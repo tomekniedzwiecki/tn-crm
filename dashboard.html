@@ -6,25 +6,164 @@
     <title>TN CRM - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .status-new { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-        .status-contacted { background-color: rgba(234, 179, 8, 0.1); color: #eab308; }
-        .status-qualified { background-color: rgba(34, 197, 94, 0.1); color: #22c55e; }
-        .status-rejected { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        .gradient-bg {
+            background: radial-gradient(ellipse at top left, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at bottom right, rgba(236, 72, 153, 0.05) 0%, transparent 50%),
+                        #09090b;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(24, 24, 27, 0.8), rgba(24, 24, 27, 0.6));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+        }
+
+        .card-stat {
+            background: linear-gradient(135deg, rgba(24, 24, 27, 0.9), rgba(31, 31, 35, 0.8));
+            border: 1px solid rgba(63, 63, 70, 0.4);
+            transition: all 0.3s ease;
+        }
+        .card-stat:hover {
+            border-color: rgba(124, 58, 237, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(236, 72, 153, 0.1));
+        }
+
+        .logo-gradient {
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-new {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        .status-contacted {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.05));
+            color: #fbbf24;
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+        .status-qualified {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        .status-rejected {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .table-row {
+            transition: all 0.2s ease;
+        }
+        .table-row:hover {
+            background: rgba(124, 58, 237, 0.05);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 40px -10px rgba(124, 58, 237, 0.5);
+        }
+
+        .input-field {
+            background: rgba(24, 24, 27, 0.8);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            transition: all 0.2s ease;
+        }
+        .input-field:focus {
+            border-color: rgba(124, 58, 237, 0.5);
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #18181b, #1f1f23);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+        }
+
+        .source-badge {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            color: #c4b5fd;
+        }
+
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #18181b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
     </style>
 </head>
-<body class="bg-zinc-950 min-h-screen">
+<body class="gradient-bg min-h-screen text-white">
 
     <!-- Header -->
-    <header class="bg-zinc-900 border-b border-zinc-800">
+    <header class="border-b border-zinc-800/50 sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-white">TN CRM</h1>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold">TN <span class="logo-gradient">CRM</span></h1>
+                </div>
+            </div>
             <div class="flex items-center gap-4">
-                <span id="user-email" class="text-zinc-400 text-sm"></span>
-                <button id="logout-btn" class="text-zinc-400 hover:text-white text-sm transition-colors">
-                    Wyloguj
+                <span id="user-email" class="text-zinc-400 text-sm hidden sm:block"></span>
+                <button id="logout-btn" class="flex items-center gap-2 text-zinc-400 hover:text-white text-sm transition-colors px-3 py-2 rounded-lg hover:bg-zinc-800/50">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span class="hidden sm:inline">Wyloguj</span>
                 </button>
             </div>
         </div>
@@ -34,60 +173,93 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
         <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="card-stat rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="stat-icon w-10 h-10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                </div>
                 <div class="text-zinc-500 text-sm">Wszystkie</div>
-                <div id="stat-all" class="text-2xl font-bold text-white mt-1">-</div>
+                <div id="stat-all" class="text-3xl font-bold text-white mt-1">-</div>
             </div>
-            <div class="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+            <div class="card-stat rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="stat-icon w-10 h-10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </div>
+                </div>
                 <div class="text-zinc-500 text-sm">Nowe</div>
-                <div id="stat-new" class="text-2xl font-bold text-blue-500 mt-1">-</div>
+                <div id="stat-new" class="text-3xl font-bold text-blue-400 mt-1">-</div>
             </div>
-            <div class="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+            <div class="card-stat rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="stat-icon w-10 h-10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                </div>
                 <div class="text-zinc-500 text-sm">Skontaktowane</div>
-                <div id="stat-contacted" class="text-2xl font-bold text-yellow-500 mt-1">-</div>
+                <div id="stat-contacted" class="text-3xl font-bold text-yellow-400 mt-1">-</div>
             </div>
-            <div class="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+            <div class="card-stat rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="stat-icon w-10 h-10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
                 <div class="text-zinc-500 text-sm">Zakwalifikowane</div>
-                <div id="stat-qualified" class="text-2xl font-bold text-green-500 mt-1">-</div>
+                <div id="stat-qualified" class="text-3xl font-bold text-green-400 mt-1">-</div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="flex flex-wrap gap-4 mb-6">
-            <select id="filter-status" class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500">
+        <div class="flex flex-wrap gap-3 mb-6">
+            <select id="filter-status" class="input-field rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none min-w-[160px]">
                 <option value="">Wszystkie statusy</option>
                 <option value="new">Nowe</option>
                 <option value="contacted">Skontaktowane</option>
                 <option value="qualified">Zakwalifikowane</option>
                 <option value="rejected">Odrzucone</option>
             </select>
-            <select id="filter-source" class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500">
+            <select id="filter-source" class="input-field rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none min-w-[160px]">
                 <option value="">Wszystkie źródła</option>
                 <option value="google">Google</option>
                 <option value="facebook">Facebook</option>
                 <option value="tiktok">TikTok</option>
                 <option value="organic">Organiczne</option>
             </select>
-            <input
-                type="text"
-                id="filter-search"
-                placeholder="Szukaj po emailu..."
-                class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500 flex-1 min-w-[200px]"
-            >
+            <div class="relative flex-1 min-w-[200px]">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                    type="text"
+                    id="filter-search"
+                    placeholder="Szukaj po emailu..."
+                    class="input-field w-full rounded-xl pl-11 pr-4 py-2.5 text-white text-sm placeholder-zinc-500 focus:outline-none"
+                >
+            </div>
         </div>
 
         <!-- Leads table -->
-        <div class="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+        <div class="card rounded-2xl overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="border-b border-zinc-800">
-                            <th class="text-left text-zinc-400 text-sm font-medium px-4 py-3">Email</th>
-                            <th class="text-left text-zinc-400 text-sm font-medium px-4 py-3">Status</th>
-                            <th class="text-left text-zinc-400 text-sm font-medium px-4 py-3">Źródło</th>
-                            <th class="text-left text-zinc-400 text-sm font-medium px-4 py-3">Data</th>
-                            <th class="text-left text-zinc-400 text-sm font-medium px-4 py-3">Akcje</th>
+                        <tr class="border-b border-zinc-800/50">
+                            <th class="text-left text-zinc-500 text-xs font-semibold uppercase tracking-wider px-6 py-4">Email</th>
+                            <th class="text-left text-zinc-500 text-xs font-semibold uppercase tracking-wider px-6 py-4">Status</th>
+                            <th class="text-left text-zinc-500 text-xs font-semibold uppercase tracking-wider px-6 py-4">Źródło</th>
+                            <th class="text-left text-zinc-500 text-xs font-semibold uppercase tracking-wider px-6 py-4">Data</th>
+                            <th class="text-left text-zinc-500 text-xs font-semibold uppercase tracking-wider px-6 py-4">Akcje</th>
                         </tr>
                     </thead>
                     <tbody id="leads-table">
@@ -97,12 +269,18 @@
             </div>
 
             <!-- Empty state -->
-            <div id="empty-state" class="hidden py-12 text-center">
+            <div id="empty-state" class="hidden py-16 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-zinc-800/50 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                </div>
                 <div class="text-zinc-500">Brak leadów do wyświetlenia</div>
             </div>
 
             <!-- Loading state -->
-            <div id="loading-state" class="py-12 text-center">
+            <div id="loading-state" class="py-16 text-center">
+                <div class="w-8 h-8 mx-auto mb-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
                 <div class="text-zinc-500">Ładowanie...</div>
             </div>
         </div>
@@ -110,14 +288,14 @@
     </main>
 
     <!-- Lead detail modal -->
-    <div id="lead-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div id="lead-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50">
+        <div class="modal-content rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-lg font-semibold text-white">Szczegóły leada</h2>
-                    <button id="close-modal" class="text-zinc-400 hover:text-white">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    <h2 class="text-xl font-bold text-white">Szczegóły leada</h2>
+                    <button id="close-modal" class="text-zinc-400 hover:text-white p-2 hover:bg-zinc-800/50 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
@@ -127,9 +305,9 @@
                 </div>
 
                 <!-- Status change -->
-                <div class="mt-6 pt-6 border-t border-zinc-800">
-                    <label class="block text-zinc-400 text-sm mb-2">Zmień status</label>
-                    <select id="modal-status" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500">
+                <div class="mt-6 pt-6 border-t border-zinc-800/50">
+                    <label class="block text-zinc-400 text-sm font-medium mb-2">Zmień status</label>
+                    <select id="modal-status" class="w-full input-field rounded-xl px-4 py-3 text-white text-sm focus:outline-none">
                         <option value="new">Nowy</option>
                         <option value="contacted">Skontaktowany</option>
                         <option value="qualified">Zakwalifikowany</option>
@@ -139,16 +317,16 @@
 
                 <!-- Notes -->
                 <div class="mt-4">
-                    <label class="block text-zinc-400 text-sm mb-2">Notatki</label>
+                    <label class="block text-zinc-400 text-sm font-medium mb-2">Notatki</label>
                     <textarea
                         id="modal-notes"
                         rows="3"
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500 resize-none"
+                        class="w-full input-field rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-500 focus:outline-none resize-none"
                         placeholder="Dodaj notatki..."
                     ></textarea>
                 </div>
 
-                <button id="save-lead" class="w-full mt-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors">
+                <button id="save-lead" class="w-full mt-6 py-3.5 btn-primary text-white font-semibold rounded-xl">
                     Zapisz zmiany
                 </button>
             </div>
@@ -199,7 +377,7 @@
             if (lead.fbclid) return 'Facebook';
             if (lead.ttclid) return 'TikTok';
             if (lead.utm_source) return lead.utm_source.charAt(0).toUpperCase() + lead.utm_source.slice(1);
-            return 'Organiczne';
+            return 'Organic';
         }
 
         // Status badge HTML
@@ -210,7 +388,7 @@
                 'qualified': 'Zakwalifikowany',
                 'rejected': 'Odrzucony'
             };
-            return `<span class="status-${status} px-2 py-1 rounded-md text-xs font-medium">${labels[status] || status}</span>`;
+            return `<span class="status-${status} px-3 py-1.5 rounded-lg text-xs font-medium">${labels[status] || status}</span>`;
         }
 
         // Load leads
@@ -233,7 +411,7 @@
         // Update stats
         function updateStats() {
             document.getElementById('stat-all').textContent = leads.length;
-            document.getElementById('stat-new').textContent = leads.filter(l => l.status === 'new').length;
+            document.getElementById('stat-new').textContent = leads.filter(l => l.status === 'new' || !l.status).length;
             document.getElementById('stat-contacted').textContent = leads.filter(l => l.status === 'contacted').length;
             document.getElementById('stat-qualified').textContent = leads.filter(l => l.status === 'qualified').length;
         }
@@ -252,10 +430,11 @@
             const searchFilter = document.getElementById('filter-search').value.toLowerCase();
 
             let filtered = leads.filter(lead => {
-                if (statusFilter && lead.status !== statusFilter) return false;
+                const leadStatus = lead.status || 'new';
+                if (statusFilter && leadStatus !== statusFilter) return false;
                 if (sourceFilter) {
                     const source = getSource(lead).toLowerCase();
-                    if (sourceFilter === 'organic' && source !== 'organiczne') return false;
+                    if (sourceFilter === 'organic' && source !== 'organic') return false;
                     if (sourceFilter !== 'organic' && !source.includes(sourceFilter)) return false;
                 }
                 if (searchFilter && !lead.email.toLowerCase().includes(searchFilter)) return false;
@@ -271,22 +450,25 @@
             emptyState.classList.add('hidden');
 
             tbody.innerHTML = filtered.map(lead => `
-                <tr class="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
-                    <td class="px-4 py-3">
-                        <div class="text-white">${lead.email}</div>
+                <tr class="table-row border-b border-zinc-800/30">
+                    <td class="px-6 py-4">
+                        <div class="text-white font-medium">${lead.email}</div>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-6 py-4">
                         ${getStatusBadge(lead.status || 'new')}
                     </td>
-                    <td class="px-4 py-3">
-                        <div class="text-zinc-400 text-sm">${getSource(lead)}</div>
+                    <td class="px-6 py-4">
+                        <span class="source-badge px-3 py-1.5 rounded-lg text-xs font-medium">${getSource(lead)}</span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-6 py-4">
                         <div class="text-zinc-400 text-sm">${formatDate(lead.created_at)}</div>
                     </td>
-                    <td class="px-4 py-3">
-                        <button onclick="openLead('${lead.id}')" class="text-purple-400 hover:text-purple-300 text-sm font-medium">
-                            Szczegóły
+                    <td class="px-6 py-4">
+                        <button onclick="openLead('${lead.id}')" class="text-purple-400 hover:text-purple-300 text-sm font-medium flex items-center gap-1 transition-colors">
+                            <span>Szczegóły</span>
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
                         </button>
                     </td>
                 </tr>
@@ -303,32 +485,32 @@
             const content = document.getElementById('modal-content');
             content.innerHTML = `
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <div class="text-zinc-500 text-xs">Email</div>
-                        <div class="text-white">${lead.email}</div>
+                    <div class="bg-zinc-800/30 rounded-xl p-4">
+                        <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Email</div>
+                        <div class="text-white font-medium">${lead.email}</div>
                     </div>
-                    <div>
-                        <div class="text-zinc-500 text-xs">Data rejestracji</div>
+                    <div class="bg-zinc-800/30 rounded-xl p-4">
+                        <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Data</div>
                         <div class="text-white">${formatDate(lead.created_at)}</div>
                     </div>
-                    <div>
-                        <div class="text-zinc-500 text-xs">Źródło</div>
+                    <div class="bg-zinc-800/30 rounded-xl p-4">
+                        <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Źródło</div>
                         <div class="text-white">${getSource(lead)}</div>
                     </div>
-                    <div>
-                        <div class="text-zinc-500 text-xs">Kampania</div>
+                    <div class="bg-zinc-800/30 rounded-xl p-4">
+                        <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Kampania</div>
                         <div class="text-white">${lead.utm_campaign || '-'}</div>
                     </div>
                 </div>
                 ${lead.landing_page ? `
-                <div class="mt-4">
-                    <div class="text-zinc-500 text-xs">Landing page</div>
+                <div class="bg-zinc-800/30 rounded-xl p-4 mt-4">
+                    <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Landing page</div>
                     <div class="text-white text-sm break-all">${lead.landing_page}</div>
                 </div>
                 ` : ''}
                 ${lead.referrer ? `
-                <div class="mt-4">
-                    <div class="text-zinc-500 text-xs">Referrer</div>
+                <div class="bg-zinc-800/30 rounded-xl p-4 mt-4">
+                    <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Referrer</div>
                     <div class="text-white text-sm break-all">${lead.referrer}</div>
                 </div>
                 ` : ''}
