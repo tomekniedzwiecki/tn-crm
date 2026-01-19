@@ -114,12 +114,17 @@
                 <span class="font-medium">Pipeline</span>
             </a>
 
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
             <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
                 <i class="ph ph-package text-xl"></i>
                 <span class="font-medium">Oferty</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all">
+            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
@@ -164,6 +169,11 @@
             <div class="flex items-center gap-2 text-xs text-zinc-500">
                 <i class="ph ph-funnel"></i>
                 <span>Filtry:</span>
+            </div>
+            <div id="team-filter-container" class="hidden">
+                <select id="filter-team" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600">
+                    <option value="">Wszyscy handlowcy</option>
+                </select>
             </div>
             <select id="filter-source" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600">
                 <option value="">Wszystkie źródła</option>
@@ -251,6 +261,15 @@
                         </select>
                     </div>
                 </div>
+                <!-- Offer -->
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                        <i class="ph ph-package text-amber-400 mr-1"></i>Zainteresowany ofertą
+                    </label>
+                    <select id="add-offer" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
+                        <option value="">-- Wybierz ofertę --</option>
+                    </select>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wartość (PLN)</label>
@@ -284,17 +303,74 @@
         let leads = [];
         let offers = [];
         let offersMap = {};
+        let teamMembers = [];
+        let teamMembersMap = {};
+        let currentMember = null; // Current logged-in team member
+        let isAdmin = false;
 
-        // Pipeline stages configuration
-        const STAGES = [
-            { id: 'new', name: 'Nowy', color: 'emerald', icon: 'ph-user-plus' },
-            { id: 'contacted', name: 'Skontaktowany', color: 'blue', icon: 'ph-chat-circle' },
-            { id: 'qualified', name: 'Zakwalifikowany', color: 'violet', icon: 'ph-check-circle' },
-            { id: 'proposal', name: 'Propozycja', color: 'amber', icon: 'ph-file-text' },
-            { id: 'negotiation', name: 'Negocjacje', color: 'orange', icon: 'ph-handshake' },
+        // Default pipeline stages (will be overwritten by settings)
+        const DEFAULT_STAGES = [
+            { id: 'new', name: 'Nowy', order: 0 },
+            { id: 'contacted', name: 'Skontaktowany', order: 1 },
+            { id: 'qualified', name: 'Zakwalifikowany', order: 2 },
+            { id: 'proposal', name: 'Propozycja', order: 3 },
+            { id: 'negotiation', name: 'Negocjacje', order: 4 }
+        ];
+
+        // Terminal stages (always present, can't be edited)
+        const TERMINAL_STAGES = [
             { id: 'won', name: 'Wygrany', color: 'green', icon: 'ph-trophy' },
             { id: 'lost', name: 'Przegrany', color: 'red', icon: 'ph-x-circle' }
         ];
+
+        // Stage colors by index
+        const STAGE_COLORS = ['emerald', 'blue', 'violet', 'amber', 'orange', 'cyan', 'pink'];
+        const STAGE_ICONS = ['ph-user-plus', 'ph-chat-circle', 'ph-check-circle', 'ph-file-text', 'ph-handshake', 'ph-star', 'ph-flag'];
+
+        let pipelineStages = [...DEFAULT_STAGES];
+        let STAGES = []; // Combined stages (pipeline + terminal)
+
+        async function loadPipelineSettings() {
+            const { data, error } = await supabaseClient
+                .from('settings')
+                .select('*')
+                .eq('key', 'pipeline_stages')
+                .single();
+
+            if (!error && data?.value) {
+                try {
+                    pipelineStages = JSON.parse(data.value);
+                } catch (e) {
+                    console.error('Error parsing pipeline stages:', e);
+                    pipelineStages = [...DEFAULT_STAGES];
+                }
+            }
+
+            // Build STAGES array with colors and icons
+            STAGES = pipelineStages.map((stage, index) => ({
+                ...stage,
+                color: STAGE_COLORS[index % STAGE_COLORS.length],
+                icon: STAGE_ICONS[index % STAGE_ICONS.length]
+            }));
+
+            // Add terminal stages
+            STAGES.push(...TERMINAL_STAGES);
+
+            // Update status select in add modal
+            updateStatusSelect();
+        }
+
+        function updateStatusSelect() {
+            const select = document.getElementById('add-status');
+            if (!select) return;
+
+            select.innerHTML = pipelineStages.map(stage =>
+                `<option value="${stage.id}">${stage.name}</option>`
+            ).join('') + `
+                <option value="won">Wygrany</option>
+                <option value="lost">Przegrany</option>
+            `;
+        }
 
         function getBasePath() {
             if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -323,7 +399,76 @@
                 return null;
             }
             document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+
+            // Load team members and find current user
+            await loadTeamMembers(session.user.id);
+
             return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            teamMembersMap = {};
+            teamMembers.forEach(member => {
+                teamMembersMap[member.id] = member;
+            });
+
+            // Find current user's team member record
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            // Show settings nav for admins
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            // Show/hide admin-only elements
+            updateAdminUI();
+        }
+
+        function updateAdminUI() {
+            // Show team filter only for admins
+            const teamFilterContainer = document.getElementById('team-filter-container');
+            if (teamFilterContainer) {
+                teamFilterContainer.classList.toggle('hidden', !isAdmin);
+            }
+
+            // Populate team filter
+            const teamFilter = document.getElementById('filter-team');
+            if (teamFilter && isAdmin) {
+                teamFilter.innerHTML = '<option value="">Wszyscy handlowcy</option>';
+                teamMembers.forEach(member => {
+                    teamFilter.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+                });
+            }
+        }
+
+        function getMemberInitials(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return '';
+            return member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+
+        function getMemberColor(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return 'zinc';
+            const colorMap = {
+                'violet': 'bg-violet-500',
+                'blue': 'bg-blue-500',
+                'emerald': 'bg-emerald-500',
+                'amber': 'bg-amber-500',
+                'pink': 'bg-pink-500',
+                'cyan': 'bg-cyan-500'
+            };
+            return colorMap[member.color] || 'bg-zinc-500';
         }
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -375,8 +520,12 @@
             const sourceFilter = document.getElementById('filter-source').value;
             const minValue = document.getElementById('filter-value-min').value;
             const maxValue = document.getElementById('filter-value-max').value;
+            const teamFilter = document.getElementById('filter-team')?.value || '';
 
             filteredLeads = leads.filter(lead => {
+                // Team member filter (admin only)
+                if (teamFilter && lead.assigned_to !== teamFilter) return false;
+
                 // Source filter
                 if (sourceFilter && getSource(lead) !== sourceFilter) return false;
 
@@ -389,7 +538,7 @@
             });
 
             // Show/hide clear button
-            const hasFilters = sourceFilter || minValue || maxValue;
+            const hasFilters = sourceFilter || minValue || maxValue || teamFilter;
             document.getElementById('clear-pipeline-filters').classList.toggle('hidden', !hasFilters);
 
             // Update counts
@@ -403,10 +552,13 @@
         document.getElementById('filter-source').addEventListener('change', applyFilters);
         document.getElementById('filter-value-min').addEventListener('input', applyFilters);
         document.getElementById('filter-value-max').addEventListener('input', applyFilters);
+        document.getElementById('filter-team')?.addEventListener('change', applyFilters);
         document.getElementById('clear-pipeline-filters').addEventListener('click', () => {
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-value-min').value = '';
             document.getElementById('filter-value-max').value = '';
+            const teamFilter = document.getElementById('filter-team');
+            if (teamFilter) teamFilter.value = '';
             applyFilters();
         });
 
@@ -425,6 +577,14 @@
             offers.forEach(offer => {
                 offersMap[offer.id] = offer;
             });
+
+            // Populate add-offer select
+            const addOfferSelect = document.getElementById('add-offer');
+            if (addOfferSelect) {
+                const activeOffers = offers.filter(o => o.active);
+                addOfferSelect.innerHTML = '<option value="">-- Wybierz ofertę --</option>' +
+                    activeOffers.map(offer => `<option value="${offer.id}">${offer.name}</option>`).join('');
+            }
         }
 
         async function loadLeads() {
@@ -470,6 +630,8 @@
                     violet: { border: 'border-violet-500/20', bg: 'bg-violet-500/10', text: 'text-violet-400' },
                     amber: { border: 'border-amber-500/20', bg: 'bg-amber-500/10', text: 'text-amber-400' },
                     orange: { border: 'border-orange-500/20', bg: 'bg-orange-500/10', text: 'text-orange-400' },
+                    cyan: { border: 'border-cyan-500/20', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+                    pink: { border: 'border-pink-500/20', bg: 'bg-pink-500/10', text: 'text-pink-400' },
                     green: { border: 'border-green-500/20', bg: 'bg-green-500/10', text: 'text-green-400' },
                     red: { border: 'border-red-500/20', bg: 'bg-red-500/10', text: 'text-red-400' },
                     zinc: { border: 'border-zinc-500/20', bg: 'bg-zinc-500/10', text: 'text-zinc-400' }
@@ -512,6 +674,9 @@
             const initial = lead.email.charAt(0).toUpperCase();
             const displayName = lead.name || lead.email.split('@')[0];
             const offer = lead.offer_id ? offersMap[lead.offer_id] : null;
+            const assignedMember = lead.assigned_to ? teamMembersMap[lead.assigned_to] : null;
+            const memberInitials = assignedMember ? getMemberInitials(lead.assigned_to) : '';
+            const memberColor = assignedMember ? getMemberColor(lead.assigned_to) : '';
 
             return `
                 <div class="lead-card group bg-zinc-900/60 border border-white/5 rounded-lg p-4 hover:border-white/10 relative"
@@ -528,13 +693,20 @@
                             <div class="font-medium text-white text-base truncate">${displayName}</div>
                             ${lead.company ? `<div class="text-zinc-500 text-sm truncate">${lead.company}</div>` : ''}
                         </div>
-                        <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1 text-purple-400 hover:bg-purple-500/20 rounded transition-colors" title="Wyślij email">
-                                <i class="ph ph-envelope-simple text-xs"></i>
-                            </button>
-                            ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
-                                <i class="ph ph-phone text-xs"></i>
-                            </button>` : ''}
+                        <div class="absolute top-2 right-2 flex items-center gap-1">
+                            ${assignedMember ? `
+                                <div class="w-6 h-6 rounded-full ${memberColor} flex items-center justify-center text-white text-[10px] font-bold" title="${assignedMember.name}">
+                                    ${memberInitials}
+                                </div>
+                            ` : ''}
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1 text-purple-400 hover:bg-purple-500/20 rounded transition-colors" title="Wyślij email">
+                                    <i class="ph ph-envelope-simple text-xs"></i>
+                                </button>
+                                ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
+                                    <i class="ph ph-phone text-xs"></i>
+                                </button>` : ''}
+                            </div>
                         </div>
                     </div>
                     ${offer ? `
@@ -632,6 +804,16 @@
             });
         }
 
+        const STATUS_LABELS = {
+            new: 'Nowy',
+            contacted: 'Skontaktowany',
+            qualified: 'Zakwalifikowany',
+            proposal: 'Propozycja',
+            negotiation: 'Negocjacje',
+            won: 'Wygrany',
+            lost: 'Przegrany'
+        };
+
         async function handleDrop(event) {
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over');
@@ -644,6 +826,11 @@
             const dropPosition = currentDropPosition !== null ? currentDropPosition : 0;
 
             if (!leadId || !newStage) return;
+
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+
+            const oldStatus = lead.status || 'new';
 
             // Get leads in this stage sorted by position
             const stageLeads = leads
@@ -664,10 +851,30 @@
                 newPosition = Math.floor((before + after) / 2);
             }
 
+            // Prepare activity if status changed
+            let updatedActivities = lead.activities || [];
+            if (oldStatus !== newStage) {
+                updatedActivities = [...updatedActivities, {
+                    type: 'status_change',
+                    content: `Status zmieniony: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[newStage]}`,
+                    created_at: new Date().toISOString(),
+                    performed_by: currentMember?.id || null,
+                    performed_by_name: currentMember?.name || null
+                }];
+            }
+
             // Update in database
+            const updateData = {
+                status: newStage,
+                pipeline_position: newPosition
+            };
+            if (oldStatus !== newStage) {
+                updateData.activities = updatedActivities;
+            }
+
             const { error } = await supabaseClient
                 .from('leads')
-                .update({ status: newStage, pipeline_position: newPosition })
+                .update(updateData)
                 .eq('id', leadId);
 
             if (error) {
@@ -677,11 +884,9 @@
             }
 
             // Update local state and re-render
-            const lead = leads.find(l => l.id === leadId);
-            if (lead) {
-                lead.status = newStage;
-                lead.pipeline_position = newPosition;
-            }
+            lead.status = newStage;
+            lead.pipeline_position = newPosition;
+            lead.activities = updatedActivities;
             currentDropPosition = null;
             renderPipeline();
         }
@@ -722,7 +927,9 @@
                 status: document.getElementById('add-status').value,
                 deal_value: document.getElementById('add-value').value ? parseFloat(document.getElementById('add-value').value) : null,
                 expected_close: document.getElementById('add-expected-close').value || null,
-                utm_source: 'manual'
+                offer_id: document.getElementById('add-offer').value || null,
+                utm_source: 'manual',
+                assigned_to: currentMember?.id || null
             };
 
             const btn = document.getElementById('submit-add-lead');
@@ -757,7 +964,10 @@
 
         async function init() {
             const session = await checkAuth();
-            if (session) await loadLeads();
+            if (session) {
+                await loadPipelineSettings();
+                await loadLeads();
+            }
         }
         init();
     </script>

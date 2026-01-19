@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Ustawienia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
+            <div class="w-7 h-7 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <i class="ph-bold ph-lightning text-sm"></i>
+            </div>
+            <span class="font-medium text-base text-zinc-200">TN CRM</span>
+            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
+        </div>
+
+        <nav class="flex-1 px-4 py-6">
+            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
+
+            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-house text-xl"></i>
+                <span class="font-medium">Overview</span>
+            </a>
+
+            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-users text-xl"></i>
+                <span class="font-medium">Leady</span>
+                <span id="nav-leads-count" class="ml-auto text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono border border-white/5">0</span>
+            </a>
+
+            <a href="/pipeline" data-page="pipeline" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-kanban text-xl"></i>
+                <span class="font-medium">Pipeline</span>
+            </a>
+
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
+            <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-package text-xl"></i>
+                <span class="font-medium">Oferty</span>
+            </a>
+
+            <a href="/settings" data-page="settings" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
+                <i class="ph ph-gear text-xl"></i>
+                <span class="font-medium">Ustawienia</span>
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-sm font-medium">TN</div>
+                <div class="flex-1 min-w-0">
+                    <div id="user-email" class="text-sm font-medium text-zinc-200 truncate"></div>
+                    <div id="user-role" class="text-xs text-zinc-500 truncate">Free Plan</div>
+                </div>
+                <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
+                    <i class="ph ph-sign-out text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <span class="text-zinc-400">tn-crm</span>
+                <span class="text-zinc-700">/</span>
+                <span class="text-white font-medium">ustawienia</span>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-2xl mx-auto animate-enter">
+                <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Ustawienia</h1>
+                <p class="text-zinc-500 mb-8">Konfiguracja systemu CRM.</p>
+
+                <!-- Access denied message for non-admins -->
+                <div id="access-denied" class="hidden bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
+                    <i class="ph ph-lock-key text-4xl text-red-400 mb-3"></i>
+                    <h2 class="text-lg font-medium text-white mb-2">Brak dostępu</h2>
+                    <p class="text-zinc-400">Tylko administrator ma dostęp do ustawień.</p>
+                </div>
+
+                <!-- Settings content (admin only) -->
+                <div id="settings-content" class="hidden space-y-6">
+                    <!-- Lead Assignment Settings -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <i class="ph ph-user-plus text-emerald-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-white font-medium">Przypisywanie leadów</h2>
+                                <p class="text-zinc-500 text-xs">Konfiguracja domyślnego przypisania nowych leadów</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przypisuj nowe leady do</label>
+                                <select id="default-lead-assignee" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
+                                    <option value="">Nie przypisuj automatycznie</option>
+                                </select>
+                                <p class="text-zinc-600 text-xs mt-2">Nowe leady (z formularzy, API) będą automatycznie przypisywane do wybranej osoby.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team Members -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                    <i class="ph ph-users-three text-violet-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-white font-medium">Zespół</h2>
+                                    <p class="text-zinc-500 text-xs">Członkowie zespołu CRM</p>
+                                </div>
+                            </div>
+                            <button id="add-member-btn" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center gap-1.5">
+                                <i class="ph ph-plus"></i>
+                                Dodaj
+                            </button>
+                        </div>
+
+                        <div id="team-members-list" class="space-y-2">
+                            <!-- Team members will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Pipeline Configuration -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                    <i class="ph ph-kanban text-blue-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-white font-medium">Pipeline</h2>
+                                    <p class="text-zinc-500 text-xs">Etapy procesu sprzedaży</p>
+                                </div>
+                            </div>
+                            <button id="add-stage-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center gap-1.5">
+                                <i class="ph ph-plus"></i>
+                                Dodaj etap
+                            </button>
+                        </div>
+
+                        <p class="text-zinc-500 text-xs mb-4">Przeciągnij etapy, aby zmienić kolejność. Kliknij nazwę, aby edytować.</p>
+
+                        <div id="pipeline-stages-list" class="space-y-2 mb-4">
+                            <!-- Pipeline stages will be loaded here -->
+                        </div>
+
+                        <!-- Terminal states info -->
+                        <div class="pt-4 border-t border-white/5">
+                            <p class="text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-2">Stany końcowe (niezmienne)</p>
+                            <div class="flex gap-2">
+                                <div class="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                    <i class="ph ph-trophy text-emerald-400"></i>
+                                    <span class="text-emerald-400 text-xs font-medium">Wygrany</span>
+                                </div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <i class="ph ph-x-circle text-red-400"></i>
+                                    <span class="text-red-400 text-xs font-medium">Przegrany</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Future: Pipeline Templates -->
+                    <div class="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-lg p-6 opacity-60">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i class="ph ph-stack text-zinc-600 text-xl"></i>
+                            <div>
+                                <h2 class="text-zinc-500 font-medium">Wiele Pipeline'ów</h2>
+                                <p class="text-zinc-600 text-xs">Wkrótce: różne pipeline'y dla różnych ofert</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-md shadow-2xl">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-user-plus text-violet-400"></i>
+                    Dodaj członka zespołu
+                </h2>
+                <button id="close-add-member-modal" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <form id="add-member-form" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email (konto Supabase) *</label>
+                    <input type="email" id="member-email" required class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="email@example.com">
+                    <p class="text-zinc-600 text-xs mt-1">Użytkownik musi mieć konto w systemie.</p>
+                </div>
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Imię i nazwisko *</label>
+                    <input type="text" id="member-name" required class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="Jan Kowalski">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Rola</label>
+                        <select id="member-role" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
+                            <option value="sales">Handlowiec</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Kolor</label>
+                        <select id="member-color" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
+                            <option value="violet">Fioletowy</option>
+                            <option value="blue">Niebieski</option>
+                            <option value="emerald">Zielony</option>
+                            <option value="amber">Pomarańczowy</option>
+                            <option value="pink">Różowy</option>
+                            <option value="cyan">Cyjan</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <div class="flex-1"></div>
+                <button id="cancel-add-member" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                    Anuluj
+                </button>
+                <button id="submit-add-member" class="bg-violet-500 text-white hover:bg-violet-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <i class="ph ph-plus"></i>
+                    Dodaj
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let teamMembers = [];
+        let currentMember = null;
+        let isAdmin = false;
+        let settings = {};
+
+        // Default pipeline stages
+        const DEFAULT_PIPELINE_STAGES = [
+            { id: 'new', name: 'Nowy', order: 0 },
+            { id: 'contacted', name: 'Skontaktowany', order: 1 },
+            { id: 'qualified', name: 'Zakwalifikowany', order: 2 },
+            { id: 'proposal', name: 'Propozycja', order: 3 },
+            { id: 'negotiation', name: 'Negocjacje', order: 4 }
+        ];
+
+        let pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+        let draggedStageIndex = null;
+
+        function getBasePath() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const path = location.pathname;
+                const match = path.match(/^(\/[^\/]+)\//);
+                return match ? match[1] : '';
+            }
+            return '';
+        }
+
+        function getLoginPath() {
+            const base = getBasePath();
+            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = getLoginPath();
+                return null;
+            }
+            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*')
+                .order('name');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            // Update role display
+            document.getElementById('user-role').textContent = isAdmin ? 'Administrator' : 'Handlowiec';
+
+            // Show/hide content based on role
+            if (isAdmin) {
+                document.getElementById('settings-content').classList.remove('hidden');
+                document.getElementById('access-denied').classList.add('hidden');
+                renderTeamMembers();
+                populateAssigneeDropdown();
+            } else {
+                document.getElementById('settings-content').classList.add('hidden');
+                document.getElementById('access-denied').classList.remove('hidden');
+            }
+        }
+
+        async function loadSettings() {
+            const { data, error } = await supabaseClient
+                .from('settings')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading settings:', error);
+                return;
+            }
+
+            settings = {};
+            (data || []).forEach(s => {
+                settings[s.key] = s.value;
+            });
+
+            // Set current values
+            const assigneeSelect = document.getElementById('default-lead-assignee');
+            if (assigneeSelect && settings.default_lead_assignee) {
+                assigneeSelect.value = settings.default_lead_assignee;
+            }
+        }
+
+        function populateAssigneeDropdown() {
+            const select = document.getElementById('default-lead-assignee');
+            select.innerHTML = '<option value="">Nie przypisuj automatycznie</option>';
+            teamMembers.forEach(member => {
+                select.innerHTML += `<option value="${member.id}">${member.name}${member.role === 'admin' ? ' (Admin)' : ''}</option>`;
+            });
+
+            // Set current value
+            if (settings.default_lead_assignee) {
+                select.value = settings.default_lead_assignee;
+            }
+        }
+
+        function getMemberColorClass(color) {
+            const colorMap = {
+                'violet': 'bg-violet-500',
+                'blue': 'bg-blue-500',
+                'emerald': 'bg-emerald-500',
+                'amber': 'bg-amber-500',
+                'pink': 'bg-pink-500',
+                'cyan': 'bg-cyan-500'
+            };
+            return colorMap[color] || 'bg-zinc-500';
+        }
+
+        function getMemberInitials(name) {
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+
+        function getRoleLabel(role) {
+            const labels = {
+                'admin': 'ADMIN',
+                'manager': 'MANAGER',
+                'sales': 'SALES'
+            };
+            return labels[role] || role?.toUpperCase() || 'SALES';
+        }
+
+        function getRoleBadgeClass(role) {
+            const classes = {
+                'admin': 'bg-amber-500/10 text-amber-400',
+                'manager': 'bg-blue-500/10 text-blue-400',
+                'sales': 'bg-zinc-800 text-zinc-400'
+            };
+            return classes[role] || 'bg-zinc-800 text-zinc-400';
+        }
+
+        function renderTeamMembers() {
+            const container = document.getElementById('team-members-list');
+            container.innerHTML = teamMembers.map(member => `
+                <div class="flex items-center gap-3 p-3 bg-zinc-900/50 rounded-lg border border-white/5">
+                    <div class="w-10 h-10 rounded-full ${getMemberColorClass(member.color)} flex items-center justify-center text-white text-sm font-bold">
+                        ${getMemberInitials(member.name)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-white font-medium">${member.name}</div>
+                        <div class="text-zinc-500 text-xs truncate">${member.email || 'Brak email'}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded ${getRoleBadgeClass(member.role)}">
+                            ${getRoleLabel(member.role)}
+                        </span>
+                        ${member.id !== currentMember?.id ? `
+                            <button onclick="deleteMember('${member.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors" title="Usuń">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Save settings
+        document.getElementById('default-lead-assignee').addEventListener('change', async (e) => {
+            const value = e.target.value || null;
+
+            const { error } = await supabaseClient
+                .from('settings')
+                .upsert({ key: 'default_lead_assignee', value: value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+
+            if (error) {
+                console.error('Error saving setting:', error);
+                alert('Błąd zapisu ustawienia');
+                return;
+            }
+
+            settings.default_lead_assignee = value;
+            showToast('Ustawienie zapisane');
+        });
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg z-50 animate-enter';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // Add member modal
+        function openAddMemberModal() {
+            document.getElementById('add-member-modal').classList.remove('hidden');
+            document.getElementById('member-email').focus();
+        }
+
+        function closeAddMemberModal() {
+            document.getElementById('add-member-modal').classList.add('hidden');
+            document.getElementById('add-member-form').reset();
+        }
+
+        document.getElementById('add-member-btn').addEventListener('click', openAddMemberModal);
+        document.getElementById('close-add-member-modal').addEventListener('click', closeAddMemberModal);
+        document.getElementById('cancel-add-member').addEventListener('click', closeAddMemberModal);
+        document.getElementById('add-member-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeAddMemberModal();
+        });
+
+        document.getElementById('submit-add-member').addEventListener('click', async () => {
+            const email = document.getElementById('member-email').value.trim();
+            const name = document.getElementById('member-name').value.trim();
+            const role = document.getElementById('member-role').value;
+            const color = document.getElementById('member-color').value;
+
+            if (!email || !name) {
+                alert('Email i imię są wymagane');
+                return;
+            }
+
+            // Note: user_id will need to be set manually or via a different flow
+            // For now, we'll insert without user_id and it can be linked later
+            const memberData = {
+                email: email,
+                name: name,
+                role: role,
+                color: color,
+                user_id: null // Will need to be linked when user logs in
+            };
+
+            const btn = document.getElementById('submit-add-member');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
+
+            const { error } = await supabaseClient.from('team_members').insert([memberData]);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-plus"></i> Dodaj';
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            closeAddMemberModal();
+            const session = await checkAuth();
+            if (session) {
+                await loadTeamMembers(session.user.id);
+            }
+            showToast('Członek zespołu dodany');
+        });
+
+        async function deleteMember(memberId) {
+            if (!confirm('Czy na pewno chcesz usunąć tego członka zespołu?')) return;
+
+            const { error } = await supabaseClient
+                .from('team_members')
+                .delete()
+                .eq('id', memberId);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            const session = await checkAuth();
+            if (session) {
+                await loadTeamMembers(session.user.id);
+            }
+            showToast('Członek zespołu usunięty');
+        }
+
+        window.deleteMember = deleteMember;
+
+        // =============================================
+        // PIPELINE STAGES MANAGEMENT
+        // =============================================
+
+        async function loadPipelineStages() {
+            // Try to load from settings
+            if (settings.pipeline_stages) {
+                try {
+                    pipelineStages = JSON.parse(settings.pipeline_stages);
+                } catch (e) {
+                    console.error('Error parsing pipeline stages:', e);
+                    pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+                }
+            } else {
+                pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+            }
+            renderPipelineStages();
+        }
+
+        async function savePipelineStages() {
+            const { error } = await supabaseClient
+                .from('settings')
+                .upsert({
+                    key: 'pipeline_stages',
+                    value: JSON.stringify(pipelineStages),
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+
+            if (error) {
+                console.error('Error saving pipeline stages:', error);
+                alert('Błąd zapisu pipeline');
+                return false;
+            }
+
+            settings.pipeline_stages = JSON.stringify(pipelineStages);
+            showToast('Pipeline zapisany');
+            return true;
+        }
+
+        function renderPipelineStages() {
+            const container = document.getElementById('pipeline-stages-list');
+            if (!container) return;
+
+            container.innerHTML = pipelineStages.map((stage, index) => `
+                <div class="pipeline-stage-item flex items-center gap-3 p-3 bg-zinc-900/50 rounded-lg border border-white/5 hover:border-white/10 transition-all cursor-grab"
+                     draggable="true"
+                     data-index="${index}"
+                     data-id="${stage.id}">
+                    <div class="flex items-center gap-2 text-zinc-500">
+                        <i class="ph ph-dots-six-vertical text-lg"></i>
+                        <span class="text-xs font-mono w-6">${index + 1}.</span>
+                    </div>
+                    <input type="text"
+                           class="stage-name-input flex-1 bg-transparent text-white text-sm font-medium outline-none border-b border-transparent focus:border-blue-500 transition-colors px-1 py-0.5"
+                           value="${stage.name}"
+                           data-index="${index}"
+                           placeholder="Nazwa etapu">
+                    <div class="flex items-center gap-1">
+                        <span class="text-[10px] font-mono text-zinc-600 px-2">${stage.id}</span>
+                        ${pipelineStages.length > 2 ? `
+                            <button onclick="deleteStage(${index})" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors" title="Usuń etap">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add event listeners for drag and drop
+            setupStageDragAndDrop();
+
+            // Add event listeners for name editing
+            document.querySelectorAll('.stage-name-input').forEach(input => {
+                input.addEventListener('blur', handleStageNameChange);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.target.blur();
+                    }
+                });
+            });
+        }
+
+        function setupStageDragAndDrop() {
+            const container = document.getElementById('pipeline-stages-list');
+            const items = container.querySelectorAll('.pipeline-stage-item');
+
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleStageDragStart);
+                item.addEventListener('dragend', handleStageDragEnd);
+                item.addEventListener('dragover', handleStageDragOver);
+                item.addEventListener('drop', handleStageDrop);
+            });
+        }
+
+        function handleStageDragStart(e) {
+            draggedStageIndex = parseInt(e.target.dataset.index);
+            e.target.classList.add('opacity-50');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleStageDragEnd(e) {
+            e.target.classList.remove('opacity-50');
+            draggedStageIndex = null;
+            document.querySelectorAll('.pipeline-stage-item').forEach(item => {
+                item.classList.remove('border-blue-500');
+            });
+        }
+
+        function handleStageDragOver(e) {
+            e.preventDefault();
+            const targetIndex = parseInt(e.currentTarget.dataset.index);
+            if (targetIndex !== draggedStageIndex) {
+                e.currentTarget.classList.add('border-blue-500');
+            }
+        }
+
+        function handleStageDrop(e) {
+            e.preventDefault();
+            const targetIndex = parseInt(e.currentTarget.dataset.index);
+            e.currentTarget.classList.remove('border-blue-500');
+
+            if (draggedStageIndex !== null && draggedStageIndex !== targetIndex) {
+                // Reorder stages
+                const [movedStage] = pipelineStages.splice(draggedStageIndex, 1);
+                pipelineStages.splice(targetIndex, 0, movedStage);
+
+                // Update order values
+                pipelineStages.forEach((stage, index) => {
+                    stage.order = index;
+                });
+
+                renderPipelineStages();
+                savePipelineStages();
+            }
+        }
+
+        function handleStageNameChange(e) {
+            const index = parseInt(e.target.dataset.index);
+            const newName = e.target.value.trim();
+
+            if (!newName) {
+                e.target.value = pipelineStages[index].name;
+                return;
+            }
+
+            if (pipelineStages[index].name !== newName) {
+                pipelineStages[index].name = newName;
+                savePipelineStages();
+            }
+        }
+
+        function addNewStage() {
+            // Generate unique ID
+            const existingIds = pipelineStages.map(s => s.id);
+            let newId = 'stage_' + (pipelineStages.length + 1);
+            let counter = 1;
+            while (existingIds.includes(newId)) {
+                counter++;
+                newId = 'stage_' + (pipelineStages.length + counter);
+            }
+
+            pipelineStages.push({
+                id: newId,
+                name: 'Nowy etap',
+                order: pipelineStages.length
+            });
+
+            renderPipelineStages();
+            savePipelineStages();
+
+            // Focus the new input
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('.stage-name-input');
+                const lastInput = inputs[inputs.length - 1];
+                if (lastInput) {
+                    lastInput.focus();
+                    lastInput.select();
+                }
+            }, 100);
+        }
+
+        async function deleteStage(index) {
+            const stage = pipelineStages[index];
+            if (!confirm(`Czy na pewno chcesz usunąć etap "${stage.name}"?\n\nLeady na tym etapie zostaną przeniesione do pierwszego etapu.`)) {
+                return;
+            }
+
+            pipelineStages.splice(index, 1);
+
+            // Update order values
+            pipelineStages.forEach((s, i) => {
+                s.order = i;
+            });
+
+            renderPipelineStages();
+            savePipelineStages();
+        }
+
+        window.deleteStage = deleteStage;
+
+        // Add stage button listener
+        document.getElementById('add-stage-btn')?.addEventListener('click', addNewStage);
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+            window.location.href = getLoginPath();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAddMemberModal();
+        });
+
+        // Fix links for local development
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const base = getBasePath();
+            document.querySelectorAll('a[data-page]').forEach(link => {
+                link.href = base + '/' + link.dataset.page + '.html';
+            });
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (session) {
+                await loadTeamMembers(session.user.id);
+                await loadSettings();
+                if (isAdmin) {
+                    loadPipelineStages();
+                }
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

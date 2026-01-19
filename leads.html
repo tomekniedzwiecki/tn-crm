@@ -88,12 +88,17 @@
                 <span class="font-medium">Pipeline</span>
             </a>
 
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
             <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
                 <i class="ph ph-package text-xl"></i>
                 <span class="font-medium">Oferty</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all">
+            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
@@ -197,6 +202,13 @@
                         <option value="yes">Z ankietą</option>
                         <option value="no">Bez ankiety</option>
                     </select>
+
+                    <!-- Team filter (admin only) -->
+                    <div id="team-filter-container" class="hidden">
+                        <select id="filter-team" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
+                            <option value="">Wszyscy handlowcy</option>
+                        </select>
+                    </div>
 
                     <!-- Clear filters -->
                     <button id="clear-filters" class="text-zinc-500 hover:text-white px-3 py-2 text-sm transition-colors hidden">
@@ -384,6 +396,16 @@
                     </div>
                 </div>
 
+                <!-- Offer -->
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                        <i class="ph ph-package text-amber-400 mr-1"></i>Zainteresowany ofertą
+                    </label>
+                    <select id="add-offer" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
+                        <option value="">-- Wybierz ofertę --</option>
+                    </select>
+                </div>
+
                 <!-- Deal Value & Expected Close -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -483,6 +505,75 @@
         let leads = [];
         let filteredLeads = [];
         let currentPage = 1;
+        let teamMembers = [];
+        let teamMembersMap = {};
+        let currentMember = null;
+        let isAdmin = false;
+        let offers = [];
+
+        // Pipeline stages - loaded dynamically from settings
+        const DEFAULT_PIPELINE_STAGES = [
+            { id: 'new', name: 'Nowy', order: 0 },
+            { id: 'contacted', name: 'Skontaktowany', order: 1 },
+            { id: 'qualified', name: 'Zakwalifikowany', order: 2 },
+            { id: 'proposal', name: 'Propozycja', order: 3 },
+            { id: 'negotiation', name: 'Negocjacje', order: 4 }
+        ];
+
+        let pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+        let STATUS_LABELS = {
+            won: 'Wygrany',
+            lost: 'Przegrany'
+        };
+
+        async function loadPipelineSettings() {
+            const { data, error } = await supabaseClient
+                .from('settings')
+                .select('*')
+                .eq('key', 'pipeline_stages')
+                .single();
+
+            if (!error && data?.value) {
+                try {
+                    pipelineStages = JSON.parse(data.value);
+                } catch (e) {
+                    pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+                }
+            }
+
+            // Build STATUS_LABELS from dynamic stages
+            STATUS_LABELS = { won: 'Wygrany', lost: 'Przegrany' };
+            pipelineStages.forEach(stage => {
+                STATUS_LABELS[stage.id] = stage.name;
+            });
+
+            // Update all status select elements
+            updateStatusSelects();
+        }
+
+        function updateStatusSelects() {
+            const selects = ['filter-status', 'modal-status', 'add-status'];
+
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+
+                const currentValue = select.value;
+                const isFilter = selectId === 'filter-status';
+
+                select.innerHTML = (isFilter ? '<option value="">Wszystkie statusy</option>' : '') +
+                    pipelineStages.map(stage =>
+                        `<option value="${stage.id}">${stage.name}</option>`
+                    ).join('') +
+                    `<option value="won">Wygrany</option>
+                    <option value="lost">Przegrany</option>`;
+
+                // Restore selected value if it exists
+                if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+                    select.value = currentValue;
+                }
+            });
+        }
 
         function getBasePath() {
             if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -505,7 +596,69 @@
                 return null;
             }
             document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            await loadTeamMembers(session.user.id);
             return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            teamMembersMap = {};
+            teamMembers.forEach(member => {
+                teamMembersMap[member.id] = member;
+            });
+
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            // Show settings nav for admins
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            updateAdminUI();
+        }
+
+        function updateAdminUI() {
+            const teamFilterContainer = document.getElementById('team-filter-container');
+            if (teamFilterContainer) {
+                teamFilterContainer.classList.toggle('hidden', !isAdmin);
+            }
+
+            const teamFilter = document.getElementById('filter-team');
+            if (teamFilter && isAdmin) {
+                teamFilter.innerHTML = '<option value="">Wszyscy handlowcy</option>';
+                teamMembers.forEach(member => {
+                    teamFilter.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+                });
+            }
+        }
+
+        function getMemberInitials(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return '';
+            return member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+
+        function getMemberColor(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return 'bg-zinc-500';
+            const colorMap = {
+                'violet': 'bg-violet-500',
+                'blue': 'bg-blue-500',
+                'emerald': 'bg-emerald-500',
+                'amber': 'bg-amber-500',
+                'pink': 'bg-pink-500',
+                'cyan': 'bg-cyan-500'
+            };
+            return colorMap[member.color] || 'bg-zinc-500';
         }
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -553,17 +706,56 @@
         }
 
         function getStatusBadge(status) {
-            const config = {
-                'new': { label: 'Nowy', bg: 'bg-zinc-800', text: 'text-zinc-300', border: 'border-zinc-700' },
-                'contacted': { label: 'Skontaktowany', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
-                'qualified': { label: 'Zakwalifikowany', bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' },
-                'proposal': { label: 'Propozycja', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
-                'negotiation': { label: 'Negocjacje', bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
-                'won': { label: 'Wygrany', bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-                'lost': { label: 'Przegrany', bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' }
-            };
-            const c = config[status] || config['new'];
-            return `<span class="inline-flex items-center px-2 py-0.5 rounded border ${c.border} ${c.bg} ${c.text} text-[10px] font-medium">${c.label}</span>`;
+            // Colors for dynamic stages
+            const stageColors = [
+                { bg: 'bg-zinc-800', text: 'text-zinc-300', border: 'border-zinc-700' },
+                { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
+                { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' },
+                { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+                { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
+                { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
+                { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' }
+            ];
+
+            // Terminal states
+            if (status === 'won') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-green-500/20 bg-green-500/10 text-green-400 text-[10px] font-medium">Wygrany</span>`;
+            }
+            if (status === 'lost') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-[10px] font-medium">Przegrany</span>`;
+            }
+
+            // Find stage in pipeline
+            const stageIndex = pipelineStages.findIndex(s => s.id === status);
+            const stage = stageIndex >= 0 ? pipelineStages[stageIndex] : null;
+            const colors = stage ? stageColors[stageIndex % stageColors.length] : stageColors[0];
+            const label = stage?.name || STATUS_LABELS[status] || status;
+
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded border ${colors.border} ${colors.bg} ${colors.text} text-[10px] font-medium">${label}</span>`;
+        }
+
+        async function loadOffers() {
+            const { data, error } = await supabaseClient
+                .from('offers')
+                .select('*')
+                .eq('active', true)
+                .order('name');
+
+            if (error) {
+                console.error('Error loading offers:', error);
+                return;
+            }
+
+            offers = data || [];
+            populateOffersSelect();
+        }
+
+        function populateOffersSelect() {
+            const select = document.getElementById('add-offer');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Wybierz ofertę --</option>' +
+                offers.map(offer => `<option value="${offer.id}">${offer.name}</option>`).join('');
         }
 
         async function loadLeads() {
@@ -581,8 +773,12 @@
             const sourceFilter = document.getElementById('filter-source').value;
             const dateFilter = document.getElementById('filter-date').value;
             const surveyFilter = document.getElementById('filter-survey').value;
+            const teamFilter = document.getElementById('filter-team')?.value || '';
 
             filteredLeads = leads.filter(lead => {
+                // Team member filter (admin only)
+                if (teamFilter && lead.assigned_to !== teamFilter) return false;
+
                 // Search
                 if (searchTerm) {
                     const searchFields = [lead.email, lead.phone, lead.utm_campaign].filter(Boolean).join(' ').toLowerCase();
@@ -625,7 +821,7 @@
             if (sortBy === 'email') filteredLeads.sort((a, b) => a.email.localeCompare(b.email));
 
             // Show/hide clear button
-            const hasFilters = searchTerm || statusFilter || sourceFilter || dateFilter || surveyFilter;
+            const hasFilters = searchTerm || statusFilter || sourceFilter || dateFilter || surveyFilter || teamFilter;
             document.getElementById('clear-filters').classList.toggle('hidden', !hasFilters);
 
             currentPage = 1;
@@ -887,6 +1083,7 @@
         document.getElementById('filter-source').addEventListener('change', applyFilters);
         document.getElementById('filter-date').addEventListener('change', applyFilters);
         document.getElementById('filter-survey').addEventListener('change', applyFilters);
+        document.getElementById('filter-team')?.addEventListener('change', applyFilters);
         document.getElementById('sort-by').addEventListener('change', applyFilters);
 
         document.getElementById('clear-filters').addEventListener('click', () => {
@@ -895,6 +1092,8 @@
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-date').value = '';
             document.getElementById('filter-survey').value = '';
+            const teamFilter = document.getElementById('filter-team');
+            if (teamFilter) teamFilter.value = '';
             applyFilters();
         });
 
@@ -1061,7 +1260,9 @@
                 deal_value: document.getElementById('add-value').value ? parseFloat(document.getElementById('add-value').value) : null,
                 expected_close: document.getElementById('add-expected-close').value || null,
                 notes: document.getElementById('add-notes').value.trim() || null,
-                utm_source: 'manual'
+                offer_id: document.getElementById('add-offer').value || null,
+                utm_source: 'manual',
+                assigned_to: currentMember?.id || null
             };
 
             const btn = document.getElementById('submit-add-lead');
@@ -1109,7 +1310,11 @@
 
         async function init() {
             const session = await checkAuth();
-            if (session) await loadLeads();
+            if (session) {
+                await loadPipelineSettings();
+                await loadOffers();
+                await loadLeads();
+            }
         }
         init();
     </script>

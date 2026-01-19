@@ -61,6 +61,117 @@
             width: 1px;
             background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
         }
+
+        /* Pipeline Mini Styles */
+        .pipeline-mini {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .stage-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: rgba(39, 39, 42, 0.5);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.5;
+        }
+        .stage-pill:hover {
+            opacity: 0.85;
+            background: rgba(39, 39, 42, 0.8);
+            transform: translateY(-1px);
+        }
+        .stage-pill:hover .stage-icon {
+            transform: scale(1.05);
+        }
+        .stage-pill .stage-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            transition: transform 0.2s ease;
+        }
+        .stage-pill .stage-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: #a1a1aa;
+        }
+        .stage-pill .stage-check {
+            display: none;
+            font-size: 10px;
+        }
+
+        /* Completed stages */
+        .stage-pill.completed {
+            opacity: 0.6;
+        }
+        .stage-pill.completed .stage-check {
+            display: block;
+            color: #22c55e;
+        }
+
+        /* Current stage - highlighted */
+        .stage-pill.current {
+            opacity: 1;
+            border-color: currentColor;
+            box-shadow: 0 0 15px var(--glow-color, rgba(255,255,255,0.2));
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .stage-pill.current .stage-name {
+            color: white;
+            font-weight: 600;
+        }
+        .stage-pill.current .stage-icon {
+            transform: scale(1.1);
+        }
+
+        /* Terminal states */
+        .stage-pill.terminal-won {
+            opacity: 1;
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.5);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.25);
+        }
+        .stage-pill.terminal-won .stage-icon {
+            background: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+            transform: scale(1.1);
+        }
+        .stage-pill.terminal-won .stage-name {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .stage-pill.terminal-lost {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+        }
+        .stage-pill.terminal-lost .stage-icon {
+            background: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            transform: scale(1.1);
+        }
+        .stage-pill.terminal-lost .stage-name {
+            color: #f87171;
+            font-weight: 600;
+        }
+
+        /* When in terminal state, fade regular stages more */
+        #pipeline-stepper.terminal-state .stage-pill:not(.terminal-won):not(.terminal-lost) {
+            opacity: 0.3;
+        }
+        #pipeline-stepper.terminal-state .stage-pill:not(.terminal-won):not(.terminal-lost):hover {
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -93,12 +204,17 @@
                 <span class="font-medium">Pipeline</span>
             </a>
 
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
             <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
                 <i class="ph ph-package text-xl"></i>
                 <span class="font-medium">Oferty</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all">
+            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
@@ -155,17 +271,12 @@
                             <span id="lead-created" class="font-mono text-xs">-</span>
                         </div>
                     </div>
-                    <div id="status-selector" class="relative">
-                        <select id="status-select" class="appearance-none bg-zinc-900 border border-zinc-700 text-white text-sm font-medium rounded-lg px-4 py-2 pr-10 cursor-pointer hover:border-zinc-500 focus:border-zinc-400 focus:outline-none transition-colors">
-                            <option value="new">Nowy</option>
-                            <option value="contacted">Skontaktowany</option>
-                            <option value="qualified">Zakwalifikowany</option>
-                            <option value="proposal">Propozycja</option>
-                            <option value="negotiation">Negocjacje</option>
-                            <option value="won">Wygrany</option>
-                            <option value="lost">Przegrany</option>
-                        </select>
-                        <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"></i>
+                </div>
+
+                <!-- Pipeline Mini -->
+                <div id="pipeline-stepper" class="mb-6">
+                    <div id="pipeline-stages-container" class="pipeline-mini">
+                        <!-- Stages will be rendered dynamically -->
                     </div>
                 </div>
 
@@ -174,40 +285,45 @@
                     <!-- Left Column - Details -->
                     <div class="lg:col-span-2 space-y-6">
 
-                        <!-- Survey Responses -->
-                        <div id="survey-section" class="bg-gradient-to-br from-cyan-950/30 to-zinc-900/40 rounded-lg border border-cyan-500/20 p-5 hidden">
-                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
-                                <i class="ph ph-clipboard-text text-cyan-400"></i>
-                                Odpowiedzi z ankiety
-                                <span class="ml-auto text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">zapisy</span>
-                            </h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Kierunek e-biznesu</div>
-                                    <div id="survey-direction" class="text-white text-sm font-medium">-</div>
-                                </div>
-                                <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czas tygodniowo</div>
-                                    <div id="survey-hours" class="text-white text-sm font-medium">-</div>
-                                </div>
-                                <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Cel dochodu (mies.)</div>
-                                    <div id="survey-income" class="text-white text-sm font-medium">-</div>
-                                </div>
-                                <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Budżet inwestycyjny</div>
-                                    <div id="survey-budget" class="text-white text-sm font-medium">-</div>
-                                </div>
-                                <div class="col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Doświadczenie</div>
-                                    <div id="survey-experience" class="text-white text-sm leading-relaxed">-</div>
-                                </div>
-                                <div id="survey-open-container" class="col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
-                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Dodatkowe informacje</div>
-                                    <div id="survey-open" class="text-white text-sm leading-relaxed">-</div>
+                        <!-- Survey Responses - Collapsible -->
+                        <details id="survey-section" class="group hidden">
+                            <summary class="bg-gradient-to-br from-cyan-950/30 to-zinc-900/40 rounded-lg border border-cyan-500/20 p-4 cursor-pointer list-none flex items-center justify-between hover:bg-cyan-950/40 transition-colors">
+                                <span class="text-sm text-white flex items-center gap-2">
+                                    <i class="ph ph-clipboard-text text-cyan-400"></i>
+                                    Odpowiedzi z ankiety
+                                    <span class="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">zapisy</span>
+                                </span>
+                                <i class="ph ph-caret-down text-cyan-500 group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <div class="bg-cyan-950/20 rounded-b-lg border border-t-0 border-cyan-500/20 p-4 -mt-1">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Kierunek e-biznesu</div>
+                                        <div id="survey-direction" class="text-white text-sm font-medium">-</div>
+                                    </div>
+                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czas tygodniowo</div>
+                                        <div id="survey-hours" class="text-white text-sm font-medium">-</div>
+                                    </div>
+                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Cel dochodu (mies.)</div>
+                                        <div id="survey-income" class="text-white text-sm font-medium">-</div>
+                                    </div>
+                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Budżet inwestycyjny</div>
+                                        <div id="survey-budget" class="text-white text-sm font-medium">-</div>
+                                    </div>
+                                    <div class="col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Doświadczenie</div>
+                                        <div id="survey-experience" class="text-white text-sm leading-relaxed">-</div>
+                                    </div>
+                                    <div id="survey-open-container" class="col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Dodatkowe informacje</div>
+                                        <div id="survey-open" class="text-white text-sm leading-relaxed">-</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </details>
 
                         <!-- Contact Info -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
@@ -279,6 +395,12 @@
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przewidywane zamknięcie</label>
                                     <input type="date" id="field-expected-close" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
                                 </div>
+                                <div class="col-span-2">
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przypisano do</label>
+                                    <select id="field-assigned-to" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
+                                        <option value="">Nie przypisano</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -288,7 +410,19 @@
                                 <i class="ph ph-note-pencil text-zinc-500"></i>
                                 Notatki
                             </h3>
-                            <textarea id="field-notes" rows="4" placeholder="Dodaj notatki o tym leadzie..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none"></textarea>
+                            <textarea id="field-notes" rows="3" placeholder="Dodaj nową notatkę..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none mb-3"></textarea>
+                            <button id="save-note-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-white/10">
+                                <i class="ph ph-floppy-disk"></i>
+                                Zapisz notatkę
+                            </button>
+
+                            <!-- Notes History -->
+                            <div id="notes-history" class="mt-4 space-y-3 hidden">
+                                <div class="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">Historia notatek</div>
+                                <div id="notes-history-list" class="space-y-2 max-h-[300px] overflow-y-auto">
+                                    <!-- Notes will be rendered here -->
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Tracking Info - Collapsible -->
@@ -366,6 +500,28 @@
                             </button>
                         </div>
 
+                        <!-- Scheduled Meetings -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                    <i class="ph ph-calendar text-pink-400"></i>
+                                    Spotkania
+                                    <span id="meetings-count" class="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-mono">0</span>
+                                </h3>
+                                <button id="add-meeting-btn" class="text-zinc-400 hover:text-white text-xs flex items-center gap-1 transition-colors">
+                                    <i class="ph ph-plus"></i>
+                                    Dodaj
+                                </button>
+                            </div>
+                            <div id="meetings-list" class="space-y-2">
+                                <!-- Meetings will be rendered here -->
+                            </div>
+                            <div id="meetings-empty" class="hidden text-center py-6">
+                                <i class="ph ph-calendar-blank text-2xl text-zinc-700 mb-2"></i>
+                                <p class="text-zinc-500 text-xs">Brak zaplanowanych spotkań</p>
+                            </div>
+                        </div>
+
                         <!-- Activity Timeline -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
                             <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
@@ -387,6 +543,86 @@
         </div>
     </main>
 
+    <!-- Add Meeting Modal -->
+    <div id="meeting-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" id="meeting-modal-backdrop"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div id="meeting-modal-content" class="bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-w-md w-full transform scale-95 opacity-0 transition-all duration-200">
+                <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                        <i class="ph ph-calendar-plus text-pink-400"></i>
+                        Nowe spotkanie
+                    </h3>
+                    <button id="close-meeting-modal" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+                <form id="meeting-form" class="p-5 space-y-4" autocomplete="off">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tytuł spotkania *</label>
+                        <input type="text" id="meeting-title" name="mtg_title_x9k2" required autocomplete="new-password" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white" placeholder="np. Prezentacja oferty">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Data *</label>
+                            <input type="date" id="meeting-date" required class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Godzina *</label>
+                            <input type="time" id="meeting-time" required class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white" value="10:00">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Czas trwania</label>
+                        <select id="meeting-duration" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
+                            <option value="30">30 minut</option>
+                            <option value="60" selected>1 godzina</option>
+                            <option value="90">1.5 godziny</option>
+                            <option value="120">2 godziny</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis (opcjonalnie)</label>
+                        <textarea id="meeting-description" name="mtg_desc_z7m4" rows="2" autocomplete="new-password" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none" placeholder="Dodatkowe notatki..."></textarea>
+                    </div>
+                </form>
+                <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-950/50">
+                    <button type="button" id="cancel-meeting" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-zinc-300 text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                    <button type="submit" form="meeting-form" id="save-meeting" class="flex-1 px-4 py-2.5 bg-pink-600 hover:bg-pink-500 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i class="ph ph-calendar-plus"></i>
+                        Dodaj spotkanie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" id="confirm-modal-backdrop"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div id="confirm-modal-content" class="bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-w-md w-full transform scale-95 opacity-0 transition-all duration-200">
+                <div class="p-6">
+                    <div id="confirm-modal-icon" class="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <i id="confirm-modal-icon-inner" class="ph text-2xl"></i>
+                    </div>
+                    <h3 id="confirm-modal-title" class="text-lg font-semibold text-white text-center mb-2"></h3>
+                    <p id="confirm-modal-message" class="text-zinc-400 text-sm text-center mb-6"></p>
+                    <div class="flex gap-3">
+                        <button id="confirm-modal-cancel" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-zinc-300 text-sm font-medium transition-colors">
+                            Anuluj
+                        </button>
+                        <button id="confirm-modal-confirm" class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                            Potwierdź
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -396,7 +632,84 @@
         let tracking = null;
         let activities = [];
         let offers = [];
+        let meetings = [];
+        let notesHistory = [];
         let hasChanges = false;
+        let teamMembers = [];
+        let teamMembersMap = {};
+        let currentMember = null;
+        let isAdmin = false;
+        let confirmModalCallback = null;
+
+        // Modal functions
+        function showConfirmModal(options) {
+            const modal = document.getElementById('confirm-modal');
+            const content = document.getElementById('confirm-modal-content');
+            const iconContainer = document.getElementById('confirm-modal-icon');
+            const iconInner = document.getElementById('confirm-modal-icon-inner');
+            const title = document.getElementById('confirm-modal-title');
+            const message = document.getElementById('confirm-modal-message');
+            const confirmBtn = document.getElementById('confirm-modal-confirm');
+
+            // Set content
+            title.textContent = options.title || 'Potwierdź';
+            message.textContent = options.message || 'Czy na pewno chcesz kontynuować?';
+
+            // Set theme (won = green, lost = red, default = blue)
+            if (options.theme === 'won') {
+                iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-emerald-500/20';
+                iconInner.className = 'ph ph-trophy text-2xl text-emerald-400';
+                confirmBtn.className = 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors bg-emerald-600 hover:bg-emerald-500 text-white';
+            } else if (options.theme === 'lost') {
+                iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-red-500/20';
+                iconInner.className = 'ph ph-x-circle text-2xl text-red-400';
+                confirmBtn.className = 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors bg-red-600 hover:bg-red-500 text-white';
+            } else {
+                iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-blue-500/20';
+                iconInner.className = 'ph ph-arrows-left-right text-2xl text-blue-400';
+                confirmBtn.className = 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-500 text-white';
+            }
+
+            // Store callback
+            confirmModalCallback = options.onConfirm || null;
+
+            // Show modal
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            });
+        }
+
+        function hideConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            const content = document.getElementById('confirm-modal-content');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                confirmModalCallback = null;
+            }, 200);
+        }
+
+        // Modal event listeners
+        document.getElementById('confirm-modal-backdrop').addEventListener('click', hideConfirmModal);
+        document.getElementById('confirm-modal-cancel').addEventListener('click', hideConfirmModal);
+        document.getElementById('confirm-modal-confirm').addEventListener('click', () => {
+            if (confirmModalCallback) {
+                confirmModalCallback();
+            }
+            hideConfirmModal();
+        });
+
+        // Close modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('confirm-modal').classList.contains('hidden')) {
+                hideConfirmModal();
+            }
+        });
 
         function getBasePath() {
             if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -424,7 +737,58 @@
                 return null;
             }
             document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            await loadTeamMembers(session.user.id);
             return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            teamMembersMap = {};
+            teamMembers.forEach(member => {
+                teamMembersMap[member.id] = member;
+            });
+
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            // Show settings nav for admins
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            populateAssignedToSelect();
+        }
+
+        function populateAssignedToSelect() {
+            const select = document.getElementById('field-assigned-to');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">Nie przypisano</option>';
+            teamMembers.forEach(member => {
+                select.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+            });
+        }
+
+        function getMemberColor(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return 'bg-zinc-500';
+            const colorMap = {
+                'violet': 'bg-violet-500',
+                'blue': 'bg-blue-500',
+                'emerald': 'bg-emerald-500',
+                'amber': 'bg-amber-500',
+                'pink': 'bg-pink-500',
+                'cyan': 'bg-cyan-500'
+            };
+            return colorMap[member.color] || 'bg-zinc-500';
         }
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -536,6 +900,28 @@
             });
         }
 
+        // Auto-map survey direction to offer based on name patterns
+        function getOfferForSurveyDirection(direction) {
+            if (!direction || !offers.length) return null;
+
+            const directionKeywords = {
+                'sklep': ['sklep', 'ecommerce', 'e-commerce', 'shop', 'dropshipping'],
+                'aplikacja': ['aplikacja', 'app', 'saas', 'software'],
+                'produkt_cyfrowy': ['kurs', 'produkt cyfrowy', 'digital', 'ebook', 'szkolenie', 'mentor']
+            };
+
+            const keywords = directionKeywords[direction];
+            if (!keywords) return null;
+
+            // Find offer that matches any of the keywords
+            const matchedOffer = offers.find(offer => {
+                const nameLower = offer.name.toLowerCase();
+                return keywords.some(keyword => nameLower.includes(keyword));
+            });
+
+            return matchedOffer?.id || null;
+        }
+
         async function loadLead() {
             const id = getLeadId();
             if (!id) {
@@ -585,9 +971,9 @@
             badge.textContent = src.name;
             badge.className = `inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium ${src.color} ${src.bg} ${src.border}`;
 
-            // Status dropdown
+            // Update pipeline stepper
             const status = lead.status || 'new';
-            document.getElementById('status-select').value = status;
+            updatePipelineStepper(status);
 
             // Form fields
             document.getElementById('field-email').value = lead.email;
@@ -596,10 +982,29 @@
             document.getElementById('field-company').value = lead.company || '';
             document.getElementById('field-nip').value = lead.nip || '';
             document.getElementById('field-address').value = lead.address || '';
-            document.getElementById('field-offer').value = lead.offer_id || '';
+
+            // Auto-map survey direction to offer if no offer is set
+            if (lead.offer_id) {
+                document.getElementById('field-offer').value = lead.offer_id;
+            } else if (lead.direction) {
+                const autoOfferId = getOfferForSurveyDirection(lead.direction);
+                if (autoOfferId) {
+                    document.getElementById('field-offer').value = autoOfferId;
+                    // Show indicator that this was auto-selected
+                    const offerSelect = document.getElementById('field-offer');
+                    offerSelect.style.borderColor = 'rgba(34, 211, 238, 0.5)';
+                    offerSelect.title = 'Auto-wybrano na podstawie kierunku z ankiety';
+                }
+            }
+
             document.getElementById('field-value').value = lead.deal_value || '';
             document.getElementById('field-expected-close').value = lead.expected_close || '';
-            document.getElementById('field-notes').value = lead.notes || '';
+            document.getElementById('field-assigned-to').value = lead.assigned_to || '';
+            document.getElementById('field-notes').value = '';
+
+            // Load and render notes history
+            notesHistory = lead.notes_history || [];
+            renderNotesHistory();
 
             // Enable/disable call button based on phone
             document.getElementById('btn-call').disabled = !lead.phone;
@@ -707,48 +1112,279 @@
             // Sort by date desc
             const sorted = [...activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            timeline.innerHTML = sorted.map((activity, index) => `
-                <div class="flex gap-3 relative ${index < sorted.length - 1 ? 'pb-4' : ''}">
-                    ${index < sorted.length - 1 ? '<div class="timeline-line"></div>' : ''}
-                    <div class="w-6 h-6 rounded-full ${getActivityColor(activity.type)} flex items-center justify-center flex-shrink-0 z-10">
-                        <i class="ph ${getActivityIcon(activity.type)} text-white text-xs"></i>
+            timeline.innerHTML = sorted.map((activity, index) => {
+                const performerName = activity.performed_by_name || (activity.type === 'created' ? 'System' : null);
+                const performerInfo = performerName ? `<span class="text-zinc-400">przez</span> <span class="text-zinc-300">${performerName}</span>` : '';
+
+                return `
+                    <div class="flex gap-3 relative ${index < sorted.length - 1 ? 'pb-4' : ''}">
+                        ${index < sorted.length - 1 ? '<div class="timeline-line"></div>' : ''}
+                        <div class="w-6 h-6 rounded-full ${getActivityColor(activity.type)} flex items-center justify-center flex-shrink-0 z-10">
+                            <i class="ph ${getActivityIcon(activity.type)} text-white text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm text-white">${activity.content}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono mt-0.5 flex items-center gap-2">
+                                <span>${formatDateRelative(activity.created_at)}</span>
+                                ${performerInfo}
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-sm text-white">${activity.content}</div>
-                        <div class="text-[10px] text-zinc-500 font-mono mt-0.5">${formatDateRelative(activity.created_at)}</div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        // Status change
-        const STATUS_LABELS = {
-            new: 'Nowy',
-            contacted: 'Skontaktowany',
-            qualified: 'Zakwalifikowany',
-            proposal: 'Propozycja',
-            negotiation: 'Negocjacje',
+        function renderNotesHistory() {
+            const container = document.getElementById('notes-history');
+            const list = document.getElementById('notes-history-list');
+
+            if (!notesHistory || notesHistory.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+
+            // Sort by date desc (newest first)
+            const sorted = [...notesHistory].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            list.innerHTML = sorted.map(note => {
+                const statusLabel = getStatusLabel(note.lead_status);
+                const authorName = note.performed_by_name || 'Nieznany';
+                const dateStr = new Date(note.created_at).toLocaleString('pl-PL', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <div class="p-3 bg-zinc-950/50 rounded-lg border border-white/5">
+                        <div class="text-sm text-white whitespace-pre-wrap mb-2">${note.content}</div>
+                        <div class="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
+                            <span class="flex items-center gap-1">
+                                <i class="ph ph-clock"></i>
+                                ${dateStr}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="ph ph-user"></i>
+                                ${authorName}
+                            </span>
+                            <span class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800 border border-white/5">
+                                <i class="ph ph-tag"></i>
+                                ${statusLabel}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getStatusLabel(status) {
+            if (!status) return 'Brak';
+            if (status === 'won') return 'Wygrany';
+            if (status === 'lost') return 'Przegrany';
+            const stage = pipelineStages.find(s => s.id === status);
+            return stage?.name || status;
+        }
+
+        // Pipeline stages - loaded dynamically from settings
+        const DEFAULT_PIPELINE_STAGES = [
+            { id: 'new', name: 'Nowy', order: 0 },
+            { id: 'contacted', name: 'Skontaktowany', order: 1 },
+            { id: 'qualified', name: 'Zakwalifikowany', order: 2 },
+            { id: 'proposal', name: 'Propozycja', order: 3 },
+            { id: 'negotiation', name: 'Negocjacje', order: 4 }
+        ];
+
+        let pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+        let PIPELINE_STAGES = pipelineStages.map(s => s.id);
+        let STATUS_LABELS = {
             won: 'Wygrany',
             lost: 'Przegrany'
         };
 
-        document.getElementById('status-select').addEventListener('change', (e) => {
-            const newStatus = e.target.value;
+        async function loadPipelineSettings() {
+            const { data, error } = await supabaseClient
+                .from('settings')
+                .select('*')
+                .eq('key', 'pipeline_stages')
+                .single();
+
+            if (!error && data?.value) {
+                try {
+                    pipelineStages = JSON.parse(data.value);
+                } catch (e) {
+                    pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+                }
+            }
+
+            // Update PIPELINE_STAGES array
+            PIPELINE_STAGES = pipelineStages.map(s => s.id);
+
+            // Build STATUS_LABELS from dynamic stages
+            STATUS_LABELS = { won: 'Wygrany', lost: 'Przegrany' };
+            pipelineStages.forEach(stage => {
+                STATUS_LABELS[stage.id] = stage.name;
+            });
+
+            // Render the stepper
+            renderPipelineStepper();
+        }
+
+        // Stage colors and icons for pipeline mini
+        const STAGE_COLORS = [
+            { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', glow: 'rgba(52, 211, 153, 0.3)' },
+            { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', glow: 'rgba(59, 130, 246, 0.3)' },
+            { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30', glow: 'rgba(139, 92, 246, 0.3)' },
+            { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', glow: 'rgba(245, 158, 11, 0.3)' },
+            { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30', glow: 'rgba(249, 115, 22, 0.3)' },
+            { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30', glow: 'rgba(34, 211, 238, 0.3)' },
+            { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/30', glow: 'rgba(236, 72, 153, 0.3)' }
+        ];
+        const STAGE_ICONS = ['ph-user-plus', 'ph-chat-circle', 'ph-check-circle', 'ph-file-text', 'ph-handshake', 'ph-star', 'ph-flag'];
+
+        function renderPipelineStepper() {
+            const container = document.getElementById('pipeline-stages-container');
+            if (!container) return;
+
+            // Render regular stages
+            let html = pipelineStages.map((stage, index) => {
+                const colors = STAGE_COLORS[index % STAGE_COLORS.length];
+                const icon = STAGE_ICONS[index % STAGE_ICONS.length];
+                return `
+                    <button data-stage="${stage.id}" class="stage-pill ${colors.text}" style="--glow-color: ${colors.glow}">
+                        <div class="stage-icon ${colors.bg}">
+                            <i class="ph ${icon}"></i>
+                        </div>
+                        <span class="stage-name">${stage.name}</span>
+                        <i class="ph ph-check stage-check"></i>
+                    </button>
+                `;
+            }).join('');
+
+            // Add terminal stages
+            html += `
+                <button data-stage="won" class="stage-pill text-emerald-400" style="--glow-color: rgba(34, 197, 94, 0.4)">
+                    <div class="stage-icon bg-emerald-500/20">
+                        <i class="ph ph-trophy"></i>
+                    </div>
+                    <span class="stage-name">Wygrany</span>
+                </button>
+                <button data-stage="lost" class="stage-pill text-red-400" style="--glow-color: rgba(239, 68, 68, 0.4)">
+                    <div class="stage-icon bg-red-500/20">
+                        <i class="ph ph-x-circle"></i>
+                    </div>
+                    <span class="stage-name">Przegrany</span>
+                </button>
+            `;
+
+            container.innerHTML = html;
+
+            // Attach click handlers
+            container.querySelectorAll('.stage-pill').forEach(pill => {
+                pill.addEventListener('click', () => {
+                    const newStatus = pill.dataset.stage;
+                    const currentStatus = lead.status || 'new';
+                    const isCurrentlyTerminal = currentStatus === 'won' || currentStatus === 'lost';
+
+                    // Confirm when reopening from terminal state
+                    if (isCurrentlyTerminal && newStatus !== 'won' && newStatus !== 'lost') {
+                        const statusLabel = currentStatus === 'won' ? 'wygrany' : 'przegrany';
+                        showConfirmModal({
+                            title: 'Ponownie otwórz leada',
+                            message: `Lead jest oznaczony jako ${statusLabel}. Czy chcesz go ponownie otworzyć?`,
+                            theme: 'reopen',
+                            onConfirm: () => changeStatus(newStatus)
+                        });
+                        return;
+                    }
+
+                    // Confirm terminal states with custom modal
+                    if (newStatus === 'won') {
+                        showConfirmModal({
+                            title: 'Oznacz jako wygrany',
+                            message: 'Czy na pewno chcesz oznaczyć tego leada jako wygrany? To oznacza zamknięcie dealu.',
+                            theme: 'won',
+                            onConfirm: () => changeStatus(newStatus)
+                        });
+                        return;
+                    }
+
+                    if (newStatus === 'lost') {
+                        showConfirmModal({
+                            title: 'Oznacz jako przegrany',
+                            message: 'Czy na pewno chcesz oznaczyć tego leada jako przegrany? Będziesz mógł później zmienić status.',
+                            theme: 'lost',
+                            onConfirm: () => changeStatus(newStatus)
+                        });
+                        return;
+                    }
+
+                    changeStatus(newStatus);
+                });
+            });
+        }
+
+        function updatePipelineStepper(status) {
+            const stepper = document.getElementById('pipeline-stepper');
+            const pills = document.querySelectorAll('.stage-pill');
+            const currentIndex = PIPELINE_STAGES.indexOf(status);
+            const isTerminal = status === 'won' || status === 'lost';
+
+            // Reset all pills
+            pills.forEach(pill => {
+                pill.classList.remove('completed', 'current', 'terminal-won', 'terminal-lost');
+            });
+
+            // Handle terminal states
+            if (isTerminal) {
+                stepper.classList.add('terminal-state');
+                const terminalPill = document.querySelector(`[data-stage="${status}"]`);
+                if (terminalPill) {
+                    terminalPill.classList.add(status === 'won' ? 'terminal-won' : 'terminal-lost');
+                }
+                // Mark all regular stages as completed
+                pipelineStages.forEach((stage, index) => {
+                    const pill = document.querySelector(`[data-stage="${stage.id}"]`);
+                    if (pill) pill.classList.add('completed');
+                });
+            } else {
+                stepper.classList.remove('terminal-state');
+                // Update regular stages
+                pipelineStages.forEach((stage, index) => {
+                    const pill = document.querySelector(`[data-stage="${stage.id}"]`);
+                    if (!pill) return;
+
+                    if (index < currentIndex) {
+                        pill.classList.add('completed');
+                    } else if (index === currentIndex) {
+                        pill.classList.add('current');
+                    }
+                });
+            }
+        }
+
+        function changeStatus(newStatus) {
             const oldStatus = lead.status || 'new';
             if (newStatus !== oldStatus) {
                 lead.status = newStatus;
 
-                // Add activity
+                // Add activity with performer info
                 activities.push({
                     type: 'status_change',
                     content: `Status zmieniony: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[newStatus]}`,
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    performed_by: currentMember?.id || null,
+                    performed_by_name: currentMember?.name || null
                 });
 
+                updatePipelineStepper(newStatus);
                 renderActivities();
-                autoSave(); // Immediate save on status change
+                autoSave();
             }
-        });
+        }
 
         // Activity type buttons
         let selectedActivityType = 'note';
@@ -779,7 +1415,9 @@
             activities.push({
                 type: selectedActivityType,
                 content: `${typeLabels[selectedActivityType]}: ${content}`,
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                performed_by: currentMember?.id || null,
+                performed_by_name: currentMember?.name || null
             });
 
             document.getElementById('activity-content').value = '';
@@ -826,7 +1464,7 @@
                 offer_id: document.getElementById('field-offer').value || null,
                 deal_value: document.getElementById('field-value').value ? parseFloat(document.getElementById('field-value').value) : null,
                 expected_close: document.getElementById('field-expected-close').value || null,
-                notes: document.getElementById('field-notes').value || null,
+                assigned_to: document.getElementById('field-assigned-to').value || null,
                 activities: activities.filter(a => a.type !== 'created')
             };
 
@@ -850,10 +1488,15 @@
         }
 
         // Track changes on all editable fields
-        const editableFields = ['field-phone', 'field-name', 'field-company', 'field-nip', 'field-address', 'field-value', 'field-expected-close', 'field-notes'];
+        const editableFields = ['field-phone', 'field-name', 'field-company', 'field-nip', 'field-address', 'field-value', 'field-expected-close'];
+        const selectFields = ['field-assigned-to'];
 
         editableFields.forEach(id => {
             document.getElementById(id).addEventListener('input', triggerAutoSave);
+        });
+
+        selectFields.forEach(id => {
+            document.getElementById(id).addEventListener('change', triggerAutoSave);
         });
 
         // Offer change handler - always set price from offer
@@ -961,6 +1604,64 @@
             window.location.href = getLeadsPath();
         });
 
+        // Save note
+        document.getElementById('save-note-btn').addEventListener('click', async () => {
+            const noteContent = document.getElementById('field-notes').value.trim();
+            if (!noteContent) {
+                alert('Wpisz treść notatki');
+                return;
+            }
+
+            const btn = document.getElementById('save-note-btn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
+
+            // Create new note entry
+            const newNote = {
+                content: noteContent,
+                created_at: new Date().toISOString(),
+                performed_by: currentMember?.id || null,
+                performed_by_name: currentMember?.name || null,
+                lead_status: lead.status || 'new'
+            };
+
+            // Add to notes history
+            notesHistory.push(newNote);
+
+            // Save to database
+            const { error } = await supabaseClient
+                .from('leads')
+                .update({ notes_history: notesHistory })
+                .eq('id', lead.id);
+
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+
+            if (error) {
+                console.error('Error saving note:', error);
+                alert('Błąd zapisywania notatki');
+                // Revert if error
+                notesHistory.pop();
+                return;
+            }
+
+            // Clear textarea and re-render history
+            document.getElementById('field-notes').value = '';
+            renderNotesHistory();
+
+            // Also add to activity timeline
+            activities.push({
+                type: 'note',
+                content: `Dodano notatkę: "${noteContent.substring(0, 50)}${noteContent.length > 50 ? '...' : ''}"`,
+                created_at: new Date().toISOString(),
+                performed_by: currentMember?.id || null,
+                performed_by_name: currentMember?.name || null
+            });
+            renderActivities();
+            autoSave(); // Save activities
+        });
+
         // Warn before leaving with unsaved changes
         window.addEventListener('beforeunload', (e) => {
             if (hasChanges) {
@@ -977,9 +1678,214 @@
             });
         }
 
+        // =============================================
+        // MEETINGS / CALENDAR
+        // =============================================
+        async function loadMeetings() {
+            const leadId = getLeadId();
+            if (!leadId) return;
+
+            const { data, error } = await supabaseClient
+                .from('calendar_events')
+                .select('*')
+                .eq('lead_id', leadId)
+                .order('start_time', { ascending: true });
+
+            if (error) {
+                console.error('Error loading meetings:', error);
+                return;
+            }
+
+            meetings = data || [];
+            renderMeetings();
+        }
+
+        function renderMeetings() {
+            const container = document.getElementById('meetings-list');
+            const empty = document.getElementById('meetings-empty');
+            const countEl = document.getElementById('meetings-count');
+            const now = new Date();
+
+            // Filter to upcoming and recent meetings
+            const relevantMeetings = meetings.filter(m => {
+                const endTime = new Date(m.end_time);
+                // Show meetings that end after 24 hours ago
+                return endTime > new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            });
+
+            countEl.textContent = relevantMeetings.length;
+
+            if (relevantMeetings.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            container.innerHTML = relevantMeetings.map(meeting => {
+                const startTime = new Date(meeting.start_time);
+                const endTime = new Date(meeting.end_time);
+                const isPast = endTime < now;
+                const isToday = startTime.toDateString() === now.toDateString();
+                const isTomorrow = startTime.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+
+                let dateLabel;
+                if (isToday) {
+                    dateLabel = 'Dziś';
+                } else if (isTomorrow) {
+                    dateLabel = 'Jutro';
+                } else {
+                    dateLabel = startTime.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                }
+
+                const timeStr = startTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-lg border ${isPast ? 'bg-zinc-900/30 border-white/5 opacity-60' : 'bg-pink-500/5 border-pink-500/20'} group">
+                        <div class="w-10 h-10 rounded-lg ${isPast ? 'bg-zinc-800' : 'bg-pink-500/20'} flex flex-col items-center justify-center flex-shrink-0">
+                            <span class="text-[10px] font-mono ${isPast ? 'text-zinc-500' : 'text-pink-400'}">${dateLabel}</span>
+                            <span class="text-xs font-semibold ${isPast ? 'text-zinc-400' : 'text-white'}">${timeStr}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-white text-sm truncate ${isPast ? 'line-through opacity-70' : ''}">${meeting.title}</div>
+                            ${meeting.description ? `<div class="text-zinc-500 text-xs truncate">${meeting.description}</div>` : ''}
+                        </div>
+                        <button onclick="deleteMeeting('${meeting.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all" title="Usuń">
+                            <i class="ph ph-trash text-sm"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Meeting modal functions
+        function openMeetingModal() {
+            const modal = document.getElementById('meeting-modal');
+            const content = document.getElementById('meeting-modal-content');
+
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('meeting-date').value = today;
+            document.getElementById('meeting-title').value = '';
+            document.getElementById('meeting-description').value = '';
+            document.getElementById('meeting-time').value = '10:00';
+            document.getElementById('meeting-duration').value = '60';
+
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            });
+
+            document.getElementById('meeting-title').focus();
+        }
+
+        function closeMeetingModal() {
+            const modal = document.getElementById('meeting-modal');
+            const content = document.getElementById('meeting-modal-content');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        // Meeting modal event listeners
+        document.getElementById('meeting-modal-backdrop').addEventListener('click', closeMeetingModal);
+        document.getElementById('close-meeting-modal').addEventListener('click', closeMeetingModal);
+        document.getElementById('cancel-meeting').addEventListener('click', closeMeetingModal);
+        document.getElementById('add-meeting-btn').addEventListener('click', openMeetingModal);
+
+        // Save meeting
+        document.getElementById('meeting-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('meeting-title').value.trim();
+            const date = document.getElementById('meeting-date').value;
+            const time = document.getElementById('meeting-time').value;
+            const duration = parseInt(document.getElementById('meeting-duration').value);
+            const description = document.getElementById('meeting-description').value.trim();
+
+            if (!title || !date || !time) return;
+
+            const startTime = new Date(`${date}T${time}`);
+            const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+
+            const btn = document.getElementById('save-meeting');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
+
+            const { error } = await supabaseClient
+                .from('calendar_events')
+                .insert({
+                    title: title,
+                    description: description || null,
+                    start_time: startTime.toISOString(),
+                    end_time: endTime.toISOString(),
+                    lead_id: lead.id,
+                    assigned_to: currentMember?.id || null
+                });
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-calendar-plus"></i> Dodaj spotkanie';
+
+            if (error) {
+                console.error('Error creating meeting:', error);
+                alert('Błąd tworzenia spotkania');
+                return;
+            }
+
+            closeMeetingModal();
+            await loadMeetings();
+
+            // Add activity about the meeting
+            activities.push({
+                type: 'meeting',
+                content: `Zaplanowano spotkanie: ${title} (${startTime.toLocaleDateString('pl-PL')} ${time})`,
+                created_at: new Date().toISOString(),
+                performed_by: currentMember?.id || null,
+                performed_by_name: currentMember?.name || null
+            });
+            renderActivities();
+            autoSave();
+        });
+
+        async function deleteMeeting(meetingId) {
+            if (!confirm('Czy na pewno chcesz usunąć to spotkanie?')) return;
+
+            const { error } = await supabaseClient
+                .from('calendar_events')
+                .delete()
+                .eq('id', meetingId);
+
+            if (error) {
+                console.error('Error deleting meeting:', error);
+                alert('Błąd usuwania spotkania');
+                return;
+            }
+
+            await loadMeetings();
+        }
+
+        window.deleteMeeting = deleteMeeting;
+
+        // Escape key for meeting modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('meeting-modal').classList.contains('hidden')) {
+                closeMeetingModal();
+            }
+        });
+
         async function init() {
             const session = await checkAuth();
-            if (session) await loadLead();
+            if (session) {
+                await loadPipelineSettings();
+                await loadLead();
+                await loadMeetings();
+            }
         }
         init();
     </script>

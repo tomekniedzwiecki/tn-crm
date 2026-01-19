@@ -74,12 +74,17 @@
                 <span class="font-medium">Pipeline</span>
             </a>
 
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
             <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
                 <i class="ph ph-package text-xl"></i>
                 <span class="font-medium">Oferty</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all">
+            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
@@ -233,6 +238,10 @@
             return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
         }
 
+        let teamMembers = [];
+        let currentMember = null;
+        let isAdmin = false;
+
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
@@ -240,7 +249,27 @@
                 return null;
             }
             document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            await loadTeamMembers(session.user.id);
             return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            // Show settings nav for admins
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
         }
 
         document.getElementById('logout-btn').addEventListener('click', async () => {

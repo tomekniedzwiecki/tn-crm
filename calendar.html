@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Kalendarz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .calendar-day {
+            min-height: 100px;
+            transition: all 0.15s;
+        }
+        .calendar-day:hover {
+            background: rgba(255,255,255,0.03);
+        }
+        .calendar-day.today {
+            background: rgba(255,255,255,0.05);
+        }
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .event-item {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: rgba(236, 72, 153, 0.2);
+            border-left: 2px solid #ec4899;
+            color: #f9a8d4;
+        }
+        .event-item:hover {
+            filter: brightness(1.1);
+        }
+
+        .view-btn {
+            transition: all 0.15s;
+        }
+        .view-btn.active {
+            background: white;
+            color: black;
+        }
+
+        .week-day-header {
+            min-width: 0;
+        }
+
+        .week-hour-row {
+            height: 60px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .day-hour-row {
+            height: 80px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .lead-search-dropdown {
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .lead-search-item {
+            transition: all 0.1s;
+        }
+        .lead-search-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .lead-search-item.selected {
+            background: rgba(236, 72, 153, 0.2);
+            border-color: rgba(236, 72, 153, 0.3);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
+            <div class="w-7 h-7 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <i class="ph-bold ph-lightning text-sm"></i>
+            </div>
+            <span class="font-medium text-base text-zinc-200">TN CRM</span>
+            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
+        </div>
+
+        <nav class="flex-1 px-4 py-6">
+            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
+
+            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-house text-xl"></i>
+                <span class="font-medium">Overview</span>
+            </a>
+
+            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-users text-xl"></i>
+                <span class="font-medium">Leady</span>
+            </a>
+
+            <a href="/pipeline" data-page="pipeline" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-kanban text-xl"></i>
+                <span class="font-medium">Pipeline</span>
+            </a>
+
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
+            <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-package text-xl"></i>
+                <span class="font-medium">Oferty</span>
+            </a>
+
+            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-gear text-xl"></i>
+                <span class="font-medium">Ustawienia</span>
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-sm font-medium">TN</div>
+                <div class="flex-1 min-w-0">
+                    <div id="user-email" class="text-sm font-medium text-zinc-200 truncate"></div>
+                    <div class="text-xs text-zinc-500 truncate">Free Plan</div>
+                </div>
+                <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
+                    <i class="ph ph-sign-out text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <span class="text-zinc-400">tn-crm</span>
+                <span class="text-zinc-700">/</span>
+                <span class="text-white font-medium">calendar</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="add-event-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
+                    <i class="ph ph-plus"></i>
+                    Dodaj spotkanie
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+                <!-- Calendar Navigation -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <button id="prev-btn" class="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                            <i class="ph ph-caret-left text-xl"></i>
+                        </button>
+                        <h1 id="current-period" class="text-2xl font-semibold text-white tracking-tight min-w-[250px] text-center">Styczeń 2026</h1>
+                        <button id="next-btn" class="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                            <i class="ph ph-caret-right text-xl"></i>
+                        </button>
+                        <button id="today-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-2">
+                            Dzisiaj
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-1 bg-zinc-900 rounded-lg p-1 border border-white/5">
+                        <button data-view="month" class="view-btn px-3 py-1.5 rounded text-xs font-medium text-zinc-400 hover:text-white active">Miesiąc</button>
+                        <button data-view="week" class="view-btn px-3 py-1.5 rounded text-xs font-medium text-zinc-400 hover:text-white">Tydzień</button>
+                        <button data-view="day" class="view-btn px-3 py-1.5 rounded text-xs font-medium text-zinc-400 hover:text-white">Dzień</button>
+                    </div>
+                </div>
+
+                <!-- Calendar Container -->
+                <div id="calendar-container" class="border border-white/5 rounded-lg overflow-hidden bg-zinc-900/40">
+                    <!-- Month View -->
+                    <div id="month-view">
+                        <div class="grid grid-cols-7 bg-zinc-900/80 border-b border-white/5">
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider">Pon</div>
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider">Wt</div>
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider">Śr</div>
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider">Czw</div>
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider">Pt</div>
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider border-l border-white/5">Sob</div>
+                            <div class="px-4 py-3 text-center text-zinc-500 text-xs font-medium uppercase tracking-wider border-l border-white/5">Ndz</div>
+                        </div>
+                        <div id="calendar-grid" class="grid grid-cols-7"></div>
+                    </div>
+
+                    <!-- Week View -->
+                    <div id="week-view" class="hidden">
+                        <div id="week-header" class="grid grid-cols-8 bg-zinc-900/80 border-b border-white/5">
+                            <div class="px-2 py-3 text-center text-zinc-600 text-xs font-medium"></div>
+                        </div>
+                        <div id="week-grid" class="relative"></div>
+                    </div>
+
+                    <!-- Day View -->
+                    <div id="day-view" class="hidden">
+                        <div id="day-header" class="bg-zinc-900/80 border-b border-white/5 px-4 py-3">
+                            <div id="day-title" class="text-white font-medium"></div>
+                        </div>
+                        <div id="day-grid" class="relative"></div>
+                    </div>
+                </div>
+
+                <!-- Upcoming events -->
+                <div class="mt-8">
+                    <h2 class="text-lg font-semibold text-white mb-4">Nadchodzące spotkania</h2>
+                    <div id="upcoming-events" class="space-y-2"></div>
+                    <div id="no-events" class="hidden text-center py-8 text-zinc-500">
+                        <i class="ph ph-calendar-blank text-3xl mb-2"></i>
+                        <p class="text-sm">Brak nadchodzących spotkań</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Event Modal -->
+    <div id="event-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-pink-500/10 to-purple-500/10 px-6 py-5 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center">
+                        <i class="ph ph-calendar-plus text-pink-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-semibold text-white">Nowe spotkanie</h2>
+                        <p class="text-xs text-zinc-500">Zaplanuj spotkanie z leadem</p>
+                    </div>
+                </div>
+                <button id="close-event-modal" class="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors p-1">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <form id="event-form" class="p-6 space-y-5">
+                <!-- Lead Selection (Required) -->
+                <div>
+                    <label class="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                        <i class="ph ph-user text-pink-400"></i>
+                        Lead <span class="text-pink-400">*</span>
+                    </label>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            id="lead-search"
+                            name="cal_lead_q8v3"
+                            class="w-full text-sm text-white bg-zinc-900/80 border border-zinc-800 px-4 py-3 rounded-lg outline-none focus:border-pink-500/50 focus:bg-zinc-900 transition-all pl-10"
+                            placeholder="Szukaj po nazwie, email lub telefonie..."
+                            autocomplete="new-password"
+                        >
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                        <input type="hidden" id="event-lead" required>
+                        <div id="lead-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-10 lead-search-dropdown">
+                            <!-- Search results will be rendered here -->
+                        </div>
+                    </div>
+                    <div id="selected-lead-info" class="hidden mt-2 p-3 bg-pink-500/10 border border-pink-500/20 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center">
+                                    <i class="ph ph-user text-pink-400"></i>
+                                </div>
+                                <div>
+                                    <div id="selected-lead-name" class="text-white text-sm font-medium"></div>
+                                    <div id="selected-lead-details" class="text-zinc-500 text-xs"></div>
+                                </div>
+                            </div>
+                            <button type="button" id="clear-lead-btn" class="text-zinc-500 hover:text-white transition-colors">
+                                <i class="ph ph-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meeting Title -->
+                <div>
+                    <label class="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                        <i class="ph ph-text-t text-pink-400"></i>
+                        Tytuł spotkania <span class="text-pink-400">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="event-title"
+                        name="cal_title_m4k9"
+                        required
+                        autocomplete="new-password"
+                        class="w-full text-sm text-white bg-zinc-900/80 border border-zinc-800 px-4 py-3 rounded-lg outline-none focus:border-pink-500/50 focus:bg-zinc-900 transition-all"
+                        placeholder="np. Prezentacja oferty, Rozmowa wstępna..."
+                    >
+                </div>
+
+                <!-- Date and Time -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                            <i class="ph ph-calendar text-pink-400"></i>
+                            Data <span class="text-pink-400">*</span>
+                        </label>
+                        <input
+                            type="date"
+                            id="event-date"
+                            required
+                            class="w-full text-sm text-white bg-zinc-900/80 border border-zinc-800 px-4 py-3 rounded-lg outline-none focus:border-pink-500/50 focus:bg-zinc-900 transition-all"
+                        >
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                            <i class="ph ph-clock text-pink-400"></i>
+                            Godzina <span class="text-pink-400">*</span>
+                        </label>
+                        <input
+                            type="time"
+                            id="event-time"
+                            required
+                            class="w-full text-sm text-white bg-zinc-900/80 border border-zinc-800 px-4 py-3 rounded-lg outline-none focus:border-pink-500/50 focus:bg-zinc-900 transition-all"
+                        >
+                    </div>
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label class="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                        <i class="ph ph-timer text-pink-400"></i>
+                        Czas trwania
+                    </label>
+                    <div class="grid grid-cols-6 gap-2">
+                        <button type="button" data-duration="15" class="duration-btn py-2 px-3 text-xs rounded-lg border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white transition-all">15 min</button>
+                        <button type="button" data-duration="30" class="duration-btn py-2 px-3 text-xs rounded-lg border border-pink-500/50 bg-pink-500/10 text-pink-400 transition-all">30 min</button>
+                        <button type="button" data-duration="45" class="duration-btn py-2 px-3 text-xs rounded-lg border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white transition-all">45 min</button>
+                        <button type="button" data-duration="60" class="duration-btn py-2 px-3 text-xs rounded-lg border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white transition-all">1 godz</button>
+                        <button type="button" data-duration="90" class="duration-btn py-2 px-3 text-xs rounded-lg border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white transition-all">1.5 godz</button>
+                        <button type="button" data-duration="120" class="duration-btn py-2 px-3 text-xs rounded-lg border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white transition-all">2 godz</button>
+                    </div>
+                    <input type="hidden" id="event-duration" value="30">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                        <i class="ph ph-note text-pink-400"></i>
+                        Notatki (opcjonalnie)
+                    </label>
+                    <textarea
+                        id="event-description"
+                        name="cal_notes_w5p8"
+                        rows="3"
+                        autocomplete="new-password"
+                        class="w-full text-sm text-white bg-zinc-900/80 border border-zinc-800 px-4 py-3 rounded-lg outline-none focus:border-pink-500/50 focus:bg-zinc-900 transition-all resize-none"
+                        placeholder="Dodatkowe informacje o spotkaniu..."
+                    ></textarea>
+                </div>
+            </form>
+
+            <!-- Modal Footer -->
+            <div class="flex gap-3 px-6 py-4 border-t border-white/5 bg-zinc-900/30">
+                <button id="cancel-event-modal" class="flex-1 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-all">
+                    Anuluj
+                </button>
+                <button type="submit" form="event-form" class="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-400 hover:to-pink-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20">
+                    <i class="ph ph-calendar-plus"></i>
+                    Dodaj spotkanie
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div id="event-details-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-pink-500/10 to-purple-500/10 px-6 py-5 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center">
+                        <i class="ph ph-calendar text-pink-400 text-xl"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 id="event-details-title" class="text-base font-semibold text-white truncate">Szczegóły spotkania</h2>
+                        <p class="text-xs text-zinc-500">Informacje o wydarzeniu</p>
+                    </div>
+                </div>
+                <button id="close-event-details" class="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors p-1">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <div id="event-details-content" class="p-6 space-y-4">
+                <!-- Event details will be rendered here -->
+            </div>
+
+            <div class="flex gap-3 px-6 py-4 border-t border-white/5 bg-zinc-900/30">
+                <button id="delete-event" class="text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/50 hover:bg-red-500/10 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+                    <i class="ph ph-trash"></i>
+                    Usuń
+                </button>
+                <div class="flex-1"></div>
+                <button id="close-details-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-all">
+                    Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===========================================
+        // CONFIGURATION
+        // ===========================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // State
+        let currentDate = new Date();
+        let currentView = 'month'; // 'month', 'week', 'day'
+        let events = [];
+        let leads = [];
+        let selectedEventId = null;
+        let selectedDuration = 30;
+        let teamMembers = [];
+        let teamMembersMap = {};
+        let currentMember = null;
+        let isAdmin = false;
+
+        // ===========================================
+        // AUTH & INIT
+        // ===========================================
+        function getBasePath() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const path = location.pathname;
+                const match = path.match(/^(\/[^\/]+)\//);
+                return match ? match[1] : '';
+            }
+            return '';
+        }
+
+        function getLoginPath() {
+            const base = getBasePath();
+            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = getLoginPath();
+                return null;
+            }
+            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            await loadTeamMembers(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            teamMembersMap = {};
+            teamMembers.forEach(member => {
+                teamMembersMap[member.id] = member;
+            });
+
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+            window.location.href = getLoginPath();
+        });
+
+        // ===========================================
+        // LEAD SEARCH
+        // ===========================================
+        const leadSearchInput = document.getElementById('lead-search');
+        const leadSearchDropdown = document.getElementById('lead-search-dropdown');
+        const eventLeadInput = document.getElementById('event-lead');
+        const selectedLeadInfo = document.getElementById('selected-lead-info');
+
+        leadSearchInput.addEventListener('input', debounce(function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            if (query.length < 2) {
+                leadSearchDropdown.classList.add('hidden');
+                return;
+            }
+
+            const results = leads.filter(lead => {
+                const name = (lead.name || '').toLowerCase();
+                const email = (lead.email || '').toLowerCase();
+                const phone = (lead.phone || '').toLowerCase();
+                const company = (lead.company || '').toLowerCase();
+                return name.includes(query) || email.includes(query) || phone.includes(query) || company.includes(query);
+            }).slice(0, 8);
+
+            if (results.length === 0) {
+                leadSearchDropdown.innerHTML = `
+                    <div class="p-4 text-center text-zinc-500 text-sm">
+                        <i class="ph ph-magnifying-glass text-xl mb-1"></i>
+                        <p>Nie znaleziono leadów</p>
+                    </div>
+                `;
+            } else {
+                leadSearchDropdown.innerHTML = results.map(lead => `
+                    <div class="lead-search-item p-3 cursor-pointer border-b border-white/5 last:border-0" data-id="${lead.id}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-medium text-zinc-400">
+                                ${(lead.name || lead.email || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-white text-sm font-medium truncate">${lead.name || 'Brak nazwy'}</div>
+                                <div class="text-zinc-500 text-xs truncate">
+                                    ${lead.email || ''}${lead.email && lead.phone ? ' • ' : ''}${lead.phone || ''}
+                                </div>
+                            </div>
+                            ${lead.company ? `<span class="text-[10px] text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">${lead.company}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            leadSearchDropdown.classList.remove('hidden');
+        }, 200));
+
+        leadSearchInput.addEventListener('focus', function() {
+            if (this.value.length >= 2) {
+                leadSearchDropdown.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#lead-search') && !e.target.closest('#lead-search-dropdown')) {
+                leadSearchDropdown.classList.add('hidden');
+            }
+        });
+
+        leadSearchDropdown.addEventListener('click', function(e) {
+            const item = e.target.closest('.lead-search-item');
+            if (item) {
+                const leadId = item.dataset.id;
+                selectLead(leadId);
+            }
+        });
+
+        function selectLead(leadId) {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+
+            eventLeadInput.value = leadId;
+            leadSearchInput.value = '';
+            leadSearchDropdown.classList.add('hidden');
+
+            document.getElementById('selected-lead-name').textContent = lead.name || lead.email || 'Brak nazwy';
+            document.getElementById('selected-lead-details').textContent = [lead.email, lead.phone, lead.company].filter(Boolean).join(' • ');
+            selectedLeadInfo.classList.remove('hidden');
+            leadSearchInput.closest('div').querySelector('input[type="text"]').classList.add('hidden');
+        }
+
+        document.getElementById('clear-lead-btn').addEventListener('click', function() {
+            eventLeadInput.value = '';
+            selectedLeadInfo.classList.add('hidden');
+            leadSearchInput.classList.remove('hidden');
+            leadSearchInput.value = '';
+            leadSearchInput.focus();
+        });
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func.apply(this, args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ===========================================
+        // DURATION BUTTONS
+        // ===========================================
+        document.querySelectorAll('.duration-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.duration-btn').forEach(b => {
+                    b.classList.remove('border-pink-500/50', 'bg-pink-500/10', 'text-pink-400');
+                    b.classList.add('border-zinc-800', 'text-zinc-400');
+                });
+                this.classList.remove('border-zinc-800', 'text-zinc-400');
+                this.classList.add('border-pink-500/50', 'bg-pink-500/10', 'text-pink-400');
+                document.getElementById('event-duration').value = this.dataset.duration;
+                selectedDuration = parseInt(this.dataset.duration);
+            });
+        });
+
+        // ===========================================
+        // LOCAL EVENTS (SUPABASE)
+        // ===========================================
+        async function loadEvents() {
+            let startDate, endDate;
+
+            if (currentView === 'month') {
+                startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+            } else if (currentView === 'week') {
+                const weekStart = getWeekStart(currentDate);
+                startDate = weekStart;
+                endDate = new Date(weekStart);
+                endDate.setDate(endDate.getDate() + 6);
+                endDate.setHours(23, 59, 59);
+            } else {
+                startDate = new Date(currentDate);
+                startDate.setHours(0, 0, 0, 0);
+                endDate = new Date(currentDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
+
+            const { data, error } = await supabaseClient
+                .from('calendar_events')
+                .select('*, leads(id, name, email, company)')
+                .gte('start_time', startDate.toISOString())
+                .lte('start_time', endDate.toISOString())
+                .order('start_time');
+
+            if (error) {
+                console.error('Error loading events:', error);
+                return;
+            }
+
+            events = data.map(e => ({
+                id: e.id,
+                title: e.title,
+                description: e.description,
+                start: e.start_time,
+                end: e.end_time,
+                lead_id: e.lead_id,
+                lead: e.leads
+            }));
+
+            renderCurrentView();
+            renderUpcomingEvents();
+        }
+
+        async function loadLeads() {
+            const { data, error } = await supabaseClient
+                .from('leads')
+                .select('id, email, name, company, phone')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading leads:', error);
+                return;
+            }
+
+            leads = data;
+        }
+
+        // ===========================================
+        // VIEW MANAGEMENT
+        // ===========================================
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            d.setDate(diff);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function renderCurrentView() {
+            document.getElementById('month-view').classList.toggle('hidden', currentView !== 'month');
+            document.getElementById('week-view').classList.toggle('hidden', currentView !== 'week');
+            document.getElementById('day-view').classList.toggle('hidden', currentView !== 'day');
+
+            if (currentView === 'month') {
+                renderMonthView();
+            } else if (currentView === 'week') {
+                renderWeekView();
+            } else {
+                renderDayView();
+            }
+
+            updatePeriodLabel();
+        }
+
+        function updatePeriodLabel() {
+            const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                               'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+            const dayNames = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+
+            let label = '';
+            if (currentView === 'month') {
+                label = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            } else if (currentView === 'week') {
+                const weekStart = getWeekStart(currentDate);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+
+                if (weekStart.getMonth() === weekEnd.getMonth()) {
+                    label = `${weekStart.getDate()} - ${weekEnd.getDate()} ${monthNames[weekStart.getMonth()]} ${weekStart.getFullYear()}`;
+                } else {
+                    label = `${weekStart.getDate()} ${monthNames[weekStart.getMonth()].slice(0, 3)} - ${weekEnd.getDate()} ${monthNames[weekEnd.getMonth()].slice(0, 3)} ${weekEnd.getFullYear()}`;
+                }
+            } else {
+                label = `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            }
+
+            document.getElementById('current-period').textContent = label;
+        }
+
+        // ===========================================
+        // MONTH VIEW
+        // ===========================================
+        function renderMonthView() {
+            const grid = document.getElementById('calendar-grid');
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            let firstDay = new Date(year, month, 1).getDay();
+            firstDay = firstDay === 0 ? 6 : firstDay - 1;
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            let html = '';
+            let dayCount = 1;
+            let nextMonthDay = 1;
+
+            for (let row = 0; row < 6; row++) {
+                for (let col = 0; col < 7; col++) {
+                    const cellIndex = row * 7 + col;
+
+                    let dayNum, isOtherMonth = false, cellDate;
+
+                    if (cellIndex < firstDay) {
+                        dayNum = daysInPrevMonth - firstDay + cellIndex + 1;
+                        isOtherMonth = true;
+                        cellDate = new Date(year, month - 1, dayNum);
+                    } else if (dayCount > daysInMonth) {
+                        dayNum = nextMonthDay++;
+                        isOtherMonth = true;
+                        cellDate = new Date(year, month + 1, dayNum);
+                    } else {
+                        dayNum = dayCount++;
+                        cellDate = new Date(year, month, dayNum);
+                    }
+
+                    const isToday = isCurrentMonth && !isOtherMonth && dayNum === today.getDate();
+                    const isWeekend = col >= 5;
+                    const dateStr = cellDate.toISOString().split('T')[0];
+
+                    const dayEvents = events.filter(e => {
+                        const eventDate = new Date(e.start).toISOString().split('T')[0];
+                        return eventDate === dateStr;
+                    });
+
+                    html += `
+                        <div class="calendar-day p-2 border-b border-r border-white/5 ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isWeekend ? 'bg-zinc-900/30' : ''}" data-date="${dateStr}">
+                            <div class="text-xs ${isToday ? 'bg-white text-black w-6 h-6 rounded-full flex items-center justify-center font-semibold' : 'text-zinc-400 mb-1'}">${dayNum}</div>
+                            <div class="space-y-0.5 mt-1">
+                                ${dayEvents.slice(0, 3).map(e => `
+                                    <div class="event-item" onclick="showEventDetails('${e.id}')" title="${e.title}">
+                                        ${formatEventTime(e.start)} ${e.title}
+                                    </div>
+                                `).join('')}
+                                ${dayEvents.length > 3 ? `<div class="text-[10px] text-zinc-500 pl-1">+${dayEvents.length - 3} więcej</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (dayCount > daysInMonth && (row + 1) * 7 >= firstDay + daysInMonth) break;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        // ===========================================
+        // WEEK VIEW
+        // ===========================================
+        function renderWeekView() {
+            const weekStart = getWeekStart(currentDate);
+            const dayNames = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Ndz'];
+            const today = new Date();
+
+            // Render header
+            let headerHtml = '<div class="px-2 py-3 text-center text-zinc-600 text-xs font-medium border-r border-white/5"></div>';
+            for (let i = 0; i < 7; i++) {
+                const dayDate = new Date(weekStart);
+                dayDate.setDate(dayDate.getDate() + i);
+                const isToday = dayDate.toDateString() === today.toDateString();
+                const isWeekend = i >= 5;
+
+                headerHtml += `
+                    <div class="week-day-header px-2 py-3 text-center border-r border-white/5 last:border-r-0 ${isWeekend ? 'bg-zinc-900/30' : ''} ${isToday ? 'bg-white/5' : ''}">
+                        <div class="text-zinc-500 text-[10px] font-medium uppercase tracking-wider">${dayNames[i]}</div>
+                        <div class="text-lg font-semibold ${isToday ? 'text-white' : 'text-zinc-400'}">${dayDate.getDate()}</div>
+                    </div>
+                `;
+            }
+            document.getElementById('week-header').innerHTML = headerHtml;
+            document.getElementById('week-header').className = 'grid grid-cols-8 bg-zinc-900/80 border-b border-white/5';
+
+            // Render grid
+            let gridHtml = '';
+            for (let hour = 7; hour < 21; hour++) {
+                gridHtml += `<div class="grid grid-cols-8 week-hour-row">`;
+                gridHtml += `<div class="px-2 py-1 text-right text-zinc-600 text-[10px] font-mono border-r border-white/5">${hour.toString().padStart(2, '0')}:00</div>`;
+
+                for (let day = 0; day < 7; day++) {
+                    const dayDate = new Date(weekStart);
+                    dayDate.setDate(dayDate.getDate() + day);
+                    const isWeekend = day >= 5;
+
+                    const dayEvents = events.filter(e => {
+                        const eventDate = new Date(e.start);
+                        return eventDate.toDateString() === dayDate.toDateString() && eventDate.getHours() === hour;
+                    });
+
+                    gridHtml += `
+                        <div class="border-r border-white/5 last:border-r-0 p-1 ${isWeekend ? 'bg-zinc-900/30' : ''} relative">
+                            ${dayEvents.map(e => `
+                                <div class="event-item text-[10px]" onclick="showEventDetails('${e.id}')" title="${e.title}">
+                                    ${e.title}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                gridHtml += `</div>`;
+            }
+
+            document.getElementById('week-grid').innerHTML = gridHtml;
+        }
+
+        // ===========================================
+        // DAY VIEW
+        // ===========================================
+        function renderDayView() {
+            const dayNames = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+            const monthNames = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
+                               'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+
+            document.getElementById('day-title').textContent = `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+            let gridHtml = '';
+            for (let hour = 7; hour < 21; hour++) {
+                const hourEvents = events.filter(e => {
+                    const eventDate = new Date(e.start);
+                    return eventDate.toDateString() === currentDate.toDateString() && eventDate.getHours() === hour;
+                });
+
+                gridHtml += `
+                    <div class="day-hour-row grid grid-cols-12 gap-4">
+                        <div class="col-span-1 px-4 py-2 text-right text-zinc-500 text-xs font-mono">${hour.toString().padStart(2, '0')}:00</div>
+                        <div class="col-span-11 p-2 border-l border-white/5">
+                            ${hourEvents.map(e => `
+                                <div class="bg-pink-500/20 border border-pink-500/30 rounded-lg p-3 mb-2 cursor-pointer hover:bg-pink-500/30 transition-colors" onclick="showEventDetails('${e.id}')">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-white font-medium">${e.title}</span>
+                                        <span class="text-pink-400 text-xs font-mono">${formatEventTime(e.start)}</span>
+                                    </div>
+                                    ${e.lead ? `
+                                        <div class="flex items-center gap-2 text-zinc-400 text-xs">
+                                            <i class="ph ph-user"></i>
+                                            ${e.lead.name || e.lead.email}
+                                            ${e.lead.company ? `<span class="text-zinc-600">•</span> ${e.lead.company}` : ''}
+                                        </div>
+                                    ` : ''}
+                                    ${e.description ? `<div class="text-zinc-500 text-xs mt-2">${e.description}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('day-grid').innerHTML = gridHtml;
+        }
+
+        function formatEventTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderUpcomingEvents() {
+            const container = document.getElementById('upcoming-events');
+            const noEvents = document.getElementById('no-events');
+            const now = new Date();
+
+            const upcomingEvents = events
+                .filter(e => new Date(e.start) >= now)
+                .sort((a, b) => new Date(a.start) - new Date(b.start))
+                .slice(0, 5);
+
+            if (upcomingEvents.length === 0) {
+                container.innerHTML = '';
+                noEvents.classList.remove('hidden');
+                return;
+            }
+
+            noEvents.classList.add('hidden');
+            container.innerHTML = upcomingEvents.map(e => {
+                const date = new Date(e.start);
+
+                return `
+                    <div class="flex items-center gap-4 p-4 border border-pink-500/20 bg-pink-500/5 rounded-lg cursor-pointer hover:bg-pink-500/10 transition-colors" onclick="showEventDetails('${e.id}')">
+                        <div class="w-12 h-12 rounded-lg bg-pink-500/20 border border-pink-500/30 flex flex-col items-center justify-center">
+                            <span class="text-pink-400 text-xs font-medium">${date.toLocaleDateString('pl-PL', { day: 'numeric' })}</span>
+                            <span class="text-pink-400/60 text-[10px] uppercase">${date.toLocaleDateString('pl-PL', { month: 'short' })}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-white font-medium truncate">${e.title}</div>
+                            <div class="text-zinc-500 text-xs">
+                                ${date.toLocaleDateString('pl-PL', { weekday: 'short' })} • ${formatEventTime(e.start)}
+                                ${e.lead ? ` • ${e.lead.name || e.lead.email}` : ''}
+                            </div>
+                        </div>
+                        <i class="ph ph-caret-right text-zinc-600"></i>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ===========================================
+        // EVENT MANAGEMENT
+        // ===========================================
+        function showEventDetails(eventId) {
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+
+            selectedEventId = eventId;
+            document.getElementById('event-details-title').textContent = event.title;
+
+            const startDate = new Date(event.start);
+            const endDate = event.end ? new Date(event.end) : null;
+
+            let html = `
+                <div class="flex items-center gap-3 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                    <i class="ph ph-clock text-pink-400 text-xl"></i>
+                    <div>
+                        <div class="text-white">${startDate.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                        <div class="text-zinc-500 text-sm">${formatEventTime(event.start)}${endDate ? ' - ' + formatEventTime(event.end) : ''}</div>
+                    </div>
+                </div>
+            `;
+
+            if (event.lead) {
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                        <i class="ph ph-user text-pink-400 text-xl"></i>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-white">${event.lead.name || 'Brak nazwy'}</div>
+                            <div class="text-zinc-500 text-sm truncate">${event.lead.email || ''}${event.lead.company ? ` • ${event.lead.company}` : ''}</div>
+                        </div>
+                        <a href="/lead?id=${event.lead.id}" class="text-pink-400 hover:text-pink-300 text-xs">
+                            Zobacz <i class="ph ph-arrow-right"></i>
+                        </a>
+                    </div>
+                `;
+            }
+
+            if (event.description) {
+                html += `
+                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Notatki</div>
+                        <div class="text-white text-sm">${event.description}</div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('event-details-content').innerHTML = html;
+            document.getElementById('event-details-modal').classList.remove('hidden');
+        }
+
+        // Event Modal
+        document.getElementById('add-event-btn').addEventListener('click', () => {
+            document.getElementById('event-form').reset();
+            document.getElementById('event-date').value = currentDate.toISOString().split('T')[0];
+            document.getElementById('event-lead').value = '';
+            selectedLeadInfo.classList.add('hidden');
+            leadSearchInput.classList.remove('hidden');
+            leadSearchInput.value = '';
+
+            // Reset duration buttons
+            document.querySelectorAll('.duration-btn').forEach(b => {
+                b.classList.remove('border-pink-500/50', 'bg-pink-500/10', 'text-pink-400');
+                b.classList.add('border-zinc-800', 'text-zinc-400');
+            });
+            document.querySelector('[data-duration="30"]').classList.remove('border-zinc-800', 'text-zinc-400');
+            document.querySelector('[data-duration="30"]').classList.add('border-pink-500/50', 'bg-pink-500/10', 'text-pink-400');
+            document.getElementById('event-duration').value = '30';
+
+            document.getElementById('event-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('close-event-modal').addEventListener('click', () => {
+            document.getElementById('event-modal').classList.add('hidden');
+        });
+
+        document.getElementById('cancel-event-modal').addEventListener('click', () => {
+            document.getElementById('event-modal').classList.add('hidden');
+        });
+
+        document.getElementById('event-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const leadId = document.getElementById('event-lead').value;
+            if (!leadId) {
+                alert('Wybierz leada, którego dotyczy spotkanie');
+                leadSearchInput.focus();
+                return;
+            }
+
+            const eventData = {
+                title: document.getElementById('event-title').value,
+                date: document.getElementById('event-date').value,
+                time: document.getElementById('event-time').value,
+                duration: parseInt(document.getElementById('event-duration').value),
+                description: document.getElementById('event-description').value,
+                lead_id: leadId
+            };
+
+            const startTime = new Date(`${eventData.date}T${eventData.time}`);
+            const endTime = new Date(startTime.getTime() + eventData.duration * 60000);
+
+            const { error } = await supabaseClient
+                .from('calendar_events')
+                .insert({
+                    title: eventData.title,
+                    description: eventData.description,
+                    start_time: startTime.toISOString(),
+                    end_time: endTime.toISOString(),
+                    lead_id: eventData.lead_id,
+                    assigned_to: currentMember?.id || null
+                });
+
+            if (error) {
+                console.error('Error creating event:', error);
+                alert('Błąd tworzenia wydarzenia');
+                return;
+            }
+
+            document.getElementById('event-modal').classList.add('hidden');
+            loadEvents();
+        });
+
+        // Event Details Modal
+        document.getElementById('close-event-details').addEventListener('click', () => {
+            document.getElementById('event-details-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-details-btn').addEventListener('click', () => {
+            document.getElementById('event-details-modal').classList.add('hidden');
+        });
+
+        document.getElementById('delete-event').addEventListener('click', async () => {
+            if (!selectedEventId || !confirm('Czy na pewno chcesz usunąć to wydarzenie?')) return;
+
+            const { error } = await supabaseClient
+                .from('calendar_events')
+                .delete()
+                .eq('id', selectedEventId);
+
+            if (error) {
+                console.error('Error deleting event:', error);
+                alert('Błąd usuwania wydarzenia');
+                return;
+            }
+
+            document.getElementById('event-details-modal').classList.add('hidden');
+            loadEvents();
+        });
+
+        // ===========================================
+        // VIEW SWITCHING
+        // ===========================================
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentView = this.dataset.view;
+                loadEvents();
+            });
+        });
+
+        // ===========================================
+        // NAVIGATION
+        // ===========================================
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+            } else if (currentView === 'week') {
+                currentDate.setDate(currentDate.getDate() - 7);
+            } else {
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+            loadEvents();
+        });
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            } else if (currentView === 'week') {
+                currentDate.setDate(currentDate.getDate() + 7);
+            } else {
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            loadEvents();
+        });
+
+        document.getElementById('today-btn').addEventListener('click', () => {
+            currentDate = new Date();
+            loadEvents();
+        });
+
+        // ===========================================
+        // FIX LOCAL NAVIGATION
+        // ===========================================
+        function fixLocalNavigation() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const base = getBasePath();
+                document.querySelectorAll('nav a[href^="/"]').forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href && href !== '#') {
+                        link.setAttribute('href', `${base}${href}.html`);
+                    }
+                });
+            }
+        }
+
+        // ===========================================
+        // INIT
+        // ===========================================
+        async function init() {
+            fixLocalNavigation();
+
+            const session = await checkAuth();
+            if (!session) return;
+
+            await loadLeads();
+            await loadEvents();
+        }
+
+        init();
+    </script>
+</body>
+</html>
