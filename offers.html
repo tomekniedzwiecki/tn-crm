@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Oferty</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
+            <div class="w-7 h-7 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <i class="ph-bold ph-lightning text-sm"></i>
+            </div>
+            <span class="font-medium text-base text-zinc-200">TN CRM</span>
+            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
+        </div>
+
+        <nav class="flex-1 px-4 py-6">
+            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
+
+            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-house text-xl"></i>
+                <span class="font-medium">Overview</span>
+            </a>
+
+            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-users text-xl"></i>
+                <span class="font-medium">Leady</span>
+            </a>
+
+            <a href="/pipeline" data-page="pipeline" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-kanban text-xl"></i>
+                <span class="font-medium">Pipeline</span>
+            </a>
+
+            <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
+                <i class="ph ph-package text-xl"></i>
+                <span class="font-medium">Oferty</span>
+            </a>
+
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all">
+                <i class="ph ph-gear text-xl"></i>
+                <span class="font-medium">Ustawienia</span>
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-sm font-medium">TN</div>
+                <div class="flex-1 min-w-0">
+                    <div id="user-email" class="text-sm font-medium text-zinc-200 truncate"></div>
+                    <div class="text-xs text-zinc-500 truncate">Free Plan</div>
+                </div>
+                <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
+                    <i class="ph ph-sign-out text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <span class="text-zinc-400">tn-crm</span>
+                <span class="text-zinc-700">/</span>
+                <span class="text-white font-medium">offers</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="add-offer-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
+                    <i class="ph ph-plus"></i>
+                    Dodaj ofertę
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-5xl mx-auto animate-enter">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Oferty</h1>
+                        <p class="text-zinc-500">Zarządzaj produktami i usługami, które oferujesz.</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-semibold text-white" id="total-count">-</div>
+                        <div class="text-zinc-500 text-xs font-mono">aktywnych ofert</div>
+                    </div>
+                </div>
+
+                <!-- Offers Grid -->
+                <div id="offers-grid" class="grid gap-4">
+                    <!-- Offers will be rendered here -->
+                </div>
+
+                <div id="empty-state" class="hidden py-16 text-center">
+                    <i class="ph ph-package text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-400 text-sm mb-1">Brak ofert</p>
+                    <p class="text-zinc-600 text-xs font-mono mb-4">Dodaj pierwszą ofertę, aby rozpocząć</p>
+                    <button onclick="openAddModal()" class="text-white bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg text-sm transition-colors">
+                        <i class="ph ph-plus mr-1"></i> Dodaj ofertę
+                    </button>
+                </div>
+
+                <div id="loading-state" class="py-16 text-center">
+                    <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
+                    <p class="text-zinc-500 text-sm font-mono">Ładowanie...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Offer Modal -->
+    <div id="offer-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-lg shadow-2xl">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 id="modal-title" class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-package text-amber-400"></i>
+                    Dodaj ofertę
+                </h2>
+                <button id="close-modal" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <form id="offer-form" class="p-5 space-y-4">
+                <input type="hidden" id="offer-id">
+
+                <!-- Name -->
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Nazwa oferty *</label>
+                    <input type="text" id="offer-name" required class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="np. Budowa sklepu internetowego">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis</label>
+                    <textarea id="offer-description" rows="3" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600 resize-none" placeholder="Szczegółowy opis oferty..."></textarea>
+                </div>
+
+                <!-- Price & Active -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena (PLN)</label>
+                        <input type="number" id="offer-price" min="0" step="0.01" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Status</label>
+                        <select id="offer-active" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
+                            <option value="true">Aktywna</option>
+                            <option value="false">Nieaktywna</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <button id="delete-offer" class="hidden text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-4 py-2 rounded-lg text-sm transition-colors">
+                    <i class="ph ph-trash mr-1"></i> Usuń
+                </button>
+                <div class="flex-1"></div>
+                <button id="cancel-modal" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                    Anuluj
+                </button>
+                <button id="save-offer" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let offers = [];
+        let editingOfferId = null;
+
+        function getBasePath() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const path = location.pathname;
+                const match = path.match(/^(\/[^\/]+)\//);
+                return match ? match[1] : '';
+            }
+            return '';
+        }
+
+        function getLoginPath() {
+            const base = getBasePath();
+            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = getLoginPath();
+                return null;
+            }
+            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            return session;
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+            window.location.href = getLoginPath();
+        });
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('pl-PL', {
+                style: 'currency',
+                currency: 'PLN',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }).format(price || 0);
+        }
+
+        async function loadOffers() {
+            const { data, error } = await supabaseClient
+                .from('offers')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading offers:', error);
+                return;
+            }
+
+            offers = data || [];
+            renderOffers();
+        }
+
+        function renderOffers() {
+            const grid = document.getElementById('offers-grid');
+            const emptyState = document.getElementById('empty-state');
+            const loadingState = document.getElementById('loading-state');
+
+            loadingState.classList.add('hidden');
+
+            const activeCount = offers.filter(o => o.is_active).length;
+            document.getElementById('total-count').textContent = activeCount;
+
+            if (offers.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = offers.map(offer => `
+                <div class="group bg-zinc-900/40 border border-white/5 rounded-lg p-5 hover:border-white/10 transition-all cursor-pointer" onclick="editOffer('${offer.id}')">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${offer.is_active ? 'from-amber-500/20 to-orange-500/20 border-amber-500/30' : 'from-zinc-800 to-zinc-900 border-zinc-700'} border flex items-center justify-center">
+                                <i class="ph ph-package text-lg ${offer.is_active ? 'text-amber-400' : 'text-zinc-500'}"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium text-white">${offer.name}</h3>
+                                <span class="text-xs ${offer.is_active ? 'text-emerald-400' : 'text-zinc-500'}">
+                                    ${offer.is_active ? '● Aktywna' : '○ Nieaktywna'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-semibold text-white font-mono">${formatPrice(offer.price)}</div>
+                        </div>
+                    </div>
+                    ${offer.description ? `
+                        <p class="text-zinc-400 text-sm line-clamp-2 mb-3">${offer.description}</p>
+                    ` : ''}
+                    <div class="flex items-center justify-between pt-3 border-t border-white/5">
+                        <span class="text-zinc-600 text-xs font-mono">
+                            ${new Date(offer.created_at).toLocaleDateString('pl-PL')}
+                        </span>
+                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="event.stopPropagation(); toggleActive('${offer.id}', ${!offer.is_active})" class="p-1.5 ${offer.is_active ? 'text-zinc-400 hover:text-zinc-200' : 'text-emerald-400 hover:text-emerald-300'} hover:bg-white/5 rounded transition-colors" title="${offer.is_active ? 'Dezaktywuj' : 'Aktywuj'}">
+                                <i class="ph ph-${offer.is_active ? 'eye-slash' : 'eye'} text-sm"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); editOffer('${offer.id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded transition-colors" title="Edytuj">
+                                <i class="ph ph-pencil-simple text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function toggleActive(id, isActive) {
+            const { error } = await supabaseClient
+                .from('offers')
+                .update({ is_active: isActive })
+                .eq('id', id);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            const offer = offers.find(o => o.id === id);
+            if (offer) offer.is_active = isActive;
+            renderOffers();
+        }
+
+        function openAddModal() {
+            editingOfferId = null;
+            document.getElementById('modal-title').innerHTML = '<i class="ph ph-package text-amber-400"></i> Dodaj ofertę';
+            document.getElementById('offer-form').reset();
+            document.getElementById('offer-id').value = '';
+            document.getElementById('offer-active').value = 'true';
+            document.getElementById('delete-offer').classList.add('hidden');
+            document.getElementById('offer-modal').classList.remove('hidden');
+            document.getElementById('offer-name').focus();
+        }
+
+        function editOffer(id) {
+            const offer = offers.find(o => o.id === id);
+            if (!offer) return;
+
+            editingOfferId = id;
+            document.getElementById('modal-title').innerHTML = '<i class="ph ph-pencil-simple text-amber-400"></i> Edytuj ofertę';
+            document.getElementById('offer-id').value = id;
+            document.getElementById('offer-name').value = offer.name;
+            document.getElementById('offer-description').value = offer.description || '';
+            document.getElementById('offer-price').value = offer.price || '';
+            document.getElementById('offer-active').value = offer.is_active ? 'true' : 'false';
+            document.getElementById('delete-offer').classList.remove('hidden');
+            document.getElementById('offer-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('offer-modal').classList.add('hidden');
+            editingOfferId = null;
+        }
+
+        document.getElementById('close-modal').addEventListener('click', closeModal);
+        document.getElementById('cancel-modal').addEventListener('click', closeModal);
+        document.getElementById('offer-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+
+        document.getElementById('add-offer-btn').addEventListener('click', openAddModal);
+
+        document.getElementById('save-offer').addEventListener('click', async () => {
+            const name = document.getElementById('offer-name').value.trim();
+            if (!name) {
+                alert('Nazwa oferty jest wymagana');
+                return;
+            }
+
+            const offerData = {
+                name: name,
+                description: document.getElementById('offer-description').value.trim() || null,
+                price: document.getElementById('offer-price').value ? parseFloat(document.getElementById('offer-price').value) : 0,
+                is_active: document.getElementById('offer-active').value === 'true'
+            };
+
+            const btn = document.getElementById('save-offer');
+            btn.disabled = true;
+            btn.textContent = 'Zapisywanie...';
+
+            let result;
+            if (editingOfferId) {
+                result = await supabaseClient
+                    .from('offers')
+                    .update(offerData)
+                    .eq('id', editingOfferId)
+                    .select();
+            } else {
+                result = await supabaseClient
+                    .from('offers')
+                    .insert([offerData])
+                    .select();
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Zapisz';
+
+            if (result.error) {
+                alert('Błąd: ' + result.error.message);
+                return;
+            }
+
+            closeModal();
+            await loadOffers();
+        });
+
+        document.getElementById('delete-offer').addEventListener('click', async () => {
+            if (!editingOfferId) return;
+            if (!confirm('Czy na pewno chcesz usunąć tę ofertę?')) return;
+
+            const { error } = await supabaseClient
+                .from('offers')
+                .delete()
+                .eq('id', editingOfferId);
+
+            if (error) {
+                alert('Błąd usuwania: ' + error.message);
+                return;
+            }
+
+            closeModal();
+            await loadOffers();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Make functions available globally
+        window.openAddModal = openAddModal;
+        window.editOffer = editOffer;
+        window.toggleActive = toggleActive;
+
+        // Fix links for local development
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const base = getBasePath();
+            document.querySelectorAll('a[data-page]').forEach(link => {
+                link.href = base + '/' + link.dataset.page + '.html';
+            });
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (session) await loadOffers();
+        }
+        init();
+    </script>
+</body>
+</html>
