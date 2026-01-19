@@ -132,10 +132,24 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        function getBasePath() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const path = location.pathname;
+                const match = path.match(/^(\/[^\/]+)\//);
+                return match ? match[1] : '';
+            }
+            return '';
+        }
+
+        function getDashboardPath() {
+            const base = getBasePath();
+            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/dashboard.html` : '/dashboard';
+        }
+
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
-                window.location.href = '/dashboard';
+                window.location.href = getDashboardPath();
             }
         }
         checkAuth();
@@ -160,7 +174,7 @@
                 return;
             }
 
-            window.location.href = '/dashboard';
+            window.location.href = getDashboardPath();
         });
     </script>
 

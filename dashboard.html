@@ -300,10 +300,24 @@
         let currentLeadId = null;
         let leads = [];
 
+        function getBasePath() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const path = location.pathname;
+                const match = path.match(/^(\/[^\/]+)\//);
+                return match ? match[1] : '';
+            }
+            return '';
+        }
+
+        function getLoginPath() {
+            const base = getBasePath();
+            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
+        }
+
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
-                window.location.href = '/';
+                window.location.href = getLoginPath();
                 return null;
             }
             document.getElementById('user-email').textContent = session.user.email.split('@')[0];
@@ -312,7 +326,7 @@
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await supabaseClient.auth.signOut();
-            window.location.href = '/';
+            window.location.href = getLoginPath();
         });
 
         function formatDate(dateString) {
@@ -490,8 +504,9 @@
 
         // Fix links for local development
         if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const base = getBasePath();
             document.querySelectorAll('a[data-page]').forEach(link => {
-                link.href = '/' + link.dataset.page + '.html';
+                link.href = base + '/' + link.dataset.page + '.html';
             });
         }
 
