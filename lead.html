@@ -178,11 +178,21 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email</label>
-                                    <input type="email" id="field-email" readonly class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-zinc-400 cursor-not-allowed">
+                                    <div class="flex gap-2">
+                                        <input type="email" id="field-email" readonly class="input-field flex-1 rounded-lg px-3 py-2.5 text-sm text-zinc-400 cursor-not-allowed">
+                                        <button id="btn-mailto" class="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-400 transition-colors" title="Wyślij email">
+                                            <i class="ph ph-envelope-simple text-lg"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
-                                    <input type="tel" id="field-phone" placeholder="+48 ..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                                    <div class="flex gap-2">
+                                        <input type="tel" id="field-phone" placeholder="+48 ..." class="input-field flex-1 rounded-lg px-3 py-2.5 text-sm text-white">
+                                        <button id="btn-call" class="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg text-emerald-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Zadzwoń" disabled>
+                                            <i class="ph ph-phone text-lg"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Imię i nazwisko</label>
@@ -491,6 +501,9 @@
             document.getElementById('field-expected-close').value = lead.expected_close || '';
             document.getElementById('field-notes').value = lead.notes || '';
 
+            // Enable/disable call button based on phone
+            document.getElementById('btn-call').disabled = !lead.phone;
+
             // Tracking
             document.getElementById('tracking-source').textContent = lead.utm_source || '-';
             document.getElementById('tracking-medium').textContent = lead.utm_medium || '-';
@@ -679,6 +692,28 @@
 
         editableFields.forEach(id => {
             document.getElementById(id).addEventListener('input', triggerAutoSave);
+        });
+
+        // Click-to-email
+        document.getElementById('btn-mailto').addEventListener('click', () => {
+            const email = document.getElementById('field-email').value;
+            if (email) {
+                window.location.href = `mailto:${email}`;
+            }
+        });
+
+        // Click-to-call
+        document.getElementById('btn-call').addEventListener('click', () => {
+            const phone = document.getElementById('field-phone').value.trim();
+            if (phone) {
+                window.location.href = `tel:${phone.replace(/\s/g, '')}`;
+            }
+        });
+
+        // Enable/disable call button based on phone field
+        document.getElementById('field-phone').addEventListener('input', (e) => {
+            const phone = e.target.value.trim();
+            document.getElementById('btn-call').disabled = !phone;
         });
 
         // Delete

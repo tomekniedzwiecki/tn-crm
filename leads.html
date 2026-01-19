@@ -216,7 +216,7 @@
                                 <th class="px-4 py-3 font-medium">Źródło</th>
                                 <th class="px-4 py-3 font-medium">Kampania</th>
                                 <th class="px-4 py-3 font-medium">Data</th>
-                                <th class="px-4 py-3 font-medium w-10"></th>
+                                <th class="px-4 py-3 font-medium w-20 text-center">Akcje</th>
                             </tr>
                         </thead>
                         <tbody id="leads-table" class="divide-y divide-white/5"></tbody>
@@ -598,9 +598,14 @@
                     </td>
                     <td class="px-4 py-3 text-zinc-500 font-mono text-[11px]">${formatDateShort(lead.created_at)}</td>
                     <td class="px-4 py-3">
-                        <button class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-white transition-all p-1">
-                            <i class="ph ph-dots-three-vertical"></i>
-                        </button>
+                        <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1.5 text-purple-400 hover:bg-purple-500/20 rounded transition-colors" title="Wyślij email">
+                                <i class="ph ph-envelope-simple text-sm"></i>
+                            </button>
+                            ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
+                                <i class="ph ph-phone text-sm"></i>
+                            </button>` : ''}
+                        </div>
                     </td>
                 </tr>
             `}).join('');
@@ -612,6 +617,17 @@
             const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/lead.html` : '/lead';
             window.location.href = `${basePath}?id=${id}`;
         }
+
+        function sendEmail(email) {
+            window.location.href = `mailto:${email}`;
+        }
+
+        function callPhone(phone) {
+            window.location.href = `tel:${phone.replace(/\s/g, '')}`;
+        }
+
+        window.sendEmail = sendEmail;
+        window.callPhone = callPhone;
 
         // Keep modal for quick status change (right-click or shift+click)
         function openLeadModal(id) {

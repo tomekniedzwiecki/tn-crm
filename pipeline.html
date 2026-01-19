@@ -146,6 +146,34 @@
             </div>
         </header>
 
+        <!-- Filters Bar -->
+        <div class="px-6 py-3 border-b border-white/5 flex items-center gap-4 bg-zinc-950/50">
+            <div class="flex items-center gap-2 text-xs text-zinc-500">
+                <i class="ph ph-funnel"></i>
+                <span>Filtry:</span>
+            </div>
+            <select id="filter-source" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600">
+                <option value="">Wszystkie źródła</option>
+                <option value="google">Google Ads</option>
+                <option value="meta">Meta</option>
+                <option value="tiktok">TikTok</option>
+                <option value="email">Email</option>
+                <option value="organic">Organic</option>
+                <option value="manual">Manual</option>
+            </select>
+            <div class="flex items-center gap-2">
+                <input type="number" id="filter-value-min" placeholder="Min PLN" class="w-24 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                <span class="text-zinc-600">-</span>
+                <input type="number" id="filter-value-max" placeholder="Max PLN" class="w-24 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 outline-none hover:border-zinc-700 focus:border-zinc-600">
+            </div>
+            <button id="clear-pipeline-filters" class="text-zinc-500 hover:text-white px-2 py-1 text-xs transition-colors hidden">
+                <i class="ph ph-x mr-1"></i> Wyczyść
+            </button>
+            <div class="ml-auto text-xs text-zinc-500 font-mono">
+                <span id="filtered-count">0</span> / <span id="all-count">0</span> leadów
+            </div>
+        </div>
+
         <!-- Pipeline Board -->
         <div class="flex-1 overflow-x-auto overflow-y-hidden p-6">
             <div id="pipeline-board" class="flex gap-4 h-full animate-enter">
@@ -300,6 +328,63 @@
             return colors[index];
         }
 
+        function getSource(lead) {
+            if (lead.gclid || lead.gbraid || lead.wbraid) return 'google';
+            if (lead.fbclid) return 'meta';
+            if (lead.ttclid) return 'tiktok';
+            if (lead.utm_source === 'manual') return 'manual';
+            if (lead.utm_source) {
+                const src = lead.utm_source.toLowerCase();
+                if (src.includes('google')) return 'google';
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return 'meta';
+                if (src.includes('tiktok')) return 'tiktok';
+                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
+            }
+            if (lead.utm_medium === 'email') return 'email';
+            return 'organic';
+        }
+
+        let filteredLeads = [];
+
+        function applyFilters() {
+            const sourceFilter = document.getElementById('filter-source').value;
+            const minValue = document.getElementById('filter-value-min').value;
+            const maxValue = document.getElementById('filter-value-max').value;
+
+            filteredLeads = leads.filter(lead => {
+                // Source filter
+                if (sourceFilter && getSource(lead) !== sourceFilter) return false;
+
+                // Value range filter
+                const dealValue = parseFloat(lead.deal_value) || 0;
+                if (minValue && dealValue < parseFloat(minValue)) return false;
+                if (maxValue && dealValue > parseFloat(maxValue)) return false;
+
+                return true;
+            });
+
+            // Show/hide clear button
+            const hasFilters = sourceFilter || minValue || maxValue;
+            document.getElementById('clear-pipeline-filters').classList.toggle('hidden', !hasFilters);
+
+            // Update counts
+            document.getElementById('filtered-count').textContent = filteredLeads.length;
+            document.getElementById('all-count').textContent = leads.length;
+
+            renderPipeline();
+        }
+
+        // Filter event listeners
+        document.getElementById('filter-source').addEventListener('change', applyFilters);
+        document.getElementById('filter-value-min').addEventListener('input', applyFilters);
+        document.getElementById('filter-value-max').addEventListener('input', applyFilters);
+        document.getElementById('clear-pipeline-filters').addEventListener('click', () => {
+            document.getElementById('filter-source').value = '';
+            document.getElementById('filter-value-min').value = '';
+            document.getElementById('filter-value-max').value = '';
+            applyFilters();
+        });
+
         async function loadLeads() {
             const { data, error } = await supabaseClient
                 .from('leads')
@@ -313,23 +398,23 @@
 
             leads = data || [];
             document.getElementById('nav-leads-count').textContent = leads.length;
-            renderPipeline();
+            applyFilters(); // This will call renderPipeline
         }
 
         function renderPipeline() {
             const board = document.getElementById('pipeline-board');
 
-            // Calculate totals
+            // Calculate totals for filtered leads
             let totalValue = 0;
-            leads.forEach(lead => {
+            filteredLeads.forEach(lead => {
                 if (lead.deal_value) totalValue += parseFloat(lead.deal_value);
             });
             document.getElementById('total-value').textContent = formatCurrency(totalValue);
-            document.getElementById('total-deals').textContent = `${leads.length} leadów`;
+            document.getElementById('total-deals').textContent = `${filteredLeads.length} leadów`;
 
             // Render columns
             board.innerHTML = STAGES.map(stage => {
-                const stageLeads = leads.filter(l => (l.status || 'new') === stage.id);
+                const stageLeads = filteredLeads.filter(l => (l.status || 'new') === stage.id);
                 const stageValue = stageLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
 
                 const colorClasses = {
@@ -377,7 +462,7 @@
             const displayName = lead.name || lead.email.split('@')[0];
 
             return `
-                <div class="lead-card bg-zinc-900/60 border border-white/5 rounded-lg p-3 hover:border-white/10"
+                <div class="lead-card group bg-zinc-900/60 border border-white/5 rounded-lg p-3 hover:border-white/10 relative"
                      draggable="true"
                      data-id="${lead.id}"
                      ondragstart="handleDragStart(event)"
@@ -390,6 +475,14 @@
                         <div class="flex-1 min-w-0">
                             <div class="font-medium text-white text-sm truncate">${displayName}</div>
                             ${lead.company ? `<div class="text-zinc-500 text-xs truncate">${lead.company}</div>` : ''}
+                        </div>
+                        <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1 text-purple-400 hover:bg-purple-500/20 rounded transition-colors" title="Wyślij email">
+                                <i class="ph ph-envelope-simple text-xs"></i>
+                            </button>
+                            ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
+                                <i class="ph ph-phone text-xs"></i>
+                            </button>` : ''}
                         </div>
                     </div>
                     ${lead.deal_value ? `
@@ -406,6 +499,17 @@
         function openLead(id) {
             window.location.href = getLeadPath(id);
         }
+
+        function sendEmail(email) {
+            window.location.href = `mailto:${email}`;
+        }
+
+        function callPhone(phone) {
+            window.location.href = `tel:${phone.replace(/\s/g, '')}`;
+        }
+
+        window.sendEmail = sendEmail;
+        window.callPhone = callPhone;
 
         // Drag and Drop
         let draggedElement = null;
