@@ -1,148 +1,137 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TN CRM - Logowanie</title>
+    <title>TN CRM | Logowanie</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bg: '#050505',
+                        surface: '#0A0A0A',
+                        border: '#27272a',
+                        txt: { main: '#EDEDED', muted: '#A1A1AA', faint: '#52525B' },
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px) scale(0.98)' },
+                            '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { background-color: #050505; color: #EDEDED; }
 
-        .gradient-bg {
-            background: radial-gradient(ellipse at top, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
-                        radial-gradient(ellipse at bottom right, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
-                        #09090b;
-        }
-
-        .gradient-border {
-            position: relative;
-            background: linear-gradient(135deg, #18181b, #1f1f23);
-            border-radius: 1rem;
-        }
-        .gradient-border::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            padding: 1px;
-            border-radius: 1rem;
-            background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(236, 72, 153, 0.5), rgba(249, 115, 22, 0.3));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 30%, transparent 100%);
         }
 
-        .btn-gradient {
-            background: linear-gradient(135deg, #7c3aed, #ec4899, #f97316);
-            background-size: 200% 200%;
-            animation: gradient-shift 3s ease infinite;
+        .input-field {
+            background: #0A0A0A;
+            border: 1px solid #27272a;
+            color: white;
+            transition: all 0.2s;
         }
-        .btn-gradient:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 40px -10px rgba(124, 58, 237, 0.5);
-        }
-
-        @keyframes gradient-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        .input-field:focus {
+            border-color: #52525B;
+            box-shadow: 0 0 0 1px #52525B;
+            outline: none;
         }
 
-        .input-glow:focus {
-            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3);
-        }
-
-        .logo-gradient {
-            background: linear-gradient(135deg, #7c3aed, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .animate-fade-in {
-            animation: fade-in 0.5s ease-out;
-        }
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0A0A0A inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+<body class="h-screen flex items-center justify-center relative overflow-hidden font-sans text-sm antialiased">
 
-    <div class="w-full max-w-sm animate-fade-in">
-        <!-- Logo / Header -->
+    <div class="absolute inset-0 bg-grid pointer-events-none z-0"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.015] blur-[120px] rounded-full pointer-events-none z-0"></div>
+
+    <main class="w-full max-w-[380px] mx-4 z-10 animate-fade-in flex flex-col items-center">
+
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 mb-4">
-                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-zinc-900 to-black border border-border shadow-[0_0_30px_rgba(255,255,255,0.03)] mb-5">
+                <i class="ph-bold ph-lightning text-2xl text-white"></i>
             </div>
-            <h1 class="text-2xl font-bold text-white">TN <span class="logo-gradient">CRM</span></h1>
-            <p class="text-zinc-500 text-sm mt-1">Panel zarządzania leadami</p>
+            <h1 class="text-xl font-semibold tracking-tight text-white">TN CRM</h1>
+            <p class="text-txt-muted text-sm mt-2">Panel zarządzania leadami</p>
         </div>
 
-        <!-- Login Form -->
-        <div class="gradient-border p-6">
+        <div class="w-full bg-black/40 backdrop-blur-xl border border-border rounded-xl p-6 shadow-2xl relative overflow-hidden">
+
+            <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
             <form id="login-form" class="space-y-5">
-                <div>
-                    <label class="block text-zinc-400 text-sm font-medium mb-2">Email</label>
-                    <input
-                        type="email"
-                        id="email"
-                        required
-                        class="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 input-glow transition-all"
-                        placeholder="twoj@email.com"
-                    >
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] uppercase tracking-wider text-txt-faint font-semibold pl-1">Adres email</label>
+                    <div class="relative group/input">
+                        <i class="ph ph-envelope-simple absolute left-3 top-2.5 text-txt-faint group-focus-within/input:text-white transition-colors"></i>
+                        <input type="email" id="email" required placeholder="twoj@email.com" class="input-field w-full rounded-lg pl-9 pr-3 py-2.5 text-sm font-mono placeholder:text-zinc-700">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-zinc-400 text-sm font-medium mb-2">Hasło</label>
-                    <input
-                        type="password"
-                        id="password"
-                        required
-                        class="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 input-glow transition-all"
-                        placeholder="••••••••"
-                    >
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] uppercase tracking-wider text-txt-faint font-semibold pl-1">Hasło</label>
+                    <div class="relative group/input">
+                        <i class="ph ph-lock absolute left-3 top-2.5 text-txt-faint group-focus-within/input:text-white transition-colors"></i>
+                        <input type="password" id="password" required placeholder="••••••••••••" class="input-field w-full rounded-lg pl-9 pr-3 py-2.5 text-sm font-mono placeholder:text-zinc-700">
+                    </div>
                 </div>
-                <button
-                    type="submit"
-                    class="w-full py-3.5 btn-gradient text-white font-semibold rounded-xl transition-all duration-300"
-                >
+
+                <button type="submit" class="w-full bg-white text-black font-medium text-sm py-2.5 rounded-lg hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] mt-4 active:scale-[0.98]">
                     Zaloguj się
                 </button>
+
             </form>
 
-            <!-- Error message -->
-            <div id="error-message" class="hidden mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center"></div>
+            <div id="error-message" class="hidden mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center font-mono"></div>
         </div>
 
-        <!-- Footer -->
-        <p class="text-zinc-600 text-xs text-center mt-6">
+        <div class="mt-8 flex items-center gap-2 px-4 py-2 rounded-full border border-white/5 bg-white/[0.02]">
+            <i class="ph-fill ph-lock-key text-txt-faint text-xs"></i>
+            <span class="text-[11px] text-txt-faint">Dostęp tylko dla autoryzowanych użytkowników</span>
+        </div>
+
+        <p class="text-zinc-700 text-xs text-center mt-6 font-mono">
             Tomasz Niedźwiecki © 2026
         </p>
-    </div>
+
+    </main>
 
     <script>
-        // Supabase configuration
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Check if already logged in
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
@@ -151,7 +140,6 @@
         }
         checkAuth();
 
-        // Handle login
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
