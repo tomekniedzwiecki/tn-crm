@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Lead</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+        .input-field:hover:not(:focus) {
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 11px;
+            top: 28px;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-[13px] tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-[260px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
+        <div class="h-14 flex items-center px-4 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
+            <div class="w-5 h-5 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <i class="ph-bold ph-lightning text-xs"></i>
+            </div>
+            <span class="font-medium text-sm text-zinc-200">TN CRM</span>
+            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
+        </div>
+
+        <nav class="flex-1 px-3 py-6">
+            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-2">Workspace</div>
+
+            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-2 py-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-md transition-all mb-0.5">
+                <i class="ph ph-house text-lg"></i>
+                <span class="font-medium">Overview</span>
+            </a>
+
+            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-2 py-1.5 bg-white/10 text-white rounded-md border border-white/5 shadow-sm mb-0.5">
+                <i class="ph ph-users text-lg"></i>
+                <span class="font-medium">Leady</span>
+            </a>
+
+            <a href="#" class="flex items-center gap-3 px-2 py-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-md transition-all mb-0.5">
+                <i class="ph ph-kanban text-lg"></i>
+                <span class="font-medium">Pipeline</span>
+            </a>
+
+            <a href="#" class="flex items-center gap-3 px-2 py-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-md transition-all">
+                <i class="ph ph-gear text-lg"></i>
+                <span class="font-medium">Ustawienia</span>
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-white/5">
+            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-md transition-colors cursor-pointer">
+                <div class="w-7 h-7 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-xs font-medium">TN</div>
+                <div class="flex-1 min-w-0">
+                    <div id="user-email" class="text-xs font-medium text-zinc-200 truncate"></div>
+                    <div class="text-[10px] text-zinc-500 truncate">Free Plan</div>
+                </div>
+                <button id="logout-btn" class="p-1 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
+                    <i class="ph ph-sign-out text-base"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-14 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <a href="/leads" data-page="leads" class="text-zinc-400 hover:text-white transition-colors">leads</a>
+                <span class="text-zinc-700">/</span>
+                <span id="breadcrumb-email" class="text-white font-medium truncate max-w-[200px]">...</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="delete-btn" class="text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-2">
+                    <i class="ph ph-trash"></i>
+                    Usuń
+                </button>
+                <button id="save-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-1.5 rounded font-medium text-xs transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-2">
+                    <i class="ph ph-floppy-disk"></i>
+                    Zapisz zmiany
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="max-w-6xl mx-auto p-6 lg:p-10 animate-enter">
+
+                <!-- Lead Header -->
+                <div class="flex items-start gap-6 mb-8">
+                    <div id="lead-avatar" class="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                        ?
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h1 id="lead-email-display" class="text-2xl font-semibold text-white tracking-tight mb-1 truncate">Ładowanie...</h1>
+                        <div class="flex items-center gap-3 text-zinc-500 text-sm">
+                            <span id="lead-source-badge" class="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium">-</span>
+                            <span class="text-zinc-700">•</span>
+                            <span id="lead-created" class="font-mono text-xs">-</span>
+                        </div>
+                    </div>
+                    <div id="status-selector" class="flex gap-1">
+                        <button data-status="new" class="status-btn px-3 py-1.5 rounded-l-lg text-xs font-medium border transition-all">Nowy</button>
+                        <button data-status="contacted" class="status-btn px-3 py-1.5 text-xs font-medium border-y transition-all">Skontaktowany</button>
+                        <button data-status="qualified" class="status-btn px-3 py-1.5 text-xs font-medium border-y transition-all">Zakwalifikowany</button>
+                        <button data-status="rejected" class="status-btn px-3 py-1.5 rounded-r-lg text-xs font-medium border transition-all">Odrzucony</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- Left Column - Details -->
+                    <div class="lg:col-span-2 space-y-6">
+
+                        <!-- Contact Info -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-user text-zinc-500"></i>
+                                Dane kontaktowe
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email</label>
+                                    <input type="email" id="field-email" readonly class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-zinc-400 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
+                                    <input type="tel" id="field-phone" placeholder="+48 ..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Imię i nazwisko</label>
+                                    <input type="text" id="field-name" placeholder="Jan Kowalski" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Firma</label>
+                                    <input type="text" id="field-company" placeholder="Nazwa firmy" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deal Info -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-currency-circle-dollar text-zinc-500"></i>
+                                Informacje o dealu
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wartość (PLN)</label>
+                                    <input type="number" id="field-value" placeholder="0" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przewidywane zamknięcie</label>
+                                    <input type="date" id="field-expected-close" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Info -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-chart-line-up text-zinc-500"></i>
+                                Dane trackingowe
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4 text-xs">
+                                <div class="p-3 bg-zinc-950 rounded-lg border border-white/5">
+                                    <div class="text-zinc-500 font-mono text-[10px] uppercase mb-1">UTM Source</div>
+                                    <div id="tracking-source" class="text-white font-mono">-</div>
+                                </div>
+                                <div class="p-3 bg-zinc-950 rounded-lg border border-white/5">
+                                    <div class="text-zinc-500 font-mono text-[10px] uppercase mb-1">UTM Medium</div>
+                                    <div id="tracking-medium" class="text-white font-mono">-</div>
+                                </div>
+                                <div class="p-3 bg-zinc-950 rounded-lg border border-white/5">
+                                    <div class="text-zinc-500 font-mono text-[10px] uppercase mb-1">UTM Campaign</div>
+                                    <div id="tracking-campaign" class="text-white font-mono">-</div>
+                                </div>
+                                <div class="p-3 bg-zinc-950 rounded-lg border border-white/5">
+                                    <div class="text-zinc-500 font-mono text-[10px] uppercase mb-1">Click ID</div>
+                                    <div id="tracking-clickid" class="text-white font-mono truncate">-</div>
+                                </div>
+                                <div class="col-span-2 p-3 bg-zinc-950 rounded-lg border border-white/5">
+                                    <div class="text-zinc-500 font-mono text-[10px] uppercase mb-1">Landing Page</div>
+                                    <div id="tracking-landing" class="text-zinc-400 font-mono text-[11px] truncate">-</div>
+                                </div>
+                                <div class="col-span-2 p-3 bg-zinc-950 rounded-lg border border-white/5">
+                                    <div class="text-zinc-500 font-mono text-[10px] uppercase mb-1">User Agent</div>
+                                    <div id="tracking-useragent" class="text-zinc-500 font-mono text-[10px] truncate">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-note-pencil text-zinc-500"></i>
+                                Notatki
+                            </h3>
+                            <textarea id="field-notes" rows="4" placeholder="Dodaj notatki o tym leadzie..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Right Column - Activity -->
+                    <div class="space-y-6">
+
+                        <!-- Quick Actions -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-lightning text-zinc-500"></i>
+                                Szybkie akcje
+                            </h3>
+                            <div class="space-y-2">
+                                <button id="action-email" class="w-full flex items-center gap-3 px-3 py-2.5 bg-zinc-950 hover:bg-zinc-800 border border-white/5 rounded-lg text-sm text-zinc-300 hover:text-white transition-all">
+                                    <i class="ph ph-envelope text-lg text-zinc-500"></i>
+                                    Wyślij email
+                                </button>
+                                <button id="action-call" class="w-full flex items-center gap-3 px-3 py-2.5 bg-zinc-950 hover:bg-zinc-800 border border-white/5 rounded-lg text-sm text-zinc-300 hover:text-white transition-all">
+                                    <i class="ph ph-phone text-lg text-zinc-500"></i>
+                                    Zadzwoń
+                                </button>
+                                <button id="action-note" class="w-full flex items-center gap-3 px-3 py-2.5 bg-zinc-950 hover:bg-zinc-800 border border-white/5 rounded-lg text-sm text-zinc-300 hover:text-white transition-all">
+                                    <i class="ph ph-plus text-lg text-zinc-500"></i>
+                                    Dodaj notatkę
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Activity Timeline -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-clock-counter-clockwise text-zinc-500"></i>
+                                Historia aktywności
+                            </h3>
+                            <div id="activity-timeline" class="space-y-4 relative">
+                                <!-- Timeline items will be inserted here -->
+                            </div>
+                            <div id="activity-empty" class="hidden text-center py-8">
+                                <i class="ph ph-clock text-2xl text-zinc-700 mb-2"></i>
+                                <p class="text-zinc-500 text-xs">Brak aktywności</p>
+                            </div>
+                        </div>
+
+                        <!-- Add Activity -->
+                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-plus-circle text-zinc-500"></i>
+                                Dodaj aktywność
+                            </h3>
+                            <select id="activity-type" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white mb-3">
+                                <option value="note">Notatka</option>
+                                <option value="call">Rozmowa telefoniczna</option>
+                                <option value="email">Email wysłany</option>
+                                <option value="meeting">Spotkanie</option>
+                                <option value="other">Inne</option>
+                            </select>
+                            <textarea id="activity-content" rows="2" placeholder="Opis aktywności..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none mb-3"></textarea>
+                            <button id="add-activity-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                Dodaj
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let lead = null;
+        let activities = [];
+        let hasChanges = false;
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = '/';
+                return null;
+            }
+            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            return session;
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+            window.location.href = '/';
+        });
+
+        function getLeadId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pl-PL', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDateRelative(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
+
+            if (minutes < 1) return 'przed chwilą';
+            if (minutes < 60) return `${minutes} min temu`;
+            if (hours < 24) return `${hours}h temu`;
+            if (days < 7) return `${days} dni temu`;
+            return formatDate(dateString);
+        }
+
+        function getSource(lead) {
+            if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google Ads', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+            if (lead.fbclid) return { name: 'Meta Ads', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+            if (lead.ttclid) return { name: 'TikTok Ads', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+            if (lead.utm_source) {
+                const src = lead.utm_source.toLowerCase();
+                if (src.includes('google')) return { name: 'Google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+                if (src.includes('tiktok')) return { name: 'TikTok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
+            }
+            if (lead.utm_medium === 'email') return { name: 'Email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
+            return { name: 'Organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+        }
+
+        function getClickId(lead) {
+            if (lead.gclid) return lead.gclid;
+            if (lead.gbraid) return lead.gbraid;
+            if (lead.wbraid) return lead.wbraid;
+            if (lead.fbclid) return lead.fbclid;
+            if (lead.ttclid) return lead.ttclid;
+            return null;
+        }
+
+        function getActivityIcon(type) {
+            const icons = {
+                'created': 'ph-plus-circle',
+                'status_change': 'ph-arrows-left-right',
+                'note': 'ph-note',
+                'call': 'ph-phone',
+                'email': 'ph-envelope',
+                'meeting': 'ph-calendar',
+                'other': 'ph-dot'
+            };
+            return icons[type] || 'ph-dot';
+        }
+
+        function getActivityColor(type) {
+            const colors = {
+                'created': 'bg-emerald-500',
+                'status_change': 'bg-blue-500',
+                'note': 'bg-zinc-500',
+                'call': 'bg-yellow-500',
+                'email': 'bg-purple-500',
+                'meeting': 'bg-pink-500',
+                'other': 'bg-zinc-600'
+            };
+            return colors[type] || 'bg-zinc-600';
+        }
+
+        async function loadLead() {
+            const id = getLeadId();
+            if (!id) {
+                window.location.href = '/leads';
+                return;
+            }
+
+            const { data, error } = await supabaseClient.from('leads').select('*').eq('id', id).single();
+            if (error || !data) {
+                alert('Lead nie znaleziony');
+                window.location.href = '/leads';
+                return;
+            }
+
+            lead = data;
+            renderLead();
+            await loadActivities();
+        }
+
+        function renderLead() {
+            const src = getSource(lead);
+            const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
+            const colorIndex = lead.email.charCodeAt(0) % colors.length;
+
+            // Header
+            document.getElementById('breadcrumb-email').textContent = lead.email;
+            document.getElementById('lead-avatar').className = `w-16 h-16 rounded-xl bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white text-2xl font-bold flex-shrink-0`;
+            document.getElementById('lead-avatar').textContent = lead.email.charAt(0).toUpperCase();
+            document.getElementById('lead-email-display').textContent = lead.email;
+            document.getElementById('lead-created').textContent = formatDate(lead.created_at);
+
+            // Source badge
+            const badge = document.getElementById('lead-source-badge');
+            badge.textContent = src.name;
+            badge.className = `inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium ${src.color} ${src.bg} ${src.border}`;
+
+            // Status buttons
+            const status = lead.status || 'new';
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                const btnStatus = btn.dataset.status;
+                if (btnStatus === status) {
+                    btn.className = 'status-btn px-3 py-1.5 text-xs font-medium border transition-all bg-white text-black border-white ' +
+                        (btnStatus === 'new' ? 'rounded-l-lg' : btnStatus === 'rejected' ? 'rounded-r-lg' : 'border-y');
+                } else {
+                    btn.className = 'status-btn px-3 py-1.5 text-xs font-medium border transition-all bg-transparent text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600 ' +
+                        (btnStatus === 'new' ? 'rounded-l-lg' : btnStatus === 'rejected' ? 'rounded-r-lg' : 'border-y');
+                }
+            });
+
+            // Form fields
+            document.getElementById('field-email').value = lead.email;
+            document.getElementById('field-phone').value = lead.phone || '';
+            document.getElementById('field-name').value = lead.name || '';
+            document.getElementById('field-company').value = lead.company || '';
+            document.getElementById('field-value').value = lead.deal_value || '';
+            document.getElementById('field-expected-close').value = lead.expected_close || '';
+            document.getElementById('field-notes').value = lead.notes || '';
+
+            // Tracking
+            document.getElementById('tracking-source').textContent = lead.utm_source || '-';
+            document.getElementById('tracking-medium').textContent = lead.utm_medium || '-';
+            document.getElementById('tracking-campaign').textContent = lead.utm_campaign || '-';
+            document.getElementById('tracking-clickid').textContent = getClickId(lead) || '-';
+            document.getElementById('tracking-landing').textContent = lead.landing_page || '-';
+            document.getElementById('tracking-useragent').textContent = lead.user_agent || '-';
+
+            // Quick actions
+            document.getElementById('action-email').onclick = () => window.location.href = `mailto:${lead.email}`;
+            document.getElementById('action-call').onclick = () => {
+                if (lead.phone) window.location.href = `tel:${lead.phone}`;
+                else alert('Brak numeru telefonu');
+            };
+            document.getElementById('action-note').onclick = () => {
+                document.getElementById('activity-content').focus();
+            };
+        }
+
+        async function loadActivities() {
+            // For now, we'll store activities in the lead's activities JSON column
+            // or create a synthetic timeline from the lead data
+            activities = lead.activities || [];
+
+            // Add creation event if not exists
+            if (!activities.find(a => a.type === 'created')) {
+                activities.unshift({
+                    type: 'created',
+                    content: 'Lead utworzony',
+                    created_at: lead.created_at
+                });
+            }
+
+            renderActivities();
+        }
+
+        function renderActivities() {
+            const timeline = document.getElementById('activity-timeline');
+            const empty = document.getElementById('activity-empty');
+
+            if (activities.length === 0) {
+                timeline.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            // Sort by date desc
+            const sorted = [...activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            timeline.innerHTML = sorted.map((activity, index) => `
+                <div class="flex gap-3 relative ${index < sorted.length - 1 ? 'pb-4' : ''}">
+                    ${index < sorted.length - 1 ? '<div class="timeline-line"></div>' : ''}
+                    <div class="w-6 h-6 rounded-full ${getActivityColor(activity.type)} flex items-center justify-center flex-shrink-0 z-10">
+                        <i class="ph ${getActivityIcon(activity.type)} text-white text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-white">${activity.content}</div>
+                        <div class="text-[10px] text-zinc-500 font-mono mt-0.5">${formatDateRelative(activity.created_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Status change
+        document.querySelectorAll('.status-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newStatus = btn.dataset.status;
+                const oldStatus = lead.status || 'new';
+                if (newStatus !== oldStatus) {
+                    lead.status = newStatus;
+
+                    // Add activity
+                    const statusLabels = { new: 'Nowy', contacted: 'Skontaktowany', qualified: 'Zakwalifikowany', rejected: 'Odrzucony' };
+                    activities.push({
+                        type: 'status_change',
+                        content: `Status zmieniony: ${statusLabels[oldStatus]} → ${statusLabels[newStatus]}`,
+                        created_at: new Date().toISOString()
+                    });
+
+                    hasChanges = true;
+                    renderLead();
+                    renderActivities();
+                }
+            });
+        });
+
+        // Add activity
+        document.getElementById('add-activity-btn').addEventListener('click', () => {
+            const type = document.getElementById('activity-type').value;
+            const content = document.getElementById('activity-content').value.trim();
+
+            if (!content) {
+                alert('Wpisz opis aktywności');
+                return;
+            }
+
+            const typeLabels = { note: 'Notatka', call: 'Rozmowa', email: 'Email', meeting: 'Spotkanie', other: 'Inne' };
+
+            activities.push({
+                type,
+                content: `${typeLabels[type]}: ${content}`,
+                created_at: new Date().toISOString()
+            });
+
+            document.getElementById('activity-content').value = '';
+            hasChanges = true;
+            renderActivities();
+        });
+
+        // Track changes
+        ['field-phone', 'field-name', 'field-company', 'field-value', 'field-expected-close', 'field-notes'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => { hasChanges = true; });
+        });
+
+        // Save
+        document.getElementById('save-btn').addEventListener('click', async () => {
+            const updates = {
+                status: lead.status,
+                phone: document.getElementById('field-phone').value || null,
+                name: document.getElementById('field-name').value || null,
+                company: document.getElementById('field-company').value || null,
+                deal_value: document.getElementById('field-value').value ? parseFloat(document.getElementById('field-value').value) : null,
+                expected_close: document.getElementById('field-expected-close').value || null,
+                notes: document.getElementById('field-notes').value || null,
+                activities: activities.filter(a => a.type !== 'created') // Don't save the synthetic created event
+            };
+
+            const { error } = await supabaseClient.from('leads').update(updates).eq('id', lead.id);
+
+            if (error) {
+                alert('Błąd zapisu: ' + error.message);
+                return;
+            }
+
+            hasChanges = false;
+
+            // Show success
+            const btn = document.getElementById('save-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-check"></i> Zapisano';
+            btn.classList.add('bg-emerald-500');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-emerald-500');
+            }, 2000);
+        });
+
+        // Delete
+        document.getElementById('delete-btn').addEventListener('click', async () => {
+            if (!confirm('Czy na pewno chcesz usunąć tego leada? Ta akcja jest nieodwracalna.')) return;
+
+            const { error } = await supabaseClient.from('leads').delete().eq('id', lead.id);
+
+            if (error) {
+                alert('Błąd usuwania: ' + error.message);
+                return;
+            }
+
+            window.location.href = '/leads';
+        });
+
+        // Warn before leaving with unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Fix links for local development
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            document.querySelectorAll('a[data-page]').forEach(link => {
+                link.href = '/' + link.dataset.page + '.html';
+            });
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (session) await loadLead();
+        }
+        init();
+    </script>
+</body>
+</html>
