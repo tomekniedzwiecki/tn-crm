@@ -136,8 +136,12 @@
             </div>
             <div class="flex items-center gap-3">
                 <button id="add-test-leads-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-2">
+                    <i class="ph ph-flask"></i>
+                    Testowe
+                </button>
+                <button id="add-lead-btn" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded font-medium text-xs transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
                     <i class="ph ph-plus"></i>
-                    Dodaj testowe
+                    Dodaj Lead
                 </button>
             </div>
         </header>
@@ -149,6 +153,77 @@
             </div>
         </div>
     </main>
+
+    <!-- Add Lead Modal -->
+    <div id="add-lead-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-lg shadow-2xl">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-user-plus text-emerald-400"></i>
+                    Dodaj nowy lead
+                </h2>
+                <button id="close-add-modal" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <form id="add-lead-form" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email *</label>
+                    <input type="email" id="add-email" required class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600" placeholder="email@example.com">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Imię i nazwisko</label>
+                        <input type="text" id="add-name" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600" placeholder="Jan Kowalski">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Firma</label>
+                        <input type="text" id="add-company" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600" placeholder="Nazwa firmy">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
+                        <input type="tel" id="add-phone" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600" placeholder="+48 ...">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Etap</label>
+                        <select id="add-status" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600">
+                            <option value="new">Nowy</option>
+                            <option value="contacted">Skontaktowany</option>
+                            <option value="qualified">Zakwalifikowany</option>
+                            <option value="proposal">Propozycja</option>
+                            <option value="negotiation">Negocjacje</option>
+                            <option value="won">Wygrany</option>
+                            <option value="lost">Przegrany</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wartość (PLN)</label>
+                        <input type="number" id="add-value" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Planowane zamknięcie</label>
+                        <input type="date" id="add-expected-close" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600">
+                    </div>
+                </div>
+            </form>
+
+            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <div class="flex-1"></div>
+                <button id="cancel-add-modal" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                    Anuluj
+                </button>
+                <button id="submit-add-lead" class="bg-emerald-500 text-white hover:bg-emerald-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <i class="ph ph-plus"></i>
+                    Dodaj lead
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
@@ -409,6 +484,65 @@
             }
 
             await loadLeads();
+        });
+
+        // Add Lead Modal
+        function openAddModal() {
+            document.getElementById('add-lead-modal').classList.remove('hidden');
+            document.getElementById('add-email').focus();
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-lead-modal').classList.add('hidden');
+            document.getElementById('add-lead-form').reset();
+        }
+
+        document.getElementById('add-lead-btn').addEventListener('click', openAddModal);
+        document.getElementById('close-add-modal').addEventListener('click', closeAddModal);
+        document.getElementById('cancel-add-modal').addEventListener('click', closeAddModal);
+
+        document.getElementById('add-lead-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeAddModal();
+        });
+
+        document.getElementById('submit-add-lead').addEventListener('click', async () => {
+            const email = document.getElementById('add-email').value.trim();
+            if (!email) {
+                alert('Email jest wymagany');
+                return;
+            }
+
+            const leadData = {
+                email: email,
+                name: document.getElementById('add-name').value.trim() || null,
+                company: document.getElementById('add-company').value.trim() || null,
+                phone: document.getElementById('add-phone').value.trim() || null,
+                status: document.getElementById('add-status').value,
+                deal_value: document.getElementById('add-value').value ? parseFloat(document.getElementById('add-value').value) : null,
+                expected_close: document.getElementById('add-expected-close').value || null,
+                utm_source: 'manual'
+            };
+
+            const btn = document.getElementById('submit-add-lead');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
+
+            const { error } = await supabaseClient.from('leads').insert([leadData]);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-plus"></i> Dodaj lead';
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            closeAddModal();
+            await loadLeads();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAddModal();
         });
 
         // Fix links for local development

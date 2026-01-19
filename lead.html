@@ -150,11 +150,17 @@
                             <span id="lead-created" class="font-mono text-xs">-</span>
                         </div>
                     </div>
-                    <div id="status-selector" class="flex gap-1">
-                        <button data-status="new" class="status-btn px-3 py-1.5 rounded-l-lg text-xs font-medium border transition-all">Nowy</button>
-                        <button data-status="contacted" class="status-btn px-3 py-1.5 text-xs font-medium border-y transition-all">Skontaktowany</button>
-                        <button data-status="qualified" class="status-btn px-3 py-1.5 text-xs font-medium border-y transition-all">Zakwalifikowany</button>
-                        <button data-status="rejected" class="status-btn px-3 py-1.5 rounded-r-lg text-xs font-medium border transition-all">Odrzucony</button>
+                    <div id="status-selector" class="relative">
+                        <select id="status-select" class="appearance-none bg-zinc-900 border border-zinc-700 text-white text-sm font-medium rounded-lg px-4 py-2 pr-10 cursor-pointer hover:border-zinc-500 focus:border-zinc-400 focus:outline-none transition-colors">
+                            <option value="new">Nowy</option>
+                            <option value="contacted">Skontaktowany</option>
+                            <option value="qualified">Zakwalifikowany</option>
+                            <option value="proposal">Propozycja</option>
+                            <option value="negotiation">Negocjacje</option>
+                            <option value="won">Wygrany</option>
+                            <option value="lost">Przegrany</option>
+                        </select>
+                        <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"></i>
                     </div>
                 </div>
 
@@ -472,18 +478,9 @@
             badge.textContent = src.name;
             badge.className = `inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium ${src.color} ${src.bg} ${src.border}`;
 
-            // Status buttons
+            // Status dropdown
             const status = lead.status || 'new';
-            document.querySelectorAll('.status-btn').forEach(btn => {
-                const btnStatus = btn.dataset.status;
-                if (btnStatus === status) {
-                    btn.className = 'status-btn px-3 py-1.5 text-xs font-medium border transition-all bg-white text-black border-white ' +
-                        (btnStatus === 'new' ? 'rounded-l-lg' : btnStatus === 'rejected' ? 'rounded-r-lg' : 'border-y');
-                } else {
-                    btn.className = 'status-btn px-3 py-1.5 text-xs font-medium border transition-all bg-transparent text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600 ' +
-                        (btnStatus === 'new' ? 'rounded-l-lg' : btnStatus === 'rejected' ? 'rounded-r-lg' : 'border-y');
-                }
-            });
+            document.getElementById('status-select').value = status;
 
             // Form fields
             document.getElementById('field-email').value = lead.email;
@@ -553,26 +550,32 @@
         }
 
         // Status change
-        document.querySelectorAll('.status-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const newStatus = btn.dataset.status;
-                const oldStatus = lead.status || 'new';
-                if (newStatus !== oldStatus) {
-                    lead.status = newStatus;
+        const STATUS_LABELS = {
+            new: 'Nowy',
+            contacted: 'Skontaktowany',
+            qualified: 'Zakwalifikowany',
+            proposal: 'Propozycja',
+            negotiation: 'Negocjacje',
+            won: 'Wygrany',
+            lost: 'Przegrany'
+        };
 
-                    // Add activity
-                    const statusLabels = { new: 'Nowy', contacted: 'Skontaktowany', qualified: 'Zakwalifikowany', rejected: 'Odrzucony' };
-                    activities.push({
-                        type: 'status_change',
-                        content: `Status zmieniony: ${statusLabels[oldStatus]} → ${statusLabels[newStatus]}`,
-                        created_at: new Date().toISOString()
-                    });
+        document.getElementById('status-select').addEventListener('change', (e) => {
+            const newStatus = e.target.value;
+            const oldStatus = lead.status || 'new';
+            if (newStatus !== oldStatus) {
+                lead.status = newStatus;
 
-                    renderLead();
-                    renderActivities();
-                    triggerAutoSave(); // Auto-save on status change
-                }
-            });
+                // Add activity
+                activities.push({
+                    type: 'status_change',
+                    content: `Status zmieniony: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[newStatus]}`,
+                    created_at: new Date().toISOString()
+                });
+
+                renderActivities();
+                autoSave(); // Immediate save on status change
+            }
         });
 
         // Activity type buttons
