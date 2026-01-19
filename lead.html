@@ -123,13 +123,12 @@
                 <span id="breadcrumb-email" class="text-white font-medium truncate max-w-[200px]">...</span>
             </div>
             <div class="flex items-center gap-3">
+                <div id="save-status" class="flex items-center gap-2 text-xs text-zinc-500 mr-2">
+                    <span id="save-status-text"></span>
+                </div>
                 <button id="delete-btn" class="text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-2">
                     <i class="ph ph-trash"></i>
                     Usuń
-                </button>
-                <button id="save-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-1.5 rounded font-medium text-xs transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-2">
-                    <i class="ph ph-floppy-disk"></i>
-                    Zapisz zmiany
                 </button>
             </div>
         </header>
@@ -166,15 +165,10 @@
 
                         <!-- Contact Info -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                    <i class="ph ph-user text-zinc-500"></i>
-                                    Dane kontaktowe
-                                </h3>
-                                <button id="save-contact-btn" class="hidden text-xs bg-white text-black hover:bg-zinc-200 px-3 py-1 rounded font-medium transition-colors">
-                                    Zapisz
-                                </button>
-                            </div>
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-user text-zinc-500"></i>
+                                Dane kontaktowe
+                            </h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email</label>
@@ -197,15 +191,10 @@
 
                         <!-- Deal Info -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                    <i class="ph ph-currency-circle-dollar text-zinc-500"></i>
-                                    Informacje o dealu
-                                </h3>
-                                <button id="save-deal-btn" class="hidden text-xs bg-white text-black hover:bg-zinc-200 px-3 py-1 rounded font-medium transition-colors">
-                                    Zapisz
-                                </button>
-                            </div>
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-currency-circle-dollar text-zinc-500"></i>
+                                Informacje o dealu
+                            </h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wartość (PLN)</label>
@@ -220,15 +209,10 @@
 
                         <!-- Notes -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                    <i class="ph ph-note-pencil text-zinc-500"></i>
-                                    Notatki
-                                </h3>
-                                <button id="save-notes-btn" class="hidden text-xs bg-white text-black hover:bg-zinc-200 px-3 py-1 rounded font-medium transition-colors">
-                                    Zapisz
-                                </button>
-                            </div>
+                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-note-pencil text-zinc-500"></i>
+                                Notatki
+                            </h3>
                             <textarea id="field-notes" rows="4" placeholder="Dodaj notatki o tym leadzie..." class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none"></textarea>
                         </div>
 
@@ -584,9 +568,9 @@
                         created_at: new Date().toISOString()
                     });
 
-                    hasChanges = true;
                     renderLead();
                     renderActivities();
+                    triggerAutoSave(); // Auto-save on status change
                 }
             });
         });
@@ -624,38 +608,39 @@
             });
 
             document.getElementById('activity-content').value = '';
-            hasChanges = true;
             renderActivities();
+            autoSave(); // Immediate save when adding activity
         });
 
-        // Track changes for each section
-        const contactFields = ['field-phone', 'field-name', 'field-company'];
-        const dealFields = ['field-value', 'field-expected-close'];
-        const noteFields = ['field-notes'];
+        // Auto-save with debounce
+        let saveTimeout = null;
+        let isSaving = false;
 
-        contactFields.forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                hasChanges = true;
-                document.getElementById('save-contact-btn').classList.remove('hidden');
-            });
-        });
+        function showSaveStatus(status) {
+            const statusEl = document.getElementById('save-status-text');
+            if (status === 'saving') {
+                statusEl.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
+                statusEl.className = 'text-zinc-400';
+            } else if (status === 'saved') {
+                statusEl.innerHTML = '<i class="ph ph-check-circle"></i> Zapisano';
+                statusEl.className = 'text-emerald-400';
+                setTimeout(() => {
+                    statusEl.innerHTML = '';
+                }, 2000);
+            } else if (status === 'error') {
+                statusEl.innerHTML = '<i class="ph ph-warning-circle"></i> Błąd zapisu';
+                statusEl.className = 'text-red-400';
+            } else {
+                statusEl.innerHTML = '';
+            }
+        }
 
-        dealFields.forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                hasChanges = true;
-                document.getElementById('save-deal-btn').classList.remove('hidden');
-            });
-        });
+        async function autoSave() {
+            if (isSaving || !lead) return;
 
-        noteFields.forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                hasChanges = true;
-                document.getElementById('save-notes-btn').classList.remove('hidden');
-            });
-        });
+            isSaving = true;
+            showSaveStatus('saving');
 
-        // Section save buttons
-        async function saveToDatabase() {
             const updates = {
                 status: lead.status,
                 phone: document.getElementById('field-phone').value || null,
@@ -668,84 +653,29 @@
             };
 
             const { error } = await supabaseClient.from('leads').update(updates).eq('id', lead.id);
+
+            isSaving = false;
+
             if (error) {
-                alert('Błąd zapisu: ' + error.message);
-                return false;
+                showSaveStatus('error');
+                console.error('Auto-save error:', error);
+            } else {
+                hasChanges = false;
+                showSaveStatus('saved');
             }
-            hasChanges = false;
-            return true;
         }
 
-        document.getElementById('save-contact-btn').addEventListener('click', async () => {
-            if (await saveToDatabase()) {
-                const btn = document.getElementById('save-contact-btn');
-                btn.textContent = 'Zapisano!';
-                btn.classList.add('bg-emerald-500');
-                setTimeout(() => {
-                    btn.textContent = 'Zapisz';
-                    btn.classList.remove('bg-emerald-500');
-                    btn.classList.add('hidden');
-                }, 1500);
-            }
-        });
+        function triggerAutoSave() {
+            hasChanges = true;
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(autoSave, 1000); // Save 1 second after last change
+        }
 
-        document.getElementById('save-deal-btn').addEventListener('click', async () => {
-            if (await saveToDatabase()) {
-                const btn = document.getElementById('save-deal-btn');
-                btn.textContent = 'Zapisano!';
-                btn.classList.add('bg-emerald-500');
-                setTimeout(() => {
-                    btn.textContent = 'Zapisz';
-                    btn.classList.remove('bg-emerald-500');
-                    btn.classList.add('hidden');
-                }, 1500);
-            }
-        });
+        // Track changes on all editable fields
+        const editableFields = ['field-phone', 'field-name', 'field-company', 'field-value', 'field-expected-close', 'field-notes'];
 
-        document.getElementById('save-notes-btn').addEventListener('click', async () => {
-            if (await saveToDatabase()) {
-                const btn = document.getElementById('save-notes-btn');
-                btn.textContent = 'Zapisano!';
-                btn.classList.add('bg-emerald-500');
-                setTimeout(() => {
-                    btn.textContent = 'Zapisz';
-                    btn.classList.remove('bg-emerald-500');
-                    btn.classList.add('hidden');
-                }, 1500);
-            }
-        });
-
-        // Save
-        document.getElementById('save-btn').addEventListener('click', async () => {
-            const updates = {
-                status: lead.status,
-                phone: document.getElementById('field-phone').value || null,
-                name: document.getElementById('field-name').value || null,
-                company: document.getElementById('field-company').value || null,
-                deal_value: document.getElementById('field-value').value ? parseFloat(document.getElementById('field-value').value) : null,
-                expected_close: document.getElementById('field-expected-close').value || null,
-                notes: document.getElementById('field-notes').value || null,
-                activities: activities.filter(a => a.type !== 'created') // Don't save the synthetic created event
-            };
-
-            const { error } = await supabaseClient.from('leads').update(updates).eq('id', lead.id);
-
-            if (error) {
-                alert('Błąd zapisu: ' + error.message);
-                return;
-            }
-
-            hasChanges = false;
-
-            // Show success
-            const btn = document.getElementById('save-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="ph ph-check"></i> Zapisano';
-            btn.classList.add('bg-emerald-500');
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.remove('bg-emerald-500');
-            }, 2000);
+        editableFields.forEach(id => {
+            document.getElementById(id).addEventListener('input', triggerAutoSave);
         });
 
         // Delete
