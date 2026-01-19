@@ -69,6 +69,18 @@
             background: rgba(255,255,255,0.05);
             border-color: rgba(255,255,255,0.2);
         }
+
+        .drop-indicator {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            border-radius: 2px;
+            margin: 4px 0;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .drop-indicator.active {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -447,7 +459,9 @@
 
             // Render columns
             board.innerHTML = STAGES.map(stage => {
-                const stageLeads = filteredLeads.filter(l => (l.status || 'new') === stage.id);
+                const stageLeads = filteredLeads
+                    .filter(l => (l.status || 'new') === stage.id)
+                    .sort((a, b) => (a.pipeline_position || 0) - (b.pipeline_position || 0));
                 const stageValue = stageLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
 
                 const colorClasses = {
@@ -477,12 +491,16 @@
                         <div class="text-[10px] text-zinc-500 font-mono mb-3 px-1">${formatCurrency(stageValue)}</div>
 
                         <!-- Cards Container -->
-                        <div class="column-drop-zone flex-1 space-y-2 p-1 rounded-lg border border-transparent overflow-y-auto"
+                        <div class="column-drop-zone flex-1 p-1 rounded-lg border border-transparent overflow-y-auto"
                              data-stage="${stage.id}"
-                             ondragover="handleDragOver(event)"
-                             ondragleave="handleDragLeave(event)"
+                             ondragover="handleColumnDragOver(event)"
+                             ondragleave="handleColumnDragLeave(event)"
                              ondrop="handleDrop(event)">
-                            ${stageLeads.map(lead => renderLeadCard(lead, colors)).join('')}
+                            <div class="drop-indicator" data-position="0"></div>
+                            ${stageLeads.map((lead, idx) => `
+                                ${renderLeadCard(lead, colors)}
+                                <div class="drop-indicator" data-position="${idx + 1}"></div>
+                            `).join('')}
                         </div>
                     </div>
                 `;
@@ -554,6 +572,7 @@
         // Drag and Drop
         let draggedElement = null;
         let draggedLeadId = null;
+        let currentDropPosition = null;
 
         function handleDragStart(event) {
             draggedElement = event.target;
@@ -568,36 +587,92 @@
             document.querySelectorAll('.column-drop-zone').forEach(zone => {
                 zone.classList.remove('drag-over');
             });
+            document.querySelectorAll('.drop-indicator').forEach(ind => {
+                ind.classList.remove('active');
+            });
+            currentDropPosition = null;
         }
 
-        function handleDragOver(event) {
+        function handleColumnDragOver(event) {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
             event.currentTarget.classList.add('drag-over');
+
+            // Find closest drop indicator
+            const dropZone = event.currentTarget;
+            const indicators = dropZone.querySelectorAll('.drop-indicator');
+            const mouseY = event.clientY;
+
+            let closestIndicator = null;
+            let closestDistance = Infinity;
+
+            indicators.forEach(indicator => {
+                const rect = indicator.getBoundingClientRect();
+                const indicatorY = rect.top + rect.height / 2;
+                const distance = Math.abs(mouseY - indicatorY);
+
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestIndicator = indicator;
+                }
+            });
+
+            // Clear all indicators and activate closest
+            indicators.forEach(ind => ind.classList.remove('active'));
+            if (closestIndicator) {
+                closestIndicator.classList.add('active');
+                currentDropPosition = parseInt(closestIndicator.dataset.position);
+            }
         }
 
-        function handleDragLeave(event) {
+        function handleColumnDragLeave(event) {
             event.currentTarget.classList.remove('drag-over');
+            event.currentTarget.querySelectorAll('.drop-indicator').forEach(ind => {
+                ind.classList.remove('active');
+            });
         }
 
         async function handleDrop(event) {
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over');
+            event.currentTarget.querySelectorAll('.drop-indicator').forEach(ind => {
+                ind.classList.remove('active');
+            });
 
             const leadId = event.dataTransfer.getData('text/plain');
             const newStage = event.currentTarget.dataset.stage;
+            const dropPosition = currentDropPosition !== null ? currentDropPosition : 0;
 
             if (!leadId || !newStage) return;
+
+            // Get leads in this stage sorted by position
+            const stageLeads = leads
+                .filter(l => (l.status || 'new') === newStage && l.id !== leadId)
+                .sort((a, b) => (a.pipeline_position || 0) - (b.pipeline_position || 0));
+
+            // Calculate new position (use position * 1000 to leave room for insertions)
+            let newPosition;
+            if (stageLeads.length === 0) {
+                newPosition = 1000;
+            } else if (dropPosition === 0) {
+                newPosition = (stageLeads[0]?.pipeline_position || 1000) - 500;
+            } else if (dropPosition >= stageLeads.length) {
+                newPosition = (stageLeads[stageLeads.length - 1]?.pipeline_position || 0) + 1000;
+            } else {
+                const before = stageLeads[dropPosition - 1]?.pipeline_position || 0;
+                const after = stageLeads[dropPosition]?.pipeline_position || before + 2000;
+                newPosition = Math.floor((before + after) / 2);
+            }
 
             // Update in database
             const { error } = await supabaseClient
                 .from('leads')
-                .update({ status: newStage })
+                .update({ status: newStage, pipeline_position: newPosition })
                 .eq('id', leadId);
 
             if (error) {
-                console.error('Error updating lead status:', error);
-                alert('Błąd aktualizacji statusu');
+                console.error('Error updating lead:', error);
+                alert('Błąd aktualizacji');
                 return;
             }
 
@@ -605,7 +680,9 @@
             const lead = leads.find(l => l.id === leadId);
             if (lead) {
                 lead.status = newStage;
+                lead.pipeline_position = newPosition;
             }
+            currentDropPosition = null;
             renderPipeline();
         }
 
