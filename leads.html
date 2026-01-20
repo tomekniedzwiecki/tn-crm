@@ -102,6 +102,11 @@
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
+
+            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-shield-check text-xl"></i>
+                <span class="font-medium">Aktywność</span>
+            </a>
         </nav>
 
         <div class="p-4 border-t border-white/5">
@@ -511,6 +516,27 @@
         let isAdmin = false;
         let offers = [];
 
+        // Audit logging helper
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
+            if (!currentMember) return;
+
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { ...metadata, source_page: window.location.pathname }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
+            }
+        }
+
         // Pipeline stages - loaded dynamically from settings
         const DEFAULT_PIPELINE_STAGES = [
             { id: 'new', name: 'Nowy', order: 0 },
@@ -622,6 +648,10 @@
             // Show settings nav for admins
             const navSettings = document.getElementById('nav-settings');
             if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            // Show audit nav for admins
+            const navAudit = document.getElementById('nav-audit');
+            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
 
             updateAdminUI();
         }
@@ -762,6 +792,19 @@
             const { data, error } = await supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
             if (error) { console.error('Error:', error); return; }
             leads = data || [];
+
+            // Load client offers to get tokens
+            const { data: clientOffers } = await supabaseClient.from('client_offers').select('lead_id, unique_token');
+            if (clientOffers) {
+                const tokenMap = {};
+                clientOffers.forEach(co => {
+                    tokenMap[co.lead_id] = co.unique_token;
+                });
+                leads.forEach(lead => {
+                    lead.client_offer_token = tokenMap[lead.id] || null;
+                });
+            }
+
             document.getElementById('total-count').textContent = leads.length;
             document.getElementById('nav-leads-count').textContent = leads.filter(l => l.status === 'new' || !l.status).length;
             applyFilters();
@@ -895,6 +938,9 @@
                     <td class="px-4 py-3 text-zinc-500 font-mono text-[11px]">${formatDateShort(lead.created_at)}</td>
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            ${lead.client_offer_token ? `<button onclick="event.stopPropagation(); openClientOffer('${lead.client_offer_token}')" class="p-1.5 text-amber-400 hover:bg-amber-500/20 rounded transition-colors" title="Otwórz ofertę klienta">
+                                <i class="ph ph-link text-sm"></i>
+                            </button>` : ''}
                             <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1.5 text-purple-400 hover:bg-purple-500/20 rounded transition-colors" title="Wyślij email">
                                 <i class="ph ph-envelope-simple text-sm"></i>
                             </button>
@@ -922,8 +968,17 @@
             window.location.href = `tel:${phone.replace(/\s/g, '')}`;
         }
 
+        function openClientOffer(token) {
+            const base = getBasePath();
+            const path = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                ? `${base}/client-offer.html?token=${token}`
+                : `/p/${token}`;
+            window.open(path, '_blank');
+        }
+
         window.sendEmail = sendEmail;
         window.callPhone = callPhone;
+        window.openClientOffer = openClientOffer;
 
         // Survey modal helpers
         function formatSurveyDirection(value) {
@@ -1193,6 +1248,14 @@
                 return;
             }
 
+            // Log batch deletion
+            const deletedEmails = data.map(d => d.email).join(', ');
+            logAuditActivity('batch_delete', 'lead', null, deletedEmails.substring(0, 100), {
+                deleted_ids: selectedIds,
+                deleted_emails: data.map(d => d.email),
+                count: selectedIds.length
+            }, null, { batch_count: selectedIds.length });
+
             console.log('Deleted leads:', data);
             leads = leads.filter(l => !selectedIds.includes(l.id));
             document.getElementById('total-count').textContent = leads.length;
@@ -1277,6 +1340,11 @@
             if (error) {
                 alert('Błąd: ' + error.message);
                 return;
+            }
+
+            // Log lead creation
+            if (data && data[0]) {
+                logAuditActivity('create', 'lead', data[0].id, leadData.email, null, leadData);
             }
 
             closeAddModal();

@@ -218,6 +218,11 @@
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
+
+            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-shield-check text-xl"></i>
+                <span class="font-medium">Aktywność</span>
+            </a>
         </nav>
 
         <div class="p-4 border-t border-white/5">
@@ -522,6 +527,87 @@
                             </div>
                         </div>
 
+                        <!-- Client Offer Link -->
+                        <div id="client-offer-section" class="bg-zinc-900/40 rounded-lg border border-white/5 p-5 hidden">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                    <i class="ph ph-link text-amber-400"></i>
+                                    Link do oferty
+                                </h3>
+                            </div>
+
+                            <!-- No offer - generate form -->
+                            <div id="client-offer-empty" class="hidden">
+                                <p class="text-zinc-500 text-xs mb-4">Wygeneruj link do oferty dla klienta. Dostęp będzie chroniony adresem e-mail.</p>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="flex-1">
+                                        <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">Ważność oferty</label>
+                                        <input type="date" id="client-offer-valid-until" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                                    </div>
+                                </div>
+                                <button id="generate-client-offer-btn" class="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-amber-500/30">
+                                    <i class="ph ph-magic-wand"></i>
+                                    Wygeneruj link
+                                </button>
+                            </div>
+
+                            <!-- Offer exists -->
+                            <div id="client-offer-exists" class="hidden">
+                                <!-- URL with copy and open -->
+                                <div class="flex items-center gap-2 mb-4">
+                                    <input type="text" id="client-offer-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono truncate">
+                                    <button onclick="copyOfferUrl()" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-white/10" title="Kopiuj link">
+                                        <i class="ph ph-copy text-zinc-400"></i>
+                                    </button>
+                                    <button onclick="openOfferPreview()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors border border-amber-500/30" title="Otwórz ofertę">
+                                        <i class="ph ph-arrow-square-out text-amber-400"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Stats -->
+                                <div class="flex items-center gap-4 mb-4 text-xs">
+                                    <div class="flex items-center gap-2 text-zinc-400">
+                                        <i class="ph ph-calendar text-amber-400"></i>
+                                        <span>Ważna do:</span>
+                                        <span id="client-offer-valid-display" class="text-white font-medium">-</span>
+                                    </div>
+                                    <div class="relative">
+                                        <button onclick="toggleViewHistory()" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group">
+                                            <i class="ph ph-eye text-cyan-400"></i>
+                                            <span>Wyświetlenia:</span>
+                                            <span id="client-offer-views" class="text-white font-medium group-hover:text-cyan-400">0</span>
+                                            <i class="ph ph-caret-down text-[10px] text-zinc-500 group-hover:text-white"></i>
+                                        </button>
+                                        <!-- View History Dropdown -->
+                                        <div id="view-history-dropdown" class="hidden absolute top-full left-0 mt-2 w-56 bg-zinc-900 border border-white/10 rounded-lg shadow-xl z-20 overflow-hidden">
+                                            <div class="px-3 py-2 border-b border-white/5 bg-zinc-950/50">
+                                                <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Historia wyświetleń</span>
+                                            </div>
+                                            <div id="view-history-list" class="max-h-48 overflow-y-auto">
+                                                <!-- History items rendered here -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="flex gap-2">
+                                    <button onclick="openOfferPreview()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-white/10">
+                                        <i class="ph ph-arrow-square-out"></i>
+                                        Podgląd
+                                    </button>
+                                    <button onclick="downloadProformaFromCRM()" class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-blue-500/30">
+                                        <i class="ph ph-file-pdf"></i>
+                                        Proforma
+                                    </button>
+                                    <button onclick="deleteClientOffer()" class="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20 flex items-center justify-center gap-2">
+                                        <i class="ph ph-trash"></i>
+                                        Usuń
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Activity Timeline -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
                             <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
@@ -640,6 +726,28 @@
         let currentMember = null;
         let isAdmin = false;
         let confirmModalCallback = null;
+        let clientOffer = null;
+
+        // Audit logging helper
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
+            if (!currentMember) return;
+
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { ...metadata, source_page: window.location.pathname }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
+            }
+        }
 
         // Modal functions
         function showConfirmModal(options) {
@@ -763,6 +871,10 @@
             // Show settings nav for admins
             const navSettings = document.getElementById('nav-settings');
             if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            // Show audit nav for admins
+            const navAudit = document.getElementById('nav-audit');
+            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
 
             populateAssignedToSelect();
         }
@@ -1380,6 +1492,12 @@
                     performed_by_name: currentMember?.name || null
                 });
 
+                // Log status change to audit
+                logAuditActivity('status_change', 'lead', lead.id, lead.email,
+                    { status: oldStatus },
+                    { status: newStatus }
+                );
+
                 updatePipelineStepper(newStatus);
                 renderActivities();
                 autoSave();
@@ -1418,6 +1536,12 @@
                 created_at: new Date().toISOString(),
                 performed_by: currentMember?.id || null,
                 performed_by_name: currentMember?.name || null
+            });
+
+            // Log activity creation
+            logAuditActivity('create', 'activity', lead.id, lead.email, null, {
+                type: selectedActivityType,
+                content: content
             });
 
             document.getElementById('activity-content').value = '';
@@ -1468,6 +1592,17 @@
                 activities: activities.filter(a => a.type !== 'created')
             };
 
+            // Track what changed for audit log
+            const changedFields = {};
+            const oldValues = {};
+            const fieldsToTrack = ['phone', 'name', 'company', 'nip', 'address', 'offer_id', 'deal_value', 'expected_close', 'assigned_to'];
+            fieldsToTrack.forEach(field => {
+                if (lead[field] !== updates[field]) {
+                    oldValues[field] = lead[field];
+                    changedFields[field] = updates[field];
+                }
+            });
+
             const { error } = await supabaseClient.from('leads').update(updates).eq('id', lead.id);
 
             isSaving = false;
@@ -1476,6 +1611,12 @@
                 showSaveStatus('error');
                 console.error('Auto-save error:', error);
             } else {
+                // Log field changes if any
+                if (Object.keys(changedFields).length > 0) {
+                    logAuditActivity('update', 'lead', lead.id, lead.email, oldValues, changedFields);
+                    // Update local lead object
+                    Object.assign(lead, changedFields);
+                }
                 hasChanges = false;
                 showSaveStatus('saved');
             }
@@ -1511,6 +1652,9 @@
             }
 
             triggerAutoSave();
+
+            // Update client offer section visibility
+            updateClientOfferSection();
         });
 
         // Fetch company data from NIP
@@ -1594,6 +1738,14 @@
         document.getElementById('delete-btn').addEventListener('click', async () => {
             if (!confirm('Czy na pewno chcesz usunąć tego leada? Ta akcja jest nieodwracalna.')) return;
 
+            // Log deletion before actually deleting
+            await logAuditActivity('delete', 'lead', lead.id, lead.email, {
+                email: lead.email,
+                name: lead.name,
+                company: lead.company,
+                status: lead.status
+            }, null);
+
             const { error } = await supabaseClient.from('leads').delete().eq('id', lead.id);
 
             if (error) {
@@ -1645,6 +1797,12 @@
                 notesHistory.pop();
                 return;
             }
+
+            // Log note creation
+            logAuditActivity('create', 'note', lead.id, lead.email, null, {
+                content: noteContent,
+                lead_status: lead.status
+            });
 
             // Clear textarea and re-render history
             document.getElementById('field-notes').value = '';
@@ -1838,6 +1996,14 @@
                 return;
             }
 
+            // Log meeting creation
+            logAuditActivity('create', 'meeting', lead.id, lead.email, null, {
+                title: title,
+                date: date,
+                time: time,
+                duration: duration
+            });
+
             closeMeetingModal();
             await loadMeetings();
 
@@ -1856,6 +2022,9 @@
         async function deleteMeeting(meetingId) {
             if (!confirm('Czy na pewno chcesz usunąć to spotkanie?')) return;
 
+            // Find meeting info for audit log
+            const meetingToDelete = meetings.find(m => m.id === meetingId);
+
             const { error } = await supabaseClient
                 .from('calendar_events')
                 .delete()
@@ -1866,6 +2035,12 @@
                 alert('Błąd usuwania spotkania');
                 return;
             }
+
+            // Log meeting deletion
+            logAuditActivity('delete', 'meeting', lead.id, lead.email, {
+                title: meetingToDelete?.title,
+                meeting_id: meetingId
+            }, null);
 
             await loadMeetings();
         }
@@ -1879,11 +2054,343 @@
             }
         });
 
+        // ============ CLIENT OFFER FUNCTIONS ============
+
+        async function loadClientOffer() {
+            if (!lead) return;
+
+            const { data, error } = await supabaseClient
+                .from('client_offers')
+                .select('*')
+                .eq('lead_id', lead.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (data && !error) {
+                clientOffer = data;
+            } else {
+                clientOffer = null;
+            }
+
+            updateClientOfferSection();
+        }
+
+        function updateClientOfferSection() {
+            const section = document.getElementById('client-offer-section');
+            const emptyState = document.getElementById('client-offer-empty');
+            const existsState = document.getElementById('client-offer-exists');
+            const offerId = document.getElementById('field-offer').value;
+
+            // Show section only if offer is selected
+            if (!offerId) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+
+            if (clientOffer) {
+                // Show existing offer
+                emptyState.classList.add('hidden');
+                existsState.classList.remove('hidden');
+
+                // Set URL (local dev uses query param, production uses path)
+                const offerUrl = getClientOfferUrl(clientOffer.unique_token);
+                document.getElementById('client-offer-url').value = offerUrl;
+
+                // Set stats
+                const validDate = new Date(clientOffer.valid_until);
+                document.getElementById('client-offer-valid-display').textContent = validDate.toLocaleDateString('pl-PL');
+                document.getElementById('client-offer-views').textContent = clientOffer.view_count || 0;
+            } else {
+                // Show empty state - form to generate
+                emptyState.classList.remove('hidden');
+                existsState.classList.add('hidden');
+
+                // Set default validity date (5 days from now)
+                const defaultDate = new Date();
+                defaultDate.setDate(defaultDate.getDate() + 5);
+                document.getElementById('client-offer-valid-until').value = defaultDate.toISOString().split('T')[0];
+            }
+        }
+
+        function generateToken() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let token = '';
+            for (let i = 0; i < 32; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        async function generateClientOffer() {
+            if (!lead || !currentMember) return;
+
+            const offerId = document.getElementById('field-offer').value;
+            if (!offerId) {
+                alert('Najpierw wybierz ofertę');
+                return;
+            }
+
+            const validUntil = document.getElementById('client-offer-valid-until').value;
+            if (!validUntil) {
+                alert('Podaj datę ważności oferty');
+                return;
+            }
+
+            const token = generateToken();
+
+            const btn = document.getElementById('generate-client-offer-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
+
+            const { data, error } = await supabaseClient
+                .from('client_offers')
+                .insert([{
+                    lead_id: lead.id,
+                    offer_id: offerId,
+                    unique_token: token,
+                    valid_until: validUntil,
+                    created_by: currentMember.id
+                }])
+                .select()
+                .single();
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-magic-wand"></i> Wygeneruj link';
+
+            if (error) {
+                console.error('Error generating offer:', error);
+                alert('Błąd podczas generowania oferty');
+                return;
+            }
+
+            clientOffer = data;
+            updateClientOfferSection();
+
+            // Log to audit
+            logAuditActivity('create', 'client_offer', data.id, lead.email, null, {
+                offer_id: offerId,
+                valid_until: validUntil,
+                token: token
+            });
+        }
+
+        function copyOfferUrl() {
+            const urlInput = document.getElementById('client-offer-url');
+            urlInput.select();
+            document.execCommand('copy');
+
+            // Show feedback
+            const btn = urlInput.nextElementSibling;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-check text-emerald-400"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+            }, 1500);
+        }
+
+        function getClientOfferUrl(token) {
+            const baseUrl = window.location.origin;
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isLocal) {
+                const base = getBasePath();
+                return `${baseUrl}${base}/client-offer.html?token=${token}`;
+            }
+            return `${baseUrl}/p/${token}`;
+        }
+
+        function openOfferPreview() {
+            if (!clientOffer) return;
+            window.open(getClientOfferUrl(clientOffer.unique_token), '_blank');
+        }
+
+        async function downloadProformaFromCRM() {
+            const btn = event.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i>';
+
+            try {
+                // Pobierz wybraną ofertę
+                const offerId = document.getElementById('field-offer').value;
+                const selectedOffer = offers.find(o => o.id === offerId);
+                if (!selectedOffer) {
+                    throw new Error('Nie wybrano oferty.');
+                }
+
+                // Przygotuj dane dla Edge Function
+                const addressParts = parseAddress(lead.address);
+                const today = new Date().toISOString().split('T')[0];
+
+                const requestData = {
+                    buyer: {
+                        name: lead.name,
+                        company: lead.company,
+                        email: lead.email,
+                        nip: lead.nip || '',
+                        street: addressParts.street,
+                        postCode: addressParts.postCode,
+                        city: addressParts.city
+                    },
+                    offer: {
+                        name: selectedOffer.name,
+                        description: selectedOffer.description,
+                        price: selectedOffer.price
+                    },
+                    validUntil: clientOffer ? clientOffer.valid_until : today
+                };
+
+                // Wywołaj Edge Function
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/fakturownia-proforma`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Błąd generowania proformy');
+                }
+
+                // Otwórz PDF
+                window.open(result.pdfUrl, '_blank');
+
+            } catch (error) {
+                console.error('Proforma error:', error);
+                alert('Błąd: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        function parseAddress(address) {
+            if (!address) return { street: '', postCode: '', city: '' };
+            const match = address.match(/^(.+?),?\s*(\d{2}-\d{3})\s+(.+)$/);
+            if (match) return { street: match[1].trim(), postCode: match[2], city: match[3].trim() };
+            return { street: address, postCode: '', city: '' };
+        }
+
+        async function deleteClientOffer() {
+            if (!clientOffer) return;
+
+            showConfirmModal({
+                title: 'Usuń ofertę',
+                message: 'Czy na pewno chcesz usunąć wygenerowaną ofertę? Link przestanie działać.',
+                theme: 'lost',
+                onConfirm: async () => {
+                    const { error } = await supabaseClient
+                        .from('client_offers')
+                        .delete()
+                        .eq('id', clientOffer.id);
+
+                    if (error) {
+                        console.error('Error deleting offer:', error);
+                        alert('Błąd podczas usuwania oferty');
+                        return;
+                    }
+
+                    // Log to audit
+                    logAuditActivity('delete', 'client_offer', clientOffer.id, lead.email, {
+                        token: clientOffer.unique_token,
+                        valid_until: clientOffer.valid_until
+                    }, null);
+
+                    clientOffer = null;
+                    updateClientOfferSection();
+                }
+            });
+        }
+
+        // View History Functions
+        function toggleViewHistory() {
+            const dropdown = document.getElementById('view-history-dropdown');
+            const isHidden = dropdown.classList.contains('hidden');
+
+            if (isHidden) {
+                renderViewHistory();
+                dropdown.classList.remove('hidden');
+
+                // Close on outside click
+                setTimeout(() => {
+                    document.addEventListener('click', closeViewHistoryOnOutsideClick);
+                }, 0);
+            } else {
+                dropdown.classList.add('hidden');
+                document.removeEventListener('click', closeViewHistoryOnOutsideClick);
+            }
+        }
+
+        function closeViewHistoryOnOutsideClick(e) {
+            const dropdown = document.getElementById('view-history-dropdown');
+            const button = e.target.closest('button[onclick="toggleViewHistory()"]');
+
+            if (!dropdown.contains(e.target) && !button) {
+                dropdown.classList.add('hidden');
+                document.removeEventListener('click', closeViewHistoryOnOutsideClick);
+            }
+        }
+
+        function renderViewHistory() {
+            const container = document.getElementById('view-history-list');
+            if (!clientOffer) {
+                container.innerHTML = '<p class="text-zinc-500 text-xs p-3">Brak danych</p>';
+                return;
+            }
+
+            const history = clientOffer.view_history || [];
+
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-zinc-500 text-xs p-3 text-center">Brak wyświetleń</p>';
+                return;
+            }
+
+            // Sort by date descending (newest first)
+            const sorted = [...history].sort((a, b) => new Date(b) - new Date(a));
+
+            container.innerHTML = sorted.map((timestamp, index) => {
+                const date = new Date(timestamp);
+                const formattedDate = date.toLocaleDateString('pl-PL', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const formattedTime = date.toLocaleTimeString('pl-PL', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                return `
+                    <div class="flex items-center justify-between px-3 py-2 hover:bg-white/5 border-b border-white/5 last:border-b-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-zinc-500 text-[10px] font-mono w-4">${sorted.length - index}</span>
+                            <i class="ph ph-eye text-cyan-400/60 text-xs"></i>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-zinc-200 text-xs font-medium">${formattedDate}</div>
+                            <div class="text-zinc-500 text-[10px] font-mono">${formattedTime}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Generate button click handler
+        document.getElementById('generate-client-offer-btn').addEventListener('click', generateClientOffer);
+
         async function init() {
             const session = await checkAuth();
             if (session) {
                 await loadPipelineSettings();
                 await loadLead();
+                await loadClientOffer();
                 await loadMeetings();
             }
         }

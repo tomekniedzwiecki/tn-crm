@@ -158,6 +158,11 @@
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
+
+            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-shield-check text-xl"></i>
+                <span class="font-medium">Aktywność</span>
+            </a>
         </nav>
 
         <div class="p-4 border-t border-white/5">
@@ -467,6 +472,27 @@
         let currentMember = null;
         let isAdmin = false;
 
+        // Audit logging helper
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
+            if (!currentMember) return;
+
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { ...metadata, source_page: window.location.pathname }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
+            }
+        }
+
         // ===========================================
         // AUTH & INIT
         // ===========================================
@@ -516,6 +542,10 @@
 
             const navSettings = document.getElementById('nav-settings');
             if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            // Show audit nav for admins
+            const navAudit = document.getElementById('nav-audit');
+            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
         }
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -1097,6 +1127,15 @@
                 return;
             }
 
+            // Log meeting creation
+            const selectedLead = leads.find(l => l.id === eventData.lead_id);
+            logAuditActivity('create', 'meeting', eventData.lead_id, selectedLead?.email || eventData.lead_id, null, {
+                title: eventData.title,
+                date: eventData.date,
+                time: eventData.time,
+                duration: eventData.duration
+            });
+
             document.getElementById('event-modal').classList.add('hidden');
             loadEvents();
         });
@@ -1113,6 +1152,10 @@
         document.getElementById('delete-event').addEventListener('click', async () => {
             if (!selectedEventId || !confirm('Czy na pewno chcesz usunąć to wydarzenie?')) return;
 
+            // Find event info for audit log
+            const eventToDelete = events.find(e => e.id === selectedEventId);
+            const eventLead = eventToDelete?.lead_id ? leads.find(l => l.id === eventToDelete.lead_id) : null;
+
             const { error } = await supabaseClient
                 .from('calendar_events')
                 .delete()
@@ -1123,6 +1166,12 @@
                 alert('Błąd usuwania wydarzenia');
                 return;
             }
+
+            // Log meeting deletion
+            logAuditActivity('delete', 'meeting', eventToDelete?.lead_id, eventLead?.email, {
+                title: eventToDelete?.title,
+                event_id: selectedEventId
+            }, null);
 
             document.getElementById('event-details-modal').classList.add('hidden');
             loadEvents();

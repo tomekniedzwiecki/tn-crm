@@ -88,6 +88,11 @@
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
+
+            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-shield-check text-xl"></i>
+                <span class="font-medium">Aktywność</span>
+            </a>
         </nav>
 
         <div class="p-4 border-t border-white/5">
@@ -270,6 +275,30 @@
             // Show settings nav for admins
             const navSettings = document.getElementById('nav-settings');
             if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            // Show audit nav for admins
+            const navAudit = document.getElementById('nav-audit');
+            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
+        }
+
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
+            if (!currentMember) return;
+
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { ...metadata, source_page: window.location.pathname }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
+            }
         }
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -301,6 +330,13 @@
             renderOffers();
         }
 
+        function getOfferPath(id) {
+            const base = getBasePath();
+            const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                ? `${base}/offer.html` : '/offer';
+            return `${basePath}?id=${id}`;
+        }
+
         function renderOffers() {
             const grid = document.getElementById('offers-grid');
             const emptyState = document.getElementById('empty-state');
@@ -319,8 +355,13 @@
 
             emptyState.classList.add('hidden');
 
-            grid.innerHTML = offers.map(offer => `
-                <div class="group bg-zinc-900/40 border border-white/5 rounded-lg p-5 hover:border-white/10 transition-all cursor-pointer" onclick="editOffer('${offer.id}')">
+            grid.innerHTML = offers.map(offer => {
+                const milestones = offer.milestones || [];
+                const totalDays = milestones.reduce((sum, m) => sum + (m.duration_days || 0), 0);
+                const totalTasks = milestones.reduce((sum, m) => sum + (m.tasks?.length || 0), 0);
+
+                return `
+                <div class="group bg-zinc-900/40 border border-white/5 rounded-lg p-5 hover:border-white/10 transition-all cursor-pointer" onclick="window.location.href=getOfferPath('${offer.id}')">
                     <div class="flex items-start justify-between mb-3">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${offer.is_active ? 'from-amber-500/20 to-orange-500/20 border-amber-500/30' : 'from-zinc-800 to-zinc-900 border-zinc-700'} border flex items-center justify-center">
@@ -340,6 +381,26 @@
                     ${offer.description ? `
                         <p class="text-zinc-400 text-sm line-clamp-2 mb-3">${offer.description}</p>
                     ` : ''}
+                    ${milestones.length > 0 ? `
+                        <div class="flex items-center gap-3 text-xs text-zinc-500 mb-3">
+                            <span class="flex items-center gap-1">
+                                <i class="ph ph-path text-amber-400"></i>
+                                ${milestones.length} ${milestones.length === 1 ? 'etap' : 'etapów'}
+                            </span>
+                            <span class="text-zinc-700">|</span>
+                            <span class="flex items-center gap-1">
+                                <i class="ph ph-clock"></i>
+                                ${totalDays} dni
+                            </span>
+                            ${totalTasks > 0 ? `
+                                <span class="text-zinc-700">|</span>
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-check-square"></i>
+                                    ${totalTasks} zadań
+                                </span>
+                            ` : ''}
+                        </div>
+                    ` : ''}
                     <div class="flex items-center justify-between pt-3 border-t border-white/5">
                         <span class="text-zinc-600 text-xs font-mono">
                             ${new Date(offer.created_at).toLocaleDateString('pl-PL')}
@@ -348,16 +409,19 @@
                             <button onclick="event.stopPropagation(); toggleActive('${offer.id}', ${!offer.is_active})" class="p-1.5 ${offer.is_active ? 'text-zinc-400 hover:text-zinc-200' : 'text-emerald-400 hover:text-emerald-300'} hover:bg-white/5 rounded transition-colors" title="${offer.is_active ? 'Dezaktywuj' : 'Aktywuj'}">
                                 <i class="ph ph-${offer.is_active ? 'eye-slash' : 'eye'} text-sm"></i>
                             </button>
-                            <button onclick="event.stopPropagation(); editOffer('${offer.id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded transition-colors" title="Edytuj">
+                            <button onclick="event.stopPropagation(); window.location.href=getOfferPath('${offer.id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded transition-colors" title="Edytuj">
                                 <i class="ph ph-pencil-simple text-sm"></i>
                             </button>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function toggleActive(id, isActive) {
+            const offer = offers.find(o => o.id === id);
+            const oldActive = offer ? offer.is_active : null;
+
             const { error } = await supabaseClient
                 .from('offers')
                 .update({ is_active: isActive })
@@ -368,8 +432,19 @@
                 return;
             }
 
-            const offer = offers.find(o => o.id === id);
-            if (offer) offer.is_active = isActive;
+            // Log audit
+            if (offer) {
+                await logAuditActivity(
+                    'update',
+                    'offer',
+                    id,
+                    offer.name,
+                    { is_active: oldActive },
+                    { is_active: isActive },
+                    { field: 'is_active' }
+                );
+                offer.is_active = isActive;
+            }
             renderOffers();
         }
 
@@ -430,6 +505,9 @@
             btn.disabled = true;
             btn.textContent = 'Zapisywanie...';
 
+            // Store old values for audit
+            const oldOffer = editingOfferId ? offers.find(o => o.id === editingOfferId) : null;
+
             let result;
             if (editingOfferId) {
                 result = await supabaseClient
@@ -452,6 +530,34 @@
                 return;
             }
 
+            // Audit log
+            if (result.data && result.data[0]) {
+                const savedOffer = result.data[0];
+                if (editingOfferId) {
+                    // Update
+                    await logAuditActivity(
+                        'update',
+                        'offer',
+                        savedOffer.id,
+                        savedOffer.name,
+                        oldOffer ? { name: oldOffer.name, description: oldOffer.description, price: oldOffer.price, is_active: oldOffer.is_active } : null,
+                        { name: savedOffer.name, description: savedOffer.description, price: savedOffer.price, is_active: savedOffer.is_active },
+                        {}
+                    );
+                } else {
+                    // Create
+                    await logAuditActivity(
+                        'create',
+                        'offer',
+                        savedOffer.id,
+                        savedOffer.name,
+                        null,
+                        { name: savedOffer.name, description: savedOffer.description, price: savedOffer.price, is_active: savedOffer.is_active },
+                        {}
+                    );
+                }
+            }
+
             closeModal();
             await loadOffers();
         });
@@ -459,6 +565,9 @@
         document.getElementById('delete-offer').addEventListener('click', async () => {
             if (!editingOfferId) return;
             if (!confirm('Czy na pewno chcesz usunąć tę ofertę?')) return;
+
+            // Store old values for audit
+            const oldOffer = offers.find(o => o.id === editingOfferId);
 
             const { error } = await supabaseClient
                 .from('offers')
@@ -468,6 +577,19 @@
             if (error) {
                 alert('Błąd usuwania: ' + error.message);
                 return;
+            }
+
+            // Audit log
+            if (oldOffer) {
+                await logAuditActivity(
+                    'delete',
+                    'offer',
+                    editingOfferId,
+                    oldOffer.name,
+                    { name: oldOffer.name, description: oldOffer.description, price: oldOffer.price, is_active: oldOffer.is_active },
+                    null,
+                    {}
+                );
             }
 
             closeModal();
@@ -483,6 +605,7 @@
         window.openAddModal = openAddModal;
         window.editOffer = editOffer;
         window.toggleActive = toggleActive;
+        window.getOfferPath = getOfferPath;
 
         // Fix links for local development
         if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {

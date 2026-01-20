@@ -86,6 +86,11 @@
                 <i class="ph ph-gear text-xl"></i>
                 <span class="font-medium">Ustawienia</span>
             </a>
+
+            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-shield-check text-xl"></i>
+                <span class="font-medium">Aktywność</span>
+            </a>
         </nav>
 
         <div class="p-4 border-t border-white/5">
@@ -352,6 +357,10 @@
             // Update role display
             document.getElementById('user-role').textContent = isAdmin ? 'Administrator' : 'Handlowiec';
 
+            // Show audit nav for admins
+            const navAudit = document.getElementById('nav-audit');
+            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
+
             // Show/hide content based on role
             if (isAdmin) {
                 document.getElementById('settings-content').classList.remove('hidden');
@@ -361,6 +370,26 @@
             } else {
                 document.getElementById('settings-content').classList.add('hidden');
                 document.getElementById('access-denied').classList.remove('hidden');
+            }
+        }
+
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
+            if (!currentMember) return;
+
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { ...metadata, source_page: window.location.pathname }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
             }
         }
 
@@ -461,6 +490,7 @@
         // Save settings
         document.getElementById('default-lead-assignee').addEventListener('change', async (e) => {
             const value = e.target.value || null;
+            const oldValue = settings.default_lead_assignee || null;
 
             const { error } = await supabaseClient
                 .from('settings')
@@ -471,6 +501,19 @@
                 alert('Błąd zapisu ustawienia');
                 return;
             }
+
+            // Audit log
+            const oldMemberName = oldValue ? teamMembers.find(m => m.id === oldValue)?.name : null;
+            const newMemberName = value ? teamMembers.find(m => m.id === value)?.name : null;
+            await logAuditActivity(
+                'update',
+                'settings',
+                null,
+                'default_lead_assignee',
+                { value: oldValue, name: oldMemberName },
+                { value: value, name: newMemberName },
+                { setting: 'default_lead_assignee' }
+            );
 
             settings.default_lead_assignee = value;
             showToast('Ustawienie zapisane');
@@ -527,7 +570,7 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
 
-            const { error } = await supabaseClient.from('team_members').insert([memberData]);
+            const { data, error } = await supabaseClient.from('team_members').insert([memberData]).select();
 
             btn.disabled = false;
             btn.innerHTML = '<i class="ph ph-plus"></i> Dodaj';
@@ -535,6 +578,19 @@
             if (error) {
                 alert('Błąd: ' + error.message);
                 return;
+            }
+
+            // Audit log
+            if (data && data[0]) {
+                await logAuditActivity(
+                    'create',
+                    'team_member',
+                    data[0].id,
+                    name,
+                    null,
+                    { name, email, role, color },
+                    {}
+                );
             }
 
             closeAddMemberModal();
@@ -548,6 +604,9 @@
         async function deleteMember(memberId) {
             if (!confirm('Czy na pewno chcesz usunąć tego członka zespołu?')) return;
 
+            // Store member info for audit
+            const memberToDelete = teamMembers.find(m => m.id === memberId);
+
             const { error } = await supabaseClient
                 .from('team_members')
                 .delete()
@@ -556,6 +615,19 @@
             if (error) {
                 alert('Błąd: ' + error.message);
                 return;
+            }
+
+            // Audit log
+            if (memberToDelete) {
+                await logAuditActivity(
+                    'delete',
+                    'team_member',
+                    memberId,
+                    memberToDelete.name,
+                    { name: memberToDelete.name, email: memberToDelete.email, role: memberToDelete.role },
+                    null,
+                    {}
+                );
             }
 
             const session = await checkAuth();
@@ -586,7 +658,9 @@
             renderPipelineStages();
         }
 
-        async function savePipelineStages() {
+        async function savePipelineStages(actionType = 'update', stageInfo = null) {
+            const oldStages = settings.pipeline_stages ? JSON.parse(settings.pipeline_stages) : null;
+
             const { error } = await supabaseClient
                 .from('settings')
                 .upsert({
@@ -600,6 +674,17 @@
                 alert('Błąd zapisu pipeline');
                 return false;
             }
+
+            // Audit log
+            await logAuditActivity(
+                actionType,
+                'settings',
+                null,
+                'pipeline_stages',
+                oldStages ? { stages: oldStages } : null,
+                { stages: pipelineStages },
+                { setting: 'pipeline_stages', ...stageInfo }
+            );
 
             settings.pipeline_stages = JSON.stringify(pipelineStages);
             showToast('Pipeline zapisany');
@@ -699,7 +784,7 @@
                 });
 
                 renderPipelineStages();
-                savePipelineStages();
+                savePipelineStages('update', { action: 'reorder', stage: movedStage.name, from: draggedStageIndex, to: targetIndex });
             }
         }
 
@@ -713,8 +798,9 @@
             }
 
             if (pipelineStages[index].name !== newName) {
+                const oldName = pipelineStages[index].name;
                 pipelineStages[index].name = newName;
-                savePipelineStages();
+                savePipelineStages('update', { action: 'rename', stageId: pipelineStages[index].id, oldName, newName });
             }
         }
 
@@ -728,14 +814,15 @@
                 newId = 'stage_' + (pipelineStages.length + counter);
             }
 
-            pipelineStages.push({
+            const newStage = {
                 id: newId,
                 name: 'Nowy etap',
                 order: pipelineStages.length
-            });
+            };
+            pipelineStages.push(newStage);
 
             renderPipelineStages();
-            savePipelineStages();
+            savePipelineStages('create', { action: 'add_stage', stageId: newId, stageName: newStage.name });
 
             // Focus the new input
             setTimeout(() => {
@@ -754,6 +841,7 @@
                 return;
             }
 
+            const deletedStage = { ...stage };
             pipelineStages.splice(index, 1);
 
             // Update order values
@@ -762,7 +850,7 @@
             });
 
             renderPipelineStages();
-            savePipelineStages();
+            savePipelineStages('delete', { action: 'delete_stage', stageId: deletedStage.id, stageName: deletedStage.name });
         }
 
         window.deleteStage = deleteStage;

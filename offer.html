@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Oferta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+        .input-field:hover:not(:focus) {
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .milestone-card {
+            transition: all 0.2s;
+        }
+        .milestone-card.dragging {
+            opacity: 0.5;
+            border-style: dashed;
+        }
+        .milestone-card.drag-over {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .task-item.task-drag-over {
+            border-top: 2px solid rgba(139, 92, 246, 0.5);
+        }
+
+        .timeline-line {
+            background: linear-gradient(to bottom, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.1), transparent);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
+            <div class="w-7 h-7 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <i class="ph-bold ph-lightning text-sm"></i>
+            </div>
+            <span class="font-medium text-base text-zinc-200">TN CRM</span>
+            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
+        </div>
+
+        <nav class="flex-1 px-4 py-6">
+            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
+
+            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-house text-xl"></i>
+                <span class="font-medium">Overview</span>
+            </a>
+
+            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-users text-xl"></i>
+                <span class="font-medium">Leady</span>
+            </a>
+
+            <a href="/pipeline" data-page="pipeline" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-kanban text-xl"></i>
+                <span class="font-medium">Pipeline</span>
+            </a>
+
+            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
+                <i class="ph ph-calendar text-xl"></i>
+                <span class="font-medium">Kalendarz</span>
+            </a>
+
+            <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
+                <i class="ph ph-package text-xl"></i>
+                <span class="font-medium">Oferty</span>
+            </a>
+
+            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-gear text-xl"></i>
+                <span class="font-medium">Ustawienia</span>
+            </a>
+
+            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
+                <i class="ph ph-shield-check text-xl"></i>
+                <span class="font-medium">Aktywność</span>
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-sm font-medium">TN</div>
+                <div class="flex-1 min-w-0">
+                    <div id="user-email" class="text-sm font-medium text-zinc-200 truncate"></div>
+                    <div class="text-xs text-zinc-500 truncate">Free Plan</div>
+                </div>
+                <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
+                    <i class="ph ph-sign-out text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <a href="/offers" class="text-zinc-400 hover:text-white transition-colors">offers</a>
+                <span class="text-zinc-700">/</span>
+                <span id="header-name" class="text-white font-medium truncate max-w-[200px]">...</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="save-status" class="text-xs text-zinc-500 flex items-center gap-1.5"></span>
+                <a href="/offers" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5">
+                    <i class="ph ph-arrow-left"></i>
+                    Wstecz
+                </a>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-6xl mx-auto animate-enter">
+
+                <!-- Loading State -->
+                <div id="loading-state" class="py-16 text-center">
+                    <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
+                    <p class="text-zinc-500 text-sm font-mono">Ładowanie...</p>
+                </div>
+
+                <!-- Offer Content -->
+                <div id="offer-content" class="hidden">
+
+                    <!-- Offer Header -->
+                    <div class="flex items-start gap-6 mb-8">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-package text-3xl text-amber-400"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="text" id="offer-name" class="text-3xl font-semibold text-white tracking-tight bg-transparent border-none outline-none w-full placeholder-zinc-600" placeholder="Nazwa oferty...">
+                            <div class="flex items-center gap-3 mt-2">
+                                <span id="created-date" class="text-xs text-zinc-500 font-mono"></span>
+                                <span class="text-zinc-700">|</span>
+                                <button id="toggle-active" class="text-xs flex items-center gap-1 transition-colors">
+                                    <span id="status-indicator"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="flex items-baseline gap-1">
+                                <input type="number" id="offer-price" class="text-3xl font-semibold text-white font-mono bg-transparent text-right w-32 border-none outline-none placeholder-zinc-600" placeholder="0" min="0" step="0.01">
+                                <span class="text-zinc-500 text-lg">PLN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Two Column Layout -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                        <!-- Left Column (2/3) -->
+                        <div class="lg:col-span-2 space-y-6">
+
+                            <!-- Basic Info -->
+                            <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                                <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                    <i class="ph ph-info text-zinc-500"></i>
+                                    Opis oferty
+                                </h3>
+                                <textarea id="offer-description" rows="4" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none" placeholder="Ogólny opis oferty..."></textarea>
+                            </div>
+
+                            <!-- Milestones Editor -->
+                            <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-path text-amber-400"></i>
+                                        Etapy realizacji
+                                        <span id="milestones-count" class="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-mono">0</span>
+                                    </h3>
+                                    <button id="add-milestone-btn" class="text-zinc-400 hover:text-white text-xs flex items-center gap-1 hover:bg-white/5 px-2 py-1 rounded transition-colors">
+                                        <i class="ph ph-plus"></i>
+                                        Dodaj etap
+                                    </button>
+                                </div>
+
+                                <div id="milestones-list" class="space-y-4">
+                                    <!-- Milestones rendered here -->
+                                </div>
+
+                                <div id="milestones-empty" class="text-center py-8">
+                                    <i class="ph ph-path text-2xl text-zinc-700 mb-2"></i>
+                                    <p class="text-zinc-500 text-xs">Brak etapów realizacji</p>
+                                    <p class="text-zinc-600 text-[10px] mb-3">Dodaj pierwszy etap, aby stworzyć harmonogram</p>
+                                    <button onclick="addMilestone()" class="text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg text-xs transition-colors">
+                                        <i class="ph ph-plus mr-1"></i> Dodaj etap
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column (1/3) - Timeline Preview -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
+                                <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                    <i class="ph ph-chart-line text-cyan-400"></i>
+                                    Harmonogram
+                                </h3>
+
+                                <div id="timeline-preview" class="relative">
+                                    <!-- Timeline rendered here -->
+                                </div>
+
+                                <!-- Summary -->
+                                <div class="mt-6 pt-4 border-t border-white/5">
+                                    <!-- Top row: General stats -->
+                                    <div class="flex items-center justify-center gap-6 mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                                                <i class="ph ph-calendar-blank text-white/60 text-sm"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-lg font-semibold text-white font-mono leading-none" id="total-days">0</div>
+                                                <div class="text-[9px] text-zinc-500 uppercase">dni</div>
+                                            </div>
+                                        </div>
+                                        <div class="w-px h-8 bg-white/10"></div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                                                <i class="ph ph-flag-checkered text-white/60 text-sm"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-lg font-semibold text-white font-mono leading-none" id="total-milestones">0</div>
+                                                <div class="text-[9px] text-zinc-500 uppercase">etapów</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Bottom row: Task breakdown -->
+                                    <div class="flex items-center justify-between gap-2 p-2 bg-zinc-950/30 rounded-lg">
+                                        <div class="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded bg-violet-500/10 border border-violet-500/20">
+                                            <i class="ph ph-users-three text-violet-400 text-xs"></i>
+                                            <span class="text-sm font-semibold text-violet-400 font-mono" id="total-team-tasks">0</span>
+                                            <span class="text-[9px] text-violet-400/60 uppercase">TN</span>
+                                        </div>
+                                        <div class="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded bg-cyan-500/10 border border-cyan-500/20">
+                                            <i class="ph ph-user text-cyan-400 text-xs"></i>
+                                            <span class="text-sm font-semibold text-cyan-400 font-mono" id="total-client-tasks">0</span>
+                                            <span class="text-[9px] text-cyan-400/60 uppercase">Klient</span>
+                                        </div>
+                                        <div class="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded bg-amber-500/10 border border-amber-500/20">
+                                            <i class="ph ph-handshake text-amber-400 text-xs"></i>
+                                            <span class="text-sm font-semibold text-amber-400 font-mono" id="total-shared-tasks">0</span>
+                                            <span class="text-[9px] text-amber-400/60 uppercase">Wspólnie</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Not Found State -->
+                <div id="not-found-state" class="hidden py-16 text-center">
+                    <i class="ph ph-warning text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-400 text-sm mb-1">Nie znaleziono oferty</p>
+                    <a href="/offers" class="text-white underline text-sm">Wróć do listy ofert</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let offer = null;
+        let milestones = [];
+        let hasChanges = false;
+        let saveTimeout = null;
+        let isSaving = false;
+        let draggedMilestone = null;
+
+        let teamMembers = [];
+        let currentMember = null;
+        let isAdmin = false;
+
+        function getBasePath() {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const path = location.pathname;
+                const match = path.match(/^(\/[^\/]+)\//);
+                return match ? match[1] : '';
+            }
+            return '';
+        }
+
+        function getLoginPath() {
+            const base = getBasePath();
+            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
+        }
+
+        function generateId() {
+            return 'xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = getLoginPath();
+                return null;
+            }
+            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            await loadTeamMembers(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient.from('team_members').select('*');
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+            teamMembers = data || [];
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+
+            const navAudit = document.getElementById('nav-audit');
+            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
+        }
+
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
+            if (!currentMember) return;
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { ...metadata, source_page: window.location.pathname }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
+            }
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+            window.location.href = getLoginPath();
+        });
+
+        // Save status
+        function showSaveStatus(status) {
+            const statusEl = document.getElementById('save-status');
+            if (status === 'saving') {
+                statusEl.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisywanie...';
+                statusEl.className = 'text-xs text-zinc-400 flex items-center gap-1.5';
+            } else if (status === 'saved') {
+                statusEl.innerHTML = '<i class="ph ph-check-circle"></i> Zapisano';
+                statusEl.className = 'text-xs text-emerald-400 flex items-center gap-1.5';
+                setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+            } else if (status === 'error') {
+                statusEl.innerHTML = '<i class="ph ph-warning-circle"></i> Błąd zapisu';
+                statusEl.className = 'text-xs text-red-400 flex items-center gap-1.5';
+            }
+        }
+
+        // Auto-save
+        async function autoSave() {
+            if (isSaving || !offer) return;
+
+            isSaving = true;
+            showSaveStatus('saving');
+
+            const oldOffer = { ...offer };
+
+            const updates = {
+                name: document.getElementById('offer-name').value.trim() || 'Bez nazwy',
+                description: document.getElementById('offer-description').value.trim() || null,
+                price: parseFloat(document.getElementById('offer-price').value) || 0,
+                is_active: offer.is_active,
+                milestones: milestones
+            };
+
+            const { error } = await supabaseClient
+                .from('offers')
+                .update(updates)
+                .eq('id', offer.id);
+
+            isSaving = false;
+
+            if (error) {
+                showSaveStatus('error');
+                console.error('Auto-save error:', error);
+            } else {
+                await logAuditActivity('update', 'offer', offer.id, updates.name,
+                    { name: oldOffer.name, milestones_count: (oldOffer.milestones || []).length },
+                    { name: updates.name, milestones_count: milestones.length }
+                );
+                Object.assign(offer, updates);
+                hasChanges = false;
+                showSaveStatus('saved');
+                document.getElementById('header-name').textContent = updates.name;
+            }
+        }
+
+        function triggerAutoSave() {
+            hasChanges = true;
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(autoSave, 1000);
+        }
+
+        // Load offer
+        async function loadOffer() {
+            const params = new URLSearchParams(window.location.search);
+            const offerId = params.get('id');
+
+            if (!offerId) {
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('not-found-state').classList.remove('hidden');
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('offers')
+                .select('*')
+                .eq('id', offerId)
+                .single();
+
+            document.getElementById('loading-state').classList.add('hidden');
+
+            if (error || !data) {
+                document.getElementById('not-found-state').classList.remove('hidden');
+                return;
+            }
+
+            offer = data;
+            milestones = offer.milestones || [];
+
+            // Populate fields
+            document.getElementById('offer-name').value = offer.name || '';
+            document.getElementById('offer-description').value = offer.description || '';
+            document.getElementById('offer-price').value = offer.price || '';
+            document.getElementById('header-name').textContent = offer.name || 'Bez nazwy';
+            document.getElementById('created-date').textContent = `Utworzono: ${new Date(offer.created_at).toLocaleDateString('pl-PL')}`;
+
+            updateStatusIndicator();
+            renderMilestones();
+            renderTimelinePreview();
+
+            document.getElementById('offer-content').classList.remove('hidden');
+
+            // Attach event listeners
+            document.getElementById('offer-name').addEventListener('input', triggerAutoSave);
+            document.getElementById('offer-description').addEventListener('input', triggerAutoSave);
+            document.getElementById('offer-price').addEventListener('input', triggerAutoSave);
+        }
+
+        function updateStatusIndicator() {
+            const indicator = document.getElementById('status-indicator');
+            if (offer.is_active) {
+                indicator.innerHTML = '<span class="text-emerald-400">● Aktywna</span>';
+            } else {
+                indicator.innerHTML = '<span class="text-zinc-500">○ Nieaktywna</span>';
+            }
+        }
+
+        document.getElementById('toggle-active').addEventListener('click', async () => {
+            if (!offer) return;
+            offer.is_active = !offer.is_active;
+            updateStatusIndicator();
+            triggerAutoSave();
+        });
+
+        // Milestones management
+        function addMilestone() {
+            const newMilestone = {
+                id: generateId(),
+                order: milestones.length,
+                title: '',
+                description: '',
+                duration_days: 7,
+                deliverables: [],
+                tasks: []
+            };
+
+            milestones.push(newMilestone);
+            renderMilestones();
+            renderTimelinePreview();
+            triggerAutoSave();
+
+            // Focus on new milestone
+            setTimeout(() => {
+                const input = document.querySelector(`[data-milestone-id="${newMilestone.id}"] .milestone-title`);
+                if (input) input.focus();
+            }, 50);
+        }
+
+        function deleteMilestone(id) {
+            if (!confirm('Czy na pewno chcesz usunąć ten etap?')) return;
+
+            milestones = milestones.filter(m => m.id !== id);
+            reorderMilestones();
+            renderMilestones();
+            renderTimelinePreview();
+            triggerAutoSave();
+        }
+
+        function reorderMilestones() {
+            milestones.forEach((m, index) => m.order = index);
+        }
+
+        function addDeliverable(milestoneId) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            milestone.deliverables.push('');
+            renderMilestoneDeliverables(milestoneId);
+            renderTimelinePreview();
+            triggerAutoSave();
+
+            // Focus on new deliverable
+            setTimeout(() => {
+                const inputs = document.querySelectorAll(`[data-milestone-id="${milestoneId}"] .deliverable-input`);
+                if (inputs.length > 0) inputs[inputs.length - 1].focus();
+            }, 50);
+        }
+
+        function removeDeliverable(milestoneId, index) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            milestone.deliverables.splice(index, 1);
+            renderMilestoneDeliverables(milestoneId);
+            renderTimelinePreview();
+            triggerAutoSave();
+        }
+
+        function updateDeliverable(milestoneId, index, value) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            milestone.deliverables[index] = value;
+            triggerAutoSave();
+        }
+
+        function addTask(milestoneId, responsible = 'team') {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            milestone.tasks.push({
+                id: generateId(),
+                title: '',
+                completed: false,
+                responsible: responsible // 'team', 'client', or 'shared'
+            });
+            renderMilestoneTasks(milestoneId);
+            renderTimelinePreview();
+            triggerAutoSave();
+
+            // Focus on new task
+            setTimeout(() => {
+                const inputs = document.querySelectorAll(`[data-milestone-id="${milestoneId}"] .task-input`);
+                if (inputs.length > 0) inputs[inputs.length - 1].focus();
+            }, 50);
+        }
+
+        function toggleTaskResponsible(milestoneId, taskId) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (task) {
+                // Cycle: team → client → shared → team
+                if (task.responsible === 'team') {
+                    task.responsible = 'client';
+                } else if (task.responsible === 'client') {
+                    task.responsible = 'shared';
+                } else {
+                    task.responsible = 'team';
+                }
+                renderMilestoneTasks(milestoneId);
+                renderTimelinePreview();
+                triggerAutoSave();
+            }
+        }
+
+        function removeTask(milestoneId, taskId) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            milestone.tasks = milestone.tasks.filter(t => t.id !== taskId);
+            renderMilestoneTasks(milestoneId);
+            renderTimelinePreview();
+            triggerAutoSave();
+        }
+
+        function updateTask(milestoneId, taskId, value) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (task) task.title = value;
+            triggerAutoSave();
+        }
+
+        function toggleTaskComplete(milestoneId, taskId) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            const task = milestone.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                renderMilestoneTasks(milestoneId);
+                triggerAutoSave();
+            }
+        }
+
+        function updateMilestoneField(milestoneId, field, value) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            if (field === 'duration_days') {
+                milestone[field] = parseInt(value) || 1;
+                renderTimelinePreview();
+            } else {
+                milestone[field] = value;
+            }
+            triggerAutoSave();
+        }
+
+        // Render milestones
+        function renderMilestones() {
+            const container = document.getElementById('milestones-list');
+            const emptyState = document.getElementById('milestones-empty');
+
+            document.getElementById('milestones-count').textContent = milestones.length;
+
+            if (milestones.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = milestones.map((milestone, index) => `
+                <div class="milestone-card group bg-zinc-950/50 rounded-lg border border-white/5 hover:border-white/10 transition-all"
+                     data-milestone-id="${milestone.id}" draggable="true">
+
+                    <!-- Header -->
+                    <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+                        <div class="drag-handle cursor-grab text-zinc-600 hover:text-zinc-400 active:cursor-grabbing">
+                            <i class="ph ph-dots-six-vertical"></i>
+                        </div>
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                            <span class="text-amber-400 text-xs font-bold">${index + 1}</span>
+                        </div>
+                        <input type="text"
+                               class="milestone-title flex-1 bg-transparent text-white font-medium text-sm border-none outline-none placeholder-zinc-600"
+                               value="${escapeHtml(milestone.title)}"
+                               placeholder="Nazwa etapu..."
+                               onchange="updateMilestoneField('${milestone.id}', 'title', this.value)"
+                               oninput="updateMilestoneField('${milestone.id}', 'title', this.value)">
+                        <div class="flex items-center gap-2">
+                            <input type="number"
+                                   class="milestone-duration w-16 bg-zinc-900 text-white text-sm px-2 py-1 rounded border border-zinc-800 text-center focus:border-zinc-600 outline-none"
+                                   value="${milestone.duration_days}"
+                                   min="1"
+                                   onchange="updateMilestoneField('${milestone.id}', 'duration_days', this.value)">
+                            <span class="text-zinc-500 text-xs">dni</span>
+                        </div>
+                        <button onclick="deleteMilestone('${milestone.id}')"
+                                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 transition-all"
+                                title="Usuń etap">
+                            <i class="ph ph-trash text-sm"></i>
+                        </button>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="px-4 py-3 border-b border-white/5">
+                        <textarea class="milestone-description w-full bg-transparent text-zinc-300 text-sm resize-none border-none outline-none placeholder-zinc-600"
+                                  rows="2"
+                                  placeholder="Opis etapu..."
+                                  onchange="updateMilestoneField('${milestone.id}', 'description', this.value)"
+                                  oninput="updateMilestoneField('${milestone.id}', 'description', this.value)">${escapeHtml(milestone.description || '')}</textarea>
+                    </div>
+
+                    <!-- Deliverables -->
+                    <div class="px-4 py-3 border-b border-white/5">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Rezultaty</span>
+                            <button onclick="addDeliverable('${milestone.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors">
+                                <i class="ph ph-plus"></i>
+                            </button>
+                        </div>
+                        <div class="deliverables-list space-y-1" data-milestone-id="${milestone.id}">
+                            ${renderDeliverables(milestone)}
+                        </div>
+                    </div>
+
+                    <!-- Tasks -->
+                    <div class="px-4 py-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Zadania</span>
+                            <div class="flex items-center gap-1">
+                                <button onclick="addTask('${milestone.id}', 'team')" class="flex items-center gap-1 text-violet-400 hover:text-violet-300 text-[10px] px-1.5 py-0.5 rounded hover:bg-violet-500/10 transition-colors" title="Dodaj zadanie dla zespołu TN">
+                                    <i class="ph ph-plus text-[10px]"></i>
+                                    <i class="ph ph-users-three text-[10px]"></i>
+                                </button>
+                                <button onclick="addTask('${milestone.id}', 'client')" class="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-[10px] px-1.5 py-0.5 rounded hover:bg-cyan-500/10 transition-colors" title="Dodaj zadanie dla klienta">
+                                    <i class="ph ph-plus text-[10px]"></i>
+                                    <i class="ph ph-user text-[10px]"></i>
+                                </button>
+                                <button onclick="addTask('${milestone.id}', 'shared')" class="flex items-center gap-1 text-amber-400 hover:text-amber-300 text-[10px] px-1.5 py-0.5 rounded hover:bg-amber-500/10 transition-colors" title="Dodaj zadanie wspólne">
+                                    <i class="ph ph-plus text-[10px]"></i>
+                                    <i class="ph ph-handshake text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="tasks-list space-y-1" data-milestone-id="${milestone.id}">
+                            ${renderTasks(milestone)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            initDragDrop();
+            initTaskDragDrop();
+        }
+
+        function renderDeliverables(milestone) {
+            if (milestone.deliverables.length === 0) {
+                return '<p class="text-zinc-600 text-xs">Brak rezultatów</p>';
+            }
+
+            return milestone.deliverables.map((deliverable, index) => `
+                <div class="deliverable-item flex items-center gap-2 group/item">
+                    <i class="ph ph-check-circle text-emerald-400 text-sm flex-shrink-0"></i>
+                    <input type="text"
+                           class="deliverable-input flex-1 bg-transparent text-sm text-zinc-300 border-none outline-none placeholder-zinc-600"
+                           value="${escapeHtml(deliverable)}"
+                           placeholder="Nazwa rezultatu..."
+                           onchange="updateDeliverable('${milestone.id}', ${index}, this.value)"
+                           oninput="updateDeliverable('${milestone.id}', ${index}, this.value)">
+                    <button onclick="removeDeliverable('${milestone.id}', ${index})"
+                            class="opacity-0 group-hover/item:opacity-100 text-zinc-500 hover:text-red-400 transition-all">
+                        <i class="ph ph-x text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderMilestoneDeliverables(milestoneId) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            const container = document.querySelector(`.deliverables-list[data-milestone-id="${milestoneId}"]`);
+            if (container) {
+                container.innerHTML = renderDeliverables(milestone);
+            }
+        }
+
+        function renderTasks(milestone) {
+            if (milestone.tasks.length === 0) {
+                return '<p class="text-zinc-600 text-xs">Brak zadań</p>';
+            }
+
+            return milestone.tasks.map(task => {
+                let responsibleColor, responsibleIcon, responsibleLabel;
+                if (task.responsible === 'client') {
+                    responsibleColor = 'cyan';
+                    responsibleIcon = 'ph-user';
+                    responsibleLabel = 'Klient';
+                } else if (task.responsible === 'shared') {
+                    responsibleColor = 'amber';
+                    responsibleIcon = 'ph-handshake';
+                    responsibleLabel = 'Wspólnie';
+                } else {
+                    // Default: team
+                    responsibleColor = 'violet';
+                    responsibleIcon = 'ph-users-three';
+                    responsibleLabel = 'TN';
+                }
+
+                return `
+                <div class="task-item flex items-center gap-2 group/item transition-all"
+                     draggable="true"
+                     data-task-id="${task.id}"
+                     data-milestone-id="${milestone.id}">
+                    <div class="task-drag-handle cursor-grab text-zinc-700 hover:text-zinc-500 active:cursor-grabbing opacity-0 group-hover/item:opacity-100 transition-opacity">
+                        <i class="ph ph-dots-six-vertical text-xs"></i>
+                    </div>
+                    <button onclick="toggleTaskResponsible('${milestone.id}', '${task.id}')"
+                            class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-${responsibleColor}-500/10 text-${responsibleColor}-400 border border-${responsibleColor}-500/20 hover:bg-${responsibleColor}-500/20 transition-colors flex-shrink-0"
+                            title="Kliknij, aby zmienić wykonawcę">
+                        <i class="ph ${responsibleIcon} text-[10px]"></i>
+                        ${responsibleLabel}
+                    </button>
+                    <input type="text"
+                           class="task-input flex-1 bg-transparent text-sm text-zinc-300 border-none outline-none placeholder-zinc-600"
+                           value="${escapeHtml(task.title)}"
+                           placeholder="Nazwa zadania..."
+                           onchange="updateTask('${milestone.id}', '${task.id}', this.value)"
+                           oninput="updateTask('${milestone.id}', '${task.id}', this.value)">
+                    <button onclick="removeTask('${milestone.id}', '${task.id}')"
+                            class="opacity-0 group-hover/item:opacity-100 text-zinc-500 hover:text-red-400 transition-all">
+                        <i class="ph ph-x text-xs"></i>
+                    </button>
+                </div>
+            `}).join('');
+        }
+
+        function renderMilestoneTasks(milestoneId) {
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            const container = document.querySelector(`.tasks-list[data-milestone-id="${milestoneId}"]`);
+            if (container) {
+                container.innerHTML = renderTasks(milestone);
+                // Re-initialize drag & drop for new task elements
+                container.querySelectorAll('.task-item').forEach(item => {
+                    item.addEventListener('dragstart', handleTaskDragStart);
+                    item.addEventListener('dragend', handleTaskDragEnd);
+                    item.addEventListener('dragover', handleTaskDragOver);
+                    item.addEventListener('dragleave', handleTaskDragLeave);
+                    item.addEventListener('drop', handleTaskDrop);
+                });
+            }
+        }
+
+        // Drag and drop
+        function initDragDrop() {
+            document.querySelectorAll('.milestone-card').forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('dragleave', handleDragLeave);
+                card.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedMilestone = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.milestone-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (this !== draggedMilestone) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (draggedMilestone === this) return;
+
+            const draggedId = draggedMilestone.dataset.milestoneId;
+            const targetId = this.dataset.milestoneId;
+
+            const draggedIndex = milestones.findIndex(m => m.id === draggedId);
+            const targetIndex = milestones.findIndex(m => m.id === targetId);
+
+            const [removed] = milestones.splice(draggedIndex, 1);
+            milestones.splice(targetIndex, 0, removed);
+
+            reorderMilestones();
+            renderMilestones();
+            renderTimelinePreview();
+            triggerAutoSave();
+        }
+
+        // Task drag and drop
+        let draggedTask = null;
+        let draggedTaskMilestoneId = null;
+
+        function initTaskDragDrop() {
+            document.querySelectorAll('.task-item').forEach(item => {
+                item.addEventListener('dragstart', handleTaskDragStart);
+                item.addEventListener('dragend', handleTaskDragEnd);
+                item.addEventListener('dragover', handleTaskDragOver);
+                item.addEventListener('dragleave', handleTaskDragLeave);
+                item.addEventListener('drop', handleTaskDrop);
+            });
+        }
+
+        function handleTaskDragStart(e) {
+            e.stopPropagation();
+            draggedTask = this;
+            draggedTaskMilestoneId = this.dataset.milestoneId;
+            this.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.taskId);
+        }
+
+        function handleTaskDragEnd(e) {
+            this.style.opacity = '1';
+            document.querySelectorAll('.task-item').forEach(item => {
+                item.classList.remove('task-drag-over');
+            });
+            draggedTask = null;
+            draggedTaskMilestoneId = null;
+        }
+
+        function handleTaskDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            if (this !== draggedTask && this.dataset.milestoneId === draggedTaskMilestoneId) {
+                this.classList.add('task-drag-over');
+            }
+        }
+
+        function handleTaskDragLeave(e) {
+            this.classList.remove('task-drag-over');
+        }
+
+        function handleTaskDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('task-drag-over');
+
+            if (draggedTask === this) return;
+            if (this.dataset.milestoneId !== draggedTaskMilestoneId) return;
+
+            const milestoneId = this.dataset.milestoneId;
+            const milestone = milestones.find(m => m.id === milestoneId);
+            if (!milestone) return;
+
+            const draggedTaskId = draggedTask.dataset.taskId;
+            const targetTaskId = this.dataset.taskId;
+
+            const draggedIndex = milestone.tasks.findIndex(t => t.id === draggedTaskId);
+            const targetIndex = milestone.tasks.findIndex(t => t.id === targetTaskId);
+
+            if (draggedIndex === -1 || targetIndex === -1) return;
+
+            const [removed] = milestone.tasks.splice(draggedIndex, 1);
+            milestone.tasks.splice(targetIndex, 0, removed);
+
+            renderMilestoneTasks(milestoneId);
+            initTaskDragDrop();
+            triggerAutoSave();
+        }
+
+        window.initTaskDragDrop = initTaskDragDrop;
+
+        // Timeline preview
+        function renderTimelinePreview() {
+            const container = document.getElementById('timeline-preview');
+
+            // Calculate totals
+            const totalTeamTasks = milestones.reduce((sum, m) => sum + m.tasks.filter(t => !t.responsible || t.responsible === 'team').length, 0);
+            const totalClientTasks = milestones.reduce((sum, m) => sum + m.tasks.filter(t => t.responsible === 'client').length, 0);
+            const totalSharedTasks = milestones.reduce((sum, m) => sum + m.tasks.filter(t => t.responsible === 'shared').length, 0);
+
+            // Update summary stats
+            document.getElementById('total-milestones').textContent = milestones.length;
+            document.getElementById('total-team-tasks').textContent = totalTeamTasks;
+            document.getElementById('total-client-tasks').textContent = totalClientTasks;
+            document.getElementById('total-shared-tasks').textContent = totalSharedTasks;
+
+            if (milestones.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-zinc-600">
+                        <i class="ph ph-chart-line text-2xl mb-2"></i>
+                        <p class="text-xs">Dodaj etapy, aby zobaczyć harmonogram</p>
+                    </div>
+                `;
+                document.getElementById('total-days').textContent = '0';
+                return;
+            }
+
+            let currentDay = 1;
+            const timelineHtml = milestones.map((milestone, index) => {
+                const startDay = currentDay;
+                const endDay = currentDay + milestone.duration_days - 1;
+                currentDay = endDay + 1;
+
+                const deliverableCount = milestone.deliverables.filter(d => d.trim()).length;
+                const teamTasks = milestone.tasks.filter(t => !t.responsible || t.responsible === 'team').length;
+                const clientTasks = milestone.tasks.filter(t => t.responsible === 'client').length;
+                const sharedTasks = milestone.tasks.filter(t => t.responsible === 'shared').length;
+
+                return `
+                    <div class="relative">
+                        <div class="absolute -left-8 top-0 w-6 h-6 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center">
+                            <span class="text-[10px] text-amber-400 font-bold">${index + 1}</span>
+                        </div>
+
+                        <div class="text-sm text-white font-medium">${escapeHtml(milestone.title) || 'Bez nazwy'}</div>
+                        <div class="flex items-center gap-2 text-[10px] text-zinc-500 font-mono mt-0.5">
+                            <i class="ph ph-clock"></i>
+                            <span>${milestone.duration_days} dni</span>
+                            <span class="text-zinc-700">|</span>
+                            <span>Dzień ${startDay} - ${endDay}</span>
+                        </div>
+                        ${deliverableCount > 0 || teamTasks > 0 || clientTasks > 0 || sharedTasks > 0 ? `
+                            <div class="flex flex-wrap gap-1 mt-2">
+                                ${deliverableCount > 0 ? `
+                                    <span class="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">
+                                        ${deliverableCount} rezultatów
+                                    </span>
+                                ` : ''}
+                                ${teamTasks > 0 ? `
+                                    <span class="text-[9px] px-1.5 py-0.5 bg-violet-500/10 text-violet-400 rounded border border-violet-500/20 flex items-center gap-0.5">
+                                        <i class="ph ph-users-three text-[8px]"></i>
+                                        ${teamTasks}
+                                    </span>
+                                ` : ''}
+                                ${clientTasks > 0 ? `
+                                    <span class="text-[9px] px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded border border-cyan-500/20 flex items-center gap-0.5">
+                                        <i class="ph ph-user text-[8px]"></i>
+                                        ${clientTasks}
+                                    </span>
+                                ` : ''}
+                                ${sharedTasks > 0 ? `
+                                    <span class="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20 flex items-center gap-0.5">
+                                        <i class="ph ph-handshake text-[8px]"></i>
+                                        ${sharedTasks}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="absolute left-3 top-0 bottom-0 w-0.5 timeline-line"></div>
+                <div class="space-y-4 pl-8">
+                    ${timelineHtml}
+                </div>
+            `;
+
+            const totalDays = milestones.reduce((sum, m) => sum + m.duration_days, 0);
+            document.getElementById('total-days').textContent = totalDays;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById('add-milestone-btn').addEventListener('click', addMilestone);
+
+        // Make functions globally available
+        window.addMilestone = addMilestone;
+        window.deleteMilestone = deleteMilestone;
+        window.addDeliverable = addDeliverable;
+        window.removeDeliverable = removeDeliverable;
+        window.updateDeliverable = updateDeliverable;
+        window.addTask = addTask;
+        window.removeTask = removeTask;
+        window.updateTask = updateTask;
+        window.toggleTaskComplete = toggleTaskComplete;
+        window.toggleTaskResponsible = toggleTaskResponsible;
+        window.updateMilestoneField = updateMilestoneField;
+
+        // Fix links for local development
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const base = getBasePath();
+            document.querySelectorAll('a[data-page]').forEach(link => {
+                link.href = base + '/' + link.dataset.page + '.html';
+            });
+            // Fix back link
+            const backLink = document.querySelector('a[href="/offers"]');
+            if (backLink) backLink.href = base + '/offers.html';
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (hasChanges) autoSave();
+            }
+        });
+
+        // Warn before leaving with unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Init
+        async function init() {
+            const session = await checkAuth();
+            if (session) await loadOffer();
+        }
+        init();
+    </script>
+</body>
+</html>

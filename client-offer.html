@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twoja spersonalizowana oferta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
+        .glass-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Milestone expand animation */
+        .milestone-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            opacity: 0;
+        }
+        .milestone-content.expanded {
+            max-height: 1000px;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-14 h-14 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                    <i class="ph-bold ph-lightning text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-2">Twoja spersonalizowana oferta</h1>
+                <p class="text-zinc-400">Wprowadź swój adres e-mail, aby zobaczyć szczegóły</p>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-white/10 p-6">
+                <div class="mb-4">
+                    <label class="block text-zinc-400 text-xs font-medium mb-2">Adres e-mail</label>
+                    <input type="email" id="email-input"
+                           class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                           placeholder="jan@firma.pl"
+                           autofocus>
+                </div>
+                <div id="login-error" class="text-red-400 text-sm mb-4 hidden"></div>
+                <button id="login-btn"
+                        class="w-full bg-white hover:bg-zinc-200 text-black px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span>Zobacz ofertę</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+
+            <p class="text-center text-zinc-600 text-xs mt-6">
+                Link jest ważny do: <span id="valid-until-preview" class="text-zinc-400">-</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Expired Screen -->
+    <div id="expired-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md text-center animate-enter">
+            <div class="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-clock-countdown text-4xl text-red-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Oferta wygasła</h1>
+            <p class="text-zinc-400 mb-6">Ta oferta nie jest już dostępna. Skontaktuj się z nami, aby otrzymać nową.</p>
+            <a href="mailto:kontakt@twojanazwa.pl"
+               class="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                <i class="ph ph-envelope"></i>
+                Napisz do nas
+            </a>
+        </div>
+    </div>
+
+    <!-- Not Found Screen -->
+    <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md text-center animate-enter">
+            <div class="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-question text-4xl text-zinc-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono oferty</h1>
+            <p class="text-zinc-400">Ten link jest nieprawidłowy lub oferta została usunięta.</p>
+        </div>
+    </div>
+
+    <!-- Offer Content -->
+    <div id="offer-screen" class="hidden">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-white text-black rounded-lg flex items-center justify-center shadow-lg">
+                        <i class="ph-bold ph-lightning text-lg"></i>
+                    </div>
+                    <span class="font-semibold text-white">TN Digital</span>
+                </div>
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="text-zinc-500">Oferta dla:</span>
+                    <div class="text-right">
+                        <div id="header-name" class="text-white font-medium">-</div>
+                        <div id="header-company" class="text-zinc-500 text-xs hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+            <!-- Personalized Intro -->
+            <div id="intro-section" class="mb-6 sm:mb-8 hidden">
+                <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8">
+                    <div class="flex items-start gap-3 sm:gap-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-hand-waving text-xl sm:text-2xl text-amber-400"></i>
+                        </div>
+                        <div>
+                            <p id="intro-text" class="text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-line"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Offer Header -->
+            <div class="mb-10 animate-enter">
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+                    <div class="flex-1">
+                        <h1 id="offer-name" class="text-3xl md:text-4xl font-bold text-white mb-3">-</h1>
+                        <p id="offer-description" class="text-zinc-400 text-base leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing & CTA Card -->
+            <div class="glass-card rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent p-5 sm:p-8 mb-8">
+                <!-- Top: Price + Valid until -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 pb-5 border-b border-white/10">
+                    <!-- Price -->
+                    <div>
+                        <div class="text-zinc-500 text-xs sm:text-sm mb-1">Wartość projektu</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="offer-price" class="text-3xl sm:text-4xl font-bold text-white">-</span>
+                            <span class="text-base sm:text-lg text-zinc-400">PLN netto</span>
+                        </div>
+                    </div>
+
+                    <!-- Valid until -->
+                    <div class="sm:text-right">
+                        <div class="text-zinc-500 text-xs sm:text-sm mb-1">Oferta ważna do</div>
+                        <div id="valid-until-display" class="text-lg font-semibold text-white">-</div>
+                    </div>
+                </div>
+
+                <!-- Middle: Client data -->
+                <div class="py-5 border-b border-white/10">
+                    <div class="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-3">
+                        <i class="ph ph-identification-card"></i>
+                        <span>Dane do faktury</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                        <div id="client-name-row" class="hidden">
+                            <span class="text-zinc-500 text-sm">Imię i nazwisko: </span>
+                            <span id="client-name" class="text-white text-sm"></span>
+                        </div>
+                        <div id="client-company-row" class="hidden">
+                            <span class="text-zinc-500 text-sm">Firma: </span>
+                            <span id="client-company" class="text-white text-sm font-medium"></span>
+                        </div>
+                        <div id="client-nip-row" class="hidden">
+                            <span class="text-zinc-500 text-sm">NIP: </span>
+                            <span id="client-nip" class="text-zinc-200 text-sm font-mono"></span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500 text-sm">Email: </span>
+                            <span id="client-email" class="text-white text-sm"></span>
+                        </div>
+                        <div id="client-phone-row" class="hidden">
+                            <span class="text-zinc-500 text-sm">Telefon: </span>
+                            <span id="client-phone" class="text-zinc-200 text-sm"></span>
+                        </div>
+                        <div id="client-address-row" class="hidden sm:col-span-2">
+                            <span class="text-zinc-500 text-sm">Adres: </span>
+                            <span id="client-address" class="text-zinc-200 text-sm"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom: CTA Buttons -->
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-5">
+                    <button onclick="downloadProforma()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 sm:px-5 py-3 rounded-xl font-medium transition-all border border-white/10 text-sm sm:text-base">
+                        <i class="ph ph-file-pdf"></i>
+                        Pobierz proformę
+                    </button>
+                    <button onclick="proceedToPayment()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-5 sm:px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/20 text-sm sm:text-base">
+                        <i class="ph ph-credit-card"></i>
+                        Zapłać online
+                    </button>
+                </div>
+            </div>
+
+            <!-- Timeline Section -->
+            <div id="timeline-section" class="mb-8">
+                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
+                    <!-- Timeline Header -->
+                    <div class="p-4 sm:p-6 border-b border-white/5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 sm:w-10 sm:h-10 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-chart-line text-lg sm:text-xl text-amber-400"></i>
+                            </div>
+                            <h2 class="text-base sm:text-lg font-semibold text-white">Harmonogram realizacji</h2>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Content -->
+                    <div class="p-4 sm:p-6">
+                        <div id="timeline-container" class="relative pl-6 sm:pl-8">
+                            <!-- Timeline items rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Section -->
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold text-white mb-1">Masz pytania?</h3>
+                        <p class="text-zinc-400 text-sm">Skontaktuj się z nami, chętnie odpowiemy na wszystkie pytania.</p>
+                    </div>
+                    <div class="flex gap-2 sm:gap-3">
+                        <a href="mailto:kontakt@tn.digital" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                            <i class="ph ph-envelope"></i>
+                            Email
+                        </a>
+                        <a href="tel:+48123456789" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                            <i class="ph ph-phone"></i>
+                            Telefon
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/5 mt-12">
+            <div class="max-w-5xl mx-auto px-6 py-8 text-center">
+                <p class="text-zinc-600 text-sm">
+                    Powered by <span class="text-zinc-400">TN Digital</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let clientOffer = null;
+        let offer = null;
+        let lead = null;
+
+        function getToken() {
+            // Try URL path first (Vercel rewrite: /p/token)
+            const path = window.location.pathname;
+            const pathMatch = path.match(/\/p\/([a-zA-Z0-9]+)/);
+            if (pathMatch) return pathMatch[1];
+
+            // Fallback to query parameter for local dev (?token=xxx)
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('pl-PL').format(price);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showScreen(screenId) {
+            ['login-screen', 'expired-screen', 'not-found-screen', 'offer-screen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        async function loadOffer() {
+            const token = getToken();
+            if (!token) {
+                showScreen('not-found-screen');
+                return;
+            }
+
+            // Fetch client offer
+            const { data, error } = await supabaseClient
+                .from('client_offers')
+                .select('*, leads(*), offers(*)')
+                .eq('unique_token', token)
+                .single();
+
+            if (error || !data) {
+                showScreen('not-found-screen');
+                return;
+            }
+
+            clientOffer = data;
+            offer = data.offers;
+            lead = data.leads;
+
+            // Check if expired
+            const validUntil = new Date(clientOffer.valid_until);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (validUntil < today) {
+                showScreen('expired-screen');
+                return;
+            }
+
+            // Show validity date on login screen
+            document.getElementById('valid-until-preview').textContent = formatDate(clientOffer.valid_until);
+
+            // Show login screen
+            showScreen('login-screen');
+        }
+
+        async function verifyEmail() {
+            const emailInput = document.getElementById('email-input');
+            const email = emailInput.value.trim().toLowerCase();
+            const errorDiv = document.getElementById('login-error');
+
+            if (!email) {
+                errorDiv.textContent = 'Wprowadź adres e-mail';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (email !== lead.email.toLowerCase()) {
+                errorDiv.textContent = 'Nieprawidłowy adres e-mail';
+                errorDiv.classList.remove('hidden');
+                emailInput.classList.add('border-red-500');
+                return;
+            }
+
+            // Success - update view count and history
+            const viewHistory = clientOffer.view_history || [];
+            viewHistory.push(new Date().toISOString());
+
+            // Try to update with view_history, fall back to just view_count if column doesn't exist
+            const { error: updateError } = await supabaseClient
+                .from('client_offers')
+                .update({
+                    view_count: (clientOffer.view_count || 0) + 1,
+                    viewed_at: new Date().toISOString(),
+                    view_history: viewHistory
+                })
+                .eq('id', clientOffer.id);
+
+            // If view_history column doesn't exist, update without it
+            if (updateError) {
+                console.warn('view_history update failed, trying without it:', updateError);
+                await supabaseClient
+                    .from('client_offers')
+                    .update({
+                        view_count: (clientOffer.view_count || 0) + 1,
+                        viewed_at: new Date().toISOString()
+                    })
+                    .eq('id', clientOffer.id);
+            }
+
+            renderOffer();
+            showScreen('offer-screen');
+        }
+
+        function renderOffer() {
+            // Header - show company OR name OR email (priority order)
+            let displayName;
+            if (lead.company) {
+                displayName = lead.company;
+            } else if (lead.name) {
+                displayName = lead.name;
+            } else {
+                displayName = lead.email;
+            }
+            document.getElementById('header-name').textContent = displayName;
+            // header-company is no longer used - we show only one line
+
+            // Intro section
+            if (clientOffer.personalized_intro) {
+                document.getElementById('intro-section').classList.remove('hidden');
+                document.getElementById('intro-text').textContent = clientOffer.personalized_intro;
+            }
+
+            // Client info section
+            document.getElementById('client-email').textContent = lead.email;
+
+            if (lead.name) {
+                document.getElementById('client-name').textContent = lead.name;
+                document.getElementById('client-name-row').classList.remove('hidden');
+            }
+            if (lead.company) {
+                document.getElementById('client-company').textContent = lead.company;
+                document.getElementById('client-company-row').classList.remove('hidden');
+            }
+            if (lead.nip) {
+                document.getElementById('client-nip').textContent = lead.nip;
+                document.getElementById('client-nip-row').classList.remove('hidden');
+            }
+            if (lead.address) {
+                document.getElementById('client-address').textContent = lead.address;
+                document.getElementById('client-address-row').classList.remove('hidden');
+            }
+            if (lead.phone) {
+                document.getElementById('client-phone').textContent = lead.phone;
+                document.getElementById('client-phone-row').classList.remove('hidden');
+            }
+
+            // Offer details
+            document.getElementById('offer-name').textContent = offer.name;
+            document.getElementById('offer-description').textContent = offer.description || '';
+            document.getElementById('offer-price').textContent = formatPrice(offer.price);
+            document.getElementById('valid-until-display').textContent = formatDate(clientOffer.valid_until);
+
+            // Render timeline
+            const milestones = offer.milestones || [];
+            renderTimeline(milestones);
+        }
+
+        function renderTimeline(milestones) {
+            const container = document.getElementById('timeline-container');
+
+            if (milestones.length === 0) {
+                document.getElementById('timeline-section').classList.add('hidden');
+                return;
+            }
+
+            let currentDay = 1;
+            const timelineHtml = milestones.map((milestone, index) => {
+                const startDay = currentDay;
+                const endDay = currentDay + (milestone.duration_days || 1) - 1;
+                currentDay = endDay + 1;
+
+                const deliverables = (milestone.deliverables || []).filter(d => d.trim());
+                const tasks = milestone.tasks || [];
+                const hasContent = deliverables.length > 0 || tasks.length > 0;
+
+                return `
+                    <div class="relative mb-4 animate-enter" style="animation-delay: ${index * 0.1}s">
+                        <!-- Timeline node -->
+                        <div class="absolute -left-4 sm:-left-5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center z-10">
+                            <span class="text-[9px] sm:text-[10px] font-bold text-amber-400">${index + 1}</span>
+                        </div>
+
+                        <!-- Card -->
+                        <div class="ml-3 sm:ml-4">
+                            <div class="glass-card rounded-xl border border-white/10 overflow-hidden">
+                                <!-- Main header row -->
+                                <div class="p-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <!-- Title -->
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="text-base font-semibold text-white leading-tight">${escapeHtml(milestone.title) || 'Etap ' + (index + 1)}</h3>
+                                            ${milestone.description ? `<p class="text-zinc-500 text-sm mt-1">${escapeHtml(milestone.description)}</p>` : ''}
+                                        </div>
+
+                                        <!-- Right side: Duration -->
+                                        <div class="text-right flex-shrink-0">
+                                            <div class="text-amber-400 font-bold">${milestone.duration_days || 1} dni</div>
+                                            <div class="text-zinc-600 text-[10px] font-mono">Dzień ${startDay}${startDay !== endDay ? '-' + endDay : ''}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Badges row -->
+                                    ${hasContent ? `
+                                        <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/5">
+                                            ${deliverables.length > 0 ? `
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                                                    <i class="ph ph-package"></i>
+                                                    <span>${deliverables.length} rezultatów</span>
+                                                </span>
+                                            ` : ''}
+                                            ${tasks.length > 0 ? `
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs">
+                                                    <i class="ph ph-list-checks"></i>
+                                                    <span>${tasks.length} zadań</span>
+                                                </span>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                </div>
+
+                                <!-- Expandable Content -->
+                                ${hasContent ? `
+                                    <div id="milestone-content-${index}" class="milestone-content">
+                                        <div class="px-4 pb-4 pt-2 border-t border-white/5">
+                                            <!-- Rezultaty -->
+                                            ${deliverables.length > 0 ? `
+                                                <div class="${tasks.length > 0 ? 'mb-5' : ''}">
+                                                    <div class="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-3">
+                                                        <i class="ph ph-package"></i>
+                                                        <span>Rezultaty</span>
+                                                    </div>
+                                                    <div class="space-y-2 pl-1">
+                                                        ${deliverables.map(d => `
+                                                            <div class="flex items-start gap-3">
+                                                                <i class="ph-fill ph-check-circle text-emerald-400 mt-0.5 flex-shrink-0"></i>
+                                                                <span class="text-zinc-200 text-sm">${escapeHtml(d)}</span>
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+
+                                            <!-- Tasks -->
+                                            ${tasks.length > 0 ? `
+                                                <div>
+                                                    <div class="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-3">
+                                                        <i class="ph ph-list-checks"></i>
+                                                        <span>Zadania</span>
+                                                    </div>
+                                                    <div class="space-y-2 pl-1">
+                                                        ${tasks.map(task => {
+                                                            let bgColor, textColor, label, icon;
+                                                            if (task.responsible === 'client') {
+                                                                bgColor = 'bg-cyan-500/15 border-cyan-500/30';
+                                                                textColor = 'text-cyan-400';
+                                                                label = 'Klient';
+                                                                icon = 'user';
+                                                            } else if (task.responsible === 'shared') {
+                                                                bgColor = 'bg-amber-500/15 border-amber-500/30';
+                                                                textColor = 'text-amber-400';
+                                                                label = 'Wspólne';
+                                                                icon = 'handshake';
+                                                            } else {
+                                                                bgColor = 'bg-violet-500/15 border-violet-500/30';
+                                                                textColor = 'text-violet-400';
+                                                                label = 'TN';
+                                                                icon = 'users-three';
+                                                            }
+                                                            return `
+                                                                <div class="flex items-start gap-3">
+                                                                    <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border ${bgColor} ${textColor} font-medium flex-shrink-0 mt-0.5">
+                                                                        <i class="ph ph-${icon}"></i>
+                                                                        ${label}
+                                                                    </span>
+                                                                    <span class="text-zinc-200 text-sm">${escapeHtml(task.title)}</span>
+                                                                </div>
+                                                            `;
+                                                        }).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+
+                                    <!-- Expand button -->
+                                    <button onclick="toggleMilestone(${index})"
+                                            id="milestone-btn-${index}"
+                                            class="w-full px-4 py-2.5 bg-zinc-800/50 hover:bg-zinc-800 border-t border-white/5 text-zinc-400 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2">
+                                        <span class="milestone-btn-text-${index}">Rozwiń szczegóły</span>
+                                        <i class="ph ph-caret-down milestone-chevron-${index} transition-transform duration-200"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = timelineHtml;
+        }
+
+        function toggleMilestone(index) {
+            const content = document.getElementById(`milestone-content-${index}`);
+            const chevron = document.querySelector(`.milestone-chevron-${index}`);
+            const btnText = document.querySelector(`.milestone-btn-text-${index}`);
+            const isExpanded = content.classList.contains('expanded');
+
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                chevron.style.transform = 'rotate(0deg)';
+                btnText.textContent = 'Rozwiń szczegóły';
+            } else {
+                content.classList.add('expanded');
+                chevron.style.transform = 'rotate(180deg)';
+                btnText.textContent = 'Zwiń szczegóły';
+            }
+        }
+
+        async function downloadProforma() {
+            const btn = event.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Generowanie...';
+
+            try {
+                // Przygotuj dane dla Edge Function
+                const addressParts = parseAddress(lead.address);
+
+                const requestData = {
+                    buyer: {
+                        name: lead.name,
+                        company: lead.company,
+                        email: lead.email,
+                        nip: lead.nip || '',
+                        street: addressParts.street,
+                        postCode: addressParts.postCode,
+                        city: addressParts.city
+                    },
+                    offer: {
+                        name: offer.name,
+                        description: offer.description,
+                        price: offer.price
+                    },
+                    validUntil: clientOffer.valid_until
+                };
+
+                // Wywołaj Edge Function
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/fakturownia-proforma`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Błąd generowania proformy');
+                }
+
+                // Otwórz PDF
+                window.open(result.pdfUrl, '_blank');
+
+            } catch (error) {
+                console.error('Proforma error:', error);
+                alert('Błąd: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        function parseAddress(address) {
+            if (!address) return { street: '', postCode: '', city: '' };
+            const match = address.match(/^(.+?),?\s*(\d{2}-\d{3})\s+(.+)$/);
+            if (match) return { street: match[1].trim(), postCode: match[2], city: match[3].trim() };
+            return { street: address, postCode: '', city: '' };
+        }
+
+        function proceedToPayment() {
+            // Placeholder - będzie zaimplementowane później
+            alert('Funkcja płatności online będzie dostępna wkrótce.');
+        }
+
+        // Event listeners
+        document.getElementById('login-btn').addEventListener('click', verifyEmail);
+        document.getElementById('email-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyEmail();
+        });
+
+        // Init
+        loadOffer();
+    </script>
+</body>
+</html>
