@@ -781,6 +781,22 @@
             }
         }
 
+        // Email notification helper - fire and forget
+        async function sendEmail(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Email notification error:', err);
+            }
+        }
+
         // Modal functions
         function showConfirmModal(options) {
             const modal = document.getElementById('confirm-modal');
@@ -2351,6 +2367,15 @@
                     offer_price: selectedOffer.price,
                     generated_by: 'salesperson',
                     salesperson_name: currentMember?.name
+                });
+
+                // Send proforma email to client
+                sendEmail('proforma_generated', {
+                    email: lead.email,
+                    clientName: lead.name,
+                    offerName: selectedOffer.name,
+                    offerPrice: selectedOffer.price,
+                    pdfUrl: result.pdfUrl
                 });
 
             } catch (error) {
