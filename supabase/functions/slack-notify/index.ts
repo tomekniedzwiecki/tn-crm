@@ -86,7 +86,21 @@ function formatNewLeadMessage(data: {
   company?: string
   source?: string
   deal_value?: number
+  // Zapisy form fields
+  traffic_source?: string
+  direction?: string
+  weekly_hours?: string
+  target_income?: string
+  experience?: string
+  open_question?: string
+  budget?: string
 }) {
+  // Check if this is from zapisy form (has direction field)
+  if (data.direction) {
+    return formatZapisyLeadMessage(data)
+  }
+
+  // Original CRM lead format
   const fields = []
 
   if (data.name) {
@@ -131,6 +145,120 @@ function formatNewLeadMessage(data: {
       }
     ]
   }
+}
+
+function formatZapisyLeadMessage(data: {
+  email: string
+  phone?: string
+  traffic_source?: string
+  direction?: string
+  weekly_hours?: string
+  target_income?: string
+  experience?: string
+  open_question?: string
+  budget?: string
+}) {
+  // Labels for form values
+  const directionLabels: Record<string, string> = {
+    'sklep': 'Sklep internetowy',
+    'aplikacja': 'Aplikacja / SaaS',
+    'produkt_cyfrowy': 'Kurs / Produkt cyfrowy',
+    'nie_wiem': 'Potrzebuje doradzenia'
+  }
+
+  const hoursLabels: Record<string, string> = {
+    '1-2h': '1-2h',
+    '3-5h': '3-5h',
+    '6-10h': '6-10h',
+    'fulltime': 'Full-time'
+  }
+
+  const incomeLabels: Record<string, string> = {
+    '5-10k': '5-10k PLN',
+    '10-20k': '10-20k PLN',
+    '20-50k': '20-50k PLN',
+    '50k+': '50k+ PLN'
+  }
+
+  const budgetLabels: Record<string, string> = {
+    '5-10k': '5-10k PLN',
+    '10-20k': '10-20k PLN',
+    '20-40k': '20-40k PLN',
+    '40k+': '40k+ PLN'
+  }
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: 'Nowe zgłoszenie z formularza',
+        emoji: false
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*${data.email}*${data.phone ? ` · ${data.phone}` : ''}`
+      }
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: `*Kierunek:*\n${directionLabels[data.direction || ''] || data.direction}` },
+        { type: 'mrkdwn', text: `*Źródło:*\n${data.traffic_source || 'Direct'}` }
+      ]
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: `*Czas/tydzień:*\n${hoursLabels[data.weekly_hours || ''] || data.weekly_hours}` },
+        { type: 'mrkdwn', text: `*Cel dochodu:*\n${incomeLabels[data.target_income || ''] || data.target_income}` }
+      ]
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: `*Budżet:*\n${budgetLabels[data.budget || ''] || data.budget}` }
+      ]
+    }
+  ]
+
+  // Experience (always present)
+  if (data.experience) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Doświadczenie:*\n${data.experience.substring(0, 500)}`
+      }
+    })
+  }
+
+  // Open question (optional)
+  if (data.open_question) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Dodatkowe info:*\n${data.open_question.substring(0, 500)}`
+      }
+    })
+  }
+
+  // Timestamp
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
+      }
+    ]
+  })
+
+  return { blocks }
 }
 
 function formatOfferViewedMessage(data: {

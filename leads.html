@@ -382,23 +382,9 @@
                 </div>
 
                 <!-- Phone & Status -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
-                        <input type="tel" id="add-phone" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="+48 123 456 789">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Status</label>
-                        <select id="add-status" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
-                            <option value="new">Nowy</option>
-                            <option value="contacted">Skontaktowany</option>
-                            <option value="qualified">Zakwalifikowany</option>
-                            <option value="proposal">Propozycja</option>
-                            <option value="negotiation">Negocjacje</option>
-                            <option value="won">Wygrany</option>
-                            <option value="lost">Przegrany</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
+                    <input type="tel" id="add-phone" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="+48 123 456 789">
                 </div>
 
                 <!-- Offer -->
@@ -565,7 +551,8 @@
         let pipelineStages = [...DEFAULT_PIPELINE_STAGES];
         let STATUS_LABELS = {
             won: 'Wygrany',
-            lost: 'Przegrany'
+            lost: 'Przegrany',
+            abandoned: 'Porzucony'
         };
 
         async function loadPipelineSettings() {
@@ -584,7 +571,7 @@
             }
 
             // Build STATUS_LABELS from dynamic stages
-            STATUS_LABELS = { won: 'Wygrany', lost: 'Przegrany' };
+            STATUS_LABELS = { won: 'Wygrany', lost: 'Przegrany', abandoned: 'Porzucony' };
             pipelineStages.forEach(stage => {
                 STATUS_LABELS[stage.id] = stage.name;
             });
@@ -608,7 +595,8 @@
                         `<option value="${stage.id}">${stage.name}</option>`
                     ).join('') +
                     `<option value="won">Wygrany</option>
-                    <option value="lost">Przegrany</option>`;
+                    <option value="lost">Przegrany</option>
+                    <option value="abandoned">Porzucony</option>`;
 
                 // Restore selected value if it exists
                 if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
@@ -770,6 +758,9 @@
             if (status === 'lost') {
                 return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-[10px] font-medium">Przegrany</span>`;
             }
+            if (status === 'abandoned') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-zinc-500/20 bg-zinc-500/10 text-zinc-400 text-[10px] font-medium">Porzucony</span>`;
+            }
 
             // Find stage in pipeline
             const stageIndex = pipelineStages.findIndex(s => s.id === status);
@@ -804,10 +795,29 @@
                 offers.map(offer => `<option value="${offer.id}">${offer.name}</option>`).join('');
         }
 
+        // Auto-assign status='new' to leads with survey (direction) but no status
+        async function autoAssignStatusForSurveyLeads(leadsData) {
+            const leadsToUpdate = leadsData.filter(lead => lead.direction && !lead.status);
+
+            for (const lead of leadsToUpdate) {
+                const { error } = await supabaseClient
+                    .from('leads')
+                    .update({ status: 'new' })
+                    .eq('id', lead.id);
+
+                if (!error) {
+                    lead.status = 'new'; // Update local state
+                }
+            }
+        }
+
         async function loadLeads() {
             const { data, error } = await supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
             if (error) { console.error('Error:', error); return; }
             leads = data || [];
+
+            // Auto-assign status for leads with survey but no status
+            await autoAssignStatusForSurveyLeads(leads);
 
             // Load client offers to get tokens
             const { data: clientOffers } = await supabaseClient.from('client_offers').select('lead_id, unique_token');
@@ -1335,7 +1345,7 @@
                 nip: document.getElementById('add-nip').value.trim() || null,
                 address: document.getElementById('add-address').value.trim() || null,
                 phone: document.getElementById('add-phone').value.trim() || null,
-                status: document.getElementById('add-status').value,
+                status: null, // Lead appears in pipeline only after survey is filled
                 deal_value: document.getElementById('add-value').value ? parseFloat(document.getElementById('add-value').value) : null,
                 expected_close: document.getElementById('add-expected-close').value || null,
                 notes: document.getElementById('add-notes').value.trim() || null,

@@ -248,23 +248,9 @@
                         <input type="text" id="add-address" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="ul. Przykładowa 1">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
-                        <input type="tel" id="add-phone" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="+48 ...">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Etap</label>
-                        <select id="add-status" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
-                            <option value="new">Nowy</option>
-                            <option value="contacted">Skontaktowany</option>
-                            <option value="qualified">Zakwalifikowany</option>
-                            <option value="proposal">Propozycja</option>
-                            <option value="negotiation">Negocjacje</option>
-                            <option value="won">Wygrany</option>
-                            <option value="lost">Przegrany</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Telefon</label>
+                    <input type="tel" id="add-phone" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="+48 ...">
                 </div>
                 <!-- Offer -->
                 <div>
@@ -362,7 +348,8 @@
         // Terminal stages (always present, can't be edited)
         const TERMINAL_STAGES = [
             { id: 'won', name: 'Wygrany', color: 'green', icon: 'ph-trophy' },
-            { id: 'lost', name: 'Przegrany', color: 'red', icon: 'ph-x-circle' }
+            { id: 'lost', name: 'Przegrany', color: 'red', icon: 'ph-x-circle' },
+            { id: 'abandoned', name: 'Porzucony', color: 'zinc', icon: 'ph-prohibit' }
         ];
 
         // Stage colors by index
@@ -569,6 +556,9 @@
             const teamFilter = document.getElementById('filter-team')?.value || '';
 
             filteredLeads = leads.filter(lead => {
+                // Only show leads that have a pipeline status (not null)
+                if (!lead.status) return false;
+
                 // Team member filter (admin only)
                 if (teamFilter && lead.assigned_to !== teamFilter) return false;
 
@@ -633,6 +623,22 @@
             }
         }
 
+        // Auto-assign status='new' to leads with survey (direction) but no status
+        async function autoAssignStatusForSurveyLeads(leadsData) {
+            const leadsToUpdate = leadsData.filter(lead => lead.direction && !lead.status);
+
+            for (const lead of leadsToUpdate) {
+                const { error } = await supabaseClient
+                    .from('leads')
+                    .update({ status: 'new' })
+                    .eq('id', lead.id);
+
+                if (!error) {
+                    lead.status = 'new'; // Update local state
+                }
+            }
+        }
+
         async function loadLeads() {
             // Load offers first
             await loadOffers();
@@ -648,6 +654,10 @@
             }
 
             leads = data || [];
+
+            // Auto-assign status for leads with survey but no status
+            await autoAssignStatusForSurveyLeads(leads);
+
             document.getElementById('nav-leads-count').textContent = leads.filter(l => l.status === 'new' || !l.status).length;
             applyFilters(); // This will call renderPipeline
         }
@@ -715,6 +725,41 @@
             }).join('');
         }
 
+        function getDaysInStatus(lead) {
+            const activities = lead.activities || [];
+            // Find the last status_change activity
+            const statusChanges = activities
+                .filter(a => a.type === 'status_change')
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            const lastChangeDate = statusChanges.length > 0
+                ? new Date(statusChanges[0].created_at)
+                : new Date(lead.created_at);
+
+            const now = new Date();
+            const diffMs = now - lastChangeDate;
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            return days;
+        }
+
+        function getDaysInStatusBadge(days) {
+            let colorClasses, icon;
+            if (days >= 5) {
+                colorClasses = 'bg-red-500/20 text-red-400 border-red-500/30';
+                icon = 'ph-warning';
+            } else if (days >= 3) {
+                colorClasses = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+                icon = 'ph-clock';
+            } else {
+                colorClasses = 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+                icon = 'ph-clock';
+            }
+            return `<div class="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono ${colorClasses}" title="Dni w tym statusie">
+                <i class="ph ${icon} text-[10px]"></i>
+                <span>${days}d</span>
+            </div>`;
+        }
+
         function renderLeadCard(lead, colors) {
             const gradient = getAvatarGradient(lead.email);
             const initial = lead.email.charAt(0).toUpperCase();
@@ -723,6 +768,7 @@
             const assignedMember = lead.assigned_to ? teamMembersMap[lead.assigned_to] : null;
             const memberInitials = assignedMember ? getMemberInitials(lead.assigned_to) : '';
             const memberColor = assignedMember ? getMemberColor(lead.assigned_to) : '';
+            const daysInStatus = getDaysInStatus(lead);
 
             return `
                 <div class="lead-card group bg-zinc-900/60 border border-white/5 rounded-lg p-4 hover:border-white/10 relative"
@@ -752,6 +798,9 @@
                                 ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
                                     <i class="ph ph-phone text-xs"></i>
                                 </button>` : ''}
+                                ${(lead.status === 'new' || !lead.status) ? `<button onclick="event.stopPropagation(); abandonLead('${lead.id}')" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-500/20 rounded transition-colors" title="Porzuć">
+                                    <i class="ph ph-prohibit text-xs"></i>
+                                </button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -767,7 +816,10 @@
                             <span class="text-sm font-mono text-zinc-400">${formatCurrency(lead.deal_value)}</span>
                         </div>
                     ` : ''}
-                    <div class="text-xs text-zinc-600 mt-3 font-mono truncate">${lead.email}</div>
+                    <div class="flex items-center justify-between mt-3 gap-2">
+                        <div class="text-xs text-zinc-600 font-mono truncate">${lead.email}</div>
+                        ${getDaysInStatusBadge(daysInStatus)}
+                    </div>
                 </div>
             `;
         }
@@ -786,6 +838,47 @@
 
         window.sendEmail = sendEmail;
         window.callPhone = callPhone;
+
+        async function abandonLead(leadId) {
+            if (!confirm('Czy na pewno chcesz porzucić tego leada?')) return;
+
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+
+            const oldStatus = lead.status || 'new';
+
+            // Add activity for status change
+            const updatedActivities = [...(lead.activities || []), {
+                type: 'status_change',
+                content: `Status zmieniony: ${STATUS_LABELS[oldStatus]} → Porzucony`,
+                created_at: new Date().toISOString(),
+                performed_by: currentMember?.id || null,
+                performed_by_name: currentMember?.name || null
+            }];
+
+            const { error } = await supabaseClient
+                .from('leads')
+                .update({ status: 'abandoned', activities: updatedActivities })
+                .eq('id', leadId);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            // Log audit
+            logAuditActivity('status_change', 'lead', leadId, lead.email,
+                { status: oldStatus },
+                { status: 'abandoned' }
+            );
+
+            // Update local state
+            lead.status = 'abandoned';
+            lead.activities = updatedActivities;
+            renderPipeline();
+        }
+
+        window.abandonLead = abandonLead;
 
         // Drag and Drop
         let draggedElement = null;
@@ -857,7 +950,8 @@
             proposal: 'Propozycja',
             negotiation: 'Negocjacje',
             won: 'Wygrany',
-            lost: 'Przegrany'
+            lost: 'Przegrany',
+            abandoned: 'Porzucony'
         };
 
         async function handleDrop(event) {
@@ -978,7 +1072,7 @@
                 nip: document.getElementById('add-nip').value.trim() || null,
                 address: document.getElementById('add-address').value.trim() || null,
                 phone: document.getElementById('add-phone').value.trim() || null,
-                status: document.getElementById('add-status').value,
+                status: null, // Lead appears in pipeline only after survey is filled
                 deal_value: document.getElementById('add-value').value ? parseFloat(document.getElementById('add-value').value) : null,
                 expected_close: document.getElementById('add-expected-close').value || null,
                 offer_id: document.getElementById('add-offer').value || null,

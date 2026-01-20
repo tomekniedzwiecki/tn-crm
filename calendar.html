@@ -276,8 +276,8 @@
                         <i class="ph ph-calendar-plus text-pink-400 text-xl"></i>
                     </div>
                     <div>
-                        <h2 class="text-base font-semibold text-white">Nowe spotkanie</h2>
-                        <p class="text-xs text-zinc-500">Zaplanuj spotkanie z leadem</p>
+                        <h2 id="event-modal-title" class="text-base font-semibold text-white">Nowe spotkanie</h2>
+                        <p id="event-modal-subtitle" class="text-xs text-zinc-500">Zaplanuj spotkanie z leadem</p>
                     </div>
                 </div>
                 <button id="close-event-modal" class="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors p-1">
@@ -444,6 +444,10 @@
                     <i class="ph ph-trash"></i>
                     Usuń
                 </button>
+                <button id="edit-event" class="text-blue-400 hover:text-blue-300 border border-blue-500/30 hover:border-blue-500/50 hover:bg-blue-500/10 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+                    <i class="ph ph-pencil-simple"></i>
+                    Edytuj
+                </button>
                 <div class="flex-1"></div>
                 <button id="close-details-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-all">
                     Zamknij
@@ -467,10 +471,19 @@
         let leads = [];
         let selectedEventId = null;
         let selectedDuration = 30;
+        let editingEventId = null; // null = creating new, string = editing existing
         let teamMembers = [];
         let teamMembersMap = {};
         let currentMember = null;
         let isAdmin = false;
+
+        // HTML escape helper (XSS prevention)
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Audit logging helper
         async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
@@ -697,11 +710,12 @@
                 endDate.setHours(23, 59, 59, 999);
             }
 
+            // Query events that overlap with the period (start before end, end after start)
             const { data, error } = await supabaseClient
                 .from('calendar_events')
                 .select('*, leads(id, name, email, company)')
-                .gte('start_time', startDate.toISOString())
                 .lte('start_time', endDate.toISOString())
+                .gte('end_time', startDate.toISOString())
                 .order('start_time');
 
             if (error) {
@@ -734,7 +748,7 @@
                 return;
             }
 
-            leads = data;
+            leads = data || [];
         }
 
         // ===========================================
@@ -831,13 +845,13 @@
                         cellDate = new Date(year, month, dayNum);
                     }
 
-                    const isToday = isCurrentMonth && !isOtherMonth && dayNum === today.getDate();
+                    const isToday = cellDate.toDateString() === today.toDateString();
                     const isWeekend = col >= 5;
                     const dateStr = cellDate.toISOString().split('T')[0];
 
                     const dayEvents = events.filter(e => {
-                        const eventDate = new Date(e.start).toISOString().split('T')[0];
-                        return eventDate === dateStr;
+                        const eventDate = new Date(e.start);
+                        return eventDate.toDateString() === cellDate.toDateString();
                     });
 
                     html += `
@@ -845,8 +859,8 @@
                             <div class="text-xs ${isToday ? 'bg-white text-black w-6 h-6 rounded-full flex items-center justify-center font-semibold' : 'text-zinc-400 mb-1'}">${dayNum}</div>
                             <div class="space-y-0.5 mt-1">
                                 ${dayEvents.slice(0, 3).map(e => `
-                                    <div class="event-item" onclick="showEventDetails('${e.id}')" title="${e.title}">
-                                        ${formatEventTime(e.start)} ${e.title}
+                                    <div class="event-item" onclick="showEventDetails('${e.id}')" title="${escapeHtml(e.title)}">
+                                        ${formatEventTime(e.start)} ${escapeHtml(e.title)}
                                     </div>
                                 `).join('')}
                                 ${dayEvents.length > 3 ? `<div class="text-[10px] text-zinc-500 pl-1">+${dayEvents.length - 3} więcej</div>` : ''}
@@ -887,9 +901,12 @@
             document.getElementById('week-header').innerHTML = headerHtml;
             document.getElementById('week-header').className = 'grid grid-cols-8 bg-zinc-900/80 border-b border-white/5';
 
-            // Render grid
+            // Render grid with event duration blocks
             let gridHtml = '';
-            for (let hour = 7; hour < 21; hour++) {
+            const startHour = 6;
+            const endHour = 22;
+
+            for (let hour = startHour; hour < endHour; hour++) {
                 gridHtml += `<div class="grid grid-cols-8 week-hour-row">`;
                 gridHtml += `<div class="px-2 py-1 text-right text-zinc-600 text-[10px] font-mono border-r border-white/5">${hour.toString().padStart(2, '0')}:00</div>`;
 
@@ -898,18 +915,38 @@
                     dayDate.setDate(dayDate.getDate() + day);
                     const isWeekend = day >= 5;
 
-                    const dayEvents = events.filter(e => {
-                        const eventDate = new Date(e.start);
-                        return eventDate.toDateString() === dayDate.toDateString() && eventDate.getHours() === hour;
+                    // Find events that START at this hour
+                    const startingEvents = events.filter(e => {
+                        const eventStart = new Date(e.start);
+                        return eventStart.toDateString() === dayDate.toDateString() && eventStart.getHours() === hour;
+                    });
+
+                    // Find events that SPAN this hour (started earlier, still ongoing)
+                    const spanningEvents = events.filter(e => {
+                        const eventStart = new Date(e.start);
+                        const eventEnd = new Date(e.end);
+                        if (eventStart.toDateString() !== dayDate.toDateString()) return false;
+                        return eventStart.getHours() < hour && eventEnd.getHours() > hour;
                     });
 
                     gridHtml += `
-                        <div class="border-r border-white/5 last:border-r-0 p-1 ${isWeekend ? 'bg-zinc-900/30' : ''} relative">
-                            ${dayEvents.map(e => `
-                                <div class="event-item text-[10px]" onclick="showEventDetails('${e.id}')" title="${e.title}">
-                                    ${e.title}
-                                </div>
-                            `).join('')}
+                        <div class="border-r border-white/5 last:border-r-0 p-0.5 ${isWeekend ? 'bg-zinc-900/30' : ''} relative min-h-[32px]">
+                            ${startingEvents.map(e => {
+                                const eventStart = new Date(e.start);
+                                const eventEnd = new Date(e.end);
+                                const durationHours = Math.max(1, Math.ceil((eventEnd - eventStart) / (1000 * 60 * 60)));
+                                const heightPx = durationHours * 32 - 4;
+                                return `
+                                    <div class="event-item text-[10px] absolute left-0.5 right-0.5 z-10 overflow-hidden"
+                                         style="height: ${heightPx}px; min-height: 28px;"
+                                         onclick="showEventDetails('${e.id}')"
+                                         title="${escapeHtml(e.title)} (${formatEventTime(e.start)} - ${formatEventTime(e.end)})">
+                                        <div class="font-medium truncate">${escapeHtml(e.title)}</div>
+                                        <div class="text-pink-300/60 text-[9px]">${formatEventTime(e.start)}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                            ${spanningEvents.length > 0 ? `<div class="absolute inset-0 bg-pink-500/5 border-l-2 border-pink-500/30"></div>` : ''}
                         </div>
                     `;
                 }
@@ -930,32 +967,49 @@
             document.getElementById('day-title').textContent = `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
             let gridHtml = '';
-            for (let hour = 7; hour < 21; hour++) {
+            const startHour = 6;
+            const endHour = 22;
+
+            for (let hour = startHour; hour < endHour; hour++) {
+                // Events starting at this hour
                 const hourEvents = events.filter(e => {
                     const eventDate = new Date(e.start);
                     return eventDate.toDateString() === currentDate.toDateString() && eventDate.getHours() === hour;
                 });
 
+                // Check if any event spans this hour (for visual indicator)
+                const hasSpanningEvent = events.some(e => {
+                    const eventStart = new Date(e.start);
+                    const eventEnd = new Date(e.end);
+                    if (eventStart.toDateString() !== currentDate.toDateString()) return false;
+                    return eventStart.getHours() < hour && eventEnd.getHours() > hour;
+                });
+
                 gridHtml += `
-                    <div class="day-hour-row grid grid-cols-12 gap-4">
+                    <div class="day-hour-row grid grid-cols-12 gap-4 ${hasSpanningEvent ? 'bg-pink-500/5' : ''}">
                         <div class="col-span-1 px-4 py-2 text-right text-zinc-500 text-xs font-mono">${hour.toString().padStart(2, '0')}:00</div>
-                        <div class="col-span-11 p-2 border-l border-white/5">
-                            ${hourEvents.map(e => `
-                                <div class="bg-pink-500/20 border border-pink-500/30 rounded-lg p-3 mb-2 cursor-pointer hover:bg-pink-500/30 transition-colors" onclick="showEventDetails('${e.id}')">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-white font-medium">${e.title}</span>
-                                        <span class="text-pink-400 text-xs font-mono">${formatEventTime(e.start)}</span>
-                                    </div>
-                                    ${e.lead ? `
-                                        <div class="flex items-center gap-2 text-zinc-400 text-xs">
-                                            <i class="ph ph-user"></i>
-                                            ${e.lead.name || e.lead.email}
-                                            ${e.lead.company ? `<span class="text-zinc-600">•</span> ${e.lead.company}` : ''}
+                        <div class="col-span-11 p-2 border-l border-white/5 ${hasSpanningEvent ? 'border-l-2 border-l-pink-500/30' : ''}">
+                            ${hourEvents.map(e => {
+                                const eventStart = new Date(e.start);
+                                const eventEnd = new Date(e.end);
+                                const durationMin = Math.round((eventEnd - eventStart) / (1000 * 60));
+                                return `
+                                    <div class="bg-pink-500/20 border border-pink-500/30 rounded-lg p-3 mb-2 cursor-pointer hover:bg-pink-500/30 transition-colors" onclick="showEventDetails('${e.id}')">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-white font-medium">${escapeHtml(e.title)}</span>
+                                            <span class="text-pink-400 text-xs font-mono">${formatEventTime(e.start)} - ${formatEventTime(e.end)} <span class="text-zinc-500">(${durationMin} min)</span></span>
                                         </div>
-                                    ` : ''}
-                                    ${e.description ? `<div class="text-zinc-500 text-xs mt-2">${e.description}</div>` : ''}
-                                </div>
-                            `).join('')}
+                                        ${e.lead ? `
+                                            <div class="flex items-center gap-2 text-zinc-400 text-xs">
+                                                <i class="ph ph-user"></i>
+                                                ${escapeHtml(e.lead.name || e.lead.email)}
+                                                ${e.lead.company ? `<span class="text-zinc-600">•</span> ${escapeHtml(e.lead.company)}` : ''}
+                                            </div>
+                                        ` : ''}
+                                        ${e.description ? `<div class="text-zinc-500 text-xs mt-2">${escapeHtml(e.description)}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
@@ -996,10 +1050,10 @@
                             <span class="text-pink-400/60 text-[10px] uppercase">${date.toLocaleDateString('pl-PL', { month: 'short' })}</span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="text-white font-medium truncate">${e.title}</div>
+                            <div class="text-white font-medium truncate">${escapeHtml(e.title)}</div>
                             <div class="text-zinc-500 text-xs">
                                 ${date.toLocaleDateString('pl-PL', { weekday: 'short' })} • ${formatEventTime(e.start)}
-                                ${e.lead ? ` • ${e.lead.name || e.lead.email}` : ''}
+                                ${e.lead ? ` • ${escapeHtml(e.lead.name || e.lead.email)}` : ''}
                             </div>
                         </div>
                         <i class="ph ph-caret-right text-zinc-600"></i>
@@ -1036,8 +1090,8 @@
                     <div class="flex items-center gap-3 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
                         <i class="ph ph-user text-pink-400 text-xl"></i>
                         <div class="flex-1 min-w-0">
-                            <div class="text-white">${event.lead.name || 'Brak nazwy'}</div>
-                            <div class="text-zinc-500 text-sm truncate">${event.lead.email || ''}${event.lead.company ? ` • ${event.lead.company}` : ''}</div>
+                            <div class="text-white">${escapeHtml(event.lead.name) || 'Brak nazwy'}</div>
+                            <div class="text-zinc-500 text-sm truncate">${escapeHtml(event.lead.email) || ''}${event.lead.company ? ` • ${escapeHtml(event.lead.company)}` : ''}</div>
                         </div>
                         <a href="/lead?id=${event.lead.id}" class="text-pink-400 hover:text-pink-300 text-xs">
                             Zobacz <i class="ph ph-arrow-right"></i>
@@ -1050,7 +1104,7 @@
                 html += `
                     <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
                         <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Notatki</div>
-                        <div class="text-white text-sm">${event.description}</div>
+                        <div class="text-white text-sm">${escapeHtml(event.description)}</div>
                     </div>
                 `;
             }
@@ -1061,6 +1115,10 @@
 
         // Event Modal
         document.getElementById('add-event-btn').addEventListener('click', () => {
+            editingEventId = null; // Reset to create mode
+            document.getElementById('event-modal-title').textContent = 'Nowe spotkanie';
+            document.getElementById('event-modal-subtitle').textContent = 'Zaplanuj spotkanie z leadem';
+
             document.getElementById('event-form').reset();
             document.getElementById('event-date').value = currentDate.toISOString().split('T')[0];
             document.getElementById('event-lead').value = '';
@@ -1091,51 +1149,105 @@
         document.getElementById('event-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Validation
             const leadId = document.getElementById('event-lead').value;
+            const title = document.getElementById('event-title').value.trim();
+            const date = document.getElementById('event-date').value;
+            const time = document.getElementById('event-time').value;
+            const duration = parseInt(document.getElementById('event-duration').value) || 0;
+
             if (!leadId) {
                 alert('Wybierz leada, którego dotyczy spotkanie');
                 leadSearchInput.focus();
                 return;
             }
 
+            if (!title) {
+                alert('Podaj tytuł spotkania');
+                document.getElementById('event-title').focus();
+                return;
+            }
+
+            if (!date) {
+                alert('Wybierz datę spotkania');
+                document.getElementById('event-date').focus();
+                return;
+            }
+
+            if (!time) {
+                alert('Wybierz godzinę spotkania');
+                document.getElementById('event-time').focus();
+                return;
+            }
+
+            if (duration < 5 || duration > 480) {
+                alert('Czas trwania musi być między 5 a 480 minut');
+                return;
+            }
+
             const eventData = {
-                title: document.getElementById('event-title').value,
-                date: document.getElementById('event-date').value,
-                time: document.getElementById('event-time').value,
-                duration: parseInt(document.getElementById('event-duration').value),
-                description: document.getElementById('event-description').value,
+                title: title,
+                date: date,
+                time: time,
+                duration: duration,
+                description: document.getElementById('event-description').value.trim(),
                 lead_id: leadId
             };
 
             const startTime = new Date(`${eventData.date}T${eventData.time}`);
             const endTime = new Date(startTime.getTime() + eventData.duration * 60000);
 
-            const { error } = await supabaseClient
-                .from('calendar_events')
-                .insert({
-                    title: eventData.title,
-                    description: eventData.description,
-                    start_time: startTime.toISOString(),
-                    end_time: endTime.toISOString(),
-                    lead_id: eventData.lead_id,
-                    assigned_to: currentMember?.id || null
-                });
+            const dbData = {
+                title: eventData.title,
+                description: eventData.description,
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                lead_id: eventData.lead_id
+            };
+
+            let error;
+            const selectedLead = leads.find(l => l.id === eventData.lead_id);
+
+            if (editingEventId) {
+                // Update existing event
+                const oldEvent = events.find(e => e.id === editingEventId);
+                const result = await supabaseClient
+                    .from('calendar_events')
+                    .update(dbData)
+                    .eq('id', editingEventId);
+                error = result.error;
+
+                if (!error) {
+                    logAuditActivity('update', 'meeting', editingEventId, selectedLead?.email || eventData.lead_id,
+                        { title: oldEvent?.title, start: oldEvent?.start },
+                        { title: eventData.title, date: eventData.date, time: eventData.time, duration: eventData.duration }
+                    );
+                }
+            } else {
+                // Create new event
+                dbData.assigned_to = currentMember?.id || null;
+                const result = await supabaseClient
+                    .from('calendar_events')
+                    .insert(dbData);
+                error = result.error;
+
+                if (!error) {
+                    logAuditActivity('create', 'meeting', eventData.lead_id, selectedLead?.email || eventData.lead_id, null, {
+                        title: eventData.title,
+                        date: eventData.date,
+                        time: eventData.time,
+                        duration: eventData.duration
+                    });
+                }
+            }
 
             if (error) {
-                console.error('Error creating event:', error);
-                alert('Błąd tworzenia wydarzenia');
+                console.error('Error saving event:', error);
+                alert(editingEventId ? 'Błąd aktualizacji wydarzenia' : 'Błąd tworzenia wydarzenia');
                 return;
             }
 
-            // Log meeting creation
-            const selectedLead = leads.find(l => l.id === eventData.lead_id);
-            logAuditActivity('create', 'meeting', eventData.lead_id, selectedLead?.email || eventData.lead_id, null, {
-                title: eventData.title,
-                date: eventData.date,
-                time: eventData.time,
-                duration: eventData.duration
-            });
-
+            editingEventId = null;
             document.getElementById('event-modal').classList.add('hidden');
             loadEvents();
         });
@@ -1175,6 +1287,52 @@
 
             document.getElementById('event-details-modal').classList.add('hidden');
             loadEvents();
+        });
+
+        // Edit event
+        document.getElementById('edit-event').addEventListener('click', () => {
+            const event = events.find(e => e.id === selectedEventId);
+            if (!event) return;
+
+            editingEventId = selectedEventId;
+
+            // Update modal title
+            document.getElementById('event-modal-title').textContent = 'Edytuj spotkanie';
+            document.getElementById('event-modal-subtitle').textContent = 'Zmień szczegóły spotkania';
+
+            // Populate form
+            const startDate = new Date(event.start);
+            const endDate = new Date(event.end);
+            const durationMin = Math.round((endDate - startDate) / (1000 * 60));
+
+            document.getElementById('event-title').value = event.title || '';
+            document.getElementById('event-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('event-time').value = startDate.toTimeString().slice(0, 5);
+            document.getElementById('event-duration').value = durationMin;
+            document.getElementById('event-description').value = event.description || '';
+
+            // Set duration button
+            document.querySelectorAll('.duration-btn').forEach(b => {
+                b.classList.remove('border-pink-500/50', 'bg-pink-500/10', 'text-pink-400');
+                b.classList.add('border-zinc-800', 'text-zinc-400');
+                if (parseInt(b.dataset.duration) === durationMin) {
+                    b.classList.remove('border-zinc-800', 'text-zinc-400');
+                    b.classList.add('border-pink-500/50', 'bg-pink-500/10', 'text-pink-400');
+                }
+            });
+
+            // Set lead
+            if (event.lead) {
+                document.getElementById('event-lead').value = event.lead.id;
+                document.getElementById('selected-lead-name').textContent = event.lead.name || 'Brak nazwy';
+                document.getElementById('selected-lead-details').textContent = `${event.lead.email || ''}${event.lead.company ? ' • ' + event.lead.company : ''}`;
+                document.getElementById('selected-lead-info').classList.remove('hidden');
+                document.getElementById('lead-search').classList.add('hidden');
+            }
+
+            // Close details modal and open edit modal
+            document.getElementById('event-details-modal').classList.add('hidden');
+            document.getElementById('event-modal').classList.remove('hidden');
         });
 
         // ===========================================

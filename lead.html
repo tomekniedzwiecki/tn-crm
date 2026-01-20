@@ -165,11 +165,27 @@
             font-weight: 600;
         }
 
+        .stage-pill.terminal-abandoned {
+            opacity: 1;
+            background: rgba(113, 113, 122, 0.15);
+            border-color: rgba(113, 113, 122, 0.5);
+            box-shadow: 0 0 20px rgba(113, 113, 122, 0.25);
+        }
+        .stage-pill.terminal-abandoned .stage-icon {
+            background: rgba(113, 113, 122, 0.3);
+            color: #a1a1aa;
+            transform: scale(1.1);
+        }
+        .stage-pill.terminal-abandoned .stage-name {
+            color: #a1a1aa;
+            font-weight: 600;
+        }
+
         /* When in terminal state, fade regular stages more */
-        #pipeline-stepper.terminal-state .stage-pill:not(.terminal-won):not(.terminal-lost) {
+        #pipeline-stepper.terminal-state .stage-pill:not(.terminal-won):not(.terminal-lost):not(.terminal-abandoned) {
             opacity: 0.3;
         }
-        #pipeline-stepper.terminal-state .stage-pill:not(.terminal-won):not(.terminal-lost):hover {
+        #pipeline-stepper.terminal-state .stage-pill:not(.terminal-won):not(.terminal-lost):not(.terminal-abandoned):hover {
             opacity: 0.6;
         }
     </style>
@@ -779,7 +795,7 @@
             title.textContent = options.title || 'Potwierdź';
             message.textContent = options.message || 'Czy na pewno chcesz kontynuować?';
 
-            // Set theme (won = green, lost = red, default = blue)
+            // Set theme (won = green, lost = red, abandoned = zinc, default = blue)
             if (options.theme === 'won') {
                 iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-emerald-500/20';
                 iconInner.className = 'ph ph-trophy text-2xl text-emerald-400';
@@ -788,6 +804,10 @@
                 iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-red-500/20';
                 iconInner.className = 'ph ph-x-circle text-2xl text-red-400';
                 confirmBtn.className = 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors bg-red-600 hover:bg-red-500 text-white';
+            } else if (options.theme === 'abandoned') {
+                iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-zinc-500/20';
+                iconInner.className = 'ph ph-prohibit text-2xl text-zinc-400';
+                confirmBtn.className = 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors bg-zinc-600 hover:bg-zinc-500 text-white';
             } else {
                 iconContainer.className = 'w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-blue-500/20';
                 iconInner.className = 'ph ph-arrows-left-right text-2xl text-blue-400';
@@ -1315,6 +1335,7 @@
             if (!status) return 'Brak';
             if (status === 'won') return 'Wygrany';
             if (status === 'lost') return 'Przegrany';
+            if (status === 'abandoned') return 'Porzucony';
             const stage = pipelineStages.find(s => s.id === status);
             return stage?.name || status;
         }
@@ -1332,7 +1353,8 @@
         let PIPELINE_STAGES = pipelineStages.map(s => s.id);
         let STATUS_LABELS = {
             won: 'Wygrany',
-            lost: 'Przegrany'
+            lost: 'Przegrany',
+            abandoned: 'Porzucony'
         };
 
         async function loadPipelineSettings() {
@@ -1354,7 +1376,7 @@
             PIPELINE_STAGES = pipelineStages.map(s => s.id);
 
             // Build STATUS_LABELS from dynamic stages
-            STATUS_LABELS = { won: 'Wygrany', lost: 'Przegrany' };
+            STATUS_LABELS = { won: 'Wygrany', lost: 'Przegrany', abandoned: 'Porzucony' };
             pipelineStages.forEach(stage => {
                 STATUS_LABELS[stage.id] = stage.name;
             });
@@ -1408,6 +1430,12 @@
                     </div>
                     <span class="stage-name">Przegrany</span>
                 </button>
+                <button data-stage="abandoned" class="stage-pill text-zinc-400" style="--glow-color: rgba(113, 113, 122, 0.4)">
+                    <div class="stage-icon bg-zinc-500/20">
+                        <i class="ph ph-prohibit"></i>
+                    </div>
+                    <span class="stage-name">Porzucony</span>
+                </button>
             `;
 
             container.innerHTML = html;
@@ -1417,11 +1445,11 @@
                 pill.addEventListener('click', () => {
                     const newStatus = pill.dataset.stage;
                     const currentStatus = lead.status || 'new';
-                    const isCurrentlyTerminal = currentStatus === 'won' || currentStatus === 'lost';
+                    const isCurrentlyTerminal = currentStatus === 'won' || currentStatus === 'lost' || currentStatus === 'abandoned';
 
                     // Confirm when reopening from terminal state
-                    if (isCurrentlyTerminal && newStatus !== 'won' && newStatus !== 'lost') {
-                        const statusLabel = currentStatus === 'won' ? 'wygrany' : 'przegrany';
+                    if (isCurrentlyTerminal && newStatus !== 'won' && newStatus !== 'lost' && newStatus !== 'abandoned') {
+                        const statusLabel = currentStatus === 'won' ? 'wygrany' : currentStatus === 'lost' ? 'przegrany' : 'porzucony';
                         showConfirmModal({
                             title: 'Ponownie otwórz leada',
                             message: `Lead jest oznaczony jako ${statusLabel}. Czy chcesz go ponownie otworzyć?`,
@@ -1452,6 +1480,16 @@
                         return;
                     }
 
+                    if (newStatus === 'abandoned') {
+                        showConfirmModal({
+                            title: 'Oznacz jako porzucony',
+                            message: 'Czy na pewno chcesz oznaczyć tego leada jako porzucony? To oznacza, że nie ma sensu się z nim kontaktować.',
+                            theme: 'abandoned',
+                            onConfirm: () => changeStatus(newStatus)
+                        });
+                        return;
+                    }
+
                     changeStatus(newStatus);
                 });
             });
@@ -1461,11 +1499,11 @@
             const stepper = document.getElementById('pipeline-stepper');
             const pills = document.querySelectorAll('.stage-pill');
             const currentIndex = PIPELINE_STAGES.indexOf(status);
-            const isTerminal = status === 'won' || status === 'lost';
+            const isTerminal = status === 'won' || status === 'lost' || status === 'abandoned';
 
             // Reset all pills
             pills.forEach(pill => {
-                pill.classList.remove('completed', 'current', 'terminal-won', 'terminal-lost');
+                pill.classList.remove('completed', 'current', 'terminal-won', 'terminal-lost', 'terminal-abandoned');
             });
 
             // Handle terminal states
@@ -1473,7 +1511,7 @@
                 stepper.classList.add('terminal-state');
                 const terminalPill = document.querySelector(`[data-stage="${status}"]`);
                 if (terminalPill) {
-                    terminalPill.classList.add(status === 'won' ? 'terminal-won' : 'terminal-lost');
+                    terminalPill.classList.add(status === 'won' ? 'terminal-won' : status === 'lost' ? 'terminal-lost' : 'terminal-abandoned');
                 }
                 // Mark all regular stages as completed
                 pipelineStages.forEach((stage, index) => {
