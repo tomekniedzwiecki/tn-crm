@@ -973,6 +973,7 @@
                 'call': 'ph-phone',
                 'email': 'ph-envelope',
                 'meeting': 'ph-calendar',
+                'proforma': 'ph-file-pdf',
                 'other': 'ph-dot'
             };
             return icons[type] || 'ph-dot';
@@ -986,6 +987,7 @@
                 'call': 'bg-yellow-500',
                 'email': 'bg-purple-500',
                 'meeting': 'bg-pink-500',
+                'proforma': 'bg-blue-400',
                 'other': 'bg-zinc-600'
             };
             return colors[type] || 'bg-zinc-600';
@@ -2260,6 +2262,31 @@
 
                 // Otwórz PDF
                 window.open(result.pdfUrl, '_blank');
+
+                // Loguj aktywność - proforma wygenerowana przez handlowca
+                logAuditActivity('create', 'proforma', lead.id, lead.email, null, {
+                    offer_name: selectedOffer.name,
+                    offer_price: selectedOffer.price,
+                    invoice_id: result.invoiceId,
+                    generated_by: 'salesperson'
+                });
+
+                // Dodaj do historii aktywności leada
+                await supabaseClient.from('lead_activities').insert([{
+                    lead_id: lead.id,
+                    type: 'proforma',
+                    description: `Wygenerowano proformę przez handlowca (${currentMember?.name || 'Nieznany'})`,
+                    metadata: {
+                        offer_name: selectedOffer.name,
+                        offer_price: selectedOffer.price,
+                        invoice_id: result.invoiceId,
+                        generated_by: 'salesperson',
+                        generated_by_name: currentMember?.name
+                    }
+                }]);
+
+                // Odśwież historię aktywności
+                loadActivities();
 
             } catch (error) {
                 console.error('Proforma error:', error);

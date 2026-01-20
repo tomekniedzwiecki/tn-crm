@@ -686,6 +686,24 @@
                 // Otwórz PDF
                 window.open(result.pdfUrl, '_blank');
 
+                // Loguj aktywność - proforma wygenerowana przez klienta
+                try {
+                    await supabaseClient.from('lead_activities').insert([{
+                        lead_id: lead.id,
+                        type: 'proforma',
+                        description: `Wygenerowano proformę przez klienta`,
+                        metadata: {
+                            offer_name: offer.name,
+                            offer_price: offer.price,
+                            invoice_id: result.invoiceId,
+                            generated_by: 'client',
+                            client_email: lead.email
+                        }
+                    }]);
+                } catch (logError) {
+                    console.error('Activity log error:', logError);
+                }
+
             } catch (error) {
                 console.error('Proforma error:', error);
                 alert('Błąd: ' + error.message);
