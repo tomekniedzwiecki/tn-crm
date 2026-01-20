@@ -334,6 +334,22 @@
             }
         }
 
+        // Slack notification helper - fire and forget
+        async function sendSlackNotification(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/slack-notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Slack notification error:', err);
+            }
+        }
+
         // Default pipeline stages (will be overwritten by settings)
         const DEFAULT_STAGES = [
             { id: 'new', name: 'Nowy', order: 0 },
@@ -987,6 +1003,16 @@
             // Log lead creation
             if (data && data[0]) {
                 logAuditActivity('create', 'lead', data[0].id, leadData.email, null, leadData);
+
+                // Send Slack notification about new lead
+                sendSlackNotification('new_lead', {
+                    name: leadData.name,
+                    email: leadData.email,
+                    phone: leadData.phone,
+                    company: leadData.company,
+                    source: 'CRM (manual)',
+                    deal_value: leadData.deal_value
+                });
             }
 
             closeAddModal();

@@ -329,6 +329,22 @@
             return div.innerHTML;
         }
 
+        // Slack notification helper - fire and forget
+        async function sendSlackNotification(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/slack-notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Slack notification error:', err);
+            }
+        }
+
         function showScreen(screenId) {
             ['login-screen', 'expired-screen', 'not-found-screen', 'offer-screen'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
@@ -394,6 +410,9 @@
                 return;
             }
 
+            // Check if this is first view
+            const isFirstView = !clientOffer.view_count || clientOffer.view_count === 0;
+
             // Success - update view count and history
             const viewHistory = clientOffer.view_history || [];
             viewHistory.push(new Date().toISOString());
@@ -419,6 +438,16 @@
                     })
                     .eq('id', clientOffer.id);
             }
+
+            // Send Slack notification about offer view
+            sendSlackNotification('offer_viewed', {
+                lead_name: lead.name,
+                lead_email: lead.email,
+                lead_company: lead.company,
+                offer_name: offer.name,
+                offer_price: offer.price,
+                first_view: isFirstView
+            });
 
             renderOffer();
             showScreen('offer-screen');
@@ -703,6 +732,16 @@
                 } catch (logError) {
                     console.error('Activity log error:', logError);
                 }
+
+                // Send Slack notification about proforma generation
+                sendSlackNotification('proforma_generated', {
+                    lead_name: lead.name,
+                    lead_email: lead.email,
+                    lead_company: lead.company,
+                    offer_name: offer.name,
+                    offer_price: offer.price,
+                    generated_by: 'client'
+                });
 
             } catch (error) {
                 console.error('Proforma error:', error);

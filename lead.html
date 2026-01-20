@@ -749,6 +749,22 @@
             }
         }
 
+        // Slack notification helper - fire and forget
+        async function sendSlackNotification(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/slack-notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Slack notification error:', err);
+            }
+        }
+
         // Modal functions
         function showConfirmModal(options) {
             const modal = document.getElementById('confirm-modal');
@@ -2287,6 +2303,17 @@
 
                 // Odśwież historię aktywności
                 loadActivities();
+
+                // Send Slack notification about proforma generation
+                sendSlackNotification('proforma_generated', {
+                    lead_name: lead.name,
+                    lead_email: lead.email,
+                    lead_company: lead.company,
+                    offer_name: selectedOffer.name,
+                    offer_price: selectedOffer.price,
+                    generated_by: 'salesperson',
+                    salesperson_name: currentMember?.name
+                });
 
             } catch (error) {
                 console.error('Proforma error:', error);
