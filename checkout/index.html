@@ -445,8 +445,8 @@
                                     <input type="checkbox" id="consent-terms" required
                                            class="mt-0.5 w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 focus:ring-offset-0">
                                     <span class="text-sm text-gray-600 leading-relaxed">
-                                        Akceptuję <a href="/dokumenty/regulamin.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">regulamin</a>
-                                        oraz <a href="/dokumenty/polityka-prywatnosci.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">politykę prywatności</a>.
+                                        Akceptuję <a id="link-regulamin" href="/dokumenty/regulamin.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">regulamin</a>
+                                        oraz <a id="link-privacy" href="/dokumenty/polityka-prywatnosci.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">politykę prywatności</a>.
                                         <span class="text-red-500">*</span>
                                     </span>
                                 </label>
@@ -488,9 +488,9 @@
                 <p class="font-medium text-gray-500">Tomasz Niedźwiecki AI</p>
                 <p>ul. Grawerska 30L, 51-180 Wrocław • NIP: 6972240255</p>
                 <p class="pt-2">
-                    <a href="/dokumenty/regulamin.html" class="hover:text-gray-600">Regulamin</a>
+                    <a id="link-regulamin-footer" href="/dokumenty/regulamin.html" class="hover:text-gray-600">Regulamin</a>
                     <span class="mx-2">•</span>
-                    <a href="/dokumenty/polityka-prywatnosci.html" class="hover:text-gray-600">Polityka prywatności</a>
+                    <a id="link-privacy-footer" href="/dokumenty/polityka-prywatnosci.html" class="hover:text-gray-600">Polityka prywatności</a>
                 </p>
             </div>
         </div>
@@ -515,6 +515,27 @@
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Set legal document URLs based on environment
+        (function setLegalLinks() {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const regulaminUrl = isLocal
+                ? '/tomekniedzwiecki.pl/dokumenty/regulamin.html'
+                : '/dokumenty/regulamin.html';
+            const privacyUrl = isLocal
+                ? '/tomekniedzwiecki.pl/dokumenty/polityka-prywatnosci.html'
+                : '/dokumenty/polityka-prywatnosci.html';
+
+            // Update all links
+            ['link-regulamin', 'link-regulamin-footer'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.href = regulaminUrl;
+            });
+            ['link-privacy', 'link-privacy-footer'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.href = privacyUrl;
+            });
+        })();
 
         let currentOffer = null;
         const MIN_INSTALLMENT_AMOUNT = 300;
