@@ -129,6 +129,10 @@
                                         <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Imię i nazwisko</label>
                                         <input type="text" id="account-name" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="Twoje imię i nazwisko">
                                     </div>
+                                    <div>
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email firmowy</label>
+                                        <input type="email" id="account-email" readonly class="w-full text-sm text-zinc-500 bg-zinc-900/50 border border-zinc-800/50 px-3 py-3 rounded-lg outline-none cursor-not-allowed">
+                                    </div>
                                     <button onclick="saveAccountName()" class="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors">
                                         Zapisz
                                     </button>
@@ -869,9 +873,9 @@
                     <input type="text" id="edit-member-name" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="Jan Kowalski">
                 </div>
 
-                <!-- Email (readonly) -->
+                <!-- Email firmowy (readonly) -->
                 <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email</label>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email firmowy</label>
                     <input type="email" id="edit-member-email" readonly class="w-full text-sm text-zinc-500 bg-zinc-900/50 border border-zinc-800/50 px-3 py-3 rounded-lg outline-none cursor-not-allowed">
                 </div>
 
@@ -1202,13 +1206,18 @@
         // Edit member modal
         let editingMemberId = null;
 
+        function getWorkEmail(name) {
+            const isMaciej = name && name.toLowerCase().includes('maciej');
+            return isMaciej ? 'maciej@tomekniedzwiecki.pl' : 'ceo@tomekniedzwiecki.pl';
+        }
+
         function openEditMemberModal(memberId) {
             const member = teamMembers.find(m => m.id === memberId);
             if (!member) return;
 
             editingMemberId = memberId;
             document.getElementById('edit-member-name').value = member.name || '';
-            document.getElementById('edit-member-email').value = member.email || '';
+            document.getElementById('edit-member-email').value = getWorkEmail(member.name);
 
             renderEmailSignature(member.name);
             document.getElementById('edit-member-modal').classList.remove('hidden');
@@ -1224,11 +1233,12 @@
             preview.innerHTML = generateEmailSignatureHTML(name);
         }
 
-        function generateEmailSignatureHTML(name) {
-            // Determine photo based on name
+        function generateEmailSignatureHTML(name, email) {
+            // Determine photo and email based on name
             const isMaciej = name.toLowerCase().includes('maciej');
             const photo = isMaciej ? 'mk_kwadrat.png' : 'tn_kwadrat.png';
             const initials = isMaciej ? 'MK' : 'TN';
+            const workEmail = email || (isMaciej ? 'maciej@tomekniedzwiecki.pl' : 'ceo@tomekniedzwiecki.pl');
 
             return `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
     <tr>
@@ -1239,7 +1249,8 @@
                         <img src="https://tomekniedzwiecki.pl/img/${photo}" width="78" height="78" style="border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); display: block;" alt="${initials}">
                     </td>
                     <td style="vertical-align: middle;">
-                        <div style="font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 3px;">${name}</div>
+                        <div style="font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 2px;">${name}</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">${workEmail}</div>
                         <div style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Budujemy i automatyzujemy biznesy online</div>
                         <table cellpadding="0" cellspacing="0" border="0">
                             <tr>
@@ -1364,6 +1375,10 @@
             const nameInput = document.getElementById('account-name');
             if (nameInput) {
                 nameInput.value = currentMember.name || '';
+            }
+            const emailInput = document.getElementById('account-email');
+            if (emailInput) {
+                emailInput.value = getWorkEmail(currentMember.name);
             }
             renderAccountSignature();
         }
