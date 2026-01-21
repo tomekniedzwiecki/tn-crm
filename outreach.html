@@ -119,6 +119,12 @@
                             <option value="5">5+ produktów</option>
                         </select>
                         <div class="flex-1"></div>
+                        <button onclick="openImportModal()" class="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors">
+                            <i class="ph ph-upload-simple mr-1"></i> Import CSV
+                        </button>
+                        <button onclick="deleteSelectedContacts()" id="btn-delete-contacts" class="px-3 py-1.5 text-xs bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors hidden">
+                            <i class="ph ph-trash mr-1"></i> Usuń zaznaczone
+                        </button>
                         <span id="contacts-count" class="text-xs text-zinc-500 font-mono">Ładowanie...</span>
                     </div>
 
@@ -127,6 +133,9 @@
                         <table class="w-full">
                             <thead>
                                 <tr class="border-b border-white/5 text-left">
+                                    <th class="px-4 py-3 w-10">
+                                        <input type="checkbox" id="select-all-contacts" onchange="toggleAllContacts()" class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                                    </th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Telefon</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-right">LTV</th>
@@ -272,6 +281,22 @@
                     </div>
                 </div>
 
+                <!-- Test Email -->
+                <div class="border-t border-white/5 pt-5 bg-zinc-800/30 -mx-5 px-5 pb-5">
+                    <h3 class="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                        <i class="ph ph-paper-plane-tilt text-amber-400"></i>
+                        Wyślij email testowy
+                    </h3>
+                    <div class="flex gap-3">
+                        <input type="email" id="test-email-address" placeholder="twoj@email.com" class="flex-1 bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                        <button type="button" onclick="sendTestEmail()" id="btn-send-test" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="ph ph-paper-plane-tilt mr-1"></i>
+                            Wyślij test
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-zinc-600 mt-2">Wyślij email testowy przed uruchomieniem kampanii. Użyje treści z "Pierwszy email".</p>
+                </div>
+
                 <!-- Email 2 (Follow-up) -->
                 <div class="border-t border-white/5 pt-5">
                     <h3 class="text-sm font-medium text-white mb-3 flex items-center gap-2">
@@ -303,6 +328,216 @@
         </div>
     </div>
 
+    <!-- Import CSV Modal -->
+    <div id="modal-import" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-xl m-4">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h2 class="text-lg font-semibold text-white">Import kontaktów z CSV</h2>
+                <button onclick="closeImportModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-5">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Nazwa źródła</label>
+                    <input type="text" id="import-source" required class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="np. klienci_ltv_2024">
+                    <p class="text-[10px] text-zinc-600 mt-1">Identyfikator do filtrowania kontaktów</p>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Plik CSV</label>
+                    <div class="border-2 border-dashed border-zinc-700 rounded-lg p-6 text-center hover:border-zinc-600 transition-colors">
+                        <input type="file" id="import-file" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
+                        <label for="import-file" class="cursor-pointer">
+                            <i class="ph ph-file-csv text-4xl text-zinc-500 mb-2"></i>
+                            <p class="text-zinc-400 text-sm">Kliknij aby wybrać plik CSV</p>
+                            <p id="file-name" class="text-xs text-zinc-600 mt-1">lub przeciągnij i upuść</p>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700/50">
+                    <h4 class="text-xs font-medium text-zinc-400 mb-2">Wymagane kolumny CSV:</h4>
+                    <code class="text-[10px] text-zinc-500 font-mono block">email,phone,ltv_pln,transaction_count,refunded_total_pln,first_purchase,last_purchase,unique_products,products</code>
+                    <p class="text-[10px] text-zinc-600 mt-2">Tylko <code class="bg-zinc-800 px-1 rounded">email</code> jest wymagane. Reszta opcjonalna.</p>
+                </div>
+
+                <div id="import-preview" class="hidden">
+                    <h4 class="text-xs font-medium text-zinc-400 mb-2">Podgląd (pierwsze 5 wierszy):</h4>
+                    <div class="bg-zinc-800/50 rounded-lg p-3 max-h-40 overflow-auto">
+                        <table class="w-full text-[10px] font-mono">
+                            <thead id="import-preview-head"></thead>
+                            <tbody id="import-preview-body"></tbody>
+                        </table>
+                    </div>
+                    <p id="import-total" class="text-xs text-zinc-500 mt-2"></p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
+                    <button type="button" onclick="closeImportModal()" class="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
+                        Anuluj
+                    </button>
+                    <button type="button" onclick="importContacts()" id="btn-import" disabled class="bg-white text-black hover:bg-zinc-200 px-5 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ph ph-upload-simple mr-1"></i>
+                        Importuj
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Details Modal -->
+    <div id="modal-details" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4 flex flex-col">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <div>
+                    <h2 id="details-title" class="text-lg font-semibold text-white">Szczegóły kampanii</h2>
+                    <p id="details-subtitle" class="text-xs text-zinc-500 mt-0.5"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="addMissingContacts(currentCampaignId)" id="btn-add-contacts" class="px-3 py-1.5 text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded-lg transition-colors">
+                        <i class="ph ph-users-plus mr-1"></i> Uzupełnij kontakty
+                    </button>
+                    <button onclick="triggerSendNow()" id="btn-trigger-send" class="px-3 py-1.5 text-xs bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded-lg transition-colors">
+                        <i class="ph ph-paper-plane-tilt mr-1"></i> Wyślij teraz
+                    </button>
+                    <button onclick="triggerFollowupNow()" id="btn-trigger-followup" class="px-3 py-1.5 text-xs bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 rounded-lg transition-colors">
+                        <i class="ph ph-arrow-bend-up-right mr-1"></i> Follow-up teraz
+                    </button>
+                    <button onclick="closeDetailsModal()" class="text-zinc-500 hover:text-white transition-colors ml-2">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="grid grid-cols-6 gap-3 p-5 border-b border-white/5 bg-zinc-900/50">
+                <div class="text-center">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Dzienny limit</div>
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="number" id="details-daily-limit" min="1" max="500" class="w-16 text-lg font-mono text-amber-400 bg-transparent border-b border-amber-400/30 text-center focus:outline-none focus:border-amber-400" onchange="updateDailyLimit(this.value)">
+                        <span class="text-zinc-600 text-xs">/dzień</span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Oczekujące</div>
+                    <div id="details-pending" class="text-lg font-mono text-white">0</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Wysłane</div>
+                    <div id="details-sent" class="text-lg font-mono text-emerald-400">0</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Follow-up</div>
+                    <div id="details-followedup" class="text-lg font-mono text-violet-400">0</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Odpowiedzi</div>
+                    <div id="details-replied" class="text-lg font-mono text-blue-400">0</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Błędy</div>
+                    <div id="details-errors" class="text-lg font-mono text-red-400">0</div>
+                </div>
+            </div>
+
+            <!-- Email Preview Section -->
+            <div class="border-b border-white/5">
+                <button onclick="toggleEmailPreview()" class="w-full flex items-center justify-between px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/30 transition-colors">
+                    <span><i class="ph ph-envelope mr-2"></i>Podgląd wiadomości</span>
+                    <i id="email-preview-chevron" class="ph ph-caret-down transition-transform"></i>
+                </button>
+                <div id="email-preview-content" class="hidden px-5 pb-4">
+                    <!-- Tabs -->
+                    <div class="flex gap-2 mb-3">
+                        <button id="tab-email-1" onclick="showEmailTab(1)" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-500/20 text-emerald-400 transition-colors">
+                            Email 1
+                        </button>
+                        <button id="tab-email-2" onclick="showEmailTab(2)" class="px-3 py-1.5 text-xs rounded-lg bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors">
+                            Follow-up
+                        </button>
+                    </div>
+
+                    <!-- Email 1 content -->
+                    <div id="preview-email-1" class="space-y-2">
+                        <div class="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Temat</div>
+                            <div id="preview-email-1-subject" class="text-sm text-white font-medium"></div>
+                        </div>
+                        <div class="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Treść</div>
+                            <div id="preview-email-1-body" class="text-sm text-zinc-300 prose prose-sm prose-invert max-w-none [&_a]:text-emerald-400 overflow-auto max-h-48"></div>
+                        </div>
+                    </div>
+
+                    <!-- Email 2 content -->
+                    <div id="preview-email-2" class="space-y-2 hidden">
+                        <div class="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Temat</div>
+                            <div id="preview-email-2-subject" class="text-sm text-white font-medium"></div>
+                        </div>
+                        <div class="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Treść</div>
+                            <div id="preview-email-2-body" class="text-sm text-zinc-300 prose prose-sm prose-invert max-w-none [&_a]:text-emerald-400 overflow-auto max-h-48"></div>
+                        </div>
+                        <div id="preview-email-2-empty" class="hidden text-center py-4 text-zinc-500 text-sm">
+                            <i class="ph ph-info mr-1"></i> Brak skonfigurowanego follow-upu
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sends list -->
+            <div class="flex-1 overflow-y-auto p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <select id="details-filter-status" onchange="filterDetailsSends()" class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-600 focus:outline-none">
+                        <option value="">Wszystkie statusy</option>
+                        <option value="pending">Oczekujące</option>
+                        <option value="sent">Wysłane</option>
+                        <option value="followed_up">Follow-up</option>
+                        <option value="replied">Odpowiedzi</option>
+                        <option value="bounced">Bounced</option>
+                        <option value="excluded">Wykluczone</option>
+                    </select>
+                    <input type="text" id="details-search" placeholder="Szukaj po email..." class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-600 focus:outline-none w-48" oninput="filterDetailsSends()">
+                </div>
+
+                <div class="bg-zinc-800/30 rounded-lg border border-white/5 overflow-hidden">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-white/5 text-left">
+                                <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email</th>
+                                <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Status</th>
+                                <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email 1</th>
+                                <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email 2</th>
+                                <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Odpowiedź</th>
+                            </tr>
+                        </thead>
+                        <tbody id="details-sends-table">
+                            <tr>
+                                <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                                    <i class="ph ph-circle-notch animate-spin text-xl"></i>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Details pagination -->
+                <div class="flex items-center justify-between mt-4">
+                    <button onclick="detailsPrevPage()" id="details-btn-prev" class="px-3 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors disabled:opacity-50" disabled>
+                        <i class="ph ph-caret-left mr-1"></i> Poprzednia
+                    </button>
+                    <span id="details-pagination-info" class="text-xs text-zinc-500 font-mono">Strona 1</span>
+                    <button onclick="detailsNextPage()" id="details-btn-next" class="px-3 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors disabled:opacity-50">
+                        Następna <i class="ph ph-caret-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
         <span id="toast-message"></span>
@@ -320,6 +555,13 @@
         let currentPage = 1;
         const PAGE_SIZE = 50;
         let totalContacts = 0;
+        let selectedContactIds = new Set();
+        let csvData = [];
+        let currentCampaignId = null;
+        let detailsSends = [];
+        let detailsPage = 1;
+        const DETAILS_PAGE_SIZE = 50;
+        let totalDetailsSends = 0;
 
         // Auth check
         async function checkAuth() {
@@ -404,7 +646,6 @@
             updatePagination();
 
             document.getElementById('contacts-count').textContent = `${totalContacts.toLocaleString('pl-PL')} kontaktów`;
-            document.getElementById('nav-contacts-count').textContent = totalContacts.toLocaleString('pl-PL');
         }
 
         function renderContacts() {
@@ -413,9 +654,12 @@
             if (contacts.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="px-4 py-12 text-center text-zinc-500">
+                        <td colspan="8" class="px-4 py-12 text-center text-zinc-500">
                             <i class="ph ph-address-book text-3xl mb-2"></i>
                             <p>Brak kontaktów pasujących do filtrów</p>
+                            <button onclick="openImportModal()" class="mt-3 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm text-white transition-colors">
+                                <i class="ph ph-upload-simple mr-1"></i> Importuj kontakty
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -424,6 +668,9 @@
 
             tbody.innerHTML = contacts.map(c => `
                 <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                    <td class="px-4 py-3">
+                        <input type="checkbox" data-id="${c.id}" onchange="toggleContactSelection('${c.id}')" ${selectedContactIds.has(c.id) ? 'checked' : ''} class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                    </td>
                     <td class="px-4 py-3">
                         <span class="font-mono text-xs text-white">${c.email}</span>
                     </td>
@@ -449,6 +696,59 @@
                     </td>
                 </tr>
             `).join('');
+        }
+
+        // Contact selection
+        function toggleContactSelection(id) {
+            if (selectedContactIds.has(id)) {
+                selectedContactIds.delete(id);
+            } else {
+                selectedContactIds.add(id);
+            }
+            updateDeleteButton();
+        }
+
+        function toggleAllContacts() {
+            const checkbox = document.getElementById('select-all-contacts');
+            if (checkbox.checked) {
+                contacts.forEach(c => selectedContactIds.add(c.id));
+            } else {
+                contacts.forEach(c => selectedContactIds.delete(c.id));
+            }
+            renderContacts();
+            updateDeleteButton();
+        }
+
+        function updateDeleteButton() {
+            const btn = document.getElementById('btn-delete-contacts');
+            if (selectedContactIds.size > 0) {
+                btn.classList.remove('hidden');
+                btn.textContent = `Usuń zaznaczone (${selectedContactIds.size})`;
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        async function deleteSelectedContacts() {
+            if (selectedContactIds.size === 0) return;
+            if (!confirm(`Czy na pewno chcesz usunąć ${selectedContactIds.size} kontaktów?`)) return;
+
+            const ids = Array.from(selectedContactIds);
+            const { error } = await supabaseClient
+                .from('outreach_contacts')
+                .delete()
+                .in('id', ids);
+
+            if (error) {
+                showToast('Błąd usuwania: ' + error.message);
+                return;
+            }
+
+            showToast(`Usunięto ${ids.length} kontaktów`);
+            selectedContactIds.clear();
+            updateDeleteButton();
+            loadContacts();
+            loadSources();
         }
 
         function updatePagination() {
@@ -585,8 +885,8 @@
                             <button onclick="viewCampaign('${c.id}')" class="px-3 py-2 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 rounded-lg text-xs font-medium transition-colors">
                                 <i class="ph ph-eye mr-1"></i> Szczegóły
                             </button>
-                            ${c.status === 'draft' ? `
-                                <button onclick="deleteCampaign('${c.id}')" class="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg text-xs font-medium transition-colors">
+                            ${c.status !== 'active' ? `
+                                <button onclick="deleteCampaign('${c.id}')" class="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg text-xs font-medium transition-colors" title="Usuń kampanię">
                                     <i class="ph ph-trash"></i>
                                 </button>
                             ` : ''}
@@ -675,16 +975,35 @@
             const campaign = campaigns.find(c => c.id === id);
             if (!campaign) return;
 
-            // Get matching contacts
-            let query = supabaseClient.from('outreach_contacts').select('id');
-            if (campaign.contact_filter?.source) {
-                query = query.eq('source', campaign.contact_filter.source);
-            }
-            if (campaign.contact_filter?.min_ltv) {
-                query = query.gte('ltv_pln', campaign.contact_filter.min_ltv);
+            // Clear any existing sends for this campaign (in case of restart)
+            await supabaseClient.from('outreach_sends').delete().eq('campaign_id', id);
+
+            // Get matching contacts (paginated to avoid 1000 row limit)
+            let allContacts = [];
+            let page = 0;
+            const PAGE_SIZE = 1000;
+
+            while (true) {
+                let query = supabaseClient.from('outreach_contacts').select('id');
+                if (campaign.contact_filter?.source) {
+                    query = query.eq('source', campaign.contact_filter.source);
+                }
+                if (campaign.contact_filter?.min_ltv) {
+                    query = query.gte('ltv_pln', campaign.contact_filter.min_ltv);
+                }
+                query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+                const { data: pageContacts } = await query;
+
+                if (!pageContacts || pageContacts.length === 0) break;
+
+                allContacts = allContacts.concat(pageContacts);
+
+                if (pageContacts.length < PAGE_SIZE) break;
+                page++;
             }
 
-            const { data: matchingContacts } = await query;
+            const matchingContacts = allContacts;
 
             if (!matchingContacts || matchingContacts.length === 0) {
                 showToast('Brak kontaktów pasujących do filtrów');
@@ -701,10 +1020,8 @@
             // Insert in batches
             const BATCH = 500;
             for (let i = 0; i < sends.length; i += BATCH) {
-                await supabaseClient.from('outreach_sends').upsert(sends.slice(i, i + BATCH), {
-                    onConflict: 'campaign_id,contact_id',
-                    ignoreDuplicates: true
-                });
+                await supabaseClient.from('outreach_sends').insert(sends.slice(i, i + BATCH));
+                showToast(`Dodawanie kontaktów: ${Math.min(i + BATCH, sends.length)}/${sends.length}...`);
             }
 
             // Update campaign status
@@ -716,6 +1033,101 @@
 
             showToast('Kampania uruchomiona!');
             loadCampaigns();
+        }
+
+        // Add missing contacts to existing campaign
+        async function addMissingContacts(id) {
+            const campaign = campaigns.find(c => c.id === id);
+            if (!campaign) return;
+
+            showToast('Pobieranie kontaktów...');
+
+            // Get matching contacts (paginated)
+            let allContacts = [];
+            let page = 0;
+            const PAGE_SIZE = 1000;
+
+            while (true) {
+                let query = supabaseClient.from('outreach_contacts').select('id');
+                if (campaign.contact_filter?.source) {
+                    query = query.eq('source', campaign.contact_filter.source);
+                }
+                if (campaign.contact_filter?.min_ltv) {
+                    query = query.gte('ltv_pln', campaign.contact_filter.min_ltv);
+                }
+                query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+                const { data: pageContacts } = await query;
+
+                if (!pageContacts || pageContacts.length === 0) break;
+
+                allContacts = allContacts.concat(pageContacts);
+                showToast(`Pobrano ${allContacts.length} kontaktów...`);
+
+                if (pageContacts.length < PAGE_SIZE) break;
+                page++;
+            }
+
+            if (allContacts.length === 0) {
+                showToast('Brak kontaktów pasujących do filtrów');
+                return;
+            }
+
+            showToast(`Sprawdzanie istniejących wysyłek...`);
+
+            // Get existing contact_ids for this campaign (paginated)
+            let existingContactIds = new Set();
+            page = 0;
+
+            while (true) {
+                const { data: existingSends } = await supabaseClient
+                    .from('outreach_sends')
+                    .select('contact_id')
+                    .eq('campaign_id', id)
+                    .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+                if (!existingSends || existingSends.length === 0) break;
+
+                existingSends.forEach(s => existingContactIds.add(s.contact_id));
+
+                if (existingSends.length < PAGE_SIZE) break;
+                page++;
+            }
+
+            // Filter out contacts that are already in the campaign
+            const newContacts = allContacts.filter(c => !existingContactIds.has(c.id));
+
+            if (newContacts.length === 0) {
+                showToast('Wszystkie kontakty są już w kampanii');
+                return;
+            }
+
+            showToast(`Dodawanie ${newContacts.length} nowych kontaktów...`);
+
+            // Insert only new contacts
+            const sends = newContacts.map(c => ({
+                campaign_id: id,
+                contact_id: c.id,
+                status: 'pending'
+            }));
+
+            const BATCH = 500;
+            for (let i = 0; i < sends.length; i += BATCH) {
+                await supabaseClient.from('outreach_sends').insert(sends.slice(i, i + BATCH));
+                showToast(`Dodano ${Math.min(i + BATCH, sends.length)}/${sends.length}...`);
+            }
+
+            // Update total_contacts
+            const newTotal = existingContactIds.size + newContacts.length;
+            await supabaseClient.from('outreach_campaigns').update({
+                total_contacts: newTotal
+            }).eq('id', id);
+
+            showToast(`Dodano ${newContacts.length} kontaktów (łącznie: ${newTotal})`);
+            loadCampaigns();
+            if (currentCampaignId === id) {
+                loadCampaignDetails(id);
+            }
         }
 
         async function pauseCampaign(id) {
@@ -738,9 +1150,497 @@
             loadCampaigns();
         }
 
-        function viewCampaign(id) {
-            // TODO: Open campaign details modal
-            showToast('Szczegóły kampanii - wkrótce');
+        async function viewCampaign(id) {
+            currentCampaignId = id;
+            detailsPage = 1;
+
+            const campaign = campaigns.find(c => c.id === id);
+            if (!campaign) return;
+
+            document.getElementById('details-title').textContent = campaign.name;
+            document.getElementById('details-subtitle').textContent = campaign.description || 'Brak opisu';
+            document.getElementById('details-daily-limit').value = campaign.daily_limit || 50;
+
+            // Show/hide trigger buttons based on status
+            document.getElementById('btn-add-contacts').classList.toggle('hidden', campaign.status === 'completed');
+            document.getElementById('btn-trigger-send').classList.toggle('hidden', campaign.status !== 'active');
+            document.getElementById('btn-trigger-followup').classList.toggle('hidden', campaign.status !== 'active' || !campaign.email_2_subject);
+
+            // Populate email preview
+            document.getElementById('preview-email-1-subject').textContent = campaign.email_1_subject || 'Brak tematu';
+            document.getElementById('preview-email-1-body').innerHTML = campaign.email_1_body || '<span class="text-zinc-500">Brak treści</span>';
+
+            // Email 2 (follow-up)
+            const hasEmail2 = campaign.email_2_subject && campaign.email_2_body;
+            document.getElementById('preview-email-2-subject').textContent = campaign.email_2_subject || '';
+            document.getElementById('preview-email-2-body').innerHTML = campaign.email_2_body || '';
+            document.getElementById('preview-email-2-subject').parentElement.classList.toggle('hidden', !hasEmail2);
+            document.getElementById('preview-email-2-body').parentElement.classList.toggle('hidden', !hasEmail2);
+            document.getElementById('preview-email-2-empty').classList.toggle('hidden', hasEmail2);
+
+            // Reset to email 1 tab
+            showEmailTab(1);
+
+            document.getElementById('modal-details').classList.remove('hidden');
+            document.getElementById('modal-details').classList.add('flex');
+
+            await loadCampaignDetails(id);
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('modal-details').classList.add('hidden');
+            document.getElementById('modal-details').classList.remove('flex');
+            currentCampaignId = null;
+            // Reset email preview state
+            document.getElementById('email-preview-content').classList.add('hidden');
+            document.getElementById('email-preview-chevron').style.transform = '';
+        }
+
+        function toggleEmailPreview() {
+            const content = document.getElementById('email-preview-content');
+            const chevron = document.getElementById('email-preview-chevron');
+            content.classList.toggle('hidden');
+            chevron.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+
+        function showEmailTab(num) {
+            const tab1 = document.getElementById('tab-email-1');
+            const tab2 = document.getElementById('tab-email-2');
+            const preview1 = document.getElementById('preview-email-1');
+            const preview2 = document.getElementById('preview-email-2');
+
+            if (num === 1) {
+                tab1.className = 'px-3 py-1.5 text-xs rounded-lg bg-emerald-500/20 text-emerald-400 transition-colors';
+                tab2.className = 'px-3 py-1.5 text-xs rounded-lg bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors';
+                preview1.classList.remove('hidden');
+                preview2.classList.add('hidden');
+            } else {
+                tab1.className = 'px-3 py-1.5 text-xs rounded-lg bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors';
+                tab2.className = 'px-3 py-1.5 text-xs rounded-lg bg-violet-500/20 text-violet-400 transition-colors';
+                preview1.classList.add('hidden');
+                preview2.classList.remove('hidden');
+            }
+        }
+
+        async function loadCampaignDetails(campaignId) {
+            const statusFilter = document.getElementById('details-filter-status').value;
+            const searchFilter = document.getElementById('details-search').value.trim().toLowerCase();
+
+            // Get stats using count queries (to handle >1000 records)
+            const [pendingRes, sentRes, followedUpRes, repliedRes, bouncedRes, excludedRes] = await Promise.all([
+                supabaseClient.from('outreach_sends').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'pending'),
+                supabaseClient.from('outreach_sends').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'sent'),
+                supabaseClient.from('outreach_sends').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'followed_up'),
+                supabaseClient.from('outreach_sends').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'replied'),
+                supabaseClient.from('outreach_sends').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'bounced'),
+                supabaseClient.from('outreach_sends').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'excluded')
+            ]);
+
+            document.getElementById('details-pending').textContent = pendingRes.count || 0;
+            document.getElementById('details-sent').textContent = sentRes.count || 0;
+            document.getElementById('details-followedup').textContent = followedUpRes.count || 0;
+            document.getElementById('details-replied').textContent = repliedRes.count || 0;
+            document.getElementById('details-errors').textContent = (bouncedRes.count || 0) + (excludedRes.count || 0);
+
+            // Get sends with pagination
+            let query = supabaseClient
+                .from('outreach_sends')
+                .select(`
+                    *,
+                    contact:outreach_contacts (email)
+                `, { count: 'exact' })
+                .eq('campaign_id', campaignId)
+                .order('created_at', { ascending: false })
+                .range((detailsPage - 1) * DETAILS_PAGE_SIZE, detailsPage * DETAILS_PAGE_SIZE - 1);
+
+            if (statusFilter) {
+                query = query.eq('status', statusFilter);
+            }
+
+            const { data, count, error } = await query;
+
+            if (error) {
+                console.error('Error loading sends:', error);
+                return;
+            }
+
+            // Filter by email search client-side (after fetch)
+            let filteredData = data || [];
+            if (searchFilter) {
+                filteredData = filteredData.filter(s => s.contact?.email?.toLowerCase().includes(searchFilter));
+            }
+
+            detailsSends = filteredData;
+            totalDetailsSends = count || 0;
+
+            renderDetailsSends();
+            updateDetailsPagination();
+        }
+
+        function renderDetailsSends() {
+            const tbody = document.getElementById('details-sends-table');
+
+            if (detailsSends.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                            Brak wysyłek pasujących do filtrów
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const statusLabels = {
+                pending: '<span class="text-[10px] px-2 py-0.5 rounded bg-zinc-500/20 text-zinc-400">Oczekuje</span>',
+                sent: '<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">Wysłano</span>',
+                followed_up: '<span class="text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-400">Follow-up</span>',
+                replied: '<span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">Odpowiedź</span>',
+                bounced: '<span class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400">Bounced</span>',
+                excluded: '<span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">Wykluczone</span>'
+            };
+
+            tbody.innerHTML = detailsSends.map(s => `
+                <tr class="border-b border-white/5 hover:bg-white/[0.02]">
+                    <td class="px-4 py-2 text-xs font-mono text-white">${s.contact?.email || '-'}</td>
+                    <td class="px-4 py-2">${statusLabels[s.status] || s.status}</td>
+                    <td class="px-4 py-2 text-xs text-zinc-500">${s.email_1_sent_at ? new Date(s.email_1_sent_at).toLocaleString('pl-PL') : '-'}</td>
+                    <td class="px-4 py-2 text-xs text-zinc-500">${s.email_2_sent_at ? new Date(s.email_2_sent_at).toLocaleString('pl-PL') : '-'}</td>
+                    <td class="px-4 py-2 text-xs text-zinc-500">${s.replied_at ? new Date(s.replied_at).toLocaleString('pl-PL') : '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateDetailsPagination() {
+            const totalPages = Math.ceil(totalDetailsSends / DETAILS_PAGE_SIZE) || 1;
+            document.getElementById('details-pagination-info').textContent = `Strona ${detailsPage} z ${totalPages}`;
+            document.getElementById('details-btn-prev').disabled = detailsPage <= 1;
+            document.getElementById('details-btn-next').disabled = detailsPage >= totalPages;
+        }
+
+        function detailsPrevPage() {
+            if (detailsPage > 1) {
+                detailsPage--;
+                loadCampaignDetails(currentCampaignId);
+            }
+        }
+
+        function detailsNextPage() {
+            const totalPages = Math.ceil(totalDetailsSends / DETAILS_PAGE_SIZE);
+            if (detailsPage < totalPages) {
+                detailsPage++;
+                loadCampaignDetails(currentCampaignId);
+            }
+        }
+
+        function filterDetailsSends() {
+            detailsPage = 1;
+            loadCampaignDetails(currentCampaignId);
+        }
+
+        // Send test email
+        async function sendTestEmail() {
+            const testEmail = document.getElementById('test-email-address').value.trim();
+            const subject = document.getElementById('email-1-subject').value.trim();
+            const body = document.getElementById('email-1-body').value.trim();
+
+            if (!testEmail || !testEmail.includes('@')) {
+                showToast('Podaj prawidłowy adres email');
+                return;
+            }
+
+            if (!subject || !body) {
+                showToast('Wypełnij temat i treść pierwszego emaila');
+                return;
+            }
+
+            const btn = document.getElementById('btn-send-test');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin mr-1"></i> Wysyłam...';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: testEmail,
+                        subject: subject,
+                        html: body,
+                        reply_to: 'test@inbound.tomekniedzwiecki.pl',
+                        no_signature: true
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Email testowy wysłany na ${testEmail}`);
+                } else {
+                    showToast('Błąd wysyłki: ' + (result.error || 'Nieznany błąd'));
+                }
+            } catch (err) {
+                showToast('Błąd połączenia: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-paper-plane-tilt mr-1"></i> Wyślij test';
+            }
+        }
+
+        // Update daily limit
+        async function updateDailyLimit(newLimit) {
+            if (!currentCampaignId) return;
+
+            const limit = parseInt(newLimit);
+            if (isNaN(limit) || limit < 1 || limit > 500) {
+                showToast('Limit musi być między 1 a 500');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('outreach_campaigns')
+                    .update({ daily_limit: limit })
+                    .eq('id', currentCampaignId);
+
+                if (error) throw error;
+
+                // Update local data
+                const campaign = campaigns.find(c => c.id === currentCampaignId);
+                if (campaign) campaign.daily_limit = limit;
+
+                showToast(`Dzienny limit zmieniony na ${limit}`);
+            } catch (err) {
+                showToast('Błąd zapisu: ' + err.message);
+            }
+        }
+
+        // Manual trigger functions
+        async function triggerSendNow() {
+            if (!currentCampaignId) return;
+            if (!confirm('Czy uruchomić wysyłkę teraz? Zostanie wysłany dzienny limit emaili.')) return;
+
+            showToast('Uruchamiam wysyłkę...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/outreach-send`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Wysłano ${result.sent} emaili`);
+                    loadCampaignDetails(currentCampaignId);
+                    loadCampaigns();
+                } else {
+                    showToast('Błąd: ' + (result.error || 'Nieznany błąd'));
+                }
+            } catch (err) {
+                showToast('Błąd połączenia: ' + err.message);
+            }
+        }
+
+        async function triggerFollowupNow() {
+            if (!currentCampaignId) return;
+            if (!confirm('Czy uruchomić follow-upy teraz? Zostaną wysłane zaległe follow-upy.')) return;
+
+            showToast('Uruchamiam follow-upy...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/outreach-followup`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Wysłano ${result.sent} follow-upów`);
+                    loadCampaignDetails(currentCampaignId);
+                    loadCampaigns();
+                } else {
+                    showToast('Błąd: ' + (result.error || 'Nieznany błąd'));
+                }
+            } catch (err) {
+                showToast('Błąd połączenia: ' + err.message);
+            }
+        }
+
+        // CSV Import functions
+        function openImportModal() {
+            document.getElementById('modal-import').classList.remove('hidden');
+            document.getElementById('modal-import').classList.add('flex');
+            csvData = [];
+            document.getElementById('import-file').value = '';
+            document.getElementById('import-source').value = '';
+            document.getElementById('file-name').textContent = 'lub przeciągnij i upuść';
+            document.getElementById('import-preview').classList.add('hidden');
+            document.getElementById('btn-import').disabled = true;
+        }
+
+        function closeImportModal() {
+            document.getElementById('modal-import').classList.add('hidden');
+            document.getElementById('modal-import').classList.remove('flex');
+            csvData = [];
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('file-name').textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                parseCSV(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            if (lines.length < 2) {
+                showToast('Plik CSV jest pusty lub ma tylko nagłówek');
+                return;
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+            const emailIndex = headers.indexOf('email');
+
+            if (emailIndex === -1) {
+                showToast('Brak kolumny "email" w pliku CSV');
+                return;
+            }
+
+            csvData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length === 0) continue;
+
+                const row = {};
+                headers.forEach((h, idx) => {
+                    row[h] = values[idx] || null;
+                });
+
+                // Validate email
+                if (row.email && row.email.includes('@')) {
+                    csvData.push(row);
+                }
+            }
+
+            // Show preview
+            if (csvData.length > 0) {
+                const previewHead = document.getElementById('import-preview-head');
+                const previewBody = document.getElementById('import-preview-body');
+
+                previewHead.innerHTML = `<tr class="text-zinc-500">${headers.slice(0, 5).map(h => `<th class="pr-4 pb-1">${h}</th>`).join('')}</tr>`;
+                previewBody.innerHTML = csvData.slice(0, 5).map(row => `
+                    <tr class="text-zinc-400">
+                        ${headers.slice(0, 5).map(h => `<td class="pr-4 py-1">${row[h] || '-'}</td>`).join('')}
+                    </tr>
+                `).join('');
+
+                document.getElementById('import-total').textContent = `Znaleziono ${csvData.length} kontaktów z poprawnymi emailami`;
+                document.getElementById('import-preview').classList.remove('hidden');
+                document.getElementById('btn-import').disabled = false;
+            } else {
+                showToast('Nie znaleziono poprawnych kontaktów w pliku');
+            }
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+
+            return result;
+        }
+
+        async function importContacts() {
+            const source = document.getElementById('import-source').value.trim();
+            if (!source) {
+                showToast('Podaj nazwę źródła');
+                return;
+            }
+
+            if (csvData.length === 0) {
+                showToast('Brak danych do importu');
+                return;
+            }
+
+            document.getElementById('btn-import').disabled = true;
+            document.getElementById('btn-import').innerHTML = '<i class="ph ph-circle-notch animate-spin mr-1"></i> Importuję...';
+
+            const contacts = csvData.map(row => ({
+                email: row.email?.toLowerCase().trim(),
+                phone: row.phone || null,
+                ltv_pln: row.ltv_pln ? parseFloat(row.ltv_pln) : null,
+                transaction_count: row.transaction_count ? parseInt(row.transaction_count) : null,
+                refunded_total_pln: row.refunded_total_pln ? parseFloat(row.refunded_total_pln) : null,
+                first_purchase: row.first_purchase || null,
+                last_purchase: row.last_purchase || null,
+                unique_products: row.unique_products ? parseInt(row.unique_products) : null,
+                products: row.products ? row.products.split(';').map(p => p.trim()) : null,
+                source: source
+            }));
+
+            // Upsert in batches
+            const BATCH = 500;
+            let imported = 0;
+            let errors = 0;
+
+            for (let i = 0; i < contacts.length; i += BATCH) {
+                const batch = contacts.slice(i, i + BATCH);
+                const { data, error } = await supabaseClient
+                    .from('outreach_contacts')
+                    .upsert(batch, {
+                        onConflict: 'email,source',
+                        ignoreDuplicates: false
+                    });
+
+                if (error) {
+                    console.error('Batch error:', error);
+                    errors += batch.length;
+                } else {
+                    imported += batch.length;
+                }
+            }
+
+            document.getElementById('btn-import').disabled = false;
+            document.getElementById('btn-import').innerHTML = '<i class="ph ph-upload-simple mr-1"></i> Importuj';
+
+            if (errors > 0) {
+                showToast(`Zaimportowano ${imported} kontaktów (${errors} błędów)`);
+            } else {
+                showToast(`Zaimportowano ${imported} kontaktów`);
+            }
+
+            closeImportModal();
+            loadContacts();
+            loadSources();
         }
 
         // Toast

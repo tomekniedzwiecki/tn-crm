@@ -130,10 +130,11 @@
                                         <input type="text" id="account-name" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="Twoje imię i nazwisko">
                                     </div>
                                     <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email firmowy</label>
-                                        <input type="email" id="account-email" readonly class="w-full text-sm text-zinc-500 bg-zinc-900/50 border border-zinc-800/50 px-3 py-3 rounded-lg outline-none cursor-not-allowed">
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email firmowy (Reply-To)</label>
+                                        <input type="email" id="account-email" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="np. tomek@tomekniedzwiecki.pl">
+                                        <p class="text-zinc-600 text-xs mt-1">Odpowiedzi na Twoje maile z CRM będą trafiać na ten adres</p>
                                     </div>
-                                    <button onclick="saveAccountName()" class="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors">
+                                    <button onclick="saveAccountProfile()" class="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors">
                                         Zapisz
                                     </button>
                                 </div>
@@ -294,6 +295,62 @@
                                         </button>
                                     </div>
                                     <p class="text-zinc-600 text-xs mt-2">Jeśli pusty, odpowiedzi trafią na adres nadawcy (noreply@...).</p>
+                                </div>
+
+                                <!-- Email Domains Configuration -->
+                                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                            <i class="ph ph-globe text-amber-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-white font-medium">Domeny wysyłkowe</h2>
+                                            <p class="text-zinc-500 text-xs">Konfiguracja adresów nadawcy dla różnych typów emaili</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <!-- Transactional emails -->
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                                                Email transakcyjny (faktury, potwierdzenia)
+                                            </label>
+                                            <div class="flex gap-2">
+                                                <input type="text" id="email-from-name-transactional"
+                                                       class="w-40 text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       placeholder="Tomek Niedzwiecki">
+                                                <span class="text-zinc-500 self-center">&lt;</span>
+                                                <input type="email" id="email-from-transactional"
+                                                       class="flex-1 text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       placeholder="biuro@tomekniedzwiecki.pl">
+                                                <span class="text-zinc-500 self-center">&gt;</span>
+                                            </div>
+                                            <p class="text-zinc-600 text-xs mt-1">Używane do: ofert, proform, powiadomień systemowych</p>
+                                        </div>
+
+                                        <!-- Outreach emails -->
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                                                Email outreach (cold mailing, kampanie)
+                                            </label>
+                                            <div class="flex gap-2">
+                                                <input type="text" id="email-from-name-outreach"
+                                                       class="w-40 text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       placeholder="Tomek Niedzwiecki">
+                                                <span class="text-zinc-500 self-center">&lt;</span>
+                                                <input type="email" id="email-from-outreach"
+                                                       class="flex-1 text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       placeholder="tomek@m.tomekniedzwiecki.pl">
+                                                <span class="text-zinc-500 self-center">&gt;</span>
+                                            </div>
+                                            <p class="text-zinc-600 text-xs mt-1">Używane do: kampanii mailingowych, follow-upów. Zalecana osobna subdomena.</p>
+                                        </div>
+
+                                        <button onclick="saveEmailDomainSettings()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                            <i class="ph ph-floppy-disk"></i>
+                                            Zapisz domeny
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- Email templates list -->
@@ -1300,27 +1357,39 @@
             }
         }
 
-        async function saveAccountName() {
+        async function saveAccountProfile() {
             if (!currentMember) return;
             const nameInput = document.getElementById('account-name');
+            const emailInput = document.getElementById('account-email');
             const newName = nameInput.value.trim();
+            const newEmail = emailInput.value.trim();
+
             if (!newName) {
                 showToast('Podaj imię i nazwisko');
                 return;
             }
 
+            const updateData = { name: newName };
+            // Email can be empty (will fall back to inbound domain)
+            if (newEmail) {
+                updateData.email = newEmail;
+            } else {
+                updateData.email = null;
+            }
+
             const { error } = await supabaseClient
                 .from('team_members')
-                .update({ name: newName })
+                .update(updateData)
                 .eq('id', currentMember.id);
 
             if (error) {
-                console.error('Error updating name:', error);
+                console.error('Error updating profile:', error);
                 showToast('Błąd zapisu');
                 return;
             }
 
             currentMember.name = newName;
+            currentMember.email = newEmail || null;
             Sidebar.setUserName(newName);
             renderAccountSignature();
             showToast('Zapisano');
@@ -1358,7 +1427,8 @@
             }
             const emailInput = document.getElementById('account-email');
             if (emailInput) {
-                emailInput.value = getWorkEmail(currentMember.name);
+                // Load actual email from team_members, not generated one
+                emailInput.value = currentMember.email || '';
             }
             renderAccountSignature();
         }
@@ -1999,6 +2069,81 @@
         }
 
         // =============================================
+        // EMAIL DOMAIN SETTINGS
+        // =============================================
+
+        const DEFAULT_EMAIL_DOMAINS = {
+            email_from_name_transactional: 'Tomek Niedzwiecki',
+            email_from_transactional: 'biuro@tomekniedzwiecki.pl',
+            email_from_name_outreach: 'Tomek Niedzwiecki',
+            email_from_outreach: 'biuro@tomekniedzwiecki.pl'
+        };
+
+        function loadEmailDomainSettings() {
+            document.getElementById('email-from-name-transactional').value =
+                settings.email_from_name_transactional || DEFAULT_EMAIL_DOMAINS.email_from_name_transactional;
+            document.getElementById('email-from-transactional').value =
+                settings.email_from_transactional || DEFAULT_EMAIL_DOMAINS.email_from_transactional;
+            document.getElementById('email-from-name-outreach').value =
+                settings.email_from_name_outreach || DEFAULT_EMAIL_DOMAINS.email_from_name_outreach;
+            document.getElementById('email-from-outreach').value =
+                settings.email_from_outreach || DEFAULT_EMAIL_DOMAINS.email_from_outreach;
+        }
+
+        async function saveEmailDomainSettings() {
+            const fromNameTransactional = document.getElementById('email-from-name-transactional').value.trim();
+            const fromTransactional = document.getElementById('email-from-transactional').value.trim();
+            const fromNameOutreach = document.getElementById('email-from-name-outreach').value.trim();
+            const fromOutreach = document.getElementById('email-from-outreach').value.trim();
+
+            if (!fromTransactional || !fromOutreach) {
+                alert('Adresy email są wymagane');
+                return;
+            }
+
+            const dataToSave = [
+                { key: 'email_from_name_transactional', value: fromNameTransactional || 'Tomek Niedzwiecki' },
+                { key: 'email_from_transactional', value: fromTransactional },
+                { key: 'email_from_name_outreach', value: fromNameOutreach || 'Tomek Niedzwiecki' },
+                { key: 'email_from_outreach', value: fromOutreach }
+            ];
+
+            const promises = dataToSave.map(item =>
+                supabaseClient.from('settings').upsert({
+                    key: item.key,
+                    value: item.value,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' })
+            );
+
+            const results = await Promise.all(promises);
+            const hasError = results.some(r => r.error);
+
+            if (hasError) {
+                alert('Błąd zapisu ustawień domen');
+                return;
+            }
+
+            // Update local settings cache
+            settings.email_from_name_transactional = fromNameTransactional;
+            settings.email_from_transactional = fromTransactional;
+            settings.email_from_name_outreach = fromNameOutreach;
+            settings.email_from_outreach = fromOutreach;
+
+            await logAuditActivity(
+                'update',
+                'settings',
+                null,
+                'email_domains',
+                null,
+                { transactional: fromTransactional, outreach: fromOutreach },
+                { setting: 'email_domains' }
+            );
+
+            showToast('Domeny wysyłkowe zapisane');
+        }
+
+        // =============================================
         // LEGAL COMPANY DATA
         // =============================================
 
@@ -2203,11 +2348,12 @@
         window.saveFakturowniaSettings = saveFakturowniaSettings;
         window.saveTpaySettings = saveTpaySettings;
         window.saveReplyToSetting = saveReplyToSetting;
+        window.saveEmailDomainSettings = saveEmailDomainSettings;
         window.saveLegalCompanyData = saveLegalCompanyData;
         window.toggleLegalEditor = toggleLegalEditor;
         window.saveLegalContent = saveLegalContent;
         window.resetLegalContent = resetLegalContent;
-        window.saveAccountName = saveAccountName;
+        window.saveAccountProfile = saveAccountProfile;
         window.copyAccountSignature = copyAccountSignature;
 
         // =============================================
@@ -2237,6 +2383,7 @@
                     loadFakturowniaSettings();
                     loadTpaySettings();
                     loadReplyToSetting();
+                    loadEmailDomainSettings();
                     loadLegalCompanyData();
                 }
 
