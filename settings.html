@@ -2114,32 +2114,21 @@
             const textarea = document.getElementById(`legal-content-${docType}`);
             textarea.value = 'Ładowanie...';
 
-            const settingKey = docType === 'regulamin' ? 'legal_content_regulamin' : 'legal_content_privacy';
-
-            // Check if we have custom content in settings
-            if (settings[settingKey]) {
-                textarea.value = settings[settingKey];
-                legalContentsLoaded[docType] = true;
-                return;
-            }
-
-            // If no custom content, fetch default from HTML file
             try {
-                const basePath = Sidebar.getBasePath();
-                const fileName = docType === 'regulamin' ? 'regulamin.html' : 'polityka-prywatnosci.html';
-                const url = basePath ? `${basePath}/${fileName}` : `/${fileName}`;
-                const response = await fetch(url);
-                const html = await response.text();
+                const { data, error } = await supabaseClient
+                    .from('public_legal_documents')
+                    .select('content')
+                    .eq('doc_type', docType)
+                    .single();
 
-                // Extract the legal-content div content
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const content = doc.querySelector('.legal-content') || doc.getElementById('legal-content');
+                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+                    throw error;
+                }
 
-                if (content) {
-                    textarea.value = content.innerHTML.trim();
+                if (data?.content) {
+                    textarea.value = data.content;
                 } else {
-                    textarea.value = '<!-- Nie udało się pobrać treści dokumentu -->';
+                    textarea.value = '<!-- Brak treści dokumentu - dodaj treść i zapisz -->';
                 }
             } catch (err) {
                 console.error('Error loading legal content:', err);
@@ -2158,28 +2147,27 @@
                 return;
             }
 
-            const settingKey = docType === 'regulamin' ? 'legal_content_regulamin' : 'legal_content_privacy';
+            const companyName = settings.legal_company_name || 'Tomasz Niedźwiecki AI';
 
             const { error } = await supabaseClient
-                .from('settings')
+                .from('public_legal_documents')
                 .upsert({
-                    key: settingKey,
-                    value: content,
+                    doc_type: docType,
+                    content: content,
+                    company_name: companyName,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
+                }, { onConflict: 'doc_type' });
 
             if (error) {
                 alert('Błąd zapisu dokumentu: ' + error.message);
                 return;
             }
 
-            settings[settingKey] = content;
-
             await logAuditActivity(
                 'update',
-                'settings',
+                'public_legal_documents',
                 null,
-                settingKey,
+                docType,
                 null,
                 { contentLength: content.length },
                 { setting: 'legal_document', docType }
@@ -2189,39 +2177,40 @@
         }
 
         async function resetLegalContent(docType) {
-            if (!confirm('Czy na pewno chcesz przywrócić domyślną treść dokumentu? Twoje zmiany zostaną utracone.')) {
+            if (!confirm('Czy na pewno chcesz wyczyścić treść dokumentu? Ta operacja jest nieodwracalna.')) {
                 return;
             }
 
-            const settingKey = docType === 'regulamin' ? 'legal_content_regulamin' : 'legal_content_privacy';
-
-            // Delete custom content from settings
             const { error } = await supabaseClient
-                .from('settings')
-                .delete()
-                .eq('key', settingKey);
+                .from('public_legal_documents')
+                .update({
+                    content: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('doc_type', docType);
 
             if (error) {
                 console.error('Error resetting legal content:', error);
+                showToast('Błąd podczas czyszczenia treści');
+                return;
             }
 
-            delete settings[settingKey];
             legalContentsLoaded[docType] = false;
 
-            // Reload default content
+            // Reload content
             await loadLegalContent(docType);
 
             await logAuditActivity(
-                'delete',
-                'settings',
+                'update',
+                'public_legal_documents',
                 null,
-                settingKey,
-                { note: 'Reset to default' },
+                docType,
+                { note: 'Content cleared' },
                 null,
                 { setting: 'legal_document', docType, action: 'reset' }
             );
 
-            showToast('Przywrócono domyślną treść');
+            showToast('Treść dokumentu została wyczyszczona');
         }
 
         // Expose functions to window for onclick handlers
