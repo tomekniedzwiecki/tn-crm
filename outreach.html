@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM | Mailing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .tab-active {
+            color: white;
+            border-bottom: 2px solid white;
+        }
+
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <span class="text-zinc-400">tn-crm</span>
+                <span class="text-zinc-700">/</span>
+                <span class="text-white font-medium">mailing</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-2.5 top-1.5 text-zinc-500"></i>
+                    <input type="text" id="search-input" placeholder="Szukaj kontaktów..." class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-full pl-8 pr-4 py-1.5 focus:border-zinc-600 focus:outline-none w-56 transition-all placeholder:text-zinc-600">
+                </div>
+                <div class="w-px h-4 bg-zinc-800"></div>
+                <button onclick="openNewCampaignModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    <i class="ph ph-plus mr-1"></i>
+                    Nowa kampania
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Mailing</h1>
+                        <p class="text-zinc-500">Wysyłaj kampanie email do swojej bazy kontaktów.</p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex gap-6 border-b border-white/10 mb-6">
+                    <button onclick="switchTab('contacts')" id="tab-contacts" class="pb-3 px-1 text-sm font-medium tab-active transition-colors">
+                        <i class="ph ph-address-book mr-1.5"></i>
+                        Kontakty
+                    </button>
+                    <button onclick="switchTab('campaigns')" id="tab-campaigns" class="pb-3 px-1 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors border-b-2 border-transparent">
+                        <i class="ph ph-paper-plane-tilt mr-1.5"></i>
+                        Kampanie
+                    </button>
+                </div>
+
+                <!-- Tab: Contacts -->
+                <div id="panel-contacts">
+                    <!-- Filters -->
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <select id="filter-source" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-600 focus:outline-none">
+                            <option value="">Wszystkie źródła</option>
+                        </select>
+                        <select id="filter-ltv" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-600 focus:outline-none">
+                            <option value="">Dowolne LTV</option>
+                            <option value="1000">LTV > 1 000 PLN</option>
+                            <option value="5000">LTV > 5 000 PLN</option>
+                            <option value="10000">LTV > 10 000 PLN</option>
+                            <option value="50000">LTV > 50 000 PLN</option>
+                        </select>
+                        <select id="filter-products" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-600 focus:outline-none">
+                            <option value="">Dowolna liczba produktów</option>
+                            <option value="1">1+ produktów</option>
+                            <option value="3">3+ produktów</option>
+                            <option value="5">5+ produktów</option>
+                        </select>
+                        <div class="flex-1"></div>
+                        <span id="contacts-count" class="text-xs text-zinc-500 font-mono">Ładowanie...</span>
+                    </div>
+
+                    <!-- Contacts Table -->
+                    <div class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-white/5 text-left">
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Telefon</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-right">LTV</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-center">Transakcje</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-center">Produkty</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Ostatni zakup</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Źródło</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contacts-table">
+                                <tr>
+                                    <td colspan="7" class="px-4 py-12 text-center text-zinc-500">
+                                        <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
+                                        <p>Ładowanie kontaktów...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-4">
+                        <button onclick="prevPage()" id="btn-prev" class="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors disabled:opacity-50" disabled>
+                            <i class="ph ph-caret-left mr-1"></i> Poprzednia
+                        </button>
+                        <span id="pagination-info" class="text-xs text-zinc-500 font-mono">Strona 1</span>
+                        <button onclick="nextPage()" id="btn-next" class="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors disabled:opacity-50">
+                            Następna <i class="ph ph-caret-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab: Campaigns -->
+                <div id="panel-campaigns" class="hidden">
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-4 mb-6">
+                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Aktywne</div>
+                            <div id="stat-active" class="text-2xl font-semibold text-emerald-400">0</div>
+                        </div>
+                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Wysłanych</div>
+                            <div id="stat-sent" class="text-2xl font-semibold text-white">0</div>
+                        </div>
+                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Follow-upy</div>
+                            <div id="stat-followups" class="text-2xl font-semibold text-white">0</div>
+                        </div>
+                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Odpowiedzi</div>
+                            <div id="stat-replies" class="text-2xl font-semibold text-violet-400">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Campaigns List -->
+                    <div id="campaigns-list" class="space-y-3">
+                        <div class="text-center py-12 text-zinc-500">
+                            <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
+                            <p>Ładowanie kampanii...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Campaign Modal -->
+    <div id="modal-campaign" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h2 class="text-lg font-semibold text-white">Nowa kampania</h2>
+                <button onclick="closeModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <form id="campaign-form" class="p-5 space-y-5">
+                <!-- Basic Info -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Nazwa kampanii</label>
+                        <input type="text" id="campaign-name" required class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="np. Reaktywacja klientów Q1">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Opis (opcjonalnie)</label>
+                        <textarea id="campaign-description" rows="2" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none resize-none" placeholder="Krótki opis celu kampanii..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Dzienny limit wysyłki</label>
+                        <input type="number" id="campaign-daily-limit" value="50" min="1" max="500" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                        <p class="text-[10px] text-zinc-600 mt-1">Max 500 emaili dziennie</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Follow-up po (dni)</label>
+                        <input type="number" id="campaign-followup-days" value="7" min="1" max="30" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                        <p class="text-[10px] text-zinc-600 mt-1">Jeśli brak odpowiedzi</p>
+                    </div>
+                </div>
+
+                <!-- Contact Filter -->
+                <div class="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700/50">
+                    <h3 class="text-sm font-medium text-white mb-3">Filtr kontaktów</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Źródło</label>
+                            <select id="campaign-filter-source" class="w-full bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-lg px-3 py-2 focus:border-zinc-500 focus:outline-none">
+                                <option value="">Wszystkie</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Minimalne LTV</label>
+                            <input type="number" id="campaign-filter-ltv" placeholder="0" class="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="mt-3 text-xs text-zinc-500">
+                        Pasujące kontakty: <span id="matching-contacts" class="text-white font-mono">-</span>
+                    </div>
+                </div>
+
+                <!-- Email 1 -->
+                <div class="border-t border-white/5 pt-5">
+                    <h3 class="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs flex items-center justify-center">1</span>
+                        Pierwszy email
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Temat</label>
+                            <input type="text" id="email-1-subject" required class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="Temat pierwszego emaila">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Treść (HTML)</label>
+                            <textarea id="email-1-body" rows="6" required class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm font-mono focus:border-zinc-500 focus:outline-none resize-y" placeholder="<p>Cześć,</p>&#10;&#10;<p>Treść wiadomości...</p>"></textarea>
+                            <div class="text-[10px] text-zinc-600 mt-1">
+                                Zmienne: <code class="bg-zinc-800 px-1 rounded">{{email}}</code> <code class="bg-zinc-800 px-1 rounded">{{ltv}}</code> <code class="bg-zinc-800 px-1 rounded">{{products}}</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email 2 (Follow-up) -->
+                <div class="border-t border-white/5 pt-5">
+                    <h3 class="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center">2</span>
+                        Follow-up (opcjonalnie)
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Temat</label>
+                            <input type="text" id="email-2-subject" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="Temat follow-up (opcjonalnie)">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Treść (HTML)</label>
+                            <textarea id="email-2-body" rows="4" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm font-mono focus:border-zinc-500 focus:outline-none resize-y" placeholder="<p>Hej,</p>&#10;&#10;<p>Chciałem się upewnić że dotarła moja poprzednia wiadomość...</p>"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="bg-white text-black hover:bg-zinc-200 px-5 py-2 rounded-lg font-medium text-sm transition-colors">
+                        Utwórz kampanię
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // State
+        let contacts = [];
+        let campaigns = [];
+        let sources = [];
+        let currentPage = 1;
+        const PAGE_SIZE = 50;
+        let totalContacts = 0;
+
+        // Auth check
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+
+            // Check admin via team_members
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('id, role, name, color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            // Update sidebar user info
+            if (teamMember) {
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+                Sidebar.setupProfileClick();
+            }
+
+            const isAdmin = teamMember?.role === 'admin';
+            Sidebar.showAdminNav(isAdmin);
+
+            return session;
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.getElementById('panel-contacts').classList.toggle('hidden', tab !== 'contacts');
+            document.getElementById('panel-campaigns').classList.toggle('hidden', tab !== 'campaigns');
+
+            document.getElementById('tab-contacts').classList.toggle('tab-active', tab === 'contacts');
+            document.getElementById('tab-contacts').classList.toggle('text-zinc-500', tab !== 'contacts');
+            document.getElementById('tab-contacts').classList.toggle('border-transparent', tab !== 'contacts');
+
+            document.getElementById('tab-campaigns').classList.toggle('tab-active', tab === 'campaigns');
+            document.getElementById('tab-campaigns').classList.toggle('text-zinc-500', tab !== 'campaigns');
+            document.getElementById('tab-campaigns').classList.toggle('border-transparent', tab !== 'campaigns');
+        }
+
+        // Load contacts
+        async function loadContacts() {
+            const search = document.getElementById('search-input').value.trim().toLowerCase();
+            const source = document.getElementById('filter-source').value;
+            const minLtv = document.getElementById('filter-ltv').value;
+            const minProducts = document.getElementById('filter-products').value;
+
+            let query = supabaseClient
+                .from('outreach_contacts')
+                .select('*', { count: 'exact' })
+                .order('ltv_pln', { ascending: false, nullsFirst: false })
+                .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
+
+            if (search) {
+                query = query.or(`email.ilike.%${search}%,phone.ilike.%${search}%`);
+            }
+            if (source) {
+                query = query.eq('source', source);
+            }
+            if (minLtv) {
+                query = query.gte('ltv_pln', parseInt(minLtv));
+            }
+            if (minProducts) {
+                query = query.gte('unique_products', parseInt(minProducts));
+            }
+
+            const { data, count, error } = await query;
+
+            if (error) {
+                console.error('Error loading contacts:', error);
+                return;
+            }
+
+            contacts = data || [];
+            totalContacts = count || 0;
+
+            renderContacts();
+            updatePagination();
+
+            document.getElementById('contacts-count').textContent = `${totalContacts.toLocaleString('pl-PL')} kontaktów`;
+            document.getElementById('nav-contacts-count').textContent = totalContacts.toLocaleString('pl-PL');
+        }
+
+        function renderContacts() {
+            const tbody = document.getElementById('contacts-table');
+
+            if (contacts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-zinc-500">
+                            <i class="ph ph-address-book text-3xl mb-2"></i>
+                            <p>Brak kontaktów pasujących do filtrów</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = contacts.map(c => `
+                <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                    <td class="px-4 py-3">
+                        <span class="font-mono text-xs text-white">${c.email}</span>
+                    </td>
+                    <td class="px-4 py-3 text-zinc-400 text-xs font-mono">
+                        ${c.phone || '-'}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <span class="font-mono text-xs ${c.ltv_pln > 10000 ? 'text-emerald-400' : c.ltv_pln > 1000 ? 'text-white' : 'text-zinc-500'}">
+                            ${c.ltv_pln ? c.ltv_pln.toLocaleString('pl-PL') + ' PLN' : '-'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="text-xs text-zinc-400">${c.transaction_count || 0}</span>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="text-xs text-zinc-400">${c.unique_products || 0}</span>
+                    </td>
+                    <td class="px-4 py-3 text-zinc-500 text-xs">
+                        ${c.last_purchase ? new Date(c.last_purchase).toLocaleDateString('pl-PL') : '-'}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">${c.source}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(totalContacts / PAGE_SIZE);
+            document.getElementById('pagination-info').textContent = `Strona ${currentPage} z ${totalPages}`;
+            document.getElementById('btn-prev').disabled = currentPage <= 1;
+            document.getElementById('btn-next').disabled = currentPage >= totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadContacts();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(totalContacts / PAGE_SIZE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadContacts();
+            }
+        }
+
+        // Load sources for filters
+        async function loadSources() {
+            const { data } = await supabaseClient
+                .from('outreach_contacts')
+                .select('source')
+                .limit(1000);
+
+            if (data) {
+                sources = [...new Set(data.map(d => d.source))].sort();
+                const options = sources.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                document.getElementById('filter-source').innerHTML = '<option value="">Wszystkie źródła</option>' + options;
+                document.getElementById('campaign-filter-source').innerHTML = '<option value="">Wszystkie</option>' + options;
+            }
+        }
+
+        // Load campaigns
+        async function loadCampaigns() {
+            const { data, error } = await supabaseClient
+                .from('outreach_campaigns')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading campaigns:', error);
+                return;
+            }
+
+            campaigns = data || [];
+            renderCampaigns();
+            updateCampaignStats();
+        }
+
+        function renderCampaigns() {
+            const container = document.getElementById('campaigns-list');
+
+            if (campaigns.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 bg-zinc-900/40 rounded-xl border border-white/5">
+                        <i class="ph ph-paper-plane-tilt text-4xl text-zinc-600 mb-3"></i>
+                        <p class="text-zinc-500 mb-4">Brak kampanii</p>
+                        <button onclick="openNewCampaignModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                            <i class="ph ph-plus mr-1"></i>
+                            Utwórz pierwszą kampanię
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = campaigns.map(c => {
+                const statusColors = {
+                    draft: 'bg-zinc-500/20 text-zinc-400',
+                    active: 'bg-emerald-500/20 text-emerald-400',
+                    paused: 'bg-amber-500/20 text-amber-400',
+                    completed: 'bg-blue-500/20 text-blue-400'
+                };
+                const statusLabels = {
+                    draft: 'Szkic',
+                    active: 'Aktywna',
+                    paused: 'Wstrzymana',
+                    completed: 'Zakończona'
+                };
+
+                return `
+                    <div class="bg-zinc-900/40 rounded-xl border border-white/5 p-5 hover:border-zinc-700 transition-colors">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="text-white font-medium">${c.name}</h3>
+                                <p class="text-zinc-500 text-xs mt-0.5">${c.description || 'Brak opisu'}</p>
+                            </div>
+                            <span class="text-[10px] px-2 py-1 rounded font-medium ${statusColors[c.status]}">${statusLabels[c.status]}</span>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-4 mb-4">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-0.5">Kontakty</div>
+                                <div class="text-sm font-mono text-white">${c.total_contacts || 0}</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-0.5">Wysłane</div>
+                                <div class="text-sm font-mono text-white">${c.sent_count || 0}</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-0.5">Follow-upy</div>
+                                <div class="text-sm font-mono text-white">${c.followed_up_count || 0}</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-0.5">Odpowiedzi</div>
+                                <div class="text-sm font-mono text-violet-400">${c.replied_count || 0}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-3 border-t border-white/5">
+                            ${c.status === 'draft' ? `
+                                <button onclick="startCampaign('${c.id}')" class="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+                                    <i class="ph ph-play mr-1"></i> Uruchom
+                                </button>
+                            ` : ''}
+                            ${c.status === 'active' ? `
+                                <button onclick="pauseCampaign('${c.id}')" class="flex-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+                                    <i class="ph ph-pause mr-1"></i> Wstrzymaj
+                                </button>
+                            ` : ''}
+                            ${c.status === 'paused' ? `
+                                <button onclick="resumeCampaign('${c.id}')" class="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+                                    <i class="ph ph-play mr-1"></i> Wznów
+                                </button>
+                            ` : ''}
+                            <button onclick="viewCampaign('${c.id}')" class="px-3 py-2 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 rounded-lg text-xs font-medium transition-colors">
+                                <i class="ph ph-eye mr-1"></i> Szczegóły
+                            </button>
+                            ${c.status === 'draft' ? `
+                                <button onclick="deleteCampaign('${c.id}')" class="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg text-xs font-medium transition-colors">
+                                    <i class="ph ph-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateCampaignStats() {
+            const active = campaigns.filter(c => c.status === 'active').length;
+            const sent = campaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0);
+            const followups = campaigns.reduce((sum, c) => sum + (c.followed_up_count || 0), 0);
+            const replies = campaigns.reduce((sum, c) => sum + (c.replied_count || 0), 0);
+
+            document.getElementById('stat-active').textContent = active;
+            document.getElementById('stat-sent').textContent = sent.toLocaleString('pl-PL');
+            document.getElementById('stat-followups').textContent = followups.toLocaleString('pl-PL');
+            document.getElementById('stat-replies').textContent = replies.toLocaleString('pl-PL');
+        }
+
+        // Modal functions
+        function openNewCampaignModal() {
+            document.getElementById('modal-campaign').classList.remove('hidden');
+            document.getElementById('modal-campaign').classList.add('flex');
+            updateMatchingContacts();
+        }
+
+        function closeModal() {
+            document.getElementById('modal-campaign').classList.add('hidden');
+            document.getElementById('modal-campaign').classList.remove('flex');
+            document.getElementById('campaign-form').reset();
+        }
+
+        async function updateMatchingContacts() {
+            const source = document.getElementById('campaign-filter-source').value;
+            const minLtv = document.getElementById('campaign-filter-ltv').value;
+
+            let query = supabaseClient.from('outreach_contacts').select('*', { count: 'exact', head: true });
+
+            if (source) query = query.eq('source', source);
+            if (minLtv) query = query.gte('ltv_pln', parseInt(minLtv));
+
+            const { count } = await query;
+            document.getElementById('matching-contacts').textContent = (count || 0).toLocaleString('pl-PL');
+        }
+
+        // Campaign form submit
+        document.getElementById('campaign-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const filter = {};
+            const source = document.getElementById('campaign-filter-source').value;
+            const minLtv = document.getElementById('campaign-filter-ltv').value;
+            if (source) filter.source = source;
+            if (minLtv) filter.min_ltv = parseInt(minLtv);
+
+            const campaignData = {
+                name: document.getElementById('campaign-name').value,
+                description: document.getElementById('campaign-description').value || null,
+                daily_limit: parseInt(document.getElementById('campaign-daily-limit').value),
+                follow_up_delay_days: parseInt(document.getElementById('campaign-followup-days').value),
+                email_1_subject: document.getElementById('email-1-subject').value,
+                email_1_body: document.getElementById('email-1-body').value,
+                email_2_subject: document.getElementById('email-2-subject').value || null,
+                email_2_body: document.getElementById('email-2-body').value || null,
+                contact_filter: filter,
+                status: 'draft'
+            };
+
+            const { data, error } = await supabaseClient.from('outreach_campaigns').insert(campaignData).select().single();
+
+            if (error) {
+                showToast('Błąd tworzenia kampanii: ' + error.message);
+                return;
+            }
+
+            showToast('Kampania utworzona!');
+            closeModal();
+            loadCampaigns();
+        });
+
+        // Campaign actions
+        async function startCampaign(id) {
+            // First, populate outreach_sends with matching contacts
+            const campaign = campaigns.find(c => c.id === id);
+            if (!campaign) return;
+
+            // Get matching contacts
+            let query = supabaseClient.from('outreach_contacts').select('id');
+            if (campaign.contact_filter?.source) {
+                query = query.eq('source', campaign.contact_filter.source);
+            }
+            if (campaign.contact_filter?.min_ltv) {
+                query = query.gte('ltv_pln', campaign.contact_filter.min_ltv);
+            }
+
+            const { data: matchingContacts } = await query;
+
+            if (!matchingContacts || matchingContacts.length === 0) {
+                showToast('Brak kontaktów pasujących do filtrów');
+                return;
+            }
+
+            // Insert sends
+            const sends = matchingContacts.map(c => ({
+                campaign_id: id,
+                contact_id: c.id,
+                status: 'pending'
+            }));
+
+            // Insert in batches
+            const BATCH = 500;
+            for (let i = 0; i < sends.length; i += BATCH) {
+                await supabaseClient.from('outreach_sends').upsert(sends.slice(i, i + BATCH), {
+                    onConflict: 'campaign_id,contact_id',
+                    ignoreDuplicates: true
+                });
+            }
+
+            // Update campaign status
+            await supabaseClient.from('outreach_campaigns').update({
+                status: 'active',
+                total_contacts: matchingContacts.length,
+                started_at: new Date().toISOString()
+            }).eq('id', id);
+
+            showToast('Kampania uruchomiona!');
+            loadCampaigns();
+        }
+
+        async function pauseCampaign(id) {
+            await supabaseClient.from('outreach_campaigns').update({ status: 'paused' }).eq('id', id);
+            showToast('Kampania wstrzymana');
+            loadCampaigns();
+        }
+
+        async function resumeCampaign(id) {
+            await supabaseClient.from('outreach_campaigns').update({ status: 'active' }).eq('id', id);
+            showToast('Kampania wznowiona');
+            loadCampaigns();
+        }
+
+        async function deleteCampaign(id) {
+            if (!confirm('Czy na pewno chcesz usunąć tę kampanię?')) return;
+
+            await supabaseClient.from('outreach_campaigns').delete().eq('id', id);
+            showToast('Kampania usunięta');
+            loadCampaigns();
+        }
+
+        function viewCampaign(id) {
+            // TODO: Open campaign details modal
+            showToast('Szczegóły kampanii - wkrótce');
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('search-input').addEventListener('input', debounce(() => {
+            currentPage = 1;
+            loadContacts();
+        }, 300));
+
+        document.getElementById('filter-source').addEventListener('change', () => {
+            currentPage = 1;
+            loadContacts();
+        });
+
+        document.getElementById('filter-ltv').addEventListener('change', () => {
+            currentPage = 1;
+            loadContacts();
+        });
+
+        document.getElementById('filter-products').addEventListener('change', () => {
+            currentPage = 1;
+            loadContacts();
+        });
+
+        document.getElementById('campaign-filter-source').addEventListener('change', updateMatchingContacts);
+        document.getElementById('campaign-filter-ltv').addEventListener('input', debounce(updateMatchingContacts, 300));
+
+        function debounce(fn, delay) {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        // Init
+        async function init() {
+            Sidebar.render();
+            Sidebar.setupLogout(supabaseClient);
+
+            const session = await checkAuth();
+            if (!session) return;
+
+            await loadSources();
+            await loadContacts();
+            await loadCampaigns();
+        }
+
+        init();
+    </script>
+</body>
+</html>

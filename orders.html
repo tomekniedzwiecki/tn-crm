@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM | Zamówienia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <span class="text-zinc-400">tn-crm</span>
+                <span class="text-zinc-700">/</span>
+                <span class="text-white font-medium">zamówienia</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="exportToCSV()" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-2">
+                    <i class="ph ph-download-simple"></i>
+                    Eksport CSV
+                </button>
+                <button onclick="openOrderModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    <i class="ph ph-plus mr-1"></i>
+                    Nowe zamówienie
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+                <!-- Header with stats -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Zamówienia</h1>
+                        <p class="text-zinc-500">Zarządzaj płatnościami z różnych źródeł.</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-3 text-center min-w-[100px]">
+                            <div id="stat-total" class="text-2xl font-semibold text-white">0</div>
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Wszystkie</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-3 text-center min-w-[100px]">
+                            <div id="stat-paid" class="text-2xl font-semibold text-emerald-400">0</div>
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Opłacone</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-3 text-center min-w-[100px]">
+                            <div id="stat-revenue" class="text-2xl font-semibold text-white font-mono">0</div>
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Przychód PLN</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4 mb-6">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative flex-1 min-w-[200px]">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                            <input type="text" id="filter-search" placeholder="Szukaj po emailu, nazwie, numerze..." class="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg pl-9 pr-4 py-2.5 focus:border-zinc-600 focus:outline-none transition-all placeholder:text-zinc-600">
+                        </div>
+                        <select id="filter-status" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none min-w-[140px]">
+                            <option value="">Wszystkie statusy</option>
+                            <option value="pending">Próba płatności</option>
+                            <option value="paid">Opłacone</option>
+                            <option value="cancelled">Anulowane</option>
+                        </select>
+                        <select id="filter-source" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none min-w-[140px]">
+                            <option value="">Wszystkie źródła</option>
+                            <option value="tpay">Tpay</option>
+                            <option value="stripe">Stripe</option>
+                            <option value="bank_transfer">Przelew bankowy</option>
+                            <option value="installments">Raty</option>
+                            <option value="cash">Gotówka</option>
+                        </select>
+                        <input type="date" id="filter-date-from" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none">
+                        <input type="date" id="filter-date-to" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none">
+                        <button id="clear-filters" class="text-zinc-500 hover:text-white text-xs transition-colors hidden">
+                            <i class="ph ph-x mr-1"></i>Wyczyść
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bulk actions -->
+                <div id="bulk-actions" class="hidden bg-violet-500/10 border border-violet-500/20 rounded-lg p-3 mb-4 flex items-center justify-between">
+                    <span class="text-violet-400 text-sm">
+                        Zaznaczono: <span id="selected-count" class="font-mono">0</span>
+                    </span>
+                    <button onclick="bulkDelete()" class="text-red-400 hover:text-red-300 text-sm font-medium flex items-center gap-1">
+                        <i class="ph ph-trash"></i>
+                        Usuń zaznaczone
+                    </button>
+                </div>
+
+                <!-- Orders table -->
+                <div class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-white/5 text-left">
+                                <th class="px-4 py-3 w-10">
+                                    <input type="checkbox" id="select-all" class="rounded bg-zinc-800 border-zinc-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 cursor-pointer">
+                                </th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Nr zamówienia</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Klient</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Opis</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-right">Kwota</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-center">Status</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Źródło</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Data</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold w-20"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table">
+                            <tr>
+                                <td colspan="9" class="px-4 py-12 text-center text-zinc-500">
+                                    <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
+                                    <p>Ładowanie zamówień...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex items-center justify-between mt-4">
+                    <button onclick="prevPage()" id="btn-prev" class="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors disabled:opacity-50" disabled>
+                        <i class="ph ph-caret-left mr-1"></i> Poprzednia
+                    </button>
+                    <span id="pagination-info" class="text-xs text-zinc-500 font-mono">Strona 1</span>
+                    <button onclick="nextPage()" id="btn-next" class="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors disabled:opacity-50">
+                        Następna <i class="ph ph-caret-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Order Modal -->
+    <div id="order-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h2 id="modal-title" class="text-lg font-semibold text-white">Nowe zamówienie</h2>
+                <button onclick="closeOrderModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <form id="order-form" class="p-5 space-y-5">
+                <input type="hidden" id="order-id">
+
+                <!-- Customer info -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Email klienta *</label>
+                        <input type="email" id="order-email" required class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="klient@email.pl">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Nazwa klienta</label>
+                        <input type="text" id="order-name" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="Jan Kowalski">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Firma</label>
+                        <input type="text" id="order-company" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="Nazwa firmy">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Telefon</label>
+                        <input type="tel" id="order-phone" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="+48 123 456 789">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">NIP</label>
+                    <input type="text" id="order-nip" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none" placeholder="1234567890">
+                </div>
+
+                <!-- Order details -->
+                <div class="border-t border-white/5 pt-5">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Opis zamówienia</label>
+                        <textarea id="order-description" rows="2" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none resize-none" placeholder="Co klient zamawia..."></textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Kwota (PLN) *</label>
+                        <input type="number" id="order-amount" required min="0" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none font-mono" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Status *</label>
+                        <select id="order-status" required class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                            <option value="pending">Próba płatności</option>
+                            <option value="paid">Opłacone</option>
+                            <option value="cancelled">Anulowane</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Źródło płatności</label>
+                        <select id="order-source" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                            <option value="">-- wybierz --</option>
+                            <option value="tpay">Tpay</option>
+                            <option value="stripe">Stripe</option>
+                            <option value="bank_transfer">Przelew bankowy</option>
+                            <option value="installments">Raty</option>
+                            <option value="cash">Gotówka</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Referencja płatności</label>
+                    <input type="text" id="order-reference" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none font-mono" placeholder="ID transakcji / nr przelewu">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Powiązany lead</label>
+                    <select id="order-lead" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                        <option value="">-- brak powiązania --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Notatki wewnętrzne</label>
+                    <textarea id="order-notes" rows="2" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none resize-none" placeholder="Notatki widoczne tylko dla zespołu..."></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
+                    <button type="button" onclick="closeOrderModal()" class="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
+                        Anuluj
+                    </button>
+                    <button type="submit" id="submit-btn" class="bg-white text-black hover:bg-zinc-200 px-5 py-2 rounded-lg font-medium text-sm transition-colors">
+                        Zapisz zamówienie
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // State
+        let orders = [];
+        let leads = [];
+        let currentPage = 1;
+        const PAGE_SIZE = 50;
+        let totalOrders = 0;
+        let selectedOrders = new Set();
+        let currentMember = null;
+
+        // Status config
+        const STATUS_CONFIG = {
+            pending: { label: 'Próba płatności', color: 'amber' },
+            paid: { label: 'Opłacone', color: 'emerald' },
+            cancelled: { label: 'Anulowane', color: 'red' }
+        };
+
+        // Source config
+        const SOURCE_CONFIG = {
+            tpay: { label: 'Tpay', icon: 'ph-credit-card' },
+            stripe: { label: 'Stripe', icon: 'ph-credit-card' },
+            bank_transfer: { label: 'Przelew', icon: 'ph-bank' },
+            installments: { label: 'Raty', icon: 'ph-calendar-blank' },
+            cash: { label: 'Gotówka', icon: 'ph-money' }
+        };
+
+        // Auth check
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+
+            // Get current team member
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+
+            currentMember = teamMember;
+
+            // Update sidebar user info
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+
+            const isAdmin = teamMember?.role === 'admin';
+            Sidebar.showAdminNav(isAdmin);
+
+            return session;
+        }
+
+        // Load orders
+        async function loadOrders() {
+            const search = document.getElementById('filter-search').value.trim().toLowerCase();
+            const status = document.getElementById('filter-status').value;
+            const source = document.getElementById('filter-source').value;
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+
+            let query = supabaseClient
+                .from('orders')
+                .select('*', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
+
+            if (search) {
+                query = query.or(`customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,order_number.ilike.%${search}%,description.ilike.%${search}%`);
+            }
+            if (status) {
+                query = query.eq('status', status);
+            }
+            if (source) {
+                query = query.eq('payment_source', source);
+            }
+            if (dateFrom) {
+                query = query.gte('created_at', dateFrom);
+            }
+            if (dateTo) {
+                query = query.lte('created_at', dateTo + 'T23:59:59');
+            }
+
+            const { data, count, error } = await query;
+
+            if (error) {
+                console.error('Error loading orders:', error);
+                showToast('Błąd ładowania zamówień');
+                return;
+            }
+
+            orders = data || [];
+            totalOrders = count || 0;
+
+            renderOrders();
+            updatePagination();
+            updateStats();
+            updateFiltersVisibility();
+        }
+
+        // Load leads for dropdown
+        async function loadLeads() {
+            const { data } = await supabaseClient
+                .from('leads')
+                .select('id, email, name, company')
+                .order('created_at', { ascending: false })
+                .limit(500);
+
+            leads = data || [];
+            populateLeadsDropdown();
+        }
+
+        function populateLeadsDropdown() {
+            const select = document.getElementById('order-lead');
+            select.innerHTML = '<option value="">-- brak powiązania --</option>' +
+                leads.map(l => `<option value="${l.id}">${l.email}${l.name ? ' - ' + l.name : ''}${l.company ? ' (' + l.company + ')' : ''}</option>`).join('');
+        }
+
+        // Render orders
+        function renderOrders() {
+            const tbody = document.getElementById('orders-table');
+
+            if (orders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="px-4 py-12 text-center text-zinc-500">
+                            <i class="ph ph-shopping-cart text-3xl mb-2"></i>
+                            <p>Brak zamówień</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(order => {
+                const statusConfig = STATUS_CONFIG[order.status] || { label: order.status, color: 'zinc' };
+                const sourceConfig = SOURCE_CONFIG[order.payment_source] || { label: order.payment_source || '-', icon: 'ph-question' };
+                const date = new Date(order.created_at);
+
+                return `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="order-checkbox rounded bg-zinc-800 border-zinc-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 cursor-pointer" data-id="${order.id}" ${selectedOrders.has(order.id) ? 'checked' : ''}>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="font-mono text-xs text-white">${order.order_number}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-white text-sm">${order.customer_email}</div>
+                            ${order.customer_name ? `<div class="text-zinc-500 text-xs">${order.customer_name}${order.customer_company ? ' • ' + order.customer_company : ''}</div>` : ''}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-zinc-400 text-xs truncate block max-w-[200px]" title="${order.description || ''}">${order.description || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <span class="font-mono text-sm ${order.status === 'paid' ? 'text-emerald-400' : 'text-white'}">${formatAmount(order.amount)}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-[10px] px-2 py-1 rounded font-medium bg-${statusConfig.color}-500/10 text-${statusConfig.color}-400 border border-${statusConfig.color}-500/20">
+                                ${statusConfig.label}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            ${order.payment_source ? `
+                                <span class="text-zinc-400 text-xs flex items-center gap-1.5">
+                                    <i class="ph ${sourceConfig.icon}"></i>
+                                    ${sourceConfig.label}
+                                </span>
+                            ` : '<span class="text-zinc-600 text-xs">-</span>'}
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-zinc-400 text-xs">${date.toLocaleDateString('pl-PL')}</div>
+                            <div class="text-zinc-600 text-[10px]">${date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-1">
+                                ${order.status === 'pending' && order.amount > 0 ? `
+                                <button onclick="payWithTpay('${order.id}')" class="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded transition-colors" title="Zapłać przez Tpay">
+                                    <i class="ph ph-credit-card text-sm"></i>
+                                </button>
+                                ` : ''}
+                                <button onclick="editOrder('${order.id}')" class="p-1.5 text-zinc-500 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edytuj">
+                                    <i class="ph ph-pencil-simple text-sm"></i>
+                                </button>
+                                <button onclick="deleteOrder('${order.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Usuń">
+                                    <i class="ph ph-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Add checkbox listeners
+            document.querySelectorAll('.order-checkbox').forEach(cb => {
+                cb.addEventListener('change', handleCheckboxChange);
+            });
+        }
+
+        function formatAmount(amount) {
+            return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount || 0) + ' PLN';
+        }
+
+        // Stats
+        async function updateStats() {
+            // Total count
+            const { count: total } = await supabaseClient
+                .from('orders')
+                .select('*', { count: 'exact', head: true });
+
+            // Paid count
+            const { count: paid } = await supabaseClient
+                .from('orders')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'paid');
+
+            // Revenue (sum of paid orders)
+            const { data: revenueData } = await supabaseClient
+                .from('orders')
+                .select('amount')
+                .eq('status', 'paid');
+
+            const revenue = (revenueData || []).reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+
+            document.getElementById('stat-total').textContent = total || 0;
+            document.getElementById('stat-paid').textContent = paid || 0;
+            document.getElementById('stat-revenue').textContent = new Intl.NumberFormat('pl-PL').format(Math.round(revenue));
+        }
+
+        // Pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(totalOrders / PAGE_SIZE);
+            document.getElementById('pagination-info').textContent = `Strona ${currentPage} z ${totalPages || 1} (${totalOrders} zamówień)`;
+            document.getElementById('btn-prev').disabled = currentPage <= 1;
+            document.getElementById('btn-next').disabled = currentPage >= totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadOrders();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(totalOrders / PAGE_SIZE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadOrders();
+            }
+        }
+
+        // Filters
+        function updateFiltersVisibility() {
+            const hasFilters = document.getElementById('filter-search').value ||
+                document.getElementById('filter-status').value ||
+                document.getElementById('filter-source').value ||
+                document.getElementById('filter-date-from').value ||
+                document.getElementById('filter-date-to').value;
+
+            document.getElementById('clear-filters').classList.toggle('hidden', !hasFilters);
+        }
+
+        function clearFilters() {
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-source').value = '';
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+            currentPage = 1;
+            loadOrders();
+        }
+
+        // Checkbox handling
+        function handleCheckboxChange(e) {
+            const id = e.target.dataset.id;
+            if (e.target.checked) {
+                selectedOrders.add(id);
+            } else {
+                selectedOrders.delete(id);
+            }
+            updateBulkActions();
+        }
+
+        document.getElementById('select-all').addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.order-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+                const id = cb.dataset.id;
+                if (e.target.checked) {
+                    selectedOrders.add(id);
+                } else {
+                    selectedOrders.delete(id);
+                }
+            });
+            updateBulkActions();
+        });
+
+        function updateBulkActions() {
+            const bulkActions = document.getElementById('bulk-actions');
+            const selectedCount = document.getElementById('selected-count');
+
+            if (selectedOrders.size > 0) {
+                bulkActions.classList.remove('hidden');
+                selectedCount.textContent = selectedOrders.size;
+            } else {
+                bulkActions.classList.add('hidden');
+            }
+        }
+
+        // Modal
+        function openOrderModal(orderId = null) {
+            document.getElementById('order-modal').classList.remove('hidden');
+            document.getElementById('order-modal').classList.add('flex');
+            document.getElementById('modal-title').textContent = orderId ? 'Edytuj zamówienie' : 'Nowe zamówienie';
+            document.getElementById('order-form').reset();
+            document.getElementById('order-id').value = orderId || '';
+
+            if (orderId) {
+                const order = orders.find(o => o.id === orderId);
+                if (order) {
+                    document.getElementById('order-email').value = order.customer_email || '';
+                    document.getElementById('order-name').value = order.customer_name || '';
+                    document.getElementById('order-company').value = order.customer_company || '';
+                    document.getElementById('order-phone').value = order.customer_phone || '';
+                    document.getElementById('order-nip').value = order.customer_nip || '';
+                    document.getElementById('order-description').value = order.description || '';
+                    document.getElementById('order-amount').value = order.amount || '';
+                    document.getElementById('order-status').value = order.status || 'pending';
+                    document.getElementById('order-source').value = order.payment_source || '';
+                    document.getElementById('order-reference').value = order.payment_reference || '';
+                    document.getElementById('order-lead').value = order.lead_id || '';
+                    document.getElementById('order-notes').value = order.notes || '';
+                }
+            }
+        }
+
+        function closeOrderModal() {
+            document.getElementById('order-modal').classList.add('hidden');
+            document.getElementById('order-modal').classList.remove('flex');
+        }
+
+        function editOrder(id) {
+            openOrderModal(id);
+        }
+
+        // Form submit
+        document.getElementById('order-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const orderId = document.getElementById('order-id').value;
+            const isEdit = !!orderId;
+
+            const orderData = {
+                customer_email: document.getElementById('order-email').value.trim(),
+                customer_name: document.getElementById('order-name').value.trim() || null,
+                customer_company: document.getElementById('order-company').value.trim() || null,
+                customer_phone: document.getElementById('order-phone').value.trim() || null,
+                customer_nip: document.getElementById('order-nip').value.trim() || null,
+                description: document.getElementById('order-description').value.trim() || null,
+                amount: parseFloat(document.getElementById('order-amount').value) || 0,
+                status: document.getElementById('order-status').value,
+                payment_source: document.getElementById('order-source').value || null,
+                payment_reference: document.getElementById('order-reference').value.trim() || null,
+                lead_id: document.getElementById('order-lead').value || null,
+                notes: document.getElementById('order-notes').value.trim() || null
+            };
+
+            // Set paid_at if status is paid
+            if (orderData.status === 'paid') {
+                const existingOrder = orders.find(o => o.id === orderId);
+                if (!existingOrder?.paid_at) {
+                    orderData.paid_at = new Date().toISOString();
+                }
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin mr-1"></i> Zapisywanie...';
+
+            let result;
+            if (isEdit) {
+                orderData.updated_at = new Date().toISOString();
+                result = await supabaseClient
+                    .from('orders')
+                    .update(orderData)
+                    .eq('id', orderId)
+                    .select()
+                    .single();
+            } else {
+                orderData.created_by = currentMember?.id || null;
+                result = await supabaseClient
+                    .from('orders')
+                    .insert(orderData)
+                    .select()
+                    .single();
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Zapisz zamówienie';
+
+            if (result.error) {
+                showToast('Błąd: ' + result.error.message);
+                return;
+            }
+
+            // Audit log
+            await logAuditActivity(
+                isEdit ? 'update' : 'create',
+                'order',
+                result.data.id,
+                result.data.order_number,
+                isEdit ? orders.find(o => o.id === orderId) : null,
+                orderData
+            );
+
+            closeOrderModal();
+            loadOrders();
+            showToast(isEdit ? 'Zamówienie zaktualizowane' : 'Zamówienie utworzone');
+        });
+
+        // Pay with Tpay
+        async function payWithTpay(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) {
+                showToast('Zamówienie nie znalezione');
+                return;
+            }
+
+            if (order.status !== 'pending') {
+                showToast('To zamówienie nie wymaga płatności');
+                return;
+            }
+
+            if (!order.amount || order.amount <= 0) {
+                showToast('Brak kwoty do zapłaty');
+                return;
+            }
+
+            showToast('Tworzenie płatności Tpay...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/tpay-create-transaction`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${(await supabaseClient.auth.getSession()).data.session?.access_token}`
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Błąd tworzenia płatności');
+                }
+
+                // Redirect to Tpay payment page
+                if (result.paymentUrl) {
+                    showToast('Przekierowanie do Tpay...');
+                    window.open(result.paymentUrl, '_blank');
+
+                    // Reload orders to show updated payment reference
+                    setTimeout(() => loadOrders(), 2000);
+                } else {
+                    throw new Error('Brak URL płatności');
+                }
+
+            } catch (error) {
+                console.error('Tpay payment error:', error);
+                showToast('Błąd: ' + error.message);
+            }
+        }
+
+        // Delete
+        async function deleteOrder(id) {
+            if (!confirm('Czy na pewno chcesz usunąć to zamówienie?')) return;
+
+            const order = orders.find(o => o.id === id);
+
+            const { error } = await supabaseClient
+                .from('orders')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                showToast('Błąd usuwania: ' + error.message);
+                return;
+            }
+
+            // Audit log
+            await logAuditActivity('delete', 'order', id, order?.order_number, order, null);
+
+            loadOrders();
+            showToast('Zamówienie usunięte');
+        }
+
+        // Bulk delete
+        async function bulkDelete() {
+            if (selectedOrders.size === 0) return;
+            if (!confirm(`Czy na pewno chcesz usunąć ${selectedOrders.size} zamówień?`)) return;
+
+            const ids = Array.from(selectedOrders);
+
+            const { error } = await supabaseClient
+                .from('orders')
+                .delete()
+                .in('id', ids);
+
+            if (error) {
+                showToast('Błąd usuwania: ' + error.message);
+                return;
+            }
+
+            // Audit log
+            await logAuditActivity('batch_delete', 'order', null, `${ids.length} zamówień`, { count: ids.length }, null);
+
+            selectedOrders.clear();
+            document.getElementById('select-all').checked = false;
+            updateBulkActions();
+            loadOrders();
+            showToast(`Usunięto ${ids.length} zamówień`);
+        }
+
+        // Export CSV
+        function exportToCSV() {
+            if (orders.length === 0) {
+                showToast('Brak danych do eksportu');
+                return;
+            }
+
+            const headers = ['Nr zamówienia', 'Email', 'Nazwa', 'Firma', 'Telefon', 'NIP', 'Opis', 'Kwota', 'Status', 'Źródło', 'Referencja', 'Data'];
+            const rows = orders.map(o => [
+                o.order_number,
+                o.customer_email,
+                o.customer_name || '',
+                o.customer_company || '',
+                o.customer_phone || '',
+                o.customer_nip || '',
+                (o.description || '').replace(/"/g, '""'),
+                o.amount,
+                STATUS_CONFIG[o.status]?.label || o.status,
+                SOURCE_CONFIG[o.payment_source]?.label || o.payment_source || '',
+                o.payment_reference || '',
+                new Date(o.created_at).toLocaleString('pl-PL')
+            ]);
+
+            const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `zamowienia_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Eksport zakończony');
+        }
+
+        // Audit log
+        async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value) {
+            if (!currentMember) return;
+
+            try {
+                await supabaseClient.from('audit_log').insert([{
+                    action_type,
+                    entity_type,
+                    entity_id,
+                    entity_identifier,
+                    old_value,
+                    new_value,
+                    performed_by: currentMember.id,
+                    performed_by_name: currentMember.name,
+                    metadata: { source_page: 'orders' }
+                }]);
+            } catch (err) {
+                console.error('Audit log error:', err);
+            }
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        // Event listeners for filters
+        document.getElementById('filter-search').addEventListener('input', debounce(() => {
+            currentPage = 1;
+            loadOrders();
+        }, 300));
+
+        document.getElementById('filter-status').addEventListener('change', () => {
+            currentPage = 1;
+            loadOrders();
+        });
+
+        document.getElementById('filter-source').addEventListener('change', () => {
+            currentPage = 1;
+            loadOrders();
+        });
+
+        document.getElementById('filter-date-from').addEventListener('change', () => {
+            currentPage = 1;
+            loadOrders();
+        });
+
+        document.getElementById('filter-date-to').addEventListener('change', () => {
+            currentPage = 1;
+            loadOrders();
+        });
+
+        document.getElementById('clear-filters').addEventListener('click', clearFilters);
+
+        function debounce(fn, delay) {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        // Init
+        async function init() {
+            Sidebar.render();
+            Sidebar.setupLogout(supabaseClient);
+
+            const session = await checkAuth();
+            if (!session) return;
+
+            await loadLeads();
+            await loadOrders();
+        }
+
+        init();
+    </script>
+</body>
+</html>
