@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zamówienie - Tomasz Niedźwiecki AI</title>
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Zamówienie - Tomasz Niedźwiecki AI">
+    <meta property="og:description" content="Bezpieczna płatność online. Kursy, konsultacje i usługi AI.">
+    <meta property="og:site_name" content="Tomasz Niedźwiecki AI">
+    <meta name="twitter:card" content="summary">
+
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+        }
+        ::selection { background: #6366f1; color: white; }
+
+        .checkout-card {
+            background: white;
+            box-shadow:
+                0 0 0 1px rgba(0,0,0,0.03),
+                0 2px 4px rgba(0,0,0,0.05),
+                0 12px 24px rgba(0,0,0,0.05);
+        }
+
+        .input-field {
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .input-field:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 1px 2px rgba(0,0,0,0.05);
+            border-color: #6366f1;
+        }
+
+        .payment-option {
+            transition: all 0.2s ease;
+        }
+        .payment-option:hover {
+            border-color: #d1d5db;
+            background: #fafafa;
+        }
+        .payment-option.selected {
+            border-color: #6366f1;
+            background: linear-gradient(to bottom, #eef2ff, white);
+            box-shadow: 0 0 0 1px #6366f1;
+        }
+
+        .pay-button {
+            background: linear-gradient(to bottom, #6366f1, #4f46e5);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 4px 12px rgba(99, 102, 241, 0.35);
+            transition: all 0.2s ease;
+        }
+        .pay-button:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #4f46e5, #4338ca);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 6px 16px rgba(99, 102, 241, 0.45);
+            transform: translateY(-1px);
+        }
+        .pay-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .pay-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .trust-badge {
+            background: linear-gradient(to bottom, #fafafa, #f5f5f5);
+            border: 1px solid #e5e5e5;
+        }
+
+        .secure-badge {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            border: 1px solid #c7d2fe;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s ease-in-out infinite;
+        }
+
+        /* Inline validation errors */
+        .input-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 0.75rem;
+            margin-top: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .error-message.hidden { display: none; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
+        .shake { animation: shake 0.4s ease-in-out; }
+
+        /* Sticky mobile button */
+        @media (max-width: 1023px) {
+            .mobile-sticky-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                padding: 1rem;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+                z-index: 50;
+                border-top: 1px solid #e5e7eb;
+            }
+            .mobile-sticky-footer .pay-button {
+                margin: 0;
+            }
+            /* Add padding to form so content isn't hidden behind sticky footer */
+            #checkout-container {
+                padding-bottom: 120px;
+            }
+        }
+
+        /* Mobile payment options */
+        @media (max-width: 640px) {
+            .payment-option {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 0.75rem !important;
+                padding: 1rem !important;
+            }
+            .payment-option .payment-radio {
+                position: absolute;
+                top: 1rem;
+                left: 1rem;
+            }
+            .payment-option > div:first-of-type {
+                padding-left: 2rem;
+            }
+            .payment-option .price-column {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding-left: 2rem;
+                padding-top: 0.5rem;
+                border-top: 1px solid #f3f4f6;
+                margin-top: 0.25rem;
+            }
+            .payment-option .price-column .installments-detail {
+                text-align: right;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-900">
+
+    <!-- Loading State -->
+    <div id="loading-state" class="min-h-screen flex items-center justify-center">
+        <div class="text-center animate-fadeIn">
+            <div class="w-12 h-12 mx-auto mb-4 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin"></div>
+            <p class="text-gray-500 text-sm font-medium">Ładowanie szczegółów zamówienia...</p>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="text-center max-w-md animate-fadeIn">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
+                <i class="ph ph-warning-circle text-4xl text-red-500"></i>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-3">Oferta niedostępna</h1>
+            <p id="error-message" class="text-gray-500 leading-relaxed">Ta oferta nie istnieje lub nie jest już aktywna. Sprawdź poprawność linku lub skontaktuj się z nami.</p>
+            <a href="mailto:ceo@tomekniedzwiecki.pl" class="inline-flex items-center gap-2 mt-6 text-primary-600 hover:text-primary-700 font-medium text-sm">
+                <i class="ph ph-envelope"></i>
+                Napisz do nas
+            </a>
+        </div>
+    </div>
+
+    <!-- Checkout Form -->
+    <div id="checkout-container" class="hidden min-h-screen py-8 px-4 lg:py-12">
+        <div class="max-w-5xl mx-auto animate-fadeIn">
+
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 bg-gray-900 text-white rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="ph-bold ph-lightning text-lg"></i>
+                    </div>
+                    <span class="font-semibold text-gray-900 text-lg">Tomasz Niedźwiecki AI</span>
+                </div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid lg:grid-cols-5 gap-8">
+
+                <!-- Left Column - Order Summary -->
+                <div class="lg:col-span-2 order-2 lg:order-1">
+                    <div class="lg:sticky lg:top-8">
+                        <!-- Product Card -->
+                        <div class="checkout-card rounded-2xl p-6 mb-4">
+                            <div class="flex items-center gap-2 text-gray-500 text-xs font-medium uppercase tracking-wider mb-4">
+                                <i class="ph ph-shopping-bag"></i>
+                                Podsumowanie zamówienia
+                            </div>
+
+                            <div class="flex gap-4 mb-6">
+                                <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 border border-indigo-200/50 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph-duotone ph-package text-2xl text-indigo-600"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h2 id="offer-name" class="font-semibold text-gray-900 mb-1 leading-tight">-</h2>
+                                    <p id="offer-description" class="text-gray-500 text-sm line-clamp-2"></p>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-4 space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Cena</span>
+                                    <span id="summary-price" class="text-gray-900 font-medium">-</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">VAT (23%)</span>
+                                    <span class="text-gray-500">zawarty w cenie</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 mt-4 pt-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-900 font-medium">Razem do zapłaty</span>
+                                    <span id="offer-price" class="text-2xl font-bold text-gray-900">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trust Badges -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="trust-badge rounded-xl p-4 text-center">
+                                <i class="ph-duotone ph-shield-check text-2xl text-indigo-600 mb-2"></i>
+                                <div class="text-xs font-medium text-gray-700">Bezpieczna płatność</div>
+                                <div class="text-[10px] text-gray-500">Szyfrowanie SSL</div>
+                            </div>
+                            <div class="trust-badge rounded-xl p-4 text-center">
+                                <i class="ph-duotone ph-clock-countdown text-2xl text-indigo-500 mb-2"></i>
+                                <div class="text-xs font-medium text-gray-700">Natychmiastowy dostęp</div>
+                                <div class="text-[10px] text-gray-500">Po opłaceniu</div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Methods -->
+                        <div class="checkout-card rounded-2xl p-4">
+                            <div class="text-xs text-gray-500 mb-3 font-medium">Akceptowane metody płatności</div>
+                            <div class="flex flex-wrap gap-2">
+                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">BLIK</div>
+                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Visa</div>
+                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Mastercard</div>
+                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Przelewy24</div>
+                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Google Pay</div>
+                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Apple Pay</div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-4 mb-2 font-medium">Płatności ratalne</div>
+                            <div class="flex flex-wrap gap-2">
+                                <div class="px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 text-xs font-medium text-indigo-600">Raty Pekao 0%</div>
+                                <div class="px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 text-xs font-medium text-indigo-600">Alior Raty</div>
+                            </div>
+                        </div>
+
+                        <!-- Help -->
+                        <div class="mt-4 text-center">
+                            <p class="text-xs text-gray-400">
+                                Masz pytania?
+                                <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-gray-600 hover:text-gray-900 underline">Napisz do nas</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Form -->
+                <div class="lg:col-span-3 order-1 lg:order-2">
+                    <form id="checkout-form" class="checkout-card rounded-2xl p-6 lg:p-8">
+
+                        <!-- Contact Section -->
+                        <div class="mb-8">
+                            <div class="flex items-center gap-3 mb-5">
+                                <div class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-semibold">1</div>
+                                <h3 class="text-lg font-semibold text-gray-900">Dane kontaktowe</h3>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Adres email <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="email" id="customer-email" required
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           placeholder="jan.kowalski@email.pl">
+                                    <p id="email-error" class="error-message hidden">
+                                        <i class="ph ph-warning-circle"></i>
+                                        <span></span>
+                                    </p>
+                                    <p id="email-hint" class="mt-1.5 text-xs text-gray-500">Na ten adres wyślemy potwierdzenie i dostęp</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Numer telefonu <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="tel" id="customer-phone" required
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           placeholder="+48 500 600 700">
+                                    <p id="phone-error" class="error-message hidden">
+                                        <i class="ph ph-warning-circle"></i>
+                                        <span></span>
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Imię i nazwisko</label>
+                                    <input type="text" id="customer-name"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           placeholder="Jan Kowalski">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Invoice Section (Collapsible) -->
+                        <div class="mb-8">
+                            <button type="button" id="toggle-invoice" class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                <i class="ph ph-plus-circle text-lg"></i>
+                                Chcę otrzymać fakturę VAT
+                            </button>
+
+                            <div id="invoice-fields" class="hidden mt-4 pt-4 border-t border-gray-100 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Nazwa firmy</label>
+                                    <input type="text" id="customer-company"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           placeholder="Firma Sp. z o.o.">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">NIP</label>
+                                    <input type="text" id="customer-nip"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           placeholder="1234567890">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method Section -->
+                        <div class="mb-8">
+                            <div class="flex items-center gap-3 mb-5">
+                                <div class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-semibold">2</div>
+                                <h3 class="text-lg font-semibold text-gray-900">Sposób płatności</h3>
+                            </div>
+
+                            <div class="space-y-3">
+                                <!-- One-time payment -->
+                                <label class="payment-option selected relative flex items-center gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer" data-type="one_time">
+                                    <input type="radio" name="payment_type" value="one_time" checked class="sr-only">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center flex-shrink-0 payment-radio">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 payment-radio-dot"></div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <i class="ph-duotone ph-credit-card text-xl text-indigo-500"></i>
+                                            <span class="font-semibold text-gray-900">Płatność jednorazowa</span>
+                                        </div>
+                                        <p class="text-gray-500 text-sm mt-1">Karta, BLIK, przelew, Google Pay, Apple Pay</p>
+                                    </div>
+                                    <div class="price-column sm:text-right">
+                                        <span id="price-one-time" class="text-xl font-bold text-gray-900">-</span>
+                                    </div>
+                                </label>
+
+                                <!-- Installments -->
+                                <label id="installments-option" class="payment-option relative hidden items-center gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer" data-type="installments">
+                                    <input type="radio" name="payment_type" value="installments" class="sr-only">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center flex-shrink-0 payment-radio">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-primary-500 hidden payment-radio-dot"></div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <i class="ph-duotone ph-calendar-check text-xl text-indigo-500"></i>
+                                            <span class="font-semibold text-gray-900">Raty 0%</span>
+                                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded-full whitespace-nowrap">Popularny wybór</span>
+                                        </div>
+                                        <p class="text-gray-500 text-sm mt-1">Rozłóż płatność na wygodne raty</p>
+                                    </div>
+                                    <div class="price-column sm:text-right">
+                                        <span id="price-installments" class="text-xl font-bold text-gray-900">-</span>
+                                        <p id="installments-info" class="text-sm text-gray-500 installments-detail">12 x -</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Terms & Submit -->
+                        <div class="border-t border-gray-100 pt-6">
+                            <div class="mb-6">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" id="consent-terms" required
+                                           class="mt-0.5 w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 focus:ring-offset-0">
+                                    <span class="text-sm text-gray-600 leading-relaxed">
+                                        Akceptuję <a href="/dokumenty/regulamin.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">regulamin</a>
+                                        oraz <a href="/dokumenty/polityka-prywatnosci.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">politykę prywatności</a>.
+                                        <span class="text-red-500">*</span>
+                                    </span>
+                                </label>
+                                <p id="terms-error" class="error-message hidden ml-8">
+                                    <i class="ph ph-warning-circle"></i>
+                                    <span></span>
+                                </p>
+                            </div>
+
+                            <!-- Desktop button -->
+                            <div class="hidden lg:block">
+                                <button type="submit" id="pay-button-desktop"
+                                        class="pay-button w-full text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2">
+                                    <i class="ph ph-lock-simple"></i>
+                                    <span class="pay-button-text">Zapłać teraz</span>
+                                </button>
+
+                                <p class="text-xs text-gray-400 text-center mt-4 flex items-center justify-center gap-1.5">
+                                    <i class="ph ph-shield-check text-gray-400"></i>
+                                    Bezpieczna płatność · Tpay
+                                </p>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Mobile sticky footer -->
+                    <div class="mobile-sticky-footer lg:hidden">
+                        <button type="button" id="pay-button-mobile"
+                                class="pay-button w-full text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2">
+                            <i class="ph ph-lock-simple"></i>
+                            <span class="pay-button-text">Zapłać <span id="mobile-price"></span></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-12 text-center text-gray-400 text-xs space-y-1">
+                <p class="font-medium text-gray-500">Tomasz Niedźwiecki AI</p>
+                <p>ul. Grawerska 30L, 51-180 Wrocław • NIP: 6972240255</p>
+                <p class="pt-2">
+                    <a href="/dokumenty/regulamin.html" class="hover:text-gray-600">Regulamin</a>
+                    <span class="mx-2">•</span>
+                    <a href="/dokumenty/polityka-prywatnosci.html" class="hover:text-gray-600">Polityka prywatności</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redirect State -->
+    <div id="redirect-state" class="hidden min-h-screen flex items-center justify-center p-4 bg-white">
+        <div class="text-center max-w-md animate-fadeIn">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-primary-50 flex items-center justify-center">
+                <i class="ph ph-circle-notch animate-spin text-4xl text-primary-500"></i>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-3">Przekierowanie do płatności</h1>
+            <p class="text-gray-500 leading-relaxed">Za chwilę zostaniesz przekierowany do bezpiecznej bramki płatności Tpay.</p>
+            <div class="mt-6 inline-flex items-center gap-2 text-sm text-gray-400">
+                <i class="ph ph-shield-check"></i>
+                Połączenie szyfrowane
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentOffer = null;
+        const MIN_INSTALLMENT_AMOUNT = 300;
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('pl-PL', {
+                style: 'currency',
+                currency: 'PLN',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }).format(price || 0);
+        }
+
+        function calculateInstallment(price, months = 12) {
+            const monthlyRate = 0.008;
+            const installment = (price * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+            return Math.ceil(installment);
+        }
+
+        function updatePaymentOptions(price) {
+            document.getElementById('price-one-time').textContent = formatPrice(price);
+            document.getElementById('summary-price').textContent = formatPrice(price);
+            document.getElementById('mobile-price').textContent = formatPrice(price);
+
+            if (price >= MIN_INSTALLMENT_AMOUNT) {
+                const installmentAmount = calculateInstallment(price, 12);
+                const installmentsOption = document.getElementById('installments-option');
+                installmentsOption.classList.remove('hidden');
+                installmentsOption.classList.add('flex');
+                document.getElementById('price-installments').textContent = formatPrice(price);
+                document.getElementById('installments-info').textContent = `12 x ${formatPrice(installmentAmount)}`;
+            }
+        }
+
+        // Inline validation helpers
+        function showFieldError(inputId, errorId, message) {
+            const input = document.getElementById(inputId);
+            const error = document.getElementById(errorId);
+            input.classList.add('input-error');
+            input.classList.add('shake');
+            error.querySelector('span').textContent = message;
+            error.classList.remove('hidden');
+            // Hide hint if exists
+            const hint = document.getElementById(inputId.replace('customer-', '') + '-hint');
+            if (hint) hint.classList.add('hidden');
+
+            setTimeout(() => input.classList.remove('shake'), 400);
+        }
+
+        function clearFieldError(inputId, errorId) {
+            const input = document.getElementById(inputId);
+            const error = document.getElementById(errorId);
+            input.classList.remove('input-error');
+            error.classList.add('hidden');
+            // Show hint if exists
+            const hint = document.getElementById(inputId.replace('customer-', '') + '-hint');
+            if (hint) hint.classList.remove('hidden');
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function validatePhone(phone) {
+            const digits = phone.replace(/\D/g, '');
+            return digits.length >= 9;
+        }
+
+        function validateForm() {
+            let isValid = true;
+
+            const email = document.getElementById('customer-email').value.trim();
+            const phone = document.getElementById('customer-phone').value.trim();
+            const consent = document.getElementById('consent-terms').checked;
+
+            // Email validation
+            if (!email) {
+                showFieldError('customer-email', 'email-error', 'Podaj adres email');
+                isValid = false;
+            } else if (!validateEmail(email)) {
+                showFieldError('customer-email', 'email-error', 'Podaj poprawny adres email');
+                isValid = false;
+            } else {
+                clearFieldError('customer-email', 'email-error');
+            }
+
+            // Phone validation
+            if (!phone) {
+                showFieldError('customer-phone', 'phone-error', 'Podaj numer telefonu');
+                isValid = false;
+            } else if (!validatePhone(phone)) {
+                showFieldError('customer-phone', 'phone-error', 'Podaj poprawny numer telefonu (min. 9 cyfr)');
+                isValid = false;
+            } else {
+                clearFieldError('customer-phone', 'phone-error');
+            }
+
+            // Terms validation
+            const termsError = document.getElementById('terms-error');
+            if (!consent) {
+                termsError.querySelector('span').textContent = 'Musisz zaakceptować regulamin';
+                termsError.classList.remove('hidden');
+                isValid = false;
+            } else {
+                termsError.classList.add('hidden');
+            }
+
+            return isValid;
+        }
+
+        // Real-time validation on blur
+        document.getElementById('customer-email').addEventListener('blur', function() {
+            const email = this.value.trim();
+            if (email && !validateEmail(email)) {
+                showFieldError('customer-email', 'email-error', 'Podaj poprawny adres email');
+            } else if (email) {
+                clearFieldError('customer-email', 'email-error');
+            }
+        });
+
+        document.getElementById('customer-phone').addEventListener('blur', function() {
+            const phone = this.value.trim();
+            if (phone && !validatePhone(phone)) {
+                showFieldError('customer-phone', 'phone-error', 'Podaj poprawny numer telefonu');
+            } else if (phone) {
+                clearFieldError('customer-phone', 'phone-error');
+            }
+        });
+
+        // Clear errors on input
+        document.getElementById('customer-email').addEventListener('input', function() {
+            if (this.classList.contains('input-error')) {
+                clearFieldError('customer-email', 'email-error');
+            }
+        });
+
+        document.getElementById('customer-phone').addEventListener('input', function() {
+            if (this.classList.contains('input-error')) {
+                clearFieldError('customer-phone', 'phone-error');
+            }
+        });
+
+        // Toggle invoice fields
+        document.getElementById('toggle-invoice').addEventListener('click', function() {
+            const fields = document.getElementById('invoice-fields');
+            const icon = this.querySelector('i');
+
+            if (fields.classList.contains('hidden')) {
+                fields.classList.remove('hidden');
+                icon.className = 'ph ph-minus-circle text-lg';
+                this.querySelector('span') || (this.innerHTML = '<i class="ph ph-minus-circle text-lg"></i> Ukryj dane do faktury');
+            } else {
+                fields.classList.add('hidden');
+                icon.className = 'ph ph-plus-circle text-lg';
+                this.innerHTML = '<i class="ph ph-plus-circle text-lg"></i> Chcę otrzymać fakturę VAT';
+            }
+        });
+
+        // Payment option selection
+        document.querySelectorAll('.payment-option').forEach(option => {
+            option.addEventListener('click', () => {
+                // Remove selection from all
+                document.querySelectorAll('.payment-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.querySelector('.payment-radio').classList.remove('border-primary-500');
+                    opt.querySelector('.payment-radio').classList.add('border-gray-300');
+                    const dot = opt.querySelector('.payment-radio-dot');
+                    if (dot) dot.classList.add('hidden');
+                });
+
+                // Add selection to clicked
+                option.classList.add('selected');
+                option.querySelector('.payment-radio').classList.add('border-primary-500');
+                option.querySelector('.payment-radio').classList.remove('border-gray-300');
+                const dot = option.querySelector('.payment-radio-dot');
+                if (dot) dot.classList.remove('hidden');
+
+                // Check the radio
+                option.querySelector('input[type="radio"]').checked = true;
+
+                // Update button text
+                const isInstallments = option.dataset.type === 'installments';
+                document.getElementById('pay-button-text').textContent = isInstallments
+                    ? 'Przejdź do wniosku ratalnego'
+                    : 'Zapłać teraz';
+            });
+        });
+
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('checkout-container').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+            if (message) {
+                document.getElementById('error-message').textContent = message;
+            }
+        }
+
+        function showCheckout() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+            document.getElementById('checkout-container').classList.remove('hidden');
+        }
+
+        function showRedirect() {
+            document.getElementById('checkout-container').classList.add('hidden');
+            document.getElementById('redirect-state').classList.remove('hidden');
+        }
+
+        async function loadOffer() {
+            const params = new URLSearchParams(window.location.search);
+            const offerId = params.get('offer') || params.get('id');
+
+            if (!offerId) {
+                showError('Brak identyfikatora oferty w linku. Sprawdź poprawność adresu URL.');
+                return;
+            }
+
+            try {
+                const { data: offer, error } = await supabaseClient
+                    .from('offers')
+                    .select('*')
+                    .eq('id', offerId)
+                    .eq('is_active', true)
+                    .single();
+
+                if (error || !offer) {
+                    showError('Ta oferta nie istnieje lub nie jest już aktywna. Skontaktuj się z nami, jeśli uważasz, że to błąd.');
+                    return;
+                }
+
+                if (!offer.price || offer.price <= 0) {
+                    showError('Ta oferta nie ma ustawionej ceny. Skontaktuj się z nami.');
+                    return;
+                }
+
+                currentOffer = offer;
+
+                document.getElementById('offer-name').textContent = offer.name;
+                document.getElementById('offer-description').textContent = offer.description || 'Produkt cyfrowy';
+                document.getElementById('offer-price').textContent = formatPrice(offer.price);
+                document.title = `${offer.name} - Zamówienie`;
+
+                updatePaymentOptions(offer.price);
+                showCheckout();
+
+            } catch (err) {
+                console.error('Error loading offer:', err);
+                showError('Wystąpił błąd podczas ładowania oferty. Spróbuj odświeżyć stronę.');
+            }
+        }
+
+        // Set buttons loading state
+        function setButtonsLoading(loading) {
+            const desktopBtn = document.getElementById('pay-button-desktop');
+            const mobileBtn = document.getElementById('pay-button-mobile');
+
+            if (loading) {
+                desktopBtn.disabled = true;
+                mobileBtn.disabled = true;
+                desktopBtn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Przetwarzanie...';
+                mobileBtn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Przetwarzanie...';
+            } else {
+                desktopBtn.disabled = false;
+                mobileBtn.disabled = false;
+                const isInstallments = document.querySelector('input[name="payment_type"]:checked')?.value === 'installments';
+                const text = isInstallments ? 'Przejdź do wniosku ratalnego' : 'Zapłać teraz';
+                const mobileText = isInstallments ? 'Przejdź do wniosku' : `Zapłać ${formatPrice(currentOffer?.price || 0)}`;
+                desktopBtn.innerHTML = `<i class="ph ph-lock-simple"></i> <span class="pay-button-text">${text}</span>`;
+                mobileBtn.innerHTML = `<i class="ph ph-lock-simple"></i> <span class="pay-button-text">${mobileText}</span>`;
+            }
+        }
+
+        async function handleSubmit() {
+            if (!currentOffer) return;
+
+            // Validate form
+            if (!validateForm()) {
+                // Scroll to first error
+                const firstError = document.querySelector('.input-error');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+                return;
+            }
+
+            const email = document.getElementById('customer-email').value.trim();
+            const phone = document.getElementById('customer-phone').value.trim();
+            const name = document.getElementById('customer-name').value.trim();
+            const company = document.getElementById('customer-company').value.trim();
+            const nip = document.getElementById('customer-nip').value.trim();
+            const paymentType = document.querySelector('input[name="payment_type"]:checked')?.value || 'one_time';
+
+            setButtonsLoading(true);
+
+            try {
+                const paymentSource = paymentType === 'installments' ? 'installments' : 'tpay';
+
+                const orderData = {
+                    customer_email: email,
+                    customer_phone: phone,
+                    customer_name: name || null,
+                    customer_company: company || null,
+                    customer_nip: nip || null,
+                    description: currentOffer.name,
+                    amount: currentOffer.price,
+                    status: 'pending',
+                    payment_source: paymentSource,
+                    notes: `Checkout - ${currentOffer.name} (${paymentType === 'installments' ? 'raty' : 'jednorazowo'})`
+                };
+
+                const { data: order, error: orderError } = await supabaseClient
+                    .from('orders')
+                    .insert(orderData)
+                    .select()
+                    .single();
+
+                if (orderError) {
+                    throw new Error('Błąd tworzenia zamówienia: ' + orderError.message);
+                }
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/tpay-create-transaction`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({
+                        orderId: order.id,
+                        paymentType: paymentType
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Błąd tworzenia płatności');
+                }
+
+                if (!result.paymentUrl) {
+                    throw new Error('Nie otrzymano linku do płatności');
+                }
+
+                showRedirect();
+
+                setTimeout(() => {
+                    window.location.href = result.paymentUrl;
+                }, 1500);
+
+            } catch (error) {
+                console.error('Checkout error:', error);
+                // Show error as inline message instead of alert
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2';
+                errorDiv.innerHTML = `<i class="ph ph-warning-circle text-lg"></i> ${error.message}`;
+
+                const form = document.getElementById('checkout-form');
+                const existingError = form.querySelector('.bg-red-50');
+                if (existingError) existingError.remove();
+                form.insertBefore(errorDiv, form.firstChild);
+
+                setButtonsLoading(false);
+            }
+        }
+
+        // Form submit handler
+        document.getElementById('checkout-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSubmit();
+        });
+
+        // Mobile button click
+        document.getElementById('pay-button-mobile').addEventListener('click', () => {
+            handleSubmit();
+        });
+
+        // Phone number formatting
+        document.getElementById('customer-phone').addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^\d+]/g, '');
+            if (value.length > 0 && !value.startsWith('+')) {
+                if (value.startsWith('48')) {
+                    value = '+' + value;
+                } else if (value.length === 9) {
+                    value = '+48' + value;
+                }
+            }
+            e.target.value = value;
+        });
+
+        // NIP formatting
+        document.getElementById('customer-nip').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
+        });
+
+        // Init
+        loadOffer();
+    </script>
+</body>
+</html>
