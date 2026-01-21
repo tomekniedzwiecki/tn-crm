@@ -13,7 +13,7 @@ const NAV_ITEMS = [
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz', adminOnly: false },
     { id: 'offers', icon: 'ph-package', label: 'Oferty', adminOnly: false },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia', adminOnly: false },
-    { id: 'outreach', icon: 'ph-paper-plane-tilt', label: 'Mailing', adminOnly: true },
+    { id: 'outreach', icon: 'ph-paper-plane-tilt', label: 'Mailing', adminOnly: false },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: false },
     { id: 'audit', icon: 'ph-shield-check', label: 'Aktywność', adminOnly: true },
 ];
