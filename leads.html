@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -60,68 +61,7 @@
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
 
     <!-- Sidebar -->
-    <aside class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
-        <div class="h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
-            <div class="w-7 h-7 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                <i class="ph-bold ph-lightning text-sm"></i>
-            </div>
-            <span class="font-medium text-base text-zinc-200">TN CRM</span>
-            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
-        </div>
-
-        <nav class="flex-1 px-4 py-6">
-            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
-
-            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-house text-xl"></i>
-                <span class="font-medium">Overview</span>
-            </a>
-
-            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
-                <i class="ph ph-users text-xl"></i>
-                <span class="font-medium">Leady</span>
-                <span id="nav-leads-count" class="ml-auto text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono border border-white/5">0</span>
-            </a>
-
-            <a href="/pipeline" data-page="pipeline" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-kanban text-xl"></i>
-                <span class="font-medium">Pipeline</span>
-            </a>
-
-            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-calendar text-xl"></i>
-                <span class="font-medium">Kalendarz</span>
-            </a>
-
-            <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-package text-xl"></i>
-                <span class="font-medium">Oferty</span>
-            </a>
-
-            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
-                <i class="ph ph-gear text-xl"></i>
-                <span class="font-medium">Ustawienia</span>
-            </a>
-
-            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
-                <i class="ph ph-shield-check text-xl"></i>
-                <span class="font-medium">Aktywność</span>
-            </a>
-        </nav>
-
-        <div class="p-4 border-t border-white/5">
-            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-sm font-medium">TN</div>
-                <div class="flex-1 min-w-0">
-                    <div id="user-email" class="text-sm font-medium text-zinc-200 truncate"></div>
-                    <div class="text-xs text-zinc-500 truncate">Free Plan</div>
-                </div>
-                <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
-                    <i class="ph ph-sign-out text-lg"></i>
-                </button>
-            </div>
-        </div>
-    </aside>
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
 
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
@@ -491,6 +431,9 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
         const ITEMS_PER_PAGE = 25;
         let currentLeadId = null;
         let leads = [];
@@ -605,27 +548,13 @@
             });
         }
 
-        function getBasePath() {
-            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                const path = location.pathname;
-                const match = path.match(/^(\/[^\/]+)\//);
-                return match ? match[1] : '';
-            }
-            return '';
-        }
-
-        function getLoginPath() {
-            const base = getBasePath();
-            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
-        }
-
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
-                window.location.href = getLoginPath();
+                window.location.href = Sidebar.getLoginPath();
                 return null;
             }
-            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
             await loadTeamMembers(session.user.id);
             return session;
         }
@@ -649,13 +578,14 @@
             currentMember = teamMembers.find(m => m.user_id === userId);
             isAdmin = currentMember?.role === 'admin';
 
-            // Show settings nav for admins
-            const navSettings = document.getElementById('nav-settings');
-            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+            // Update sidebar user info
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
 
-            // Show audit nav for admins
-            const navAudit = document.getElementById('nav-audit');
-            if (navAudit && isAdmin) navAudit.classList.remove('hidden');
+            Sidebar.showAdminNav(isAdmin);
 
             updateAdminUI();
         }
@@ -694,11 +624,6 @@
             };
             return colorMap[member.color] || 'bg-zinc-500';
         }
-
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            await supabaseClient.auth.signOut();
-            window.location.href = getLoginPath();
-        });
 
         function formatDate(dateString) {
             const date = new Date(dateString);
@@ -981,7 +906,7 @@
 
         function openLead(id) {
             // Navigate to lead detail page
-            const base = getBasePath();
+            const base = Sidebar.getBasePath();
             const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/lead.html` : '/lead';
             window.location.href = `${basePath}?id=${id}`;
         }
@@ -995,7 +920,7 @@
         }
 
         function openClientOffer(token) {
-            const base = getBasePath();
+            const base = Sidebar.getBasePath();
             const path = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
                 ? `${base}/client-offer.html?token=${token}`
                 : `/p/${token}`;
@@ -1403,14 +1328,6 @@
                 document.getElementById('filter-search').focus();
             }
         });
-
-        // Fix links for local development
-        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-            const base = getBasePath();
-            document.querySelectorAll('a[data-page]').forEach(link => {
-                link.href = base + '/' + link.dataset.page + '.html';
-            });
-        }
 
         async function init() {
             const session = await checkAuth();

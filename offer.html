@@ -40,6 +40,86 @@
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
+        /* Nav icon animations */
+        nav a i {
+            display: inline-block;
+        }
+
+        @keyframes houseBounce {
+            0% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+            50% { transform: translateY(0); }
+            70% { transform: translateY(-2px); }
+            100% { transform: translateY(0); }
+        }
+        nav a:hover .ph-house {
+            animation: houseBounce 0.5s ease-out;
+        }
+
+        /* Users - friendly wave/huddle effect */
+        @keyframes usersHuddle {
+            0% { transform: scale(1) rotate(0deg); }
+            20% { transform: scale(1.1) rotate(-5deg); }
+            40% { transform: scale(1.15) rotate(3deg); }
+            60% { transform: scale(1.1) rotate(-2deg); }
+            80% { transform: scale(1.05) rotate(1deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        nav a:hover .ph-users {
+            animation: usersHuddle 0.6s ease-out;
+        }
+
+        /* Kanban - cards sliding on board */
+        @keyframes kanbanSlide {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-3px); }
+            40% { transform: translateX(4px); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+            100% { transform: translateX(0); }
+        }
+        nav a:hover .ph-kanban {
+            animation: kanbanSlide 0.6s ease-in-out;
+        }
+
+        @keyframes calendarFlip {
+            0% { transform: rotateY(0deg); }
+            50% { transform: rotateY(-20deg); }
+            100% { transform: rotateY(0deg); }
+        }
+        nav a:hover .ph-calendar {
+            animation: calendarFlip 0.5s ease-in-out;
+        }
+
+        @keyframes packageBounce {
+            0% { transform: translateY(0) scale(1); }
+            30% { transform: translateY(-5px) scale(1.1); }
+            50% { transform: translateY(-2px) scale(1.05); }
+            70% { transform: translateY(-3px) scale(1.08); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        nav a:hover .ph-package {
+            animation: packageBounce 0.5s ease-out;
+        }
+
+        @keyframes gearSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(180deg); }
+        }
+        nav a:hover .ph-gear {
+            animation: gearSpin 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes shieldPulse {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.15); }
+            60% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        nav a:hover .ph-shield-check {
+            animation: shieldPulse 0.5s ease-out;
+        }
+
         .input-field {
             background: #0a0a0a;
             border: 1px solid rgba(255,255,255,0.1);
@@ -131,11 +211,11 @@
         </nav>
 
         <div class="p-4 border-t border-white/5">
-            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 border border-white/10 flex items-center justify-center text-sm font-medium">TN</div>
+            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" id="user-profile-btn">
+                <div id="user-avatar" class="w-9 h-9 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 border border-white/10 flex items-center justify-center text-sm font-medium text-white">--</div>
                 <div class="flex-1 min-w-0">
-                    <div id="user-email" class="text-sm font-medium text-zinc-200 truncate"></div>
-                    <div class="text-xs text-zinc-500 truncate">Free Plan</div>
+                    <div id="user-name" class="text-sm font-medium text-zinc-200 truncate"></div>
+                    <div id="user-email" class="text-xs text-zinc-500 truncate"></div>
                 </div>
                 <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
                     <i class="ph ph-sign-out text-lg"></i>
@@ -194,6 +274,31 @@
                             <div class="flex items-baseline gap-1">
                                 <input type="number" id="offer-price" class="text-3xl font-semibold text-white font-mono bg-transparent text-right w-32 border-none outline-none placeholder-zinc-600" placeholder="0" min="0" step="0.01">
                                 <span class="text-zinc-500 text-lg">PLN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Offer Link -->
+                    <div id="offer-link-section" class="hidden mb-6 bg-zinc-900/40 rounded-lg border border-white/5 p-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-link text-emerald-400"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs text-zinc-500 mb-1">Link do płatności</div>
+                                    <div id="offer-checkout-url" class="text-sm text-zinc-300 font-mono truncate"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button onclick="copyOfferLink()" class="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors">
+                                    <i class="ph ph-copy"></i>
+                                    Kopiuj
+                                </button>
+                                <button onclick="openOfferLink()" class="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm transition-colors">
+                                    <i class="ph ph-arrow-square-out"></i>
+                                    Otwórz
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -368,8 +473,36 @@
             currentMember = teamMembers.find(m => m.user_id === userId);
             isAdmin = currentMember?.role === 'admin';
 
+            // Update sidebar user info
+            if (currentMember) {
+                const nameEl = document.getElementById('user-name');
+                const avatarEl = document.getElementById('user-avatar');
+                if (nameEl) nameEl.textContent = currentMember.name || '';
+                if (avatarEl && currentMember.name) {
+                    const parts = currentMember.name.trim().split(' ');
+                    const initials = parts.length >= 2
+                        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                        : currentMember.name.substring(0, 2).toUpperCase();
+                    avatarEl.textContent = initials;
+                }
+
+                // Setup profile click
+                const profileBtn = document.getElementById('user-profile-btn');
+                if (profileBtn) {
+                    profileBtn.addEventListener('click', (e) => {
+                        if (e.target.closest('#logout-btn')) return;
+                        const base = getBasePath();
+                        const settingsPath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                            ? `${base}/settings.html`
+                            : '/settings';
+                        window.location.href = settingsPath + '?tab=account';
+                    });
+                }
+            }
+
+            // Settings visible for all users now
             const navSettings = document.getElementById('nav-settings');
-            if (navSettings && isAdmin) navSettings.classList.remove('hidden');
+            if (navSettings) navSettings.classList.remove('hidden');
 
             const navAudit = document.getElementById('nav-audit');
             if (navAudit && isAdmin) navAudit.classList.remove('hidden');
@@ -497,13 +630,19 @@
             updateStatusIndicator();
             renderMilestones();
             renderTimelinePreview();
+            updateOfferLink();
 
             document.getElementById('offer-content').classList.remove('hidden');
 
             // Attach event listeners
             document.getElementById('offer-name').addEventListener('input', triggerAutoSave);
             document.getElementById('offer-description').addEventListener('input', triggerAutoSave);
-            document.getElementById('offer-price').addEventListener('input', triggerAutoSave);
+            document.getElementById('offer-price').addEventListener('input', () => {
+                triggerAutoSave();
+                // Update link visibility when price changes
+                offer.price = parseFloat(document.getElementById('offer-price').value) || 0;
+                updateOfferLink();
+            });
         }
 
         function updateStatusIndicator() {
@@ -514,6 +653,69 @@
                 indicator.innerHTML = '<span class="text-zinc-500">○ Nieaktywna</span>';
             }
         }
+
+        // Checkout link functions
+        function getCheckoutUrl() {
+            if (!offer) return '';
+            const baseUrl = location.origin;
+            const base = getBasePath();
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const checkoutPath = isLocal ? `${base}/checkout/index.html` : '/checkout';
+            return `${baseUrl}${checkoutPath}?offer=${offer.id}`;
+        }
+
+        function updateOfferLink() {
+            if (!offer || !offer.price || offer.price <= 0) {
+                document.getElementById('offer-link-section').classList.add('hidden');
+                return;
+            }
+            const url = getCheckoutUrl();
+            document.getElementById('offer-checkout-url').textContent = url;
+            document.getElementById('offer-link-section').classList.remove('hidden');
+        }
+
+        async function copyOfferLink() {
+            const url = getCheckoutUrl();
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast('Link skopiowany do schowka');
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Link skopiowany do schowka');
+            }
+        }
+
+        function openOfferLink() {
+            const url = getCheckoutUrl();
+            window.open(url, '_blank');
+        }
+
+        function showToast(message) {
+            const existing = document.getElementById('toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-enter';
+            toast.innerHTML = `<i class="ph ph-check-circle text-emerald-400"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Make link functions globally available
+        window.copyOfferLink = copyOfferLink;
+        window.openOfferLink = openOfferLink;
 
         document.getElementById('toggle-active').addEventListener('click', async () => {
             if (!offer) return;
