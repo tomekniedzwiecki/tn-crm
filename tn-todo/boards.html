@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Todo | Tablice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .board-card {
+            transition: all 0.2s ease;
+        }
+        .board-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-zinc-500">
+                <span class="text-zinc-400">tn-todo</span>
+                <span class="text-zinc-700">/</span>
+                <span class="text-white font-medium">tablice</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="openNewBoardModal()" class="bg-violet-500 text-white hover:bg-violet-600 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                    <i class="ph ph-plus mr-1"></i>
+                    Nowa tablica
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-6xl mx-auto animate-enter">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Tablice</h1>
+                        <p class="text-zinc-500">Zarządzaj projektami i zadaniami w stylu Kanban.</p>
+                    </div>
+                </div>
+
+                <!-- Boards Grid -->
+                <div id="boards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div class="col-span-full text-center py-12 text-zinc-500">
+                        <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
+                        <p>Ładowanie tablic...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Board Modal -->
+    <div id="modal-board" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-md m-4">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h2 id="board-modal-title" class="text-lg font-semibold text-white">Nowa tablica</h2>
+                <button onclick="closeBoardModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="board-id">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Nazwa tablicy</label>
+                    <input type="text" id="board-name" placeholder="np. Projekt X, Marketing, Rozwój..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-3 text-sm focus:border-violet-500 focus:outline-none" autofocus>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Opis (opcjonalnie)</label>
+                    <textarea id="board-description" rows="2" placeholder="Krótki opis tablicy..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-3 text-sm focus:border-violet-500 focus:outline-none resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Kolor</label>
+                    <div class="flex gap-2" id="color-picker">
+                        <button type="button" data-color="violet" class="color-btn w-8 h-8 rounded-lg bg-violet-500 hover:scale-110 transition-transform ring-2 ring-offset-2 ring-offset-zinc-900 ring-violet-500"></button>
+                        <button type="button" data-color="blue" class="color-btn w-8 h-8 rounded-lg bg-blue-500 hover:scale-110 transition-transform ring-2 ring-offset-2 ring-offset-zinc-900 ring-transparent"></button>
+                        <button type="button" data-color="emerald" class="color-btn w-8 h-8 rounded-lg bg-emerald-500 hover:scale-110 transition-transform ring-2 ring-offset-2 ring-offset-zinc-900 ring-transparent"></button>
+                        <button type="button" data-color="amber" class="color-btn w-8 h-8 rounded-lg bg-amber-500 hover:scale-110 transition-transform ring-2 ring-offset-2 ring-offset-zinc-900 ring-transparent"></button>
+                        <button type="button" data-color="pink" class="color-btn w-8 h-8 rounded-lg bg-pink-500 hover:scale-110 transition-transform ring-2 ring-offset-2 ring-offset-zinc-900 ring-transparent"></button>
+                        <button type="button" data-color="cyan" class="color-btn w-8 h-8 rounded-lg bg-cyan-500 hover:scale-110 transition-transform ring-2 ring-offset-2 ring-offset-zinc-900 ring-transparent"></button>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closeBoardModal()" class="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                    <button onclick="saveBoard()" class="flex-1 px-4 py-3 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-floppy-disk mr-1"></i>
+                        Zapisz
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Board Modal -->
+    <div id="modal-delete-board" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-sm m-4">
+            <div class="p-5 text-center">
+                <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                    <i class="ph ph-trash text-2xl text-red-400"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">Usuń tablicę</h3>
+                <p class="text-sm text-zinc-400 mb-5">Czy na pewno chcesz usunąć tablicę <span id="delete-board-name" class="text-white font-medium"></span>? Wszystkie listy i zadania zostaną usunięte.</p>
+                <div class="flex gap-3">
+                    <button onclick="closeDeleteBoardModal()" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                    <button onclick="confirmDeleteBoard()" class="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-trash mr-1"></i>
+                        Usuń
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // State
+        let boards = [];
+        let currentTeamMember = null;
+        let selectedColor = 'violet';
+        let deleteBoardId = null;
+
+        const BOARD_COLORS = {
+            'violet': { bg: 'bg-violet-500', gradient: 'from-violet-600 to-violet-700' },
+            'blue': { bg: 'bg-blue-500', gradient: 'from-blue-600 to-blue-700' },
+            'emerald': { bg: 'bg-emerald-500', gradient: 'from-emerald-600 to-emerald-700' },
+            'amber': { bg: 'bg-amber-500', gradient: 'from-amber-500 to-amber-600' },
+            'pink': { bg: 'bg-pink-500', gradient: 'from-pink-500 to-pink-600' },
+            'cyan': { bg: 'bg-cyan-500', gradient: 'from-cyan-500 to-cyan-600' }
+        };
+
+        // Auth check
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = '/tn-crm/index.html';
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('id, role, name, color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (teamMember) {
+                currentTeamMember = teamMember;
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+            }
+
+            return session;
+        }
+
+        // Load boards
+        async function loadBoards() {
+            const { data, error } = await supabaseClient
+                .from('todo_boards')
+                .select(`
+                    *,
+                    created_by_member:team_members!created_by(name),
+                    lists:todo_lists(
+                        id,
+                        tasks:todo_tasks(id)
+                    )
+                `)
+                .eq('is_archived', false)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading boards:', error);
+                return;
+            }
+
+            boards = data || [];
+            renderBoards();
+        }
+
+        function renderBoards() {
+            const grid = document.getElementById('boards-grid');
+
+            if (boards.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-16">
+                        <div class="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                            <i class="ph ph-kanban text-3xl text-zinc-600"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-white mb-2">Brak tablic</h3>
+                        <p class="text-zinc-500 mb-4">Utwórz pierwszą tablicę, aby rozpocząć.</p>
+                        <button onclick="openNewBoardModal()" class="px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors">
+                            <i class="ph ph-plus mr-1"></i>
+                            Nowa tablica
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = boards.map(board => {
+                const color = BOARD_COLORS[board.color] || BOARD_COLORS['violet'];
+                const taskCount = board.lists?.reduce((sum, list) => sum + (list.tasks?.length || 0), 0) || 0;
+                const listCount = board.lists?.length || 0;
+
+                return `
+                    <div class="board-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden cursor-pointer group" onclick="openBoard('${board.id}')">
+                        <div class="h-24 bg-gradient-to-br ${color.gradient} relative">
+                            <div class="absolute inset-0 bg-black/20"></div>
+                            <div class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="event.stopPropagation(); editBoard('${board.id}')" class="p-1.5 bg-black/30 hover:bg-black/50 rounded-lg text-white/80 hover:text-white transition-colors">
+                                    <i class="ph ph-pencil-simple text-sm"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteBoard('${board.id}', '${escapeHtml(board.name)}')" class="p-1.5 bg-black/30 hover:bg-red-500/80 rounded-lg text-white/80 hover:text-white transition-colors">
+                                    <i class="ph ph-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-base font-semibold text-white mb-1 truncate">${escapeHtml(board.name)}</h3>
+                            ${board.description ? `<p class="text-xs text-zinc-500 mb-3 line-clamp-2">${escapeHtml(board.description)}</p>` : '<div class="mb-3"></div>'}
+                            <div class="flex items-center gap-3 text-[11px] text-zinc-500">
+                                <span><i class="ph ph-list mr-1"></i>${listCount} list</span>
+                                <span><i class="ph ph-check-square mr-1"></i>${taskCount} zadań</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function openBoard(boardId) {
+            window.location.href = Sidebar.getPagePath('board') + '?id=' + boardId;
+        }
+
+        // Board modal
+        function openNewBoardModal() {
+            document.getElementById('board-id').value = '';
+            document.getElementById('board-name').value = '';
+            document.getElementById('board-description').value = '';
+            document.getElementById('board-modal-title').textContent = 'Nowa tablica';
+            selectColor('violet');
+            document.getElementById('modal-board').classList.remove('hidden');
+            document.getElementById('modal-board').classList.add('flex');
+            document.getElementById('board-name').focus();
+        }
+
+        function editBoard(boardId) {
+            const board = boards.find(b => b.id === boardId);
+            if (!board) return;
+
+            document.getElementById('board-id').value = board.id;
+            document.getElementById('board-name').value = board.name;
+            document.getElementById('board-description').value = board.description || '';
+            document.getElementById('board-modal-title').textContent = 'Edytuj tablicę';
+            selectColor(board.color || 'violet');
+            document.getElementById('modal-board').classList.remove('hidden');
+            document.getElementById('modal-board').classList.add('flex');
+            document.getElementById('board-name').focus();
+        }
+
+        function closeBoardModal() {
+            document.getElementById('modal-board').classList.add('hidden');
+            document.getElementById('modal-board').classList.remove('flex');
+        }
+
+        function selectColor(color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                const isSelected = btn.dataset.color === color;
+                btn.classList.toggle('ring-transparent', !isSelected);
+                btn.classList.toggle(`ring-${btn.dataset.color}-500`, isSelected);
+            });
+        }
+
+        // Setup color picker
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => selectColor(btn.dataset.color));
+        });
+
+        async function saveBoard() {
+            const id = document.getElementById('board-id').value;
+            const name = document.getElementById('board-name').value.trim();
+            const description = document.getElementById('board-description').value.trim();
+
+            if (!name) {
+                showToast('Podaj nazwę tablicy');
+                return;
+            }
+
+            const boardData = {
+                name,
+                description: description || null,
+                color: selectedColor
+            };
+
+            let error;
+            if (id) {
+                const result = await supabaseClient
+                    .from('todo_boards')
+                    .update(boardData)
+                    .eq('id', id);
+                error = result.error;
+            } else {
+                boardData.created_by = currentTeamMember?.id || null;
+                const result = await supabaseClient
+                    .from('todo_boards')
+                    .insert(boardData);
+                error = result.error;
+            }
+
+            if (error) {
+                console.error('Error saving board:', error);
+                showToast('Błąd zapisu tablicy');
+                return;
+            }
+
+            closeBoardModal();
+            await loadBoards();
+            showToast(id ? 'Tablica zaktualizowana' : 'Tablica utworzona');
+        }
+
+        // Delete board
+        function deleteBoard(boardId, boardName) {
+            deleteBoardId = boardId;
+            document.getElementById('delete-board-name').textContent = `"${boardName}"`;
+            document.getElementById('modal-delete-board').classList.remove('hidden');
+            document.getElementById('modal-delete-board').classList.add('flex');
+        }
+
+        function closeDeleteBoardModal() {
+            document.getElementById('modal-delete-board').classList.add('hidden');
+            document.getElementById('modal-delete-board').classList.remove('flex');
+            deleteBoardId = null;
+        }
+
+        async function confirmDeleteBoard() {
+            if (!deleteBoardId) return;
+
+            const { error } = await supabaseClient
+                .from('todo_boards')
+                .delete()
+                .eq('id', deleteBoardId);
+
+            if (error) {
+                console.error('Error deleting board:', error);
+                showToast('Błąd usuwania tablicy');
+                return;
+            }
+
+            closeDeleteBoardModal();
+            await loadBoards();
+            showToast('Tablica usunięta');
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Init
+        async function init() {
+            Sidebar.render();
+            Sidebar.setupLogout(supabaseClient);
+
+            const session = await checkAuth();
+            if (!session) return;
+
+            await loadBoards();
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeBoardModal();
+                    closeDeleteBoardModal();
+                }
+                if (e.key === 'n' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    openNewBoardModal();
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

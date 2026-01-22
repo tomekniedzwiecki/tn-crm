@@ -536,6 +536,9 @@
                                         <button id="btn-call" class="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg text-emerald-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Zadzwoń" disabled>
                                             <i class="ph ph-phone text-lg"></i>
                                         </button>
+                                        <button id="btn-whatsapp" class="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-lg text-green-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="WhatsApp" disabled>
+                                            <i class="ph ph-whatsapp-logo text-lg"></i>
+                                        </button>
                                     </div>
                                 </div>
                                 <div>
@@ -1449,6 +1452,10 @@
             // Form fields
             document.getElementById('field-email').value = lead.email;
             document.getElementById('field-phone').value = lead.phone || '';
+            // Enable/disable phone action buttons
+            const hasPhone = !!lead.phone;
+            document.getElementById('btn-call').disabled = !hasPhone;
+            document.getElementById('btn-whatsapp').disabled = !hasPhone;
             document.getElementById('field-name').value = lead.name || '';
             document.getElementById('field-company').value = lead.company || '';
             document.getElementById('field-nip').value = lead.nip || '';
@@ -2258,10 +2265,27 @@
             }
         });
 
-        // Enable/disable call button based on phone field
+        // Click-to-WhatsApp
+        document.getElementById('btn-whatsapp').addEventListener('click', async () => {
+            const phone = document.getElementById('field-phone').value.trim();
+            if (phone) {
+                // Remove spaces, dashes and Polish prefix, ensure proper format
+                let cleaned = phone.replace(/[\s\-\(\)]/g, '').replace(/^\+?48/, '');
+                window.open(`https://wa.me/48${cleaned}`, '_blank');
+
+                // Save WhatsApp contact timestamp to database
+                await supabaseClient
+                    .from('leads')
+                    .update({ whatsapp_contacted_at: new Date().toISOString() })
+                    .eq('id', lead.id);
+            }
+        });
+
+        // Enable/disable call and whatsapp buttons based on phone field
         document.getElementById('field-phone').addEventListener('input', (e) => {
             const phone = e.target.value.trim();
             document.getElementById('btn-call').disabled = !phone;
+            document.getElementById('btn-whatsapp').disabled = !phone;
         });
 
         // Delete

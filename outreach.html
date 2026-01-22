@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TN CRM | Mailing</title>
+    <title>TN CRM | Kampanie</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -47,6 +47,37 @@
             border-bottom: 2px solid white;
         }
 
+        /* WhatsApp template cards */
+        .wa-template-btn {
+            transition: all 0.2s ease;
+        }
+        .wa-template-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Table row hover effect */
+        #wa-contacts-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+
+        /* Templates Side Panel */
+        .templates-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .templates-panel.open {
+            transform: translateX(0);
+        }
+        .templates-panel-backdrop {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .templates-panel-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -61,15 +92,15 @@
             <div class="flex items-center gap-2 text-zinc-500">
                 <span class="text-zinc-400">tn-crm</span>
                 <span class="text-zinc-700">/</span>
-                <span class="text-white font-medium">mailing</span>
+                <span class="text-white font-medium">kampanie</span>
             </div>
             <div class="flex items-center gap-4">
-                <div class="relative">
+                <div class="relative" id="header-search-email">
                     <i class="ph ph-magnifying-glass absolute left-2.5 top-1.5 text-zinc-500"></i>
                     <input type="text" id="search-input" placeholder="Szukaj kontaktów..." class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-full pl-8 pr-4 py-1.5 focus:border-zinc-600 focus:outline-none w-56 transition-all placeholder:text-zinc-600">
                 </div>
-                <div class="w-px h-4 bg-zinc-800"></div>
-                <button onclick="openNewCampaignModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                <div class="w-px h-4 bg-zinc-800" id="header-divider-email"></div>
+                <button onclick="openNewCampaignModal()" id="header-btn-email" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                     <i class="ph ph-plus mr-1"></i>
                     Nowa kampania
                 </button>
@@ -81,20 +112,24 @@
             <div class="max-w-7xl mx-auto animate-enter">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Mailing</h1>
-                        <p class="text-zinc-500">Wysyłaj kampanie email do swojej bazy kontaktów.</p>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Kampanie</h1>
+                        <p class="text-zinc-500">Zarządzaj kontaktami i kampaniami outreach.</p>
                     </div>
                 </div>
 
-                <!-- Tabs -->
+                <!-- Main Tabs -->
                 <div class="flex gap-6 border-b border-white/10 mb-6">
                     <button onclick="switchTab('contacts')" id="tab-contacts" class="pb-3 px-1 text-sm font-medium tab-active transition-colors">
                         <i class="ph ph-address-book mr-1.5"></i>
                         Kontakty
                     </button>
-                    <button onclick="switchTab('campaigns')" id="tab-campaigns" class="pb-3 px-1 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors border-b-2 border-transparent">
-                        <i class="ph ph-paper-plane-tilt mr-1.5"></i>
-                        Kampanie
+                    <button onclick="switchTab('campaigns-email')" id="tab-campaigns-email" class="pb-3 px-1 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors border-b-2 border-transparent">
+                        <i class="ph ph-envelope mr-1.5"></i>
+                        Kampanie Email
+                    </button>
+                    <button onclick="switchTab('campaigns-whatsapp')" id="tab-campaigns-whatsapp" class="pb-3 px-1 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors border-b-2 border-transparent">
+                        <i class="ph ph-whatsapp-logo mr-1.5"></i>
+                        Kampanie WhatsApp
                     </button>
                 </div>
 
@@ -168,27 +203,27 @@
                     </div>
                 </div>
 
-                <!-- Tab: Campaigns -->
-                <div id="panel-campaigns" class="hidden">
-                    <!-- Stats -->
-                    <div class="grid grid-cols-4 gap-4 mb-6">
-                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Aktywne</div>
-                            <div id="stat-active" class="text-2xl font-semibold text-emerald-400">0</div>
+                <!-- Tab: Campaigns Email -->
+                <div id="panel-campaigns-email" class="hidden">
+                        <!-- Stats -->
+                        <div class="grid grid-cols-4 gap-4 mb-6">
+                            <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Aktywne</div>
+                                <div id="stat-active" class="text-2xl font-semibold text-emerald-400">0</div>
+                            </div>
+                            <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Wysłanych</div>
+                                <div id="stat-sent" class="text-2xl font-semibold text-white">0</div>
+                            </div>
+                            <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Follow-upy</div>
+                                <div id="stat-followups" class="text-2xl font-semibold text-white">0</div>
+                            </div>
+                            <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Odpowiedzi</div>
+                                <div id="stat-replies" class="text-2xl font-semibold text-violet-400">0</div>
+                            </div>
                         </div>
-                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Wysłanych</div>
-                            <div id="stat-sent" class="text-2xl font-semibold text-white">0</div>
-                        </div>
-                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Follow-upy</div>
-                            <div id="stat-followups" class="text-2xl font-semibold text-white">0</div>
-                        </div>
-                        <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">Odpowiedzi</div>
-                            <div id="stat-replies" class="text-2xl font-semibold text-violet-400">0</div>
-                        </div>
-                    </div>
 
                     <!-- Campaigns List -->
                     <div id="campaigns-list" class="space-y-3">
@@ -196,6 +231,152 @@
                             <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
                             <p>Ładowanie kampanii...</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Campaigns WhatsApp -->
+                <div id="panel-campaigns-whatsapp" class="hidden">
+                    <!-- Saved Filters + Main Filters -->
+                    <div class="bg-zinc-900/40 rounded-xl border border-white/5 p-4 mb-4">
+                        <!-- Row 1: Saved Filters -->
+                        <div class="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-zinc-800">
+                            <div class="flex items-center gap-2 text-zinc-500">
+                                <i class="ph ph-bookmark-simple text-sm"></i>
+                                <span class="text-[10px] uppercase tracking-wider font-medium">Zapisane:</span>
+                            </div>
+                            <div id="wa-saved-filters" class="flex flex-wrap gap-2 flex-1">
+                                <!-- Saved filters will be rendered here -->
+                                <span class="text-xs text-zinc-600 italic">Brak zapisanych filtrów</span>
+                            </div>
+                            <div class="flex items-center gap-2 ml-auto">
+                                <button onclick="openSaveFilterModal()" id="wa-btn-save-filter" class="hidden px-3 py-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors border border-emerald-500/20 font-medium">
+                                    <i class="ph ph-floppy-disk mr-1.5"></i>
+                                    Zapisz filtr
+                                </button>
+                                <button onclick="resetWaFilters()" id="wa-reset-filters" class="hidden px-3 py-1.5 text-xs bg-zinc-700/80 hover:bg-zinc-600 text-zinc-300 rounded-lg transition-colors border border-zinc-600">
+                                    <i class="ph ph-arrow-counter-clockwise mr-1.5"></i>
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Search -->
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="relative flex-1 max-w-xs">
+                                <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
+                                <input type="text" id="wa-search" placeholder="Szukaj email, telefon..." class="bg-zinc-800 border border-zinc-700 w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none">
+                            </div>
+                            <div class="relative flex-1 max-w-xs">
+                                <i class="ph ph-package absolute left-3 top-2.5 text-zinc-500"></i>
+                                <input type="text" id="wa-filter-product" placeholder="Szukaj produkt..." class="bg-zinc-800 border border-zinc-700 w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Filters -->
+                        <div class="flex flex-wrap items-center gap-3">
+                            <!-- LTV Filter -->
+                            <div class="flex items-center gap-1.5 bg-zinc-800/50 rounded-lg px-3 py-1.5">
+                                <span class="text-[10px] text-zinc-500 uppercase tracking-wider">LTV:</span>
+                                <input type="number" id="wa-filter-ltv-min" placeholder="od" class="bg-transparent border-none text-zinc-300 text-xs focus:outline-none w-16 text-center" min="0">
+                                <span class="text-zinc-600">-</span>
+                                <input type="number" id="wa-filter-ltv-max" placeholder="do" class="bg-transparent border-none text-zinc-300 text-xs focus:outline-none w-16 text-center" min="0">
+                                <span class="text-[10px] text-zinc-500">zł</span>
+                            </div>
+
+                            <!-- Last Purchase Filter -->
+                            <select id="wa-filter-recency" class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-500 focus:outline-none cursor-pointer">
+                                <option value="">Zakup: kiedykolwiek</option>
+                                <option value="30">Ostatnie 30 dni</option>
+                                <option value="60">Ostatnie 60 dni</option>
+                                <option value="90">Ostatnie 90 dni</option>
+                                <option value="180">Ostatnie 180 dni</option>
+                                <option value="old-90">> 90 dni temu</option>
+                                <option value="old-180">> 180 dni temu</option>
+                            </select>
+
+                            <!-- Products Filter -->
+                            <select id="wa-filter-products" class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-500 focus:outline-none cursor-pointer">
+                                <option value="">Produkty: wszystkie</option>
+                                <option value="1">1+ produktów</option>
+                                <option value="2">2+ produktów</option>
+                                <option value="3">3+ produktów</option>
+                                <option value="5">5+ produktów</option>
+                            </select>
+
+                            <!-- WhatsApp Status -->
+                            <select id="wa-filter-whatsapp" class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-500 focus:outline-none cursor-pointer">
+                                <option value="">Status: wszystkie</option>
+                                <option value="pending">Do kontaktu</option>
+                                <option value="contacted">Skontaktowano</option>
+                            </select>
+
+                            <!-- Source Filter -->
+                            <select id="wa-filter-source" class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-500 focus:outline-none cursor-pointer">
+                                <option value="">Źródło: wszystkie</option>
+                            </select>
+
+                            <div class="flex-1"></div>
+
+                            <!-- Sort -->
+                            <select id="wa-sort" class="bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-lg px-3 py-2 focus:border-zinc-500 focus:outline-none cursor-pointer">
+                                <option value="ltv_desc">LTV ↓</option>
+                                <option value="ltv_asc">LTV ↑</option>
+                                <option value="last_purchase_desc">Zakup ↓</option>
+                                <option value="last_purchase_asc">Zakup ↑</option>
+                                <option value="products_desc">Produkty ↓</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Results Header -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3 text-xs text-zinc-500">
+                            <span><span id="wa-stat-pending" class="text-amber-400 font-medium">0</span> do kontaktu</span>
+                            <span>•</span>
+                            <span><span id="wa-stat-contacted" class="text-green-400 font-medium">0</span> skontaktowano</span>
+                        </div>
+                        <button onclick="toggleTemplatesPanel()" id="btn-templates-panel" class="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg transition-colors border border-zinc-700 flex items-center gap-2">
+                            <i class="ph ph-chat-text"></i>
+                            <span>Szablony</span>
+                            <span id="templates-count" class="text-zinc-500">(0)</span>
+                        </button>
+                    </div>
+
+                    <!-- Contacts Table -->
+                    <div class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-white/5 text-left bg-zinc-900/50">
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Kontakt</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Telefon</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-right">LTV</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Pierwszy zakup</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Ostatni zakup</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-center">Produkty</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Status</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-center w-28">Akcja</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wa-contacts-table">
+                                <tr>
+                                    <td colspan="8" class="px-4 py-12 text-center text-zinc-500">
+                                        <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
+                                        <p>Ładowanie kontaktów...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-4">
+                        <button onclick="waContactsPrevPage()" id="wa-btn-prev" class="px-4 py-2 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="ph ph-caret-left mr-1"></i> Poprzednia
+                        </button>
+                        <span id="wa-pagination-info" class="text-xs text-zinc-500 font-mono">Strona 1</span>
+                        <button onclick="waContactsNextPage()" id="wa-btn-next" class="px-4 py-2 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Następna <i class="ph ph-caret-right ml-1"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -538,10 +719,150 @@
         </div>
     </div>
 
+    <!-- Save Filter Modal -->
+    <div id="modal-save-filter" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-sm m-4">
+            <div class="flex items-center justify-between p-4 border-b border-white/5">
+                <h2 class="text-base font-semibold text-white">Zapisz filtr</h2>
+                <button onclick="closeSaveFilterModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Nazwa filtra</label>
+                <input type="text" id="filter-name-input" placeholder="np. VIP klienci, Reaktywacja..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none mb-4">
+                <button onclick="saveCurrentFilter()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg font-medium text-sm transition-colors">
+                    <i class="ph ph-floppy-disk mr-1"></i>
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Filter Confirmation Modal -->
+    <div id="modal-delete-filter" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-sm m-4">
+            <div class="p-5 text-center">
+                <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                    <i class="ph ph-trash text-2xl text-red-400"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">Usuń filtr</h3>
+                <p class="text-sm text-zinc-400 mb-5">Czy na pewno chcesz usunąć filtr <span id="delete-filter-name" class="text-white font-medium"></span>?</p>
+                <div class="flex gap-3">
+                    <button onclick="closeDeleteFilterModal()" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                    <button onclick="confirmDeleteFilter()" class="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-trash mr-1"></i>
+                        Usuń
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Template Modal -->
+    <div id="modal-template" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-lg m-4">
+            <div class="flex items-center justify-between p-4 border-b border-white/5">
+                <h2 id="template-modal-title" class="text-base font-semibold text-white">Nowy szablon</h2>
+                <button onclick="closeTemplateModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <input type="hidden" id="template-id">
+                <div class="mb-4">
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Nazwa szablonu</label>
+                    <input type="text" id="template-name" placeholder="np. Powitanie, Follow-up, Reaktywacja..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Kategoria</label>
+                    <select id="template-category" class="w-full bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm rounded-lg px-3 py-2.5 focus:border-zinc-500 focus:outline-none cursor-pointer">
+                        <option value="general">Ogólne</option>
+                        <option value="intro">Pierwsze kontakt</option>
+                        <option value="followup">Follow-up</option>
+                        <option value="reactivation">Reaktywacja</option>
+                        <option value="promo">Promocje</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Treść wiadomości</label>
+                    <textarea id="template-content" rows="6" placeholder="Cześć! Mam dla Ciebie..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-zinc-500 focus:outline-none resize-none"></textarea>
+                    <p class="text-[10px] text-zinc-600 mt-1">Możesz użyć zmiennych: {imie}, {produkt}, {ltv}</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="closeTemplateModal()" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                    <button onclick="saveTemplate()" class="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-floppy-disk mr-1"></i>
+                        Zapisz
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Template Confirmation Modal -->
+    <div id="modal-delete-template" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-sm m-4">
+            <div class="p-5 text-center">
+                <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                    <i class="ph ph-trash text-2xl text-red-400"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">Usuń szablon</h3>
+                <p class="text-sm text-zinc-400 mb-5">Czy na pewno chcesz usunąć szablon <span id="delete-template-name" class="text-white font-medium"></span>?</p>
+                <div class="flex gap-3">
+                    <button onclick="closeDeleteTemplateModal()" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                    <button onclick="confirmDeleteTemplate()" class="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-trash mr-1"></i>
+                        Usuń
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
         <span id="toast-message"></span>
     </div>
+
+    <!-- Templates Side Panel (Drawer) -->
+    <div id="templates-panel-backdrop" class="templates-panel-backdrop fixed inset-0 bg-black/50 z-40" onclick="closeTemplatesPanel()"></div>
+    <aside id="templates-panel" class="templates-panel fixed top-0 right-0 h-full w-80 bg-zinc-900 border-l border-white/10 z-50 flex flex-col shadow-2xl">
+        <!-- Panel Header -->
+        <div class="flex items-center justify-between p-4 border-b border-white/10">
+            <div class="flex items-center gap-2">
+                <i class="ph ph-chat-text text-zinc-400"></i>
+                <h3 class="text-sm font-semibold text-white">Szablony wiadomości</h3>
+            </div>
+            <button onclick="closeTemplatesPanel()" class="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Add New Button -->
+        <div class="p-4 border-b border-white/10">
+            <button onclick="openTemplateModal()" class="w-full px-4 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium transition-colors border border-emerald-500/30 flex items-center justify-center gap-2">
+                <i class="ph ph-plus"></i>
+                Nowy szablon
+            </button>
+        </div>
+
+        <!-- Templates List -->
+        <div id="templates-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <div class="text-xs text-zinc-600 italic py-8 text-center">Ładowanie...</div>
+        </div>
+
+        <!-- Panel Footer -->
+        <div class="p-4 border-t border-white/10 bg-zinc-950/50">
+            <p class="text-[10px] text-zinc-600 text-center">Kliknij "Kopiuj" aby skopiować treść do schowka</p>
+        </div>
+    </aside>
 
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
@@ -563,6 +884,20 @@
         const DETAILS_PAGE_SIZE = 50;
         let totalDetailsSends = 0;
 
+        // WhatsApp state
+        let waContacts = [];
+        let waCurrentPage = 1;
+        const WA_PAGE_SIZE = 50;
+        let waTotalContacts = 0;
+
+        // Current user state
+        let currentTeamMember = null;
+
+        // Templates state
+        let messageTemplates = [];
+        let deleteTemplateId = null;
+        let templatesPanelOpen = localStorage.getItem('templatesPanelOpen') === 'true';
+
         // Auth check
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -579,8 +914,9 @@
                 .eq('user_id', session.user.id)
                 .single();
 
-            // Update sidebar user info
+            // Update sidebar user info and store team member globally
             if (teamMember) {
+                currentTeamMember = teamMember;
                 Sidebar.setUserName(teamMember.name);
                 Sidebar.setUserColor(teamMember.color);
                 Sidebar.setupProfileClick();
@@ -594,16 +930,33 @@
 
         // Tab switching
         function switchTab(tab) {
-            document.getElementById('panel-contacts').classList.toggle('hidden', tab !== 'contacts');
-            document.getElementById('panel-campaigns').classList.toggle('hidden', tab !== 'campaigns');
+            const tabs = ['contacts', 'campaigns-email', 'campaigns-whatsapp'];
 
-            document.getElementById('tab-contacts').classList.toggle('tab-active', tab === 'contacts');
-            document.getElementById('tab-contacts').classList.toggle('text-zinc-500', tab !== 'contacts');
-            document.getElementById('tab-contacts').classList.toggle('border-transparent', tab !== 'contacts');
+            tabs.forEach(t => {
+                const panel = document.getElementById(`panel-${t}`);
+                const tabBtn = document.getElementById(`tab-${t}`);
 
-            document.getElementById('tab-campaigns').classList.toggle('tab-active', tab === 'campaigns');
-            document.getElementById('tab-campaigns').classList.toggle('text-zinc-500', tab !== 'campaigns');
-            document.getElementById('tab-campaigns').classList.toggle('border-transparent', tab !== 'campaigns');
+                if (panel) panel.classList.toggle('hidden', tab !== t);
+                if (tabBtn) {
+                    tabBtn.classList.toggle('tab-active', tab === t);
+                    tabBtn.classList.toggle('text-zinc-500', tab !== t);
+                    tabBtn.classList.toggle('border-transparent', tab !== t);
+                }
+            });
+
+            // Load WhatsApp contacts when switching to that tab
+            if (tab === 'campaigns-whatsapp') {
+                renderSavedFilters();
+                updateFilterButtons();
+                loadWaContacts();
+                loadTemplates();
+                // Restore templates panel state
+                updateTemplatesPanelState();
+            } else {
+                // Hide templates panel when leaving WhatsApp tab
+                document.getElementById('templates-panel').classList.remove('open');
+                document.getElementById('templates-panel-backdrop').classList.remove('open');
+            }
         }
 
         // Load contacts
@@ -786,6 +1139,7 @@
 
                 document.getElementById('filter-source').innerHTML = '<option value="">Wszystkie źródła</option>' + options;
                 document.getElementById('campaign-filter-source').innerHTML = '<option value="">Wszystkie</option>' + options;
+                document.getElementById('wa-filter-source').innerHTML = '<option value="">Wszystkie źródła</option>' + options;
             }
         }
 
@@ -1656,6 +2010,664 @@
             }, 3000);
         }
 
+        // ===============================================
+        // WHATSAPP CAMPAIGNS FUNCTIONS
+        // ===============================================
+
+        const WA_FILTERS_STORAGE_KEY = 'wa_saved_filters';
+
+        // Get current filter state
+        function getCurrentFilters() {
+            return {
+                product: document.getElementById('wa-filter-product').value.trim(),
+                ltvMin: document.getElementById('wa-filter-ltv-min').value,
+                ltvMax: document.getElementById('wa-filter-ltv-max').value,
+                recency: document.getElementById('wa-filter-recency').value,
+                products: document.getElementById('wa-filter-products').value,
+                whatsapp: document.getElementById('wa-filter-whatsapp').value,
+                source: document.getElementById('wa-filter-source').value,
+                sort: document.getElementById('wa-sort').value
+            };
+        }
+
+        // Check if any filter is active
+        function hasActiveFilters() {
+            const f = getCurrentFilters();
+            return f.product || f.ltvMin || f.ltvMax || f.recency || f.products || f.whatsapp || f.source;
+        }
+
+        // Update visibility of save/reset buttons
+        function updateFilterButtons() {
+            const hasFilters = hasActiveFilters();
+            document.getElementById('wa-btn-save-filter').classList.toggle('hidden', !hasFilters);
+            document.getElementById('wa-reset-filters').classList.toggle('hidden', !hasFilters);
+        }
+
+        // Reset all filters
+        function resetWaFilters() {
+            document.getElementById('wa-search').value = '';
+            document.getElementById('wa-filter-product').value = '';
+            document.getElementById('wa-filter-ltv-min').value = '';
+            document.getElementById('wa-filter-ltv-max').value = '';
+            document.getElementById('wa-filter-recency').value = '';
+            document.getElementById('wa-filter-products').value = '';
+            document.getElementById('wa-filter-whatsapp').value = '';
+            document.getElementById('wa-filter-source').value = '';
+            document.getElementById('wa-sort').value = 'ltv_desc';
+            waCurrentPage = 1;
+            updateFilterButtons();
+            renderSavedFilters();
+            loadWaContacts();
+        }
+
+        // Load saved filters from localStorage
+        function getSavedFilters() {
+            try {
+                return JSON.parse(localStorage.getItem(WA_FILTERS_STORAGE_KEY)) || [];
+            } catch {
+                return [];
+            }
+        }
+
+        // Save filters to localStorage
+        function setSavedFilters(filters) {
+            localStorage.setItem(WA_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+        }
+
+        // Render saved filters as buttons
+        function renderSavedFilters() {
+            const container = document.getElementById('wa-saved-filters');
+            const saved = getSavedFilters();
+            const currentFilters = JSON.stringify(getCurrentFilters());
+
+            if (saved.length === 0) {
+                container.innerHTML = '<span class="text-xs text-zinc-600 italic">Brak zapisanych filtrów</span>';
+                return;
+            }
+
+            container.innerHTML = saved.map((f, idx) => {
+                const isActive = JSON.stringify(f.filters) === currentFilters;
+                const activeClass = isActive
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10 shadow-sm'
+                    : 'bg-zinc-800/80 text-zinc-300 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600';
+                return `
+                    <div class="group flex items-center border rounded-lg overflow-hidden ${activeClass}">
+                        <button onclick="applySavedFilter(${idx})" class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-colors">
+                            <i class="ph ph-funnel text-[11px] ${isActive ? 'text-emerald-400' : 'text-zinc-500'}"></i>
+                            <span>${f.name}</span>
+                        </button>
+                        <button onclick="deleteSavedFilter(${idx})" class="px-2 py-1.5 border-l ${isActive ? 'border-emerald-500/30 text-emerald-400/60 hover:text-red-400 hover:bg-red-500/10' : 'border-zinc-700 text-zinc-500 hover:text-red-400 hover:bg-red-500/10'} transition-colors" title="Usuń filtr">
+                            <i class="ph ph-x text-[10px]"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Apply a saved filter
+        function applySavedFilter(index) {
+            const saved = getSavedFilters();
+            if (!saved[index]) return;
+
+            const f = saved[index].filters;
+            document.getElementById('wa-filter-product').value = f.product || '';
+            document.getElementById('wa-filter-ltv-min').value = f.ltvMin || '';
+            document.getElementById('wa-filter-ltv-max').value = f.ltvMax || '';
+            document.getElementById('wa-filter-recency').value = f.recency || '';
+            document.getElementById('wa-filter-products').value = f.products || '';
+            document.getElementById('wa-filter-whatsapp').value = f.whatsapp || '';
+            document.getElementById('wa-filter-source').value = f.source || '';
+            document.getElementById('wa-sort').value = f.sort || 'ltv_desc';
+
+            waCurrentPage = 1;
+            updateFilterButtons();
+            renderSavedFilters();
+            loadWaContacts();
+        }
+
+        // Delete filter state
+        let deleteFilterIndex = null;
+
+        // Delete a saved filter - show confirmation modal
+        function deleteSavedFilter(index) {
+            const saved = getSavedFilters();
+            if (!saved[index]) return;
+
+            deleteFilterIndex = index;
+            document.getElementById('delete-filter-name').textContent = `"${saved[index].name}"`;
+            document.getElementById('modal-delete-filter').classList.remove('hidden');
+            document.getElementById('modal-delete-filter').classList.add('flex');
+        }
+
+        // Close delete confirmation modal
+        function closeDeleteFilterModal() {
+            document.getElementById('modal-delete-filter').classList.add('hidden');
+            document.getElementById('modal-delete-filter').classList.remove('flex');
+            deleteFilterIndex = null;
+        }
+
+        // Confirm and execute filter deletion
+        function confirmDeleteFilter() {
+            if (deleteFilterIndex === null) return;
+
+            const saved = getSavedFilters();
+            const filterName = saved[deleteFilterIndex]?.name;
+            saved.splice(deleteFilterIndex, 1);
+            setSavedFilters(saved);
+
+            closeDeleteFilterModal();
+            renderSavedFilters();
+            showToast(`Filtr "${filterName}" usunięty`);
+        }
+
+        // Open save filter modal
+        function openSaveFilterModal() {
+            document.getElementById('modal-save-filter').classList.remove('hidden');
+            document.getElementById('modal-save-filter').classList.add('flex');
+            document.getElementById('filter-name-input').value = '';
+            document.getElementById('filter-name-input').focus();
+        }
+
+        // Close save filter modal
+        function closeSaveFilterModal() {
+            document.getElementById('modal-save-filter').classList.add('hidden');
+            document.getElementById('modal-save-filter').classList.remove('flex');
+        }
+
+        // Save current filter with name
+        function saveCurrentFilter() {
+            const name = document.getElementById('filter-name-input').value.trim();
+            if (!name) {
+                showToast('Podaj nazwę filtra');
+                return;
+            }
+
+            const saved = getSavedFilters();
+            saved.push({
+                name: name,
+                filters: getCurrentFilters()
+            });
+            setSavedFilters(saved);
+
+            closeSaveFilterModal();
+            renderSavedFilters();
+            showToast(`Filtr "${name}" zapisany`);
+        }
+
+        // =============================================
+        // MESSAGE TEMPLATES
+        // =============================================
+
+        function toggleTemplatesPanel() {
+            templatesPanelOpen = !templatesPanelOpen;
+            updateTemplatesPanelState();
+            localStorage.setItem('templatesPanelOpen', templatesPanelOpen);
+        }
+
+        function openTemplatesPanel() {
+            templatesPanelOpen = true;
+            updateTemplatesPanelState();
+            localStorage.setItem('templatesPanelOpen', 'true');
+        }
+
+        function closeTemplatesPanel() {
+            templatesPanelOpen = false;
+            updateTemplatesPanelState();
+            localStorage.setItem('templatesPanelOpen', 'false');
+        }
+
+        function updateTemplatesPanelState() {
+            const panel = document.getElementById('templates-panel');
+            const backdrop = document.getElementById('templates-panel-backdrop');
+            const btn = document.getElementById('btn-templates-panel');
+
+            panel.classList.toggle('open', templatesPanelOpen);
+            backdrop.classList.toggle('open', templatesPanelOpen);
+
+            if (btn) {
+                btn.classList.toggle('bg-emerald-500/20', templatesPanelOpen);
+                btn.classList.toggle('border-emerald-500/30', templatesPanelOpen);
+                btn.classList.toggle('text-emerald-400', templatesPanelOpen);
+                btn.classList.toggle('bg-zinc-800', !templatesPanelOpen);
+                btn.classList.toggle('border-zinc-700', !templatesPanelOpen);
+                btn.classList.toggle('text-zinc-300', !templatesPanelOpen);
+            }
+        }
+
+        async function loadTemplates() {
+            const { data, error } = await supabaseClient
+                .from('message_templates')
+                .select('*, created_by_member:team_members!created_by(name)')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading templates:', error);
+                return;
+            }
+
+            messageTemplates = data || [];
+            document.getElementById('templates-count').textContent = `(${messageTemplates.length})`;
+            renderTemplates();
+        }
+
+        const CATEGORY_LABELS = {
+            'general': 'Ogólne',
+            'intro': 'Pierwszy kontakt',
+            'followup': 'Follow-up',
+            'reactivation': 'Reaktywacja',
+            'promo': 'Promocje'
+        };
+
+        const CATEGORY_COLORS = {
+            'general': 'bg-zinc-600',
+            'intro': 'bg-blue-500',
+            'followup': 'bg-amber-500',
+            'reactivation': 'bg-purple-500',
+            'promo': 'bg-pink-500'
+        };
+
+        function renderTemplates() {
+            const container = document.getElementById('templates-list');
+
+            if (messageTemplates.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                            <i class="ph ph-chat-text text-xl text-zinc-600"></i>
+                        </div>
+                        <p class="text-xs text-zinc-500 mb-1">Brak szablonów</p>
+                        <p class="text-[10px] text-zinc-600">Kliknij "Nowy szablon" aby dodać pierwszy</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = messageTemplates.map(t => `
+                <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 group hover:border-zinc-600 transition-colors">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                            <span class="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-medium rounded ${CATEGORY_COLORS[t.category] || 'bg-zinc-600'} text-white shrink-0">${CATEGORY_LABELS[t.category] || t.category}</span>
+                            <span class="text-sm font-medium text-white truncate">${escapeHtml(t.name)}</span>
+                        </div>
+                        <div class="flex items-center gap-0.5 shrink-0">
+                            <button onclick="editTemplate('${t.id}')" class="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-700 rounded transition-colors" title="Edytuj">
+                                <i class="ph ph-pencil-simple text-sm"></i>
+                            </button>
+                            <button onclick="deleteTemplate('${t.id}', '${escapeHtml(t.name).replace(/'/g, "\\'")}'); event.stopPropagation();" class="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Usuń">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-zinc-400 line-clamp-3 mb-3 leading-relaxed">${escapeHtml(t.content)}</p>
+                    <button onclick="copyTemplate('${t.id}')" class="w-full px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 border border-emerald-500/20">
+                        <i class="ph ph-copy"></i>
+                        Kopiuj do schowka
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function copyTemplate(id) {
+            const template = messageTemplates.find(t => t.id === id);
+            if (!template) return;
+
+            try {
+                await navigator.clipboard.writeText(template.content);
+                showToast('Skopiowano do schowka');
+            } catch (err) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = template.content;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Skopiowano do schowka');
+            }
+        }
+
+        function openTemplateModal(templateId = null) {
+            document.getElementById('template-id').value = templateId || '';
+            document.getElementById('template-modal-title').textContent = templateId ? 'Edytuj szablon' : 'Nowy szablon';
+
+            if (templateId) {
+                const template = messageTemplates.find(t => t.id === templateId);
+                if (template) {
+                    document.getElementById('template-name').value = template.name;
+                    document.getElementById('template-category').value = template.category;
+                    document.getElementById('template-content').value = template.content;
+                }
+            } else {
+                document.getElementById('template-name').value = '';
+                document.getElementById('template-category').value = 'general';
+                document.getElementById('template-content').value = '';
+            }
+
+            document.getElementById('modal-template').classList.remove('hidden');
+            document.getElementById('modal-template').classList.add('flex');
+            document.getElementById('template-name').focus();
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('modal-template').classList.add('hidden');
+            document.getElementById('modal-template').classList.remove('flex');
+        }
+
+        function editTemplate(id) {
+            openTemplateModal(id);
+        }
+
+        async function saveTemplate() {
+            const id = document.getElementById('template-id').value;
+            const name = document.getElementById('template-name').value.trim();
+            const category = document.getElementById('template-category').value;
+            const content = document.getElementById('template-content').value.trim();
+
+            if (!name || !content) {
+                showToast('Wypełnij wszystkie pola');
+                return;
+            }
+
+            const templateData = {
+                name,
+                category,
+                content
+            };
+
+            let error;
+            if (id) {
+                // Update existing
+                const result = await supabaseClient
+                    .from('message_templates')
+                    .update(templateData)
+                    .eq('id', id);
+                error = result.error;
+            } else {
+                // Create new
+                templateData.created_by = currentTeamMember?.id || null;
+                const result = await supabaseClient
+                    .from('message_templates')
+                    .insert(templateData);
+                error = result.error;
+            }
+
+            if (error) {
+                console.error('Error saving template:', error);
+                showToast('Błąd zapisu szablonu');
+                return;
+            }
+
+            closeTemplateModal();
+            await loadTemplates();
+            showToast(id ? 'Szablon zaktualizowany' : 'Szablon utworzony');
+        }
+
+        function deleteTemplate(id, name) {
+            deleteTemplateId = id;
+            document.getElementById('delete-template-name').textContent = `"${name}"`;
+            document.getElementById('modal-delete-template').classList.remove('hidden');
+            document.getElementById('modal-delete-template').classList.add('flex');
+        }
+
+        function closeDeleteTemplateModal() {
+            document.getElementById('modal-delete-template').classList.add('hidden');
+            document.getElementById('modal-delete-template').classList.remove('flex');
+            deleteTemplateId = null;
+        }
+
+        async function confirmDeleteTemplate() {
+            if (!deleteTemplateId) return;
+
+            const { error } = await supabaseClient
+                .from('message_templates')
+                .delete()
+                .eq('id', deleteTemplateId);
+
+            if (error) {
+                console.error('Error deleting template:', error);
+                showToast('Błąd usuwania szablonu');
+                return;
+            }
+
+            closeDeleteTemplateModal();
+            await loadTemplates();
+            showToast('Szablon usunięty');
+        }
+
+        // =============================================
+        // WHATSAPP CONTACTS
+        // =============================================
+
+        async function loadWaContacts() {
+            const search = document.getElementById('wa-search').value.trim().toLowerCase();
+            const productFilter = document.getElementById('wa-filter-product').value.trim();
+            const ltvMin = document.getElementById('wa-filter-ltv-min').value;
+            const ltvMax = document.getElementById('wa-filter-ltv-max').value;
+            const recencyFilter = document.getElementById('wa-filter-recency').value;
+            const productsCountFilter = document.getElementById('wa-filter-products').value;
+            const whatsappFilter = document.getElementById('wa-filter-whatsapp').value;
+            const sourceFilter = document.getElementById('wa-filter-source').value;
+            const sortValue = document.getElementById('wa-sort').value;
+
+            // Parse sort
+            let orderColumn = 'ltv_pln';
+            let orderAsc = false;
+            switch (sortValue) {
+                case 'ltv_asc': orderColumn = 'ltv_pln'; orderAsc = true; break;
+                case 'ltv_desc': orderColumn = 'ltv_pln'; orderAsc = false; break;
+                case 'last_purchase_desc': orderColumn = 'last_purchase'; orderAsc = false; break;
+                case 'last_purchase_asc': orderColumn = 'last_purchase'; orderAsc = true; break;
+                case 'first_purchase_desc': orderColumn = 'first_purchase'; orderAsc = false; break;
+                case 'products_desc': orderColumn = 'unique_products'; orderAsc = false; break;
+            }
+
+            // Build query - only contacts with phone, include contacted_by team member name
+            let query = supabaseClient
+                .from('outreach_contacts')
+                .select('*, contacted_by:team_members!whatsapp_contacted_by(id, name)', { count: 'exact' })
+                .not('phone', 'is', null)
+                .order(orderColumn, { ascending: orderAsc, nullsFirst: false })
+                .range((waCurrentPage - 1) * WA_PAGE_SIZE, waCurrentPage * WA_PAGE_SIZE - 1);
+
+            // Search
+            if (search) {
+                query = query.or(`email.ilike.%${search}%,phone.ilike.%${search}%`);
+            }
+
+            // LTV filter (min/max)
+            if (ltvMin) {
+                query = query.gte('ltv_pln', parseInt(ltvMin));
+            }
+            if (ltvMax) {
+                query = query.lte('ltv_pln', parseInt(ltvMax));
+            }
+
+            // Recency filter (last purchase)
+            if (recencyFilter) {
+                const now = new Date();
+                if (recencyFilter.startsWith('old-')) {
+                    const days = parseInt(recencyFilter.replace('old-', ''));
+                    const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+                    query = query.lt('last_purchase', cutoff.toISOString());
+                } else {
+                    const days = parseInt(recencyFilter);
+                    const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+                    query = query.gte('last_purchase', cutoff.toISOString());
+                }
+            }
+
+            // Product name filter (search in products array)
+            if (productFilter) {
+                query = query.cs('products', [productFilter]);
+            }
+
+            // Products count filter
+            if (productsCountFilter) {
+                query = query.gte('unique_products', parseInt(productsCountFilter));
+            }
+
+            // WhatsApp filter
+            if (whatsappFilter === 'pending') {
+                query = query.is('whatsapp_contacted_at', null);
+            } else if (whatsappFilter === 'contacted') {
+                query = query.not('whatsapp_contacted_at', 'is', null);
+            }
+
+            // Source filter
+            if (sourceFilter) {
+                query = query.eq('source', sourceFilter);
+            }
+
+            const { data, count, error } = await query;
+
+            if (error) {
+                console.error('Error loading WhatsApp contacts:', error);
+                return;
+            }
+
+            waContacts = data || [];
+            waTotalContacts = count || 0;
+
+            renderWaContacts();
+            updateWaPagination();
+            await loadWaStats();
+        }
+
+        async function loadWaStats() {
+            // Get counts based on current filtered results
+            const [pendingRes, contactedRes] = await Promise.all([
+                supabaseClient.from('outreach_contacts').select('*', { count: 'exact', head: true }).not('phone', 'is', null).is('whatsapp_contacted_at', null),
+                supabaseClient.from('outreach_contacts').select('*', { count: 'exact', head: true }).not('phone', 'is', null).not('whatsapp_contacted_at', 'is', null)
+            ]);
+
+            document.getElementById('wa-stat-pending').textContent = (pendingRes.count || 0).toLocaleString('pl-PL');
+            document.getElementById('wa-stat-contacted').textContent = (contactedRes.count || 0).toLocaleString('pl-PL');
+        }
+
+        function renderWaContacts() {
+            const tbody = document.getElementById('wa-contacts-table');
+
+            if (waContacts.length === 0) {
+                const hasFilters = hasActiveFilters() || document.getElementById('wa-search').value;
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-16 text-center text-zinc-500">
+                            <i class="ph ${hasFilters ? 'ph-funnel-simple' : 'ph-whatsapp-logo'} text-4xl mb-3 block"></i>
+                            <p class="text-sm mb-1">${hasFilters ? 'Brak wyników dla wybranych filtrów' : 'Brak kontaktów z numerem telefonu'}</p>
+                            ${hasFilters ? '<button onclick="resetWaFilters()" class="mt-3 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs text-white transition-colors">Wyczyść filtry</button>' : ''}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = waContacts.map(contact => {
+                const hasWhatsApp = !!contact.whatsapp_contacted_at;
+
+                return `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td class="px-4 py-3">
+                            <div class="font-mono text-xs text-white">${contact.email}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="font-mono text-xs text-zinc-400">${contact.phone || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <span class="font-mono text-xs ${contact.ltv_pln > 10000 ? 'text-emerald-400' : contact.ltv_pln > 1000 ? 'text-white' : 'text-zinc-500'}">
+                                ${contact.ltv_pln ? contact.ltv_pln.toLocaleString('pl-PL') + ' PLN' : '-'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-zinc-500 text-xs">
+                            ${contact.first_purchase ? new Date(contact.first_purchase).toLocaleDateString('pl-PL') : '-'}
+                        </td>
+                        <td class="px-4 py-3 text-zinc-500 text-xs">
+                            ${contact.last_purchase ? new Date(contact.last_purchase).toLocaleDateString('pl-PL') : '-'}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-xs text-zinc-400">${contact.unique_products || 0}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            ${hasWhatsApp
+                                ? `<div class="flex flex-col gap-0.5">
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 inline-flex items-center w-fit" title="${new Date(contact.whatsapp_contacted_at).toLocaleString('pl-PL')}">
+                                        <i class="ph ph-check mr-1"></i>Skontaktowano
+                                    </span>
+                                    ${contact.contacted_by?.name ? `<span class="text-[10px] text-zinc-500 pl-2">${contact.contacted_by.name}</span>` : ''}
+                                   </div>`
+                                : '<span class="text-[10px] px-2 py-0.5 rounded bg-zinc-700 text-zinc-400">Do kontaktu</span>'
+                            }
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="openWaContact('${contact.id}', '${contact.phone.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-xs font-medium transition-colors">
+                                <i class="ph ph-whatsapp-logo mr-1"></i>
+                                Kontakt
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function openWaContact(contactId, phone) {
+            // Format phone for WhatsApp
+            let cleaned = phone.replace(/[\s\-\(\)]/g, '').replace(/^\+?48/, '');
+            window.open(`https://wa.me/48${cleaned}`, '_blank');
+
+            // Update whatsapp_contacted_at and whatsapp_contacted_by in outreach_contacts
+            const updateData = {
+                whatsapp_contacted_at: new Date().toISOString(),
+                whatsapp_contacted_by: currentTeamMember?.id || null
+            };
+
+            const { error } = await supabaseClient
+                .from('outreach_contacts')
+                .update(updateData)
+                .eq('id', contactId);
+
+            if (!error) {
+                // Update local data
+                const contact = waContacts.find(c => c.id === contactId);
+                if (contact) {
+                    contact.whatsapp_contacted_at = updateData.whatsapp_contacted_at;
+                    contact.whatsapp_contacted_by = updateData.whatsapp_contacted_by;
+                    contact.contacted_by_name = currentTeamMember?.name || null;
+                }
+                renderWaContacts();
+                loadWaStats();
+                showToast('Oznaczono jako skontaktowany');
+            }
+        }
+
+        function updateWaPagination() {
+            const totalPages = Math.ceil(waTotalContacts / WA_PAGE_SIZE) || 1;
+            const formattedTotal = waTotalContacts.toLocaleString('pl-PL');
+            document.getElementById('wa-pagination-info').textContent = `Strona ${waCurrentPage} z ${totalPages} (${formattedTotal} kontaktów)`;
+            document.getElementById('wa-btn-prev').disabled = waCurrentPage <= 1;
+            document.getElementById('wa-btn-next').disabled = waCurrentPage >= totalPages;
+        }
+
+        function waContactsPrevPage() {
+            if (waCurrentPage > 1) {
+                waCurrentPage--;
+                loadWaContacts();
+            }
+        }
+
+        function waContactsNextPage() {
+            const totalPages = Math.ceil(waTotalContacts / WA_PAGE_SIZE);
+            if (waCurrentPage < totalPages) {
+                waCurrentPage++;
+                loadWaContacts();
+            }
+        }
+
         // Event listeners
         document.getElementById('search-input').addEventListener('input', debounce(() => {
             currentPage = 1;
@@ -1680,6 +2692,34 @@
         document.getElementById('campaign-filter-source').addEventListener('change', updateMatchingContacts);
         document.getElementById('campaign-filter-ltv').addEventListener('input', debounce(updateMatchingContacts, 300));
 
+        // WhatsApp event listeners
+        document.getElementById('wa-search').addEventListener('input', debounce(() => {
+            waCurrentPage = 1;
+            loadWaContacts();
+        }, 300));
+
+        // Filter change handler
+        function onWaFilterChange() {
+            waCurrentPage = 1;
+            updateFilterButtons();
+            renderSavedFilters();
+            loadWaContacts();
+        }
+
+        document.getElementById('wa-filter-product').addEventListener('input', debounce(onWaFilterChange, 500));
+        document.getElementById('wa-filter-ltv-min').addEventListener('input', debounce(onWaFilterChange, 500));
+        document.getElementById('wa-filter-ltv-max').addEventListener('input', debounce(onWaFilterChange, 500));
+        document.getElementById('wa-filter-recency').addEventListener('change', onWaFilterChange);
+        document.getElementById('wa-filter-products').addEventListener('change', onWaFilterChange);
+        document.getElementById('wa-filter-whatsapp').addEventListener('change', onWaFilterChange);
+        document.getElementById('wa-filter-source').addEventListener('change', onWaFilterChange);
+
+        document.getElementById('wa-sort').addEventListener('change', () => {
+            waCurrentPage = 1;
+            renderSavedFilters();
+            loadWaContacts();
+        });
+
         function debounce(fn, delay) {
             let timeout;
             return (...args) => {
@@ -1699,6 +2739,14 @@
             await loadSources();
             await loadContacts();
             await loadCampaigns();
+
+            // Setup keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Close templates panel with Escape
+                if (e.key === 'Escape' && templatesPanelOpen) {
+                    closeTemplatesPanel();
+                }
+            });
         }
 
         init();

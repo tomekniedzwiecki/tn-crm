@@ -148,6 +148,13 @@
                         <option value="no">Bez ankiety</option>
                     </select>
 
+                    <!-- WhatsApp filter -->
+                    <select id="filter-whatsapp" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
+                        <option value="">WhatsApp: wszystkie</option>
+                        <option value="yes">Kontaktowano</option>
+                        <option value="no">Nie kontaktowano</option>
+                    </select>
+
                     <!-- Team filter (admin only) -->
                     <div id="team-filter-container" class="hidden">
                         <select id="filter-team" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
@@ -767,6 +774,7 @@
             const sourceFilter = document.getElementById('filter-source').value;
             const dateFilter = document.getElementById('filter-date').value;
             const surveyFilter = document.getElementById('filter-survey').value;
+            const whatsappFilter = document.getElementById('filter-whatsapp').value;
             const teamFilter = document.getElementById('filter-team')?.value || '';
 
             filteredLeads = leads.filter(lead => {
@@ -806,6 +814,13 @@
                     if (surveyFilter === 'no' && hasSurvey) return false;
                 }
 
+                // WhatsApp contact
+                if (whatsappFilter) {
+                    const hasWhatsApp = !!lead.whatsapp_contacted_at;
+                    if (whatsappFilter === 'yes' && !hasWhatsApp) return false;
+                    if (whatsappFilter === 'no' && hasWhatsApp) return false;
+                }
+
                 return true;
             });
 
@@ -815,7 +830,7 @@
             if (sortBy === 'email') filteredLeads.sort((a, b) => a.email.localeCompare(b.email));
 
             // Show/hide clear button
-            const hasFilters = searchTerm || statusFilter || sourceFilter || dateFilter || surveyFilter || teamFilter;
+            const hasFilters = searchTerm || statusFilter || sourceFilter || dateFilter || surveyFilter || whatsappFilter || teamFilter;
             document.getElementById('clear-filters').classList.toggle('hidden', !hasFilters);
 
             currentPage = 1;
@@ -897,6 +912,9 @@
                             </button>
                             ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
                                 <i class="ph ph-phone text-sm"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); openWhatsApp('${lead.id}', '${lead.phone.replace(/'/g, "\\'")}')" class="p-1.5 text-green-400 hover:bg-green-500/20 rounded transition-colors" title="WhatsApp">
+                                <i class="ph ph-whatsapp-logo text-sm"></i>
                             </button>` : ''}
                         </div>
                     </td>
@@ -919,6 +937,27 @@
             window.location.href = `tel:${phone.replace(/\s/g, '')}`;
         }
 
+        async function openWhatsApp(leadId, phone) {
+            // Remove spaces, dashes and Polish prefix, ensure proper format
+            let cleaned = phone.replace(/[\s\-\(\)]/g, '').replace(/^\+?48/, '');
+            // Add Polish country code
+            window.open(`https://wa.me/48${cleaned}`, '_blank');
+
+            // Save WhatsApp contact timestamp to database
+            const { error } = await supabaseClient
+                .from('leads')
+                .update({ whatsapp_contacted_at: new Date().toISOString() })
+                .eq('id', leadId);
+
+            if (!error) {
+                // Update local lead data
+                const lead = leads.find(l => l.id === leadId);
+                if (lead) {
+                    lead.whatsapp_contacted_at = new Date().toISOString();
+                }
+            }
+        }
+
         function openClientOffer(token) {
             const base = Sidebar.getBasePath();
             const path = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -929,6 +968,7 @@
 
         window.sendEmail = sendEmail;
         window.callPhone = callPhone;
+        window.openWhatsApp = openWhatsApp;
         window.openClientOffer = openClientOffer;
 
         // Survey modal helpers
@@ -1089,6 +1129,7 @@
         document.getElementById('filter-source').addEventListener('change', applyFilters);
         document.getElementById('filter-date').addEventListener('change', applyFilters);
         document.getElementById('filter-survey').addEventListener('change', applyFilters);
+        document.getElementById('filter-whatsapp').addEventListener('change', applyFilters);
         document.getElementById('filter-team')?.addEventListener('change', applyFilters);
         document.getElementById('sort-by').addEventListener('change', applyFilters);
 
@@ -1098,6 +1139,7 @@
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-date').value = '';
             document.getElementById('filter-survey').value = '';
+            document.getElementById('filter-whatsapp').value = '';
             const teamFilter = document.getElementById('filter-team');
             if (teamFilter) teamFilter.value = '';
             applyFilters();
