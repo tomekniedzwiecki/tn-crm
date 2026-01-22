@@ -16,9 +16,9 @@ const CURRENT_APP = 'todo';
 function getAppPath(appId) {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (appId === 'crm') {
-        return isLocal ? '/tn-crm/dashboard.html' : '/dashboard';
+        return isLocal ? '/tn-crm/dashboard.html' : '/tn-crm/dashboard.html';
     } else if (appId === 'todo') {
-        return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards';
+        return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards.html';
     }
     return '/';
 }
@@ -84,7 +84,7 @@ function getBasePath() {
 function getPagePath(page) {
     const base = getBasePath();
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    return isLocal ? `${base}/${page}.html` : `/tn-todo/${page}`;
+    return isLocal ? `${base}/${page}.html` : `/tn-todo/${page}.html`;
 }
 
 function getLoginPath() {
