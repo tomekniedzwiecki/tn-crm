@@ -84,7 +84,7 @@ function getBasePath() {
 function getPagePath(page) {
     const base = getBasePath();
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    return isLocal ? `${base}/${page}.html` : `/${page}`;
+    return isLocal ? `${base}/${page}.html` : `/tn-todo/${page}`;
 }
 
 function getLoginPath() {
