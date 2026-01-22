@@ -195,15 +195,32 @@
             box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
         }
 
-        /* Activity item */
+        /* Activity item - Vercel style */
         .activity-item {
             font-size: 12px;
-            color: #a1a1aa;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #666;
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
         }
         .activity-item:last-child {
             border-bottom: none;
+        }
+        .activity-item span:first-child {
+            color: #999;
+        }
+
+        /* Modal input focus states */
+        #modal-task input:focus,
+        #modal-task textarea:focus,
+        #modal-task select:focus {
+            border-color: #555;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+        }
+
+        /* Cover option selected state - Vercel */
+        .cover-option.selected,
+        .cover-option[data-selected="true"] {
+            box-shadow: 0 0 0 2px #fff;
         }
     </style>
 </head>
@@ -264,132 +281,124 @@
         </div>
     </div>
 
-    <!-- Task Modal -->
-    <div id="modal-task" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center overflow-y-auto py-4">
-        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl mx-4 my-auto">
-            <!-- Cover -->
-            <div id="task-cover-display" class="h-24 rounded-t-xl hidden"></div>
+    <!-- Task Modal - Vercel Style -->
+    <div id="modal-task" class="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 hidden items-center justify-center overflow-y-auto p-4">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-xl mx-auto my-auto shadow-2xl">
+            <input type="hidden" id="task-id">
+            <input type="hidden" id="task-list-id">
+            <input type="hidden" id="task-cover-color">
 
-            <div class="flex items-center justify-between p-4 border-b border-white/5">
-                <h2 id="task-modal-title" class="text-base font-semibold text-white">Nowe zadanie</h2>
-                <div class="flex items-center gap-2">
-                    <button id="task-delete-btn" onclick="deleteTask()" class="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors hidden" title="Usuń zadanie">
-                        <i class="ph ph-trash text-lg"></i>
+            <!-- Cover -->
+            <div id="task-cover-display" class="h-20 rounded-t-lg hidden"></div>
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-[#333]">
+                <h2 id="task-modal-title" class="text-[15px] font-medium text-white">Nowe zadanie</h2>
+                <div class="flex items-center gap-1">
+                    <button id="task-delete-btn" onclick="deleteTask()" class="w-8 h-8 flex items-center justify-center text-[#666] hover:text-red-400 hover:bg-[#1a1a1a] rounded-md transition-colors hidden" title="Usuń">
+                        <i class="ph ph-trash text-base"></i>
                     </button>
-                    <button onclick="closeTaskModal()" class="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
-                        <i class="ph ph-x text-lg"></i>
+                    <button onclick="closeTaskModal()" class="w-8 h-8 flex items-center justify-center text-[#666] hover:text-white hover:bg-[#1a1a1a] rounded-md transition-colors">
+                        <i class="ph ph-x text-base"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-0">
-                <!-- Main content -->
-                <div class="lg:col-span-2 p-4 space-y-4 border-r border-white/5">
-                    <input type="hidden" id="task-id">
-                    <input type="hidden" id="task-list-id">
-
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Tytuł</label>
-                        <input type="text" id="task-title" placeholder="Co trzeba zrobić?" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-3 text-sm focus:border-violet-500 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Opis</label>
-                        <textarea id="task-description" rows="3" placeholder="Szczegóły zadania..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-3 text-sm focus:border-violet-500 focus:outline-none resize-none"></textarea>
-                    </div>
-
-                    <!-- Attachments Section -->
-                    <div id="attachments-section" class="hidden">
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">
-                            <i class="ph ph-paperclip mr-1"></i>Załączniki
-                        </label>
-                        <div id="attachments-list" class="space-y-2 mb-2"></div>
-                        <label class="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 border-dashed rounded-lg cursor-pointer transition-colors">
-                            <i class="ph ph-upload-simple text-zinc-400"></i>
-                            <span class="text-sm text-zinc-400">Dodaj załącznik</span>
-                            <input type="file" id="attachment-input" class="hidden" onchange="uploadAttachment(event)">
-                        </label>
-                    </div>
-
-                    <!-- Comments Section -->
-                    <div id="comments-section" class="hidden">
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">
-                            <i class="ph ph-chat-circle mr-1"></i>Komentarze
-                        </label>
-                        <div id="comments-list" class="space-y-3 mb-3 max-h-64 overflow-y-auto"></div>
-                        <div class="flex gap-2">
-                            <input type="text" id="comment-input" placeholder="Dodaj komentarz..." class="flex-1 bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:outline-none" onkeydown="if(event.key==='Enter')addComment()">
-                            <button onclick="addComment()" class="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors">
-                                <i class="ph ph-paper-plane-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Activity Section -->
-                    <div id="activity-section" class="hidden">
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">
-                            <i class="ph ph-clock-counter-clockwise mr-1"></i>Historia
-                        </label>
-                        <div id="activity-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
-                    </div>
+            <!-- Content -->
+            <div class="px-6 py-5 space-y-5">
+                <!-- Title -->
+                <div>
+                    <label class="block text-[13px] text-[#888] mb-2">Tytuł</label>
+                    <input type="text" id="task-title" placeholder="Nazwa zadania" class="w-full bg-[#0a0a0a] border border-[#333] text-white rounded-md px-3 py-2.5 text-[14px] placeholder:text-[#555] focus:border-[#888] focus:outline-none transition-colors">
                 </div>
 
-                <!-- Sidebar -->
-                <div class="p-4 space-y-4 bg-zinc-900/50">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Priorytet</label>
-                            <select id="task-priority" class="w-full bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:outline-none cursor-pointer">
-                                <option value="low">Niski</option>
-                                <option value="medium" selected>Średni</option>
-                                <option value="high">Wysoki</option>
-                                <option value="urgent">Pilny</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Termin</label>
-                            <input type="date" id="task-due-date" class="w-full bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:outline-none cursor-pointer">
-                        </div>
-                    </div>
+                <!-- Description -->
+                <div>
+                    <label class="block text-[13px] text-[#888] mb-2">Opis <span class="text-[#555]">(opcjonalnie)</span></label>
+                    <textarea id="task-description" rows="3" placeholder="Dodaj szczegóły..." class="w-full bg-[#0a0a0a] border border-[#333] text-white rounded-md px-3 py-2.5 text-[14px] placeholder:text-[#555] focus:border-[#888] focus:outline-none resize-none transition-colors"></textarea>
+                </div>
 
+                <!-- Options Grid -->
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Przypisz do</label>
-                        <select id="task-assigned" class="w-full bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:outline-none cursor-pointer">
-                            <option value="">Nieprzypisane</option>
+                        <label class="block text-[13px] text-[#888] mb-2">Priorytet</label>
+                        <select id="task-priority" class="w-full bg-[#0a0a0a] border border-[#333] text-[#ccc] rounded-md px-3 py-2.5 text-[14px] focus:border-[#888] focus:outline-none cursor-pointer appearance-none transition-colors" style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23666%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;">
+                            <option value="low">Niski</option>
+                            <option value="medium" selected>Średni</option>
+                            <option value="high">Wysoki</option>
+                            <option value="urgent">Pilny</option>
                         </select>
                     </div>
-
-                    <!-- Cover Color -->
                     <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1.5">Okładka</label>
-                        <div class="grid grid-cols-5 gap-1.5" id="cover-colors">
-                            <button type="button" onclick="selectCover(null)" class="w-full h-7 rounded bg-zinc-700 hover:ring-2 hover:ring-white/30 transition-all flex items-center justify-center cover-option" data-color="">
-                                <i class="ph ph-x text-zinc-500 text-xs"></i>
-                            </button>
-                            <button type="button" onclick="selectCover('red')" class="w-full h-7 rounded bg-red-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="red"></button>
-                            <button type="button" onclick="selectCover('orange')" class="w-full h-7 rounded bg-orange-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="orange"></button>
-                            <button type="button" onclick="selectCover('yellow')" class="w-full h-7 rounded bg-yellow-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="yellow"></button>
-                            <button type="button" onclick="selectCover('green')" class="w-full h-7 rounded bg-green-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="green"></button>
-                            <button type="button" onclick="selectCover('teal')" class="w-full h-7 rounded bg-teal-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="teal"></button>
-                            <button type="button" onclick="selectCover('blue')" class="w-full h-7 rounded bg-blue-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="blue"></button>
-                            <button type="button" onclick="selectCover('purple')" class="w-full h-7 rounded bg-purple-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="purple"></button>
-                            <button type="button" onclick="selectCover('pink')" class="w-full h-7 rounded bg-pink-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="pink"></button>
-                            <button type="button" onclick="selectCover('gray')" class="w-full h-7 rounded bg-gray-500 hover:ring-2 hover:ring-white/30 transition-all cover-option" data-color="gray"></button>
-                        </div>
+                        <label class="block text-[13px] text-[#888] mb-2">Termin</label>
+                        <input type="date" id="task-due-date" class="w-full bg-[#0a0a0a] border border-[#333] text-[#ccc] rounded-md px-3 py-2.5 text-[14px] focus:border-[#888] focus:outline-none cursor-pointer transition-colors">
                     </div>
+                </div>
 
-                    <input type="hidden" id="task-cover-color">
+                <!-- Assignee -->
+                <div>
+                    <label class="block text-[13px] text-[#888] mb-2">Przypisz do</label>
+                    <select id="task-assigned" class="w-full bg-[#0a0a0a] border border-[#333] text-[#ccc] rounded-md px-3 py-2.5 text-[14px] focus:border-[#888] focus:outline-none cursor-pointer appearance-none transition-colors" style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23666%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;">
+                        <option value="">Nieprzypisane</option>
+                    </select>
+                </div>
 
-                    <div class="flex gap-2 pt-2">
-                        <button onclick="closeTaskModal()" class="flex-1 px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
-                            Anuluj
+                <!-- Cover -->
+                <div>
+                    <label class="block text-[13px] text-[#888] mb-2">Kolor okładki</label>
+                    <div class="flex gap-2" id="cover-colors">
+                        <button type="button" onclick="selectCover(null)" class="w-8 h-8 rounded-md bg-[#1a1a1a] border border-[#333] hover:border-[#555] transition-all flex items-center justify-center cover-option" data-color="">
+                            <i class="ph ph-x text-[#555] text-sm"></i>
                         </button>
-                        <button onclick="saveTask()" class="flex-1 px-3 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors">
-                            <i class="ph ph-floppy-disk mr-1"></i>
-                            Zapisz
+                        <button type="button" onclick="selectCover('red')" class="w-8 h-8 rounded-md bg-red-500/80 hover:bg-red-500 transition-all cover-option" data-color="red"></button>
+                        <button type="button" onclick="selectCover('orange')" class="w-8 h-8 rounded-md bg-orange-500/80 hover:bg-orange-500 transition-all cover-option" data-color="orange"></button>
+                        <button type="button" onclick="selectCover('yellow')" class="w-8 h-8 rounded-md bg-yellow-500/80 hover:bg-yellow-500 transition-all cover-option" data-color="yellow"></button>
+                        <button type="button" onclick="selectCover('green')" class="w-8 h-8 rounded-md bg-green-500/80 hover:bg-green-500 transition-all cover-option" data-color="green"></button>
+                        <button type="button" onclick="selectCover('teal')" class="w-8 h-8 rounded-md bg-teal-500/80 hover:bg-teal-500 transition-all cover-option" data-color="teal"></button>
+                        <button type="button" onclick="selectCover('blue')" class="w-8 h-8 rounded-md bg-blue-500/80 hover:bg-blue-500 transition-all cover-option" data-color="blue"></button>
+                        <button type="button" onclick="selectCover('purple')" class="w-8 h-8 rounded-md bg-purple-500/80 hover:bg-purple-500 transition-all cover-option" data-color="purple"></button>
+                        <button type="button" onclick="selectCover('pink')" class="w-8 h-8 rounded-md bg-pink-500/80 hover:bg-pink-500 transition-all cover-option" data-color="pink"></button>
+                    </div>
+                </div>
+
+                <!-- Attachments Section -->
+                <div id="attachments-section" class="hidden border-t border-[#222] pt-5">
+                    <label class="block text-[13px] text-[#888] mb-3">Załączniki</label>
+                    <div id="attachments-list" class="space-y-2 mb-3"></div>
+                    <label class="flex items-center justify-center gap-2 px-4 py-3 bg-[#0a0a0a] border border-dashed border-[#333] hover:border-[#555] rounded-md cursor-pointer transition-colors">
+                        <i class="ph ph-upload-simple text-[#666]"></i>
+                        <span class="text-[13px] text-[#666]">Dodaj plik</span>
+                        <input type="file" id="attachment-input" class="hidden" onchange="uploadAttachment(event)">
+                    </label>
+                </div>
+
+                <!-- Comments Section -->
+                <div id="comments-section" class="hidden border-t border-[#222] pt-5">
+                    <label class="block text-[13px] text-[#888] mb-3">Komentarze</label>
+                    <div id="comments-list" class="space-y-3 mb-3 max-h-48 overflow-y-auto"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="comment-input" placeholder="Napisz komentarz..." class="flex-1 bg-[#0a0a0a] border border-[#333] text-white rounded-md px-3 py-2 text-[13px] placeholder:text-[#555] focus:border-[#888] focus:outline-none transition-colors" onkeydown="if(event.key==='Enter')addComment()">
+                        <button onclick="addComment()" class="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] border border-[#333] text-[#888] hover:text-white rounded-md transition-colors">
+                            <i class="ph ph-paper-plane-right"></i>
                         </button>
                     </div>
                 </div>
+
+                <!-- Activity Section -->
+                <div id="activity-section" class="hidden border-t border-[#222] pt-5">
+                    <label class="block text-[13px] text-[#888] mb-3">Historia</label>
+                    <div id="activity-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#333] bg-[#0a0a0a]">
+                <button onclick="closeTaskModal()" class="px-4 py-2 text-[13px] text-[#888] hover:text-white bg-transparent hover:bg-[#1a1a1a] border border-[#333] rounded-md font-medium transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="saveTask()" class="px-4 py-2 text-[13px] text-black bg-white hover:bg-[#e5e5e5] rounded-md font-medium transition-colors">
+                    Zapisz
+                </button>
             </div>
         </div>
     </div>
@@ -1196,13 +1205,15 @@
         function selectCover(color) {
             document.getElementById('task-cover-color').value = color || '';
 
-            // Update visual selection
+            // Update visual selection - Vercel style
             document.querySelectorAll('.cover-option').forEach(btn => {
                 const btnColor = btn.getAttribute('data-color');
                 if (btnColor === (color || '')) {
-                    btn.classList.add('ring-2', 'ring-white');
+                    btn.classList.add('selected');
+                    btn.style.boxShadow = '0 0 0 2px #fff';
                 } else {
-                    btn.classList.remove('ring-2', 'ring-white');
+                    btn.classList.remove('selected');
+                    btn.style.boxShadow = '';
                 }
             });
 
@@ -1212,22 +1223,22 @@
         function updateCoverDisplay(color) {
             const coverDisplay = document.getElementById('task-cover-display');
             if (color) {
-                coverDisplay.className = `h-24 rounded-t-xl bg-gradient-to-r`;
-                const gradients = {
-                    red: 'from-red-500 to-red-600',
-                    orange: 'from-orange-500 to-orange-600',
-                    yellow: 'from-yellow-500 to-yellow-600',
-                    green: 'from-green-500 to-green-600',
-                    teal: 'from-teal-500 to-teal-600',
-                    blue: 'from-blue-500 to-blue-600',
-                    purple: 'from-purple-500 to-purple-600',
-                    pink: 'from-pink-500 to-pink-600',
-                    gray: 'from-gray-500 to-gray-600'
+                const colors = {
+                    red: '#ef4444',
+                    orange: '#f97316',
+                    yellow: '#eab308',
+                    green: '#22c55e',
+                    teal: '#14b8a6',
+                    blue: '#3b82f6',
+                    purple: '#a855f7',
+                    pink: '#ec4899',
+                    gray: '#6b7280'
                 };
-                coverDisplay.classList.add(...(gradients[color] || 'from-zinc-700 to-zinc-800').split(' '));
-                coverDisplay.classList.remove('hidden');
+                coverDisplay.style.background = `linear-gradient(135deg, ${colors[color] || '#333'}, ${colors[color] || '#222'}cc)`;
+                coverDisplay.className = 'h-20 rounded-t-lg';
             } else {
                 coverDisplay.classList.add('hidden');
+                coverDisplay.style.background = '';
             }
         }
 
