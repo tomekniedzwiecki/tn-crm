@@ -22,127 +22,115 @@
         }
     </script>
     <style>
-        body { background: #050505; color: #e5e5e5; }
+        body { background: #000; color: #ededed; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
         ::selection { background: white; color: black; }
 
         .glass-header {
-            background: rgba(5, 5, 5, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid #262626;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
-        /* Kanban styles */
+        /* Kanban - Vercel style */
         .kanban-board {
             display: flex;
-            gap: 1rem;
+            gap: 16px;
             overflow-x: auto;
             padding-bottom: 1rem;
-            min-height: calc(100vh - 180px);
+            min-height: calc(100vh - 140px);
         }
 
         .kanban-list {
-            flex: 0 0 300px;
-            max-height: calc(100vh - 200px);
+            flex: 0 0 320px;
+            max-height: calc(100vh - 160px);
             display: flex;
             flex-direction: column;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+        .kanban-list:hover {
+            border-color: #333;
         }
 
         .kanban-list-content {
             flex: 1;
             overflow-y: auto;
-            min-height: 100px;
+            min-height: 80px;
+            padding: 8px;
         }
 
+        /* Task card - Vercel style */
         .task-card {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #171717;
+            border: 1px solid #262626;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 8px;
             cursor: grab;
+            transition: all 0.15s ease;
             position: relative;
         }
+        .task-card:hover {
+            border-color: #404040;
+            background: #1a1a1a;
+        }
+        .task-card:active {
+            cursor: grabbing;
+        }
+        .task-card.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg) scale(1.02);
+        }
+
+        /* Priority indicator */
         .task-card::before {
             content: '';
             position: absolute;
             left: 0;
-            top: 0;
-            bottom: 0;
+            top: 12px;
+            bottom: 12px;
             width: 3px;
-            border-radius: 3px 0 0 3px;
-            transition: width 0.2s ease;
+            border-radius: 0 2px 2px 0;
         }
-        .task-card.priority-low::before { background: #52525b; }
+        .task-card.priority-low::before { background: #525252; }
         .task-card.priority-medium::before { background: #3b82f6; }
         .task-card.priority-high::before { background: #f59e0b; }
         .task-card.priority-urgent::before { background: #ef4444; }
 
-        .task-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-            border-color: rgba(255,255,255,0.1);
-        }
-        .task-card:hover::before {
-            width: 4px;
-        }
-        .task-card:active {
-            cursor: grabbing;
-            transform: scale(1.02) rotate(1deg);
-        }
-        .task-card.dragging {
-            opacity: 0.6;
-            transform: rotate(2deg) scale(1.05);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
-        }
-
-        .kanban-list {
-            transition: all 0.2s ease;
-            cursor: default;
-        }
+        /* List drag states */
         .kanban-list.drag-over {
-            transform: scale(1.01);
-        }
-        .kanban-list.drag-over .kanban-list-content {
-            background: rgba(139, 92, 246, 0.08);
-            border: 2px dashed rgba(139, 92, 246, 0.3);
-            border-radius: 8px;
-        }
-
-        /* List dragging */
-        .kanban-list .list-drag-handle {
-            cursor: grab;
-        }
-        .kanban-list .list-drag-handle:active {
-            cursor: grabbing;
+            border-color: #525252;
+            background: #0f0f0f;
         }
         .kanban-list.list-dragging {
             opacity: 0.5;
-            transform: rotate(1deg);
-        }
-        .list-drop-indicator {
-            width: 4px;
-            background: #8b5cf6;
-            border-radius: 2px;
-            margin: 0 -2px;
-            min-height: 100px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        .list-drop-indicator.active {
-            opacity: 1;
         }
         .kanban-list.list-drag-target {
-            border-color: rgba(139, 92, 246, 0.5);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+            border-color: #525252;
+            box-shadow: 0 0 20px rgba(255,255,255,0.05);
         }
 
+        .list-drag-handle {
+            cursor: grab;
+        }
+        .list-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* Quick add form */
         .quick-add-form {
             display: none;
         }
@@ -152,12 +140,13 @@
 
         /* Due date badges */
         .due-badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
+            font-weight: 500;
         }
         .due-badge.overdue {
             background: rgba(239, 68, 68, 0.15);
@@ -168,62 +157,44 @@
             color: #fbbf24;
         }
         .due-badge.upcoming {
-            background: rgba(63, 63, 70, 0.5);
-            color: #a1a1aa;
+            background: #262626;
+            color: #a3a3a3;
         }
 
-        /* Card covers */
+        /* Card covers - Vercel */
         .task-cover {
-            height: 32px;
-            border-radius: 6px 6px 0 0;
-            margin: -12px -12px 8px -16px;
-            width: calc(100% + 28px);
+            height: 6px;
+            border-radius: 10px 10px 0 0;
+            margin: -14px -14px 12px -14px;
         }
-        .task-cover.cover-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
-        .task-cover.cover-orange { background: linear-gradient(135deg, #f97316, #ea580c); }
-        .task-cover.cover-yellow { background: linear-gradient(135deg, #eab308, #ca8a04); }
-        .task-cover.cover-green { background: linear-gradient(135deg, #22c55e, #16a34a); }
-        .task-cover.cover-teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
-        .task-cover.cover-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-        .task-cover.cover-purple { background: linear-gradient(135deg, #a855f7, #9333ea); }
-        .task-cover.cover-pink { background: linear-gradient(135deg, #ec4899, #db2777); }
-        .task-cover.cover-gray { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        .task-cover.cover-red { background: #ef4444; }
+        .task-cover.cover-orange { background: #f97316; }
+        .task-cover.cover-yellow { background: #eab308; }
+        .task-cover.cover-green { background: #22c55e; }
+        .task-cover.cover-teal { background: #14b8a6; }
+        .task-cover.cover-blue { background: #3b82f6; }
+        .task-cover.cover-purple { background: #a855f7; }
+        .task-cover.cover-pink { background: #ec4899; }
+        .task-cover.cover-gray { background: #6b7280; }
 
-        /* Cover selected state */
+        /* Cover option selected */
         .cover-option.selected {
-            ring: 2px solid white;
-            box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+            box-shadow: 0 0 0 3px #fff;
+            transform: scale(1.1);
         }
 
-        /* Activity item - Vercel style */
-        .activity-item {
-            font-size: 12px;
-            color: #666;
-            padding: 8px 0;
-            border-bottom: 1px solid #222;
+        /* Modal styles - Vercel */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
         }
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        .activity-item span:first-child {
-            color: #999;
+        .modal-content {
+            background: #000;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 25px 50px -12px rgba(0,0,0,0.8);
         }
 
-        /* Modal input focus states */
-        #modal-task input:focus,
-        #modal-task textarea:focus,
-        #modal-task select:focus {
-            border-color: #555;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
-        }
-
-        /* Cover option selected state - Vercel */
-        .cover-option.selected,
-        .cover-option[data-selected="true"] {
-            box-shadow: 0 0 0 2px #fff;
-        }
-
-        /* Task Modal Tabs */
+        /* Tab styles */
         .task-tab.active {
             color: #fff;
             border-bottom-color: #fff;
@@ -267,58 +238,83 @@
             border-color: #404040;
             background: #111;
         }
+
+        /* Empty state */
+        .empty-illustration {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #171717 0%, #0a0a0a 100%);
+            border: 1px solid #262626;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Count badge */
+        .count-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            background: #262626;
+            border-radius: 4px;
+            color: #a3a3a3;
+            font-weight: 500;
+        }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+<body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
 
     <!-- Sidebar -->
     <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
 
     <!-- Main -->
-    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+    <main class="flex-1 flex flex-col relative min-w-0">
         <!-- Header -->
-        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-            <div class="flex items-center gap-2 text-zinc-500">
-                <a href="boards.html" class="text-zinc-400 hover:text-white transition-colors">tn-todo</a>
-                <span class="text-zinc-700">/</span>
-                <span id="board-name-header" class="text-white font-medium">Ładowanie...</span>
+        <header class="h-14 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-2">
+                <a href="boards.html" class="text-neutral-500 hover:text-white transition-colors text-sm">tn-todo</a>
+                <span class="text-neutral-700">/</span>
+                <span id="board-name-header" class="text-white font-medium text-sm">Ładowanie...</span>
             </div>
-            <div class="flex items-center gap-3">
-                <button onclick="openAddListModal()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-sm font-medium transition-colors border border-zinc-700">
-                    <i class="ph ph-plus mr-1"></i>
-                    Dodaj listę
-                </button>
-            </div>
+            <button onclick="openAddListModal()" class="bg-white text-black hover:bg-neutral-200 px-4 py-2 rounded-lg font-medium text-sm transition-all">
+                Dodaj listę
+            </button>
         </header>
 
         <!-- Kanban Board -->
         <div class="flex-1 overflow-x-auto p-6">
             <div id="kanban-board" class="kanban-board animate-enter">
-                <div class="flex items-center justify-center w-full py-12 text-zinc-500">
-                    <i class="ph ph-circle-notch animate-spin text-2xl mr-2"></i>
-                    <span>Ładowanie tablicy...</span>
+                <div class="flex items-center justify-center w-full py-20">
+                    <div class="flex items-center gap-3 text-neutral-500">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Ładowanie tablicy...</span>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
     <!-- Add List Modal -->
-    <div id="modal-list" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
-        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-sm m-4">
-            <div class="flex items-center justify-between p-4 border-b border-white/5">
+    <div id="modal-list" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content w-full max-w-sm">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
                 <h2 id="list-modal-title" class="text-base font-semibold text-white">Nowa lista</h2>
-                <button onclick="closeListModal()" class="text-zinc-500 hover:text-white transition-colors">
+                <button onclick="closeListModal()" class="w-8 h-8 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-900 rounded-lg transition-all">
                     <i class="ph ph-x text-lg"></i>
                 </button>
             </div>
-            <div class="p-4">
+            <div class="p-5">
                 <input type="hidden" id="list-id">
-                <input type="text" id="list-name" placeholder="Nazwa listy..." class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-3 text-sm focus:border-violet-500 focus:outline-none mb-4" autofocus>
+                <input type="text" id="list-name" placeholder="np. Do zrobienia, W trakcie..."
+                    class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 mb-5" autofocus>
                 <div class="flex gap-3">
-                    <button onclick="closeListModal()" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors">
+                    <button onclick="closeListModal()" class="flex-1 px-4 py-2.5 text-sm text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-900 border border-neutral-800 rounded-lg font-medium transition-all">
                         Anuluj
                     </button>
-                    <button onclick="saveList()" class="flex-1 px-4 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors">
+                    <button onclick="saveList()" class="flex-1 px-4 py-2.5 text-sm text-black bg-white hover:bg-neutral-200 rounded-lg font-medium transition-all">
                         Zapisz
                     </button>
                 </div>
@@ -327,8 +323,8 @@
     </div>
 
     <!-- Task Modal - Full Vercel Style -->
-    <div id="modal-task" class="fixed inset-0 bg-black/70 z-50 hidden items-start justify-center overflow-y-auto">
-        <div class="bg-black border border-neutral-800 rounded-xl w-full max-w-3xl mx-4 my-16 shadow-2xl" style="box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 25px 50px -12px rgba(0,0,0,0.8);">
+    <div id="modal-task" class="fixed inset-0 modal-overlay z-50 hidden items-start justify-center overflow-y-auto p-4">
+        <div class="modal-content w-full max-w-3xl my-12">
             <input type="hidden" id="task-id">
             <input type="hidden" id="task-list-id">
             <input type="hidden" id="task-cover-color">
@@ -377,7 +373,7 @@
                     <div>
                         <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">Opis</label>
                         <textarea id="task-description" rows="4" placeholder="Dodaj opis zadania..."
-                            class="w-full bg-neutral-900 border border-neutral-800 text-white text-sm rounded-lg px-4 py-3 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 focus:ring-1 focus:ring-neutral-700 resize-none transition-all"></textarea>
+                            class="w-full bg-neutral-900 border border-neutral-800 text-white text-sm rounded-lg px-4 py-3 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 resize-none transition-all"></textarea>
                     </div>
 
                     <!-- Options Row -->
@@ -474,7 +470,8 @@
     </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <div id="toast" class="fixed bottom-6 right-6 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
+        <i class="ph ph-check-circle text-emerald-400"></i>
         <span id="toast-message"></span>
     </div>
 
@@ -491,21 +488,7 @@
         let draggedTask = null;
         let draggedListId = null;
         let draggedListIndex = null;
-        let canDragList = false; // Track if mousedown was on drag handle
-
-        const PRIORITY_COLORS = {
-            'low': 'bg-zinc-600',
-            'medium': 'bg-blue-500',
-            'high': 'bg-amber-500',
-            'urgent': 'bg-red-500'
-        };
-
-        const PRIORITY_LABELS = {
-            'low': 'Niski',
-            'medium': 'Średni',
-            'high': 'Wysoki',
-            'urgent': 'Pilny'
-        };
+        let canDragList = false;
 
         // Get board ID from URL
         function getBoardId() {
@@ -546,13 +529,12 @@
 
             teamMembers = data || [];
 
-            // Populate assignee dropdown
             const select = document.getElementById('task-assigned');
             select.innerHTML = '<option value="">Nieprzypisane</option>' +
                 teamMembers.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
         }
 
-        // Load board with lists and tasks
+        // Load board
         async function loadBoard() {
             const boardId = getBoardId();
             if (!boardId) {
@@ -567,7 +549,6 @@
                 .single();
 
             if (error || !data) {
-                console.error('Error loading board:', error);
                 window.location.href = 'boards.html';
                 return;
             }
@@ -595,12 +576,8 @@
                 .order('position')
                 .order('position', { foreignTable: 'todo_tasks' });
 
-            if (error) {
-                console.error('Error loading lists:', error);
-                return;
-            }
+            if (error) return;
 
-            // Transform data to add counts
             lists = (data || []).map(list => ({
                 ...list,
                 tasks: (list.tasks || []).map(task => ({
@@ -618,14 +595,13 @@
 
             if (lists.length === 0) {
                 container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center w-full py-16 text-center">
-                        <div class="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-                            <i class="ph ph-list-plus text-3xl text-zinc-600"></i>
+                    <div class="flex flex-col items-center justify-center w-full py-20">
+                        <div class="empty-illustration mb-6">
+                            <i class="ph ph-list-plus text-3xl text-neutral-600"></i>
                         </div>
-                        <h3 class="text-lg font-medium text-white mb-2">Brak list</h3>
-                        <p class="text-zinc-500 mb-4">Dodaj pierwszą listę, np. "Do zrobienia", "W trakcie", "Zrobione".</p>
-                        <button onclick="openAddListModal()" class="px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors">
-                            <i class="ph ph-plus mr-1"></i>
+                        <h3 class="text-xl font-semibold text-white mb-2">Brak list</h3>
+                        <p class="text-neutral-500 mb-6 text-center max-w-sm">Dodaj pierwszą listę, np. "Do zrobienia", "W trakcie", "Zrobione".</p>
+                        <button onclick="openAddListModal()" class="px-5 py-2.5 bg-white text-black hover:bg-neutral-200 rounded-lg text-sm font-medium transition-all">
                             Dodaj listę
                         </button>
                     </div>
@@ -634,7 +610,7 @@
             }
 
             container.innerHTML = lists.map((list, index) => `
-                <div class="kanban-list bg-zinc-900/50 rounded-xl border border-white/5 backdrop-blur-sm group"
+                <div class="kanban-list group"
                      data-list-id="${list.id}"
                      data-list-index="${index}"
                      draggable="true"
@@ -643,45 +619,45 @@
                      ondragover="handleListDragOver(event, ${index})"
                      ondrop="handleListDrop(event, ${index})">
                     <!-- List Header -->
-                    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-zinc-900/50 rounded-t-xl list-drag-handle">
-                        <div class="flex items-center gap-2.5">
-                            <i class="ph ph-dots-six-vertical text-zinc-600 cursor-grab"></i>
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800 list-drag-handle">
+                        <div class="flex items-center gap-3">
+                            <i class="ph ph-dots-six-vertical text-neutral-600 cursor-grab"></i>
                             <h3 class="font-semibold text-white text-sm">${escapeHtml(list.name)}</h3>
-                            <span class="text-[11px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded-md font-medium">${list.tasks?.length || 0}</span>
+                            <span class="count-badge">${list.tasks?.length || 0}</span>
                         </div>
-                        <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="event.stopPropagation(); editList('${list.id}')" class="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors">
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="event.stopPropagation(); editList('${list.id}')" class="w-7 h-7 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-md transition-all">
                                 <i class="ph ph-pencil-simple text-sm"></i>
                             </button>
-                            <button onclick="event.stopPropagation(); deleteList('${list.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                            <button onclick="event.stopPropagation(); deleteList('${list.id}')" class="w-7 h-7 flex items-center justify-center text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all">
                                 <i class="ph ph-trash text-sm"></i>
                             </button>
                         </div>
                     </div>
 
                     <!-- Tasks -->
-                    <div class="kanban-list-content p-2 space-y-2" data-list-id="${list.id}" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${list.id}')" ondragleave="handleDragLeave(event)">
+                    <div class="kanban-list-content" data-list-id="${list.id}" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${list.id}')" ondragleave="handleDragLeave(event)">
                         ${(list.tasks || []).map(task => renderTaskCard(task)).join('')}
                     </div>
 
                     <!-- Quick Add -->
-                    <div class="p-2 border-t border-white/5">
+                    <div class="p-2 border-t border-neutral-800">
                         <div id="quick-add-${list.id}" class="quick-add-form mb-2">
                             <input type="text"
                                    id="quick-input-${list.id}"
                                    placeholder="Tytuł zadania..."
-                                   class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:outline-none mb-2"
+                                   class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-700 mb-2"
                                    onkeydown="handleQuickAddKeydown(event, '${list.id}')">
                             <div class="flex gap-2">
-                                <button onclick="submitQuickAdd('${list.id}')" class="flex-1 px-3 py-1.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-xs font-medium transition-colors">
+                                <button onclick="submitQuickAdd('${list.id}')" class="flex-1 px-3 py-2 bg-white text-black rounded-lg text-xs font-medium transition-all hover:bg-neutral-200">
                                     Dodaj
                                 </button>
-                                <button onclick="closeQuickAdd('${list.id}')" class="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-lg text-xs font-medium transition-colors">
+                                <button onclick="closeQuickAdd('${list.id}')" class="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs font-medium transition-all">
                                     <i class="ph ph-x"></i>
                                 </button>
                             </div>
                         </div>
-                        <button onclick="openQuickAdd('${list.id}')" id="quick-btn-${list.id}" class="w-full px-3 py-2 text-zinc-500 hover:text-white hover:bg-zinc-800/80 rounded-lg text-sm transition-colors flex items-center gap-2">
+                        <button onclick="openQuickAdd('${list.id}')" id="quick-btn-${list.id}" class="w-full px-3 py-2.5 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-lg text-sm transition-all flex items-center gap-2">
                             <i class="ph ph-plus"></i>
                             Dodaj zadanie
                         </button>
@@ -704,7 +680,7 @@
                 const initials = task.assigned_member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 const color = task.assigned_member.color || 'violet';
                 assigneeHtml = `
-                    <div class="w-6 h-6 rounded-full bg-gradient-to-b from-${color}-600 to-${color}-700 flex items-center justify-center text-[10px] font-medium text-white ring-2 ring-zinc-800" title="${escapeHtml(task.assigned_member.name)}">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-b from-${color}-500 to-${color}-600 flex items-center justify-center text-[10px] font-medium text-white" title="${escapeHtml(task.assigned_member.name)}">
                         ${initials}
                     </div>
                 `;
@@ -718,20 +694,19 @@
                 ? `<div class="task-cover cover-${task.cover_color}"></div>`
                 : '';
 
-            // Count indicators
             const hasComments = task.comments_count > 0;
             const hasAttachments = task.attachments_count > 0;
 
             return `
-                <div class="task-card priority-${priority} bg-zinc-800/90 border border-zinc-700/50 rounded-lg p-3 pl-4 group"
+                <div class="task-card priority-${priority}"
                      draggable="true"
                      data-task-id="${task.id}"
                      ondragstart="handleDragStart(event, '${task.id}')"
                      ondragend="handleDragEnd(event)"
                      onclick="openEditTaskModal('${task.id}')">
                     ${coverHtml}
-                    <p class="text-sm text-white mb-2 leading-snug ${task.is_completed ? 'line-through text-zinc-500' : ''}">${escapeHtml(task.title)}</p>
-                    ${task.description ? `<p class="text-xs text-zinc-500 mb-3 line-clamp-2 leading-relaxed">${escapeHtml(task.description)}</p>` : ''}
+                    <p class="text-sm text-white mb-2 leading-relaxed ${task.is_completed ? 'line-through text-neutral-500' : ''}">${escapeHtml(task.title)}</p>
+                    ${task.description ? `<p class="text-xs text-neutral-500 mb-3 line-clamp-2">${escapeHtml(task.description)}</p>` : ''}
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             ${hasDueDate ? `
@@ -740,8 +715,8 @@
                                     ${formatDate(task.due_date)}
                                 </span>
                             ` : ''}
-                            ${hasComments ? `<span class="text-[10px] text-zinc-500 flex items-center gap-0.5"><i class="ph ph-chat-circle"></i>${task.comments_count}</span>` : ''}
-                            ${hasAttachments ? `<span class="text-[10px] text-zinc-500 flex items-center gap-0.5"><i class="ph ph-paperclip"></i>${task.attachments_count}</span>` : ''}
+                            ${hasComments ? `<span class="text-xs text-neutral-500 flex items-center gap-1"><i class="ph ph-chat-circle"></i>${task.comments_count}</span>` : ''}
+                            ${hasAttachments ? `<span class="text-xs text-neutral-500 flex items-center gap-1"><i class="ph ph-paperclip"></i>${task.attachments_count}</span>` : ''}
                         </div>
                         ${assigneeHtml}
                     </div>
@@ -770,7 +745,7 @@
 
         // Task Drag and Drop
         function handleDragStart(event, taskId) {
-            event.stopPropagation(); // Prevent list drag
+            event.stopPropagation();
             draggedTask = taskId;
             event.target.classList.add('dragging');
             event.dataTransfer.effectAllowed = 'move';
@@ -784,7 +759,7 @@
         }
 
         function handleDragOver(event) {
-            if (draggedListId !== null) return; // Don't handle if dragging a list
+            if (draggedListId !== null) return;
             event.preventDefault();
             event.stopPropagation();
             event.dataTransfer.dropEffect = 'move';
@@ -798,16 +773,14 @@
         }
 
         async function handleDrop(event, listId) {
-            if (draggedListId !== null) return; // Don't handle if dragging a list
+            if (draggedListId !== null) return;
             event.preventDefault();
             event.stopPropagation();
             const listContent = event.currentTarget;
             listContent.closest('.kanban-list').classList.remove('drag-over');
-            document.querySelectorAll('.task-drop-indicator').forEach(el => el.remove());
 
             if (!draggedTask) return;
 
-            // Find the task and its source list
             let task = null;
             let sourceListId = null;
             for (const list of lists) {
@@ -820,12 +793,10 @@
 
             if (!task) return;
 
-            // Calculate drop position based on mouse position
             const targetList = lists.find(l => l.id === listId);
             const tasksInTarget = targetList?.tasks || [];
             let newPosition = tasksInTarget.length;
 
-            // Find the task we're dropping on/near
             const taskCards = listContent.querySelectorAll('.task-card');
             const dropY = event.clientY;
 
@@ -840,69 +811,32 @@
                 }
             }
 
-            // If same list and same position, do nothing
             if (sourceListId === listId) {
                 const currentIndex = tasksInTarget.findIndex(t => t.id === draggedTask);
                 if (currentIndex === newPosition || currentIndex === newPosition - 1) {
                     return;
                 }
-                // Adjust position if moving down in same list
                 if (currentIndex < newPosition) {
                     newPosition--;
                 }
             }
 
-            // Update task position and list
             const { error } = await supabaseClient
                 .from('todo_tasks')
                 .update({ list_id: listId, position: newPosition })
                 .eq('id', draggedTask);
 
             if (error) {
-                console.error('Error moving task:', error);
-                showToast('Błąd przenoszenia zadania');
+                showToast('Błąd przenoszenia zadania', 'error');
                 return;
             }
 
-            // Reorder other tasks in target list
-            const updates = [];
-            const allTasksInTarget = sourceListId === listId
-                ? tasksInTarget.filter(t => t.id !== draggedTask)
-                : tasksInTarget;
-
-            allTasksInTarget.splice(newPosition, 0, { id: draggedTask });
-
-            for (let i = 0; i < allTasksInTarget.length; i++) {
-                if (allTasksInTarget[i].id !== draggedTask) {
-                    const currentTask = tasksInTarget.find(t => t.id === allTasksInTarget[i].id);
-                    if (currentTask && currentTask.position !== i) {
-                        updates.push(
-                            supabaseClient
-                                .from('todo_tasks')
-                                .update({ position: i })
-                                .eq('id', allTasksInTarget[i].id)
-                        );
-                    }
-                }
-            }
-
-            if (updates.length > 0) {
-                await Promise.all(updates);
-            }
-
-            // Log activity
-            await logActivity(draggedTask, 'moved', {
-                from_list: sourceListId,
-                to_list: listId,
-                position: newPosition
-            });
-
+            await logActivity(draggedTask, 'moved', { from_list: sourceListId, to_list: listId });
             await loadLists();
         }
 
         // List Drag and Drop
         function handleListDragStart(event, listId, index) {
-            // Only drag if mousedown was on header/handle area
             if (!canDragList) {
                 event.preventDefault();
                 return;
@@ -916,7 +850,6 @@
 
         function handleListDragEnd(event) {
             event.target.classList.remove('list-dragging');
-            document.querySelectorAll('.list-drop-indicator').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.kanban-list').forEach(el => el.classList.remove('list-drag-target'));
             draggedListId = null;
             draggedListIndex = null;
@@ -924,12 +857,11 @@
         }
 
         function handleListDragOver(event, targetIndex) {
-            if (draggedListId === null) return; // Only handle list drags
+            if (draggedListId === null) return;
             event.preventDefault();
             event.stopPropagation();
             event.dataTransfer.dropEffect = 'move';
 
-            // Visual indicator - highlight target list
             document.querySelectorAll('.kanban-list').forEach((el, idx) => {
                 if (idx === targetIndex && targetIndex !== draggedListIndex) {
                     el.classList.add('list-drag-target');
@@ -944,18 +876,15 @@
             event.preventDefault();
             event.stopPropagation();
 
-            // Clear visual indicators
             document.querySelectorAll('.kanban-list').forEach(el => el.classList.remove('list-drag-target'));
 
             if (draggedListIndex === targetIndex) return;
 
-            // Calculate new positions
             const updates = [];
             const newLists = [...lists];
             const [movedList] = newLists.splice(draggedListIndex, 1);
             newLists.splice(targetIndex, 0, movedList);
 
-            // Update all positions
             for (let i = 0; i < newLists.length; i++) {
                 if (newLists[i].position !== i) {
                     updates.push(
@@ -983,7 +912,7 @@
             document.getElementById('list-modal-title').textContent = 'Nowa lista';
             document.getElementById('modal-list').classList.remove('hidden');
             document.getElementById('modal-list').classList.add('flex');
-            document.getElementById('list-name').focus();
+            setTimeout(() => document.getElementById('list-name').focus(), 100);
         }
 
         function editList(listId) {
@@ -995,7 +924,7 @@
             document.getElementById('list-modal-title').textContent = 'Edytuj listę';
             document.getElementById('modal-list').classList.remove('hidden');
             document.getElementById('modal-list').classList.add('flex');
-            document.getElementById('list-name').focus();
+            setTimeout(() => document.getElementById('list-name').focus(), 100);
         }
 
         function closeListModal() {
@@ -1008,7 +937,7 @@
             const name = document.getElementById('list-name').value.trim();
 
             if (!name) {
-                showToast('Podaj nazwę listy');
+                showToast('Podaj nazwę listy', 'error');
                 return;
             }
 
@@ -1028,8 +957,7 @@
             }
 
             if (error) {
-                console.error('Error saving list:', error);
-                showToast('Błąd zapisu listy');
+                showToast('Błąd zapisu listy', 'error');
                 return;
             }
 
@@ -1047,8 +975,7 @@
                 .eq('id', listId);
 
             if (error) {
-                console.error('Error deleting list:', error);
-                showToast('Błąd usuwania listy');
+                showToast('Błąd usuwania listy', 'error');
                 return;
             }
 
@@ -1056,7 +983,7 @@
             showToast('Lista usunięta');
         }
 
-        // Quick Add (inline)
+        // Quick Add
         function openQuickAdd(listId) {
             document.getElementById(`quick-add-${listId}`).classList.add('active');
             document.getElementById(`quick-btn-${listId}`).style.display = 'none';
@@ -1090,7 +1017,7 @@
             const list = lists.find(l => l.id === listId);
             const position = list?.tasks?.length || 0;
 
-            const { error } = await supabaseClient
+            const { data, error } = await supabaseClient
                 .from('todo_tasks')
                 .insert({
                     list_id: listId,
@@ -1098,12 +1025,17 @@
                     position: position,
                     priority: 'medium',
                     created_by: currentTeamMember?.id || null
-                });
+                })
+                .select('id')
+                .single();
 
             if (error) {
-                console.error('Error adding task:', error);
-                showToast('Błąd dodawania zadania');
+                showToast('Błąd dodawania zadania', 'error');
                 return;
+            }
+
+            if (data?.id) {
+                await logActivity(data.id, 'created', {});
             }
 
             closeQuickAdd(listId);
@@ -1121,18 +1053,13 @@
             document.getElementById('task-assigned').value = '';
             document.getElementById('task-cover-color').value = '';
 
-            // Hide delete button for new tasks
             document.getElementById('task-delete-btn').classList.add('hidden');
-
-            // Reset to details tab
             switchTaskTab('details');
 
-            // Clear other tabs
-            document.getElementById('comments-list').innerHTML = '<p class="text-neutral-500 text-sm">Zapisz zadanie, aby dodać komentarze.</p>';
+            document.getElementById('comments-list').innerHTML = '<p class="text-neutral-500 text-sm text-center py-8">Zapisz zadanie, aby dodać komentarze.</p>';
             document.getElementById('attachments-list').innerHTML = '';
-            document.getElementById('activity-list').innerHTML = '<p class="text-neutral-500 text-sm">Brak historii.</p>';
+            document.getElementById('activity-list').innerHTML = '<p class="text-neutral-500 text-sm text-center py-8">Brak historii.</p>';
 
-            // Reset cover selection
             selectCover(null);
 
             document.getElementById('modal-task').classList.remove('hidden');
@@ -1157,19 +1084,13 @@
             document.getElementById('task-assigned').value = task.assigned_to || '';
             document.getElementById('task-cover-color').value = task.cover_color || '';
 
-            // Show delete button
             document.getElementById('task-delete-btn').classList.remove('hidden');
-
-            // Reset to details tab
             switchTaskTab('details');
-
-            // Set cover
             selectCover(task.cover_color);
 
             document.getElementById('modal-task').classList.remove('hidden');
             document.getElementById('modal-task').classList.add('flex');
 
-            // Load related data
             await Promise.all([
                 loadComments(taskId),
                 loadAttachments(taskId),
@@ -1193,7 +1114,7 @@
             const coverColor = document.getElementById('task-cover-color').value;
 
             if (!title) {
-                showToast('Podaj tytuł zadania');
+                showToast('Podaj tytuł zadania', 'error');
                 return;
             }
 
@@ -1215,7 +1136,6 @@
                     .eq('id', id);
                 error = result.error;
 
-                // Log activity
                 if (!error) {
                     await logActivity(id, 'updated', { fields: Object.keys(taskData) });
                 }
@@ -1233,15 +1153,13 @@
                 error = result.error;
                 newTaskId = result.data?.id;
 
-                // Log activity
                 if (!error && newTaskId) {
                     await logActivity(newTaskId, 'created', {});
                 }
             }
 
             if (error) {
-                console.error('Error saving task:', error);
-                showToast('Błąd zapisu zadania');
+                showToast('Błąd zapisu zadania', 'error');
                 return;
             }
 
@@ -1262,8 +1180,7 @@
                 .eq('id', taskId);
 
             if (error) {
-                console.error('Error deleting task:', error);
-                showToast('Błąd usuwania zadania');
+                showToast('Błąd usuwania zadania', 'error');
                 return;
             }
 
@@ -1274,7 +1191,6 @@
 
         // Tab switching
         function switchTaskTab(tabName) {
-            // Update tab buttons
             document.querySelectorAll('.task-tab').forEach(tab => {
                 if (tab.dataset.tab === tabName) {
                     tab.classList.add('active');
@@ -1283,7 +1199,6 @@
                 }
             });
 
-            // Update tab content
             document.querySelectorAll('.task-tab-content').forEach(content => {
                 content.classList.add('hidden');
             });
@@ -1294,17 +1209,12 @@
         function selectCover(color) {
             document.getElementById('task-cover-color').value = color || '';
 
-            // Update visual selection
             document.querySelectorAll('.cover-option').forEach(btn => {
                 const btnColor = btn.getAttribute('data-color');
                 if (btnColor === (color || '')) {
                     btn.classList.add('selected');
-                    btn.style.boxShadow = '0 0 0 3px #fff';
-                    btn.style.transform = 'scale(1.1)';
                 } else {
                     btn.classList.remove('selected');
-                    btn.style.boxShadow = '';
-                    btn.style.transform = '';
                 }
             });
 
@@ -1332,17 +1242,11 @@
         async function loadComments(taskId) {
             const { data, error } = await supabaseClient
                 .from('todo_comments')
-                .select(`
-                    *,
-                    author:team_members!created_by(id, name, color)
-                `)
+                .select(`*, author:team_members!created_by(id, name, color)`)
                 .eq('task_id', taskId)
                 .order('created_at', { ascending: true });
 
-            if (error) {
-                console.error('Error loading comments:', error);
-                return;
-            }
+            if (error) return;
 
             const container = document.getElementById('comments-list');
             const badge = document.getElementById('comments-count-badge');
@@ -1398,15 +1302,14 @@
                 });
 
             if (error) {
-                console.error('Error adding comment:', error);
-                showToast('Błąd dodawania komentarza');
+                showToast('Błąd dodawania komentarza', 'error');
                 return;
             }
 
             input.value = '';
             await loadComments(taskId);
             await logActivity(taskId, 'comment', { content: content.substring(0, 50) });
-            await loadLists(); // Refresh counts
+            await loadLists();
         }
 
         async function deleteComment(commentId) {
@@ -1417,10 +1320,7 @@
                 .delete()
                 .eq('id', commentId);
 
-            if (error) {
-                console.error('Error deleting comment:', error);
-                return;
-            }
+            if (error) return;
 
             await loadComments(taskId);
             await loadLists();
@@ -1434,10 +1334,7 @@
                 .eq('task_id', taskId)
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error('Error loading attachments:', error);
-                return;
-            }
+            if (error) return;
 
             const container = document.getElementById('attachments-list');
             if (!data || data.length === 0) {
@@ -1483,7 +1380,6 @@
             const file = event.target.files[0];
             if (!file || !taskId) return;
 
-            // Upload to Supabase Storage
             const fileExt = file.name.split('.').pop();
             const fileName = `${taskId}/${Date.now()}.${fileExt}`;
 
@@ -1492,18 +1388,15 @@
                 .upload(fileName, file);
 
             if (uploadError) {
-                console.error('Error uploading file:', uploadError);
-                showToast('Błąd przesyłania pliku');
+                showToast('Błąd przesyłania pliku', 'error');
                 event.target.value = '';
                 return;
             }
 
-            // Get public URL
             const { data: urlData } = supabaseClient.storage
                 .from('attachments')
                 .getPublicUrl(fileName);
 
-            // Save attachment record
             const { error } = await supabaseClient
                 .from('todo_attachments')
                 .insert({
@@ -1516,8 +1409,7 @@
                 });
 
             if (error) {
-                console.error('Error saving attachment:', error);
-                showToast('Błąd zapisu załącznika');
+                showToast('Błąd zapisu załącznika', 'error');
                 return;
             }
 
@@ -1536,10 +1428,7 @@
                 .delete()
                 .eq('id', attachmentId);
 
-            if (error) {
-                console.error('Error deleting attachment:', error);
-                return;
-            }
+            if (error) return;
 
             await loadAttachments(taskId);
             await loadLists();
@@ -1579,18 +1468,12 @@
         async function loadActivity(taskId) {
             const { data, error } = await supabaseClient
                 .from('todo_activity')
-                .select(`
-                    *,
-                    author:team_members!created_by(id, name)
-                `)
+                .select(`*, author:team_members!created_by(id, name)`)
                 .eq('task_id', taskId)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
-            if (error) {
-                console.error('Error loading activity:', error);
-                return;
-            }
+            if (error) return;
 
             const container = document.getElementById('activity-list');
             if (!data || data.length === 0) {
@@ -1664,8 +1547,16 @@
         }
 
         // Toast
-        function showToast(message) {
+        function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
+            const icon = toast.querySelector('i');
+
+            if (type === 'error') {
+                icon.className = 'ph ph-x-circle text-red-400';
+            } else {
+                icon.className = 'ph ph-check-circle text-emerald-400';
+            }
+
             document.getElementById('toast-message').textContent = message;
             toast.classList.remove('translate-y-20', 'opacity-0');
             setTimeout(() => {
@@ -1684,7 +1575,6 @@
             await loadTeamMembers();
             await loadBoard();
 
-            // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     closeListModal();
@@ -1692,7 +1582,6 @@
                 }
             });
 
-            // Track mousedown on list drag handles for drag detection
             document.addEventListener('mousedown', (e) => {
                 canDragList = e.target.closest('.list-drag-handle') !== null;
             });
