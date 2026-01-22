@@ -7,11 +7,21 @@
 // APP CONFIGURATION
 // ============================================
 const APPS = [
-    { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', path: '/tn-crm/dashboard.html', color: 'bg-white text-black' },
-    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', path: '/tn-todo/boards.html', color: 'bg-violet-500 text-white' }
+    { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black' },
+    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white' }
 ];
 
 const CURRENT_APP = 'todo';
+
+function getAppPath(appId) {
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (appId === 'crm') {
+        return isLocal ? '/tn-crm/dashboard.html' : '/dashboard';
+    } else if (appId === 'todo') {
+        return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards';
+    }
+    return '/';
+}
 
 // ============================================
 // NAVIGATION ITEMS FOR TODO APP
@@ -134,7 +144,7 @@ function renderSidebar(containerId = 'sidebar') {
 
     // App switcher dropdown HTML
     const appSwitcherDropdown = APPS.filter(a => a.id !== CURRENT_APP).map(app => `
-        <a href="${app.path}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+        <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
             <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
                 <i class="ph-bold ${app.icon} text-xs"></i>
             </div>
