@@ -6,8 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Tpay API URLs
-const TPAY_API_URL = 'https://api.tpay.com'
+// Tpay OpenAPI URLs
+// Production: https://openapi.tpay.com (NOT api.tpay.com - that's the old API)
+// Sandbox: https://openapi.sandbox.tpay.com
+const TPAY_API_URL = 'https://openapi.tpay.com'
 const TPAY_SANDBOX_URL = 'https://openapi.sandbox.tpay.com'
 
 // Tpay Payment Group IDs
@@ -37,24 +39,28 @@ interface TpayTransactionResponse {
 async function getTpayToken(clientId: string, clientSecret: string, useSandbox: boolean): Promise<string> {
   const baseUrl = useSandbox ? TPAY_SANDBOX_URL : TPAY_API_URL
 
+  // Tpay OAuth requires x-www-form-urlencoded format
+  const formData = new URLSearchParams()
+  formData.append('client_id', clientId)
+  formData.append('client_secret', clientSecret)
+
   const response = await fetch(`${baseUrl}/oauth/auth`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
+    body: formData.toString(),
   })
 
   if (!response.ok) {
     const errorText = await response.text()
     console.error('[tpay] Token error:', response.status, errorText)
-    throw new Error(`Błąd autoryzacji Tpay: ${response.status}`)
+    console.error('[tpay] Using URL:', `${baseUrl}/oauth/auth`)
+    throw new Error(`Błąd autoryzacji Tpay: ${response.status} - ${errorText}`)
   }
 
   const data: TpayTokenResponse = await response.json()
+  console.log('[tpay] Token obtained successfully, expires in:', data.expires_in)
   return data.access_token
 }
 
