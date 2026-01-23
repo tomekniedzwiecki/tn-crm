@@ -35,19 +35,26 @@ interface TpayTransactionResponse {
   transactionPaymentUrl: string
 }
 
-// Get OAuth2 access token from Tpay
+// Get OAuth2 access token from Tpay using client credentials flow
 async function getTpayToken(clientId: string, clientSecret: string, useSandbox: boolean): Promise<string> {
   const baseUrl = useSandbox ? TPAY_SANDBOX_URL : TPAY_API_URL
+  const tokenUrl = `${baseUrl}/oauth/auth`
 
-  // Tpay OAuth requires x-www-form-urlencoded format
+  console.log('[tpay] Requesting token from:', tokenUrl)
+  console.log('[tpay] Client ID length:', clientId?.length, 'Secret length:', clientSecret?.length)
+
+  // Create Basic Auth header (standard OAuth2 client credentials)
+  const basicAuth = btoa(`${clientId}:${clientSecret}`)
+
+  // Request body with grant_type
   const formData = new URLSearchParams()
-  formData.append('client_id', clientId)
-  formData.append('client_secret', clientSecret)
+  formData.append('grant_type', 'client_credentials')
 
-  const response = await fetch(`${baseUrl}/oauth/auth`, {
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${basicAuth}`,
     },
     body: formData.toString(),
   })
@@ -55,7 +62,7 @@ async function getTpayToken(clientId: string, clientSecret: string, useSandbox: 
   if (!response.ok) {
     const errorText = await response.text()
     console.error('[tpay] Token error:', response.status, errorText)
-    console.error('[tpay] Using URL:', `${baseUrl}/oauth/auth`)
+    console.error('[tpay] Using URL:', tokenUrl)
     throw new Error(`Błąd autoryzacji Tpay: ${response.status} - ${errorText}`)
   }
 
