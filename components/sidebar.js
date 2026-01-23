@@ -16,7 +16,7 @@ const CURRENT_APP = 'crm';
 function getAppPath(appId) {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (appId === 'crm') {
-        return isLocal ? '/tn-crm/dashboard.html' : '/tn-crm/dashboard.html';
+        return isLocal ? '/tn-crm/dashboard.html' : '/dashboard.html';
     } else if (appId === 'todo') {
         return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards.html';
     }

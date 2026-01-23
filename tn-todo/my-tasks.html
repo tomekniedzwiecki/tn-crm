@@ -96,10 +96,15 @@
             'urgent': 'bg-red-500'
         };
 
+        function getCrmLoginPath() {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            return isLocal ? '/tn-crm/index.html' : '/index.html';
+        }
+
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
-                window.location.href = '/tn-crm/index.html';
+                window.location.href = getCrmLoginPath();
                 return null;
             }
             Sidebar.setUserEmail(session.user.email.split('@')[0]);

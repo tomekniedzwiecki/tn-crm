@@ -11,13 +11,18 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        function getCrmLoginPath() {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            return isLocal ? '/tn-crm/index.html' : '/index.html';
+        }
+
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 window.location.href = '/tn-todo/boards.html';
             } else {
                 // Redirect to CRM login
-                window.location.href = '/tn-crm/index.html';
+                window.location.href = getCrmLoginPath();
             }
         }
 
