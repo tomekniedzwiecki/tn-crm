@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kod rabatowy - Tomasz Niedźwiecki AI</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="theme-color" content="#10b981">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #000; min-height: 100vh; font-family: 'Inter', sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen p-4">
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center">
+        <div class="w-12 h-12 mx-auto mb-4 border-2 border-zinc-800 border-t-emerald-500 rounded-full animate-spin"></div>
+        <p class="text-zinc-400 text-sm">Sprawdzanie kodu rabatowego...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden text-center max-w-md">
+        <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-red-500/10 flex items-center justify-center">
+            <i class="ph ph-warning-circle text-3xl text-red-400"></i>
+        </div>
+        <h1 class="text-xl font-semibold text-white mb-2">Kod nieaktywny</h1>
+        <p id="error-message" class="text-zinc-400 text-sm mb-5">Ten kod rabatowy nie istnieje lub wygasł.</p>
+        <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 font-medium text-sm">
+            <i class="ph ph-arrow-left"></i>
+            Wróć na stronę główną
+        </a>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+            if (message) {
+                document.getElementById('error-message').textContent = message;
+            }
+        }
+
+        async function processCode() {
+            // Get code from URL path: /kod/CODE or /kod?code=CODE
+            const path = window.location.pathname;
+            const params = new URLSearchParams(window.location.search);
+
+            let code = params.get('code');
+
+            // Try to extract from path /kod/CODE
+            const pathMatch = path.match(/\/kod\/([^\/]+)/i);
+            if (pathMatch) {
+                code = decodeURIComponent(pathMatch[1]);
+            }
+
+            if (!code) {
+                showError('Brak kodu rabatowego w linku.');
+                return;
+            }
+
+            try {
+                // Find the discount code
+                const { data: discountCode, error } = await supabaseClient
+                    .from('discount_codes')
+                    .select('*, offers(id, name, is_active)')
+                    .eq('code', code.toUpperCase())
+                    .eq('is_active', true)
+                    .single();
+
+                if (error || !discountCode) {
+                    showError('Nieprawidłowy kod rabatowy.');
+                    return;
+                }
+
+                // Check if code has expired
+                if (discountCode.valid_until && new Date(discountCode.valid_until) < new Date()) {
+                    showError('Ten kod rabatowy wygasł.');
+                    return;
+                }
+
+                // Check if code is not yet active
+                if (discountCode.valid_from && new Date(discountCode.valid_from) > new Date()) {
+                    showError('Ten kod rabatowy jeszcze nie jest aktywny.');
+                    return;
+                }
+
+                // Check usage limit
+                if (discountCode.uses_limit && discountCode.uses_count >= discountCode.uses_limit) {
+                    showError('Ten kod rabatowy został już wykorzystany.');
+                    return;
+                }
+
+                // Check if offer exists and is active
+                if (!discountCode.offer_id) {
+                    showError('Ten kod nie jest przypisany do żadnej oferty.');
+                    return;
+                }
+
+                if (!discountCode.offers || !discountCode.offers.is_active) {
+                    showError('Oferta powiązana z tym kodem jest nieaktywna.');
+                    return;
+                }
+
+                // Redirect to checkout with offer and code
+                const checkoutUrl = `/checkout?offer=${discountCode.offer_id}&code=${encodeURIComponent(discountCode.code)}`;
+                window.location.href = checkoutUrl;
+
+            } catch (err) {
+                console.error('Error processing code:', err);
+                showError('Wystąpił błąd. Spróbuj ponownie.');
+            }
+        }
+
+        processCode();
+    </script>
+</body>
+</html>
