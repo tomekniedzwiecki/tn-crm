@@ -19,9 +19,8 @@ const PAYMENT_GROUPS = {
   google_pay: 166,
   apple_pay: 167,
   transfer: 0, // 0 = let user choose bank on Tpay page
-  installments: 109, // Raty
+  installments: 169, // Pekao Raty 0%
   twisto: 170, // Twisto BNPL
-  alior_raty: 169, // Alior Raty 0%
 }
 
 interface TpayTokenResponse {
@@ -246,8 +245,7 @@ serve(async (req) => {
           finalGroupId = PAYMENT_GROUPS.transfer
           break
         case 'installments':
-        case 'alior_raty':
-          finalGroupId = PAYMENT_GROUPS.alior_raty
+          finalGroupId = PAYMENT_GROUPS.installments
           break
         case 'twisto':
           finalGroupId = PAYMENT_GROUPS.twisto
