@@ -312,16 +312,68 @@
                                     <span class="text-zinc-500">Cena</span>
                                     <span id="summary-price" class="text-zinc-300 font-medium">-</span>
                                 </div>
+
+                                <!-- Discount row (hidden by default) -->
+                                <div id="discount-row" class="hidden flex justify-between text-sm">
+                                    <span class="text-emerald-400 flex items-center gap-1">
+                                        <i class="ph ph-ticket text-xs"></i>
+                                        Rabat <span id="discount-percent-badge" class="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded">-0%</span>
+                                    </span>
+                                    <span id="discount-amount" class="text-emerald-400 font-medium">-0 PLN</span>
+                                </div>
+
                                 <div class="flex justify-between text-sm">
                                     <span class="text-zinc-500">VAT (23%)</span>
                                     <span class="text-zinc-600">w cenie</span>
                                 </div>
                             </div>
 
+                            <!-- Discount code input -->
+                            <div class="border-t border-white/5 mt-4 pt-4">
+                                <div id="discount-code-section">
+                                    <button type="button" id="toggle-discount-code" class="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors w-full">
+                                        <i class="ph ph-ticket text-base"></i>
+                                        <span>Mam kod rabatowy</span>
+                                    </button>
+                                    <div id="discount-code-input-section" class="hidden mt-3">
+                                        <div class="flex gap-2">
+                                            <input type="text" id="discount-code-input"
+                                                   class="input-field flex-1 text-sm px-3 py-2 rounded-lg uppercase font-mono"
+                                                   placeholder="Wpisz kod">
+                                            <button type="button" id="apply-discount-btn"
+                                                    class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors">
+                                                Zastosuj
+                                            </button>
+                                        </div>
+                                        <p id="discount-code-error" class="error-text hidden mt-2">
+                                            <i class="ph ph-warning-circle"></i>
+                                            <span>Nieprawidłowy kod</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Applied discount display -->
+                                <div id="applied-discount-section" class="hidden mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <i class="ph ph-check-circle text-emerald-400"></i>
+                                            <span class="text-sm text-emerald-300">Kod zastosowany:</span>
+                                            <span id="applied-discount-code" class="font-mono text-emerald-400 font-medium">-</span>
+                                        </div>
+                                        <button type="button" id="remove-discount-btn" class="text-zinc-500 hover:text-red-400 transition-colors">
+                                            <i class="ph ph-x text-sm"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="border-t border-white/5 mt-4 pt-4">
                                 <div class="flex justify-between items-center">
                                     <span class="text-zinc-400 font-medium text-sm">Razem</span>
-                                    <span id="offer-price" class="text-2xl font-bold text-emerald-400">-</span>
+                                    <div class="text-right">
+                                        <span id="original-price-strikethrough" class="hidden text-zinc-500 line-through text-sm mr-2">-</span>
+                                        <span id="offer-price" class="text-2xl font-bold text-emerald-400">-</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -635,6 +687,9 @@
         let isInlinePayment = true;
         const MIN_INSTALLMENT_AMOUNT = 300;
 
+        // Discount code state
+        let appliedDiscount = null; // { id, code, target_price, discount_amount, discount_percent }
+
         // Set legal links
         (function setLegalLinks() {
             const baseUrl = 'https://tomekniedzwiecki.pl';
@@ -686,6 +741,150 @@
 
         function validateBlikCode(code) {
             return /^\d{6}$/.test(code);
+        }
+
+        // Discount code functions
+        async function validateDiscountCode(code) {
+            if (!currentOffer) return null;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .rpc('validate_discount_code', {
+                        p_code: code,
+                        p_offer_id: currentOffer.id
+                    });
+
+                if (error) {
+                    console.error('Discount validation error:', error);
+                    return { is_valid: false, error_message: 'Błąd walidacji kodu' };
+                }
+
+                if (data && data.length > 0) {
+                    return data[0];
+                }
+
+                return { is_valid: false, error_message: 'Nieprawidłowy kod rabatowy' };
+            } catch (err) {
+                console.error('Discount code error:', err);
+                return { is_valid: false, error_message: 'Błąd walidacji kodu' };
+            }
+        }
+
+        async function applyDiscountCode() {
+            const input = document.getElementById('discount-code-input');
+            const code = input.value.trim().toUpperCase();
+            const errorEl = document.getElementById('discount-code-error');
+
+            if (!code) {
+                errorEl.querySelector('span').textContent = 'Wpisz kod rabatowy';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            // Disable button while validating
+            const btn = document.getElementById('apply-discount-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i>';
+
+            const result = await validateDiscountCode(code);
+
+            btn.disabled = false;
+            btn.textContent = 'Zastosuj';
+
+            if (!result || !result.is_valid) {
+                errorEl.querySelector('span').textContent = result?.error_message || 'Nieprawidłowy kod rabatowy';
+                errorEl.classList.remove('hidden');
+                input.classList.add('input-error', 'shake');
+                setTimeout(() => input.classList.remove('shake'), 400);
+                return;
+            }
+
+            // Apply discount
+            appliedDiscount = {
+                id: result.id,
+                code: result.code,
+                target_price: parseFloat(result.target_price),
+                discount_amount: parseFloat(result.discount_amount),
+                discount_percent: parseFloat(result.discount_percent)
+            };
+
+            errorEl.classList.add('hidden');
+            input.classList.remove('input-error');
+
+            // Update UI
+            updateDiscountDisplay();
+        }
+
+        function removeDiscount() {
+            appliedDiscount = null;
+            document.getElementById('discount-code-input').value = '';
+            updateDiscountDisplay();
+        }
+
+        function updateDiscountDisplay() {
+            const discountRow = document.getElementById('discount-row');
+            const discountCodeSection = document.getElementById('discount-code-section');
+            const appliedSection = document.getElementById('applied-discount-section');
+            const originalPriceEl = document.getElementById('original-price-strikethrough');
+            const offerPriceEl = document.getElementById('offer-price');
+
+            if (appliedDiscount) {
+                // Show discount row
+                discountRow.classList.remove('hidden');
+                discountRow.classList.add('flex');
+                document.getElementById('discount-percent-badge').textContent = `-${appliedDiscount.discount_percent.toFixed(0)}%`;
+                document.getElementById('discount-amount').textContent = `-${formatPrice(appliedDiscount.discount_amount)}`;
+
+                // Show applied section, hide input
+                discountCodeSection.classList.add('hidden');
+                appliedSection.classList.remove('hidden');
+                document.getElementById('applied-discount-code').textContent = appliedDiscount.code;
+
+                // Show strikethrough original price
+                originalPriceEl.textContent = formatPrice(currentOffer.price);
+                originalPriceEl.classList.remove('hidden');
+
+                // Update total price
+                offerPriceEl.textContent = formatPrice(appliedDiscount.target_price);
+
+                // Update button text
+                updateButtonText();
+
+                // Update installments if visible
+                if (currentOffer.price >= MIN_INSTALLMENT_AMOUNT) {
+                    const newMonthly = calculateInstallment(appliedDiscount.target_price, 10);
+                    document.getElementById('monthly-price').textContent = formatPrice(newMonthly);
+                    document.getElementById('monthly-price-inline').textContent = formatPrice(newMonthly);
+                }
+            } else {
+                // Hide discount row
+                discountRow.classList.add('hidden');
+                discountRow.classList.remove('flex');
+
+                // Show input section, hide applied
+                discountCodeSection.classList.remove('hidden');
+                appliedSection.classList.add('hidden');
+
+                // Hide strikethrough
+                originalPriceEl.classList.add('hidden');
+
+                // Restore original price
+                offerPriceEl.textContent = formatPrice(currentOffer?.price || 0);
+
+                // Update button text
+                updateButtonText();
+
+                // Restore installments
+                if (currentOffer && currentOffer.price >= MIN_INSTALLMENT_AMOUNT) {
+                    const monthly = calculateInstallment(currentOffer.price, 10);
+                    document.getElementById('monthly-price').textContent = formatPrice(monthly);
+                    document.getElementById('monthly-price-inline').textContent = formatPrice(monthly);
+                }
+            }
+        }
+
+        function getEffectivePrice() {
+            return appliedDiscount ? appliedDiscount.target_price : (currentOffer?.price || 0);
         }
 
         function validateForm() {
@@ -828,12 +1027,13 @@
         });
 
         function updateButtonText() {
-            const price = formatPrice(currentOffer?.price || 0);
+            const effectivePrice = getEffectivePrice();
+            const price = formatPrice(effectivePrice);
             let text = `Zapłać ${price}`;
             let mobileText = `Zapłać ${price}`;
 
             if (selectedMethod === 'installments') {
-                const monthly = formatPrice(calculateInstallment(currentOffer?.price || 0, 12));
+                const monthly = formatPrice(calculateInstallment(effectivePrice, 10));
                 text = `Rozłóż na raty - ${monthly}/mies.`;
                 mobileText = `Raty ${monthly}/mies.`;
             } else if (selectedMethod === 'twisto') {
@@ -964,6 +1164,7 @@
                             setupOfferDisplay(offer);
                             showRetryNotice();
                             showCheckout();
+                            await checkUrlDiscountCode();
                             return;
                         }
                     }
@@ -998,6 +1199,9 @@
                 currentOffer = offer;
                 setupOfferDisplay(offer);
                 showCheckout();
+
+                // Check for discount code in URL
+                await checkUrlDiscountCode();
 
             } catch (err) {
                 console.error('Load error:', err);
@@ -1091,6 +1295,7 @@
                         })
                         .eq('id', order.id);
                 } else {
+                    const effectivePrice = getEffectivePrice();
                     const orderData = {
                         customer_email: email,
                         customer_phone: phone,
@@ -1098,10 +1303,13 @@
                         customer_company: company || null,
                         customer_nip: nip || null,
                         description: currentOffer.name,
-                        amount: currentOffer.price,
+                        amount: effectivePrice,
+                        original_amount: appliedDiscount ? currentOffer.price : null,
+                        discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
+                        discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                         status: 'pending',
                         payment_source: paymentSource,
-                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}`
+                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}`
                     };
 
                     const { data: newOrder, error: orderError } = await supabaseClient
@@ -1113,6 +1321,11 @@
                     if (orderError) throw new Error('Błąd tworzenia zamówienia');
                     order = newOrder;
                     console.log('[checkout] Created order:', order.order_number);
+
+                    // Increment discount code usage
+                    if (appliedDiscount) {
+                        await supabaseClient.rpc('use_discount_code', { p_code_id: appliedDiscount.id });
+                    }
                 }
 
                 // Call Edge Function
@@ -1186,6 +1399,43 @@
                     console.error('Poll error:', e);
                 }
             }, 2000);
+        }
+
+        // Discount code event listeners
+        document.getElementById('toggle-discount-code').addEventListener('click', function() {
+            const inputSection = document.getElementById('discount-code-input-section');
+            const icon = this.querySelector('i');
+            if (inputSection.classList.contains('hidden')) {
+                inputSection.classList.remove('hidden');
+                icon.classList.replace('ph-ticket', 'ph-minus-circle');
+                this.querySelector('span').textContent = 'Ukryj';
+                document.getElementById('discount-code-input').focus();
+            } else {
+                inputSection.classList.add('hidden');
+                icon.classList.replace('ph-minus-circle', 'ph-ticket');
+                this.querySelector('span').textContent = 'Mam kod rabatowy';
+            }
+        });
+
+        document.getElementById('apply-discount-btn').addEventListener('click', applyDiscountCode);
+        document.getElementById('remove-discount-btn').addEventListener('click', removeDiscount);
+
+        document.getElementById('discount-code-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyDiscountCode();
+            }
+        });
+
+        // Check for discount code in URL
+        async function checkUrlDiscountCode() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+
+            if (code && currentOffer) {
+                document.getElementById('discount-code-input').value = code;
+                await applyDiscountCode();
+            }
         }
 
         // Event listeners
