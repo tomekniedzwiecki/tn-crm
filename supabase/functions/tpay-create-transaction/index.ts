@@ -146,7 +146,15 @@ async function createTpayTransaction(
   if (!response.ok) {
     const errorText = await response.text()
     console.error('[tpay] Transaction error:', response.status, errorText)
-    throw new Error(`Błąd tworzenia transakcji Tpay: ${response.status}`)
+    // Parse error details if available
+    let errorDetails = ''
+    try {
+      const errorJson = JSON.parse(errorText)
+      errorDetails = errorJson.message || errorJson.error || JSON.stringify(errorJson)
+    } catch {
+      errorDetails = errorText
+    }
+    throw new Error(`Błąd Tpay (${response.status}): ${errorDetails}`)
   }
 
   const data: TpayTransactionResponse = await response.json()
@@ -248,12 +256,19 @@ serve(async (req) => {
           finalGroupId = PAYMENT_GROUPS.installments
           break
         case 'twisto':
-          finalGroupId = PAYMENT_GROUPS.twisto
+          // Twisto (BNPL) requires additional payer data (address)
+          // Let user complete on Tpay page where they can fill in required info
+          finalGroupId = 0 // 0 = user selects payment method on Tpay page
           break
       }
     }
 
     console.log('[tpay] Payment type:', paymentType, 'Group ID:', finalGroupId, 'BLIK code:', blikCode ? 'provided' : 'none')
+
+    // For Twisto and other BNPL, log additional info
+    if (paymentType === 'twisto') {
+      console.log('[tpay] Twisto selected - redirecting to Tpay page for address collection')
+    }
 
     // Get OAuth token
     const token = await getTpayToken(tpayClientId, tpayClientSecret, useSandbox)
