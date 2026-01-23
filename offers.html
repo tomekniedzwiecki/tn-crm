@@ -733,6 +733,16 @@
             if (session) {
                 await loadOffers();
 
+                // Fix iframe src for local development
+                const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+                if (isLocal) {
+                    const iframe = document.getElementById('codes-iframe');
+                    if (iframe) {
+                        const base = Sidebar.getBasePath();
+                        iframe.src = `${base}/discount-codes.html`;
+                    }
+                }
+
                 // Check URL for tab parameter
                 const params = new URLSearchParams(window.location.search);
                 const tab = params.get('tab');
