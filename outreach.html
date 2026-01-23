@@ -2614,11 +2614,17 @@
                                 : '<span class="text-[10px] px-2 py-0.5 rounded bg-zinc-700 text-zinc-400">Do kontaktu</span>'
                             }
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            <button onclick="openWaContact('${contact.id}', '${contact.phone.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-xs font-medium transition-colors">
-                                <i class="ph ph-whatsapp-logo mr-1"></i>
-                                Kontakt
-                            </button>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="openWaContact('${contact.id}', '${contact.phone.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-xs font-medium transition-colors">
+                                    <i class="ph ph-whatsapp-logo mr-1"></i>
+                                    Kontakt
+                                </button>
+                                <button onclick="addToPipeline('${contact.id}')" class="px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors" title="Dodaj do pipeline jako lead">
+                                    <i class="ph ph-kanban mr-1"></i>
+                                    Pipeline
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -2652,6 +2658,54 @@
                 renderWaContacts();
                 loadWaStats();
                 showToast('Oznaczono jako skontaktowany');
+            }
+        }
+
+        async function addToPipeline(contactId) {
+            const contact = waContacts.find(c => c.id === contactId);
+            if (!contact) {
+                showToast('Nie znaleziono kontaktu');
+                return;
+            }
+
+            // Check if lead with this email already exists
+            const { data: existingLead } = await supabaseClient
+                .from('leads')
+                .select('id')
+                .eq('email', contact.email)
+                .maybeSingle();
+
+            if (existingLead) {
+                showToast('Lead z tym emailem już istnieje w CRM');
+                window.open(Sidebar.getPagePath('lead') + '?id=' + existingLead.id, '_blank');
+                return;
+            }
+
+            // Create lead with status 'contacted'
+            const leadData = {
+                email: contact.email,
+                phone: contact.phone,
+                status: 'contacted',
+                utm_source: 'outreach_whatsapp',
+                assigned_to: currentTeamMember?.id || null,
+                notes: `Dodano z kampanii WhatsApp.\nLTV: ${contact.ltv_pln ? contact.ltv_pln.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${contact.unique_products || 0}`
+            };
+
+            const { data, error } = await supabaseClient
+                .from('leads')
+                .insert([leadData])
+                .select();
+
+            if (error) {
+                showToast('Błąd: ' + error.message);
+                return;
+            }
+
+            showToast('Dodano do pipeline jako Skontaktowany');
+
+            // Open new lead in new tab
+            if (data && data[0]) {
+                window.open(Sidebar.getPagePath('lead') + '?id=' + data[0].id, '_blank');
             }
         }
 
