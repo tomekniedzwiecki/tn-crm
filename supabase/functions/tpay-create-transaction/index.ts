@@ -416,7 +416,7 @@ serve(async (req) => {
     console.log('[tpay-create-transaction] SUCCESS - Payment URL generated')
 
     // Send Slack notification for checkout attempt
-    await sendSlackCheckoutNotification(order, paymentType || selectedMethod || 'unknown')
+    await sendSlackCheckoutNotification(order, paymentType || 'unknown')
 
     // For BLIK inline, we don't redirect - the payment is processed immediately
     // Frontend should poll for status

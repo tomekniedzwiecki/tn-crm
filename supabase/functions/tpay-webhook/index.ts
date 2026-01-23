@@ -256,6 +256,16 @@ serve(async (req) => {
 
       // Send Slack notification for successful payment
       await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' })
+
+      // Increment discount code usage only on successful payment
+      if (order.discount_code_id) {
+        try {
+          await supabase.rpc('use_discount_code', { p_code_id: order.discount_code_id })
+          console.log('[tpay-webhook] Discount code usage incremented:', order.discount_code_id)
+        } catch (discountErr) {
+          console.error('[tpay-webhook] Failed to increment discount code usage:', discountErr)
+        }
+      }
     } else if (trStatus === TPAY_STATUS.FALSE || trStatus === 'error' || trStatus === 'failed') {
       // Keep as pending or mark as failed if needed
       console.log('[tpay-webhook] Payment failed')
