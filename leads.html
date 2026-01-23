@@ -140,7 +140,7 @@
                     <select id="filter-lead-source" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
                         <option value="">Skąd w CRM</option>
                         <option value="website">Ze strony</option>
-                        <option value="outreach">Z kampanii</option>
+                        <option value="outreach">Z bazy</option>
                         <option value="manual">Ręcznie</option>
                     </select>
 
@@ -680,8 +680,17 @@
 
         // Lead Source - skąd lead trafił do CRM (website/outreach/manual)
         function getLeadSource(lead) {
-            const source = lead.lead_source;
-            if (source === 'outreach') return { name: 'Kampania', key: 'outreach', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: 'ph-megaphone' };
+            // Check lead_source field first
+            let source = lead.lead_source;
+
+            // Backwards compatibility: if no lead_source, try to detect from utm_source
+            // (for leads created before migration)
+            if (!source && lead.utm_source) {
+                if (lead.utm_source === 'outreach') source = 'outreach';
+                else if (lead.utm_source === 'manual') source = 'manual';
+            }
+
+            if (source === 'outreach') return { name: 'Baza', key: 'outreach', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: 'ph-database' };
             if (source === 'manual') return { name: 'Ręczny', key: 'manual', color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: 'ph-user-plus' };
             // Default: website
             return { name: 'Strona', key: 'website', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', icon: 'ph-globe' };
@@ -1577,7 +1586,7 @@
                 status: 'contacted',
                 assigned_to: currentMember?.id || null,
                 lead_source: 'outreach',
-                notes: `Źródło: Kampania\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
+                notes: `Źródło: Baza kontaktów\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
             };
 
             const { data, error } = await supabaseClient

@@ -2,8 +2,11 @@
 -- LEAD SOURCE - Źródło pozyskania leada w CRM
 -- ============================================
 -- Oddzielne od utm_source (marketing attribution)
--- lead_source = skąd lead trafił do CRM
--- utm_source = skąd lead trafił na stronę (marketing)
+-- lead_source = skąd lead trafił do CRM:
+--   website = z formularza na stronie
+--   outreach = z bazy kontaktów (import z kampanii/outreach)
+--   manual = dodany ręcznie w CRM
+-- utm_source = skąd lead trafił na stronę (marketing: google, meta, etc.)
 
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS lead_source TEXT
     CHECK (lead_source IN ('website', 'outreach', 'manual'));
@@ -28,4 +31,4 @@ UPDATE leads SET utm_source = NULL WHERE utm_source = 'outreach';
 -- Index
 CREATE INDEX IF NOT EXISTS idx_leads_lead_source ON leads(lead_source);
 
-COMMENT ON COLUMN leads.lead_source IS 'Źródło pozyskania leada: website (formularz), outreach (kampania mailingowa), manual (dodany ręcznie)';
+COMMENT ON COLUMN leads.lead_source IS 'Źródło pozyskania leada: website (formularz), outreach (baza kontaktów), manual (dodany ręcznie)';
