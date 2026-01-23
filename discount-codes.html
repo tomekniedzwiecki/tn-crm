@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kody rabatowe - TN CRM</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #ededed; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid #262626;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+
+        /* Table styles - Vercel */
+        .data-table {
+            border: 1px solid #262626;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .data-table th {
+            background: #0a0a0a;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #737373;
+            border-bottom: 1px solid #262626;
+        }
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #1a1a1a;
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        .data-table tr:hover td {
+            background: #0a0a0a;
+        }
+
+        /* Status badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-badge.active {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+        .status-badge.inactive {
+            background: rgba(161, 161, 170, 0.15);
+            color: #a1a1aa;
+        }
+        .status-badge.expired {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        /* Code badge */
+        .code-badge {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            background: #171717;
+            border: 1px solid #262626;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #ededed;
+            letter-spacing: 0.02em;
+        }
+
+        /* Usage badge */
+        .usage-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: #171717;
+            border: 1px solid #262626;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #a1a1aa;
+        }
+
+        /* Modal - Vercel style */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+        }
+        .modal-content {
+            background: #000;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 25px 50px -12px rgba(0,0,0,0.8);
+        }
+
+        /* Input - Vercel style */
+        .v-input {
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ededed;
+            font-size: 14px;
+            transition: border-color 0.15s ease;
+        }
+        .v-input:focus {
+            outline: none;
+            border-color: #525252;
+        }
+        .v-input::placeholder {
+            color: #525252;
+        }
+
+        /* Select - Vercel style */
+        .v-select {
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ededed;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .v-select:focus {
+            outline: none;
+            border-color: #525252;
+        }
+
+        /* Toggle switch - Vercel style */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #262626;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .toggle-switch.active {
+            background: white;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #737373;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+            background: black;
+        }
+
+        /* Button - Vercel style */
+        .v-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+        .v-btn-primary {
+            background: white;
+            color: black;
+        }
+        .v-btn-primary:hover {
+            background: #e5e5e5;
+        }
+        .v-btn-secondary {
+            background: transparent;
+            border: 1px solid #262626;
+            color: #ededed;
+        }
+        .v-btn-secondary:hover {
+            border-color: #404040;
+            background: #0a0a0a;
+        }
+        .v-btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .v-btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Empty state */
+        .empty-illustration {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #171717 0%, #0a0a0a 100%);
+            border: 1px solid #262626;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Filter tabs */
+        .filter-tab {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #737373;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .filter-tab:hover {
+            color: #ededed;
+            background: #171717;
+        }
+        .filter-tab.active {
+            color: white;
+            background: #262626;
+        }
+
+        /* Discount badge */
+        .discount-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Action buttons */
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: #737373;
+            transition: all 0.15s ease;
+        }
+        .action-btn:hover {
+            color: white;
+            background: #262626;
+        }
+        .action-btn.delete:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* Copy tooltip */
+        .copy-tooltip {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 8px;
+            background: white;
+            color: black;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
+        .copy-tooltip.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col relative min-w-0">
+        <!-- Header -->
+        <header class="h-14 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="text-neutral-500 text-sm hidden sm:inline">marketing</span>
+                    <span class="text-neutral-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium text-sm">kody rabatowe</span>
+                </div>
+            </div>
+            <button onclick="openModal()" class="v-btn v-btn-primary">
+                <i class="ph ph-plus text-base"></i>
+                <span class="hidden sm:inline">Nowy kod</span>
+            </button>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-auto p-4 md:p-6">
+            <!-- Stats cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 animate-enter">
+                <div class="bg-[#0a0a0a] border border-[#262626] rounded-xl p-4">
+                    <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-1">Wszystkie kody</div>
+                    <div id="stat-total" class="text-2xl font-semibold text-white">-</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#262626] rounded-xl p-4">
+                    <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-1">Aktywne</div>
+                    <div id="stat-active" class="text-2xl font-semibold text-emerald-400">-</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#262626] rounded-xl p-4">
+                    <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-1">Użycia dzisiaj</div>
+                    <div id="stat-today" class="text-2xl font-semibold text-white">-</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#262626] rounded-xl p-4">
+                    <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-1">Całkowita wartość rabatów</div>
+                    <div id="stat-value" class="text-2xl font-semibold text-white">-</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-col sm:flex-row gap-3 mb-4 animate-enter">
+                <div class="flex-1 relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"></i>
+                    <input type="text" id="search-input" placeholder="Szukaj po kodzie, ofercie..."
+                           class="v-input w-full pl-10"
+                           oninput="filterCodes()">
+                </div>
+                <div class="flex gap-2">
+                    <div class="flex bg-[#0a0a0a] border border-[#262626] rounded-lg p-1">
+                        <button class="filter-tab active" data-filter="all" onclick="setFilter('all')">Wszystkie</button>
+                        <button class="filter-tab" data-filter="active" onclick="setFilter('active')">Aktywne</button>
+                        <button class="filter-tab" data-filter="expired" onclick="setFilter('expired')">Wygasłe</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div id="codes-container" class="animate-enter">
+                <table class="data-table w-full">
+                    <thead>
+                        <tr>
+                            <th>Kod</th>
+                            <th>Oferta</th>
+                            <th>Rabat</th>
+                            <th>Użycia</th>
+                            <th>Ważność</th>
+                            <th>Status</th>
+                            <th>Utworzono</th>
+                            <th class="text-right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codes-list">
+                        <tr>
+                            <td colspan="8" class="text-center py-12">
+                                <div class="flex justify-center">
+                                    <div class="animate-spin w-6 h-6 border-2 border-white/20 border-t-white rounded-full"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div id="empty-state" class="hidden text-center py-16">
+                <div class="flex justify-center mb-4">
+                    <div class="empty-illustration">
+                        <i class="ph ph-ticket text-4xl text-neutral-600"></i>
+                    </div>
+                </div>
+                <h3 class="text-lg font-medium text-white mb-2">Brak kodów rabatowych</h3>
+                <p class="text-neutral-500 mb-6">Stwórz pierwszy kod rabatowy dla swoich ofert</p>
+                <button onclick="openModal()" class="v-btn v-btn-primary">
+                    <i class="ph ph-plus"></i>
+                    Stwórz kod
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="code-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
+        <div class="modal-content w-full max-w-lg relative">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-5 border-b border-[#262626]">
+                <h2 id="modal-title" class="text-lg font-semibold text-white">Nowy kod rabatowy</h2>
+                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#262626] text-neutral-400 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="code-form" class="p-5 space-y-5">
+                <input type="hidden" id="code-id">
+
+                <!-- Code -->
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Kod</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="code-value" class="v-input flex-1 uppercase" placeholder="np. RABAT20" required>
+                        <button type="button" onclick="generateCode()" class="v-btn v-btn-secondary" title="Generuj losowy kod">
+                            <i class="ph ph-shuffle text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Offer -->
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Oferta</label>
+                    <select id="code-offer" class="v-select w-full">
+                        <option value="">Wszystkie oferty (globalny)</option>
+                    </select>
+                    <p class="text-xs text-neutral-500 mt-1">Zostaw puste dla kodu działającego na wszystkie oferty</p>
+                </div>
+
+                <!-- Prices -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Cena oryginalna</label>
+                        <div class="relative">
+                            <input type="number" id="code-original-price" class="v-input w-full pr-12" step="0.01" min="0" placeholder="0.00">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">PLN</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Cena po rabacie</label>
+                        <div class="relative">
+                            <input type="number" id="code-target-price" class="v-input w-full pr-12" step="0.01" min="0" placeholder="0.00" required>
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">PLN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discount preview -->
+                <div id="discount-preview" class="hidden bg-[#0a0a0a] border border-[#262626] rounded-lg p-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-neutral-400">Wysokość rabatu:</span>
+                        <span id="preview-discount" class="discount-badge">-</span>
+                    </div>
+                </div>
+
+                <!-- Usage limit -->
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Limit użyć</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="code-limit" class="v-input w-32" min="1" placeholder="∞">
+                        <span class="text-neutral-500 text-sm">Zostaw puste = bez limitu</span>
+                    </div>
+                </div>
+
+                <!-- Validity period -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Ważny od</label>
+                        <input type="datetime-local" id="code-valid-from" class="v-input w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Ważny do</label>
+                        <input type="datetime-local" id="code-valid-until" class="v-input w-full">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Opis (wewnętrzny)</label>
+                    <input type="text" id="code-description" class="v-input w-full" placeholder="np. Promocja dla subskrybentów newslettera">
+                </div>
+
+                <!-- Active toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-medium text-white">Aktywny</div>
+                        <div class="text-xs text-neutral-500">Kod jest dostępny do użycia</div>
+                    </div>
+                    <div id="code-active-toggle" class="toggle-switch active" onclick="toggleActive()"></div>
+                </div>
+            </form>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between p-5 border-t border-[#262626]">
+                <button type="button" onclick="closeModal()" class="v-btn v-btn-secondary">Anuluj</button>
+                <button type="button" onclick="saveCode()" class="v-btn v-btn-primary">
+                    <i class="ph ph-check"></i>
+                    <span id="save-btn-text">Zapisz</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="modal-overlay absolute inset-0" onclick="closeDeleteModal()"></div>
+        <div class="modal-content w-full max-w-sm relative p-6 text-center">
+            <div class="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="ph ph-trash text-2xl text-red-500"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-white mb-2">Usuń kod rabatowy</h3>
+            <p class="text-neutral-400 mb-6">Czy na pewno chcesz usunąć kod <span id="delete-code-name" class="code-badge"></span>?</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeDeleteModal()" class="v-btn v-btn-secondary">Anuluj</button>
+                <button onclick="confirmDelete()" class="v-btn v-btn-danger">
+                    <i class="ph ph-trash"></i>
+                    Usuń
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase client
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY1MTcyMDYsImV4cCI6MjA1MjA5MzIwNn0.x3_RXn2E11b_zj01oJq4VW0G5VqzK6kN9F47M8cixuc';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+        let codes = [];
+        let offers = [];
+        let currentFilter = 'all';
+        let deleteCodeId = null;
+        let isActive = true;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = '/';
+                return;
+            }
+            currentUser = session.user;
+
+            // Initialize sidebar
+            if (typeof Sidebar !== 'undefined') {
+                Sidebar.render();
+            }
+
+            // Load data
+            await Promise.all([
+                loadOffers(),
+                loadCodes()
+            ]);
+        });
+
+        async function loadOffers() {
+            const { data, error } = await supabaseClient
+                .from('offers')
+                .select('id, name, price, is_active')
+                .order('name');
+
+            if (error) {
+                console.error('Error loading offers:', error);
+                return;
+            }
+
+            offers = data || [];
+
+            // Populate offer select
+            const select = document.getElementById('code-offer');
+            offers.forEach(offer => {
+                const option = document.createElement('option');
+                option.value = offer.id;
+                option.textContent = `${offer.name} (${parseFloat(offer.price).toFixed(2)} PLN)`;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadCodes() {
+            const { data, error } = await supabaseClient
+                .from('discount_codes')
+                .select(`
+                    *,
+                    offer:offers(id, name, price)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading codes:', error);
+                return;
+            }
+
+            codes = data || [];
+            updateStats();
+            renderCodes();
+        }
+
+        function updateStats() {
+            const now = new Date();
+
+            // Total codes
+            document.getElementById('stat-total').textContent = codes.length;
+
+            // Active codes
+            const activeCodes = codes.filter(c => c.is_active && (!c.valid_until || new Date(c.valid_until) > now));
+            document.getElementById('stat-active').textContent = activeCodes.length;
+
+            // Today's uses (we'd need orders data for accurate count, showing placeholder)
+            document.getElementById('stat-today').textContent = '-';
+
+            // Total discount value from used codes
+            const totalValue = codes.reduce((sum, c) => sum + (c.discount_amount || 0) * (c.uses_count || 0), 0);
+            document.getElementById('stat-value').textContent = `${totalValue.toFixed(0)} PLN`;
+        }
+
+        function renderCodes() {
+            const list = document.getElementById('codes-list');
+            const empty = document.getElementById('empty-state');
+            const container = document.getElementById('codes-container');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const now = new Date();
+
+            // Filter codes
+            let filtered = codes.filter(code => {
+                // Search filter
+                const matchSearch = !search ||
+                    code.code.toLowerCase().includes(search) ||
+                    (code.offer?.name || '').toLowerCase().includes(search) ||
+                    (code.description || '').toLowerCase().includes(search);
+
+                // Status filter
+                const isExpired = code.valid_until && new Date(code.valid_until) < now;
+                const isCodeActive = code.is_active && !isExpired;
+
+                if (currentFilter === 'active' && !isCodeActive) return false;
+                if (currentFilter === 'expired' && !isExpired) return false;
+
+                return matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            empty.classList.add('hidden');
+
+            list.innerHTML = filtered.map(code => {
+                const isExpired = code.valid_until && new Date(code.valid_until) < now;
+                const isCodeActive = code.is_active && !isExpired;
+
+                const statusClass = isExpired ? 'expired' : (isCodeActive ? 'active' : 'inactive');
+                const statusText = isExpired ? 'Wygasły' : (isCodeActive ? 'Aktywny' : 'Nieaktywny');
+
+                const usageText = code.uses_limit
+                    ? `${code.uses_count || 0} / ${code.uses_limit}`
+                    : `${code.uses_count || 0} / ∞`;
+
+                const validityText = formatValidity(code.valid_from, code.valid_until);
+                const createdText = formatDate(code.created_at);
+
+                const offerName = code.offer?.name || 'Wszystkie oferty';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="relative inline-block">
+                                <span class="code-badge cursor-pointer" onclick="copyCode('${code.code}', this)" title="Kliknij aby skopiować">
+                                    ${code.code}
+                                </span>
+                                <span class="copy-tooltip">Skopiowano!</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="text-neutral-300">${offerName}</span>
+                        </td>
+                        <td>
+                            <span class="discount-badge">
+                                -${parseFloat(code.discount_amount || 0).toFixed(0)} PLN
+                                ${code.discount_percent ? `(${parseFloat(code.discount_percent).toFixed(0)}%)` : ''}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="usage-badge">
+                                <i class="ph ph-users text-sm"></i>
+                                ${usageText}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-neutral-400 text-sm">${validityText}</span>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                ${statusText}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-neutral-500 text-sm">${createdText}</span>
+                        </td>
+                        <td>
+                            <div class="flex gap-1 justify-end">
+                                <button class="action-btn" onclick="editCode('${code.id}')" title="Edytuj">
+                                    <i class="ph ph-pencil-simple"></i>
+                                </button>
+                                <button class="action-btn" onclick="duplicateCode('${code.id}')" title="Duplikuj">
+                                    <i class="ph ph-copy"></i>
+                                </button>
+                                <button class="action-btn delete" onclick="deleteCode('${code.id}', '${code.code}')" title="Usuń">
+                                    <i class="ph ph-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function formatValidity(from, until) {
+            if (!from && !until) return 'Bezterminowo';
+
+            const options = { day: 'numeric', month: 'short' };
+            const fromStr = from ? new Date(from).toLocaleDateString('pl-PL', options) : '-';
+            const untilStr = until ? new Date(until).toLocaleDateString('pl-PL', options) : '∞';
+
+            return `${fromStr} → ${untilStr}`;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.filter === filter);
+            });
+            renderCodes();
+        }
+
+        function filterCodes() {
+            renderCodes();
+        }
+
+        function copyCode(code, element) {
+            navigator.clipboard.writeText(code);
+            const tooltip = element.nextElementSibling;
+            tooltip.classList.add('show');
+            setTimeout(() => tooltip.classList.remove('show'), 1500);
+        }
+
+        function openModal(code = null) {
+            const modal = document.getElementById('code-modal');
+            const title = document.getElementById('modal-title');
+            const saveBtn = document.getElementById('save-btn-text');
+
+            if (code) {
+                title.textContent = 'Edytuj kod rabatowy';
+                saveBtn.textContent = 'Zapisz zmiany';
+
+                document.getElementById('code-id').value = code.id;
+                document.getElementById('code-value').value = code.code;
+                document.getElementById('code-offer').value = code.offer_id || '';
+                document.getElementById('code-original-price').value = code.original_price || '';
+                document.getElementById('code-target-price').value = code.target_price || '';
+                document.getElementById('code-limit').value = code.uses_limit || '';
+                document.getElementById('code-valid-from').value = code.valid_from ? formatDateTimeLocal(code.valid_from) : '';
+                document.getElementById('code-valid-until').value = code.valid_until ? formatDateTimeLocal(code.valid_until) : '';
+                document.getElementById('code-description').value = code.description || '';
+                isActive = code.is_active;
+            } else {
+                title.textContent = 'Nowy kod rabatowy';
+                saveBtn.textContent = 'Zapisz';
+
+                document.getElementById('code-form').reset();
+                document.getElementById('code-id').value = '';
+                isActive = true;
+            }
+
+            updateToggle();
+            updateDiscountPreview();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('code-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function toggleActive() {
+            isActive = !isActive;
+            updateToggle();
+        }
+
+        function updateToggle() {
+            const toggle = document.getElementById('code-active-toggle');
+            toggle.classList.toggle('active', isActive);
+        }
+
+        function generateCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('code-value').value = code;
+        }
+
+        function formatDateTimeLocal(dateStr) {
+            const date = new Date(dateStr);
+            return date.toISOString().slice(0, 16);
+        }
+
+        // Price change handlers
+        document.getElementById('code-original-price')?.addEventListener('input', updateDiscountPreview);
+        document.getElementById('code-target-price')?.addEventListener('input', updateDiscountPreview);
+        document.getElementById('code-offer')?.addEventListener('change', () => {
+            const offerId = document.getElementById('code-offer').value;
+            if (offerId) {
+                const offer = offers.find(o => o.id === offerId);
+                if (offer) {
+                    document.getElementById('code-original-price').value = offer.price;
+                    updateDiscountPreview();
+                }
+            }
+        });
+
+        function updateDiscountPreview() {
+            const original = parseFloat(document.getElementById('code-original-price').value) || 0;
+            const target = parseFloat(document.getElementById('code-target-price').value) || 0;
+            const preview = document.getElementById('discount-preview');
+            const previewText = document.getElementById('preview-discount');
+
+            if (original > 0 && target > 0 && original > target) {
+                const discount = original - target;
+                const percent = ((discount / original) * 100).toFixed(0);
+                previewText.textContent = `-${discount.toFixed(0)} PLN (${percent}%)`;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        async function saveCode() {
+            const id = document.getElementById('code-id').value;
+            const code = document.getElementById('code-value').value.toUpperCase().trim();
+            const offerId = document.getElementById('code-offer').value || null;
+            const originalPrice = document.getElementById('code-original-price').value || null;
+            const targetPrice = document.getElementById('code-target-price').value;
+            const limit = document.getElementById('code-limit').value || null;
+            const validFrom = document.getElementById('code-valid-from').value || null;
+            const validUntil = document.getElementById('code-valid-until').value || null;
+            const description = document.getElementById('code-description').value.trim() || null;
+
+            if (!code || !targetPrice) {
+                alert('Wypełnij wymagane pola: kod i cena po rabacie');
+                return;
+            }
+
+            const data = {
+                code,
+                offer_id: offerId,
+                original_price: originalPrice ? parseFloat(originalPrice) : null,
+                target_price: parseFloat(targetPrice),
+                uses_limit: limit ? parseInt(limit) : null,
+                valid_from: validFrom ? new Date(validFrom).toISOString() : null,
+                valid_until: validUntil ? new Date(validUntil).toISOString() : null,
+                description,
+                is_active: isActive
+            };
+
+            try {
+                let result;
+                if (id) {
+                    result = await supabaseClient
+                        .from('discount_codes')
+                        .update(data)
+                        .eq('id', id);
+                } else {
+                    result = await supabaseClient
+                        .from('discount_codes')
+                        .insert(data);
+                }
+
+                if (result.error) throw result.error;
+
+                closeModal();
+                await loadCodes();
+            } catch (err) {
+                console.error('Error saving code:', err);
+                alert('Błąd zapisywania kodu: ' + err.message);
+            }
+        }
+
+        function editCode(id) {
+            const code = codes.find(c => c.id === id);
+            if (code) openModal(code);
+        }
+
+        function duplicateCode(id) {
+            const code = codes.find(c => c.id === id);
+            if (code) {
+                const duplicate = { ...code };
+                delete duplicate.id;
+                delete duplicate.created_at;
+                delete duplicate.updated_at;
+                delete duplicate.uses_count;
+                duplicate.code = code.code + '_COPY';
+                openModal(duplicate);
+            }
+        }
+
+        function deleteCode(id, code) {
+            deleteCodeId = id;
+            document.getElementById('delete-code-name').textContent = code;
+            const modal = document.getElementById('delete-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('delete-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            deleteCodeId = null;
+        }
+
+        async function confirmDelete() {
+            if (!deleteCodeId) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('discount_codes')
+                    .delete()
+                    .eq('id', deleteCodeId);
+
+                if (error) throw error;
+
+                closeDeleteModal();
+                await loadCodes();
+            } catch (err) {
+                console.error('Error deleting code:', err);
+                alert('Błąd usuwania kodu: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
