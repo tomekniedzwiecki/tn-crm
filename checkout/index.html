@@ -842,23 +842,33 @@
                 if (orderError) throw new Error('Błąd tworzenia zamówienia');
 
                 // Call Edge Function
+                const requestBody = {
+                    orderId: order.id,
+                    paymentType: selectedMethod === 'installments' ? 'installments' : 'one_time',
+                    groupId: selectedGroupId > 0 ? selectedGroupId : null
+                };
+
+                console.log('[checkout] Calling tpay-create-transaction with:', requestBody);
+                console.log('[checkout] URL:', `${SUPABASE_URL}/functions/v1/tpay-create-transaction`);
+
                 const response = await fetch(`${SUPABASE_URL}/functions/v1/tpay-create-transaction`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': SUPABASE_ANON_KEY
                     },
-                    body: JSON.stringify({
-                        orderId: order.id,
-                        paymentType: selectedMethod === 'installments' ? 'installments' : 'one_time',
-                        groupId: selectedGroupId > 0 ? selectedGroupId : null
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('[checkout] Response status:', response.status);
+
                 const result = await response.json();
+                console.log('[checkout] Response body:', result);
 
                 if (!result.success) throw new Error(result.error || 'Błąd płatności');
                 if (!result.paymentUrl) throw new Error('Brak linku do płatności');
+
+                console.log('[checkout] Payment URL:', result.paymentUrl);
 
                 showRedirect();
                 setTimeout(() => window.location.href = result.paymentUrl, 1200);
