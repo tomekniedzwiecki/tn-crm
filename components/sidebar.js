@@ -35,7 +35,6 @@ const NAV_ITEMS = [
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline', adminOnly: false },
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz', adminOnly: false },
     { id: 'offers', icon: 'ph-package', label: 'Oferty', adminOnly: false },
-    { id: 'discount-codes', icon: 'ph-ticket', label: 'Kody rabatowe', adminOnly: false },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia', adminOnly: false },
     { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie', adminOnly: false },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
