@@ -114,17 +114,15 @@
 
                 <!-- Filters -->
                 <div class="flex flex-wrap gap-3 mb-6">
-                    <!-- Search -->
-                    <div class="relative flex-1 min-w-[200px] max-w-md">
-                        <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
-                        <input type="text" id="filter-search" placeholder="Szukaj email, telefon..." class="filter-input w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600">
+                    <!-- Unified Search -->
+                    <div class="relative flex-1 min-w-[200px] max-w-lg">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500 z-10"></i>
+                        <input type="text" id="filter-search" placeholder="Szukaj email, telefon (leady + kampanie)..." class="filter-input w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600">
+                        <!-- Search Results Dropdown -->
+                        <div id="unified-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 max-h-[400px] overflow-y-auto">
+                            <div id="unified-search-results" class="p-2"></div>
+                        </div>
                     </div>
-
-                    <!-- Search in campaigns -->
-                    <button onclick="openCampaignSearch()" class="flex items-center gap-2 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 rounded-lg text-sm font-medium transition-colors">
-                        <i class="ph ph-megaphone"></i>
-                        Szukaj w kampaniach
-                    </button>
 
                     <!-- Status -->
                     <select id="filter-status" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
@@ -445,40 +443,6 @@
                     <i class="ph ph-arrow-right"></i>
                     Otwórz lead
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Campaign Search Modal -->
-    <div id="campaign-search-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-zinc-950 border border-indigo-500/20 rounded-xl w-full max-w-2xl shadow-2xl shadow-indigo-500/5 max-h-[80vh] flex flex-col">
-            <div class="flex items-center justify-between p-5 border-b border-white/5">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20 flex items-center justify-center">
-                        <i class="ph ph-megaphone text-indigo-400 text-xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-white font-semibold">Szukaj w kampaniach</h2>
-                        <p class="text-zinc-500 text-xs">Znajdź kontakty z bazy outreach</p>
-                    </div>
-                </div>
-                <button onclick="closeCampaignSearch()" class="text-zinc-500 hover:text-white p-1.5 hover:bg-white/5 rounded-lg transition-colors">
-                    <i class="ph ph-x text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-5 border-b border-white/5">
-                <div class="relative">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
-                    <input type="text" id="campaign-search-input" placeholder="Wpisz email lub telefon..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-indigo-500/50 outline-none" autofocus>
-                </div>
-            </div>
-
-            <div id="campaign-search-results" class="flex-1 overflow-y-auto p-5">
-                <div class="text-center text-zinc-500 py-8">
-                    <i class="ph ph-magnifying-glass text-3xl mb-2 block"></i>
-                    <p class="text-sm">Wpisz minimum 3 znaki aby wyszukać</p>
-                </div>
             </div>
         </div>
     </div>
@@ -1414,7 +1378,7 @@
             if (e.key === 'Escape') {
                 closeModal();
                 closeAddModal();
-                closeCampaignSearch();
+                closeUnifiedSearch();
             }
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
@@ -1422,145 +1386,153 @@
             }
         });
 
-        // Campaign Search Functions
-        let campaignSearchTimeout = null;
+        // Unified Search (Leads + Campaigns)
+        let unifiedSearchTimeout = null;
 
-        function openCampaignSearch() {
-            document.getElementById('campaign-search-modal').classList.remove('hidden');
-            const input = document.getElementById('campaign-search-input');
-            input.value = document.getElementById('filter-search').value;
-            input.focus();
-            if (input.value.length >= 3) {
-                searchCampaignContacts(input.value);
-            }
+        function closeUnifiedSearch() {
+            document.getElementById('unified-search-dropdown').classList.add('hidden');
         }
 
-        function closeCampaignSearch() {
-            document.getElementById('campaign-search-modal').classList.add('hidden');
-            document.getElementById('campaign-search-input').value = '';
-            document.getElementById('campaign-search-results').innerHTML = `
-                <div class="text-center text-zinc-500 py-8">
-                    <i class="ph ph-magnifying-glass text-3xl mb-2 block"></i>
-                    <p class="text-sm">Wpisz minimum 3 znaki aby wyszukać</p>
-                </div>
-            `;
-        }
-
-        document.getElementById('campaign-search-input').addEventListener('input', (e) => {
-            clearTimeout(campaignSearchTimeout);
+        document.getElementById('filter-search').addEventListener('input', (e) => {
+            clearTimeout(unifiedSearchTimeout);
             const query = e.target.value.trim();
 
+            // Also apply filters to table
+            applyFilters();
+
             if (query.length < 3) {
-                document.getElementById('campaign-search-results').innerHTML = `
-                    <div class="text-center text-zinc-500 py-8">
-                        <i class="ph ph-magnifying-glass text-3xl mb-2 block"></i>
-                        <p class="text-sm">Wpisz minimum 3 znaki aby wyszukać</p>
-                    </div>
-                `;
+                closeUnifiedSearch();
                 return;
             }
 
-            document.getElementById('campaign-search-results').innerHTML = `
-                <div class="text-center text-zinc-500 py-8">
-                    <i class="ph ph-circle-notch animate-spin text-3xl mb-2 block"></i>
-                    <p class="text-sm">Szukam...</p>
-                </div>
-            `;
-
-            campaignSearchTimeout = setTimeout(() => searchCampaignContacts(query), 300);
+            unifiedSearchTimeout = setTimeout(() => unifiedSearch(query), 300);
         });
 
-        async function searchCampaignContacts(query) {
-            const { data, error } = await supabaseClient
-                .from('outreach_contacts')
-                .select('id, email, phone, ltv_pln, unique_products, first_purchase, last_purchase, whatsapp_contacted_at')
-                .or(`email.ilike.%${query}%,phone.ilike.%${query}%`)
-                .order('ltv_pln', { ascending: false, nullsFirst: false })
-                .limit(20);
+        document.getElementById('filter-search').addEventListener('focus', (e) => {
+            const query = e.target.value.trim();
+            if (query.length >= 3) {
+                unifiedSearch(query);
+            }
+        });
 
-            if (error) {
-                document.getElementById('campaign-search-results').innerHTML = `
-                    <div class="text-center text-red-400 py-8">
-                        <i class="ph ph-warning text-3xl mb-2 block"></i>
-                        <p class="text-sm">Błąd: ${error.message}</p>
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#filter-search') && !e.target.closest('#unified-search-dropdown')) {
+                closeUnifiedSearch();
+            }
+        });
+
+        async function unifiedSearch(query) {
+            const dropdown = document.getElementById('unified-search-dropdown');
+            const results = document.getElementById('unified-search-results');
+
+            dropdown.classList.remove('hidden');
+            results.innerHTML = `<div class="text-center text-zinc-500 py-4"><i class="ph ph-circle-notch animate-spin text-xl"></i></div>`;
+
+            // Search both tables in parallel
+            const [leadsResult, campaignsResult] = await Promise.all([
+                supabaseClient
+                    .from('leads')
+                    .select('id, email, phone, status, created_at, name, company')
+                    .or(`email.ilike.%${query}%,phone.ilike.%${query}%`)
+                    .order('created_at', { ascending: false })
+                    .limit(10),
+                supabaseClient
+                    .from('outreach_contacts')
+                    .select('id, email, phone, ltv_pln, unique_products, whatsapp_contacted_at')
+                    .or(`email.ilike.%${query}%,phone.ilike.%${query}%`)
+                    .order('ltv_pln', { ascending: false, nullsFirst: false })
+                    .limit(10)
+            ]);
+
+            const leadsData = leadsResult.data || [];
+            const campaignsData = campaignsResult.data || [];
+
+            // Filter out campaigns that are already leads
+            const leadEmails = new Set(leadsData.map(l => l.email));
+            const uniqueCampaigns = campaignsData.filter(c => !leadEmails.has(c.email));
+
+            if (leadsData.length === 0 && uniqueCampaigns.length === 0) {
+                results.innerHTML = `
+                    <div class="text-center text-zinc-500 py-4">
+                        <i class="ph ph-magnifying-glass text-xl mb-1 block"></i>
+                        <p class="text-xs">Brak wyników dla "${query}"</p>
                     </div>
                 `;
                 return;
             }
 
-            if (!data || data.length === 0) {
-                document.getElementById('campaign-search-results').innerHTML = `
-                    <div class="text-center text-zinc-500 py-8">
-                        <i class="ph ph-user-minus text-3xl mb-2 block"></i>
-                        <p class="text-sm">Brak wyników dla "${query}"</p>
-                    </div>
-                `;
-                return;
-            }
+            let html = '';
 
-            // Check which contacts already exist as leads
-            const emails = data.map(c => c.email);
-            const { data: existingLeads } = await supabaseClient
-                .from('leads')
-                .select('email')
-                .in('email', emails);
-
-            const existingEmails = new Set((existingLeads || []).map(l => l.email));
-
-            document.getElementById('campaign-search-results').innerHTML = `
-                <div class="text-zinc-500 text-xs mb-3">Znaleziono ${data.length} kontaktów</div>
-                <div class="space-y-2">
-                    ${data.map(contact => {
-                        const isLead = existingEmails.has(contact.email);
-                        return `
-                            <div class="flex items-center justify-between p-3 bg-zinc-900/60 rounded-lg border ${isLead ? 'border-emerald-500/20' : 'border-white/5'} hover:border-white/10 transition-colors">
+            // Leads section
+            if (leadsData.length > 0) {
+                html += `
+                    <div class="mb-2">
+                        <div class="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold px-2 py-1 flex items-center gap-1">
+                            <i class="ph ph-users"></i> Leady (${leadsData.length})
+                        </div>
+                        ${leadsData.map(lead => `
+                            <button onclick="openLead('${lead.id}'); closeUnifiedSearch();" class="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-lg transition-colors text-left">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">
+                                    ${lead.email.charAt(0).toUpperCase()}
+                                </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="font-mono text-sm text-white truncate">${contact.email}</span>
-                                        ${isLead ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 whitespace-nowrap">Jest w leadach</span>' : ''}
-                                        ${contact.whatsapp_contacted_at ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 whitespace-nowrap">WA ✓</span>' : ''}
-                                    </div>
-                                    <div class="flex items-center gap-4 text-xs text-zinc-500">
-                                        ${contact.phone ? `<span class="font-mono">${contact.phone}</span>` : ''}
-                                        ${contact.ltv_pln ? `<span class="text-emerald-400">LTV: ${contact.ltv_pln.toLocaleString('pl-PL')} PLN</span>` : ''}
-                                        ${contact.unique_products ? `<span>${contact.unique_products} produktów</span>` : ''}
+                                    <div class="text-white text-sm truncate">${lead.email}</div>
+                                    <div class="text-zinc-500 text-xs truncate">
+                                        ${lead.name || lead.company || lead.phone || 'Lead'}
+                                        ${lead.status ? ` · ${formatStatus(lead.status)}` : ''}
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 ml-4">
-                                    ${isLead
-                                        ? `<button onclick="openLeadByEmail('${contact.email}')" class="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-xs font-medium transition-colors">
-                                            <i class="ph ph-arrow-right mr-1"></i>Otwórz
-                                           </button>`
-                                        : `<button onclick="addCampaignContactAsLead('${contact.id}', '${contact.email}', '${contact.phone || ''}', ${contact.ltv_pln || 0}, ${contact.unique_products || 0})" class="px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors">
-                                            <i class="ph ph-plus mr-1"></i>Dodaj do leadów
-                                           </button>`
-                                    }
+                                <i class="ph ph-arrow-right text-zinc-600"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            // Campaigns section
+            if (uniqueCampaigns.length > 0) {
+                html += `
+                    <div>
+                        <div class="text-[10px] uppercase tracking-wider text-indigo-400 font-semibold px-2 py-1 flex items-center gap-1">
+                            <i class="ph ph-megaphone"></i> Kampanie (${uniqueCampaigns.length})
+                        </div>
+                        ${uniqueCampaigns.map(contact => `
+                            <div class="flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-lg transition-colors">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0">
+                                    ${contact.email.charAt(0).toUpperCase()}
                                 </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-white text-sm truncate">${contact.email}</div>
+                                    <div class="text-zinc-500 text-xs truncate">
+                                        ${contact.phone || ''}
+                                        ${contact.ltv_pln ? ` · LTV: ${contact.ltv_pln.toLocaleString('pl-PL')} PLN` : ''}
+                                        ${contact.whatsapp_contacted_at ? ' · WA ✓' : ''}
+                                    </div>
+                                </div>
+                                <button onclick="addCampaignContactAsLead('${contact.id}', '${contact.email}', '${contact.phone || ''}', ${contact.ltv_pln || 0}, ${contact.unique_products || 0})" class="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded text-xs font-medium transition-colors flex-shrink-0">
+                                    <i class="ph ph-plus mr-1"></i>Dodaj
+                                </button>
                             </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            results.innerHTML = html;
         }
 
-        async function openLeadByEmail(email) {
-            const lead = leads.find(l => l.email === email);
-            if (lead) {
-                closeCampaignSearch();
-                openLead(lead.id);
-            } else {
-                // Lead might not be in current list, fetch it
-                const { data } = await supabaseClient
-                    .from('leads')
-                    .select('id')
-                    .eq('email', email)
-                    .single();
-
-                if (data) {
-                    closeCampaignSearch();
-                    openLead(data.id);
-                }
-            }
+        function formatStatus(status) {
+            const statusMap = {
+                'new': 'Nowy',
+                'contacted': 'Skontaktowany',
+                'qualified': 'Zakwalifikowany',
+                'proposal': 'Propozycja',
+                'negotiation': 'Negocjacje',
+                'won': 'Wygrany',
+                'lost': 'Przegrany'
+            };
+            return statusMap[status] || status;
         }
 
         async function addCampaignContactAsLead(contactId, email, phone, ltv, products) {
@@ -1569,7 +1541,7 @@
                 phone: phone || null,
                 status: 'contacted',
                 assigned_to: currentMember?.id || null,
-                notes: `Źródło: Kampania (wyszukiwarka)\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
+                notes: `Źródło: Kampania\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
             };
 
             const { data, error } = await supabaseClient
@@ -1582,23 +1554,21 @@
                 return;
             }
 
-            // Refresh search results
-            const query = document.getElementById('campaign-search-input').value;
-            await searchCampaignContacts(query);
-
             // Reload leads list
             await loadLeads();
 
+            // Refresh search
+            const query = document.getElementById('filter-search').value.trim();
+            if (query.length >= 3) {
+                await unifiedSearch(query);
+            }
+
             // Open the new lead
             if (data && data[0]) {
-                closeCampaignSearch();
+                closeUnifiedSearch();
                 openLead(data[0].id);
             }
         }
-
-        document.getElementById('campaign-search-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'campaign-search-modal') closeCampaignSearch();
-        });
 
         async function init() {
             const session = await checkAuth();
