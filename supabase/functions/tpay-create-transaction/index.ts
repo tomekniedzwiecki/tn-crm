@@ -28,7 +28,6 @@ async function sendSlackCheckoutNotification(order: any, paymentMethod: string) 
       'card': 'Karta',
       'transfer': 'Przelew',
       'installments': 'Raty',
-      'twisto': 'Twisto',
       'pragmapay': 'PragmaPay',
     }
 
@@ -132,7 +131,7 @@ const PAYMENT_GROUPS = {
   apple_pay: 167,
   transfer: 0, // 0 = let user choose bank on Tpay page
   installments: 169, // Pekao Raty 0%
-  twisto: 170, // Twisto BNPL
+  // twisto: 170, // Twisto BNPL - not available on this account
 }
 
 interface TpayTokenResponse {
@@ -367,20 +366,10 @@ serve(async (req) => {
         case 'installments':
           finalGroupId = PAYMENT_GROUPS.installments
           break
-        case 'twisto':
-          // Twisto (BNPL) requires additional payer data (address)
-          // Let user complete on Tpay page where they can fill in required info
-          finalGroupId = 0 // 0 = user selects payment method on Tpay page
-          break
       }
     }
 
     console.log('[tpay] Payment type:', paymentType, 'Group ID:', finalGroupId, 'BLIK code:', blikCode ? 'provided' : 'none')
-
-    // For Twisto and other BNPL, log additional info
-    if (paymentType === 'twisto') {
-      console.log('[tpay] Twisto selected - redirecting to Tpay page for address collection')
-    }
 
     // Get OAuth token
     const token = await getTpayToken(tpayClientId, tpayClientSecret, useSandbox)
@@ -406,8 +395,6 @@ serve(async (req) => {
       paymentSource = 'blik'
     } else if (paymentType === 'installments') {
       paymentSource = 'installments'
-    } else if (paymentType === 'twisto') {
-      paymentSource = 'twisto'
     } else if (paymentType === 'pragmapay') {
       paymentSource = 'pragmapay'
     }
