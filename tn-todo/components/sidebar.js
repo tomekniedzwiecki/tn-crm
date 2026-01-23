@@ -137,7 +137,7 @@ function getLoginPath() {
 
 function getCrmPath() {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    return isLocal ? '/tn-crm/dashboard.html' : '/dashboard.html';
+    return isLocal ? '/tn-crm/dashboard.html' : '/dashboard';
 }
 
 function getCurrentPage() {
