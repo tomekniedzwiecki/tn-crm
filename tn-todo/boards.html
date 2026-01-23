@@ -207,6 +207,19 @@
                         <button type="button" data-color="red" class="color-option bg-red-500"></button>
                     </div>
                 </div>
+
+                <div>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <div>
+                            <span class="block text-xs font-medium text-neutral-500 uppercase tracking-wider">Prywatna tablica</span>
+                            <span class="block text-xs text-neutral-600 mt-1">Tylko Ty będziesz widzieć tę tablicę</span>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="board-private" class="sr-only peer">
+                            <div class="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-neutral-500 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600 peer-checked:after:bg-white"></div>
+                        </div>
+                    </label>
+                </div>
             </div>
 
             <!-- Footer -->
@@ -344,6 +357,7 @@
                 const taskCount = board.lists?.reduce((sum, list) => sum + (list.tasks?.length || 0), 0) || 0;
                 const listCount = board.lists?.length || 0;
                 const createdDate = new Date(board.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                const isPrivate = board.is_private;
 
                 return `
                     <div class="board-card cursor-pointer group" onclick="openBoard('${board.id}')" style="animation-delay: ${index * 50}ms">
@@ -353,6 +367,7 @@
                                 <div class="flex items-center gap-3">
                                     <div class="color-dot" style="background: ${color}"></div>
                                     <h3 class="text-base font-semibold text-white truncate">${escapeHtml(board.name)}</h3>
+                                    ${isPrivate ? '<i class="ph ph-lock-simple text-neutral-500 text-sm" title="Prywatna tablica"></i>' : ''}
                                 </div>
                                 <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onclick="event.stopPropagation(); editBoard('${board.id}')" class="w-7 h-7 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-md transition-all">
@@ -403,6 +418,7 @@
             document.getElementById('board-id').value = '';
             document.getElementById('board-name').value = '';
             document.getElementById('board-description').value = '';
+            document.getElementById('board-private').checked = false;
             document.getElementById('board-modal-title').textContent = 'Nowa tablica';
             document.querySelector('[onclick="saveBoard()"]').textContent = 'Utwórz tablicę';
             selectColor('violet');
@@ -418,6 +434,7 @@
             document.getElementById('board-id').value = board.id;
             document.getElementById('board-name').value = board.name;
             document.getElementById('board-description').value = board.description || '';
+            document.getElementById('board-private').checked = board.is_private || false;
             document.getElementById('board-modal-title').textContent = 'Edytuj tablicę';
             document.querySelector('[onclick="saveBoard()"]').textContent = 'Zapisz zmiany';
             selectColor(board.color || 'violet');
@@ -451,6 +468,7 @@
             const id = document.getElementById('board-id').value;
             const name = document.getElementById('board-name').value.trim();
             const description = document.getElementById('board-description').value.trim();
+            const isPrivate = document.getElementById('board-private').checked;
 
             if (!name) {
                 showToast('Podaj nazwę tablicy', 'error');
@@ -460,7 +478,8 @@
             const boardData = {
                 name,
                 description: description || null,
-                color: selectedColor
+                color: selectedColor,
+                is_private: isPrivate
             };
 
             let error;
