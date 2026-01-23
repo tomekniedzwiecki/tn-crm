@@ -139,11 +139,13 @@
                     <!-- Source -->
                     <select id="filter-source" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
                         <option value="">Wszystkie źródła</option>
+                        <option value="organic">Ze strony</option>
+                        <option value="outreach">Z kampanii</option>
+                        <option value="manual">Ręczne</option>
                         <option value="google">Google Ads</option>
                         <option value="meta">Meta</option>
                         <option value="tiktok">TikTok</option>
                         <option value="email">Email</option>
-                        <option value="organic">Organic</option>
                     </select>
 
                     <!-- Date range -->
@@ -671,9 +673,16 @@
         }
 
         function getSource(lead) {
+            // Check for campaign/outreach source first
+            if (lead.utm_source === 'outreach') return { name: 'Kampania', key: 'outreach', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' };
+            if (lead.utm_source === 'manual') return { name: 'Ręczny', key: 'manual', color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' };
+
+            // Ad platform click IDs
             if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
             if (lead.fbclid) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
             if (lead.ttclid) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+
+            // UTM source detection
             if (lead.utm_source) {
                 const src = lead.utm_source.toLowerCase();
                 if (src.includes('google')) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
@@ -682,7 +691,9 @@
                 if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
             }
             if (lead.utm_medium === 'email') return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
-            return { name: 'Organic', key: 'organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+
+            // Default: organic/website
+            return { name: 'Strona', key: 'organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
         }
 
         function getStatusBadge(status) {
@@ -1536,6 +1547,7 @@
                 phone: phone || null,
                 status: 'contacted',
                 assigned_to: currentMember?.id || null,
+                utm_source: 'outreach',
                 notes: `Źródło: Kampania\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
             };
 
