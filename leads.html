@@ -680,16 +680,7 @@
 
         // Lead Source - skąd lead trafił do CRM (website/outreach/manual)
         function getLeadSource(lead) {
-            // Check lead_source field first
-            let source = lead.lead_source;
-
-            // Backwards compatibility: if no lead_source, try to detect from utm_source
-            // (for leads created before migration)
-            if (!source && lead.utm_source) {
-                if (lead.utm_source === 'outreach') source = 'outreach';
-                else if (lead.utm_source === 'manual') source = 'manual';
-            }
-
+            const source = lead.lead_source;
             if (source === 'outreach') return { name: 'Baza', key: 'outreach', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: 'ph-database' };
             if (source === 'manual') return { name: 'Ręczny', key: 'manual', color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: 'ph-user-plus' };
             // Default: website
@@ -697,21 +688,25 @@
         }
 
         // Marketing Source - skąd lead trafił na stronę (atrybucja marketingowa)
+        // Note: tracking data jest w tabeli lead_tracking, nie w leads
+        // Dla listy pokazujemy dane z tracking jeśli są załadowane
         function getMarketingSource(lead) {
+            const tracking = lead.tracking || {};
+
             // Ad platform click IDs
-            if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
-            if (lead.fbclid) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
-            if (lead.ttclid) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+            if (tracking.gclid || tracking.gbraid || tracking.wbraid) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+            if (tracking.fbclid) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+            if (tracking.ttclid) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
 
             // UTM source detection
-            if (lead.utm_source) {
-                const src = lead.utm_source.toLowerCase();
+            if (tracking.utm_source) {
+                const src = tracking.utm_source.toLowerCase();
                 if (src.includes('google')) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
                 if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
                 if (src.includes('tiktok')) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
                 if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
             }
-            if (lead.utm_medium === 'email') return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
+            if (tracking.utm_medium === 'email') return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
 
             // Default: organic
             return { name: 'Organic', key: 'organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
@@ -811,6 +806,18 @@
                 });
                 leads.forEach(lead => {
                     lead.client_offer_token = tokenMap[lead.id] || null;
+                });
+            }
+
+            // Load tracking data for marketing source attribution
+            const { data: trackingData } = await supabaseClient.from('lead_tracking').select('lead_id, gclid, gbraid, wbraid, fbclid, ttclid, utm_source, utm_medium, utm_campaign');
+            if (trackingData) {
+                const trackingMap = {};
+                trackingData.forEach(t => {
+                    trackingMap[t.lead_id] = t;
+                });
+                leads.forEach(lead => {
+                    lead.tracking = trackingMap[lead.id] || null;
                 });
             }
 
