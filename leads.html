@@ -120,6 +120,12 @@
                         <input type="text" id="filter-search" placeholder="Szukaj email, telefon..." class="filter-input w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600">
                     </div>
 
+                    <!-- Search in campaigns -->
+                    <button onclick="openCampaignSearch()" class="flex items-center gap-2 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-megaphone"></i>
+                        Szukaj w kampaniach
+                    </button>
+
                     <!-- Status -->
                     <select id="filter-status" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
                         <option value="">Wszystkie statusy</option>
@@ -439,6 +445,40 @@
                     <i class="ph ph-arrow-right"></i>
                     Otwórz lead
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Search Modal -->
+    <div id="campaign-search-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-indigo-500/20 rounded-xl w-full max-w-2xl shadow-2xl shadow-indigo-500/5 max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20 flex items-center justify-center">
+                        <i class="ph ph-megaphone text-indigo-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-white font-semibold">Szukaj w kampaniach</h2>
+                        <p class="text-zinc-500 text-xs">Znajdź kontakty z bazy outreach</p>
+                    </div>
+                </div>
+                <button onclick="closeCampaignSearch()" class="text-zinc-500 hover:text-white p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 border-b border-white/5">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
+                    <input type="text" id="campaign-search-input" placeholder="Wpisz email lub telefon..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-indigo-500/50 outline-none" autofocus>
+                </div>
+            </div>
+
+            <div id="campaign-search-results" class="flex-1 overflow-y-auto p-5">
+                <div class="text-center text-zinc-500 py-8">
+                    <i class="ph ph-magnifying-glass text-3xl mb-2 block"></i>
+                    <p class="text-sm">Wpisz minimum 3 znaki aby wyszukać</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1374,11 +1414,190 @@
             if (e.key === 'Escape') {
                 closeModal();
                 closeAddModal();
+                closeCampaignSearch();
             }
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 document.getElementById('filter-search').focus();
             }
+        });
+
+        // Campaign Search Functions
+        let campaignSearchTimeout = null;
+
+        function openCampaignSearch() {
+            document.getElementById('campaign-search-modal').classList.remove('hidden');
+            const input = document.getElementById('campaign-search-input');
+            input.value = document.getElementById('filter-search').value;
+            input.focus();
+            if (input.value.length >= 3) {
+                searchCampaignContacts(input.value);
+            }
+        }
+
+        function closeCampaignSearch() {
+            document.getElementById('campaign-search-modal').classList.add('hidden');
+            document.getElementById('campaign-search-input').value = '';
+            document.getElementById('campaign-search-results').innerHTML = `
+                <div class="text-center text-zinc-500 py-8">
+                    <i class="ph ph-magnifying-glass text-3xl mb-2 block"></i>
+                    <p class="text-sm">Wpisz minimum 3 znaki aby wyszukać</p>
+                </div>
+            `;
+        }
+
+        document.getElementById('campaign-search-input').addEventListener('input', (e) => {
+            clearTimeout(campaignSearchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 3) {
+                document.getElementById('campaign-search-results').innerHTML = `
+                    <div class="text-center text-zinc-500 py-8">
+                        <i class="ph ph-magnifying-glass text-3xl mb-2 block"></i>
+                        <p class="text-sm">Wpisz minimum 3 znaki aby wyszukać</p>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('campaign-search-results').innerHTML = `
+                <div class="text-center text-zinc-500 py-8">
+                    <i class="ph ph-circle-notch animate-spin text-3xl mb-2 block"></i>
+                    <p class="text-sm">Szukam...</p>
+                </div>
+            `;
+
+            campaignSearchTimeout = setTimeout(() => searchCampaignContacts(query), 300);
+        });
+
+        async function searchCampaignContacts(query) {
+            const { data, error } = await supabaseClient
+                .from('outreach_contacts')
+                .select('id, email, phone, ltv_pln, unique_products, first_purchase, last_purchase, whatsapp_contacted_at')
+                .or(`email.ilike.%${query}%,phone.ilike.%${query}%`)
+                .order('ltv_pln', { ascending: false, nullsFirst: false })
+                .limit(20);
+
+            if (error) {
+                document.getElementById('campaign-search-results').innerHTML = `
+                    <div class="text-center text-red-400 py-8">
+                        <i class="ph ph-warning text-3xl mb-2 block"></i>
+                        <p class="text-sm">Błąd: ${error.message}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                document.getElementById('campaign-search-results').innerHTML = `
+                    <div class="text-center text-zinc-500 py-8">
+                        <i class="ph ph-user-minus text-3xl mb-2 block"></i>
+                        <p class="text-sm">Brak wyników dla "${query}"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Check which contacts already exist as leads
+            const emails = data.map(c => c.email);
+            const { data: existingLeads } = await supabaseClient
+                .from('leads')
+                .select('email')
+                .in('email', emails);
+
+            const existingEmails = new Set((existingLeads || []).map(l => l.email));
+
+            document.getElementById('campaign-search-results').innerHTML = `
+                <div class="text-zinc-500 text-xs mb-3">Znaleziono ${data.length} kontaktów</div>
+                <div class="space-y-2">
+                    ${data.map(contact => {
+                        const isLead = existingEmails.has(contact.email);
+                        return `
+                            <div class="flex items-center justify-between p-3 bg-zinc-900/60 rounded-lg border ${isLead ? 'border-emerald-500/20' : 'border-white/5'} hover:border-white/10 transition-colors">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-mono text-sm text-white truncate">${contact.email}</span>
+                                        ${isLead ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 whitespace-nowrap">Jest w leadach</span>' : ''}
+                                        ${contact.whatsapp_contacted_at ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 whitespace-nowrap">WA ✓</span>' : ''}
+                                    </div>
+                                    <div class="flex items-center gap-4 text-xs text-zinc-500">
+                                        ${contact.phone ? `<span class="font-mono">${contact.phone}</span>` : ''}
+                                        ${contact.ltv_pln ? `<span class="text-emerald-400">LTV: ${contact.ltv_pln.toLocaleString('pl-PL')} PLN</span>` : ''}
+                                        ${contact.unique_products ? `<span>${contact.unique_products} produktów</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 ml-4">
+                                    ${isLead
+                                        ? `<button onclick="openLeadByEmail('${contact.email}')" class="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-xs font-medium transition-colors">
+                                            <i class="ph ph-arrow-right mr-1"></i>Otwórz
+                                           </button>`
+                                        : `<button onclick="addCampaignContactAsLead('${contact.id}', '${contact.email}', '${contact.phone || ''}', ${contact.ltv_pln || 0}, ${contact.unique_products || 0})" class="px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors">
+                                            <i class="ph ph-plus mr-1"></i>Dodaj do leadów
+                                           </button>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        async function openLeadByEmail(email) {
+            const lead = leads.find(l => l.email === email);
+            if (lead) {
+                closeCampaignSearch();
+                openLead(lead.id);
+            } else {
+                // Lead might not be in current list, fetch it
+                const { data } = await supabaseClient
+                    .from('leads')
+                    .select('id')
+                    .eq('email', email)
+                    .single();
+
+                if (data) {
+                    closeCampaignSearch();
+                    openLead(data.id);
+                }
+            }
+        }
+
+        async function addCampaignContactAsLead(contactId, email, phone, ltv, products) {
+            const leadData = {
+                email: email,
+                phone: phone || null,
+                status: 'contacted',
+                assigned_to: currentMember?.id || null,
+                notes: `Źródło: Kampania (wyszukiwarka)\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
+            };
+
+            const { data, error } = await supabaseClient
+                .from('leads')
+                .insert([leadData])
+                .select();
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            // Refresh search results
+            const query = document.getElementById('campaign-search-input').value;
+            await searchCampaignContacts(query);
+
+            // Reload leads list
+            await loadLeads();
+
+            // Open the new lead
+            if (data && data[0]) {
+                closeCampaignSearch();
+                openLead(data[0].id);
+            }
+        }
+
+        document.getElementById('campaign-search-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'campaign-search-modal') closeCampaignSearch();
         });
 
         async function init() {
