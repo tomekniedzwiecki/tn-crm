@@ -1,6 +1,5 @@
 /**
- * TN Todo Sidebar Component
- * With app switcher between CRM and Todo
+ * TN Stack Sidebar Component
  */
 
 // ============================================
@@ -12,7 +11,7 @@ const APPS = [
     { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white' }
 ];
 
-const CURRENT_APP = 'todo';
+const CURRENT_APP = 'stack';
 
 function getAppPath(appId) {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -27,15 +26,15 @@ function getAppPath(appId) {
 }
 
 // ============================================
-// NAVIGATION ITEMS FOR TODO APP
+// NAVIGATION ITEMS
 // ============================================
 const NAV_ITEMS = [
-    { id: 'boards', icon: 'ph-kanban', label: 'Tablice', adminOnly: false },
-    { id: 'my-tasks', icon: 'ph-user-circle', label: 'Moje zadania', adminOnly: false },
+    { id: 'dashboard', icon: 'ph-chart-pie', label: 'Dashboard', path: 'dashboard' },
+    { id: 'categories', icon: 'ph-folders', label: 'Kategorie', path: 'categories' }
 ];
 
 // ============================================
-// CSS ANIMATIONS
+// CSS
 // ============================================
 const SIDEBAR_CSS = `
     /* Mobile sidebar */
@@ -82,78 +81,53 @@ const SIDEBAR_CSS = `
     /* Nav icon animations */
     nav a i { display: inline-block; }
 
-    @keyframes kanbanSlide {
-        0% { transform: translateX(0); }
-        20% { transform: translateX(-3px); }
-        40% { transform: translateX(4px); }
-        60% { transform: translateX(-2px); }
-        80% { transform: translateX(2px); }
-        100% { transform: translateX(0); }
+    @keyframes chartSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
-    nav a:hover .ph-kanban { animation: kanbanSlide 0.6s ease-in-out; }
+    nav a:hover .ph-chart-pie { animation: chartSpin 0.6s ease-out; }
 
-    @keyframes userBounce {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.15); }
-        100% { transform: scale(1); }
+    @keyframes folderBounce {
+        0% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+        50% { transform: translateY(0); }
+        70% { transform: translateY(-2px); }
+        100% { transform: translateY(0); }
     }
-    nav a:hover .ph-user-circle { animation: userBounce 0.4s ease-out; }
-
-    /* App switcher dropdown */
-    .app-switcher-dropdown {
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-5px);
-        transition: all 0.2s ease;
-    }
-    .app-switcher-dropdown.open {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-    }
+    nav a:hover .ph-folders { animation: folderBounce 0.5s ease-out; }
 `;
 
 // ============================================
-// PATH HELPERS
+// HELPER FUNCTIONS
 // ============================================
 function getBasePath() {
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-        const path = location.pathname;
-        const match = path.match(/^(\/[^\/]+)\//);
-        return match ? match[1] : '';
+        return '/tn-stack';
     }
-    return '';
+    return '/tn-stack';
 }
 
 function getPagePath(page) {
     const base = getBasePath();
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    return isLocal ? `${base}/${page}.html` : `/tn-todo/${page}.html`;
+    return isLocal ? `${base}/${page}.html` : `${base}/${page}`;
 }
 
 function getLoginPath() {
-    return getPagePath('index');
-}
-
-function getCrmPath() {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    return isLocal ? '/tn-crm/dashboard.html' : '/dashboard.html';
+    return isLocal ? '/tn-crm/index.html' : '/';
 }
 
 function getCurrentPage() {
-    const path = location.pathname;
-    const match = path.match(/\/([^\/]+)\.html$/) || path.match(/\/([^\/]+)$/);
-    if (match) {
-        const page = match[1];
-        return page === 'index' ? 'boards' : page;
-    }
-    return 'boards';
+    const path = window.location.pathname;
+    const match = path.match(/\/([^\/]+?)(?:\.html)?$/);
+    return match ? match[1] : 'dashboard';
 }
 
 // ============================================
 // RENDER SIDEBAR
 // ============================================
-function renderSidebar(containerId = 'sidebar') {
+function renderSidebar(containerId = 'sidebar', options = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -168,33 +142,20 @@ function renderSidebar(containerId = 'sidebar') {
     const currentPage = getCurrentPage();
     const currentApp = APPS.find(a => a.id === CURRENT_APP);
 
-    // Build navigation HTML
+    // Build navigation
     const navHtml = NAV_ITEMS.map(item => {
-        const isActive = item.id === currentPage;
-        const hiddenClass = item.adminOnly ? ' hidden' : '';
-        const itemId = `id="nav-${item.id}"`;
-
+        const isActive = currentPage === item.id || currentPage === item.path;
         const activeClasses = isActive
-            ? 'bg-white/10 text-white rounded-lg border border-white/5 shadow-sm'
-            : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all';
+            ? 'bg-white/10 text-white border border-white/5 shadow-sm'
+            : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5';
 
         return `
-            <a href="/${item.id}" data-page="${item.id}" ${itemId} class="flex items-center gap-3 px-3 py-2.5 ${activeClasses} mb-1${hiddenClass}">
+            <a href="${getPagePath(item.path)}" data-page="${item.id}" class="flex items-center gap-3 px-3 py-2.5 ${activeClasses} rounded-lg transition-all mb-1">
                 <i class="ph ${item.icon} text-xl"></i>
                 <span class="font-medium">${item.label}</span>
             </a>
         `;
     }).join('');
-
-    // App switcher dropdown HTML
-    const appSwitcherDropdown = APPS.filter(a => a.id !== CURRENT_APP).map(app => `
-        <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-            <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
-                <i class="ph-bold ${app.icon} text-xs"></i>
-            </div>
-            <span class="text-sm font-medium">${app.name}</span>
-        </a>
-    `).join('');
 
     // Add mobile overlay if not exists
     if (!document.getElementById('sidebar-overlay')) {
@@ -204,12 +165,26 @@ function renderSidebar(containerId = 'sidebar') {
         overlay.addEventListener('click', closeMobileSidebar);
     }
 
+    // App switcher dropdown
+    const appSwitcherOptions = APPS.map(app => {
+        const isCurrentApp = app.id === CURRENT_APP;
+        return `
+            <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-lg transition-colors ${isCurrentApp ? 'bg-white/5' : ''}">
+                <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
+                    <i class="ph-bold ${app.icon} text-xs"></i>
+                </div>
+                <span class="text-sm ${isCurrentApp ? 'text-white font-medium' : 'text-zinc-400'}">${app.name}</span>
+                ${isCurrentApp ? '<i class="ph ph-check ml-auto text-white"></i>' : ''}
+            </a>
+        `;
+    }).join('');
+
     // Full sidebar HTML
     container.innerHTML = `
         <!-- Logo / App Switcher -->
         <div class="relative">
             <button id="app-switcher-btn" class="w-full h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
-                <div class="w-7 h-7 ${currentApp.color} rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                <div class="w-7 h-7 ${currentApp.color} rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                     <i class="ph-bold ${currentApp.icon} text-sm"></i>
                 </div>
                 <span class="font-medium text-base text-zinc-200">${currentApp.name}</span>
@@ -217,22 +192,20 @@ function renderSidebar(containerId = 'sidebar') {
             </button>
 
             <!-- Dropdown -->
-            <div id="app-switcher-dropdown" class="app-switcher-dropdown absolute top-full left-0 right-0 bg-zinc-900 border border-white/10 rounded-lg m-2 p-2 shadow-xl z-50">
-                <div class="text-[10px] uppercase tracking-wider text-zinc-500 px-3 py-1.5 font-semibold">Przełącz na</div>
-                ${appSwitcherDropdown}
+            <div id="app-switcher-dropdown" class="hidden absolute top-full left-0 right-0 mx-3 mt-1 bg-zinc-900 border border-white/10 rounded-lg shadow-xl z-50 p-1">
+                ${appSwitcherOptions}
             </div>
         </div>
 
-        <!-- Navigation -->
-        <nav class="flex-1 px-4 py-6">
-            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
+        <nav class="flex-1 px-4 py-6 overflow-y-auto">
+            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Nawigacja</div>
             ${navHtml}
         </nav>
 
-        <!-- User -->
+        <!-- User Profile -->
         <div class="p-4 border-t border-white/5">
             <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" id="user-profile-btn">
-                <div id="user-avatar" class="w-9 h-9 rounded-full bg-gradient-to-b from-violet-600 to-violet-700 border border-white/10 flex items-center justify-center text-sm font-medium text-white">--</div>
+                <div id="user-avatar" class="w-9 h-9 rounded-full bg-gradient-to-b from-amber-600 to-amber-700 border border-white/10 flex items-center justify-center text-sm font-medium text-white">--</div>
                 <div class="flex-1 min-w-0">
                     <div id="user-name" class="text-sm font-medium text-zinc-200 truncate"></div>
                     <div id="user-email" class="text-xs text-zinc-500 truncate"></div>
@@ -243,9 +216,6 @@ function renderSidebar(containerId = 'sidebar') {
             </div>
         </div>
     `;
-
-    // Update hrefs for local development
-    updateNavLinks();
 
     // Setup app switcher
     setupAppSwitcher();
@@ -264,30 +234,25 @@ function setupAppSwitcher() {
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        dropdown.classList.toggle('open');
+        dropdown.classList.toggle('hidden');
     });
 
-    // Close on outside click
-    document.addEventListener('click', () => {
-        dropdown.classList.remove('open');
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
     });
-}
 
-function updateNavLinks() {
-    document.querySelectorAll('[data-page]').forEach(link => {
-        const page = link.getAttribute('data-page');
-        link.href = getPagePath(page);
-    });
-}
-
-function showAdminNav(isAdmin) {
-    if (!isAdmin) return;
-    NAV_ITEMS.filter(item => item.adminOnly).forEach(item => {
-        const el = document.getElementById(`nav-${item.id}`);
-        if (el) el.classList.remove('hidden');
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            dropdown.classList.add('hidden');
+        }
     });
 }
 
+// ============================================
+// USER FUNCTIONS
+// ============================================
 function setUserEmail(email) {
     const el = document.getElementById('user-email');
     if (el) el.textContent = email;
@@ -295,37 +260,16 @@ function setUserEmail(email) {
 
 function setUserName(name) {
     const el = document.getElementById('user-name');
-    if (el) el.textContent = name || '';
+    const avatarEl = document.getElementById('user-avatar');
 
-    // Update avatar initials
-    const avatar = document.getElementById('user-avatar');
-    if (avatar && name) {
+    if (el) el.textContent = name;
+    if (avatarEl && name) {
         const parts = name.trim().split(' ');
         const initials = parts.length >= 2
             ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
             : name.substring(0, 2).toUpperCase();
-        avatar.textContent = initials;
+        avatarEl.textContent = initials;
     }
-}
-
-function setUserColor(color) {
-    const avatar = document.getElementById('user-avatar');
-    if (!avatar || !color) return;
-
-    const colorClasses = {
-        'violet': 'from-violet-600 to-violet-700',
-        'blue': 'from-blue-600 to-blue-700',
-        'emerald': 'from-emerald-600 to-emerald-700',
-        'amber': 'from-amber-500 to-amber-600',
-        'pink': 'from-pink-500 to-pink-600',
-        'cyan': 'from-cyan-500 to-cyan-600'
-    };
-
-    // Remove old gradient classes
-    avatar.className = avatar.className.replace(/from-\w+-\d+ to-\w+-\d+/g, '');
-
-    const gradientClass = colorClasses[color] || colorClasses['violet'];
-    avatar.classList.add(...gradientClass.split(' '));
 }
 
 function setupLogout(supabaseClient) {
@@ -342,14 +286,18 @@ function setupProfileClick() {
     const btn = document.getElementById('user-profile-btn');
     if (btn) {
         btn.addEventListener('click', (e) => {
-            // Don't trigger if clicking logout button
             if (e.target.closest('#logout-btn')) return;
-            // Navigate to CRM settings for now
-            window.location.href = getCrmPath().replace('dashboard', 'settings') + '?tab=account';
+            // Navigate to CRM settings
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const settingsPath = isLocal ? '/tn-crm/settings.html' : '/settings';
+            window.location.href = settingsPath + '?tab=account';
         });
     }
 }
 
+// ============================================
+// MOBILE FUNCTIONS
+// ============================================
 function toggleMobileSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -369,17 +317,14 @@ function closeMobileSidebar() {
 // ============================================
 window.Sidebar = {
     render: renderSidebar,
-    showAdminNav,
     setUserEmail,
     setUserName,
-    setUserColor,
     setupLogout,
     setupProfileClick,
     getPagePath,
     getLoginPath,
     getBasePath,
     getCurrentPage,
-    updateLinks: updateNavLinks,
     toggle: toggleMobileSidebar,
     close: closeMobileSidebar
 };

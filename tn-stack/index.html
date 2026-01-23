@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Stack</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-stack/favicon.svg">
+    <link rel="manifest" href="/tn-stack/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function getCrmLoginPath() {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            return isLocal ? '/tn-crm/index.html' : '/index.html';
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                window.location.href = '/tn-stack/dashboard.html';
+            } else {
+                // Redirect to CRM login
+                window.location.href = getCrmLoginPath();
+            }
+        }
+
+        checkAuth();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/tn-stack/sw.js').catch(() => {});
+        }
+    </script>
+</head>
+<body style="background: #000;">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #666;">
+        Przekierowywanie...
+    </div>
+</body>
+</html>

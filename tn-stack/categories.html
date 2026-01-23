@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Stack - Kategorie</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-stack/favicon.svg">
+    <link rel="manifest" href="/tn-stack/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #f59e0b; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
+        .category-card {
+            transition: all 0.15s ease;
+        }
+        .category-card:hover {
+            background: rgba(255,255,255,0.03);
+        }
+        .category-card.dragging {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-stack</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">kategorie</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-4">
+                <button onclick="openModal()" class="bg-amber-500 text-black hover:bg-amber-400 px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors">
+                    <i class="ph ph-plus md:mr-1"></i>
+                    <span class="hidden md:inline">Dodaj kategorię</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10">
+            <div class="max-w-3xl mx-auto animate-enter">
+                <h1 class="text-2xl font-semibold text-white mb-2">Kategorie narzędzi</h1>
+                <p class="text-zinc-500 mb-6">Zarządzaj kategoriami do grupowania swoich narzędzi. Przeciągnij, aby zmienić kolejność.</p>
+
+                <div id="categories-list" class="space-y-2">
+                    <!-- Categories rendered here -->
+                </div>
+
+                <div id="categories-empty" class="hidden py-12 text-center bg-zinc-950/50 rounded-xl border border-white/5">
+                    <i class="ph ph-folders text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-500 mb-1">Brak kategorii</p>
+                    <button onclick="openModal()" class="text-amber-400 hover:text-amber-300 text-sm font-medium mt-2">
+                        <i class="ph ph-plus mr-1"></i>Dodaj kategorię
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-md">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h3 id="modal-title" class="text-lg font-semibold text-white">Dodaj kategorię</h3>
+                <button onclick="closeModal()" class="text-zinc-500 hover:text-white p-1">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <form id="category-form" class="p-5 space-y-4">
+                <input type="hidden" id="category-id">
+
+                <div>
+                    <label class="text-xs text-zinc-500 font-medium mb-1 block">Nazwa *</label>
+                    <input type="text" id="category-name" required class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="np. AI, Marketing...">
+                </div>
+
+                <div>
+                    <label class="text-xs text-zinc-500 font-medium mb-1 block">Kolor</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button type="button" onclick="selectColor('#8b5cf6')" data-color="#8b5cf6" class="color-btn w-8 h-8 rounded-lg bg-violet-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#3b82f6')" data-color="#3b82f6" class="color-btn w-8 h-8 rounded-lg bg-blue-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#06b6d4')" data-color="#06b6d4" class="color-btn w-8 h-8 rounded-lg bg-cyan-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#10b981')" data-color="#10b981" class="color-btn w-8 h-8 rounded-lg bg-emerald-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#84cc16')" data-color="#84cc16" class="color-btn w-8 h-8 rounded-lg bg-lime-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#f59e0b')" data-color="#f59e0b" class="color-btn w-8 h-8 rounded-lg bg-amber-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#ef4444')" data-color="#ef4444" class="color-btn w-8 h-8 rounded-lg bg-red-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#ec4899')" data-color="#ec4899" class="color-btn w-8 h-8 rounded-lg bg-pink-500 hover:ring-2 ring-white/50 transition-all"></button>
+                        <button type="button" onclick="selectColor('#71717a')" data-color="#71717a" class="color-btn w-8 h-8 rounded-lg bg-zinc-500 hover:ring-2 ring-white/50 transition-all"></button>
+                    </div>
+                    <input type="hidden" id="category-color" value="#8b5cf6">
+                </div>
+
+                <div>
+                    <label class="text-xs text-zinc-500 font-medium mb-1 block">Ikona (Phosphor)</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button type="button" onclick="selectIcon('ph-brain')" data-icon="ph-brain" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-brain text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-code')" data-icon="ph-code" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-code text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-palette')" data-icon="ph-palette" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-palette text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-cloud')" data-icon="ph-cloud" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-cloud text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-megaphone')" data-icon="ph-megaphone" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-megaphone text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-chart-line')" data-icon="ph-chart-line" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-chart-line text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-chat-circle')" data-icon="ph-chat-circle" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-chat-circle text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-lightning')" data-icon="ph-lightning" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-lightning text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-folder')" data-icon="ph-folder" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-folder text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-database')" data-icon="ph-database" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-database text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-lock')" data-icon="ph-lock" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-lock text-lg text-zinc-300"></i></button>
+                        <button type="button" onclick="selectIcon('ph-envelope')" data-icon="ph-envelope" class="icon-btn w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all"><i class="ph ph-envelope text-lg text-zinc-300"></i></button>
+                    </div>
+                    <input type="hidden" id="category-icon" value="ph-folder">
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-white/5">
+                    <button type="button" id="btn-delete" onclick="deleteCategory()" class="hidden text-red-400 hover:text-red-300 text-sm">
+                        <i class="ph ph-trash mr-1"></i>Usuń
+                    </button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-zinc-400 hover:text-white text-sm transition-colors">Anuluj</button>
+                        <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black rounded-lg text-sm font-medium transition-colors">Zapisz</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let categories = [];
+        let draggedItem = null;
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        async function loadTeamMember(userId) {
+            const { data } = await supabaseClient.from('team_members').select('*').eq('user_id', userId).single();
+            if (data) {
+                Sidebar.setUserName(data.name);
+                Sidebar.setUserEmail(data.email?.split('@')[0] || '');
+            }
+        }
+
+        async function loadCategories() {
+            const { data, error } = await supabaseClient
+                .from('tool_categories')
+                .select('*')
+                .order('sort_order');
+
+            if (error) {
+                console.error('Error:', error);
+                return;
+            }
+
+            categories = data || [];
+            renderCategories();
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categories-list');
+            const empty = document.getElementById('categories-empty');
+
+            if (categories.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            container.innerHTML = categories.map((cat, index) => `
+                <div class="category-card flex items-center gap-4 p-4 bg-zinc-950/50 rounded-xl border border-white/5 cursor-move"
+                     data-id="${cat.id}" draggable="true">
+                    <div class="drag-handle text-zinc-600 hover:text-zinc-400">
+                        <i class="ph ph-dots-six-vertical"></i>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background: ${cat.color}20">
+                        <i class="ph ${cat.icon} text-xl" style="color: ${cat.color}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-medium text-white">${escapeHtml(cat.name)}</div>
+                        <div class="text-xs text-zinc-500">Kolejność: ${cat.sort_order}</div>
+                    </div>
+                    <button onclick="editCategory('${cat.id}')" class="p-2 text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-pencil-simple"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            initDragDrop();
+        }
+
+        function initDragDrop() {
+            const cards = document.querySelectorAll('.category-card');
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                const container = document.getElementById('categories-list');
+                const cards = [...container.children];
+                const draggedIndex = cards.indexOf(draggedItem);
+                const targetIndex = cards.indexOf(this);
+
+                if (draggedIndex < targetIndex) {
+                    this.after(draggedItem);
+                } else {
+                    this.before(draggedItem);
+                }
+            }
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            const container = document.getElementById('categories-list');
+            const cards = [...container.children];
+
+            // Update sort order
+            const updates = cards.map((card, index) => ({
+                id: card.dataset.id,
+                sort_order: index
+            }));
+
+            for (const update of updates) {
+                await supabaseClient
+                    .from('tool_categories')
+                    .update({ sort_order: update.sort_order })
+                    .eq('id', update.id);
+            }
+
+            await loadCategories();
+        }
+
+        // Modal
+        let selectedColor = '#8b5cf6';
+        let selectedIcon = 'ph-folder';
+
+        function selectColor(color) {
+            selectedColor = color;
+            document.getElementById('category-color').value = color;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.toggle('ring-2', btn.dataset.color === color);
+            });
+        }
+
+        function selectIcon(icon) {
+            selectedIcon = icon;
+            document.getElementById('category-icon').value = icon;
+            document.querySelectorAll('.icon-btn').forEach(btn => {
+                btn.classList.toggle('ring-2', btn.dataset.icon === icon);
+                btn.classList.toggle('ring-amber-500', btn.dataset.icon === icon);
+            });
+        }
+
+        function openModal(category = null) {
+            const modal = document.getElementById('modal');
+            const title = document.getElementById('modal-title');
+            const deleteBtn = document.getElementById('btn-delete');
+
+            document.getElementById('category-form').reset();
+            document.getElementById('category-id').value = '';
+
+            if (category) {
+                title.textContent = 'Edytuj kategorię';
+                deleteBtn.classList.remove('hidden');
+                document.getElementById('category-id').value = category.id;
+                document.getElementById('category-name').value = category.name;
+                selectColor(category.color);
+                selectIcon(category.icon);
+            } else {
+                title.textContent = 'Dodaj kategorię';
+                deleteBtn.classList.add('hidden');
+                selectColor('#8b5cf6');
+                selectIcon('ph-folder');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
+
+        function editCategory(id) {
+            const category = categories.find(c => c.id === id);
+            if (category) openModal(category);
+        }
+
+        async function saveCategory(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('category-id').value;
+            const data = {
+                name: document.getElementById('category-name').value.trim(),
+                color: document.getElementById('category-color').value,
+                icon: document.getElementById('category-icon').value
+            };
+
+            let error;
+
+            if (id) {
+                ({ error } = await supabaseClient.from('tool_categories').update(data).eq('id', id));
+            } else {
+                data.sort_order = categories.length;
+                ({ error } = await supabaseClient.from('tool_categories').insert([data]));
+            }
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            closeModal();
+            await loadCategories();
+        }
+
+        async function deleteCategory() {
+            const id = document.getElementById('category-id').value;
+            if (!id) return;
+
+            if (!confirm('Usunąć kategorię? Narzędzia w tej kategorii nie zostaną usunięte.')) return;
+
+            const { error } = await supabaseClient.from('tool_categories').delete().eq('id', id);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            closeModal();
+            await loadCategories();
+        }
+
+        document.getElementById('category-form').addEventListener('submit', saveCategory);
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            Sidebar.render('sidebar');
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            await loadTeamMember(session.user.id);
+            await loadCategories();
+        }
+
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/tn-stack/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

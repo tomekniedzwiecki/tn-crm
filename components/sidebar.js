@@ -8,7 +8,8 @@
 // ============================================
 const APPS = [
     { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black' },
-    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white' }
+    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white' },
+    { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white' }
 ];
 
 const CURRENT_APP = 'crm';
@@ -19,6 +20,8 @@ function getAppPath(appId) {
         return isLocal ? '/tn-crm/dashboard.html' : '/dashboard.html';
     } else if (appId === 'todo') {
         return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards.html';
+    } else if (appId === 'stack') {
+        return isLocal ? '/tn-stack/dashboard.html' : '/tn-stack/dashboard.html';
     }
     return '/';
 }

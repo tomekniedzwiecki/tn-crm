@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Stack - Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-stack/favicon.svg">
+    <link rel="manifest" href="/tn-stack/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #f59e0b; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .tool-row {
+            transition: all 0.15s ease;
+        }
+        .tool-row:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .status-active { color: #10b981; }
+        .status-trial { color: #f59e0b; }
+        .status-paused { color: #6b7280; }
+        .status-cancelled { color: #ef4444; }
+
+        .tab-btn {
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-color: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-stack</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">dashboard</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-4">
+                <button onclick="openModal()" class="bg-amber-500 text-black hover:bg-amber-400 px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                    <i class="ph ph-plus md:mr-1"></i>
+                    <span class="hidden md:inline">Dodaj narzędzie</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- Tabs -->
+                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
+                    <button onclick="switchTab('tools')" data-tab="tools" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-stack mr-1.5"></i>Narzędzia
+                    </button>
+                    <button onclick="switchTab('payments')" data-tab="payments" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-calendar-check mr-1.5"></i>Płatności
+                    </button>
+                    <button onclick="switchTab('revolut')" data-tab="revolut" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-bank mr-1.5"></i>Revolut
+                    </button>
+                </div>
+
+                <!-- Tab: Tools -->
+                <div id="tab-tools" class="tab-content">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                    <i class="ph ph-calendar text-amber-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-monthly">0 zł</div>
+                            <div class="text-xs text-zinc-500">Miesięcznie</div>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                    <i class="ph ph-calendar-blank text-emerald-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-yearly">0 zł</div>
+                            <div class="text-xs text-zinc-500">Rocznie</div>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                    <i class="ph ph-stack text-violet-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-tools">0</div>
+                            <div class="text-xs text-zinc-500">Narzędzi</div>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                                    <i class="ph ph-warning text-red-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-upcoming">0</div>
+                            <div class="text-xs text-zinc-500">Do zapłaty (7 dni)</div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="flex flex-col md:flex-row gap-3 mb-4">
+                        <div class="relative flex-1">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
+                            <input type="text" id="filter-search" placeholder="Szukaj narzędzia..." class="input-field w-full rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-zinc-600">
+                        </div>
+                        <select id="filter-category" class="input-field rounded-lg px-3 py-2 text-sm text-white min-w-[150px]">
+                            <option value="">Wszystkie kategorie</option>
+                        </select>
+                        <select id="filter-status" class="input-field rounded-lg px-3 py-2 text-sm text-white min-w-[130px]">
+                            <option value="">Wszystkie statusy</option>
+                            <option value="active">Aktywne</option>
+                            <option value="trial">Trial</option>
+                            <option value="paused">Wstrzymane</option>
+                            <option value="cancelled">Anulowane</option>
+                        </select>
+                    </div>
+
+                    <!-- Tools List -->
+                    <div class="bg-zinc-950/50 rounded-xl border border-white/5 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5 text-left">
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Narzędzie</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden md:table-cell">Kategoria</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Koszt</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Karta</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden sm:table-cell">Następna płatność</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-4 py-3 w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tools-list">
+                                    <!-- Tools rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="tools-empty" class="hidden py-12 text-center">
+                            <i class="ph ph-stack text-4xl text-zinc-700 mb-3"></i>
+                            <p class="text-zinc-500 mb-1">Brak narzędzi</p>
+                            <p class="text-zinc-600 text-xs mb-4">Dodaj pierwsze narzędzie do swojego stacku</p>
+                            <button onclick="openModal()" class="text-amber-400 hover:text-amber-300 text-sm font-medium">
+                                <i class="ph ph-plus mr-1"></i>Dodaj narzędzie
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Payments -->
+                <div id="tab-payments" class="tab-content hidden">
+                    <h2 class="text-lg font-semibold text-white mb-4">Nadchodzące płatności</h2>
+
+                    <div id="upcoming-payments" class="space-y-3">
+                        <!-- Payments rendered here -->
+                    </div>
+
+                    <div id="payments-empty" class="hidden py-12 text-center bg-zinc-950/50 rounded-xl border border-white/5">
+                        <i class="ph ph-calendar-check text-4xl text-zinc-700 mb-3"></i>
+                        <p class="text-zinc-500">Brak nadchodzących płatności</p>
+                    </div>
+
+                    <h2 class="text-lg font-semibold text-white mb-4 mt-8">Historia płatności</h2>
+                    <div class="bg-zinc-950/50 rounded-xl border border-white/5 overflow-hidden">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-white/5 text-left">
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Data</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Narzędzie</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Kwota</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payment-history">
+                                <!-- History rendered here -->
+                            </tbody>
+                        </table>
+                        <div id="history-empty" class="hidden py-8 text-center text-zinc-500">
+                            Brak historii płatności
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Revolut -->
+                <div id="tab-revolut" class="tab-content hidden">
+                    <div class="bg-zinc-950/50 rounded-xl border border-white/5 p-6 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-[#0666eb]/20 flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-bank text-[#0666eb] text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-white mb-1">Integracja Revolut Business</h3>
+                                <p class="text-zinc-400 text-sm mb-4">Połącz konto Revolut Business, aby automatycznie importować transakcje i dopasowywać je do narzędzi.</p>
+
+                                <div id="revolut-status" class="mb-4">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs bg-zinc-800 text-zinc-400">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+                                        Nie połączono
+                                    </span>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="showRevolutSetup()" class="px-4 py-2 bg-[#0666eb] hover:bg-[#0555cc] text-white rounded-lg text-sm font-medium transition-colors">
+                                        <i class="ph ph-link mr-1.5"></i>Połącz Revolut
+                                    </button>
+                                    <button onclick="syncRevolut()" id="btn-sync-revolut" class="hidden px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                        <i class="ph ph-arrows-clockwise mr-1.5"></i>Synchronizuj
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unmatched transactions -->
+                    <h2 class="text-lg font-semibold text-white mb-4">Transakcje do dopasowania</h2>
+                    <div class="bg-zinc-950/50 rounded-xl border border-white/5 overflow-hidden">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-white/5 text-left">
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Data</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Merchant</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Kwota</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase">Karta</th>
+                                    <th class="px-4 py-3 w-32"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="unmatched-transactions">
+                                <!-- Transactions rendered here -->
+                            </tbody>
+                        </table>
+                        <div id="transactions-empty" class="py-8 text-center text-zinc-500">
+                            <i class="ph ph-check-circle text-2xl text-emerald-500 mb-2"></i>
+                            <p>Wszystkie transakcje dopasowane</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Add/Edit Tool -->
+    <div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h3 id="modal-title" class="text-lg font-semibold text-white">Dodaj narzędzie</h3>
+                <button onclick="closeModal()" class="text-zinc-500 hover:text-white p-1">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <form id="tool-form" class="p-5 space-y-4">
+                <input type="hidden" id="tool-id">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Nazwa narzędzia *</label>
+                        <input type="text" id="tool-name" required class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="np. OpenAI, Vercel, Figma...">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">URL</label>
+                        <input type="url" id="tool-url" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="https://...">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Kategoria</label>
+                        <select id="tool-category" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="">Wybierz...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Status</label>
+                        <select id="tool-status" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="active">Aktywne</option>
+                            <option value="trial">Trial</option>
+                            <option value="paused">Wstrzymane</option>
+                            <option value="cancelled">Anulowane</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Plan</label>
+                        <input type="text" id="tool-plan" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="Free, Pro, Enterprise...">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Cykl rozliczeniowy</label>
+                        <select id="tool-billing" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="monthly">Miesięcznie</option>
+                            <option value="yearly">Rocznie</option>
+                            <option value="one_time">Jednorazowo</option>
+                            <option value="lifetime">Lifetime</option>
+                            <option value="free">Free</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Koszt</label>
+                        <input type="number" id="tool-cost" step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="0.00">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Waluta</label>
+                        <select id="tool-currency" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="PLN">PLN</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Następna płatność</label>
+                        <input type="date" id="tool-next-payment" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Koniec trial</label>
+                        <input type="date" id="tool-trial-ends" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Karta Revolut (nazwa)</label>
+                        <input type="text" id="tool-card-name" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="np. OpenAI">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Ostatnie 4 cyfry karty</label>
+                        <input type="text" id="tool-card-last" maxlength="4" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white font-mono" placeholder="1234">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Email logowania</label>
+                        <input type="email" id="tool-login-email" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="email@example.com">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="text-xs text-zinc-500 font-medium mb-1 block">Notatki</label>
+                        <textarea id="tool-notes" rows="2" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white resize-none" placeholder="Dodatkowe informacje..."></textarea>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-white/5">
+                    <button type="button" id="btn-delete-tool" onclick="deleteTool()" class="hidden text-red-400 hover:text-red-300 text-sm">
+                        <i class="ph ph-trash mr-1"></i>Usuń
+                    </button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-zinc-400 hover:text-white text-sm transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black rounded-lg text-sm font-medium transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Match Transaction -->
+    <div id="match-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-md">
+            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                <h3 class="text-lg font-semibold text-white">Dopasuj transakcję</h3>
+                <button onclick="closeMatchModal()" class="text-zinc-500 hover:text-white p-1">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-5">
+                <div id="match-tx-info" class="bg-zinc-950 rounded-lg p-3 mb-4">
+                    <!-- Transaction info -->
+                </div>
+                <label class="text-xs text-zinc-500 font-medium mb-2 block">Dopasuj do narzędzia</label>
+                <select id="match-tool-select" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white mb-4">
+                    <option value="">Wybierz narzędzie...</option>
+                </select>
+                <label class="flex items-center gap-2 text-sm text-zinc-400 mb-4">
+                    <input type="checkbox" id="match-create-rule" class="rounded border-zinc-700">
+                    Utwórz regułę auto-dopasowania
+                </label>
+                <div class="flex gap-2">
+                    <button onclick="ignoreTransaction()" class="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors">
+                        Ignoruj
+                    </button>
+                    <button onclick="confirmMatch()" class="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black rounded-lg text-sm font-medium transition-colors">
+                        Dopasuj
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let tools = [];
+        let categories = [];
+        let payments = [];
+        let transactions = [];
+        let currentMember = null;
+        let selectedTransaction = null;
+
+        // ============================================
+        // AUTH & INIT
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        async function loadTeamMember(userId) {
+            const { data } = await supabaseClient.from('team_members').select('*').eq('user_id', userId).single();
+            currentMember = data;
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserEmail(currentMember.email?.split('@')[0] || '');
+            }
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadCategories() {
+            const { data, error } = await supabaseClient
+                .from('tool_categories')
+                .select('*')
+                .order('sort_order');
+
+            if (error) {
+                console.error('Error loading categories:', error);
+                return;
+            }
+
+            categories = data || [];
+            populateCategoryFilters();
+        }
+
+        async function loadTools() {
+            const { data, error } = await supabaseClient
+                .from('tools')
+                .select(`
+                    *,
+                    category:tool_categories(id, name, color, icon)
+                `)
+                .order('name');
+
+            if (error) {
+                console.error('Error loading tools:', error);
+                return;
+            }
+
+            tools = data || [];
+            renderTools();
+            updateStats();
+        }
+
+        async function loadPayments() {
+            const { data, error } = await supabaseClient
+                .from('tool_payments')
+                .select(`
+                    *,
+                    tool:tools(id, name)
+                `)
+                .order('paid_at', { ascending: false })
+                .limit(50);
+
+            if (error) {
+                console.error('Error loading payments:', error);
+                return;
+            }
+
+            payments = data || [];
+            renderPaymentHistory();
+        }
+
+        async function loadTransactions() {
+            const { data, error } = await supabaseClient
+                .from('revolut_transactions')
+                .select('*')
+                .is('matched_tool_id', null)
+                .eq('ignored', false)
+                .order('transaction_date', { ascending: false });
+
+            if (error) {
+                console.error('Error loading transactions:', error);
+                return;
+            }
+
+            transactions = data || [];
+            renderTransactions();
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function populateCategoryFilters() {
+            const filterSelect = document.getElementById('filter-category');
+            const modalSelect = document.getElementById('tool-category');
+
+            const options = categories.map(c =>
+                `<option value="${c.id}">${c.name}</option>`
+            ).join('');
+
+            filterSelect.innerHTML = '<option value="">Wszystkie kategorie</option>' + options;
+            modalSelect.innerHTML = '<option value="">Wybierz...</option>' + options;
+        }
+
+        function renderTools() {
+            const tbody = document.getElementById('tools-list');
+            const empty = document.getElementById('tools-empty');
+
+            // Apply filters
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const categoryFilter = document.getElementById('filter-category').value;
+            const statusFilter = document.getElementById('filter-status').value;
+
+            let filtered = tools.filter(t => {
+                if (search && !t.name.toLowerCase().includes(search)) return false;
+                if (categoryFilter && t.category_id !== categoryFilter) return false;
+                if (statusFilter && t.status !== statusFilter) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            tbody.innerHTML = filtered.map(tool => {
+                const statusClass = `status-${tool.status}`;
+                const statusLabel = {
+                    active: 'Aktywne',
+                    trial: 'Trial',
+                    paused: 'Wstrzymane',
+                    cancelled: 'Anulowane'
+                }[tool.status] || tool.status;
+
+                const costDisplay = tool.billing_cycle === 'free' ? 'Free' :
+                    `${formatCurrency(tool.cost, tool.currency)}/${tool.billing_cycle === 'yearly' ? 'rok' : 'mies.'}`;
+
+                const nextPayment = tool.next_payment_date ?
+                    new Date(tool.next_payment_date).toLocaleDateString('pl-PL') : '-';
+
+                const categoryBadge = tool.category ?
+                    `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs" style="background: ${tool.category.color}20; color: ${tool.category.color}">
+                        <i class="ph ${tool.category.icon} text-[10px]"></i>
+                        ${tool.category.name}
+                    </span>` : '-';
+
+                return `
+                    <tr class="tool-row border-b border-white/5 cursor-pointer" onclick="editTool('${tool.id}')">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                                    ${tool.icon_url ?
+                                        `<img src="${tool.icon_url}" class="w-5 h-5 rounded" alt="">` :
+                                        `<i class="ph ph-cube text-zinc-500"></i>`
+                                    }
+                                </div>
+                                <div>
+                                    <div class="font-medium text-white">${escapeHtml(tool.name)}</div>
+                                    ${tool.plan_name ? `<div class="text-xs text-zinc-500">${escapeHtml(tool.plan_name)}</div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 hidden md:table-cell">${categoryBadge}</td>
+                        <td class="px-4 py-3">
+                            <span class="font-mono text-white">${costDisplay}</span>
+                        </td>
+                        <td class="px-4 py-3 hidden lg:table-cell">
+                            ${tool.card_name ?
+                                `<span class="text-zinc-400">${escapeHtml(tool.card_name)} ${tool.card_last_four ? `•${tool.card_last_four}` : ''}</span>` :
+                                '<span class="text-zinc-600">-</span>'
+                            }
+                        </td>
+                        <td class="px-4 py-3 hidden sm:table-cell">
+                            <span class="text-zinc-400 font-mono text-xs">${nextPayment}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="${statusClass} text-xs font-medium">${statusLabel}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick="event.stopPropagation(); editTool('${tool.id}')" class="text-zinc-500 hover:text-white p-1">
+                                <i class="ph ph-pencil-simple"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            // Monthly cost (active tools with monthly billing)
+            const monthlyCost = tools
+                .filter(t => t.status === 'active' && t.billing_cycle === 'monthly')
+                .reduce((sum, t) => sum + (parseFloat(t.cost) || 0), 0);
+
+            // Yearly cost (convert monthly to yearly + yearly subscriptions)
+            const yearlyFromMonthly = monthlyCost * 12;
+            const yearlyDirect = tools
+                .filter(t => t.status === 'active' && t.billing_cycle === 'yearly')
+                .reduce((sum, t) => sum + (parseFloat(t.cost) || 0), 0);
+            const yearlyCost = yearlyFromMonthly + yearlyDirect;
+
+            // Upcoming payments (next 7 days)
+            const now = new Date();
+            const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const upcoming = tools.filter(t => {
+                if (!t.next_payment_date || t.status !== 'active') return false;
+                const date = new Date(t.next_payment_date);
+                return date >= now && date <= in7Days;
+            }).length;
+
+            document.getElementById('stat-monthly').textContent = formatCurrency(monthlyCost, 'PLN');
+            document.getElementById('stat-yearly').textContent = formatCurrency(yearlyCost, 'PLN');
+            document.getElementById('stat-tools').textContent = tools.filter(t => t.status === 'active').length;
+            document.getElementById('stat-upcoming').textContent = upcoming;
+
+            renderUpcomingPayments();
+        }
+
+        function renderUpcomingPayments() {
+            const container = document.getElementById('upcoming-payments');
+            const empty = document.getElementById('payments-empty');
+
+            const now = new Date();
+            const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+            const upcoming = tools
+                .filter(t => {
+                    if (!t.next_payment_date || t.status !== 'active') return false;
+                    const date = new Date(t.next_payment_date);
+                    return date >= now && date <= in30Days;
+                })
+                .sort((a, b) => new Date(a.next_payment_date) - new Date(b.next_payment_date));
+
+            if (upcoming.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            container.innerHTML = upcoming.map(tool => {
+                const date = new Date(tool.next_payment_date);
+                const daysUntil = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+                const urgencyClass = daysUntil <= 3 ? 'bg-red-500/10 border-red-500/20' :
+                    daysUntil <= 7 ? 'bg-amber-500/10 border-amber-500/20' :
+                    'bg-zinc-900/50 border-white/5';
+
+                return `
+                    <div class="flex items-center gap-4 p-4 rounded-xl border ${urgencyClass}">
+                        <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-cube text-zinc-500"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-white">${escapeHtml(tool.name)}</div>
+                            <div class="text-xs text-zinc-500">
+                                ${date.toLocaleDateString('pl-PL')} • za ${daysUntil} ${daysUntil === 1 ? 'dzień' : 'dni'}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-white">${formatCurrency(tool.cost, tool.currency)}</div>
+                            <div class="text-xs text-zinc-500">${tool.card_name || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPaymentHistory() {
+            const tbody = document.getElementById('payment-history');
+            const empty = document.getElementById('history-empty');
+
+            if (payments.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            tbody.innerHTML = payments.map(p => `
+                <tr class="border-b border-white/5">
+                    <td class="px-4 py-3 text-zinc-400 font-mono text-xs">
+                        ${new Date(p.paid_at).toLocaleDateString('pl-PL')}
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                        ${p.tool ? escapeHtml(p.tool.name) : '-'}
+                    </td>
+                    <td class="px-4 py-3 font-mono text-white">
+                        ${formatCurrency(p.amount, p.currency)}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTransactions() {
+            const tbody = document.getElementById('unmatched-transactions');
+            const empty = document.getElementById('transactions-empty');
+
+            if (transactions.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+
+            tbody.innerHTML = transactions.map(tx => `
+                <tr class="border-b border-white/5">
+                    <td class="px-4 py-3 text-zinc-400 font-mono text-xs">
+                        ${new Date(tx.transaction_date).toLocaleDateString('pl-PL')}
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                        ${escapeHtml(tx.merchant_name || tx.description || '-')}
+                    </td>
+                    <td class="px-4 py-3 font-mono text-white">
+                        ${formatCurrency(Math.abs(tx.amount), tx.currency)}
+                    </td>
+                    <td class="px-4 py-3 text-zinc-500 font-mono text-xs">
+                        ${tx.card_last_four ? `•${tx.card_last_four}` : '-'}
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="openMatchModal('${tx.id}')" class="text-amber-400 hover:text-amber-300 text-xs font-medium">
+                            Dopasuj
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ============================================
+        // TABS
+        // ============================================
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('hidden', content.id !== `tab-${tab}`);
+            });
+        }
+
+        // ============================================
+        // MODAL: ADD/EDIT TOOL
+        // ============================================
+        function openModal(tool = null) {
+            const modal = document.getElementById('modal');
+            const title = document.getElementById('modal-title');
+            const deleteBtn = document.getElementById('btn-delete-tool');
+
+            // Reset form
+            document.getElementById('tool-form').reset();
+            document.getElementById('tool-id').value = '';
+
+            if (tool) {
+                title.textContent = 'Edytuj narzędzie';
+                deleteBtn.classList.remove('hidden');
+
+                document.getElementById('tool-id').value = tool.id;
+                document.getElementById('tool-name').value = tool.name || '';
+                document.getElementById('tool-url').value = tool.url || '';
+                document.getElementById('tool-category').value = tool.category_id || '';
+                document.getElementById('tool-status').value = tool.status || 'active';
+                document.getElementById('tool-plan').value = tool.plan_name || '';
+                document.getElementById('tool-billing').value = tool.billing_cycle || 'monthly';
+                document.getElementById('tool-cost').value = tool.cost || '';
+                document.getElementById('tool-currency').value = tool.currency || 'PLN';
+                document.getElementById('tool-next-payment').value = tool.next_payment_date || '';
+                document.getElementById('tool-trial-ends').value = tool.trial_ends_at || '';
+                document.getElementById('tool-card-name').value = tool.card_name || '';
+                document.getElementById('tool-card-last').value = tool.card_last_four || '';
+                document.getElementById('tool-login-email').value = tool.login_email || '';
+                document.getElementById('tool-notes').value = tool.notes || '';
+            } else {
+                title.textContent = 'Dodaj narzędzie';
+                deleteBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('tool-name').focus();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function editTool(id) {
+            const tool = tools.find(t => t.id === id);
+            if (tool) openModal(tool);
+        }
+
+        async function saveTool(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('tool-id').value;
+            const data = {
+                name: document.getElementById('tool-name').value.trim(),
+                url: document.getElementById('tool-url').value.trim() || null,
+                category_id: document.getElementById('tool-category').value || null,
+                status: document.getElementById('tool-status').value,
+                plan_name: document.getElementById('tool-plan').value.trim() || null,
+                billing_cycle: document.getElementById('tool-billing').value,
+                cost: parseFloat(document.getElementById('tool-cost').value) || 0,
+                currency: document.getElementById('tool-currency').value,
+                next_payment_date: document.getElementById('tool-next-payment').value || null,
+                trial_ends_at: document.getElementById('tool-trial-ends').value || null,
+                card_name: document.getElementById('tool-card-name').value.trim() || null,
+                card_last_four: document.getElementById('tool-card-last').value.trim() || null,
+                login_email: document.getElementById('tool-login-email').value.trim() || null,
+                notes: document.getElementById('tool-notes').value.trim() || null
+            };
+
+            let error;
+
+            if (id) {
+                ({ error } = await supabaseClient.from('tools').update(data).eq('id', id));
+            } else {
+                data.created_by = currentMember?.id;
+                ({ error } = await supabaseClient.from('tools').insert([data]));
+            }
+
+            if (error) {
+                alert('Błąd zapisu: ' + error.message);
+                return;
+            }
+
+            closeModal();
+            await loadTools();
+        }
+
+        async function deleteTool() {
+            const id = document.getElementById('tool-id').value;
+            if (!id) return;
+
+            if (!confirm('Czy na pewno chcesz usunąć to narzędzie?')) return;
+
+            const { error } = await supabaseClient.from('tools').delete().eq('id', id);
+
+            if (error) {
+                alert('Błąd usuwania: ' + error.message);
+                return;
+            }
+
+            closeModal();
+            await loadTools();
+        }
+
+        document.getElementById('tool-form').addEventListener('submit', saveTool);
+
+        // ============================================
+        // MODAL: MATCH TRANSACTION
+        // ============================================
+        function openMatchModal(txId) {
+            selectedTransaction = transactions.find(t => t.id === txId);
+            if (!selectedTransaction) return;
+
+            const modal = document.getElementById('match-modal');
+            const info = document.getElementById('match-tx-info');
+            const select = document.getElementById('match-tool-select');
+
+            info.innerHTML = `
+                <div class="text-white font-medium">${escapeHtml(selectedTransaction.merchant_name || selectedTransaction.description)}</div>
+                <div class="text-sm text-zinc-400 mt-1">
+                    ${formatCurrency(Math.abs(selectedTransaction.amount), selectedTransaction.currency)} •
+                    ${new Date(selectedTransaction.transaction_date).toLocaleDateString('pl-PL')}
+                </div>
+            `;
+
+            select.innerHTML = '<option value="">Wybierz narzędzie...</option>' +
+                tools.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeMatchModal() {
+            document.getElementById('match-modal').classList.add('hidden');
+            document.getElementById('match-modal').classList.remove('flex');
+            selectedTransaction = null;
+        }
+
+        async function confirmMatch() {
+            if (!selectedTransaction) return;
+
+            const toolId = document.getElementById('match-tool-select').value;
+            if (!toolId) {
+                alert('Wybierz narzędzie');
+                return;
+            }
+
+            const createRule = document.getElementById('match-create-rule').checked;
+
+            // Update transaction
+            const { error } = await supabaseClient
+                .from('revolut_transactions')
+                .update({
+                    matched_tool_id: toolId,
+                    matched_at: new Date().toISOString()
+                })
+                .eq('id', selectedTransaction.id);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            // Create matching rule if requested
+            if (createRule && selectedTransaction.merchant_name) {
+                await supabaseClient.from('revolut_matching_rules').insert([{
+                    merchant_pattern: `%${selectedTransaction.merchant_name}%`,
+                    tool_id: toolId
+                }]);
+            }
+
+            // Add to payment history
+            await supabaseClient.from('tool_payments').insert([{
+                tool_id: toolId,
+                amount: Math.abs(selectedTransaction.amount),
+                currency: selectedTransaction.currency,
+                paid_at: selectedTransaction.transaction_date,
+                payment_method: 'card'
+            }]);
+
+            closeMatchModal();
+            await loadTransactions();
+            await loadPayments();
+        }
+
+        async function ignoreTransaction() {
+            if (!selectedTransaction) return;
+
+            const { error } = await supabaseClient
+                .from('revolut_transactions')
+                .update({ ignored: true })
+                .eq('id', selectedTransaction.id);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            closeMatchModal();
+            await loadTransactions();
+        }
+
+        // ============================================
+        // REVOLUT
+        // ============================================
+        function showRevolutSetup() {
+            alert('Integracja z Revolut Business wymaga konfiguracji API w Supabase Edge Functions.\n\nKroki:\n1. Utwórz aplikację w Revolut Business API\n2. Skonfiguruj Edge Function do obsługi OAuth\n3. Ustaw webhooks dla nowych transakcji');
+        }
+
+        async function syncRevolut() {
+            alert('Synchronizacja wymaga skonfigurowanej integracji Revolut API');
+        }
+
+        // ============================================
+        // FILTERS
+        // ============================================
+        document.getElementById('filter-search').addEventListener('input', renderTools);
+        document.getElementById('filter-category').addEventListener('change', renderTools);
+        document.getElementById('filter-status').addEventListener('change', renderTools);
+
+        // ============================================
+        // UTILS
+        // ============================================
+        function formatCurrency(amount, currency = 'PLN') {
+            return new Intl.NumberFormat('pl-PL', {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            Sidebar.render('sidebar');
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            await loadTeamMember(session.user.id);
+            await loadCategories();
+            await loadTools();
+            await loadPayments();
+            await loadTransactions();
+        }
+
+        init();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/tn-stack/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
