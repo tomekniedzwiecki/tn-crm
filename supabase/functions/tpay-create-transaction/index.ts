@@ -19,7 +19,9 @@ const PAYMENT_GROUPS = {
   google_pay: 166,
   apple_pay: 167,
   transfer: 0, // 0 = let user choose bank on Tpay page
-  installments: 109, // PayU Raty
+  installments: 109, // Raty
+  twisto: 170, // Twisto BNPL
+  alior_raty: 169, // Alior Raty 0%
 }
 
 interface TpayTokenResponse {
@@ -84,6 +86,7 @@ async function createTpayTransaction(
     errorUrl: string
     notifyUrl: string
     groupId?: number
+    blikCode?: string
   }
 ): Promise<TpayTransactionResponse> {
   const baseUrl = useSandbox ? TPAY_SANDBOX_URL : TPAY_API_URL
@@ -116,6 +119,18 @@ async function createTpayTransaction(
       groupId: params.groupId,
     }
     console.log('[tpay] Using payment group:', params.groupId)
+  }
+
+  // Add BLIK code for inline BLIK payment
+  if (params.blikCode) {
+    payload.pay = {
+      ...payload.pay,
+      groupId: 150, // BLIK group ID
+      blikPaymentData: {
+        blikToken: params.blikCode,
+      },
+    }
+    console.log('[tpay] Using BLIK inline with code')
   }
 
   console.log('[tpay] Creating transaction:', JSON.stringify(payload))
@@ -166,7 +181,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Parse request body
-    const { orderId, successUrl, errorUrl, paymentType, groupId } = await req.json()
+    const { orderId, successUrl, errorUrl, paymentType, groupId, blikCode } = await req.json()
 
     if (!orderId) {
       throw new Error('Brak ID zamówienia')
@@ -219,11 +234,28 @@ serve(async (req) => {
     let finalGroupId = groupId
 
     // If no groupId provided, use default based on payment type
-    if (!finalGroupId && paymentType === 'installments') {
-      finalGroupId = PAYMENT_GROUPS.installments
+    if (!finalGroupId && paymentType) {
+      switch (paymentType) {
+        case 'blik':
+          finalGroupId = PAYMENT_GROUPS.blik
+          break
+        case 'card':
+          finalGroupId = PAYMENT_GROUPS.card
+          break
+        case 'transfer':
+          finalGroupId = PAYMENT_GROUPS.transfer
+          break
+        case 'installments':
+        case 'alior_raty':
+          finalGroupId = PAYMENT_GROUPS.alior_raty
+          break
+        case 'twisto':
+          finalGroupId = PAYMENT_GROUPS.twisto
+          break
+      }
     }
 
-    console.log('[tpay] Payment type:', paymentType, 'Group ID:', finalGroupId)
+    console.log('[tpay] Payment type:', paymentType, 'Group ID:', finalGroupId, 'BLIK code:', blikCode ? 'provided' : 'none')
 
     // Get OAuth token
     const token = await getTpayToken(tpayClientId, tpayClientSecret, useSandbox)
@@ -240,14 +272,27 @@ serve(async (req) => {
       errorUrl: finalErrorUrl,
       notifyUrl: notifyUrl,
       groupId: finalGroupId,
+      blikCode: blikCode,
     })
+
+    // Determine payment source
+    let paymentSource = 'tpay'
+    if (blikCode) {
+      paymentSource = 'blik'
+    } else if (paymentType === 'installments') {
+      paymentSource = 'installments'
+    } else if (paymentType === 'twisto') {
+      paymentSource = 'twisto'
+    } else if (paymentType === 'pragmapay') {
+      paymentSource = 'pragmapay'
+    }
 
     // Update order with Tpay transaction ID
     const { error: updateError } = await supabase
       .from('orders')
       .update({
         payment_reference: transaction.transactionId,
-        payment_source: paymentType === 'installments' ? 'installments' : 'tpay',
+        payment_source: paymentSource,
         updated_at: new Date().toISOString(),
       })
       .eq('id', orderId)
@@ -258,11 +303,16 @@ serve(async (req) => {
 
     console.log('[tpay-create-transaction] SUCCESS - Payment URL generated')
 
+    // For BLIK inline, we don't redirect - the payment is processed immediately
+    // Frontend should poll for status
+    const isBlikInline = !!blikCode
+
     return new Response(
       JSON.stringify({
         success: true,
         transactionId: transaction.transactionId,
         paymentUrl: transaction.transactionPaymentUrl,
+        blikInline: isBlikInline,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
