@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TN Todo | Tablica</title>
     <link rel="icon" type="image/svg+xml" href="/tn-todo/favicon.svg">
+    <link rel="manifest" href="/tn-todo/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -274,14 +278,20 @@
     <!-- Main -->
     <main class="flex-1 flex flex-col relative min-w-0">
         <!-- Header -->
-        <header class="h-14 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-            <div class="flex items-center gap-2">
-                <a href="/tn-todo/boards.html" class="text-neutral-500 hover:text-white transition-colors text-sm">tn-todo</a>
-                <span class="text-neutral-700">/</span>
-                <span id="board-name-header" class="text-white font-medium text-sm">Ładowanie...</span>
+        <header class="h-14 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <a href="/tn-todo/boards.html" data-page="boards" class="text-neutral-500 hover:text-white transition-colors text-sm hidden sm:inline">tn-todo</a>
+                    <span class="text-neutral-700 hidden sm:inline">/</span>
+                    <span id="board-name-header" class="text-white font-medium text-sm truncate max-w-[150px] md:max-w-none">Ładowanie...</span>
+                </div>
             </div>
-            <button onclick="openAddListModal()" class="bg-white text-black hover:bg-neutral-200 px-4 py-2 rounded-lg font-medium text-sm transition-all">
-                Dodaj listę
+            <button onclick="openAddListModal()" class="bg-white text-black hover:bg-neutral-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-all">
+                <i class="ph ph-plus md:hidden"></i>
+                <span class="hidden md:inline">Dodaj listę</span>
             </button>
         </header>
 
@@ -1609,6 +1619,11 @@
         }
 
         init();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/tn-todo/sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>

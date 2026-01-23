@@ -42,6 +42,47 @@ const NAV_ITEMS = [
 // CSS ANIMATIONS
 // ============================================
 const SIDEBAR_CSS = `
+    /* Mobile sidebar */
+    @media (max-width: 768px) {
+        #sidebar {
+            position: fixed !important;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        #sidebar.open {
+            transform: translateX(0);
+        }
+        #sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        #sidebar-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .mobile-menu-btn {
+            display: flex !important;
+        }
+    }
+    @media (min-width: 769px) {
+        #sidebar-overlay {
+            display: none !important;
+        }
+        .mobile-menu-btn {
+            display: none !important;
+        }
+    }
+
     /* Nav icon animations */
     nav a i { display: inline-block; }
 
@@ -221,6 +262,14 @@ function renderSidebar(containerId = 'sidebar') {
         `;
     }).join('');
 
+    // Add mobile overlay if not exists
+    if (!document.getElementById('sidebar-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'sidebar-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', closeMobileSidebar);
+    }
+
     // Full sidebar HTML
     container.innerHTML = `
         <!-- Logo / App Switcher -->
@@ -266,6 +315,11 @@ function renderSidebar(containerId = 'sidebar') {
 
     // Setup app switcher
     setupAppSwitcher();
+
+    // Close sidebar on nav link click (mobile)
+    container.querySelectorAll('nav a').forEach(link => {
+        link.addEventListener('click', closeMobileSidebar);
+    });
 }
 
 function setupAppSwitcher() {
@@ -368,6 +422,20 @@ function setupProfileClick() {
     }
 }
 
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+}
+
 // ============================================
 // EXPORT
 // ============================================
@@ -384,5 +452,7 @@ window.Sidebar = {
     getLoginPath,
     getBasePath,
     getCurrentPage,
-    updateLinks: updateNavLinks
+    updateLinks: updateNavLinks,
+    toggle: toggleMobileSidebar,
+    close: closeMobileSidebar
 };

@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TN CRM - Aktywność</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -60,16 +64,21 @@
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
         <!-- Header -->
-        <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-            <div class="flex items-center gap-2 text-zinc-500">
-                <span class="text-zinc-400">tn-crm</span>
-                <span class="text-zinc-700">/</span>
-                <span class="text-white font-medium">audit</span>
-            </div>
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
             <div class="flex items-center gap-3">
-                <button id="refresh-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">audit</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3">
+                <button id="refresh-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 md:px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
                     <i class="ph ph-arrows-clockwise"></i>
-                    Odswież
+                    <span class="hidden md:inline">Odśwież</span>
                 </button>
             </div>
         </header>
@@ -770,6 +779,11 @@
             const session = await checkAuth();
         }
         init();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>
