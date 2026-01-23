@@ -16,11 +16,11 @@ const CURRENT_APP = 'stack';
 function getAppPath(appId) {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (appId === 'crm') {
-        return isLocal ? '/tn-crm/dashboard.html' : '/dashboard.html';
+        return isLocal ? '/tn-crm/dashboard.html' : '/dashboard';
     } else if (appId === 'todo') {
-        return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards.html';
+        return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards';
     } else if (appId === 'stack') {
-        return isLocal ? '/tn-stack/dashboard.html' : '/tn-stack/dashboard.html';
+        return isLocal ? '/tn-stack/dashboard.html' : '/tn-stack/dashboard';
     }
     return '/';
 }
