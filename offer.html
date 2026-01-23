@@ -1511,9 +1511,14 @@
                             <span class="text-xs text-zinc-500">-${formatPrice(code.discount_amount)} PLN</span>
                             ${code.uses_limit ? `<span class="text-[10px] text-zinc-600">(${code.uses_count || 0}/${code.uses_limit})</span>` : ''}
                         </div>
-                        <button onclick="copyDiscountCode('${code.code}')" class="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 transition-colors" title="Kopiuj kod">
-                            <i class="ph ph-copy text-sm"></i>
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="copyCheckoutWithCode('${code.code}')" class="text-zinc-500 hover:text-emerald-400 p-1 rounded hover:bg-emerald-500/10 transition-colors" title="Kopiuj link do checkout z kodem">
+                                <i class="ph ph-link text-sm"></i>
+                            </button>
+                            <button onclick="copyDiscountCode('${code.code}')" class="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 transition-colors" title="Kopiuj kod">
+                                <i class="ph ph-copy text-sm"></i>
+                            </button>
+                        </div>
                     </div>
                 `).join('');
             } else {
@@ -1524,6 +1529,16 @@
         function copyDiscountCode(code) {
             navigator.clipboard.writeText(code);
             showToast('Kod skopiowany');
+        }
+
+        function copyCheckoutWithCode(code) {
+            if (!offer) return;
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const base = isLocal ? getBasePath() : '';
+            const checkoutPath = isLocal ? `${base}/checkout/index.html` : '/checkout';
+            const url = `${location.origin}${checkoutPath}?offer=${offer.id}&code=${code}`;
+            navigator.clipboard.writeText(url);
+            showToast('Link z kodem skopiowany');
         }
 
         function quickAddDiscountCode() {
@@ -1634,6 +1649,7 @@
         window.generateDiscountCode = generateDiscountCode;
         window.saveDiscountCode = saveDiscountCode;
         window.copyDiscountCode = copyDiscountCode;
+        window.copyCheckoutWithCode = copyCheckoutWithCode;
 
         // Event listeners
         document.getElementById('add-milestone-btn').addEventListener('click', addMilestone);
