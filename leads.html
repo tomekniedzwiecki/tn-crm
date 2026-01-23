@@ -115,11 +115,11 @@
                 <!-- Filters -->
                 <div class="flex flex-wrap gap-3 mb-6">
                     <!-- Unified Search -->
-                    <div class="relative flex-1 min-w-[200px] max-w-lg">
+                    <div class="relative flex-1 min-w-[200px] max-w-md">
                         <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500 z-10"></i>
-                        <input type="text" id="filter-search" placeholder="Szukaj email, telefon (leady + kampanie)..." class="filter-input w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600">
+                        <input type="text" id="filter-search" placeholder="Szukaj email, telefon..." class="filter-input w-full rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600">
                         <!-- Search Results Dropdown -->
-                        <div id="unified-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 max-h-[400px] overflow-y-auto">
+                        <div id="unified-search-dropdown" class="hidden absolute top-full left-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 max-h-[400px] overflow-y-auto w-[500px]">
                             <div id="unified-search-results" class="p-2"></div>
                         </div>
                     </div>
@@ -1472,18 +1472,16 @@
                             <i class="ph ph-users"></i> Leady (${leadsData.length})
                         </div>
                         ${leadsData.map(lead => `
-                            <button onclick="openLead('${lead.id}'); closeUnifiedSearch();" class="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-lg transition-colors text-left">
-                                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">
-                                    ${lead.email.charAt(0).toUpperCase()}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="text-white text-sm truncate">${lead.email}</div>
-                                    <div class="text-zinc-500 text-xs truncate">
-                                        ${lead.name || lead.company || lead.phone || 'Lead'}
+                            <button onclick="openLead('${lead.id}'); closeUnifiedSearch();" class="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/5 rounded-lg transition-colors text-left group">
+                                <div class="flex-1">
+                                    <div class="text-white text-sm font-mono">${lead.email}</div>
+                                    <div class="text-zinc-500 text-xs mt-0.5">
+                                        ${lead.phone ? `<span class="font-mono">${lead.phone}</span>` : ''}
+                                        ${lead.name ? ` · ${lead.name}` : ''}
                                         ${lead.status ? ` · ${formatStatus(lead.status)}` : ''}
                                     </div>
                                 </div>
-                                <i class="ph ph-arrow-right text-zinc-600"></i>
+                                <i class="ph ph-arrow-right text-zinc-600 group-hover:text-emerald-400 transition-colors"></i>
                             </button>
                         `).join('')}
                     </div>
@@ -1498,19 +1496,16 @@
                             <i class="ph ph-megaphone"></i> Kampanie (${uniqueCampaigns.length})
                         </div>
                         ${uniqueCampaigns.map(contact => `
-                            <div class="flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-lg transition-colors">
-                                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0">
-                                    ${contact.email.charAt(0).toUpperCase()}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="text-white text-sm truncate">${contact.email}</div>
-                                    <div class="text-zinc-500 text-xs truncate">
-                                        ${contact.phone || ''}
+                            <div class="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/5 rounded-lg transition-colors">
+                                <div class="flex-1">
+                                    <div class="text-white text-sm font-mono">${contact.email}</div>
+                                    <div class="text-zinc-500 text-xs mt-0.5">
+                                        ${contact.phone ? `<span class="font-mono">${contact.phone}</span>` : ''}
                                         ${contact.ltv_pln ? ` · LTV: ${contact.ltv_pln.toLocaleString('pl-PL')} PLN` : ''}
                                         ${contact.whatsapp_contacted_at ? ' · WA ✓' : ''}
                                     </div>
                                 </div>
-                                <button onclick="addCampaignContactAsLead('${contact.id}', '${contact.email}', '${contact.phone || ''}', ${contact.ltv_pln || 0}, ${contact.unique_products || 0})" class="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded text-xs font-medium transition-colors flex-shrink-0">
+                                <button onclick="addCampaignContactAsLead('${contact.id}', '${contact.email}', '${contact.phone || ''}', ${contact.ltv_pln || 0}, ${contact.unique_products || 0})" class="px-2.5 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded text-xs font-medium transition-colors flex-shrink-0">
                                     <i class="ph ph-plus mr-1"></i>Dodaj
                                 </button>
                             </div>
