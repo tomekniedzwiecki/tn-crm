@@ -6,12 +6,12 @@
     <title>Płatność nieudana - Tomasz Niedźwiecki AI</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
-    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Płatność nieudana">
     <meta name="theme-color" content="#ef4444">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -35,37 +35,37 @@
         .error-card {
             background: white;
             box-shadow:
-                0 0 0 1px rgba(0,0,0,0.03),
-                0 2px 4px rgba(0,0,0,0.05),
-                0 12px 24px rgba(0,0,0,0.05);
+                0 0 0 1px rgba(0,0,0,0.02),
+                0 1px 3px rgba(0,0,0,0.04),
+                0 8px 24px rgba(0,0,0,0.06);
         }
 
         @keyframes scale-in {
             0% { transform: scale(0); opacity: 0; }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(1); opacity: 1; }
         }
         @keyframes fade-up {
-            0% { opacity: 0; transform: translateY(20px); }
+            0% { opacity: 0; transform: translateY(15px); }
             100% { opacity: 1; transform: translateY(0); }
         }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-5px); }
-            40%, 80% { transform: translateX(5px); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
         }
 
         .error-icon {
-            animation: scale-in 0.5s ease-out forwards, shake 0.5s ease-out 0.5s;
+            animation: scale-in 0.4s ease-out forwards, shake 0.4s ease-out 0.4s;
         }
         .fade-up {
             opacity: 0;
-            animation: fade-up 0.5s ease-out forwards;
+            animation: fade-up 0.4s ease-out forwards;
         }
-        .fade-up-1 { animation-delay: 0.3s; }
-        .fade-up-2 { animation-delay: 0.4s; }
-        .fade-up-3 { animation-delay: 0.5s; }
-        .fade-up-4 { animation-delay: 0.6s; }
+        .fade-up-1 { animation-delay: 0.25s; }
+        .fade-up-2 { animation-delay: 0.35s; }
+        .fade-up-3 { animation-delay: 0.45s; }
+        .fade-up-4 { animation-delay: 0.55s; }
     </style>
 </head>
 <body class="font-sans antialiased text-gray-900">
@@ -73,79 +73,89 @@
     <div class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full">
 
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-gray-900 text-white rounded-xl flex items-center justify-center shadow">
+                        <i class="ph-bold ph-lightning text-base"></i>
+                    </div>
+                    <span class="font-semibold text-gray-900">Tomasz Niedźwiecki AI</span>
+                </a>
+            </div>
+
             <!-- Error Card -->
-            <div class="error-card rounded-3xl p-8 text-center">
+            <div class="error-card rounded-2xl p-6 text-center">
 
                 <!-- Error Icon -->
-                <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center error-icon">
-                    <i class="ph-duotone ph-x-circle text-5xl text-red-500"></i>
+                <div class="w-20 h-20 mx-auto mb-5 rounded-full bg-red-50 flex items-center justify-center error-icon">
+                    <i class="ph-duotone ph-x-circle text-4xl text-red-500"></i>
                 </div>
 
-                <h1 class="text-2xl font-bold text-gray-900 mb-2 fade-up fade-up-1">
+                <h1 class="text-xl font-bold text-gray-900 mb-2 fade-up fade-up-1">
                     Płatność nieudana
                 </h1>
 
-                <p class="text-gray-500 mb-6 fade-up fade-up-2">
-                    Niestety, nie udało się przetworzyć Twojej płatności. Twoje konto nie zostało obciążone.
+                <p class="text-gray-500 text-sm mb-5 fade-up fade-up-2">
+                    Nie udało się przetworzyć płatności. Twoje konto nie zostało obciążone.
                 </p>
 
                 <!-- Common Reasons -->
-                <div class="text-left bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6 fade-up fade-up-3">
-                    <p class="font-medium text-gray-900 text-sm mb-2 flex items-center gap-2">
+                <div class="text-left bg-amber-50 border border-amber-100 rounded-xl p-4 mb-5 fade-up fade-up-3">
+                    <p class="font-medium text-gray-900 text-sm mb-2.5 flex items-center gap-2">
                         <i class="ph ph-lightbulb text-amber-500"></i>
                         Możliwe przyczyny:
                     </p>
                     <ul class="text-gray-600 text-sm space-y-1.5 ml-6">
                         <li class="flex items-start gap-2">
-                            <span class="text-amber-500 mt-0.5">•</span>
+                            <span class="text-amber-500 mt-0.5">&bull;</span>
                             Niewystarczające środki na koncie
                         </li>
                         <li class="flex items-start gap-2">
-                            <span class="text-amber-500 mt-0.5">•</span>
+                            <span class="text-amber-500 mt-0.5">&bull;</span>
+                            Błędny kod BLIK lub dane karty
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-500 mt-0.5">&bull;</span>
                             Przekroczony limit transakcji
                         </li>
                         <li class="flex items-start gap-2">
-                            <span class="text-amber-500 mt-0.5">•</span>
-                            Błędne dane karty lub kodu BLIK
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="text-amber-500 mt-0.5">•</span>
+                            <span class="text-amber-500 mt-0.5">&bull;</span>
                             Sesja płatności wygasła
                         </li>
                     </ul>
                 </div>
 
                 <!-- Actions -->
-                <div class="space-y-3 fade-up fade-up-4">
+                <div class="space-y-2.5 fade-up fade-up-4">
                     <a id="retry-link" href="#"
-                       class="block w-full bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                       class="block w-full bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-3 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2">
                         <i class="ph ph-arrow-clockwise"></i>
                         Spróbuj ponownie
                     </a>
 
                     <a href="https://tomekniedzwiecki.pl"
-                       class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3.5 rounded-xl font-medium transition-colors">
+                       class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-3 rounded-xl font-medium text-sm transition-colors">
                         Wróć na stronę główną
                     </a>
 
                     <a href="mailto:ceo@tomekniedzwiecki.pl"
-                       class="block w-full text-gray-500 hover:text-gray-700 px-6 py-3 text-sm font-medium transition-colors">
+                       class="block w-full text-gray-500 hover:text-gray-700 px-5 py-2.5 text-sm font-medium transition-colors">
                         <i class="ph ph-envelope mr-1"></i>
-                        Potrzebujesz pomocy? Napisz do nas
+                        Potrzebujesz pomocy?
                     </a>
                 </div>
             </div>
 
             <!-- Security Note -->
-            <div class="mt-6 text-center fade-up fade-up-4">
-                <div class="inline-flex items-center gap-2 text-xs text-gray-400">
+            <div class="mt-5 text-center fade-up fade-up-4">
+                <div class="inline-flex items-center gap-1.5 text-xs text-gray-400">
                     <i class="ph ph-shield-check"></i>
-                    Twoje dane płatnicze są bezpieczne
+                    Twoje dane są bezpieczne
                 </div>
             </div>
 
             <!-- Footer -->
-            <div class="mt-6 text-center text-gray-400 text-xs">
+            <div class="mt-4 text-center text-gray-400 text-xs">
                 <p class="font-medium text-gray-500">Tomasz Niedźwiecki AI</p>
                 <p class="mt-1">ul. Grawerska 30L, 51-180 Wrocław</p>
             </div>
@@ -153,18 +163,38 @@
     </div>
 
     <script>
-        // Get order info from URL and set retry link
-        const params = new URLSearchParams(window.location.search);
-        const orderId = params.get('order');
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
 
-        if (orderId) {
-            // Set retry link to checkout with the same order
-            // In a real scenario, you might want to create a new order or use the offer ID
-            document.getElementById('retry-link').href = `index.html?order=${orderId}`;
-        } else {
-            // If no order ID, go to main page
-            document.getElementById('retry-link').href = 'https://tomekniedzwiecki.pl';
+        // Set retry link based on order
+        async function setupRetryLink() {
+            const params = new URLSearchParams(window.location.search);
+            const orderId = params.get('order');
+            const retryLink = document.getElementById('retry-link');
+
+            if (!orderId) {
+                retryLink.href = 'https://tomekniedzwiecki.pl';
+                return;
+            }
+
+            try {
+                // Try to get the offer ID from the order to redirect back to checkout
+                const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                const { data: order } = await supabaseClient
+                    .from('orders')
+                    .select('description')
+                    .eq('id', orderId)
+                    .single();
+
+                // For now, just link to main page since we don't store offer_id in orders
+                // In a real scenario, you might want to store offer_id in orders table
+                retryLink.href = 'https://tomekniedzwiecki.pl';
+            } catch (e) {
+                retryLink.href = 'https://tomekniedzwiecki.pl';
+            }
         }
+
+        setupRetryLink();
     </script>
 </body>
 </html>
