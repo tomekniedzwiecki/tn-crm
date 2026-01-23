@@ -171,6 +171,17 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
             50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
         }
+
+        /* Modal - Vercel style */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+        }
+        .modal-content {
+            background: #000;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 25px 50px -12px rgba(0,0,0,0.8);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -467,106 +478,113 @@
         </div>
     </main>
 
-    <!-- Discount Code Modal -->
-    <div id="discount-code-modal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDiscountCodeModal()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
-            <div class="bg-zinc-900 border border-white/10 rounded-xl shadow-2xl">
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
-                    <h3 id="discount-modal-title" class="text-base font-medium text-white">Nowy kod rabatowy</h3>
-                    <button onclick="closeDiscountCodeModal()" class="text-zinc-500 hover:text-white transition-colors">
-                        <i class="ph ph-x text-xl"></i>
-                    </button>
+    <!-- Discount Code Modal - Vercel style -->
+    <div id="discount-code-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="absolute inset-0" onclick="closeDiscountCodeModal()"></div>
+        <div class="modal-content w-full max-w-md relative">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-800">
+                <h2 id="discount-modal-title" class="text-base font-semibold text-white">Nowy kod rabatowy</h2>
+                <button onclick="closeDiscountCodeModal()" class="w-8 h-8 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-900 rounded-lg transition-all">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 space-y-5">
+                <input type="hidden" id="discount-code-id">
+
+                <!-- Code -->
+                <div>
+                    <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Kod <span class="text-red-400">*</span></label>
+                    <div class="flex gap-2">
+                        <input type="text" id="discount-code-code" required
+                               class="flex-1 bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 transition-all uppercase font-mono"
+                               placeholder="np. WAKACJE20" autocomplete="off">
+                        <button type="button" onclick="generateRandomCode()"
+                                class="px-4 py-3 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-all"
+                                title="Generuj losowy kod">
+                            <i class="ph ph-shuffle"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Modal Body -->
-                <form id="discount-code-form" class="p-5 space-y-4">
-                    <input type="hidden" id="discount-code-id">
-
-                    <!-- Code -->
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Kod <span class="text-red-400">*</span></label>
-                        <div class="flex gap-2">
-                            <input type="text" id="discount-code-code" required
-                                   class="input-field flex-1 rounded-lg px-3 py-2 text-sm text-white uppercase font-mono"
-                                   placeholder="np. WAKACJE20" autocomplete="off">
-                            <button type="button" onclick="generateRandomCode()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs transition-colors" title="Generuj losowy kod">
-                                <i class="ph ph-shuffle"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Target Price -->
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Cena docelowa (PLN) <span class="text-red-400">*</span></label>
-                        <input type="number" id="discount-code-target-price" required min="0" step="0.01"
-                               class="input-field w-full rounded-lg px-3 py-2 text-sm text-white font-mono"
-                               placeholder="np. 199.00" oninput="calculateDiscount()">
-                    </div>
-
-                    <!-- Calculated Discount Preview -->
-                    <div id="discount-preview" class="hidden bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs text-zinc-400">Rabat:</span>
-                            <div class="text-right">
-                                <span id="discount-preview-amount" class="text-emerald-400 font-semibold font-mono">0 PLN</span>
-                                <span id="discount-preview-percent" class="text-emerald-400/60 text-xs ml-1">(-0%)</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between mt-1">
-                            <span class="text-xs text-zinc-400">Cena oryginalna:</span>
-                            <span id="discount-preview-original" class="text-zinc-500 text-xs font-mono">0 PLN</span>
-                        </div>
-                    </div>
-
-                    <!-- Usage Limit -->
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Limit użyć <span class="text-zinc-600">(puste = bez limitu)</span></label>
-                        <input type="number" id="discount-code-limit" min="1"
-                               class="input-field w-full rounded-lg px-3 py-2 text-sm text-white font-mono"
-                               placeholder="np. 100">
-                    </div>
-
-                    <!-- Validity Period -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1.5">Ważny od</label>
-                            <input type="datetime-local" id="discount-code-valid-from"
-                                   class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1.5">Ważny do</label>
-                            <input type="datetime-local" id="discount-code-valid-until"
-                                   class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
-                        </div>
-                    </div>
-
-                    <!-- Description -->
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Notatka wewnętrzna</label>
-                        <input type="text" id="discount-code-description"
-                               class="input-field w-full rounded-lg px-3 py-2 text-sm text-white"
-                               placeholder="np. Promocja letnia 2026">
-                    </div>
-
-                    <!-- Active toggle -->
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" id="discount-code-active" checked
-                               class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0">
-                        <label for="discount-code-active" class="text-sm text-zinc-300">Aktywny</label>
-                    </div>
-                </form>
-
-                <!-- Modal Footer -->
-                <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/5">
-                    <button type="button" onclick="closeDiscountCodeModal()" class="px-4 py-2 text-zinc-400 hover:text-white text-sm transition-colors">
-                        Anuluj
-                    </button>
-                    <button type="button" onclick="saveDiscountCode()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
-                        Zapisz kod
-                    </button>
+                <!-- Target Price -->
+                <div>
+                    <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Cena docelowa (PLN) <span class="text-red-400">*</span></label>
+                    <input type="number" id="discount-code-target-price" required min="0" step="0.01"
+                           class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 transition-all font-mono"
+                           placeholder="np. 199.00" oninput="calculateDiscount()">
                 </div>
+
+                <!-- Calculated Discount Preview -->
+                <div id="discount-preview" class="hidden bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-neutral-500 uppercase tracking-wider">Rabat</span>
+                        <div class="text-right">
+                            <span id="discount-preview-amount" class="text-emerald-400 font-semibold font-mono">0 PLN</span>
+                            <span id="discount-preview-percent" class="text-emerald-400/60 text-xs ml-1">(-0%)</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 pt-2 border-t border-emerald-500/10">
+                        <span class="text-xs text-neutral-500">Cena oryginalna</span>
+                        <span id="discount-preview-original" class="text-neutral-400 text-sm font-mono">0 PLN</span>
+                    </div>
+                </div>
+
+                <!-- Usage Limit -->
+                <div>
+                    <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Limit użyć <span class="text-neutral-600 normal-case">(opcjonalnie)</span></label>
+                    <input type="number" id="discount-code-limit" min="1"
+                           class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 transition-all font-mono"
+                           placeholder="np. 100">
+                </div>
+
+                <!-- Validity Period -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Ważny od</label>
+                        <input type="datetime-local" id="discount-code-valid-from"
+                               class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-neutral-700 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Ważny do</label>
+                        <input type="datetime-local" id="discount-code-valid-until"
+                               class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-neutral-700 transition-all">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Notatka <span class="text-neutral-600 normal-case">(opcjonalnie)</span></label>
+                    <input type="text" id="discount-code-description"
+                           class="w-full bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-3 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 transition-all"
+                           placeholder="np. Promocja letnia 2026">
+                </div>
+
+                <!-- Active toggle - Vercel style -->
+                <div>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <div>
+                            <span class="block text-xs font-medium text-neutral-500 uppercase tracking-wider">Aktywny</span>
+                            <span class="block text-xs text-neutral-600 mt-1">Kod będzie dostępny do użycia</span>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="discount-code-active" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-neutral-500 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-800 bg-neutral-950/50">
+                <button type="button" onclick="closeDiscountCodeModal()" class="px-4 py-2.5 text-sm text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-900 border border-neutral-800 rounded-lg font-medium transition-all">
+                    Anuluj
+                </button>
+                <button type="button" onclick="saveDiscountCode()" id="discount-save-btn" class="px-4 py-2.5 text-sm text-black bg-white hover:bg-neutral-200 rounded-lg font-medium transition-all">
+                    Utwórz kod
+                </button>
             </div>
         </div>
     </div>
@@ -1572,10 +1590,16 @@
         function openDiscountCodeModal(codeId = null) {
             editingDiscountCodeId = codeId;
             const modal = document.getElementById('discount-code-modal');
-            const form = document.getElementById('discount-code-form');
             const title = document.getElementById('discount-modal-title');
+            const saveBtn = document.getElementById('discount-save-btn');
 
-            form.reset();
+            // Reset form
+            document.getElementById('discount-code-code').value = '';
+            document.getElementById('discount-code-target-price').value = '';
+            document.getElementById('discount-code-limit').value = '';
+            document.getElementById('discount-code-valid-from').value = '';
+            document.getElementById('discount-code-valid-until').value = '';
+            document.getElementById('discount-code-description').value = '';
             document.getElementById('discount-code-active').checked = true;
             document.getElementById('discount-preview').classList.add('hidden');
 
@@ -1583,6 +1607,7 @@
                 const code = discountCodes.find(c => c.id === codeId);
                 if (code) {
                     title.textContent = 'Edytuj kod rabatowy';
+                    saveBtn.textContent = 'Zapisz zmiany';
                     document.getElementById('discount-code-id').value = code.id;
                     document.getElementById('discount-code-code').value = code.code;
                     document.getElementById('discount-code-target-price').value = code.target_price;
@@ -1601,14 +1626,19 @@
                 }
             } else {
                 title.textContent = 'Nowy kod rabatowy';
+                saveBtn.textContent = 'Utwórz kod';
                 document.getElementById('discount-code-id').value = '';
             }
 
             modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => document.getElementById('discount-code-code').focus(), 100);
         }
 
         function closeDiscountCodeModal() {
-            document.getElementById('discount-code-modal').classList.add('hidden');
+            const modal = document.getElementById('discount-code-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
             editingDiscountCodeId = null;
         }
 
@@ -1821,6 +1851,9 @@
             if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 if (hasChanges) autoSave();
+            }
+            if (e.key === 'Escape') {
+                closeDiscountCodeModal();
             }
         });
 
