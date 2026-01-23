@@ -95,20 +95,24 @@
             transform: rotate(2deg) scale(1.02);
         }
 
-        /* Priority indicator */
-        .task-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 12px;
-            bottom: 12px;
-            width: 3px;
-            border-radius: 0 2px 2px 0;
+        /* Priority badge */
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 10px;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
-        .task-card.priority-low::before { background: #525252; }
-        .task-card.priority-medium::before { background: #3b82f6; }
-        .task-card.priority-high::before { background: #f59e0b; }
-        .task-card.priority-urgent::before { background: #ef4444; }
+        .priority-badge.priority-high {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+        .priority-badge.priority-urgent {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
 
         /* List drag states */
         .kanban-list.drag-over {
@@ -697,8 +701,16 @@
             const hasComments = task.comments_count > 0;
             const hasAttachments = task.attachments_count > 0;
 
+            // Priority badge only for high/urgent
+            let priorityBadgeHtml = '';
+            if (priority === 'high') {
+                priorityBadgeHtml = '<span class="priority-badge priority-high"><i class="ph ph-flag"></i>Wysoki</span>';
+            } else if (priority === 'urgent') {
+                priorityBadgeHtml = '<span class="priority-badge priority-urgent"><i class="ph ph-warning"></i>Pilny</span>';
+            }
+
             return `
-                <div class="task-card priority-${priority}"
+                <div class="task-card"
                      draggable="true"
                      data-task-id="${task.id}"
                      ondragstart="handleDragStart(event, '${task.id}')"
@@ -708,7 +720,8 @@
                     <p class="text-sm text-white mb-2 leading-relaxed ${task.is_completed ? 'line-through text-neutral-500' : ''}">${escapeHtml(task.title)}</p>
                     ${task.description ? `<p class="text-xs text-neutral-500 mb-3 line-clamp-2">${escapeHtml(task.description)}</p>` : ''}
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            ${priorityBadgeHtml}
                             ${hasDueDate ? `
                                 <span class="due-badge ${dueBadgeClass}">
                                     <i class="ph ph-calendar-blank"></i>
