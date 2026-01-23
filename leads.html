@@ -136,16 +136,22 @@
                         <option value="lost">Przegrany</option>
                     </select>
 
-                    <!-- Source -->
-                    <select id="filter-source" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
-                        <option value="">Wszystkie źródła</option>
-                        <option value="organic">Ze strony</option>
+                    <!-- Lead Source (CRM entry source) -->
+                    <select id="filter-lead-source" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
+                        <option value="">Skąd w CRM</option>
+                        <option value="website">Ze strony</option>
                         <option value="outreach">Z kampanii</option>
-                        <option value="manual">Ręczne</option>
+                        <option value="manual">Ręcznie</option>
+                    </select>
+
+                    <!-- Marketing Source -->
+                    <select id="filter-source" class="filter-input rounded-lg px-3 py-2 text-sm text-zinc-300 min-w-[140px] cursor-pointer">
+                        <option value="">Źródło marketing</option>
                         <option value="google">Google Ads</option>
                         <option value="meta">Meta</option>
                         <option value="tiktok">TikTok</option>
                         <option value="email">Email</option>
+                        <option value="organic">Organiczne</option>
                     </select>
 
                     <!-- Date range -->
@@ -210,8 +216,8 @@
                                 <th class="px-4 py-3 font-medium">Lead</th>
                                 <th class="px-4 py-3 font-medium">Status</th>
                                 <th class="px-4 py-3 font-medium w-16 text-center">Ankieta</th>
-                                <th class="px-4 py-3 font-medium">Źródło</th>
-                                <th class="px-4 py-3 font-medium">Kampania</th>
+                                <th class="px-4 py-3 font-medium">Pozyskanie</th>
+                                <th class="px-4 py-3 font-medium">Marketing</th>
                                 <th class="px-4 py-3 font-medium">Data</th>
                                 <th class="px-4 py-3 font-medium w-20 text-center">Akcje</th>
                             </tr>
@@ -672,11 +678,17 @@
             return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
         }
 
-        function getSource(lead) {
-            // Check for campaign/outreach source first
-            if (lead.utm_source === 'outreach') return { name: 'Kampania', key: 'outreach', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' };
-            if (lead.utm_source === 'manual') return { name: 'Ręczny', key: 'manual', color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' };
+        // Lead Source - skąd lead trafił do CRM (website/outreach/manual)
+        function getLeadSource(lead) {
+            const source = lead.lead_source;
+            if (source === 'outreach') return { name: 'Kampania', key: 'outreach', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: 'ph-megaphone' };
+            if (source === 'manual') return { name: 'Ręczny', key: 'manual', color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: 'ph-user-plus' };
+            // Default: website
+            return { name: 'Strona', key: 'website', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', icon: 'ph-globe' };
+        }
 
+        // Marketing Source - skąd lead trafił na stronę (atrybucja marketingowa)
+        function getMarketingSource(lead) {
             // Ad platform click IDs
             if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
             if (lead.fbclid) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
@@ -692,8 +704,13 @@
             }
             if (lead.utm_medium === 'email') return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
 
-            // Default: organic/website
-            return { name: 'Strona', key: 'organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+            // Default: organic
+            return { name: 'Organic', key: 'organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+        }
+
+        // Backwards compatibility alias
+        function getSource(lead) {
+            return getMarketingSource(lead);
         }
 
         function getStatusBadge(status) {
@@ -796,6 +813,7 @@
         function applyFilters() {
             const searchTerm = document.getElementById('filter-search').value.toLowerCase();
             const statusFilter = document.getElementById('filter-status').value;
+            const leadSourceFilter = document.getElementById('filter-lead-source').value;
             const sourceFilter = document.getElementById('filter-source').value;
             const dateFilter = document.getElementById('filter-date').value;
             const surveyFilter = document.getElementById('filter-survey').value;
@@ -816,9 +834,15 @@
                 const leadStatus = lead.status || 'new';
                 if (statusFilter && leadStatus !== statusFilter) return false;
 
-                // Source
+                // Lead Source (CRM entry source)
+                if (leadSourceFilter) {
+                    const ls = getLeadSource(lead);
+                    if (ls.key !== leadSourceFilter) return false;
+                }
+
+                // Marketing Source
                 if (sourceFilter) {
-                    const src = getSource(lead);
+                    const src = getMarketingSource(lead);
                     if (src.key !== sourceFilter) return false;
                 }
 
@@ -855,7 +879,7 @@
             if (sortBy === 'email') filteredLeads.sort((a, b) => a.email.localeCompare(b.email));
 
             // Show/hide clear button
-            const hasFilters = searchTerm || statusFilter || sourceFilter || dateFilter || surveyFilter || whatsappFilter || teamFilter;
+            const hasFilters = searchTerm || statusFilter || leadSourceFilter || sourceFilter || dateFilter || surveyFilter || whatsappFilter || teamFilter;
             document.getElementById('clear-filters').classList.toggle('hidden', !hasFilters);
 
             currentPage = 1;
@@ -894,7 +918,8 @@
             document.getElementById('next-page').disabled = currentPage === totalPages;
 
             tbody.innerHTML = pageLeads.map(lead => {
-                const src = getSource(lead);
+                const leadSrc = getLeadSource(lead);
+                const marketingSrc = getMarketingSource(lead);
                 const initial = lead.email.charAt(0).toUpperCase();
                 const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
                 const colorIndex = lead.email.charCodeAt(0) % colors.length;
@@ -921,10 +946,12 @@
                         </button>` : `<span class="text-zinc-700">—</span>`}
                     </td>
                     <td class="px-4 py-3">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded border ${src.border} ${src.bg} ${src.color} text-[10px] font-medium">${src.name}</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border ${leadSrc.border} ${leadSrc.bg} ${leadSrc.color} text-[10px] font-medium">
+                            <i class="ph ${leadSrc.icon}"></i>${leadSrc.name}
+                        </span>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="text-zinc-400 font-mono text-[11px]">${lead.utm_campaign || '-'}</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded border ${marketingSrc.border} ${marketingSrc.bg} ${marketingSrc.color} text-[10px] font-medium">${marketingSrc.name}</span>
                     </td>
                     <td class="px-4 py-3 text-zinc-500 font-mono text-[11px]">${formatDateShort(lead.created_at)}</td>
                     <td class="px-4 py-3">
@@ -1151,6 +1178,7 @@
         // Filter listeners
         document.getElementById('filter-search').addEventListener('input', applyFilters);
         document.getElementById('filter-status').addEventListener('change', applyFilters);
+        document.getElementById('filter-lead-source').addEventListener('change', applyFilters);
         document.getElementById('filter-source').addEventListener('change', applyFilters);
         document.getElementById('filter-date').addEventListener('change', applyFilters);
         document.getElementById('filter-survey').addEventListener('change', applyFilters);
@@ -1161,6 +1189,7 @@
         document.getElementById('clear-filters').addEventListener('click', () => {
             document.getElementById('filter-search').value = '';
             document.getElementById('filter-status').value = '';
+            document.getElementById('filter-lead-source').value = '';
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-date').value = '';
             document.getElementById('filter-survey').value = '';
@@ -1342,7 +1371,7 @@
                 expected_close: document.getElementById('add-expected-close').value || null,
                 notes: document.getElementById('add-notes').value.trim() || null,
                 offer_id: document.getElementById('add-offer').value || null,
-                utm_source: 'manual',
+                lead_source: 'manual',
                 assigned_to: currentMember?.id || null
             };
 
@@ -1547,7 +1576,7 @@
                 phone: phone || null,
                 status: 'contacted',
                 assigned_to: currentMember?.id || null,
-                utm_source: 'outreach',
+                lead_source: 'outreach',
                 notes: `Źródło: Kampania\nLTV: ${ltv ? ltv.toLocaleString('pl-PL') + ' PLN' : '-'}\nProdukty: ${products || 0}`
             };
 
