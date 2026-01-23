@@ -31,6 +31,7 @@
                         primary: {
                             50: '#eef2ff',
                             100: '#e0e7ff',
+                            200: '#c7d2fe',
                             500: '#6366f1',
                             600: '#4f46e5',
                             700: '#4338ca',
@@ -42,7 +43,7 @@
     </script>
     <style>
         body {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
             min-height: 100vh;
         }
         ::selection { background: #6366f1; color: white; }
@@ -50,135 +51,106 @@
         .checkout-card {
             background: white;
             box-shadow:
-                0 0 0 1px rgba(0,0,0,0.03),
-                0 2px 4px rgba(0,0,0,0.05),
-                0 12px 24px rgba(0,0,0,0.05);
+                0 0 0 1px rgba(0,0,0,0.02),
+                0 1px 3px rgba(0,0,0,0.04),
+                0 8px 24px rgba(0,0,0,0.06);
         }
 
         .input-field {
             transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .input-field:focus {
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
             border-color: #6366f1;
         }
 
-        .payment-option {
+        /* Payment method cards */
+        .payment-method {
             transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            cursor: pointer;
+            position: relative;
         }
-        .payment-option:hover:not(.selected) {
+        .payment-method:hover:not(.selected) {
             border-color: #c7d2fe;
             background: #fafbff;
         }
-        .payment-option.selected {
+        .payment-method.selected {
             border-color: #6366f1;
             background: linear-gradient(to bottom, #f5f7ff, #ffffff);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12), 0 2px 8px rgba(99, 102, 241, 0.08);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
-        .payment-option .payment-check {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: 2px solid #d1d5db;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+        .payment-method .check-icon {
+            opacity: 0;
+            transform: scale(0.5);
             transition: all 0.2s ease;
         }
-        .payment-option .payment-check i {
-            display: none;
-            color: white;
-            font-size: 12px;
-        }
-        .payment-option.selected .payment-check {
-            border-color: #6366f1;
-            background: #6366f1;
-        }
-        .payment-option.selected .payment-check i {
-            display: block;
-        }
-        .payment-option .popular-badge {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            padding: 0.25rem 0.625rem;
-            font-size: 0.65rem;
-            font-weight: 600;
-            border-radius: 9999px;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.25);
+        .payment-method.selected .check-icon {
+            opacity: 1;
+            transform: scale(1);
         }
 
+        /* Popular badge */
+        .popular-badge {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        /* Pay button */
         .pay-button {
             background: linear-gradient(to bottom, #6366f1, #4f46e5);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 4px 12px rgba(99, 102, 241, 0.35);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 4px 12px rgba(99, 102, 241, 0.3);
             transition: all 0.2s ease;
         }
         .pay-button:hover:not(:disabled) {
             background: linear-gradient(to bottom, #4f46e5, #4338ca);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 6px 16px rgba(99, 102, 241, 0.45);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 6px 16px rgba(99, 102, 241, 0.4);
             transform: translateY(-1px);
         }
         .pay-button:active:not(:disabled) {
             transform: translateY(0);
         }
         .pay-button:disabled {
-            opacity: 0.7;
+            opacity: 0.65;
             cursor: not-allowed;
         }
 
-        .trust-badge {
-            background: linear-gradient(to bottom, #fafafa, #f5f5f5);
-            border: 1px solid #e5e5e5;
-        }
-
-        .secure-badge {
-            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-            border: 1px solid #c7d2fe;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-            animation: fadeIn 0.4s ease-out;
-        }
-
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .animate-pulse-soft {
-            animation: pulse-soft 2s ease-in-out infinite;
-        }
-
-        /* Inline validation errors */
+        /* Error states */
         .input-error {
             border-color: #ef4444 !important;
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
         }
-        .error-message {
+        .input-error:focus {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+        }
+        .error-text {
             color: #ef4444;
-            font-size: 0.75rem;
-            margin-top: 0.375rem;
+            font-size: 12px;
+            margin-top: 6px;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 4px;
         }
-        .error-message.hidden { display: none; }
+        .error-text.hidden { display: none; }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-4px); }
-            40%, 80% { transform: translateX(4px); }
+            20%, 60% { transform: translateX(-3px); }
+            40%, 80% { transform: translateX(3px); }
         }
         .shake { animation: shake 0.4s ease-in-out; }
 
-        /* Sticky mobile button */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+
+        /* Sticky mobile footer */
         @media (max-width: 1023px) {
             .mobile-sticky-footer {
                 position: fixed;
@@ -186,49 +158,25 @@
                 left: 0;
                 right: 0;
                 background: white;
-                padding: 1rem;
-                box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+                padding: 16px;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
                 z-index: 50;
                 border-top: 1px solid #e5e7eb;
             }
-            .mobile-sticky-footer .pay-button {
-                margin: 0;
-            }
-            /* Add padding to form so content isn't hidden behind sticky footer */
             #checkout-container {
-                padding-bottom: 120px;
+                padding-bottom: 100px;
             }
         }
 
-        /* Mobile payment options */
-        @media (max-width: 640px) {
-            .payment-option {
-                flex-direction: column;
-                align-items: flex-start !important;
-                gap: 0.75rem !important;
-                padding: 1rem !important;
-            }
-            .payment-option .payment-check {
-                position: absolute;
-                top: 1rem;
-                left: 1rem;
-            }
-            .payment-option > div:first-of-type {
-                padding-left: 2rem;
-            }
-            .payment-option .price-column {
-                width: 100%;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding-left: 2rem;
-                padding-top: 0.5rem;
-                border-top: 1px solid #f3f4f6;
-                margin-top: 0.25rem;
-            }
-            .payment-option .price-column .installments-detail {
-                text-align: right;
-            }
+        /* Payment method icons */
+        .method-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -237,20 +185,20 @@
     <!-- Loading State -->
     <div id="loading-state" class="min-h-screen flex items-center justify-center">
         <div class="text-center animate-fadeIn">
-            <div class="w-12 h-12 mx-auto mb-4 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin"></div>
-            <p class="text-gray-500 text-sm font-medium">Ładowanie szczegółów zamówienia...</p>
+            <div class="w-10 h-10 mx-auto mb-4 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin"></div>
+            <p class="text-gray-500 text-sm">Ładowanie...</p>
         </div>
     </div>
 
     <!-- Error State -->
     <div id="error-state" class="hidden min-h-screen flex items-center justify-center p-4">
         <div class="text-center max-w-md animate-fadeIn">
-            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
-                <i class="ph ph-warning-circle text-4xl text-red-500"></i>
+            <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-red-50 flex items-center justify-center">
+                <i class="ph ph-warning-circle text-3xl text-red-500"></i>
             </div>
-            <h1 class="text-2xl font-semibold text-gray-900 mb-3">Oferta niedostępna</h1>
-            <p id="error-message" class="text-gray-500 leading-relaxed">Ta oferta nie istnieje lub nie jest już aktywna. Sprawdź poprawność linku lub skontaktuj się z nami.</p>
-            <a href="mailto:ceo@tomekniedzwiecki.pl" class="inline-flex items-center gap-2 mt-6 text-primary-600 hover:text-primary-700 font-medium text-sm">
+            <h1 class="text-xl font-semibold text-gray-900 mb-2">Oferta niedostępna</h1>
+            <p id="error-message" class="text-gray-500 text-sm leading-relaxed">Ta oferta nie istnieje lub nie jest już aktywna.</p>
+            <a href="mailto:ceo@tomekniedzwiecki.pl" class="inline-flex items-center gap-2 mt-5 text-indigo-600 hover:text-indigo-700 font-medium text-sm">
                 <i class="ph ph-envelope"></i>
                 Napisz do nas
             </a>
@@ -258,275 +206,304 @@
     </div>
 
     <!-- Checkout Form -->
-    <div id="checkout-container" class="hidden min-h-screen py-8 px-4 lg:py-12">
+    <div id="checkout-container" class="hidden min-h-screen py-6 px-4 lg:py-10">
         <div class="max-w-5xl mx-auto animate-fadeIn">
 
             <!-- Header -->
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 bg-gray-900 text-white rounded-xl flex items-center justify-center shadow-lg">
-                        <i class="ph-bold ph-lightning text-lg"></i>
+            <div class="text-center mb-6">
+                <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-2.5 mb-1">
+                    <div class="w-9 h-9 bg-gray-900 text-white rounded-xl flex items-center justify-center shadow">
+                        <i class="ph-bold ph-lightning text-base"></i>
                     </div>
-                    <span class="font-semibold text-gray-900 text-lg">Tomasz Niedźwiecki AI</span>
-                </div>
+                    <span class="font-semibold text-gray-900">Tomasz Niedźwiecki AI</span>
+                </a>
             </div>
 
             <!-- Main Grid -->
-            <div class="grid lg:grid-cols-5 gap-8">
+            <div class="grid lg:grid-cols-5 gap-6">
 
                 <!-- Left Column - Order Summary -->
                 <div class="lg:col-span-2 order-2 lg:order-1">
-                    <div class="lg:sticky lg:top-8">
+                    <div class="lg:sticky lg:top-6">
                         <!-- Product Card -->
-                        <div class="checkout-card rounded-2xl p-6 mb-4">
-                            <div class="flex items-center gap-2 text-gray-500 text-xs font-medium uppercase tracking-wider mb-4">
-                                <i class="ph ph-shopping-bag"></i>
-                                Podsumowanie zamówienia
+                        <div class="checkout-card rounded-2xl p-5 mb-4">
+                            <div class="flex items-center gap-1.5 text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-4">
+                                <i class="ph ph-shopping-bag text-xs"></i>
+                                Twoje zamówienie
                             </div>
 
-                            <div class="flex gap-4 mb-6">
-                                <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 border border-indigo-200/50 flex items-center justify-center flex-shrink-0">
-                                    <i class="ph-duotone ph-package text-2xl text-indigo-600"></i>
+                            <div class="flex gap-3.5 mb-5">
+                                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph-duotone ph-package text-xl text-indigo-500"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h2 id="offer-name" class="font-semibold text-gray-900 mb-1 leading-tight">-</h2>
-                                    <p id="offer-description" class="text-gray-500 text-sm line-clamp-2"></p>
+                                    <h2 id="offer-name" class="font-semibold text-gray-900 text-sm leading-tight mb-1">-</h2>
+                                    <p id="offer-description" class="text-gray-500 text-xs line-clamp-2"></p>
                                 </div>
                             </div>
 
-                            <div class="border-t border-gray-100 pt-4 space-y-3">
+                            <div class="border-t border-gray-100 pt-4 space-y-2.5">
                                 <div class="flex justify-between text-sm">
                                     <span class="text-gray-500">Cena</span>
                                     <span id="summary-price" class="text-gray-900 font-medium">-</span>
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-gray-500">VAT (23%)</span>
-                                    <span class="text-gray-500">zawarty w cenie</span>
+                                    <span class="text-gray-400">w cenie</span>
                                 </div>
                             </div>
 
                             <div class="border-t border-gray-100 mt-4 pt-4">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-900 font-medium">Razem do zapłaty</span>
-                                    <span id="offer-price" class="text-2xl font-bold text-gray-900">-</span>
+                                    <span class="text-gray-700 font-medium text-sm">Razem</span>
+                                    <span id="offer-price" class="text-xl font-bold text-gray-900">-</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Trust Badges -->
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="trust-badge rounded-xl p-4 text-center">
-                                <i class="ph-duotone ph-shield-check text-2xl text-indigo-600 mb-2"></i>
-                                <div class="text-xs font-medium text-gray-700">Bezpieczna płatność</div>
-                                <div class="text-[10px] text-gray-500">Szyfrowanie SSL</div>
+                        <div class="grid grid-cols-2 gap-2.5 mb-4">
+                            <div class="bg-white/80 border border-gray-100 rounded-xl p-3 text-center">
+                                <i class="ph-duotone ph-shield-check text-xl text-indigo-500 mb-1"></i>
+                                <div class="text-[11px] font-medium text-gray-700">Bezpieczna płatność</div>
+                                <div class="text-[10px] text-gray-400">SSL 256-bit</div>
                             </div>
-                            <div class="trust-badge rounded-xl p-4 text-center">
-                                <i class="ph-duotone ph-clock-countdown text-2xl text-indigo-500 mb-2"></i>
-                                <div class="text-xs font-medium text-gray-700">Natychmiastowy dostęp</div>
-                                <div class="text-[10px] text-gray-500">Po opłaceniu</div>
+                            <div class="bg-white/80 border border-gray-100 rounded-xl p-3 text-center">
+                                <i class="ph-duotone ph-clock-countdown text-xl text-indigo-500 mb-1"></i>
+                                <div class="text-[11px] font-medium text-gray-700">Natychmiastowy dostęp</div>
+                                <div class="text-[10px] text-gray-400">Po opłaceniu</div>
                             </div>
                         </div>
 
-                        <!-- Payment Methods -->
-                        <div class="checkout-card rounded-2xl p-4">
-                            <div class="text-xs text-gray-500 mb-3 font-medium">Akceptowane metody płatności</div>
-                            <div class="flex flex-wrap gap-2">
-                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">BLIK</div>
-                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Visa</div>
-                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Mastercard</div>
-                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Przelewy24</div>
-                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Google Pay</div>
-                                <div class="px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-600">Apple Pay</div>
-                            </div>
-                            <div class="text-xs text-gray-500 mt-4 mb-2 font-medium">Płatności ratalne</div>
-                            <div class="flex flex-wrap gap-2">
-                                <div class="px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 text-xs font-medium text-indigo-600">Raty Pekao 0%</div>
-                                <div class="px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 text-xs font-medium text-indigo-600">Alior Raty</div>
-                            </div>
+                        <!-- Tpay Badge -->
+                        <div class="checkout-card rounded-xl p-3 flex items-center justify-center gap-2">
+                            <span class="text-[10px] text-gray-400 font-medium">Płatności obsługuje</span>
+                            <svg class="h-4" viewBox="0 0 100 28" fill="none">
+                                <path d="M13.5 0H0v6.5h13.5V0zM6.5 9H0v19h6.5V9zM37.5 6.5h-8V0H16v6.5h5v4h-5v9c0 5.5 3.5 8.5 9 8.5h5.5v-5.5H27c-2 0-3.5-1-3.5-3.5v-8.5h8V6.5zM60 6v2.5c-1.5-2-4-3.5-7.5-3.5-6.5 0-11.5 5.5-11.5 12.5S46 30 52.5 30c3.5 0 6-1.5 7.5-3.5V29h6.5V6H60zm-6 18c-4 0-6.5-3-6.5-6.5S50 11 54 11s6.5 3 6.5 6.5-2.5 6.5-6.5 6.5zM100 6v23h-6.5v-2.5c-1.5 2-4 3.5-7.5 3.5-6.5 0-11.5-5.5-11.5-12.5S79.5 5 86 5c3.5 0 6 1.5 7.5 3.5V6H100zm-13.5 18c4 0 6.5-3 6.5-6.5S90.5 11 86.5 11 80 14 80 17.5s2.5 6.5 6.5 6.5z" fill="#000"/>
+                            </svg>
                         </div>
 
                         <!-- Help -->
-                        <div class="mt-4 text-center">
-                            <p class="text-xs text-gray-400">
-                                Masz pytania?
-                                <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-gray-600 hover:text-gray-900 underline">Napisz do nas</a>
-                            </p>
-                        </div>
+                        <p class="text-center text-xs text-gray-400 mt-4">
+                            Potrzebujesz pomocy? <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-gray-600 hover:text-gray-900 underline">Napisz do nas</a>
+                        </p>
                     </div>
                 </div>
 
                 <!-- Right Column - Form -->
                 <div class="lg:col-span-3 order-1 lg:order-2">
-                    <form id="checkout-form" class="checkout-card rounded-2xl p-6 lg:p-8">
+                    <form id="checkout-form" class="checkout-card rounded-2xl p-5 lg:p-6">
 
-                        <!-- Contact Section -->
-                        <div class="mb-8">
-                            <div class="flex items-center gap-3 mb-5">
-                                <div class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-semibold">1</div>
-                                <h3 class="text-lg font-semibold text-gray-900">Dane kontaktowe</h3>
+                        <!-- Alert for errors -->
+                        <div id="form-error" class="hidden bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm flex items-center gap-2">
+                            <i class="ph ph-warning-circle text-lg flex-shrink-0"></i>
+                            <span id="form-error-text"></span>
+                        </div>
+
+                        <!-- Section 1: Contact -->
+                        <div class="mb-6">
+                            <div class="flex items-center gap-2.5 mb-4">
+                                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">1</div>
+                                <h3 class="font-semibold text-gray-900">Dane kontaktowe</h3>
                             </div>
 
-                            <div class="space-y-4">
+                            <div class="space-y-3.5">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Adres email <span class="text-red-500">*</span>
+                                        Email <span class="text-red-500">*</span>
                                     </label>
                                     <input type="email" id="customer-email" required
-                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-200 px-3.5 py-2.5 rounded-xl outline-none"
                                            placeholder="jan.kowalski@email.pl">
-                                    <p id="email-error" class="error-message hidden">
+                                    <p id="email-error" class="error-text hidden">
                                         <i class="ph ph-warning-circle"></i>
-                                        <span></span>
+                                        <span>Podaj poprawny adres email</span>
                                     </p>
-                                    <p id="email-hint" class="mt-1.5 text-xs text-gray-500">Na ten adres wyślemy potwierdzenie i dostęp</p>
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Numer telefonu <span class="text-red-500">*</span>
+                                        Telefon <span class="text-red-500">*</span>
                                     </label>
                                     <input type="tel" id="customer-phone" required
-                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-200 px-3.5 py-2.5 rounded-xl outline-none"
                                            placeholder="+48 500 600 700">
-                                    <p id="phone-error" class="error-message hidden">
+                                    <p id="phone-error" class="error-text hidden">
                                         <i class="ph ph-warning-circle"></i>
-                                        <span></span>
+                                        <span>Podaj poprawny numer telefonu</span>
                                     </p>
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Imię i nazwisko</label>
                                     <input type="text" id="customer-name"
-                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-200 px-3.5 py-2.5 rounded-xl outline-none"
                                            placeholder="Jan Kowalski">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Invoice Section (Collapsible) -->
-                        <div class="mb-8">
-                            <button type="button" id="toggle-invoice" class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                <i class="ph ph-plus-circle text-lg"></i>
-                                Chcę otrzymać fakturę VAT
+                        <!-- Invoice toggle -->
+                        <div class="mb-6">
+                            <button type="button" id="toggle-invoice" class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                                <i class="ph ph-plus-circle text-base"></i>
+                                <span>Chcę fakturę VAT</span>
                             </button>
 
-                            <div id="invoice-fields" class="hidden mt-4 pt-4 border-t border-gray-100 space-y-4">
+                            <div id="invoice-fields" class="hidden mt-4 pt-4 border-t border-gray-100 space-y-3.5">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Nazwa firmy</label>
                                     <input type="text" id="customer-company"
-                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-200 px-3.5 py-2.5 rounded-xl outline-none"
                                            placeholder="Firma Sp. z o.o.">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">NIP</label>
                                     <input type="text" id="customer-nip"
-                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-300 px-4 py-3 rounded-xl outline-none"
-                                           placeholder="1234567890">
+                                           class="input-field w-full text-sm text-gray-900 bg-white border border-gray-200 px-3.5 py-2.5 rounded-xl outline-none"
+                                           placeholder="1234567890" maxlength="10">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Payment Method Section -->
-                        <div class="mb-8">
-                            <div class="flex items-center gap-3 mb-5">
-                                <div class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-semibold">2</div>
-                                <h3 class="text-lg font-semibold text-gray-900">Sposób płatności</h3>
+                        <!-- Section 2: Payment Method -->
+                        <div class="mb-6">
+                            <div class="flex items-center gap-2.5 mb-4">
+                                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">2</div>
+                                <h3 class="font-semibold text-gray-900">Metoda płatności</h3>
                             </div>
 
-                            <div class="space-y-3">
-                                <!-- One-time payment -->
-                                <label class="payment-option selected relative flex items-center gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer" data-type="one_time">
-                                    <input type="radio" name="payment_type" value="one_time" checked class="sr-only">
-                                    <div class="payment-check">
-                                        <i class="ph-bold ph-check"></i>
+                            <div class="grid grid-cols-2 gap-2.5" id="payment-methods">
+                                <!-- BLIK -->
+                                <div class="payment-method selected border-2 border-gray-200 rounded-xl p-3 relative" data-method="blik" data-group="150">
+                                    <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <i class="ph-bold ph-check text-white text-xs"></i>
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <i class="ph-duotone ph-credit-card text-xl text-indigo-500"></i>
-                                            <span class="font-semibold text-gray-900">Płatność jednorazowa</span>
-                                        </div>
-                                        <p class="text-gray-500 text-sm mt-1">Karta, BLIK, przelew, Google Pay, Apple Pay</p>
+                                    <div class="method-icon bg-gradient-to-br from-pink-500 to-red-500 text-white mb-2">
+                                        <span class="text-xs font-bold">BLIK</span>
                                     </div>
-                                    <div class="price-column sm:text-right">
-                                        <span id="price-one-time" class="text-xl font-bold text-gray-900">-</span>
+                                    <div class="text-sm font-medium text-gray-900">BLIK</div>
+                                    <div class="text-xs text-gray-400">Kod z aplikacji</div>
+                                    <span class="popular-badge absolute top-2 left-2">Popularne</span>
+                                </div>
+
+                                <!-- Card -->
+                                <div class="payment-method border-2 border-gray-200 rounded-xl p-3 relative" data-method="card" data-group="103">
+                                    <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <i class="ph-bold ph-check text-white text-xs"></i>
                                     </div>
-                                </label>
+                                    <div class="method-icon bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-2">
+                                        <i class="ph-bold ph-credit-card"></i>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">Karta</div>
+                                    <div class="text-xs text-gray-400">Visa, Mastercard</div>
+                                </div>
+
+                                <!-- Google Pay -->
+                                <div class="payment-method border-2 border-gray-200 rounded-xl p-3 relative" data-method="google_pay" data-group="166">
+                                    <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <i class="ph-bold ph-check text-white text-xs"></i>
+                                    </div>
+                                    <div class="method-icon bg-white border border-gray-200 mb-2">
+                                        <svg viewBox="0 0 24 24" class="w-5 h-5">
+                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">Google Pay</div>
+                                    <div class="text-xs text-gray-400">Szybka płatność</div>
+                                </div>
+
+                                <!-- Apple Pay -->
+                                <div class="payment-method border-2 border-gray-200 rounded-xl p-3 relative" data-method="apple_pay" data-group="167">
+                                    <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <i class="ph-bold ph-check text-white text-xs"></i>
+                                    </div>
+                                    <div class="method-icon bg-black text-white mb-2">
+                                        <i class="ph-bold ph-apple-logo"></i>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">Apple Pay</div>
+                                    <div class="text-xs text-gray-400">Touch/Face ID</div>
+                                </div>
+
+                                <!-- Bank Transfer -->
+                                <div class="payment-method border-2 border-gray-200 rounded-xl p-3 relative" data-method="transfer" data-group="0">
+                                    <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <i class="ph-bold ph-check text-white text-xs"></i>
+                                    </div>
+                                    <div class="method-icon bg-gradient-to-br from-emerald-500 to-teal-600 text-white mb-2">
+                                        <i class="ph-bold ph-bank"></i>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">Przelew</div>
+                                    <div class="text-xs text-gray-400">Twój bank</div>
+                                </div>
 
                                 <!-- Installments -->
-                                <label id="installments-option" class="payment-option relative hidden items-center gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer" data-type="installments">
-                                    <input type="radio" name="payment_type" value="installments" class="sr-only">
-                                    <div class="payment-check">
-                                        <i class="ph-bold ph-check"></i>
+                                <div id="installments-option" class="payment-method border-2 border-gray-200 rounded-xl p-3 relative hidden" data-method="installments" data-group="109">
+                                    <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <i class="ph-bold ph-check text-white text-xs"></i>
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <i class="ph-duotone ph-calendar-check text-xl text-indigo-500"></i>
-                                            <span class="font-semibold text-gray-900">Raty 0%</span>
-                                            <span class="popular-badge whitespace-nowrap">Popularny wybór</span>
-                                        </div>
-                                        <p class="text-gray-500 text-sm mt-1">Rozłóż płatność na wygodne raty</p>
+                                    <div class="method-icon bg-gradient-to-br from-violet-500 to-purple-600 text-white mb-2">
+                                        <i class="ph-bold ph-calendar-check"></i>
                                     </div>
-                                    <div class="price-column sm:text-right">
-                                        <span id="price-installments" class="text-xl font-bold text-gray-900">-</span>
-                                        <p id="installments-info" class="text-sm text-gray-500 installments-detail">12 x -</p>
-                                    </div>
-                                </label>
+                                    <div class="text-sm font-medium text-gray-900">Raty 0%</div>
+                                    <div id="installments-detail" class="text-xs text-gray-400">12 x -</div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Terms & Submit -->
-                        <div class="border-t border-gray-100 pt-6">
-                            <div class="mb-6">
-                                <label class="flex items-start gap-3 cursor-pointer">
-                                    <input type="checkbox" id="consent-terms" required
-                                           class="mt-0.5 w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 focus:ring-offset-0">
-                                    <span class="text-sm text-gray-600 leading-relaxed">
-                                        Akceptuję <a id="link-regulamin" href="/dokumenty/regulamin.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">regulamin</a>
-                                        oraz <a id="link-privacy" href="/dokumenty/polityka-prywatnosci.html" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium underline">politykę prywatności</a>.
-                                        <span class="text-red-500">*</span>
-                                    </span>
-                                </label>
-                                <p id="terms-error" class="error-message hidden ml-8">
-                                    <i class="ph ph-warning-circle"></i>
-                                    <span></span>
-                                </p>
-                            </div>
+                        <!-- Terms -->
+                        <div class="border-t border-gray-100 pt-5">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" id="consent-terms" required
+                                       class="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0">
+                                <span class="text-sm text-gray-600 leading-relaxed">
+                                    Akceptuję <a id="link-regulamin" href="#" target="_blank" class="text-indigo-600 hover:text-indigo-700 underline">regulamin</a>
+                                    i <a id="link-privacy" href="#" target="_blank" class="text-indigo-600 hover:text-indigo-700 underline">politykę prywatności</a>
+                                    <span class="text-red-500">*</span>
+                                </span>
+                            </label>
+                            <p id="terms-error" class="error-text hidden ml-7">
+                                <i class="ph ph-warning-circle"></i>
+                                <span>Zaakceptuj regulamin</span>
+                            </p>
+                        </div>
 
-                            <!-- Desktop button -->
-                            <div class="hidden lg:block">
-                                <button type="submit" id="pay-button-desktop"
-                                        class="pay-button w-full text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2">
-                                    <i class="ph ph-lock-simple"></i>
-                                    <span class="pay-button-text">Zapłać teraz</span>
-                                </button>
-
-                                <p class="text-xs text-gray-400 text-center mt-4 flex items-center justify-center gap-1.5">
-                                    <i class="ph ph-shield-check text-gray-400"></i>
-                                    Bezpieczna płatność · Tpay
-                                </p>
-                            </div>
+                        <!-- Desktop Submit Button -->
+                        <div class="hidden lg:block mt-6">
+                            <button type="submit" id="pay-button-desktop"
+                                    class="pay-button w-full text-white px-6 py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2">
+                                <i class="ph ph-lock-simple"></i>
+                                <span id="desktop-btn-text">Zapłać <span id="desktop-price"></span></span>
+                            </button>
+                            <p class="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1.5">
+                                <i class="ph ph-shield-check"></i>
+                                Bezpieczna płatność szyfrowana SSL
+                            </p>
                         </div>
                     </form>
 
-                    <!-- Mobile sticky footer -->
+                    <!-- Mobile Sticky Footer -->
                     <div class="mobile-sticky-footer lg:hidden">
                         <button type="button" id="pay-button-mobile"
-                                class="pay-button w-full text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2">
+                                class="pay-button w-full text-white px-6 py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2">
                             <i class="ph ph-lock-simple"></i>
-                            <span class="pay-button-text">Zapłać <span id="mobile-price"></span></span>
+                            <span id="mobile-btn-text">Zapłać <span id="mobile-price"></span></span>
                         </button>
                     </div>
                 </div>
             </div>
 
             <!-- Footer -->
-            <div class="mt-12 text-center text-gray-400 text-xs space-y-1">
+            <div class="mt-10 text-center text-gray-400 text-xs space-y-1">
                 <p class="font-medium text-gray-500">Tomasz Niedźwiecki AI</p>
-                <p>ul. Grawerska 30L, 51-180 Wrocław • NIP: 6972240255</p>
-                <p class="pt-2">
-                    <a id="link-regulamin-footer" href="/dokumenty/regulamin.html" class="hover:text-gray-600">Regulamin</a>
-                    <span class="mx-2">•</span>
-                    <a id="link-privacy-footer" href="/dokumenty/polityka-prywatnosci.html" class="hover:text-gray-600">Polityka prywatności</a>
+                <p>ul. Grawerska 30L, 51-180 Wrocław &bull; NIP: 6972240255</p>
+                <p class="pt-1">
+                    <a id="link-regulamin-footer" href="#" class="hover:text-gray-600">Regulamin</a>
+                    <span class="mx-2">&bull;</span>
+                    <a id="link-privacy-footer" href="#" class="hover:text-gray-600">Polityka prywatności</a>
                 </p>
             </div>
         </div>
@@ -535,12 +512,12 @@
     <!-- Redirect State -->
     <div id="redirect-state" class="hidden min-h-screen flex items-center justify-center p-4 bg-white">
         <div class="text-center max-w-md animate-fadeIn">
-            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-primary-50 flex items-center justify-center">
-                <i class="ph ph-circle-notch animate-spin text-4xl text-primary-500"></i>
+            <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-indigo-50 flex items-center justify-center">
+                <i class="ph ph-circle-notch animate-spin text-3xl text-indigo-500"></i>
             </div>
-            <h1 class="text-2xl font-semibold text-gray-900 mb-3">Przekierowanie do płatności</h1>
-            <p class="text-gray-500 leading-relaxed">Za chwilę zostaniesz przekierowany do bezpiecznej bramki płatności Tpay.</p>
-            <div class="mt-6 inline-flex items-center gap-2 text-sm text-gray-400">
+            <h1 class="text-xl font-semibold text-gray-900 mb-2">Przekierowanie do płatności</h1>
+            <p class="text-gray-500 text-sm">Za chwilę zostaniesz przekierowany do bezpiecznej bramki płatności.</p>
+            <div class="mt-5 inline-flex items-center gap-1.5 text-xs text-gray-400">
                 <i class="ph ph-shield-check"></i>
                 Połączenie szyfrowane
             </div>
@@ -552,17 +529,18 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Set legal document URLs based on environment
+        let currentOffer = null;
+        let selectedMethod = 'blik';
+        let selectedGroupId = 150;
+        const MIN_INSTALLMENT_AMOUNT = 300;
+
+        // Set legal links
         (function setLegalLinks() {
             const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const regulaminUrl = isLocal
-                ? '/tomekniedzwiecki.pl/dokumenty/regulamin.html'
-                : 'https://tomekniedzwiecki.pl/dokumenty/regulamin.html';
-            const privacyUrl = isLocal
-                ? '/tomekniedzwiecki.pl/dokumenty/polityka-prywatnosci.html'
-                : 'https://tomekniedzwiecki.pl/dokumenty/polityka-prywatnosci.html';
+            const baseUrl = isLocal ? '' : 'https://tomekniedzwiecki.pl';
+            const regulaminUrl = `${baseUrl}/dokumenty/regulamin.html`;
+            const privacyUrl = `${baseUrl}/dokumenty/polityka-prywatnosci.html`;
 
-            // Update all links
             ['link-regulamin', 'link-regulamin-footer'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.href = regulaminUrl;
@@ -573,9 +551,7 @@
             });
         })();
 
-        let currentOffer = null;
-        const MIN_INSTALLMENT_AMOUNT = 300;
-
+        // Helpers
         function formatPrice(price) {
             return new Intl.NumberFormat('pl-PL', {
                 style: 'currency',
@@ -586,49 +562,27 @@
         }
 
         function calculateInstallment(price, months = 12) {
-            const monthlyRate = 0.008;
-            const installment = (price * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
-            return Math.ceil(installment);
+            return Math.ceil(price / months);
         }
 
-        function updatePaymentOptions(price) {
-            document.getElementById('price-one-time').textContent = formatPrice(price);
-            document.getElementById('summary-price').textContent = formatPrice(price);
-            document.getElementById('mobile-price').textContent = formatPrice(price);
-
-            if (price >= MIN_INSTALLMENT_AMOUNT) {
-                const installmentAmount = calculateInstallment(price, 12);
-                const installmentsOption = document.getElementById('installments-option');
-                installmentsOption.classList.remove('hidden');
-                installmentsOption.classList.add('flex');
-                document.getElementById('price-installments').textContent = formatPrice(price);
-                document.getElementById('installments-info').textContent = `12 x ${formatPrice(installmentAmount)}`;
+        function showError(field, message) {
+            const input = document.getElementById(field);
+            const error = document.getElementById(`${field.replace('customer-', '')}-error`);
+            if (input) {
+                input.classList.add('input-error', 'shake');
+                setTimeout(() => input.classList.remove('shake'), 400);
+            }
+            if (error) {
+                error.classList.remove('hidden');
+                error.querySelector('span').textContent = message;
             }
         }
 
-        // Inline validation helpers
-        function showFieldError(inputId, errorId, message) {
-            const input = document.getElementById(inputId);
-            const error = document.getElementById(errorId);
-            input.classList.add('input-error');
-            input.classList.add('shake');
-            error.querySelector('span').textContent = message;
-            error.classList.remove('hidden');
-            // Hide hint if exists
-            const hint = document.getElementById(inputId.replace('customer-', '') + '-hint');
-            if (hint) hint.classList.add('hidden');
-
-            setTimeout(() => input.classList.remove('shake'), 400);
-        }
-
-        function clearFieldError(inputId, errorId) {
-            const input = document.getElementById(inputId);
-            const error = document.getElementById(errorId);
-            input.classList.remove('input-error');
-            error.classList.add('hidden');
-            // Show hint if exists
-            const hint = document.getElementById(inputId.replace('customer-', '') + '-hint');
-            if (hint) hint.classList.remove('hidden');
+        function clearError(field) {
+            const input = document.getElementById(field);
+            const error = document.getElementById(`${field.replace('customer-', '')}-error`);
+            if (input) input.classList.remove('input-error');
+            if (error) error.classList.add('hidden');
         }
 
         function validateEmail(email) {
@@ -636,156 +590,163 @@
         }
 
         function validatePhone(phone) {
-            const digits = phone.replace(/\D/g, '');
-            return digits.length >= 9;
+            return phone.replace(/\D/g, '').length >= 9;
         }
 
         function validateForm() {
-            let isValid = true;
-
+            let valid = true;
             const email = document.getElementById('customer-email').value.trim();
             const phone = document.getElementById('customer-phone').value.trim();
-            const consent = document.getElementById('consent-terms').checked;
+            const terms = document.getElementById('consent-terms').checked;
 
-            // Email validation
-            if (!email) {
-                showFieldError('customer-email', 'email-error', 'Podaj adres email');
-                isValid = false;
-            } else if (!validateEmail(email)) {
-                showFieldError('customer-email', 'email-error', 'Podaj poprawny adres email');
-                isValid = false;
+            if (!email || !validateEmail(email)) {
+                showError('customer-email', 'Podaj poprawny adres email');
+                valid = false;
             } else {
-                clearFieldError('customer-email', 'email-error');
+                clearError('customer-email');
             }
 
-            // Phone validation
-            if (!phone) {
-                showFieldError('customer-phone', 'phone-error', 'Podaj numer telefonu');
-                isValid = false;
-            } else if (!validatePhone(phone)) {
-                showFieldError('customer-phone', 'phone-error', 'Podaj poprawny numer telefonu (min. 9 cyfr)');
-                isValid = false;
+            if (!phone || !validatePhone(phone)) {
+                showError('customer-phone', 'Podaj poprawny numer telefonu');
+                valid = false;
             } else {
-                clearFieldError('customer-phone', 'phone-error');
+                clearError('customer-phone');
             }
 
-            // Terms validation
             const termsError = document.getElementById('terms-error');
-            if (!consent) {
-                termsError.querySelector('span').textContent = 'Musisz zaakceptować regulamin';
+            if (!terms) {
                 termsError.classList.remove('hidden');
-                isValid = false;
+                valid = false;
             } else {
                 termsError.classList.add('hidden');
             }
 
-            return isValid;
+            return valid;
         }
 
-        // Real-time validation on blur
-        document.getElementById('customer-email').addEventListener('blur', function() {
-            const email = this.value.trim();
-            if (email && !validateEmail(email)) {
-                showFieldError('customer-email', 'email-error', 'Podaj poprawny adres email');
-            } else if (email) {
-                clearFieldError('customer-email', 'email-error');
-            }
-        });
+        // Payment method selection
+        document.querySelectorAll('.payment-method').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+                el.classList.add('selected');
+                selectedMethod = el.dataset.method;
+                selectedGroupId = parseInt(el.dataset.group) || 0;
 
-        document.getElementById('customer-phone').addEventListener('blur', function() {
-            const phone = this.value.trim();
-            if (phone && !validatePhone(phone)) {
-                showFieldError('customer-phone', 'phone-error', 'Podaj poprawny numer telefonu');
-            } else if (phone) {
-                clearFieldError('customer-phone', 'phone-error');
-            }
-        });
-
-        // Clear errors on input
-        document.getElementById('customer-email').addEventListener('input', function() {
-            if (this.classList.contains('input-error')) {
-                clearFieldError('customer-email', 'email-error');
-            }
-        });
-
-        document.getElementById('customer-phone').addEventListener('input', function() {
-            if (this.classList.contains('input-error')) {
-                clearFieldError('customer-phone', 'phone-error');
-            }
+                // Update button text for installments
+                const isInstallments = selectedMethod === 'installments';
+                const price = formatPrice(currentOffer?.price || 0);
+                const text = isInstallments ? 'Przejdź do wniosku ratalnego' : `Zapłać ${price}`;
+                document.getElementById('desktop-btn-text').innerHTML = isInstallments
+                    ? 'Przejdź do wniosku ratalnego'
+                    : `Zapłać <span id="desktop-price">${price}</span>`;
+                document.getElementById('mobile-btn-text').innerHTML = isInstallments
+                    ? 'Raty 0%'
+                    : `Zapłać <span id="mobile-price">${price}</span>`;
+            });
         });
 
         // Toggle invoice fields
         document.getElementById('toggle-invoice').addEventListener('click', function() {
             const fields = document.getElementById('invoice-fields');
-            const icon = this.querySelector('i');
+            const isHidden = fields.classList.contains('hidden');
+            fields.classList.toggle('hidden');
+            this.querySelector('i').className = isHidden ? 'ph ph-minus-circle text-base' : 'ph ph-plus-circle text-base';
+            this.querySelector('span').textContent = isHidden ? 'Ukryj dane do faktury' : 'Chcę fakturę VAT';
+        });
 
-            if (fields.classList.contains('hidden')) {
-                fields.classList.remove('hidden');
-                icon.className = 'ph ph-minus-circle text-lg';
-                this.querySelector('span') || (this.innerHTML = '<i class="ph ph-minus-circle text-lg"></i> Ukryj dane do faktury');
-            } else {
-                fields.classList.add('hidden');
-                icon.className = 'ph ph-plus-circle text-lg';
-                this.innerHTML = '<i class="ph ph-plus-circle text-lg"></i> Chcę otrzymać fakturę VAT';
+        // Real-time validation
+        document.getElementById('customer-email').addEventListener('blur', function() {
+            if (this.value && !validateEmail(this.value)) {
+                showError('customer-email', 'Podaj poprawny adres email');
+            } else if (this.value) {
+                clearError('customer-email');
             }
         });
 
-        // Payment option selection
-        document.querySelectorAll('.payment-option').forEach(option => {
-            option.addEventListener('click', () => {
-                // Remove selection from all
-                document.querySelectorAll('.payment-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                    opt.querySelector('.payment-radio').classList.remove('border-primary-500');
-                    opt.querySelector('.payment-radio').classList.add('border-gray-300');
-                    const dot = opt.querySelector('.payment-radio-dot');
-                    if (dot) dot.classList.add('hidden');
-                });
+        document.getElementById('customer-phone').addEventListener('blur', function() {
+            if (this.value && !validatePhone(this.value)) {
+                showError('customer-phone', 'Podaj poprawny numer telefonu');
+            } else if (this.value) {
+                clearError('customer-phone');
+            }
+        });
 
-                // Add selection to clicked
-                option.classList.add('selected');
-                option.querySelector('.payment-radio').classList.add('border-primary-500');
-                option.querySelector('.payment-radio').classList.remove('border-gray-300');
-                const dot = option.querySelector('.payment-radio-dot');
-                if (dot) dot.classList.remove('hidden');
-
-                // Check the radio
-                option.querySelector('input[type="radio"]').checked = true;
-
-                // Update button text
-                const isInstallments = option.dataset.type === 'installments';
-                document.getElementById('pay-button-text').textContent = isInstallments
-                    ? 'Przejdź do wniosku ratalnego'
-                    : 'Zapłać teraz';
+        // Clear errors on input
+        ['customer-email', 'customer-phone'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                if (this.classList.contains('input-error')) clearError(id);
             });
         });
 
-        function showError(message) {
-            document.getElementById('loading-state').classList.add('hidden');
-            document.getElementById('checkout-container').classList.add('hidden');
-            document.getElementById('error-state').classList.remove('hidden');
-            if (message) {
-                document.getElementById('error-message').textContent = message;
+        // Phone formatting
+        document.getElementById('customer-phone').addEventListener('input', function(e) {
+            let v = e.target.value.replace(/[^\d+]/g, '');
+            if (v.length > 0 && !v.startsWith('+')) {
+                if (v.startsWith('48')) v = '+' + v;
+                else if (v.length === 9) v = '+48' + v;
             }
-        }
+            e.target.value = v;
+        });
 
+        // NIP formatting
+        document.getElementById('customer-nip').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+        });
+
+        // UI state functions
         function showCheckout() {
             document.getElementById('loading-state').classList.add('hidden');
             document.getElementById('error-state').classList.add('hidden');
             document.getElementById('checkout-container').classList.remove('hidden');
         }
 
+        function showErrorState(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('checkout-container').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+            if (message) document.getElementById('error-message').textContent = message;
+        }
+
         function showRedirect() {
             document.getElementById('checkout-container').classList.add('hidden');
             document.getElementById('redirect-state').classList.remove('hidden');
+            document.querySelector('.mobile-sticky-footer')?.classList.add('hidden');
         }
 
+        function setButtonsLoading(loading) {
+            const dBtn = document.getElementById('pay-button-desktop');
+            const mBtn = document.getElementById('pay-button-mobile');
+
+            if (loading) {
+                dBtn.disabled = mBtn.disabled = true;
+                dBtn.innerHTML = mBtn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Przetwarzanie...';
+            } else {
+                dBtn.disabled = mBtn.disabled = false;
+                const price = formatPrice(currentOffer?.price || 0);
+                const isInstallments = selectedMethod === 'installments';
+                dBtn.innerHTML = `<i class="ph ph-lock-simple"></i> <span>${isInstallments ? 'Przejdź do wniosku ratalnego' : `Zapłać ${price}`}</span>`;
+                mBtn.innerHTML = `<i class="ph ph-lock-simple"></i> <span>${isInstallments ? 'Raty 0%' : `Zapłać ${price}`}</span>`;
+            }
+        }
+
+        function showFormError(message) {
+            const el = document.getElementById('form-error');
+            document.getElementById('form-error-text').textContent = message;
+            el.classList.remove('hidden');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideFormError() {
+            document.getElementById('form-error').classList.add('hidden');
+        }
+
+        // Load offer
         async function loadOffer() {
             const params = new URLSearchParams(window.location.search);
             const offerId = params.get('offer') || params.get('id');
 
             if (!offerId) {
-                showError('Brak identyfikatora oferty w linku. Sprawdź poprawność adresu URL.');
+                showErrorState('Brak identyfikatora oferty. Sprawdź link.');
                 return;
             }
 
@@ -798,58 +759,46 @@
                     .single();
 
                 if (error || !offer) {
-                    showError('Ta oferta nie istnieje lub nie jest już aktywna. Skontaktuj się z nami, jeśli uważasz, że to błąd.');
+                    showErrorState('Ta oferta nie istnieje lub jest nieaktywna.');
                     return;
                 }
 
                 if (!offer.price || offer.price <= 0) {
-                    showError('Ta oferta nie ma ustawionej ceny. Skontaktuj się z nami.');
+                    showErrorState('Oferta nie ma ustawionej ceny.');
                     return;
                 }
 
                 currentOffer = offer;
-
                 document.getElementById('offer-name').textContent = offer.name;
                 document.getElementById('offer-description').textContent = offer.description || 'Produkt cyfrowy';
                 document.getElementById('offer-price').textContent = formatPrice(offer.price);
+                document.getElementById('summary-price').textContent = formatPrice(offer.price);
+                document.getElementById('desktop-price').textContent = formatPrice(offer.price);
+                document.getElementById('mobile-price').textContent = formatPrice(offer.price);
                 document.title = `${offer.name} - Zamówienie`;
 
-                updatePaymentOptions(offer.price);
+                // Show installments option if price >= 300 PLN
+                if (offer.price >= MIN_INSTALLMENT_AMOUNT) {
+                    const installmentOption = document.getElementById('installments-option');
+                    installmentOption.classList.remove('hidden');
+                    const monthly = calculateInstallment(offer.price, 12);
+                    document.getElementById('installments-detail').textContent = `12 x ${formatPrice(monthly)}`;
+                }
+
                 showCheckout();
 
             } catch (err) {
-                console.error('Error loading offer:', err);
-                showError('Wystąpił błąd podczas ładowania oferty. Spróbuj odświeżyć stronę.');
+                console.error('Load error:', err);
+                showErrorState('Wystąpił błąd. Spróbuj odświeżyć stronę.');
             }
         }
 
-        // Set buttons loading state
-        function setButtonsLoading(loading) {
-            const desktopBtn = document.getElementById('pay-button-desktop');
-            const mobileBtn = document.getElementById('pay-button-mobile');
-
-            if (loading) {
-                desktopBtn.disabled = true;
-                mobileBtn.disabled = true;
-                desktopBtn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Przetwarzanie...';
-                mobileBtn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Przetwarzanie...';
-            } else {
-                desktopBtn.disabled = false;
-                mobileBtn.disabled = false;
-                const isInstallments = document.querySelector('input[name="payment_type"]:checked')?.value === 'installments';
-                const text = isInstallments ? 'Przejdź do wniosku ratalnego' : 'Zapłać teraz';
-                const mobileText = isInstallments ? 'Przejdź do wniosku' : `Zapłać ${formatPrice(currentOffer?.price || 0)}`;
-                desktopBtn.innerHTML = `<i class="ph ph-lock-simple"></i> <span class="pay-button-text">${text}</span>`;
-                mobileBtn.innerHTML = `<i class="ph ph-lock-simple"></i> <span class="pay-button-text">${mobileText}</span>`;
-            }
-        }
-
+        // Submit handler
         async function handleSubmit() {
             if (!currentOffer) return;
+            hideFormError();
 
-            // Validate form
             if (!validateForm()) {
-                // Scroll to first error
                 const firstError = document.querySelector('.input-error');
                 if (firstError) {
                     firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -863,13 +812,14 @@
             const name = document.getElementById('customer-name').value.trim();
             const company = document.getElementById('customer-company').value.trim();
             const nip = document.getElementById('customer-nip').value.trim();
-            const paymentType = document.querySelector('input[name="payment_type"]:checked')?.value || 'one_time';
 
             setButtonsLoading(true);
 
             try {
-                const paymentSource = paymentType === 'installments' ? 'installments' : 'tpay';
+                // Determine payment source
+                const paymentSource = selectedMethod === 'installments' ? 'installments' : 'tpay';
 
+                // Create order
                 const orderData = {
                     customer_email: email,
                     customer_phone: phone,
@@ -880,7 +830,7 @@
                     amount: currentOffer.price,
                     status: 'pending',
                     payment_source: paymentSource,
-                    notes: `Checkout - ${currentOffer.name} (${paymentType === 'installments' ? 'raty' : 'jednorazowo'})`
+                    notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}`
                 };
 
                 const { data: order, error: orderError } = await supabaseClient
@@ -889,10 +839,9 @@
                     .select()
                     .single();
 
-                if (orderError) {
-                    throw new Error('Błąd tworzenia zamówienia: ' + orderError.message);
-                }
+                if (orderError) throw new Error('Błąd tworzenia zamówienia');
 
+                // Call Edge Function
                 const response = await fetch(`${SUPABASE_URL}/functions/v1/tpay-create-transaction`, {
                     method: 'POST',
                     headers: {
@@ -901,70 +850,33 @@
                     },
                     body: JSON.stringify({
                         orderId: order.id,
-                        paymentType: paymentType
+                        paymentType: selectedMethod === 'installments' ? 'installments' : 'one_time',
+                        groupId: selectedGroupId > 0 ? selectedGroupId : null
                     })
                 });
 
                 const result = await response.json();
 
-                if (!result.success) {
-                    throw new Error(result.error || 'Błąd tworzenia płatności');
-                }
-
-                if (!result.paymentUrl) {
-                    throw new Error('Nie otrzymano linku do płatności');
-                }
+                if (!result.success) throw new Error(result.error || 'Błąd płatności');
+                if (!result.paymentUrl) throw new Error('Brak linku do płatności');
 
                 showRedirect();
-
-                setTimeout(() => {
-                    window.location.href = result.paymentUrl;
-                }, 1500);
+                setTimeout(() => window.location.href = result.paymentUrl, 1200);
 
             } catch (error) {
-                console.error('Checkout error:', error);
-                // Show error as inline message instead of alert
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2';
-                errorDiv.innerHTML = `<i class="ph ph-warning-circle text-lg"></i> ${error.message}`;
-
-                const form = document.getElementById('checkout-form');
-                const existingError = form.querySelector('.bg-red-50');
-                if (existingError) existingError.remove();
-                form.insertBefore(errorDiv, form.firstChild);
-
+                console.error('Submit error:', error);
+                showFormError(error.message);
                 setButtonsLoading(false);
             }
         }
 
-        // Form submit handler
-        document.getElementById('checkout-form').addEventListener('submit', (e) => {
+        // Event listeners
+        document.getElementById('checkout-form').addEventListener('submit', e => {
             e.preventDefault();
             handleSubmit();
         });
 
-        // Mobile button click
-        document.getElementById('pay-button-mobile').addEventListener('click', () => {
-            handleSubmit();
-        });
-
-        // Phone number formatting
-        document.getElementById('customer-phone').addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^\d+]/g, '');
-            if (value.length > 0 && !value.startsWith('+')) {
-                if (value.startsWith('48')) {
-                    value = '+' + value;
-                } else if (value.length === 9) {
-                    value = '+48' + value;
-                }
-            }
-            e.target.value = value;
-        });
-
-        // NIP formatting
-        document.getElementById('customer-nip').addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
-        });
+        document.getElementById('pay-button-mobile').addEventListener('click', handleSubmit);
 
         // Init
         loadOffer();

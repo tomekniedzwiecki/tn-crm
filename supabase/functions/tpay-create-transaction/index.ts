@@ -10,6 +10,16 @@ const corsHeaders = {
 const TPAY_API_URL = 'https://api.tpay.com'
 const TPAY_SANDBOX_URL = 'https://openapi.sandbox.tpay.com'
 
+// Tpay Payment Group IDs
+const PAYMENT_GROUPS = {
+  blik: 150,
+  card: 103,
+  google_pay: 166,
+  apple_pay: 167,
+  transfer: 0, // 0 = let user choose bank on Tpay page
+  installments: 109, // PayU Raty
+}
+
 interface TpayTokenResponse {
   access_token: string
   token_type: string
@@ -62,7 +72,7 @@ async function createTpayTransaction(
     successUrl: string
     errorUrl: string
     notifyUrl: string
-    paymentType?: string // 'one_time' or 'installments'
+    groupId?: number
   }
 ): Promise<TpayTransactionResponse> {
   const baseUrl = useSandbox ? TPAY_SANDBOX_URL : TPAY_API_URL
@@ -88,14 +98,13 @@ async function createTpayTransaction(
     },
   }
 
-  // For installments, we can use Tpay's installment payment groups
-  // Group 109 = PayU Raty, Group 169 = Twisto, etc.
-  // Or we can let user choose on Tpay's payment page
-  if (params.paymentType === 'installments') {
-    // Enable installments payment groups
+  // Add payment group if specified and valid
+  // groupId 0 means let user choose on Tpay page (bank transfers)
+  if (params.groupId && params.groupId > 0) {
     payload.pay = {
-      groupId: 109, // PayU Raty - can be configured
+      groupId: params.groupId,
     }
+    console.log('[tpay] Using payment group:', params.groupId)
   }
 
   console.log('[tpay] Creating transaction:', JSON.stringify(payload))
@@ -146,7 +155,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Parse request body
-    const { orderId, successUrl, errorUrl, paymentType } = await req.json()
+    const { orderId, successUrl, errorUrl, paymentType, groupId } = await req.json()
 
     if (!orderId) {
       throw new Error('Brak ID zamówienia')
@@ -188,10 +197,20 @@ serve(async (req) => {
 
     const appBaseUrl = baseUrlSetting?.value || 'https://crm.tomekniedzwiecki.pl'
 
-    // Build callback URLs - use dedicated success/error pages
-    const finalSuccessUrl = successUrl || `${appBaseUrl}/checkout/success.html?order=${orderId}`
-    const finalErrorUrl = errorUrl || `${appBaseUrl}/checkout/error.html?order=${orderId}`
+    // Build callback URLs - use clean URLs without .html
+    const finalSuccessUrl = successUrl || `${appBaseUrl}/checkout/success?order=${orderId}`
+    const finalErrorUrl = errorUrl || `${appBaseUrl}/checkout/error?order=${orderId}`
     const notifyUrl = `${supabaseUrl}/functions/v1/tpay-webhook`
+
+    // Determine payment group
+    let finalGroupId = groupId
+
+    // If no groupId provided, use default based on payment type
+    if (!finalGroupId && paymentType === 'installments') {
+      finalGroupId = PAYMENT_GROUPS.installments
+    }
+
+    console.log('[tpay] Payment type:', paymentType, 'Group ID:', finalGroupId)
 
     // Get OAuth token
     const token = await getTpayToken(tpayClientId, tpayClientSecret, useSandbox)
@@ -207,7 +226,7 @@ serve(async (req) => {
       successUrl: finalSuccessUrl,
       errorUrl: finalErrorUrl,
       notifyUrl: notifyUrl,
-      paymentType: paymentType || 'one_time',
+      groupId: finalGroupId,
     })
 
     // Update order with Tpay transaction ID
@@ -215,7 +234,7 @@ serve(async (req) => {
       .from('orders')
       .update({
         payment_reference: transaction.transactionId,
-        payment_source: 'tpay',
+        payment_source: paymentType === 'installments' ? 'installments' : 'tpay',
         updated_at: new Date().toISOString(),
       })
       .eq('id', orderId)
