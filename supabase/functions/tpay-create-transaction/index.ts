@@ -6,10 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Tpay OpenAPI URLs
-// Production: https://openapi.tpay.com (NOT api.tpay.com - that's the old API)
+// Tpay API URLs
+// Production: https://api.tpay.com (confirmed from docs-api.tpay.com)
 // Sandbox: https://openapi.sandbox.tpay.com
-const TPAY_API_URL = 'https://openapi.tpay.com'
+const TPAY_API_URL = 'https://api.tpay.com'
 const TPAY_SANDBOX_URL = 'https://openapi.sandbox.tpay.com'
 
 // Tpay Payment Group IDs
@@ -41,20 +41,18 @@ async function getTpayToken(clientId: string, clientSecret: string, useSandbox: 
   const tokenUrl = `${baseUrl}/oauth/auth`
 
   console.log('[tpay] Requesting token from:', tokenUrl)
-  console.log('[tpay] Client ID length:', clientId?.length, 'Secret length:', clientSecret?.length)
+  console.log('[tpay] Sandbox mode:', useSandbox)
+  console.log('[tpay] Client ID (first 8 chars):', clientId?.substring(0, 8))
 
-  // Create Basic Auth header (standard OAuth2 client credentials)
-  const basicAuth = btoa(`${clientId}:${clientSecret}`)
-
-  // Request body with grant_type
+  // Tpay expects client_id and client_secret in the body
   const formData = new URLSearchParams()
-  formData.append('grant_type', 'client_credentials')
+  formData.append('client_id', clientId)
+  formData.append('client_secret', clientSecret)
 
   const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${basicAuth}`,
     },
     body: formData.toString(),
   })
@@ -192,14 +190,16 @@ serve(async (req) => {
     console.log('[tpay] Order found:', order.order_number, 'Amount:', order.amount)
 
     // Check if using sandbox mode (from settings)
+    // Default to production (false) if setting doesn't exist or is not explicitly 'true'
     const { data: sandboxSetting } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'tpay_sandbox_mode')
       .single()
 
-    const useSandbox = sandboxSetting?.value === 'true'
-    console.log('[tpay] Sandbox mode:', useSandbox)
+    // Force production mode - user confirmed they have production credentials
+    const useSandbox = false // sandboxSetting?.value === 'true'
+    console.log('[tpay] Sandbox mode:', useSandbox, '(forced production)')
 
     // Get base URL for callbacks
     const { data: baseUrlSetting } = await supabase

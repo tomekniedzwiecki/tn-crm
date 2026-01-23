@@ -744,6 +744,46 @@
         async function loadOffer() {
             const params = new URLSearchParams(window.location.search);
             const offerId = params.get('offer') || params.get('id');
+            const retryOrderId = params.get('retry');
+
+            // Handle retry from error page - load existing order and its offer
+            if (retryOrderId) {
+                try {
+                    const { data: existingOrder } = await supabaseClient
+                        .from('orders')
+                        .select('*')
+                        .eq('id', retryOrderId)
+                        .eq('status', 'pending')
+                        .single();
+
+                    if (existingOrder) {
+                        // Find offer by name/description match or use order data directly
+                        const { data: offer } = await supabaseClient
+                            .from('offers')
+                            .select('*')
+                            .eq('name', existingOrder.description)
+                            .eq('is_active', true)
+                            .single();
+
+                        if (offer) {
+                            currentOffer = offer;
+                            // Pre-fill form with existing order data
+                            document.getElementById('customer-email').value = existingOrder.customer_email || '';
+                            document.getElementById('customer-phone').value = existingOrder.customer_phone || '';
+                            document.getElementById('customer-name').value = existingOrder.customer_name || '';
+                            document.getElementById('customer-company').value = existingOrder.customer_company || '';
+                            document.getElementById('customer-nip').value = existingOrder.customer_nip || '';
+
+                            setupOfferDisplay(offer);
+                            showRetryNotice();
+                            showCheckout();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.log('[checkout] Retry order not found, loading offer normally');
+                }
+            }
 
             if (!offerId) {
                 showErrorState('Brak identyfikatora oferty. Sprawdź link.');
@@ -769,28 +809,39 @@
                 }
 
                 currentOffer = offer;
-                document.getElementById('offer-name').textContent = offer.name;
-                document.getElementById('offer-description').textContent = offer.description || 'Produkt cyfrowy';
-                document.getElementById('offer-price').textContent = formatPrice(offer.price);
-                document.getElementById('summary-price').textContent = formatPrice(offer.price);
-                document.getElementById('desktop-price').textContent = formatPrice(offer.price);
-                document.getElementById('mobile-price').textContent = formatPrice(offer.price);
-                document.title = `${offer.name} - Zamówienie`;
-
-                // Show installments option if price >= 300 PLN
-                if (offer.price >= MIN_INSTALLMENT_AMOUNT) {
-                    const installmentOption = document.getElementById('installments-option');
-                    installmentOption.classList.remove('hidden');
-                    const monthly = calculateInstallment(offer.price, 12);
-                    document.getElementById('installments-detail').textContent = `12 x ${formatPrice(monthly)}`;
-                }
-
+                setupOfferDisplay(offer);
                 showCheckout();
 
             } catch (err) {
                 console.error('Load error:', err);
                 showErrorState('Wystąpił błąd. Spróbuj odświeżyć stronę.');
             }
+        }
+
+        function setupOfferDisplay(offer) {
+            document.getElementById('offer-name').textContent = offer.name;
+            document.getElementById('offer-description').textContent = offer.description || 'Produkt cyfrowy';
+            document.getElementById('offer-price').textContent = formatPrice(offer.price);
+            document.getElementById('summary-price').textContent = formatPrice(offer.price);
+            document.getElementById('desktop-price').textContent = formatPrice(offer.price);
+            document.getElementById('mobile-price').textContent = formatPrice(offer.price);
+            document.title = `${offer.name} - Zamówienie`;
+
+            // Show installments option if price >= 300 PLN
+            if (offer.price >= MIN_INSTALLMENT_AMOUNT) {
+                const installmentOption = document.getElementById('installments-option');
+                installmentOption.classList.remove('hidden');
+                const monthly = calculateInstallment(offer.price, 12);
+                document.getElementById('installments-detail').textContent = `12 x ${formatPrice(monthly)}`;
+            }
+        }
+
+        function showRetryNotice() {
+            const notice = document.createElement('div');
+            notice.className = 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2';
+            notice.innerHTML = '<i class="ph ph-arrow-counter-clockwise text-amber-500"></i> Kontynuuj poprzednią próbę płatności. Twoje dane zostały zachowane.';
+            const form = document.getElementById('checkout-form');
+            form.insertBefore(notice, form.firstChild);
         }
 
         // Submit handler
@@ -819,27 +870,60 @@
                 // Determine payment source
                 const paymentSource = selectedMethod === 'installments' ? 'installments' : 'tpay';
 
-                // Create order
-                const orderData = {
-                    customer_email: email,
-                    customer_phone: phone,
-                    customer_name: name || null,
-                    customer_company: company || null,
-                    customer_nip: nip || null,
-                    description: currentOffer.name,
-                    amount: currentOffer.price,
-                    status: 'pending',
-                    payment_source: paymentSource,
-                    notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}`
-                };
+                let order;
 
-                const { data: order, error: orderError } = await supabaseClient
+                // Check if there's an existing pending order for this email and offer
+                const { data: existingOrders } = await supabaseClient
                     .from('orders')
-                    .insert(orderData)
-                    .select()
-                    .single();
+                    .select('*')
+                    .eq('customer_email', email)
+                    .eq('description', currentOffer.name)
+                    .eq('status', 'pending')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
 
-                if (orderError) throw new Error('Błąd tworzenia zamówienia');
+                if (existingOrders && existingOrders.length > 0) {
+                    // Use existing pending order
+                    order = existingOrders[0];
+                    console.log('[checkout] Found existing pending order:', order.order_number);
+
+                    // Update order with current data (in case user changed phone/name)
+                    await supabaseClient
+                        .from('orders')
+                        .update({
+                            customer_phone: phone,
+                            customer_name: name || null,
+                            customer_company: company || null,
+                            customer_nip: nip || null,
+                            payment_source: paymentSource,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', order.id);
+                } else {
+                    // Create new order
+                    const orderData = {
+                        customer_email: email,
+                        customer_phone: phone,
+                        customer_name: name || null,
+                        customer_company: company || null,
+                        customer_nip: nip || null,
+                        description: currentOffer.name,
+                        amount: currentOffer.price,
+                        status: 'pending',
+                        payment_source: paymentSource,
+                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}`
+                    };
+
+                    const { data: newOrder, error: orderError } = await supabaseClient
+                        .from('orders')
+                        .insert(orderData)
+                        .select()
+                        .single();
+
+                    if (orderError) throw new Error('Błąd tworzenia zamówienia');
+                    order = newOrder;
+                    console.log('[checkout] Created new order:', order.order_number);
+                }
 
                 // Call Edge Function
                 const requestBody = {

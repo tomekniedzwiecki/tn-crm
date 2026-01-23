@@ -178,18 +178,34 @@
             }
 
             try {
-                // Try to get the offer ID from the order to redirect back to checkout
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 const { data: order } = await supabaseClient
                     .from('orders')
-                    .select('description')
+                    .select('id, description, status')
                     .eq('id', orderId)
                     .single();
 
-                // For now, just link to main page since we don't store offer_id in orders
-                // In a real scenario, you might want to store offer_id in orders table
-                retryLink.href = 'https://tomekniedzwiecki.pl';
+                if (order && order.status === 'pending') {
+                    // Find offer by name to get offer ID for checkout
+                    const { data: offer } = await supabaseClient
+                        .from('offers')
+                        .select('id')
+                        .eq('name', order.description)
+                        .eq('is_active', true)
+                        .single();
+
+                    if (offer) {
+                        // Link to checkout with offer ID and retry parameter
+                        retryLink.href = `/checkout?offer=${offer.id}&retry=${orderId}`;
+                    } else {
+                        // Fallback: just retry with order ID
+                        retryLink.href = `/checkout?retry=${orderId}`;
+                    }
+                } else {
+                    retryLink.href = 'https://tomekniedzwiecki.pl';
+                }
             } catch (e) {
+                console.error('Error setting up retry link:', e);
                 retryLink.href = 'https://tomekniedzwiecki.pl';
             }
         }
