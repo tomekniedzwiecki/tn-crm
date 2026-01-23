@@ -137,22 +137,42 @@
             cursor: not-allowed;
         }
 
-        /* BLIK code input */
-        .blik-input {
+        /* BLIK digit inputs */
+        .blik-digit {
+            width: 44px;
+            height: 56px;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
             font-family: 'SF Mono', Monaco, 'Courier New', monospace;
             font-size: 24px;
-            letter-spacing: 8px;
+            font-weight: 600;
             text-align: center;
-            background: rgba(255,255,255,0.04);
-            border: 2px solid rgba(255,255,255,0.1);
+            color: white;
+            transition: all 0.15s ease;
+            caret-color: #10b981;
         }
-        .blik-input:focus {
+        .blik-digit:focus {
+            outline: none;
             border-color: #10b981;
+            background: rgba(16, 185, 129, 0.08);
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
         }
-        .blik-input::placeholder {
-            letter-spacing: 4px;
-            color: #52525b;
+        .blik-digit.filled {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .blik-digit.error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+        }
+        .blik-digit::placeholder {
+            color: #3f3f46;
+        }
+        .blik-digit::-webkit-outer-spin-button,
+        .blik-digit::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         /* Error states */
@@ -448,12 +468,24 @@
 
                             <!-- BLIK Code Input Panel -->
                             <div id="blik-panel" class="expand-panel open mt-3 mb-3">
-                                <div class="bg-gradient-to-br from-pink-500/10 to-red-500/10 border border-pink-500/20 rounded-xl p-4">
-                                    <label class="block text-sm font-medium text-zinc-300 mb-2 text-center">Wpisz kod BLIK z aplikacji bankowej</label>
-                                    <input type="text" id="blik-code" maxlength="6" inputmode="numeric" pattern="[0-9]*"
-                                           class="blik-input w-full py-3 rounded-xl outline-none text-white"
-                                           placeholder="● ● ● ● ● ●">
-                                    <p id="blik-error" class="error-text hidden justify-center mt-2">
+                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                    <div class="flex items-center justify-center gap-2 mb-3">
+                                        <div class="w-6 h-6 bg-gradient-to-br from-pink-500 to-red-500 rounded-md flex items-center justify-center">
+                                            <span class="text-[8px] font-bold text-white">BLIK</span>
+                                        </div>
+                                        <span class="text-sm font-medium text-zinc-300">Wpisz kod z aplikacji</span>
+                                    </div>
+                                    <div class="flex justify-center gap-2" id="blik-inputs">
+                                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="blik-digit" data-index="0" autocomplete="off">
+                                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="blik-digit" data-index="1" autocomplete="off">
+                                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="blik-digit" data-index="2" autocomplete="off">
+                                        <span class="text-zinc-600 text-2xl font-light self-center mx-1">-</span>
+                                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="blik-digit" data-index="3" autocomplete="off">
+                                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="blik-digit" data-index="4" autocomplete="off">
+                                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="blik-digit" data-index="5" autocomplete="off">
+                                    </div>
+                                    <input type="hidden" id="blik-code" value="">
+                                    <p id="blik-error" class="error-text hidden justify-center mt-3">
                                         <i class="ph ph-warning-circle"></i>
                                         <span>Wpisz 6-cyfrowy kod BLIK</span>
                                     </p>
@@ -681,14 +713,17 @@
             if (selectedMethod === 'blik') {
                 const blikCode = document.getElementById('blik-code').value.trim();
                 const blikError = document.getElementById('blik-error');
+                const blikDigits = document.querySelectorAll('.blik-digit');
                 if (!validateBlikCode(blikCode)) {
                     blikError.classList.remove('hidden');
-                    document.getElementById('blik-code').classList.add('input-error', 'shake');
-                    setTimeout(() => document.getElementById('blik-code').classList.remove('shake'), 400);
+                    blikDigits.forEach(input => {
+                        input.classList.add('error', 'shake');
+                        setTimeout(() => input.classList.remove('shake'), 400);
+                    });
                     valid = false;
                 } else {
                     blikError.classList.add('hidden');
-                    document.getElementById('blik-code').classList.remove('input-error');
+                    blikDigits.forEach(input => input.classList.remove('error'));
                 }
             }
 
@@ -703,9 +738,72 @@
             return valid;
         }
 
-        // BLIK code input formatting
-        document.getElementById('blik-code').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+        // BLIK digit inputs handling
+        const blikDigits = document.querySelectorAll('.blik-digit');
+        const blikCodeHidden = document.getElementById('blik-code');
+
+        function updateBlikCode() {
+            let code = '';
+            blikDigits.forEach(input => {
+                code += input.value;
+                if (input.value) {
+                    input.classList.add('filled');
+                } else {
+                    input.classList.remove('filled');
+                }
+            });
+            blikCodeHidden.value = code;
+        }
+
+        blikDigits.forEach((input, index) => {
+            input.addEventListener('input', function(e) {
+                // Only allow digits
+                this.value = this.value.replace(/\D/g, '').slice(0, 1);
+
+                updateBlikCode();
+
+                // Auto-advance to next input
+                if (this.value && index < 5) {
+                    blikDigits[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                // Handle backspace - go to previous input
+                if (e.key === 'Backspace' && !this.value && index > 0) {
+                    blikDigits[index - 1].focus();
+                    blikDigits[index - 1].value = '';
+                    updateBlikCode();
+                }
+                // Handle arrow keys
+                if (e.key === 'ArrowLeft' && index > 0) {
+                    blikDigits[index - 1].focus();
+                }
+                if (e.key === 'ArrowRight' && index < 5) {
+                    blikDigits[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const digits = paste.replace(/\D/g, '').slice(0, 6);
+
+                digits.split('').forEach((digit, i) => {
+                    if (blikDigits[i]) {
+                        blikDigits[i].value = digit;
+                    }
+                });
+                updateBlikCode();
+
+                // Focus last filled or first empty
+                const focusIndex = Math.min(digits.length, 5);
+                blikDigits[focusIndex].focus();
+            });
+
+            input.addEventListener('focus', function() {
+                this.select();
+            });
         });
 
         // Payment method selection
