@@ -12,6 +12,118 @@ const corsHeaders = {
 const TPAY_API_URL = 'https://api.tpay.com'
 const TPAY_SANDBOX_URL = 'https://openapi.sandbox.tpay.com'
 
+// Slack webhook for payment attempts (from environment variable)
+
+// Send Slack notification for checkout attempt
+async function sendSlackCheckoutNotification(order: any, paymentMethod: string) {
+  const webhookUrl = Deno.env.get('SLACK_CHECKOUT_WEBHOOK')
+  if (!webhookUrl) {
+    console.log('[slack] SLACK_CHECKOUT_WEBHOOK not configured, skipping notification')
+    return
+  }
+
+  try {
+    const methodNames: Record<string, string> = {
+      'blik': 'BLIK',
+      'card': 'Karta',
+      'transfer': 'Przelew',
+      'installments': 'Raty',
+      'twisto': 'Twisto',
+      'pragmapay': 'PragmaPay',
+    }
+
+    const methodName = methodNames[paymentMethod] || paymentMethod
+
+    const message = {
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🛒 Nowa próba płatności',
+            emoji: true
+          }
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Zamówienie:*\n${order.order_number}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Kwota:*\n${parseFloat(order.amount).toFixed(2)} PLN`
+            }
+          ]
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Email:*\n${order.customer_email}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Telefon:*\n${order.customer_phone || '-'}`
+            }
+          ]
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Produkt:*\n${order.description}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Metoda:*\n${methodName}`
+            }
+          ]
+        }
+      ]
+    }
+
+    // Add discount info if present
+    if (order.discount_amount && order.discount_amount > 0) {
+      message.blocks.push({
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `🎟️ Rabat: -${parseFloat(order.discount_amount).toFixed(2)} PLN (cena oryginalna: ${parseFloat(order.original_amount).toFixed(2)} PLN)`
+          }
+        ]
+      } as any)
+    }
+
+    // Add customer name/company if present
+    if (order.customer_name || order.customer_company) {
+      message.blocks.push({
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `👤 ${order.customer_name || ''} ${order.customer_company ? `(${order.customer_company})` : ''}`
+          }
+        ]
+      } as any)
+    }
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(message)
+    })
+
+    console.log('[slack] Checkout notification sent')
+  } catch (err) {
+    console.error('[slack] Failed to send checkout notification:', err)
+  }
+}
+
 // Tpay Payment Group IDs
 const PAYMENT_GROUPS = {
   blik: 150,
@@ -315,6 +427,9 @@ serve(async (req) => {
     }
 
     console.log('[tpay-create-transaction] SUCCESS - Payment URL generated')
+
+    // Send Slack notification for checkout attempt
+    await sendSlackCheckoutNotification(order, paymentType || selectedMethod || 'unknown')
 
     // For BLIK inline, we don't redirect - the payment is processed immediately
     // Frontend should poll for status

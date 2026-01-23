@@ -15,6 +15,107 @@ const TPAY_STATUS = {
   CHARGEBACK: 'CHARGEBACK', // Refund/chargeback
 }
 
+// Slack webhook for successful payments (from environment variable)
+
+// Send Slack notification for successful payment
+async function sendSlackPaidNotification(order: any) {
+  const webhookUrl = Deno.env.get('SLACK_PAID_WEBHOOK')
+  if (!webhookUrl) {
+    console.log('[slack] SLACK_PAID_WEBHOOK not configured, skipping notification')
+    return
+  }
+
+  try {
+    const message = {
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '💰 Nowa płatność!',
+            emoji: true
+          }
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Zamówienie:*\n${order.order_number}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Kwota:*\n*${parseFloat(order.amount).toFixed(2)} PLN*`
+            }
+          ]
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Email:*\n${order.customer_email}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Telefon:*\n${order.customer_phone || '-'}`
+            }
+          ]
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Produkt:*\n${order.description}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Źródło:*\n${order.payment_source || 'tpay'}`
+            }
+          ]
+        }
+      ]
+    }
+
+    // Add discount info if present
+    if (order.discount_amount && order.discount_amount > 0) {
+      message.blocks.push({
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `🎟️ Rabat: -${parseFloat(order.discount_amount).toFixed(2)} PLN (cena oryginalna: ${parseFloat(order.original_amount).toFixed(2)} PLN)`
+          }
+        ]
+      } as any)
+    }
+
+    // Add customer name/company if present
+    if (order.customer_name || order.customer_company) {
+      message.blocks.push({
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `👤 ${order.customer_name || ''} ${order.customer_company ? `(${order.customer_company})` : ''}`
+          }
+        ]
+      } as any)
+    }
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(message)
+    })
+
+    console.log('[slack] Paid notification sent')
+  } catch (err) {
+    console.error('[slack] Failed to send paid notification:', err)
+  }
+}
+
 // Verify Tpay notification signature using MD5 checksum
 function verifyTpaySignature(
   merchantId: string,
@@ -152,6 +253,9 @@ serve(async (req) => {
       newStatus = 'paid'
       paidAt = new Date().toISOString()
       console.log('[tpay-webhook] Payment successful!')
+
+      // Send Slack notification for successful payment
+      await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' })
     } else if (trStatus === TPAY_STATUS.FALSE || trStatus === 'error' || trStatus === 'failed') {
       // Keep as pending or mark as failed if needed
       console.log('[tpay-webhook] Payment failed')
