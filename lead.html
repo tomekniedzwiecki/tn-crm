@@ -1420,7 +1420,19 @@
                 }
             }
 
-            document.getElementById('field-value').value = lead.deal_value || '';
+            // Set deal_value - use offer price as default if deal_value is empty
+            if (lead.deal_value) {
+                document.getElementById('field-value').value = lead.deal_value;
+            } else {
+                // Try to get price from selected offer
+                const offerSelect = document.getElementById('field-offer');
+                const selectedOption = offerSelect.options[offerSelect.selectedIndex];
+                if (selectedOption && selectedOption.dataset.price && selectedOption.dataset.price !== '0') {
+                    document.getElementById('field-value').value = selectedOption.dataset.price;
+                } else {
+                    document.getElementById('field-value').value = '';
+                }
+            }
             document.getElementById('field-expected-close').value = lead.expected_close || '';
             document.getElementById('field-assigned-to').value = lead.assigned_to || '';
             document.getElementById('field-notes').value = '';
