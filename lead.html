@@ -371,6 +371,15 @@
                     <span class="text-zinc-700 hidden sm:inline">/</span>
                     <span id="breadcrumb-email" class="text-white font-medium truncate max-w-[150px] md:max-w-[200px]">...</span>
                 </div>
+                <!-- Lead Navigation -->
+                <div class="flex items-center gap-1 ml-2 border-l border-white/10 pl-3">
+                    <button id="prev-lead-btn" disabled class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500" title="Poprzedni lead">
+                        <i class="ph ph-caret-left text-lg"></i>
+                    </button>
+                    <button id="next-lead-btn" disabled class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500" title="Następny lead">
+                        <i class="ph ph-caret-right text-lg"></i>
+                    </button>
+                </div>
             </div>
             <div class="flex items-center gap-2 md:gap-3">
                 <div id="save-status" class="hidden md:flex items-center gap-2 text-xs text-zinc-500 mr-2">
@@ -3251,6 +3260,58 @@
         window.filterEmails = filterEmails;
         window.sendEmailToLead = sendEmailToLead;
 
+        // Lead navigation (prev/next)
+        async function setupLeadNavigation() {
+            const currentId = getLeadId();
+            if (!currentId || !lead) return;
+
+            const createdAt = lead.created_at;
+            const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                ? `${getBasePath()}/lead.html`
+                : '/lead';
+
+            // Get previous lead (newer - created after current)
+            const { data: prevLead } = await supabaseClient
+                .from('leads')
+                .select('id')
+                .gt('created_at', createdAt)
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .single();
+
+            // Get next lead (older - created before current)
+            const { data: nextLead } = await supabaseClient
+                .from('leads')
+                .select('id')
+                .lt('created_at', createdAt)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            const prevBtn = document.getElementById('prev-lead-btn');
+            const nextBtn = document.getElementById('next-lead-btn');
+
+            if (prevLead) {
+                prevBtn.disabled = false;
+                prevBtn.onclick = () => { window.location.href = `${basePath}?id=${prevLead.id}`; };
+            }
+
+            if (nextLead) {
+                nextBtn.disabled = false;
+                nextBtn.onclick = () => { window.location.href = `${basePath}?id=${nextLead.id}`; };
+            }
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+                if (e.key === 'ArrowLeft' && prevLead) {
+                    window.location.href = `${basePath}?id=${prevLead.id}`;
+                } else if (e.key === 'ArrowRight' && nextLead) {
+                    window.location.href = `${basePath}?id=${nextLead.id}`;
+                }
+            });
+        }
+
         async function init() {
             const session = await checkAuth();
             if (session) {
@@ -3260,6 +3321,8 @@
                 await loadMeetings();
                 // Reload activities after clientOffer is loaded to include offer views
                 await loadActivities();
+                // Setup lead navigation after lead is loaded
+                await setupLeadNavigation();
             }
         }
         init();
