@@ -1324,28 +1324,15 @@
         }
 
         async function copyEmailSignature() {
-            // Select the preview element and copy as rendered HTML
-            const preview = document.getElementById('email-signature-preview');
-            if (!preview) return;
+            const name = document.getElementById('edit-member-name').value.trim() || 'Imię Nazwisko';
+            const html = generateEmailSignatureHTML(name);
 
             try {
-                // Create a range and select the preview content
-                const range = document.createRange();
-                range.selectNodeContents(preview);
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(range);
-
-                // Copy the selection (rendered HTML)
-                document.execCommand('copy');
-
-                // Deselect
-                selection.removeAllRanges();
-
-                showToast('Stopka skopiowana! Wklej do Gmail.');
+                await navigator.clipboard.writeText(html);
+                showToast('HTML skopiowany do schowka!');
             } catch (err) {
                 console.error('Failed to copy:', err);
-                alert('Nie udało się skopiować. Zaznacz stopkę ręcznie i skopiuj (Ctrl+C).');
+                alert('Nie udało się skopiować.');
             }
         }
 
@@ -1409,29 +1396,15 @@
 
         async function copyAccountSignature() {
             if (!currentMember) return;
-
-            // Select the preview element and copy as rendered HTML
-            const preview = document.getElementById('account-signature-preview');
-            if (!preview) return;
+            const name = currentMember.name || 'Imię Nazwisko';
+            const html = generateEmailSignatureHTML(name);
 
             try {
-                // Create a range and select the preview content
-                const range = document.createRange();
-                range.selectNodeContents(preview);
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(range);
-
-                // Copy the selection (rendered HTML)
-                document.execCommand('copy');
-
-                // Deselect
-                selection.removeAllRanges();
-
-                showToast('Stopka skopiowana! Wklej do Gmail.');
+                await navigator.clipboard.writeText(html);
+                showToast('HTML skopiowany do schowka!');
             } catch (err) {
                 console.error('Failed to copy:', err);
-                alert('Nie udało się skopiować. Zaznacz stopkę ręcznie i skopiuj (Ctrl+C).');
+                alert('Nie udało się skopiować.');
             }
         }
 
