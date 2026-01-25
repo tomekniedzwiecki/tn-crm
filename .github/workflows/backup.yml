@@ -1,0 +1,28 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Codziennie o 3:00 UTC (4:00 czasu polskiego)
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Możliwość ręcznego uruchomienia
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Create backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          pg_dump "$SUPABASE_DB_URL" | gzip > "backup-$TIMESTAMP.sql.gz"
+
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: "*.sql.gz"
+          retention-days: 30
