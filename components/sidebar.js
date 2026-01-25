@@ -37,6 +37,7 @@ const NAV_ITEMS = [
     { id: 'offers', icon: 'ph-package', label: 'Oferty', adminOnly: false },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia', adminOnly: false },
     { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie', adminOnly: false },
+    { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki', adminOnly: false },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
     { id: 'audit', icon: 'ph-shield-check', label: 'Aktywność', adminOnly: true },
 ];
@@ -166,6 +167,15 @@ const SIDEBAR_CSS = `
         100% { transform: scale(1); }
     }
     nav a:hover .ph-shield-check { animation: shieldPulse 0.5s ease-out; }
+
+    @keyframes noteWiggle {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(-5deg); }
+        50% { transform: rotate(5deg); }
+        75% { transform: rotate(-3deg); }
+        100% { transform: rotate(0deg); }
+    }
+    nav a:hover .ph-note-pencil { animation: noteWiggle 0.4s ease-out; }
 
     /* App switcher dropdown */
     .app-switcher-dropdown {

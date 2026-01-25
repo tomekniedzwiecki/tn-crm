@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM | Notatki</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        /* Note card colors */
+        .note-zinc { background: rgba(39, 39, 42, 0.5); border-color: rgba(63, 63, 70, 0.5); }
+        .note-blue { background: rgba(30, 58, 138, 0.3); border-color: rgba(59, 130, 246, 0.3); }
+        .note-emerald { background: rgba(6, 78, 59, 0.3); border-color: rgba(16, 185, 129, 0.3); }
+        .note-amber { background: rgba(120, 53, 15, 0.3); border-color: rgba(245, 158, 11, 0.3); }
+        .note-pink { background: rgba(131, 24, 67, 0.3); border-color: rgba(236, 72, 153, 0.3); }
+        .note-violet { background: rgba(76, 29, 149, 0.3); border-color: rgba(139, 92, 246, 0.3); }
+
+        .note-card {
+            transition: all 0.2s ease;
+        }
+        .note-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Color picker */
+        .color-option {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            border: 2px solid transparent;
+        }
+        .color-option:hover {
+            transform: scale(1.15);
+        }
+        .color-option.selected {
+            border-color: white;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+        }
+
+        .color-zinc { background: #3f3f46; }
+        .color-blue { background: #3b82f6; }
+        .color-emerald { background: #10b981; }
+        .color-amber { background: #f59e0b; }
+        .color-pink { background: #ec4899; }
+        .color-violet { background: #8b5cf6; }
+
+        /* Masonry-like grid */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Textarea auto-resize */
+        textarea {
+            resize: none;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">notatki</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-4">
+                <div class="text-zinc-600 text-xs hidden md:block">
+                    <kbd class="bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">Ctrl</kbd>
+                    <span class="mx-0.5">+</span>
+                    <kbd class="bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">N</kbd>
+                    <span class="ml-1 text-zinc-500">nowa notatka</span>
+                </div>
+                <button onclick="openNoteModal()" class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    <i class="ph ph-plus md:mr-1"></i>
+                    <span class="hidden md:inline">Nowa notatka</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-6xl mx-auto animate-enter">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Notatki</h1>
+                        <p class="text-zinc-500">Twoje prywatne notatki. Tylko Ty je widzisz.</p>
+                    </div>
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-3 text-center min-w-[80px]">
+                        <div id="stat-total" class="text-2xl font-semibold text-white">0</div>
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Notatek</div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="mb-6">
+                    <div class="relative max-w-md">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                        <input type="text" id="search-input" placeholder="Szukaj w notatkach..." class="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded-lg pl-10 pr-4 py-2.5 focus:border-zinc-600 focus:outline-none transition-all placeholder:text-zinc-600">
+                    </div>
+                </div>
+
+                <!-- Notes grid -->
+                <div id="notes-grid" class="notes-grid">
+                    <!-- Notes will be rendered here -->
+                </div>
+
+                <!-- Empty state -->
+                <div id="empty-state" class="hidden text-center py-20">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-note-pencil text-3xl text-zinc-600"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-zinc-400 mb-2">Brak notatek</h3>
+                    <p class="text-zinc-600 mb-4">Utwórz pierwszą notatkę klikając przycisk powyżej lub naciskając Ctrl+N</p>
+                    <button onclick="openNoteModal()" class="text-white hover:text-zinc-300 text-sm">
+                        <i class="ph ph-plus mr-1"></i>Nowa notatka
+                    </button>
+                </div>
+
+                <!-- Loading state -->
+                <div id="loading-state" class="text-center py-20">
+                    <div class="w-8 h-8 mx-auto border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Note Modal -->
+    <div id="note-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-xl shadow-2xl">
+            <!-- Modal header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h3 id="modal-title" class="text-lg font-semibold text-white">Nowa notatka</h3>
+                <button onclick="closeNoteModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal body -->
+            <form id="note-form" class="p-5">
+                <input type="hidden" id="note-id">
+
+                <!-- Title -->
+                <div class="mb-4">
+                    <input type="text" id="note-title" placeholder="Tytuł (opcjonalnie)" class="w-full bg-zinc-800/50 border border-zinc-700 text-white text-lg font-medium rounded-lg px-4 py-3 focus:border-zinc-500 focus:outline-none transition-all placeholder:text-zinc-600">
+                </div>
+
+                <!-- Content -->
+                <div class="mb-4">
+                    <textarea id="note-content" rows="6" placeholder="Treść notatki..." class="w-full bg-zinc-800/50 border border-zinc-700 text-zinc-200 rounded-lg px-4 py-3 focus:border-zinc-500 focus:outline-none transition-all placeholder:text-zinc-600" required></textarea>
+                </div>
+
+                <!-- Color picker -->
+                <div class="mb-4">
+                    <label class="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Kolor</label>
+                    <div class="flex gap-2">
+                        <button type="button" data-color="zinc" class="color-option color-zinc selected" onclick="selectColor('zinc')"></button>
+                        <button type="button" data-color="blue" class="color-option color-blue" onclick="selectColor('blue')"></button>
+                        <button type="button" data-color="emerald" class="color-option color-emerald" onclick="selectColor('emerald')"></button>
+                        <button type="button" data-color="amber" class="color-option color-amber" onclick="selectColor('amber')"></button>
+                        <button type="button" data-color="pink" class="color-option color-pink" onclick="selectColor('pink')"></button>
+                        <button type="button" data-color="violet" class="color-option color-violet" onclick="selectColor('violet')"></button>
+                    </div>
+                </div>
+
+                <!-- Pin checkbox -->
+                <div class="mb-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="note-pinned" class="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-white focus:ring-0 focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400">Przypnij na górze</span>
+                    </label>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-between">
+                    <button type="button" id="delete-btn" onclick="deleteNote()" class="hidden text-red-400 hover:text-red-300 text-sm font-medium">
+                        <i class="ph ph-trash mr-1"></i>Usuń
+                    </button>
+                    <div class="flex gap-3 ml-auto">
+                        <button type="button" onclick="closeNoteModal()" class="px-4 py-2 text-zinc-400 hover:text-white transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="bg-white text-black hover:bg-zinc-200 px-5 py-2 rounded-lg font-medium transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
+        <i class="ph ph-check-circle text-emerald-400"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Supabase config
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY2MTQ3ODUsImV4cCI6MjA1MjE5MDc4NX0.AGKJ1BqS4j_jE2Esq8ho0SgaVAuHPpIWneQsGSvdpmA';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let notes = [];
+        let currentMember = null;
+        let selectedColor = 'zinc';
+        let searchTimeout = null;
+
+        // Auth check
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('id, role, name, color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (teamMember) {
+                currentMember = teamMember;
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+                Sidebar.showAdminNav(teamMember.role === 'admin');
+            }
+
+            return session;
+        }
+
+        // Load notes
+        async function loadNotes(search = '') {
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('notes-grid').innerHTML = '';
+            document.getElementById('empty-state').classList.add('hidden');
+
+            let query = supabaseClient
+                .from('notes')
+                .select('*')
+                .order('is_pinned', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            if (search) {
+                query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+            }
+
+            const { data, error } = await query;
+
+            document.getElementById('loading-state').classList.add('hidden');
+
+            if (error) {
+                console.error('Error loading notes:', error);
+                showToast('Błąd ładowania notatek', 'error');
+                return;
+            }
+
+            notes = data || [];
+            document.getElementById('stat-total').textContent = notes.length;
+
+            if (notes.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+            } else {
+                renderNotes();
+            }
+        }
+
+        // Render notes
+        function renderNotes() {
+            const grid = document.getElementById('notes-grid');
+            grid.innerHTML = notes.map(note => {
+                const title = note.title || '';
+                const content = note.content || '';
+                const preview = content.length > 200 ? content.substring(0, 200) + '...' : content;
+                const date = new Date(note.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+
+                return `
+                    <div class="note-card note-${note.color} border rounded-xl p-4 cursor-pointer group" onclick="editNote('${note.id}')">
+                        <div class="flex items-start justify-between mb-2">
+                            ${note.is_pinned ? '<i class="ph-fill ph-push-pin text-zinc-400 text-sm"></i>' : '<span></span>'}
+                            <span class="text-xs text-zinc-500">${date}</span>
+                        </div>
+                        ${title ? `<h3 class="font-medium text-white mb-2">${escapeHtml(title)}</h3>` : ''}
+                        <p class="text-sm text-zinc-400 whitespace-pre-wrap break-words">${escapeHtml(preview)}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Open modal
+        function openNoteModal(noteId = null) {
+            const modal = document.getElementById('note-modal');
+            const form = document.getElementById('note-form');
+            const deleteBtn = document.getElementById('delete-btn');
+
+            form.reset();
+            document.getElementById('note-id').value = '';
+            selectColor('zinc');
+
+            if (noteId) {
+                const note = notes.find(n => n.id === noteId);
+                if (note) {
+                    document.getElementById('modal-title').textContent = 'Edytuj notatkę';
+                    document.getElementById('note-id').value = note.id;
+                    document.getElementById('note-title').value = note.title || '';
+                    document.getElementById('note-content').value = note.content || '';
+                    document.getElementById('note-pinned').checked = note.is_pinned;
+                    selectColor(note.color || 'zinc');
+                    deleteBtn.classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('modal-title').textContent = 'Nowa notatka';
+                deleteBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('note-content').focus();
+        }
+
+        function closeNoteModal() {
+            const modal = document.getElementById('note-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function editNote(noteId) {
+            openNoteModal(noteId);
+        }
+
+        // Color selection
+        function selectColor(color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.color === color);
+            });
+        }
+
+        // Save note
+        document.getElementById('note-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('note-id').value;
+            const title = document.getElementById('note-title').value.trim();
+            const content = document.getElementById('note-content').value.trim();
+            const isPinned = document.getElementById('note-pinned').checked;
+
+            if (!content) {
+                showToast('Treść notatki jest wymagana', 'error');
+                return;
+            }
+
+            const noteData = {
+                title: title || null,
+                content,
+                color: selectedColor,
+                is_pinned: isPinned
+            };
+
+            let result;
+            if (id) {
+                // Update
+                result = await supabaseClient
+                    .from('notes')
+                    .update(noteData)
+                    .eq('id', id)
+                    .select()
+                    .single();
+            } else {
+                // Insert
+                noteData.created_by = currentMember?.id;
+                result = await supabaseClient
+                    .from('notes')
+                    .insert(noteData)
+                    .select()
+                    .single();
+            }
+
+            if (result.error) {
+                console.error('Error saving note:', result.error);
+                showToast('Błąd zapisu notatki', 'error');
+                return;
+            }
+
+            closeNoteModal();
+            await loadNotes(document.getElementById('search-input').value);
+            showToast(id ? 'Notatka zaktualizowana' : 'Notatka utworzona');
+        });
+
+        // Delete note
+        async function deleteNote() {
+            const id = document.getElementById('note-id').value;
+            if (!id) return;
+
+            if (!confirm('Czy na pewno chcesz usunąć tę notatkę?')) return;
+
+            const { error } = await supabaseClient
+                .from('notes')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error deleting note:', error);
+                showToast('Błąd usuwania notatki', 'error');
+                return;
+            }
+
+            closeNoteModal();
+            await loadNotes(document.getElementById('search-input').value);
+            showToast('Notatka usunięta');
+        }
+
+        // Search
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadNotes(e.target.value);
+            }, 300);
+        });
+
+        // Toast
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = toast.querySelector('i');
+
+            if (type === 'error') {
+                icon.className = 'ph ph-x-circle text-red-400';
+            } else {
+                icon.className = 'ph ph-check-circle text-emerald-400';
+            }
+
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+N - new note
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                openNoteModal();
+            }
+            // Escape - close modal
+            if (e.key === 'Escape') {
+                closeNoteModal();
+            }
+        });
+
+        // Init
+        async function init() {
+            Sidebar.render();
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const session = await checkAuth();
+            if (!session) return;
+
+            await loadNotes();
+        }
+
+        init();
+    </script>
+</body>
+</html>
