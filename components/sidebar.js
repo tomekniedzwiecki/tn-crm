@@ -37,7 +37,6 @@ const NAV_ITEMS = [
     { id: 'offers', icon: 'ph-package', label: 'Oferty', adminOnly: false },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia', adminOnly: false },
     { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie', adminOnly: false },
-    { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki', adminOnly: false },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
     { id: 'audit', icon: 'ph-shield-check', label: 'Aktywność', adminOnly: true },
 ];

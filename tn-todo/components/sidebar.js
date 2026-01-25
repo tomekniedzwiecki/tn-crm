@@ -32,6 +32,7 @@ function getAppPath(appId) {
 const NAV_ITEMS = [
     { id: 'boards', icon: 'ph-kanban', label: 'Tablice', adminOnly: false },
     { id: 'my-tasks', icon: 'ph-user-circle', label: 'Moje zadania', adminOnly: false },
+    { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki', adminOnly: false },
 ];
 
 // ============================================
@@ -98,6 +99,15 @@ const SIDEBAR_CSS = `
         100% { transform: scale(1); }
     }
     nav a:hover .ph-user-circle { animation: userBounce 0.4s ease-out; }
+
+    @keyframes noteWiggle {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(-5deg); }
+        50% { transform: rotate(5deg); }
+        75% { transform: rotate(-3deg); }
+        100% { transform: rotate(0deg); }
+    }
+    nav a:hover .ph-note-pencil { animation: noteWiggle 0.4s ease-out; }
 
     /* App switcher dropdown */
     .app-switcher-dropdown {

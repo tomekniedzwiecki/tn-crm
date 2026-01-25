@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS notes (
     content TEXT NOT NULL,
     color TEXT DEFAULT 'zinc' CHECK (color IN ('zinc', 'blue', 'emerald', 'amber', 'pink', 'violet')),
     is_pinned BOOLEAN DEFAULT false,
+    position INTEGER DEFAULT 0,
     created_by UUID NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -17,8 +18,8 @@ CREATE TABLE IF NOT EXISTS notes (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_notes_created_by ON notes(created_by);
-CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned DESC, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_position ON notes(created_by, position);
+CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned DESC, position ASC);
 
 -- Trigger for updated_at
 DROP TRIGGER IF EXISTS update_notes_updated_at ON notes;
