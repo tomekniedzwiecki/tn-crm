@@ -668,13 +668,11 @@
         function formatDateShort(dateString) {
             const date = new Date(dateString);
             const now = new Date();
-            const diff = now - date;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const days = Math.floor(hours / 24);
+            const isToday = date.toDateString() === now.toDateString();
 
-            if (hours < 1) return 'teraz';
-            if (hours < 24) return `${hours}h temu`;
-            if (days < 7) return `${days}d temu`;
+            if (isToday) {
+                return date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+            }
             return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
         }
 
