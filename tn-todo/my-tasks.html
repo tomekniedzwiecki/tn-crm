@@ -164,7 +164,7 @@
         async function loadMyTasks() {
             if (!currentTeamMember) return;
 
-            // Load board tasks
+            // Load board tasks (tasks with list_id - linked to boards)
             const { data: boardTasks, error: boardError } = await supabaseClient
                 .from('todo_tasks')
                 .select(`
@@ -176,7 +176,7 @@
                 `)
                 .eq('assigned_to', currentTeamMember.id)
                 .eq('is_completed', false)
-                .or('is_personal.is.null,is_personal.eq.false')
+                .not('list_id', 'is', null)
                 .order('due_date', { ascending: true, nullsFirst: false });
 
             if (boardError) {
@@ -185,13 +185,13 @@
                 tasks = boardTasks || [];
             }
 
-            // Load personal tasks
+            // Load personal tasks (tasks with is_personal=true OR list_id=null)
             const { data: personal, error: personalError } = await supabaseClient
                 .from('todo_tasks')
                 .select('*')
                 .eq('assigned_to', currentTeamMember.id)
-                .eq('is_personal', true)
                 .eq('is_completed', false)
+                .is('list_id', null)
                 .order('due_date', { ascending: true, nullsFirst: false });
 
             if (personalError) {
