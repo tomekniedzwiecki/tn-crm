@@ -1,5 +1,5 @@
 // TN CRM Service Worker
-const CACHE_NAME = 'tn-crm-v1';
+const CACHE_NAME = 'tn-crm-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -31,20 +31,33 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - network first, fallback to cache for static assets only
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip API calls and external resources
   const url = new URL(event.request.url);
+
+  // Skip external resources
   if (url.origin !== location.origin) return;
+
+  // Skip API calls and auth endpoints
   if (url.pathname.includes('/rest/') || url.pathname.includes('/auth/')) return;
+
+  // Skip HTML pages (require authentication) - only cache static assets
+  if (url.pathname.endsWith('.html') || url.pathname === '/' || !url.pathname.includes('.')) return;
+
+  // Skip requests with authorization headers (authenticated requests)
+  if (event.request.headers.get('authorization')) return;
+
+  // Only cache static assets (js, css, images, fonts)
+  const isStaticAsset = /\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)$/i.test(url.pathname);
+  if (!isStaticAsset) return;
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone and cache successful responses
+        // Clone and cache successful responses for static assets only
         if (response.ok) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {

@@ -2,9 +2,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts"
 
+// Tpay webhook doesn't need CORS - it's server-to-server
+// But we keep minimal headers for compatibility
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': 'https://api.tpay.com',
+  'Access-Control-Allow-Headers': 'content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // Tpay notification statuses
@@ -188,13 +191,13 @@ serve(async (req) => {
     const trMd5sum = notification.md5sum || ''
 
     if (!trId) {
-      console.error('[tpay-webhook] Missing transaction ID')
-      return new Response('TRUE', { headers: corsHeaders, status: 200 })
+      console.error('[tpay-webhook] Missing transaction ID - invalid request')
+      return new Response('FALSE', { headers: corsHeaders, status: 400 })
     }
 
     console.log('[tpay-webhook] Transaction:', trId, 'Status:', trStatus, 'OrderId:', trCrc)
 
-    // Optional: Verify signature (if security code is set)
+    // Verify signature (if security code is set)
     if (tpaySecurityCode && tpayMerchantId && trMd5sum) {
       const isValid = verifyTpaySignature(
         tpayMerchantId,
@@ -206,9 +209,9 @@ serve(async (req) => {
       )
 
       if (!isValid) {
-        console.error('[tpay-webhook] Invalid signature!')
-        // Still return TRUE to prevent Tpay from retrying
-        return new Response('TRUE', { headers: corsHeaders, status: 200 })
+        console.error('[tpay-webhook] Invalid signature - rejecting request!')
+        // Return 403 Forbidden for invalid signature - this is a security issue
+        return new Response('FALSE', { headers: corsHeaders, status: 403 })
       }
     }
 
