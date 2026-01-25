@@ -49,6 +49,12 @@
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin { animation: spin 0.8s linear infinite; }
+
         .filter-input {
             background: #0a0a0a;
             border: 1px solid rgba(255,255,255,0.1);
@@ -87,6 +93,16 @@
                     <i class="ph ph-trash"></i>
                     <span id="delete-selected-count" class="hidden md:inline">Usuń (0)</span>
                 </button>
+                <!-- Refresh controls -->
+                <div class="flex items-center gap-1 border-r border-zinc-800 pr-2 mr-1">
+                    <button id="refresh-btn" onclick="refreshLeads()" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-2.5 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5" title="Odśwież leady">
+                        <i class="ph ph-arrows-clockwise text-base" id="refresh-icon"></i>
+                        <span id="refresh-countdown" class="hidden text-[10px] text-zinc-500 font-mono w-4"></span>
+                    </button>
+                    <button id="auto-refresh-btn" onclick="toggleAutoRefresh()" class="text-zinc-500 hover:text-white border border-zinc-800 hover:border-zinc-700 px-2 py-2 rounded-lg text-xs transition-all flex items-center" title="Auto-odświeżanie co 30s">
+                        <i class="ph ph-timer text-base"></i>
+                    </button>
+                </div>
                 <button id="export-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 md:px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
                     <i class="ph ph-download-simple"></i>
                     <span class="hidden md:inline">Export</span>
@@ -1617,6 +1633,71 @@
             if (data && data[0]) {
                 closeUnifiedSearch();
                 openLead(data[0].id);
+            }
+        }
+
+        // Auto-refresh variables
+        let autoRefreshInterval = null;
+        let countdownInterval = null;
+        let countdownValue = 30;
+        const AUTO_REFRESH_SECONDS = 30;
+
+        async function refreshLeads() {
+            const icon = document.getElementById('refresh-icon');
+            const btn = document.getElementById('refresh-btn');
+
+            // Add spinning animation
+            icon.classList.add('animate-spin');
+            btn.disabled = true;
+
+            await loadLeads();
+
+            // Remove animation after 500ms
+            setTimeout(() => {
+                icon.classList.remove('animate-spin');
+                btn.disabled = false;
+            }, 500);
+
+            // Reset countdown if auto-refresh is active
+            if (autoRefreshInterval) {
+                countdownValue = AUTO_REFRESH_SECONDS;
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('auto-refresh-btn');
+            const countdownEl = document.getElementById('refresh-countdown');
+
+            if (autoRefreshInterval) {
+                // Turn off
+                clearInterval(autoRefreshInterval);
+                clearInterval(countdownInterval);
+                autoRefreshInterval = null;
+                countdownInterval = null;
+                btn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30');
+                btn.classList.add('text-zinc-500', 'border-zinc-800');
+                countdownEl.classList.add('hidden');
+            } else {
+                // Turn on
+                countdownValue = AUTO_REFRESH_SECONDS;
+                countdownEl.textContent = countdownValue;
+                countdownEl.classList.remove('hidden');
+                btn.classList.remove('text-zinc-500', 'border-zinc-800');
+                btn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30');
+
+                // Update countdown every second
+                countdownInterval = setInterval(() => {
+                    countdownValue--;
+                    countdownEl.textContent = countdownValue;
+                    if (countdownValue <= 0) {
+                        countdownValue = AUTO_REFRESH_SECONDS;
+                    }
+                }, 1000);
+
+                // Refresh every 30 seconds
+                autoRefreshInterval = setInterval(() => {
+                    refreshLeads();
+                }, AUTO_REFRESH_SECONDS * 1000);
             }
         }
 
