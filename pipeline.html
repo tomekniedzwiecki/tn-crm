@@ -447,6 +447,15 @@
             return new Intl.NumberFormat('pl-PL').format(value) + ' PLN';
         }
 
+        // Get lead value - from deal_value or offer price
+        function getLeadValue(lead) {
+            if (lead.deal_value) return parseFloat(lead.deal_value);
+            if (lead.offer_id && offersMap[lead.offer_id]) {
+                return parseFloat(offersMap[lead.offer_id].price) || 0;
+            }
+            return 0;
+        }
+
         function getStageColor(stageId) {
             const stage = STAGES.find(s => s.id === stageId);
             return stage ? stage.color : 'zinc';
@@ -499,7 +508,7 @@
                 if (sourceFilter && getSource(lead) !== sourceFilter) return false;
 
                 // Value range filter
-                const dealValue = parseFloat(lead.deal_value) || 0;
+                const dealValue = getLeadValue(lead);
                 if (minValue && dealValue < parseFloat(minValue)) return false;
                 if (maxValue && dealValue > parseFloat(maxValue)) return false;
 
@@ -601,7 +610,7 @@
             // Calculate totals for filtered leads
             let totalValue = 0;
             filteredLeads.forEach(lead => {
-                if (lead.deal_value) totalValue += parseFloat(lead.deal_value);
+                totalValue += getLeadValue(lead);
             });
             document.getElementById('total-value').textContent = formatCurrency(totalValue);
             document.getElementById('total-deals').textContent = `${filteredLeads.length} leadów`;
@@ -611,7 +620,7 @@
                 const stageLeads = filteredLeads
                     .filter(l => (l.status || 'new') === stage.id)
                     .sort((a, b) => (a.pipeline_position || 0) - (b.pipeline_position || 0));
-                const stageValue = stageLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
+                const stageValue = stageLeads.reduce((sum, l) => sum + getLeadValue(l), 0);
 
                 const colorClasses = {
                     emerald: { border: 'border-emerald-500/20', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
@@ -743,10 +752,10 @@
                             <span class="text-sm text-amber-400/80 truncate">${offer.name}</span>
                         </div>
                     ` : ''}
-                    ${lead.deal_value ? `
+                    ${getLeadValue(lead) > 0 ? `
                         <div class="flex items-center gap-2 mt-2">
                             <div class="w-2 h-2 rounded-full bg-zinc-600"></div>
-                            <span class="text-sm font-mono text-zinc-400">${formatCurrency(lead.deal_value)}</span>
+                            <span class="text-sm font-mono text-zinc-400">${formatCurrency(getLeadValue(lead))}</span>
                         </div>
                     ` : ''}
                     <div class="flex items-center justify-between mt-3 gap-2">
