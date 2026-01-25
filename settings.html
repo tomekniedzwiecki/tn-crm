@@ -1324,26 +1324,28 @@
         }
 
         async function copyEmailSignature() {
-            const name = document.getElementById('edit-member-name').value.trim() || 'Imię Nazwisko';
-            const html = generateEmailSignatureHTML(name);
+            // Select the preview element and copy as rendered HTML
+            const preview = document.getElementById('email-signature-preview');
+            if (!preview) return;
 
             try {
-                await navigator.clipboard.write([
-                    new ClipboardItem({
-                        'text/html': new Blob([html], { type: 'text/html' }),
-                        'text/plain': new Blob([html], { type: 'text/plain' })
-                    })
-                ]);
-                showToast('Stopka skopiowana do schowka!');
+                // Create a range and select the preview content
+                const range = document.createRange();
+                range.selectNodeContents(preview);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // Copy the selection (rendered HTML)
+                document.execCommand('copy');
+
+                // Deselect
+                selection.removeAllRanges();
+
+                showToast('Stopka skopiowana! Wklej do Gmail.');
             } catch (err) {
-                // Fallback - copy as text
-                try {
-                    await navigator.clipboard.writeText(html);
-                    showToast('HTML stopki skopiowany');
-                } catch (e) {
-                    console.error('Failed to copy:', e);
-                    alert('Nie udało się skopiować. Zaznacz stopkę ręcznie i skopiuj.');
-                }
+                console.error('Failed to copy:', err);
+                alert('Nie udało się skopiować. Zaznacz stopkę ręcznie i skopiuj (Ctrl+C).');
             }
         }
 
@@ -1407,25 +1409,29 @@
 
         async function copyAccountSignature() {
             if (!currentMember) return;
-            const name = currentMember.name || 'Imię Nazwisko';
-            const html = generateEmailSignatureHTML(name);
+
+            // Select the preview element and copy as rendered HTML
+            const preview = document.getElementById('account-signature-preview');
+            if (!preview) return;
 
             try {
-                await navigator.clipboard.write([
-                    new ClipboardItem({
-                        'text/html': new Blob([html], { type: 'text/html' }),
-                        'text/plain': new Blob([html], { type: 'text/plain' })
-                    })
-                ]);
-                showToast('Stopka skopiowana do schowka!');
+                // Create a range and select the preview content
+                const range = document.createRange();
+                range.selectNodeContents(preview);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // Copy the selection (rendered HTML)
+                document.execCommand('copy');
+
+                // Deselect
+                selection.removeAllRanges();
+
+                showToast('Stopka skopiowana! Wklej do Gmail.');
             } catch (err) {
-                try {
-                    await navigator.clipboard.writeText(html);
-                    showToast('HTML stopki skopiowany');
-                } catch (e) {
-                    console.error('Failed to copy:', e);
-                    alert('Nie udało się skopiować. Zaznacz stopkę ręcznie i skopiuj.');
-                }
+                console.error('Failed to copy:', err);
+                alert('Nie udało się skopiować. Zaznacz stopkę ręcznie i skopiuj (Ctrl+C).');
             }
         }
 
