@@ -67,7 +67,7 @@ serve(async (req) => {
         positions: [{
           name: offer.name + (offer.description ? ' - ' + offer.description.substring(0, 50) : ''),
           tax: 23,
-          total_price_gross: offer.price * 1.23,
+          total_price_gross: offer.price, // offer.price is already gross (brutto)
           quantity: 1
         }]
       }

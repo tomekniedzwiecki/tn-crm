@@ -346,7 +346,7 @@ function formatProformaMessage(data: {
   ]
 
   if (data.offer_price) {
-    fields.push({ type: 'mrkdwn', text: `*Wartość netto:*\n${data.offer_price.toLocaleString('pl-PL')} PLN` })
+    fields.push({ type: 'mrkdwn', text: `*Wartość brutto:*\n${data.offer_price.toLocaleString('pl-PL')} PLN` })
   }
 
   fields.push({ type: 'mrkdwn', text: `*Wygenerowano:*\n${generatorText}` })
