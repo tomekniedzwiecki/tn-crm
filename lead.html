@@ -617,6 +617,63 @@
                                 </div>
                             </div>
                         </details>
+
+                        <!-- Purchase History -->
+                        <details id="purchase-history-section" class="group hidden">
+                            <summary class="bg-gradient-to-br from-green-950/30 to-zinc-900/40 rounded-lg border border-green-500/20 p-4 cursor-pointer list-none flex items-center justify-between hover:bg-green-950/40 transition-colors">
+                                <span class="text-sm text-white flex items-center gap-2">
+                                    <i class="ph ph-shopping-cart text-green-400"></i>
+                                    Historia zakupów
+                                    <span id="purchase-total-badge" class="text-[10px] font-mono text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">0 PLN</span>
+                                </span>
+                                <i class="ph ph-caret-down text-green-500 group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <div class="bg-green-950/20 rounded-b-lg border border-t-0 border-green-500/20 p-4 -mt-1">
+
+                                <!-- Historical LTV (outreach_contacts) -->
+                                <div id="historical-ltv-section" class="mb-4 hidden">
+                                    <div class="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <i class="ph ph-database text-green-500"></i>
+                                        Historyczne zakupy (baza klientów)
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                            <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">LTV</div>
+                                            <div id="ltv-value" class="text-green-400 text-lg font-bold">0 PLN</div>
+                                        </div>
+                                        <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                            <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Transakcje</div>
+                                            <div id="ltv-transactions" class="text-white text-lg font-bold">0</div>
+                                        </div>
+                                        <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                            <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Pierwszy zakup</div>
+                                            <div id="ltv-first" class="text-zinc-300 text-sm">-</div>
+                                        </div>
+                                        <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                            <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Ostatni zakup</div>
+                                            <div id="ltv-last" class="text-zinc-300 text-sm">-</div>
+                                        </div>
+                                        <div class="col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                            <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Produkty</div>
+                                            <div id="ltv-products" class="text-zinc-300 text-sm">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CRM Orders -->
+                                <div id="crm-orders-section">
+                                    <div class="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <i class="ph ph-receipt text-green-500"></i>
+                                        Zamówienia w systemie
+                                        <span id="crm-orders-count" class="text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded text-[9px]">0</span>
+                                    </div>
+                                    <div id="crm-orders-list" class="space-y-2">
+                                        <div class="text-center text-zinc-600 text-xs py-4">Brak zamówień</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </details>
                     </div>
 
                     <!-- Right Column - Meetings & Offers -->
@@ -3272,6 +3329,141 @@
         window.filterEmails = filterEmails;
         window.sendEmailToLead = sendEmailToLead;
 
+        // ============ PURCHASE HISTORY ============
+
+        let historicalLTV = null;
+        let crmOrders = [];
+
+        async function loadPurchaseHistory() {
+            if (!lead?.email) return;
+
+            await Promise.all([
+                loadHistoricalLTV(),
+                loadCrmOrders()
+            ]);
+
+            updatePurchaseHistorySection();
+        }
+
+        async function loadHistoricalLTV() {
+            if (!lead?.email) return;
+
+            const { data, error } = await supabaseClient
+                .from('outreach_contacts')
+                .select('*')
+                .ilike('email', lead.email)
+                .limit(1)
+                .single();
+
+            if (!error && data) {
+                historicalLTV = data;
+            }
+        }
+
+        async function loadCrmOrders() {
+            if (!lead) return;
+
+            // Query by lead_id OR by email
+            let query = supabaseClient
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (lead.email) {
+                query = query.or(`lead_id.eq.${lead.id},customer_email.ilike.${lead.email.toLowerCase()}`);
+            } else {
+                query = query.eq('lead_id', lead.id);
+            }
+
+            const { data, error } = await query;
+
+            if (!error && data) {
+                crmOrders = data;
+            }
+        }
+
+        function updatePurchaseHistorySection() {
+            const section = document.getElementById('purchase-history-section');
+            const totalBadge = document.getElementById('purchase-total-badge');
+            const ltvSection = document.getElementById('historical-ltv-section');
+            const ordersSection = document.getElementById('crm-orders-section');
+            const ordersList = document.getElementById('crm-orders-list');
+            const ordersCount = document.getElementById('crm-orders-count');
+
+            // Calculate totals
+            let totalLTV = historicalLTV?.ltv_pln || 0;
+            let ordersTotal = crmOrders.filter(o => o.status === 'paid').reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
+            let grandTotal = totalLTV + ordersTotal;
+
+            // Show section only if there's any data
+            if (!historicalLTV && crmOrders.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            totalBadge.textContent = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 0 }).format(grandTotal);
+
+            // Historical LTV
+            if (historicalLTV) {
+                ltvSection.classList.remove('hidden');
+
+                document.getElementById('ltv-value').textContent = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 0 }).format(historicalLTV.ltv_pln || 0);
+                document.getElementById('ltv-transactions').textContent = historicalLTV.transaction_count || 0;
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    return new Date(dateStr).toLocaleDateString('pl-PL', { year: 'numeric', month: 'short', day: 'numeric' });
+                };
+
+                document.getElementById('ltv-first').textContent = formatDate(historicalLTV.first_purchase);
+                document.getElementById('ltv-last').textContent = formatDate(historicalLTV.last_purchase);
+
+                // Products
+                const products = historicalLTV.products || [];
+                document.getElementById('ltv-products').textContent = products.length > 0
+                    ? products.slice(0, 5).join(', ') + (products.length > 5 ? ` (+${products.length - 5} więcej)` : '')
+                    : '-';
+            } else {
+                ltvSection.classList.add('hidden');
+            }
+
+            // CRM Orders
+            ordersCount.textContent = crmOrders.length;
+
+            if (crmOrders.length === 0) {
+                ordersList.innerHTML = '<div class="text-center text-zinc-600 text-xs py-4">Brak zamówień w systemie</div>';
+            } else {
+                const statusColors = {
+                    pending: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20', label: 'Oczekujące' },
+                    paid: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20', label: 'Opłacone' },
+                    cancelled: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', label: 'Anulowane' }
+                };
+
+                ordersList.innerHTML = crmOrders.map(order => {
+                    const status = statusColors[order.status] || statusColors.pending;
+                    const amount = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 0 }).format(order.amount || 0);
+                    const date = new Date(order.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                    return `
+                        <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-white text-sm font-medium">${order.order_number}</span>
+                                    <span class="${status.bg} ${status.text} ${status.border} border text-[9px] px-1.5 py-0.5 rounded font-medium">${status.label}</span>
+                                </div>
+                                <div class="text-zinc-500 text-xs truncate">${order.description || '-'}</div>
+                                <div class="text-zinc-600 text-[10px] font-mono mt-1">${date}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-3">
+                                <div class="${order.status === 'paid' ? 'text-green-400' : 'text-zinc-400'} font-bold">${amount}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
         // Lead navigation (prev/next)
         async function setupLeadNavigation() {
             const currentId = getLeadId();
@@ -3333,6 +3525,8 @@
                 await loadMeetings();
                 // Reload activities after clientOffer is loaded to include offer views
                 await loadActivities();
+                // Load purchase history (historical LTV + CRM orders)
+                await loadPurchaseHistory();
                 // Setup lead navigation after lead is loaded
                 await setupLeadNavigation();
             }
