@@ -1591,7 +1591,7 @@
 
             timeline.innerHTML = sorted.map((activity, index) => {
                 const performerName = activity.performed_by_name || (activity.type === 'created' ? 'System' : null);
-                const performerInfo = performerName ? `<span class="text-zinc-400">przez</span> <span class="text-zinc-300">${performerName}</span>` : '';
+                const performerInfo = performerName ? `<span class="text-zinc-400">przez</span> <span class="text-zinc-300">${DOMPurify.sanitize(performerName)}</span>` : '';
 
                 return `
                     <div class="flex gap-3 relative ${index < sorted.length - 1 ? 'pb-4' : ''}">
@@ -1600,7 +1600,7 @@
                             <i class="ph ${getActivityIcon(activity.type)} text-white text-xs"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm text-white">${activity.content}</div>
+                            <div class="text-sm text-white">${DOMPurify.sanitize(activity.content || '')}</div>
                             <div class="text-[10px] text-zinc-500 font-mono mt-0.5 flex items-center gap-2">
                                 <span>${formatDateRelative(activity.created_at)}</span>
                                 ${performerInfo}
@@ -1641,7 +1641,7 @@
 
                 return `
                     <div class="p-3 bg-zinc-950/50 rounded-lg border border-white/5">
-                        <div class="text-sm text-white whitespace-pre-wrap mb-2">${note.content}</div>
+                        <div class="text-sm text-white whitespace-pre-wrap mb-2">${DOMPurify.sanitize(note.content || '')}</div>
                         <div class="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
                             <span class="flex items-center gap-1">
                                 <i class="ph ph-clock"></i>
@@ -1649,7 +1649,7 @@
                             </span>
                             <span class="flex items-center gap-1">
                                 <i class="ph ph-user"></i>
-                                ${authorName}
+                                ${DOMPurify.sanitize(authorName)}
                             </span>
                             <span class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800 border border-white/5">
                                 <i class="ph ph-tag"></i>
@@ -1760,9 +1760,9 @@
                                 <span class="text-zinc-500">${dateStr}</span>
                             </div>
                             <div class="text-xs text-zinc-400">
-                                <div><strong>Od:</strong> ${email.from_name ? email.from_name + ' &lt;' + email.from_email + '&gt;' : email.from_email}</div>
-                                <div><strong>Do:</strong> ${email.to_email}</div>
-                                <div><strong>Temat:</strong> ${email.subject || '(bez tematu)'}</div>
+                                <div><strong>Od:</strong> ${email.from_name ? DOMPurify.sanitize(email.from_name) + ' &lt;' + DOMPurify.sanitize(email.from_email) + '&gt;' : DOMPurify.sanitize(email.from_email)}</div>
+                                <div><strong>Do:</strong> ${DOMPurify.sanitize(email.to_email || '')}</div>
+                                <div><strong>Temat:</strong> ${DOMPurify.sanitize(email.subject || '(bez tematu)')}</div>
                             </div>
                             <div class="border-t border-white/10 pt-4">
                                 <div class="prose prose-invert prose-sm max-w-none text-zinc-300 text-sm email-body-content">
