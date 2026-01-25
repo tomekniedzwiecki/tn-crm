@@ -449,6 +449,12 @@
 
         // Create new note
         async function createNote() {
+            if (!currentMember?.id) {
+                showToast('Błąd: brak użytkownika', 'error');
+                console.error('currentMember is null or has no id');
+                return;
+            }
+
             const maxPosition = notes.length > 0 ? Math.max(...notes.map(n => n.position || 0)) + 1 : 0;
 
             const { data, error } = await supabaseClient
@@ -458,7 +464,7 @@
                     content: '',
                     color: 'zinc',
                     position: maxPosition,
-                    created_by: currentMember?.id
+                    created_by: currentMember.id
                 })
                 .select()
                 .single();
