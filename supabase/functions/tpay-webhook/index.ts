@@ -57,7 +57,7 @@ async function sendSlackPaidNotification(order: any) {
           fields: [
             {
               type: 'mrkdwn',
-              text: `*Email:*\n${order.customer_email}`
+              text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(order.customer_email)}|${order.customer_email}>`
             },
             {
               type: 'mrkdwn',
