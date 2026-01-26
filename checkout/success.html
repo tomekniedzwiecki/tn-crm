@@ -20,6 +20,18 @@
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
                     }
                 }
             }
@@ -27,17 +39,15 @@
     </script>
     <style>
         body {
-            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #f8fafc 100%);
+            background: #000;
             min-height: 100vh;
         }
         ::selection { background: #10b981; color: white; }
 
-        .success-card {
-            background: white;
-            box-shadow:
-                0 0 0 1px rgba(0,0,0,0.02),
-                0 1px 3px rgba(0,0,0,0.04),
-                0 8px 24px rgba(0,0,0,0.06);
+        .glass-card {
+            background: rgba(255,255,255,0.02);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         @keyframes checkmark {
@@ -53,6 +63,10 @@
             0% { opacity: 0; transform: translateY(15px); }
             100% { opacity: 1; transform: translateY(0); }
         }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.5); }
+        }
 
         .checkmark-circle {
             animation: scale-in 0.4s ease-out forwards;
@@ -61,6 +75,9 @@
             stroke-dasharray: 100;
             stroke-dashoffset: 100;
             animation: checkmark 0.4s ease-out 0.25s forwards;
+        }
+        .checkmark-container {
+            animation: pulse-glow 2s ease-in-out infinite;
         }
         .fade-up {
             opacity: 0;
@@ -78,60 +95,70 @@
             opacity: 0;
             pointer-events: none;
         }
+
+        .success-btn {
+            background: linear-gradient(to bottom, #10b981, #059669);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.2s ease;
+        }
+        .success-btn:hover {
+            background: linear-gradient(to bottom, #059669, #047857);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 6px 16px rgba(16, 185, 129, 0.4);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
-<body class="font-sans antialiased text-gray-900">
+<body class="font-sans antialiased text-white">
 
     <div class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full">
 
             <!-- Header -->
-            <div class="text-center mb-6">
-                <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-2.5">
-                    <div class="w-9 h-9 bg-gray-900 text-white rounded-xl flex items-center justify-center shadow">
-                        <i class="ph-bold ph-lightning text-base"></i>
+            <div class="text-center mb-8">
+                <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-b from-emerald-500 to-emerald-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <i class="ph-bold ph-lightning text-lg"></i>
                     </div>
-                    <span class="font-semibold text-gray-900">Tomasz Niedźwiecki AI</span>
+                    <span class="font-semibold text-white text-lg">Tomasz Niedźwiecki AI</span>
                 </a>
             </div>
 
             <!-- Success Card -->
-            <div class="success-card rounded-2xl p-6 text-center">
+            <div class="glass-card rounded-2xl p-8 text-center">
 
                 <!-- Animated Checkmark -->
-                <div class="w-20 h-20 mx-auto mb-5 relative">
+                <div class="w-24 h-24 mx-auto mb-6 relative checkmark-container rounded-full">
                     <svg class="w-full h-full" viewBox="0 0 100 100">
-                        <circle class="checkmark-circle" cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="3"/>
+                        <circle class="checkmark-circle" cx="50" cy="50" r="45" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="2"/>
                         <path class="checkmark-check" d="M30 50 L45 65 L70 35" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <div class="absolute inset-0 rounded-full bg-emerald-50 -z-10 checkmark-circle"></div>
                 </div>
 
-                <h1 class="text-xl font-bold text-gray-900 mb-2 fade-up fade-up-1">
+                <h1 class="text-2xl font-bold text-white mb-3 fade-up fade-up-1">
                     Dziękujemy za zakup!
                 </h1>
 
-                <p class="text-gray-500 text-sm mb-5 fade-up fade-up-2">
+                <p class="text-zinc-400 text-sm mb-6 fade-up fade-up-2">
                     Płatność zakończona sukcesem. Potwierdzenie zostało wysłane na Twój email.
                 </p>
 
                 <!-- Order Info -->
-                <div id="order-info" class="hidden bg-gray-50 rounded-xl p-4 mb-5 fade-up fade-up-3">
+                <div id="order-info" class="hidden bg-white/5 border border-white/10 rounded-xl p-4 mb-6 fade-up fade-up-3">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-500">Numer zamówienia</span>
-                        <span id="order-number" class="font-semibold text-gray-900 font-mono">-</span>
+                        <span class="text-zinc-500">Numer zamówienia</span>
+                        <span id="order-number" class="font-semibold text-emerald-400 font-mono">-</span>
                     </div>
                 </div>
 
                 <!-- What's Next -->
-                <div class="text-left bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-5 fade-up fade-up-3">
+                <div class="text-left bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 fade-up fade-up-3">
                     <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i class="ph-duotone ph-envelope text-emerald-600"></i>
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-duotone ph-envelope text-xl text-emerald-400"></i>
                         </div>
                         <div>
-                            <p class="font-medium text-gray-900 text-sm">Co dalej?</p>
-                            <p class="text-gray-600 text-sm mt-1 leading-relaxed">
+                            <p class="font-semibold text-white text-sm">Co dalej?</p>
+                            <p class="text-zinc-400 text-sm mt-1 leading-relaxed">
                                 Sprawdź email - znajdziesz tam potwierdzenie i instrukcje dostępu.
                             </p>
                         </div>
@@ -139,23 +166,32 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="space-y-2.5 fade-up fade-up-4">
+                <div class="space-y-3 fade-up fade-up-4">
                     <a href="https://tomekniedzwiecki.pl"
-                       class="block w-full bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold text-sm transition-colors">
+                       class="success-btn block w-full text-white px-5 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+                        <i class="ph ph-house"></i>
                         Wróć na stronę główną
                     </a>
 
                     <a href="mailto:ceo@tomekniedzwiecki.pl"
-                       class="block w-full text-gray-500 hover:text-gray-700 px-5 py-2.5 text-sm font-medium transition-colors">
+                       class="block w-full text-zinc-500 hover:text-zinc-300 px-5 py-2.5 text-sm font-medium transition-colors">
                         <i class="ph ph-question mr-1"></i>
                         Masz pytania?
                     </a>
                 </div>
             </div>
 
+            <!-- Security Badge -->
+            <div class="mt-6 text-center">
+                <div class="inline-flex items-center gap-2 text-xs text-zinc-600">
+                    <i class="ph ph-shield-check text-emerald-500"></i>
+                    Płatność przetworzona bezpiecznie
+                </div>
+            </div>
+
             <!-- Footer -->
-            <div class="mt-6 text-center text-gray-400 text-xs">
-                <p class="font-medium text-gray-500">Tomasz Niedźwiecki AI</p>
+            <div class="mt-4 text-center text-zinc-600 text-xs">
+                <p class="font-medium text-zinc-500">Tomasz Niedźwiecki AI</p>
                 <p class="mt-1">ul. Grawerska 30L, 51-180 Wrocław</p>
             </div>
         </div>
@@ -165,18 +201,18 @@
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
 
-        // Simple confetti effect
+        // Confetti effect
         function createConfetti() {
-            const colors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#6366f1', '#818cf8'];
+            const colors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#8b5cf6', '#a78bfa'];
             const container = document.body;
 
-            for (let i = 0; i < 40; i++) {
+            for (let i = 0; i < 50; i++) {
                 const confetti = document.createElement('div');
                 confetti.className = 'confetti';
                 confetti.style.left = Math.random() * 100 + 'vw';
                 confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
                 confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-                confetti.style.width = (Math.random() * 6 + 4) + 'px';
+                confetti.style.width = (Math.random() * 8 + 4) + 'px';
                 confetti.style.height = confetti.style.width;
 
                 container.appendChild(confetti);
@@ -185,8 +221,8 @@
                     { transform: `translateY(-10vh) rotate(0deg)`, opacity: 1 },
                     { transform: `translateY(100vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }
                 ], {
-                    duration: Math.random() * 2000 + 2000,
-                    delay: Math.random() * 400,
+                    duration: Math.random() * 2000 + 2500,
+                    delay: Math.random() * 500,
                     easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                 }).onfinish = () => confetti.remove();
             }
@@ -218,7 +254,7 @@
 
         // Init
         loadOrderInfo();
-        setTimeout(createConfetti, 250);
+        setTimeout(createConfetti, 300);
     </script>
 </body>
 </html>
