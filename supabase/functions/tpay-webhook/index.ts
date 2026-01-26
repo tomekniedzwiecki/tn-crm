@@ -1,6 +1,7 @@
  
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts"
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
 
 // Tpay webhook doesn't need CORS - it's server-to-server
 // But we keep minimal headers for compatibility
@@ -116,6 +117,130 @@ async function sendSlackPaidNotification(order: any) {
     console.log('[slack] Paid notification sent')
   } catch (err) {
     console.error('[slack] Failed to send paid notification:', err)
+  }
+}
+
+// Meta Conversions API configuration
+const META_PIXEL_ID = '1668188210820080'
+const META_API_VERSION = 'v23.0'
+
+// SHA256 hash for Meta (they require lowercase hex)
+async function sha256Hash(value: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(value.toLowerCase().trim())
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Normalize phone for Meta (remove spaces, dashes, ensure country code)
+function normalizePhone(phone: string): string {
+  let normalized = phone.replace(/[\s\-\(\)]/g, '')
+  // Add Poland country code if not present
+  if (normalized.startsWith('0')) {
+    normalized = '48' + normalized.substring(1)
+  } else if (!normalized.startsWith('+') && !normalized.startsWith('48')) {
+    normalized = '48' + normalized
+  }
+  return normalized.replace('+', '')
+}
+
+// Send Purchase event to Meta Conversions API
+async function sendMetaConversion(order: any, supabase: any) {
+  const accessToken = Deno.env.get('meta_conversions_token')
+  if (!accessToken) {
+    console.log('[meta] meta_conversions_token not configured, skipping')
+    return
+  }
+
+  try {
+    // Get fbclid from lead_tracking if order has lead_id
+    let fbc: string | null = null
+    if (order.lead_id) {
+      const { data: tracking } = await supabase
+        .from('lead_tracking')
+        .select('fbclid')
+        .eq('lead_id', order.lead_id)
+        .single()
+
+      if (tracking?.fbclid) {
+        // Format fbc: fb.1.{timestamp}.{fbclid}
+        const timestamp = Date.now()
+        fbc = `fb.1.${timestamp}.${tracking.fbclid}`
+        console.log('[meta] Found fbclid, using fbc:', fbc.substring(0, 30) + '...')
+      }
+    }
+
+    // Build user data with hashed PII
+    const userData: Record<string, any> = {}
+
+    if (order.customer_email) {
+      userData.em = [await sha256Hash(order.customer_email)]
+    }
+
+    if (order.customer_phone) {
+      const normalizedPhone = normalizePhone(order.customer_phone)
+      userData.ph = [await sha256Hash(normalizedPhone)]
+    }
+
+    if (fbc) {
+      userData.fbc = fbc
+    }
+
+    // Build the event
+    // Test event code for Meta Events Manager testing (remove in production or set via env)
+    const testEventCode = Deno.env.get('META_TEST_EVENT_CODE') // Set to TEST92533 for testing
+
+    const eventData: Record<string, any> = {
+      data: [
+        {
+          event_name: 'Purchase',
+          event_time: Math.floor(Date.now() / 1000),
+          event_id: order.id, // Unique event ID for deduplication
+          event_source_url: 'https://crm.tomekniedzwiecki.pl/checkout',
+          action_source: 'website',
+          user_data: userData,
+          custom_data: {
+            currency: 'PLN',
+            value: parseFloat(order.amount),
+            content_name: order.description,
+            order_id: order.order_number,
+          }
+        }
+      ]
+    }
+
+    // Add test code if configured (for Meta Events Manager testing)
+    if (testEventCode) {
+      eventData.test_event_code = testEventCode
+      console.log('[meta] Using test_event_code:', testEventCode)
+    }
+
+    console.log('[meta] Sending Purchase event:', JSON.stringify({
+      event_id: order.id,
+      value: order.amount,
+      has_email: !!userData.em,
+      has_phone: !!userData.ph,
+      has_fbc: !!fbc
+    }))
+
+    const url = `https://graph.facebook.com/${META_API_VERSION}/${META_PIXEL_ID}/events?access_token=${accessToken}`
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventData)
+    })
+
+    const result = await response.json()
+
+    if (response.ok) {
+      console.log('[meta] Purchase event sent successfully:', result)
+    } else {
+      console.error('[meta] Failed to send event:', result)
+    }
+  } catch (err) {
+    console.error('[meta] Error sending conversion:', err)
   }
 }
 
@@ -259,6 +384,9 @@ Deno.serve(async (req) => {
 
       // Send Slack notification for successful payment
       await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' })
+
+      // Send Meta Conversions API event
+      await sendMetaConversion(order, supabase)
 
       // Increment discount code usage only on successful payment
       if (order.discount_code_id) {
