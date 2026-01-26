@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
               },
               {
                 type: 'section',
-                text: { type: 'mrkdwn', text: `*Od:* ${cleanEmail}\n*Temat:* ${subject}` }
+                text: { type: 'mrkdwn', text: `*Od:* <https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(cleanEmail)}|${cleanEmail}>\n*Temat:* ${subject}` }
               },
               {
                 type: 'section',

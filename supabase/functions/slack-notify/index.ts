@@ -120,7 +120,7 @@ function formatNewLeadMessage(data: {
   if (data.name) {
     fields.push({ type: 'mrkdwn', text: `*Imię:*\n${data.name}` })
   }
-  fields.push({ type: 'mrkdwn', text: `*Email:*\n${data.email}` })
+  fields.push({ type: 'mrkdwn', text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.email)}|${data.email}>` })
   if (data.phone) {
     fields.push({ type: 'mrkdwn', text: `*Telefon:*\n${data.phone}` })
   }
@@ -214,7 +214,7 @@ function formatZapisyLeadMessage(data: {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*${data.email}*${data.phone ? ` · ${data.phone}` : ''}`
+        text: `*<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.email)}|${data.email}>*${data.phone ? ` · ${data.phone}` : ''}`
       }
     },
     {
@@ -287,7 +287,7 @@ function formatOfferViewedMessage(data: {
   const viewText = data.first_view ? '👀 Pierwsze otwarcie oferty!' : '👁️ Oferta przeglądana'
 
   const fields = [
-    { type: 'mrkdwn', text: `*Klient:*\n${displayName}` },
+    { type: 'mrkdwn', text: `*Klient:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.lead_email)}|${displayName}>` },
     { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` }
   ]
 
@@ -296,7 +296,7 @@ function formatOfferViewedMessage(data: {
   }
 
   if (data.lead_email !== displayName) {
-    fields.push({ type: 'mrkdwn', text: `*Email:*\n${data.lead_email}` })
+    fields.push({ type: 'mrkdwn', text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.lead_email)}|${data.lead_email}>` })
   }
 
   return {
@@ -341,7 +341,7 @@ function formatProformaMessage(data: {
     : `przez ${data.salesperson_name || 'handlowca'}`
 
   const fields = [
-    { type: 'mrkdwn', text: `*Klient:*\n${displayName}` },
+    { type: 'mrkdwn', text: `*Klient:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.lead_email)}|${displayName}>` },
     { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` }
   ]
 
