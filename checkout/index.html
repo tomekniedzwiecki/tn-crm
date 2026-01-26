@@ -1287,6 +1287,7 @@
                     order = existingOrders[0];
                     console.log('[checkout] Using existing order:', order.order_number);
 
+                    const effectivePrice = getEffectivePrice();
                     await supabaseClient
                         .from('orders')
                         .update({
@@ -1294,10 +1295,18 @@
                             customer_name: name || null,
                             customer_company: company || null,
                             customer_nip: nip || null,
+                            amount: effectivePrice,
+                            original_amount: appliedDiscount ? currentOffer.price : null,
+                            discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
+                            discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                             payment_source: paymentSource,
+                            notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}`,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', order.id);
+
+                    // Update local order object with new amount
+                    order.amount = effectivePrice;
                 } else {
                     const effectivePrice = getEffectivePrice();
                     const orderData = {

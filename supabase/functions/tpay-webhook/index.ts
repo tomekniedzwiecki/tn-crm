@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+ 
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts"
 
 // Tpay webhook doesn't need CORS - it's server-to-server
@@ -141,7 +141,7 @@ function verifyTpaySignature(
   return calculatedMd5 === receivedMd5
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
