@@ -439,11 +439,37 @@
             const entity = ENTITY_TYPES[log.entity_type] || { label: log.entity_type, icon: 'ph-question' };
             const identifier = log.entity_identifier || '-';
 
+            // Create link for specific entity types
+            let linkUrl = null;
+            if (log.entity_id) {
+                switch (log.entity_type) {
+                    case 'lead':
+                        linkUrl = `/lead?id=${log.entity_id}`;
+                        break;
+                    case 'offer':
+                        linkUrl = `/offer?id=${log.entity_id}`;
+                        break;
+                    case 'client_offer':
+                        // client_offer - try to get lead_id from old/new value
+                        const leadId = log.new_value?.lead_id || log.old_value?.lead_id;
+                        if (leadId) linkUrl = `/lead?id=${leadId}`;
+                        break;
+                }
+            }
+
+            const identifierHtml = linkUrl
+                ? `<a href="${linkUrl}" class="text-blue-400 hover:text-blue-300 hover:underline text-[10px] truncate max-w-[200px] transition-colors" title="${identifier}">${identifier}</a>`
+                : `<span class="text-zinc-500 text-[10px] truncate max-w-[200px]" title="${identifier}">${identifier}</span>`;
+
+            const labelHtml = linkUrl
+                ? `<a href="${linkUrl}" class="text-white font-medium hover:text-blue-400 transition-colors">${entity.label}</a>`
+                : `<span class="text-white font-medium">${entity.label}</span>`;
+
             return `<div class="flex items-center gap-2">
                 <i class="ph ${entity.icon} text-zinc-500"></i>
                 <div>
-                    <div class="text-white font-medium">${entity.label}</div>
-                    <div class="text-zinc-500 text-[10px] truncate max-w-[200px]" title="${identifier}">${identifier}</div>
+                    <div>${labelHtml}</div>
+                    <div class="truncate max-w-[200px]">${identifierHtml}</div>
                 </div>
             </div>`;
         }
