@@ -277,8 +277,8 @@
                     </div>
                 </div>
 
-                <!-- Three Column Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 animate-enter animate-enter-delay-3">
+                <!-- Two Column Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-enter animate-enter-delay-3">
                     <!-- Lead Sources -->
                     <div class="section-card p-5">
                         <div class="flex items-center justify-between mb-4">
@@ -300,16 +300,6 @@
                         </div>
                         <div id="activity-feed" class="space-y-3 max-h-64 overflow-y-auto">
                             <!-- Activity rendered by JS -->
-                        </div>
-                    </div>
-
-                    <!-- Alerts & Queue -->
-                    <div class="section-card p-5">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-sm font-medium text-white">Do zrobienia</h3>
-                        </div>
-                        <div id="alerts-section" class="space-y-3">
-                            <!-- Alerts rendered by JS -->
                         </div>
                     </div>
                 </div>
@@ -357,7 +347,6 @@
         // State
         let leads = [];
         let orders = [];
-        let scheduledEmails = [];
         let auditLogs = [];
         let teamMembers = [];
         let currentMember = null;
@@ -402,17 +391,15 @@
             const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
 
             // Load all data in parallel
-            const [leadsRes, ordersRes, scheduledRes, auditRes, stagesRes] = await Promise.all([
+            const [leadsRes, ordersRes, auditRes, stagesRes] = await Promise.all([
                 supabaseClient.from('leads').select('*').order('created_at', { ascending: false }),
                 supabaseClient.from('orders').select('*').order('created_at', { ascending: false }),
-                supabaseClient.from('scheduled_emails').select('*, lead:leads(email, name)').is('sent_at', null).is('cancelled_at', null).order('scheduled_for', { ascending: true }).limit(10),
                 supabaseClient.from('audit_log').select('*').gte('created_at', thirtyDaysAgo).order('created_at', { ascending: false }).limit(20),
                 supabaseClient.from('settings').select('*').eq('key', 'pipeline_stages').single()
             ]);
 
             leads = leadsRes.data || [];
             orders = ordersRes.data || [];
-            scheduledEmails = scheduledRes.data || [];
             auditLogs = auditRes.data || [];
 
             // Parse pipeline stages
@@ -926,106 +913,6 @@
             }).join('');
         }
 
-        function renderAlerts() {
-            const container = document.getElementById('alerts-section');
-            const alerts = [];
-
-            // Stale leads (in status > 5 days without activity)
-            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-            const staleLeads = leads.filter(l => {
-                if (['won', 'lost', 'abandoned'].includes(l.status)) return false;
-                const lastActivity = l.activities?.length > 0
-                    ? new Date(l.activities[l.activities.length - 1].created_at)
-                    : new Date(l.created_at);
-                return lastActivity < fiveDaysAgo;
-            });
-
-            if (staleLeads.length > 0) {
-                alerts.push({
-                    icon: 'ph-warning-circle',
-                    color: 'text-amber-400',
-                    bgColor: 'bg-amber-500/10',
-                    borderColor: 'border-amber-500/20',
-                    title: `${staleLeads.length} nieaktywnych leadów`,
-                    desc: 'Leady bez aktywności > 5 dni',
-                    link: '/pipeline'
-                });
-            }
-
-            // Scheduled emails
-            if (scheduledEmails.length > 0) {
-                const nextEmail = scheduledEmails[0];
-                const scheduledFor = new Date(nextEmail.scheduled_for);
-                const timeUntil = scheduledFor > new Date()
-                    ? formatTimeAgo(scheduledFor.toISOString()).replace(' temu', '')
-                    : 'zaraz';
-
-                alerts.push({
-                    icon: 'ph-envelope',
-                    color: 'text-blue-400',
-                    bgColor: 'bg-blue-500/10',
-                    borderColor: 'border-blue-500/20',
-                    title: `${scheduledEmails.length} zaplanowanych maili`,
-                    desc: `Następny: za ${timeUntil}`,
-                    link: '/logi'
-                });
-            }
-
-            // New leads today
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayLeads = leads.filter(l => new Date(l.created_at) >= today);
-            if (todayLeads.length > 0) {
-                alerts.push({
-                    icon: 'ph-user-plus',
-                    color: 'text-emerald-400',
-                    bgColor: 'bg-emerald-500/10',
-                    borderColor: 'border-emerald-500/20',
-                    title: `${todayLeads.length} nowych leadów dziś`,
-                    desc: 'Wymagają kontaktu',
-                    link: '/leads?status=new'
-                });
-            }
-
-            // Pending orders
-            const pendingOrders = orders.filter(o => o.status === 'pending');
-            if (pendingOrders.length > 0) {
-                const pendingValue = pendingOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
-                alerts.push({
-                    icon: 'ph-clock',
-                    color: 'text-violet-400',
-                    bgColor: 'bg-violet-500/10',
-                    borderColor: 'border-violet-500/20',
-                    title: `${pendingOrders.length} oczekujących zamówień`,
-                    desc: formatCurrency(pendingValue, false),
-                    link: '/orders?status=pending'
-                });
-            }
-
-            if (alerts.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-6">
-                        <i class="ph ph-check-circle text-2xl text-emerald-500 mb-2"></i>
-                        <p class="text-zinc-500 text-xs">Wszystko ogarnięte!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = alerts.map(alert => `
-                <a href="${alert.link}" class="block p-3 rounded-lg border ${alert.borderColor} ${alert.bgColor} hover:bg-opacity-20 transition-colors">
-                    <div class="flex items-start gap-3">
-                        <i class="ph ${alert.icon} ${alert.color} text-lg"></i>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-xs text-white font-medium">${alert.title}</div>
-                            <div class="text-[10px] text-zinc-500 mt-0.5">${alert.desc}</div>
-                        </div>
-                        <i class="ph ph-caret-right text-zinc-600"></i>
-                    </div>
-                </a>
-            `).join('');
-        }
-
         function renderLeadsTable() {
             const tbody = document.getElementById('leads-table');
             const empty = document.getElementById('leads-empty');
@@ -1128,7 +1015,6 @@
             renderPipelineFunnel();
             renderLeadSources();
             renderActivityFeed();
-            renderAlerts();
             renderLeadsTable();
         }
         window.refreshDashboard = refreshDashboard;
