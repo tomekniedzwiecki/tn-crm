@@ -124,17 +124,17 @@ $$ LANGUAGE plpgsql STABLE;
 CREATE OR REPLACE FUNCTION add_working_days(start_date DATE, num_days INTEGER)
 RETURNS DATE AS $$
 DECLARE
-    current_date DATE := start_date;
+    result_date DATE := start_date;
     days_added INTEGER := 0;
 BEGIN
     WHILE days_added < num_days LOOP
-        current_date := current_date + INTERVAL '1 day';
-        IF is_working_day(current_date) THEN
+        result_date := result_date + INTERVAL '1 day';
+        IF is_working_day(result_date) THEN
             days_added := days_added + 1;
         END IF;
     END LOOP;
 
-    RETURN current_date;
+    RETURN result_date;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
