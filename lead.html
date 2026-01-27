@@ -2768,6 +2768,22 @@
 
         // Schedule offer flow emails (3 emails - first one is sent immediately)
         async function scheduleOfferEmails(lead, clientOffer, validUntil, selectedOffer, offerUrl) {
+            // Check if lead has already purchased (skip entire email flow)
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: paidOrder } = await supabaseClient
+                .from('orders')
+                .select('id')
+                .eq('customer_email', lead.email)
+                .eq('status', 'paid')
+                .gte('created_at', sevenDaysAgo)
+                .limit(1)
+                .single();
+
+            if (paidOrder) {
+                console.log('Lead has already purchased - skipping email flow:', lead.email);
+                return; // Don't send any emails
+            }
+
             const now = new Date();
             const validUntilDate = new Date(validUntil + 'T23:59:59');
 
