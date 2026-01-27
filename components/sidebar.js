@@ -38,7 +38,7 @@ const NAV_ITEMS = [
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia', adminOnly: false },
     { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie', adminOnly: false },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
-    { id: 'audit', icon: 'ph-shield-check', label: 'Aktywność', adminOnly: true },
+    { id: 'logi', icon: 'ph-list-bullets', label: 'Logi', adminOnly: false },
 ];
 
 // ============================================

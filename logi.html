@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Logi</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .log-tab.active {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
+
+        .log-tab.active i {
+            color: white;
+        }
+
+        /* Status badges */
+        .status-sent { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+        .status-pending { background: rgba(251, 191, 36, 0.1); color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); }
+        .status-cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+        .status-scheduled { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); }
+
+        /* Email type badges */
+        .type-offer_created { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .type-offer_personal { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        .type-offer_reminder_halfway { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+        .type-offer_expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .type-direct { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .type-zapisy_confirmation { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+        .type-proforma_generated { background: rgba(236, 72, 153, 0.1); color: #ec4899; }
+
+        /* Row hover effect like Vercel */
+        .log-row {
+            transition: background-color 0.15s ease;
+        }
+        .log-row:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Email preview modal */
+        .email-preview-modal {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">logi</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3">
+                <button id="refresh-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 md:px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+                    <i class="ph ph-arrows-clockwise"></i>
+                    <span class="hidden md:inline">Odśwież</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="flex h-full">
+                <!-- Logs Navigation -->
+                <nav id="logs-nav" class="w-56 flex-shrink-0 border-r border-white/5 p-4">
+                    <div class="space-y-1">
+                        <button onclick="switchLogsTab('activity')" data-tab="activity" class="log-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                            <i class="ph ph-pulse text-lg"></i>
+                            <div>
+                                <span class="text-sm font-medium block">Aktywność</span>
+                                <span class="text-[10px] text-zinc-600">Dziennik akcji</span>
+                            </div>
+                        </button>
+                        <button onclick="switchLogsTab('sent-emails')" data-tab="sent-emails" class="log-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                            <i class="ph ph-paper-plane-tilt text-lg"></i>
+                            <div>
+                                <span class="text-sm font-medium block">Wysłane maile</span>
+                                <span class="text-[10px] text-zinc-600">Historia wysyłek</span>
+                            </div>
+                        </button>
+                        <button onclick="switchLogsTab('scheduled-emails')" data-tab="scheduled-emails" class="log-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                            <i class="ph ph-clock text-lg"></i>
+                            <div>
+                                <span class="text-sm font-medium block">Zaplanowane</span>
+                                <span class="text-[10px] text-zinc-600">Kolejka emaili</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Quick stats -->
+                    <div class="mt-6 pt-4 border-t border-white/5">
+                        <div class="text-[10px] uppercase tracking-wider text-zinc-600 font-medium px-3 mb-3">Statystyki (24h)</div>
+                        <div class="space-y-2 px-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-zinc-500 text-xs">Wysłane</span>
+                                <span id="stats-sent-24h" class="text-emerald-400 font-mono text-xs">-</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-zinc-500 text-xs">Zaplanowane</span>
+                                <span id="stats-scheduled-24h" class="text-blue-400 font-mono text-xs">-</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-zinc-500 text-xs">Anulowane</span>
+                                <span id="stats-cancelled-24h" class="text-red-400 font-mono text-xs">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Logs Content Area -->
+                <div class="flex-1 p-6 lg:p-8 overflow-y-auto">
+                    <div class="max-w-6xl animate-enter">
+
+                        <!-- Access denied message for non-admins -->
+                        <div id="access-denied" class="hidden bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
+                            <i class="ph ph-lock-key text-4xl text-red-400 mb-3"></i>
+                            <h2 class="text-lg font-medium text-white mb-2">Brak dostępu</h2>
+                            <p class="text-zinc-400">Tylko administrator ma dostęp do logów systemowych.</p>
+                        </div>
+
+                        <!-- Logs content (admin only) -->
+                        <div id="logs-content" class="hidden">
+
+                            <!-- TAB: Activity (Aktywność) -->
+                            <div id="tab-activity" class="logs-panel hidden">
+                                <div class="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Dziennik aktywności</h1>
+                                        <p class="text-zinc-500 text-sm">Wszystkie akcje wykonane w systemie</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-semibold text-white" id="activity-total-count">-</div>
+                                        <div class="text-zinc-600 text-[10px] font-mono">wszystkich wpisów</div>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Filters -->
+                                <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <select id="activity-filter-user" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[140px]">
+                                            <option value="">Wszyscy</option>
+                                        </select>
+                                        <select id="activity-filter-action" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[130px]">
+                                            <option value="">Wszystkie akcje</option>
+                                            <option value="create">Utworzono</option>
+                                            <option value="update">Zaktualizowano</option>
+                                            <option value="delete">Usunięto</option>
+                                            <option value="status_change">Zmiana statusu</option>
+                                            <option value="batch_delete">Usunięto wiele</option>
+                                        </select>
+                                        <select id="activity-filter-entity" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[130px]">
+                                            <option value="">Wszystkie encje</option>
+                                            <option value="lead">Lead</option>
+                                            <option value="meeting">Spotkanie</option>
+                                            <option value="activity">Aktywność</option>
+                                            <option value="note">Notatka</option>
+                                            <option value="offer">Oferta</option>
+                                            <option value="proforma">Proforma</option>
+                                            <option value="client_offer">Oferta klienta</option>
+                                            <option value="team_member">Użytkownik</option>
+                                            <option value="settings">Ustawienia</option>
+                                        </select>
+                                        <input type="date" id="activity-filter-date-from" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                        <input type="date" id="activity-filter-date-to" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                        <div class="relative flex-1 min-w-[180px]">
+                                            <input type="text" id="activity-filter-search" placeholder="Szukaj..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                                        </div>
+                                        <button id="activity-clear-filters" class="text-zinc-500 hover:text-white px-2 py-2 text-xs transition-colors hidden">
+                                            <i class="ph ph-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Results -->
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-[10px] text-zinc-500 font-mono">
+                                        <span id="activity-showing-count">0</span> z <span id="activity-filtered-count">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Table -->
+                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-hidden">
+                                    <table class="w-full text-left text-xs">
+                                        <thead class="bg-zinc-900/50 text-zinc-500 border-b border-white/5">
+                                            <tr>
+                                                <th class="px-4 py-3 font-medium w-[160px]">Czas</th>
+                                                <th class="px-4 py-3 font-medium w-[140px]">Użytkownik</th>
+                                                <th class="px-4 py-3 font-medium w-[120px]">Akcja</th>
+                                                <th class="px-4 py-3 font-medium">Encja</th>
+                                                <th class="px-4 py-3 font-medium w-[60px] text-center">Info</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="activity-table" class="divide-y divide-white/5"></tbody>
+                                    </table>
+                                    <div id="activity-empty-state" class="hidden p-12 text-center">
+                                        <i class="ph ph-clipboard-text text-3xl text-zinc-700 mb-2"></i>
+                                        <p class="text-zinc-600 text-sm">Brak wpisów</p>
+                                    </div>
+                                    <div id="activity-loading-state" class="p-12 text-center">
+                                        <i class="ph ph-circle-notch animate-spin text-3xl text-zinc-700 mb-2"></i>
+                                        <p class="text-zinc-600 text-sm">Ładowanie...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Pagination -->
+                                <div class="flex items-center justify-between mt-4">
+                                    <button id="activity-prev-page" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                                        <i class="ph ph-caret-left"></i>
+                                        Wstecz
+                                    </button>
+                                    <span class="text-zinc-600 text-xs font-mono">
+                                        <span id="activity-current-page">1</span> / <span id="activity-total-pages">1</span>
+                                    </span>
+                                    <button id="activity-next-page" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                                        Dalej
+                                        <i class="ph ph-caret-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- TAB: Sent Emails -->
+                            <div id="tab-sent-emails" class="logs-panel hidden">
+                                <div class="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Wysłane maile</h1>
+                                        <p class="text-zinc-500 text-sm">Historia wszystkich wysłanych wiadomości</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-semibold text-white" id="emails-total-count">-</div>
+                                        <div class="text-zinc-600 text-[10px] font-mono">wszystkich maili</div>
+                                    </div>
+                                </div>
+
+                                <!-- Sent Emails Filters -->
+                                <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <select id="emails-filter-status" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[120px]">
+                                            <option value="">Wszystkie statusy</option>
+                                            <option value="sent">Wysłane</option>
+                                            <option value="delivered">Dostarczone</option>
+                                            <option value="opened">Otwarte</option>
+                                            <option value="clicked">Kliknięte</option>
+                                            <option value="bounced">Odbite</option>
+                                        </select>
+                                        <input type="date" id="emails-filter-date-from" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                        <input type="date" id="emails-filter-date-to" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                        <div class="relative flex-1 min-w-[200px]">
+                                            <input type="text" id="emails-filter-search" placeholder="Szukaj po adresie lub temacie..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                                        </div>
+                                        <button id="emails-clear-filters" class="text-zinc-500 hover:text-white px-2 py-2 text-xs transition-colors hidden">
+                                            <i class="ph ph-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Sent Emails Results -->
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-[10px] text-zinc-500 font-mono">
+                                        <span id="emails-showing-count">0</span> z <span id="emails-filtered-count">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Sent Emails Table -->
+                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-hidden">
+                                    <table class="w-full text-left text-xs">
+                                        <thead class="bg-zinc-900/50 text-zinc-500 border-b border-white/5">
+                                            <tr>
+                                                <th class="px-4 py-3 font-medium w-[140px]">Data</th>
+                                                <th class="px-4 py-3 font-medium w-[200px]">Odbiorca</th>
+                                                <th class="px-4 py-3 font-medium">Temat</th>
+                                                <th class="px-4 py-3 font-medium w-[100px]">Status</th>
+                                                <th class="px-4 py-3 font-medium w-[60px] text-center">Podgląd</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="emails-table" class="divide-y divide-white/5"></tbody>
+                                    </table>
+                                    <div id="emails-empty-state" class="hidden p-12 text-center">
+                                        <i class="ph ph-envelope text-3xl text-zinc-700 mb-2"></i>
+                                        <p class="text-zinc-600 text-sm">Brak wysłanych maili</p>
+                                    </div>
+                                    <div id="emails-loading-state" class="p-12 text-center">
+                                        <i class="ph ph-circle-notch animate-spin text-3xl text-zinc-700 mb-2"></i>
+                                        <p class="text-zinc-600 text-sm">Ładowanie...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Sent Emails Pagination -->
+                                <div class="flex items-center justify-between mt-4">
+                                    <button id="emails-prev-page" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                                        <i class="ph ph-caret-left"></i>
+                                        Wstecz
+                                    </button>
+                                    <span class="text-zinc-600 text-xs font-mono">
+                                        <span id="emails-current-page">1</span> / <span id="emails-total-pages">1</span>
+                                    </span>
+                                    <button id="emails-next-page" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                                        Dalej
+                                        <i class="ph ph-caret-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- TAB: Scheduled Emails -->
+                            <div id="tab-scheduled-emails" class="logs-panel hidden">
+                                <div class="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Zaplanowane maile</h1>
+                                        <p class="text-zinc-500 text-sm">Kolejka emaili oczekujących na wysłanie</p>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="text-right">
+                                            <div class="text-2xl font-semibold text-amber-400" id="scheduled-pending-count">-</div>
+                                            <div class="text-zinc-600 text-[10px] font-mono">oczekujących</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Scheduled Emails Filters -->
+                                <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <select id="scheduled-filter-status" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[140px]">
+                                            <option value="">Wszystkie statusy</option>
+                                            <option value="pending">Oczekujące</option>
+                                            <option value="sent">Wysłane</option>
+                                            <option value="cancelled">Anulowane</option>
+                                        </select>
+                                        <select id="scheduled-filter-type" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[160px]">
+                                            <option value="">Wszystkie typy</option>
+                                            <option value="offer_created">Oferta utworzona</option>
+                                            <option value="offer_personal">Wiadomość od Tomka</option>
+                                            <option value="offer_reminder_halfway">Przypomnienie</option>
+                                            <option value="offer_expired">Oferta wygasła</option>
+                                        </select>
+                                        <div class="relative flex-1 min-w-[200px]">
+                                            <input type="text" id="scheduled-filter-search" placeholder="Szukaj po leadzie..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
+                                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                                        </div>
+                                        <button id="scheduled-clear-filters" class="text-zinc-500 hover:text-white px-2 py-2 text-xs transition-colors hidden">
+                                            <i class="ph ph-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Scheduled Emails Results -->
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-[10px] text-zinc-500 font-mono">
+                                        <span id="scheduled-showing-count">0</span> z <span id="scheduled-filtered-count">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Scheduled Emails Table -->
+                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-hidden">
+                                    <table class="w-full text-left text-xs">
+                                        <thead class="bg-zinc-900/50 text-zinc-500 border-b border-white/5">
+                                            <tr>
+                                                <th class="px-4 py-3 font-medium w-[160px]">Zaplanowano na</th>
+                                                <th class="px-4 py-3 font-medium w-[180px]">Lead</th>
+                                                <th class="px-4 py-3 font-medium">Typ emaila</th>
+                                                <th class="px-4 py-3 font-medium w-[120px]">Status</th>
+                                                <th class="px-4 py-3 font-medium w-[80px] text-center">Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="scheduled-table" class="divide-y divide-white/5"></tbody>
+                                    </table>
+                                    <div id="scheduled-empty-state" class="hidden p-12 text-center">
+                                        <i class="ph ph-clock text-3xl text-zinc-700 mb-2"></i>
+                                        <p class="text-zinc-600 text-sm">Brak zaplanowanych maili</p>
+                                    </div>
+                                    <div id="scheduled-loading-state" class="p-12 text-center">
+                                        <i class="ph ph-circle-notch animate-spin text-3xl text-zinc-700 mb-2"></i>
+                                        <p class="text-zinc-600 text-sm">Ładowanie...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Scheduled Emails Pagination -->
+                                <div class="flex items-center justify-between mt-4">
+                                    <button id="scheduled-prev-page" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                                        <i class="ph ph-caret-left"></i>
+                                        Wstecz
+                                    </button>
+                                    <span class="text-zinc-600 text-xs font-mono">
+                                        <span id="scheduled-current-page">1</span> / <span id="scheduled-total-pages">1</span>
+                                    </span>
+                                    <button id="scheduled-next-page" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                                        Dalej
+                                        <i class="ph ph-caret-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Email Preview Modal -->
+    <div id="email-preview-modal" class="fixed inset-0 bg-black/80 email-preview-modal z-50 hidden items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                <div>
+                    <h3 class="text-white font-medium" id="preview-subject">-</h3>
+                    <p class="text-zinc-500 text-xs mt-1">
+                        Do: <span id="preview-to" class="text-zinc-400">-</span> ·
+                        <span id="preview-date" class="text-zinc-500">-</span>
+                    </p>
+                </div>
+                <button onclick="closeEmailPreview()" class="text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-lg transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="preview-body" class="bg-white rounded-lg overflow-hidden">
+                    <!-- Email HTML content -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const ITEMS_PER_PAGE = 50;
+        let teamMembers = [];
+        let teamMembersMap = {};
+        let currentMember = null;
+        let isAdmin = false;
+
+        // Activity data
+        let auditLogs = [];
+        let filteredAuditLogs = [];
+        let activityPage = 1;
+
+        // Sent emails data
+        let sentEmails = [];
+        let filteredSentEmails = [];
+        let emailsPage = 1;
+
+        // Scheduled emails data
+        let scheduledEmails = [];
+        let filteredScheduledEmails = [];
+        let scheduledPage = 1;
+
+        // Leads map for displaying names
+        let leadsMap = {};
+
+        // Action type labels and styles
+        const ACTION_TYPES = {
+            create: { label: 'Utworzono', icon: 'ph-plus-circle', color: 'emerald' },
+            update: { label: 'Zaktualizowano', icon: 'ph-pencil-simple', color: 'blue' },
+            delete: { label: 'Usunięto', icon: 'ph-trash', color: 'red' },
+            status_change: { label: 'Zmiana statusu', icon: 'ph-arrows-left-right', color: 'violet' },
+            batch_delete: { label: 'Usunięto wiele', icon: 'ph-trash', color: 'red' }
+        };
+
+        // Entity type labels and icons
+        const ENTITY_TYPES = {
+            lead: { label: 'Lead', icon: 'ph-user' },
+            meeting: { label: 'Spotkanie', icon: 'ph-calendar' },
+            activity: { label: 'Aktywność', icon: 'ph-clock' },
+            note: { label: 'Notatka', icon: 'ph-note' },
+            offer: { label: 'Oferta', icon: 'ph-package' },
+            proforma: { label: 'Proforma', icon: 'ph-file-pdf' },
+            team_member: { label: 'Użytkownik', icon: 'ph-users-three' },
+            settings: { label: 'Ustawienia', icon: 'ph-gear' },
+            client_offer: { label: 'Oferta klienta', icon: 'ph-link' }
+        };
+
+        // Email type labels
+        const EMAIL_TYPE_LABELS = {
+            offer_created: { label: 'Oferta utworzona', icon: 'ph-paper-plane-tilt', color: 'emerald' },
+            offer_personal: { label: 'Wiadomość osobista', icon: 'ph-user', color: 'violet' },
+            offer_reminder_halfway: { label: 'Przypomnienie', icon: 'ph-bell', color: 'amber' },
+            offer_expired: { label: 'Oferta wygasła', icon: 'ph-clock-countdown', color: 'red' },
+            direct: { label: 'Bezpośredni', icon: 'ph-envelope', color: 'blue' },
+            zapisy_confirmation: { label: 'Potwierdzenie zapisu', icon: 'ph-check-circle', color: 'cyan' },
+            proforma_generated: { label: 'Proforma', icon: 'ph-file-pdf', color: 'pink' }
+        };
+
+        const STATUS_LABELS = {
+            new: 'Nowy',
+            contacted: 'Skontaktowany',
+            qualified: 'Zakwalifikowany',
+            proposal: 'Propozycja',
+            negotiation: 'Negocjacje',
+            won: 'Wygrany',
+            lost: 'Przegrany',
+            abandoned: 'Porzucony'
+        };
+
+        // ==================== AUTH ====================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            await loadTeamMembers(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient.from('team_members').select('*');
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            teamMembersMap = {};
+            teamMembers.forEach(member => {
+                teamMembersMap[member.id] = member;
+            });
+
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+
+            Sidebar.showAdminNav(isAdmin);
+
+            if (isAdmin) {
+                document.getElementById('logs-content').classList.remove('hidden');
+                document.getElementById('access-denied').classList.add('hidden');
+                populateUserFilter();
+                // Load initial tab data
+                switchLogsTab('activity');
+                loadStats();
+            } else {
+                document.getElementById('logs-content').classList.add('hidden');
+                document.getElementById('access-denied').classList.remove('hidden');
+            }
+        }
+
+        // ==================== TAB SWITCHING ====================
+        function switchLogsTab(tabName) {
+            // Hide all panels
+            document.querySelectorAll('.logs-panel').forEach(panel => panel.classList.add('hidden'));
+
+            // Deactivate all tabs
+            document.querySelectorAll('.log-tab').forEach(tab => tab.classList.remove('active'));
+
+            // Show selected panel
+            const panel = document.getElementById(`tab-${tabName}`);
+            if (panel) panel.classList.remove('hidden');
+
+            // Activate selected tab
+            const tab = document.querySelector(`[data-tab="${tabName}"]`);
+            if (tab) tab.classList.add('active');
+
+            // Load data for the selected tab
+            if (tabName === 'activity' && auditLogs.length === 0) {
+                loadAuditLogs();
+            } else if (tabName === 'sent-emails' && sentEmails.length === 0) {
+                loadSentEmails();
+            } else if (tabName === 'scheduled-emails' && scheduledEmails.length === 0) {
+                loadScheduledEmails();
+            }
+        }
+
+        // ==================== STATS ====================
+        async function loadStats() {
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+            // Sent emails in last 24h
+            const { count: sentCount } = await supabaseClient
+                .from('email_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('direction', 'outbound')
+                .gte('sent_at', yesterday.toISOString());
+
+            // Scheduled emails pending
+            const { count: scheduledCount } = await supabaseClient
+                .from('scheduled_emails')
+                .select('*', { count: 'exact', head: true })
+                .is('sent_at', null)
+                .is('cancelled_at', null);
+
+            // Cancelled in last 24h
+            const { count: cancelledCount } = await supabaseClient
+                .from('scheduled_emails')
+                .select('*', { count: 'exact', head: true })
+                .not('cancelled_at', 'is', null)
+                .gte('cancelled_at', yesterday.toISOString());
+
+            document.getElementById('stats-sent-24h').textContent = sentCount || 0;
+            document.getElementById('stats-scheduled-24h').textContent = scheduledCount || 0;
+            document.getElementById('stats-cancelled-24h').textContent = cancelledCount || 0;
+        }
+
+        // ==================== HELPERS ====================
+        function populateUserFilter() {
+            const select = document.getElementById('activity-filter-user');
+            select.innerHTML = '<option value="">Wszyscy</option>' +
+                teamMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        }
+
+        function getMemberInitials(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return '??';
+            return member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+
+        function getMemberColor(memberId) {
+            const member = teamMembersMap[memberId];
+            if (!member) return 'bg-zinc-500';
+            const colorMap = {
+                'violet': 'bg-violet-500',
+                'blue': 'bg-blue-500',
+                'emerald': 'bg-emerald-500',
+                'amber': 'bg-amber-500',
+                'pink': 'bg-pink-500',
+                'cyan': 'bg-cyan-500'
+            };
+            return colorMap[member.color] || 'bg-zinc-500';
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            let relative;
+            if (minutes < 1) relative = 'Teraz';
+            else if (minutes < 60) relative = `${minutes}m temu`;
+            else if (hours < 24) relative = `${hours}h temu`;
+            else if (days < 7) relative = `${days}d temu`;
+            else relative = date.toLocaleDateString('pl-PL');
+
+            const time = date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+            return { relative, time, full: date.toLocaleString('pl-PL') };
+        }
+
+        function formatFutureDateTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = date - now;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            let relative;
+            if (diff < 0) {
+                relative = 'Zaległy';
+            } else if (minutes < 60) {
+                relative = `za ${minutes}m`;
+            } else if (hours < 24) {
+                relative = `za ${hours}h`;
+            } else {
+                relative = `za ${days}d`;
+            }
+
+            const time = date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+            return { relative, time, dateStr, full: date.toLocaleString('pl-PL') };
+        }
+
+        // ==================== ACTIVITY (AUDIT LOGS) ====================
+        async function loadAuditLogs() {
+            document.getElementById('activity-loading-state').classList.remove('hidden');
+            document.getElementById('activity-empty-state').classList.add('hidden');
+
+            const { data, error } = await supabaseClient
+                .from('audit_log')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            document.getElementById('activity-loading-state').classList.add('hidden');
+
+            if (error) {
+                console.error('Error loading audit logs:', error);
+                return;
+            }
+
+            auditLogs = data || [];
+            document.getElementById('activity-total-count').textContent = auditLogs.length;
+            applyActivityFilters();
+        }
+
+        function applyActivityFilters() {
+            const userFilter = document.getElementById('activity-filter-user').value;
+            const actionFilter = document.getElementById('activity-filter-action').value;
+            const entityFilter = document.getElementById('activity-filter-entity').value;
+            const dateFromFilter = document.getElementById('activity-filter-date-from').value;
+            const dateToFilter = document.getElementById('activity-filter-date-to').value;
+            const searchFilter = document.getElementById('activity-filter-search').value.toLowerCase();
+
+            filteredAuditLogs = auditLogs.filter(log => {
+                if (userFilter && log.performed_by !== userFilter) return false;
+                if (actionFilter && log.action_type !== actionFilter) return false;
+                if (entityFilter && log.entity_type !== entityFilter) return false;
+                if (dateFromFilter) {
+                    const logDate = new Date(log.created_at).toISOString().split('T')[0];
+                    if (logDate < dateFromFilter) return false;
+                }
+                if (dateToFilter) {
+                    const logDate = new Date(log.created_at).toISOString().split('T')[0];
+                    if (logDate > dateToFilter) return false;
+                }
+                if (searchFilter) {
+                    const searchIn = [log.entity_identifier, log.performed_by_name].filter(Boolean).join(' ').toLowerCase();
+                    if (!searchIn.includes(searchFilter)) return false;
+                }
+                return true;
+            });
+
+            const hasFilters = userFilter || actionFilter || entityFilter || dateFromFilter || dateToFilter || searchFilter;
+            document.getElementById('activity-clear-filters').classList.toggle('hidden', !hasFilters);
+
+            document.getElementById('activity-filtered-count').textContent = filteredAuditLogs.length;
+            activityPage = 1;
+            renderActivityLogs();
+        }
+
+        function renderActivityLogs() {
+            const tbody = document.getElementById('activity-table');
+            const emptyState = document.getElementById('activity-empty-state');
+            const totalPages = Math.ceil(filteredAuditLogs.length / ITEMS_PER_PAGE);
+
+            if (filteredAuditLogs.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('activity-showing-count').textContent = '0';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            const start = (activityPage - 1) * ITEMS_PER_PAGE;
+            const end = Math.min(start + ITEMS_PER_PAGE, filteredAuditLogs.length);
+            const pageItems = filteredAuditLogs.slice(start, end);
+
+            document.getElementById('activity-showing-count').textContent = pageItems.length;
+            document.getElementById('activity-current-page').textContent = activityPage;
+            document.getElementById('activity-total-pages').textContent = totalPages || 1;
+
+            document.getElementById('activity-prev-page').disabled = activityPage <= 1;
+            document.getElementById('activity-next-page').disabled = activityPage >= totalPages;
+
+            tbody.innerHTML = pageItems.map((log, index) => {
+                const dateTime = formatDateTime(log.created_at);
+                const action = ACTION_TYPES[log.action_type] || { label: log.action_type, icon: 'ph-question', color: 'zinc' };
+                const entity = ENTITY_TYPES[log.entity_type] || { label: log.entity_type, icon: 'ph-question' };
+                const memberColor = getMemberColor(log.performed_by);
+                const memberInitials = getMemberInitials(log.performed_by);
+                const rowId = `activity-details-${start + index}`;
+
+                const colorClasses = {
+                    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                    red: 'bg-red-500/10 text-red-400 border-red-500/20',
+                    violet: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+                    zinc: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                };
+
+                // Link for entity
+                let linkUrl = null;
+                if (log.entity_id) {
+                    switch (log.entity_type) {
+                        case 'lead': linkUrl = `/lead?id=${log.entity_id}`; break;
+                        case 'offer': linkUrl = `/offer?id=${log.entity_id}`; break;
+                        case 'client_offer':
+                            const leadId = log.new_value?.lead_id || log.old_value?.lead_id;
+                            if (leadId) linkUrl = `/lead?id=${leadId}`;
+                            break;
+                    }
+                }
+
+                return `
+                    <tr class="log-row">
+                        <td class="px-4 py-3">
+                            <div class="text-white text-xs">${dateTime.relative}</div>
+                            <div class="text-zinc-600 text-[10px] font-mono">${dateTime.time}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full ${memberColor} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
+                                    ${memberInitials}
+                                </div>
+                                <span class="text-zinc-300 text-xs truncate">${log.performed_by_name || '-'}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border ${colorClasses[action.color]} text-[10px] font-medium">
+                                <i class="ph ${action.icon}"></i>
+                                ${action.label}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ${entity.icon} text-zinc-500"></i>
+                                <div>
+                                    ${linkUrl
+                                        ? `<a href="${linkUrl}" class="text-white text-xs hover:text-blue-400 transition-colors">${entity.label}</a>`
+                                        : `<span class="text-white text-xs">${entity.label}</span>`
+                                    }
+                                    <div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${log.entity_identifier || ''}">${log.entity_identifier || '-'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="toggleActivityDetails('${rowId}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/10 rounded transition-colors">
+                                <i class="ph ph-caret-down text-xs" id="icon-${rowId}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr id="${rowId}" class="hidden bg-zinc-950/50">
+                        <td colspan="5" class="px-4 py-3 border-t border-white/5">
+                            <div class="text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-2">Szczegóły</div>
+                            <div class="bg-zinc-900/50 rounded-lg p-3 text-xs">
+                                ${formatActivityDetails(log.old_value, log.new_value, log.action_type)}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleActivityDetails(rowId) {
+            const row = document.getElementById(rowId);
+            const icon = document.getElementById('icon-' + rowId);
+            if (row.classList.contains('hidden')) {
+                row.classList.remove('hidden');
+                icon.classList.remove('ph-caret-down');
+                icon.classList.add('ph-caret-up');
+            } else {
+                row.classList.add('hidden');
+                icon.classList.remove('ph-caret-up');
+                icon.classList.add('ph-caret-down');
+            }
+        }
+
+        function formatActivityDetails(oldValue, newValue, actionType) {
+            if (actionType === 'status_change' && oldValue?.status && newValue?.status) {
+                const oldLabel = STATUS_LABELS[oldValue.status] || oldValue.status;
+                const newLabel = STATUS_LABELS[newValue.status] || newValue.status;
+                return `
+                    <div class="flex items-center gap-3">
+                        <span class="px-2 py-1 rounded bg-zinc-800 text-zinc-400">${oldLabel}</span>
+                        <i class="ph ph-arrow-right text-zinc-600"></i>
+                        <span class="px-2 py-1 rounded bg-blue-500/10 text-blue-400">${newLabel}</span>
+                    </div>
+                `;
+            }
+
+            if (actionType === 'create' && newValue) {
+                return `<pre class="text-zinc-400 text-[10px] font-mono whitespace-pre-wrap overflow-x-auto">${JSON.stringify(newValue, null, 2)}</pre>`;
+            }
+
+            if (actionType === 'delete' && oldValue) {
+                return `<pre class="text-red-400/60 text-[10px] font-mono whitespace-pre-wrap overflow-x-auto">${JSON.stringify(oldValue, null, 2)}</pre>`;
+            }
+
+            if (oldValue || newValue) {
+                const allKeys = new Set([...Object.keys(oldValue || {}), ...Object.keys(newValue || {})]);
+                const changes = [];
+                allKeys.forEach(key => {
+                    if (key === 'stages') return;
+                    const oldVal = oldValue?.[key];
+                    const newVal = newValue?.[key];
+                    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                        changes.push(`<div class="flex items-center gap-2 py-1">
+                            <span class="text-zinc-500 w-24">${key}:</span>
+                            <span class="text-red-400/60 line-through">${oldVal ?? '-'}</span>
+                            <i class="ph ph-arrow-right text-zinc-700"></i>
+                            <span class="text-emerald-400">${newVal ?? '-'}</span>
+                        </div>`);
+                    }
+                });
+                return changes.length > 0 ? changes.join('') : '<span class="text-zinc-600">Brak zmian</span>';
+            }
+
+            return '<span class="text-zinc-600">Brak szczegółów</span>';
+        }
+
+        // ==================== SENT EMAILS ====================
+        async function loadSentEmails() {
+            document.getElementById('emails-loading-state').classList.remove('hidden');
+            document.getElementById('emails-empty-state').classList.add('hidden');
+
+            const { data, error } = await supabaseClient
+                .from('email_messages')
+                .select('*')
+                .eq('direction', 'outbound')
+                .order('sent_at', { ascending: false });
+
+            document.getElementById('emails-loading-state').classList.add('hidden');
+
+            if (error) {
+                console.error('Error loading sent emails:', error);
+                return;
+            }
+
+            sentEmails = data || [];
+            document.getElementById('emails-total-count').textContent = sentEmails.length;
+            applyEmailsFilters();
+        }
+
+        function applyEmailsFilters() {
+            const statusFilter = document.getElementById('emails-filter-status').value;
+            const dateFromFilter = document.getElementById('emails-filter-date-from').value;
+            const dateToFilter = document.getElementById('emails-filter-date-to').value;
+            const searchFilter = document.getElementById('emails-filter-search').value.toLowerCase();
+
+            filteredSentEmails = sentEmails.filter(email => {
+                if (statusFilter && email.status !== statusFilter) return false;
+                if (dateFromFilter) {
+                    const emailDate = new Date(email.sent_at).toISOString().split('T')[0];
+                    if (emailDate < dateFromFilter) return false;
+                }
+                if (dateToFilter) {
+                    const emailDate = new Date(email.sent_at).toISOString().split('T')[0];
+                    if (emailDate > dateToFilter) return false;
+                }
+                if (searchFilter) {
+                    const searchIn = [email.to_email, email.subject].filter(Boolean).join(' ').toLowerCase();
+                    if (!searchIn.includes(searchFilter)) return false;
+                }
+                return true;
+            });
+
+            const hasFilters = statusFilter || dateFromFilter || dateToFilter || searchFilter;
+            document.getElementById('emails-clear-filters').classList.toggle('hidden', !hasFilters);
+
+            document.getElementById('emails-filtered-count').textContent = filteredSentEmails.length;
+            emailsPage = 1;
+            renderSentEmails();
+        }
+
+        function renderSentEmails() {
+            const tbody = document.getElementById('emails-table');
+            const emptyState = document.getElementById('emails-empty-state');
+            const totalPages = Math.ceil(filteredSentEmails.length / ITEMS_PER_PAGE);
+
+            if (filteredSentEmails.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('emails-showing-count').textContent = '0';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            const start = (emailsPage - 1) * ITEMS_PER_PAGE;
+            const end = Math.min(start + ITEMS_PER_PAGE, filteredSentEmails.length);
+            const pageItems = filteredSentEmails.slice(start, end);
+
+            document.getElementById('emails-showing-count').textContent = pageItems.length;
+            document.getElementById('emails-current-page').textContent = emailsPage;
+            document.getElementById('emails-total-pages').textContent = totalPages || 1;
+
+            document.getElementById('emails-prev-page').disabled = emailsPage <= 1;
+            document.getElementById('emails-next-page').disabled = emailsPage >= totalPages;
+
+            tbody.innerHTML = pageItems.map((email, index) => {
+                const dateTime = formatDateTime(email.sent_at);
+                const statusClass = email.status === 'sent' ? 'status-sent' :
+                                   email.status === 'delivered' ? 'status-sent' :
+                                   email.status === 'opened' ? 'status-scheduled' :
+                                   email.status === 'bounced' ? 'status-cancelled' : 'status-pending';
+                const statusLabel = {
+                    sent: 'Wysłany',
+                    delivered: 'Dostarczony',
+                    opened: 'Otwarty',
+                    clicked: 'Kliknięty',
+                    bounced: 'Odbity'
+                }[email.status] || email.status;
+
+                return `
+                    <tr class="log-row">
+                        <td class="px-4 py-3">
+                            <div class="text-white text-xs">${dateTime.relative}</div>
+                            <div class="text-zinc-600 text-[10px] font-mono">${dateTime.time}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-white text-xs truncate max-w-[180px]" title="${email.to_email}">${email.to_email}</div>
+                            ${email.lead_id ? `<a href="/lead?id=${email.lead_id}" class="text-zinc-600 text-[10px] hover:text-blue-400">Zobacz lead →</a>` : ''}
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-zinc-300 text-xs truncate max-w-[300px]" title="${email.subject}">${email.subject || '-'}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded border ${statusClass} text-[10px] font-medium">
+                                ${statusLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="previewEmail(${index})" class="p-1 text-zinc-500 hover:text-white hover:bg-white/10 rounded transition-colors">
+                                <i class="ph ph-eye text-xs"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function previewEmail(index) {
+            const start = (emailsPage - 1) * ITEMS_PER_PAGE;
+            const email = filteredSentEmails[start + index];
+            if (!email) return;
+
+            document.getElementById('preview-subject').textContent = email.subject || '(bez tematu)';
+            document.getElementById('preview-to').textContent = email.to_email;
+            document.getElementById('preview-date').textContent = formatDateTime(email.sent_at).full;
+            document.getElementById('preview-body').innerHTML = email.body_html || '<p style="padding: 20px; color: #666;">Brak treści</p>';
+
+            document.getElementById('email-preview-modal').classList.remove('hidden');
+            document.getElementById('email-preview-modal').classList.add('flex');
+        }
+
+        function closeEmailPreview() {
+            document.getElementById('email-preview-modal').classList.add('hidden');
+            document.getElementById('email-preview-modal').classList.remove('flex');
+        }
+
+        // ==================== SCHEDULED EMAILS ====================
+        async function loadScheduledEmails() {
+            document.getElementById('scheduled-loading-state').classList.remove('hidden');
+            document.getElementById('scheduled-empty-state').classList.add('hidden');
+
+            // Load scheduled emails with lead info
+            const { data, error } = await supabaseClient
+                .from('scheduled_emails')
+                .select(`
+                    *,
+                    lead:leads(id, name, email, company)
+                `)
+                .order('scheduled_for', { ascending: true });
+
+            document.getElementById('scheduled-loading-state').classList.add('hidden');
+
+            if (error) {
+                console.error('Error loading scheduled emails:', error);
+                return;
+            }
+
+            scheduledEmails = data || [];
+
+            // Count pending
+            const pendingCount = scheduledEmails.filter(e => !e.sent_at && !e.cancelled_at).length;
+            document.getElementById('scheduled-pending-count').textContent = pendingCount;
+
+            applyScheduledFilters();
+        }
+
+        function applyScheduledFilters() {
+            const statusFilter = document.getElementById('scheduled-filter-status').value;
+            const typeFilter = document.getElementById('scheduled-filter-type').value;
+            const searchFilter = document.getElementById('scheduled-filter-search').value.toLowerCase();
+
+            filteredScheduledEmails = scheduledEmails.filter(email => {
+                // Status filter
+                if (statusFilter) {
+                    if (statusFilter === 'pending' && (email.sent_at || email.cancelled_at)) return false;
+                    if (statusFilter === 'sent' && !email.sent_at) return false;
+                    if (statusFilter === 'cancelled' && !email.cancelled_at) return false;
+                }
+                if (typeFilter && email.email_type !== typeFilter) return false;
+                if (searchFilter) {
+                    const leadName = email.lead?.name || email.lead?.email || email.lead?.company || '';
+                    if (!leadName.toLowerCase().includes(searchFilter)) return false;
+                }
+                return true;
+            });
+
+            const hasFilters = statusFilter || typeFilter || searchFilter;
+            document.getElementById('scheduled-clear-filters').classList.toggle('hidden', !hasFilters);
+
+            document.getElementById('scheduled-filtered-count').textContent = filteredScheduledEmails.length;
+            scheduledPage = 1;
+            renderScheduledEmails();
+        }
+
+        function renderScheduledEmails() {
+            const tbody = document.getElementById('scheduled-table');
+            const emptyState = document.getElementById('scheduled-empty-state');
+            const totalPages = Math.ceil(filteredScheduledEmails.length / ITEMS_PER_PAGE);
+
+            if (filteredScheduledEmails.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('scheduled-showing-count').textContent = '0';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            const start = (scheduledPage - 1) * ITEMS_PER_PAGE;
+            const end = Math.min(start + ITEMS_PER_PAGE, filteredScheduledEmails.length);
+            const pageItems = filteredScheduledEmails.slice(start, end);
+
+            document.getElementById('scheduled-showing-count').textContent = pageItems.length;
+            document.getElementById('scheduled-current-page').textContent = scheduledPage;
+            document.getElementById('scheduled-total-pages').textContent = totalPages || 1;
+
+            document.getElementById('scheduled-prev-page').disabled = scheduledPage <= 1;
+            document.getElementById('scheduled-next-page').disabled = scheduledPage >= totalPages;
+
+            tbody.innerHTML = pageItems.map((email, index) => {
+                const dateTime = formatFutureDateTime(email.scheduled_for);
+                const typeInfo = EMAIL_TYPE_LABELS[email.email_type] || { label: email.email_type, icon: 'ph-envelope', color: 'zinc' };
+
+                // Status
+                let statusClass, statusLabel, statusIcon;
+                if (email.sent_at) {
+                    statusClass = 'status-sent';
+                    statusLabel = 'Wysłany';
+                    statusIcon = 'ph-check';
+                } else if (email.cancelled_at) {
+                    statusClass = 'status-cancelled';
+                    statusLabel = email.cancel_reason === 'purchased' ? 'Kupił' : 'Anulowany';
+                    statusIcon = 'ph-x';
+                } else {
+                    statusClass = 'status-scheduled';
+                    statusLabel = dateTime.relative;
+                    statusIcon = 'ph-clock';
+                }
+
+                const leadName = email.lead?.name || email.lead?.company || email.lead?.email || '-';
+                const canCancel = !email.sent_at && !email.cancelled_at;
+
+                return `
+                    <tr class="log-row">
+                        <td class="px-4 py-3">
+                            <div class="text-white text-xs">${dateTime.dateStr}</div>
+                            <div class="text-zinc-600 text-[10px] font-mono">${dateTime.time}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-white text-xs truncate max-w-[160px]" title="${leadName}">${leadName}</div>
+                            ${email.lead?.id ? `<a href="/lead?id=${email.lead.id}" class="text-zinc-600 text-[10px] hover:text-blue-400">Zobacz lead →</a>` : ''}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded type-${email.email_type} text-[10px] font-medium">
+                                <i class="ph ${typeInfo.icon}"></i>
+                                ${typeInfo.label}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border ${statusClass} text-[10px] font-medium">
+                                <i class="ph ${statusIcon}"></i>
+                                ${statusLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            ${canCancel ? `
+                                <button onclick="cancelScheduledEmail('${email.id}')" class="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Anuluj">
+                                    <i class="ph ph-x text-xs"></i>
+                                </button>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function cancelScheduledEmail(emailId) {
+            if (!confirm('Czy na pewno anulować ten email?')) return;
+
+            const { error } = await supabaseClient
+                .from('scheduled_emails')
+                .update({
+                    cancelled_at: new Date().toISOString(),
+                    cancel_reason: 'manual'
+                })
+                .eq('id', emailId);
+
+            if (error) {
+                console.error('Error cancelling email:', error);
+                alert('Błąd anulowania emaila');
+                return;
+            }
+
+            // Reload
+            scheduledEmails = [];
+            loadScheduledEmails();
+            loadStats();
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            // Reload current tab
+            const activeTab = document.querySelector('.log-tab.active');
+            if (activeTab) {
+                const tabName = activeTab.dataset.tab;
+                if (tabName === 'activity') {
+                    auditLogs = [];
+                    loadAuditLogs();
+                } else if (tabName === 'sent-emails') {
+                    sentEmails = [];
+                    loadSentEmails();
+                } else if (tabName === 'scheduled-emails') {
+                    scheduledEmails = [];
+                    loadScheduledEmails();
+                }
+            }
+            loadStats();
+        });
+
+        // Activity filters
+        document.getElementById('activity-filter-user').addEventListener('change', applyActivityFilters);
+        document.getElementById('activity-filter-action').addEventListener('change', applyActivityFilters);
+        document.getElementById('activity-filter-entity').addEventListener('change', applyActivityFilters);
+        document.getElementById('activity-filter-date-from').addEventListener('change', applyActivityFilters);
+        document.getElementById('activity-filter-date-to').addEventListener('change', applyActivityFilters);
+        document.getElementById('activity-filter-search').addEventListener('input', applyActivityFilters);
+        document.getElementById('activity-clear-filters').addEventListener('click', () => {
+            document.getElementById('activity-filter-user').value = '';
+            document.getElementById('activity-filter-action').value = '';
+            document.getElementById('activity-filter-entity').value = '';
+            document.getElementById('activity-filter-date-from').value = '';
+            document.getElementById('activity-filter-date-to').value = '';
+            document.getElementById('activity-filter-search').value = '';
+            applyActivityFilters();
+        });
+
+        // Activity pagination
+        document.getElementById('activity-prev-page').addEventListener('click', () => {
+            if (activityPage > 1) { activityPage--; renderActivityLogs(); }
+        });
+        document.getElementById('activity-next-page').addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredAuditLogs.length / ITEMS_PER_PAGE);
+            if (activityPage < totalPages) { activityPage++; renderActivityLogs(); }
+        });
+
+        // Emails filters
+        document.getElementById('emails-filter-status').addEventListener('change', applyEmailsFilters);
+        document.getElementById('emails-filter-date-from').addEventListener('change', applyEmailsFilters);
+        document.getElementById('emails-filter-date-to').addEventListener('change', applyEmailsFilters);
+        document.getElementById('emails-filter-search').addEventListener('input', applyEmailsFilters);
+        document.getElementById('emails-clear-filters').addEventListener('click', () => {
+            document.getElementById('emails-filter-status').value = '';
+            document.getElementById('emails-filter-date-from').value = '';
+            document.getElementById('emails-filter-date-to').value = '';
+            document.getElementById('emails-filter-search').value = '';
+            applyEmailsFilters();
+        });
+
+        // Emails pagination
+        document.getElementById('emails-prev-page').addEventListener('click', () => {
+            if (emailsPage > 1) { emailsPage--; renderSentEmails(); }
+        });
+        document.getElementById('emails-next-page').addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredSentEmails.length / ITEMS_PER_PAGE);
+            if (emailsPage < totalPages) { emailsPage++; renderSentEmails(); }
+        });
+
+        // Scheduled filters
+        document.getElementById('scheduled-filter-status').addEventListener('change', applyScheduledFilters);
+        document.getElementById('scheduled-filter-type').addEventListener('change', applyScheduledFilters);
+        document.getElementById('scheduled-filter-search').addEventListener('input', applyScheduledFilters);
+        document.getElementById('scheduled-clear-filters').addEventListener('click', () => {
+            document.getElementById('scheduled-filter-status').value = '';
+            document.getElementById('scheduled-filter-type').value = '';
+            document.getElementById('scheduled-filter-search').value = '';
+            applyScheduledFilters();
+        });
+
+        // Scheduled pagination
+        document.getElementById('scheduled-prev-page').addEventListener('click', () => {
+            if (scheduledPage > 1) { scheduledPage--; renderScheduledEmails(); }
+        });
+        document.getElementById('scheduled-next-page').addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredScheduledEmails.length / ITEMS_PER_PAGE);
+            if (scheduledPage < totalPages) { scheduledPage++; renderScheduledEmails(); }
+        });
+
+        // Close modal on escape or click outside
+        document.getElementById('email-preview-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'email-preview-modal') closeEmailPreview();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeEmailPreview();
+        });
+
+        // ==================== INIT ====================
+        async function init() {
+            Sidebar.render();
+            Sidebar.setupLogout(supabaseClient);
+            await checkAuth();
+        }
+        init();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

@@ -6,6 +6,8 @@ const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
   'https://tomekniedzwiecki.pl',
   'http://localhost:3000',
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -115,12 +117,17 @@ function replaceVariables(template: string, data: Record<string, any>): string {
   // Format date if present
   if (data.validUntil) {
     try {
-      data.validUntil = new Date(data.validUntil).toLocaleDateString('pl-PL', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
-    } catch (e) {
+      // Handle date-only format (YYYY-MM-DD) by adding time component
+      const dateStr = String(data.validUntil)
+      const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T12:00:00')
+      if (!isNaN(date.getTime())) {
+        data.validUntil = date.toLocaleDateString('pl-PL', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      }
+    } catch (_e) {
       // Keep original value if parsing fails
     }
   }

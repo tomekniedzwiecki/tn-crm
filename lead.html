@@ -1090,10 +1090,11 @@
             }
         }
 
-        // Email notification helper - fire and forget
+        // Email notification helper
         async function sendEmail(type, data) {
             try {
-                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                console.log('[sendEmail] Sending:', type, data?.email);
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1101,8 +1102,16 @@
                     },
                     body: JSON.stringify({ type, data })
                 });
+                const result = await response.json();
+                if (result.success) {
+                    console.log('[sendEmail] Success:', type, result.id);
+                } else {
+                    console.error('[sendEmail] Failed:', type, result.error);
+                }
+                return result;
             } catch (err) {
-                console.error('Email notification error:', err);
+                console.error('[sendEmail] Error:', err);
+                throw err;
             }
         }
 
@@ -2757,6 +2766,61 @@
             return token;
         }
 
+        // Schedule offer flow emails (3 emails - first one is sent immediately)
+        async function scheduleOfferEmails(lead, clientOffer, validUntil, selectedOffer, offerUrl) {
+            const now = new Date();
+            const validUntilDate = new Date(validUntil + 'T23:59:59');
+
+            // Calculate halfway point between now and expiration
+            const halfwayTime = new Date(now.getTime() + (validUntilDate.getTime() - now.getTime()) / 2);
+
+            // 1. Send first email (offer_created) immediately
+            try {
+                await sendEmail('offer_created', {
+                    email: lead.email,
+                    clientName: lead.name || lead.company || 'Cześć',
+                    offerName: selectedOffer.name,
+                    offerPrice: selectedOffer.price,
+                    validUntil: validUntil,
+                    offerUrl: offerUrl
+                });
+                console.log('Sent offer_created email immediately to:', lead.email);
+            } catch (emailErr) {
+                console.error('Error sending offer_created email:', emailErr);
+            }
+
+            // 2. Schedule remaining 3 emails
+            const emails = [
+                {
+                    email_type: 'offer_personal',
+                    scheduled_for: new Date(now.getTime() + 20 * 60 * 1000).toISOString() // +20 min
+                },
+                {
+                    email_type: 'offer_reminder_halfway',
+                    scheduled_for: halfwayTime.toISOString() // halfway point
+                },
+                {
+                    email_type: 'offer_expired',
+                    scheduled_for: new Date(validUntilDate.getTime() + 60 * 1000).toISOString() // 1 min after midnight
+                }
+            ];
+
+            const emailRecords = emails.map(e => ({
+                lead_id: lead.id,
+                client_offer_id: clientOffer.id,
+                email_type: e.email_type,
+                scheduled_for: e.scheduled_for,
+                metadata: { offer_id: lead.offer_id }
+            }));
+
+            const { error } = await supabaseClient.from('scheduled_emails').insert(emailRecords);
+            if (error) {
+                console.error('Error scheduling emails:', error);
+            } else {
+                console.log('Scheduled 3 follow-up emails for lead:', lead.email);
+            }
+        }
+
         async function generateClientOffer() {
             if (!lead || !currentMember) return;
 
@@ -2809,18 +2873,14 @@
                 token: token
             });
 
-            // Send email notification to client
+            // Send first email immediately + schedule 3 follow-up emails
             const selectedOffer = offers.find(o => o.id === offerId);
-            if (selectedOffer && lead.email) {
+            console.log('Offer flow check:', { email: lead.email, selectedOffer: selectedOffer?.name, offerId });
+            if (lead.email && selectedOffer) {
                 const offerUrl = getClientOfferUrl(token);
-                sendEmail('offer_created', {
-                    email: lead.email,
-                    clientName: lead.name || lead.company || 'Cześć',
-                    offerName: selectedOffer.name,
-                    offerPrice: selectedOffer.price,
-                    validUntil: validUntil,
-                    offerUrl: offerUrl
-                });
+                await scheduleOfferEmails(lead, data, validUntil, selectedOffer, offerUrl);
+            } else {
+                console.warn('Skipped email flow - missing email or offer:', { email: lead.email, offerId });
             }
         }
 
