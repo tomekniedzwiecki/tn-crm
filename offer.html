@@ -433,6 +433,29 @@
                         </div>
                     </div>
 
+                    <!-- Contract Template Section (only for specific offers) -->
+                    <div id="contract-section" class="mb-6 bg-zinc-900/40 rounded-lg border border-white/5 p-4 hidden">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                                    <i class="ph ph-file-text text-lg text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        Wzór umowy
+                                    </h3>
+                                    <p class="text-xs text-zinc-500">Umowa o współpracy dla tej oferty</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a id="contract-link" href="#" target="_blank" class="text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-arrow-square-out"></i>
+                                    Otwórz umowę
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Two Column Layout -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -855,6 +878,19 @@
 
             // Load discount codes for this offer
             await loadOfferDiscountCodes();
+
+            // Show contract section for specific offers
+            const contractTemplates = {
+                '30bf199b-8bc1-4810-8716-43dbffeb9113': '/umowy/umowa-budowa-sklepu.html'
+            };
+            if (contractTemplates[offer.id]) {
+                const contractSection = document.getElementById('contract-section');
+                const contractLink = document.getElementById('contract-link');
+                if (contractSection && contractLink) {
+                    contractLink.href = contractTemplates[offer.id];
+                    contractSection.classList.remove('hidden');
+                }
+            }
 
             // Fix all-codes link to include offer filter
             const allCodesLink = document.getElementById('all-codes-link');
