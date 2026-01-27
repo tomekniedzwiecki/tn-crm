@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TN CRM</title>
+    <title>TN CRM - Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#050505">
@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="components/sidebar.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
@@ -27,277 +27,355 @@
         }
     </script>
     <style>
-        body { background: #050505; color: #e5e5e5; }
+        body { background: #0a0a0a; color: #fafafa; }
 
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
 
         ::selection { background: white; color: black; }
 
         .glass-header {
-            background: rgba(5, 5, 5, 0.7);
+            background: rgba(10, 10, 10, 0.8);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
-        .hover-border {
+        /* Vercel-style card */
+        .stat-card {
+            background: #0a0a0a;
             border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
             transition: all 0.2s ease;
         }
-        .hover-border:hover {
-            border-color: rgba(255,255,255,0.2);
+        .stat-card:hover {
+            border-color: rgba(255,255,255,0.15);
             background: rgba(255,255,255,0.02);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        /* Section card */
+        .section-card {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+        }
+
+        /* Chart tooltip */
+        .chart-tooltip {
+            position: absolute;
+            background: #171717;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 50;
+            white-space: nowrap;
+        }
+
+        /* Funnel bar */
+        .funnel-bar {
+            height: 32px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .funnel-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+        }
+
+        /* Activity dot */
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Source bar */
+        .source-bar {
+            height: 6px;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        /* Trend indicator */
+        .trend-up { color: #22c55e; }
+        .trend-down { color: #ef4444; }
+        .trend-neutral { color: #71717a; }
+
+        /* Skeleton loading */
+        .skeleton {
+            background: linear-gradient(90deg, #1a1a1a 25%, #262626 50%, #1a1a1a 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Mini sparkline */
+        .sparkline {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-enter-delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .animate-enter-delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .animate-enter-delay-3 { animation-delay: 0.3s; opacity: 0; }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+<body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
 
-    <!-- Sidebar (rendered by sidebar.js) -->
+    <!-- Sidebar -->
     <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
 
     <!-- Main -->
-    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+    <main class="flex-1 flex flex-col min-w-0">
         <!-- Header -->
-        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+        <header class="h-14 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
             <div class="flex items-center gap-3">
-                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
-                    <i class="ph ph-list text-xl"></i>
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-lg"></i>
                 </button>
-                <div class="flex items-center gap-2 text-zinc-500">
-                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
-                    <span class="text-zinc-700 hidden sm:inline">/</span>
-                    <span class="text-white font-medium">dashboard</span>
-                </div>
+                <span class="text-zinc-400 text-sm">Dashboard</span>
             </div>
-            <div class="flex items-center gap-2 md:gap-4">
-                <div class="relative hidden md:block">
-                    <i class="ph ph-magnifying-glass absolute left-2.5 top-1.5 text-zinc-500"></i>
-                    <input type="text" id="filter-search" placeholder="Search..." class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-full pl-8 pr-16 py-1.5 focus:border-zinc-600 focus:outline-none w-56 transition-all placeholder:text-zinc-600">
-                    <kbd class="absolute right-2 top-1.5 hidden sm:inline-block border border-zinc-700 rounded px-1 text-[9px] font-mono text-zinc-500">⌘K</kbd>
-                </div>
-                <div class="w-px h-4 bg-zinc-800 hidden md:block"></div>
-                <button class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                    <i class="ph ph-plus md:hidden"></i>
-                    <span class="hidden md:inline">Dodaj Lead</span>
+            <div class="flex items-center gap-3">
+                <button onclick="refreshDashboard()" class="flex items-center gap-2 text-zinc-500 hover:text-white text-xs transition-colors">
+                    <i class="ph ph-arrows-clockwise"></i>
+                    <span class="hidden sm:inline">Odśwież</span>
                 </button>
+                <div class="w-px h-4 bg-zinc-800"></div>
+                <span id="last-updated" class="text-zinc-600 text-[10px] font-mono"></span>
             </div>
         </header>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div class="max-w-6xl mx-auto animate-enter">
-                <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Overview</h1>
-                <p class="text-zinc-500 mb-8">Zarządzaj leadami i monitoruj konwersje.</p>
+        <div class="flex-1 overflow-y-auto">
+            <div class="max-w-7xl mx-auto p-6 lg:p-8">
 
-                <!-- Stats Row 1 -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-                    <!-- Total Leads -->
-                    <div class="relative bg-zinc-900/40 rounded-lg p-5 border border-white/5 group hover:border-zinc-700 hover:bg-zinc-900/60 transition-all duration-300">
-                        <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-zinc-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Total</span>
-                                <div class="w-8 h-8 rounded-lg bg-zinc-800/80 flex items-center justify-center group-hover:bg-zinc-700/80 transition-colors">
-                                    <i class="ph ph-users text-zinc-400 group-hover:text-white transition-colors"></i>
-                                </div>
+                <!-- Page Title -->
+                <div class="mb-8 animate-enter">
+                    <h1 class="text-2xl font-semibold text-white tracking-tight">Overview</h1>
+                    <p class="text-zinc-500 text-sm mt-1">Kluczowe metryki i aktywność w CRM</p>
+                </div>
+
+                <!-- KPI Cards Row -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-enter animate-enter-delay-1">
+                    <!-- Revenue -->
+                    <div class="stat-card p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-zinc-500 text-xs font-medium">Przychód</span>
+                            <span id="revenue-trend" class="text-[10px] font-mono flex items-center gap-1"></span>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <div id="stat-revenue" class="text-2xl font-semibold text-white tracking-tight">-</div>
+                                <div id="stat-revenue-period" class="text-[10px] text-zinc-600 font-mono mt-1">ten miesiąc</div>
                             </div>
-                            <div class="flex items-end gap-2">
-                                <span id="stat-all" class="text-3xl font-semibold text-white tracking-tighter">-</span>
+                            <svg id="revenue-sparkline" class="w-16 h-8" viewBox="0 0 64 32"></svg>
+                        </div>
+                    </div>
+
+                    <!-- Pipeline -->
+                    <div class="stat-card p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-zinc-500 text-xs font-medium">Pipeline</span>
+                            <span class="text-[10px] text-zinc-600 font-mono" id="pipeline-deals-count">0 ofert</span>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <div id="stat-pipeline" class="text-2xl font-semibold text-white tracking-tight">-</div>
+                                <div class="text-[10px] text-zinc-600 font-mono mt-1">w trakcie</div>
+                            </div>
+                            <div class="text-right">
+                                <div id="stat-expected" class="text-sm font-mono text-emerald-400">-</div>
+                                <div class="text-[10px] text-zinc-600">prognoza</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- New Leads -->
-                    <div class="relative bg-zinc-900/40 rounded-lg p-5 border border-emerald-500/10 group hover:border-emerald-500/30 hover:shadow-[0_0_30px_-10px_rgba(16,185,129,0.2)] transition-all duration-300">
-                        <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Nowe</span>
-                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                                    <i class="ph ph-user-plus text-emerald-400 transition-colors"></i>
-                                </div>
+                    <!-- Leads -->
+                    <div class="stat-card p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-zinc-500 text-xs font-medium">Nowe Leady</span>
+                            <span id="leads-trend" class="text-[10px] font-mono flex items-center gap-1"></span>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <div id="stat-new-leads" class="text-2xl font-semibold text-white tracking-tight">-</div>
+                                <div class="text-[10px] text-zinc-600 font-mono mt-1">ten miesiąc</div>
                             </div>
-                            <div class="flex items-end gap-2">
-                                <span id="stat-new" class="text-3xl font-semibold text-white tracking-tighter">-</span>
+                            <div class="text-right">
+                                <div id="stat-total-leads" class="text-sm font-mono text-zinc-400">-</div>
+                                <div class="text-[10px] text-zinc-600">łącznie</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- In Progress -->
-                    <div class="relative bg-zinc-900/40 rounded-lg p-5 border border-blue-500/10 group hover:border-blue-500/30 hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.2)] transition-all duration-300">
-                        <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">W trakcie</span>
-                                <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                                    <i class="ph ph-hourglass-medium text-blue-400 transition-colors"></i>
-                                </div>
-                            </div>
-                            <div class="flex items-end gap-2">
-                                <span id="stat-progress" class="text-3xl font-semibold text-white tracking-tighter">-</span>
-                            </div>
+                    <!-- Conversion -->
+                    <div class="stat-card p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-zinc-500 text-xs font-medium">Konwersja</span>
+                            <span id="conversion-trend" class="text-[10px] font-mono flex items-center gap-1"></span>
                         </div>
-                    </div>
-
-                    <!-- Won -->
-                    <div class="relative bg-zinc-900/40 rounded-lg p-5 border border-green-500/10 group hover:border-green-500/30 hover:shadow-[0_0_30px_-10px_rgba(34,197,94,0.2)] transition-all duration-300">
-                        <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Wygrane</span>
-                                <div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-                                    <i class="ph ph-trophy text-green-400 transition-colors"></i>
-                                </div>
+                        <div>
+                            <div class="flex items-end gap-2 mb-2">
+                                <span id="stat-conversion" class="text-2xl font-semibold text-white tracking-tight">-</span>
                             </div>
-                            <div class="flex items-end gap-2">
-                                <span id="stat-won" class="text-3xl font-semibold text-white tracking-tighter">-</span>
-                                <span id="stat-won-value" class="text-green-400 text-xs font-mono mb-1.5 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20"></span>
+                            <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                <div id="conversion-bar" class="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-700" style="width: 0%"></div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Pipeline Value -->
-                    <div class="relative bg-zinc-900/40 rounded-lg p-5 border border-amber-500/10 group hover:border-amber-500/30 hover:shadow-[0_0_30px_-10px_rgba(245,158,11,0.2)] transition-all duration-300">
-                        <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Pipeline</span>
-                                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                                    <i class="ph ph-currency-circle-dollar text-amber-400 transition-colors"></i>
-                                </div>
-                            </div>
-                            <div class="flex items-end gap-2">
-                                <span id="stat-pipeline" class="text-3xl font-semibold text-white tracking-tighter">-</span>
+                            <div class="flex justify-between mt-1.5 text-[10px] text-zinc-600 font-mono">
+                                <span id="stat-won-count">0 wygranych</span>
+                                <span id="stat-lost-count">0 przegranych</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Conversion Rate Bar -->
-                <div class="bg-zinc-900/40 rounded-lg p-4 border border-white/5 mb-8">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Konwersja</span>
-                        <span id="stat-conversion" class="text-white font-mono text-sm font-medium">-</span>
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 animate-enter animate-enter-delay-2">
+                    <!-- Revenue Chart -->
+                    <div class="section-card p-5 lg:col-span-2">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white">Przychód w czasie</h3>
+                            <div class="flex items-center gap-2">
+                                <button onclick="setChartPeriod('7d')" class="chart-period-btn text-[10px] px-2 py-1 rounded text-zinc-500 hover:text-white hover:bg-white/5 transition-colors" data-period="7d">7D</button>
+                                <button onclick="setChartPeriod('30d')" class="chart-period-btn text-[10px] px-2 py-1 rounded bg-white/5 text-white" data-period="30d">30D</button>
+                                <button onclick="setChartPeriod('90d')" class="chart-period-btn text-[10px] px-2 py-1 rounded text-zinc-500 hover:text-white hover:bg-white/5 transition-colors" data-period="90d">90D</button>
+                            </div>
+                        </div>
+                        <div class="relative h-48">
+                            <svg id="revenue-chart" class="w-full h-full" preserveAspectRatio="none"></svg>
+                            <div id="chart-tooltip" class="chart-tooltip hidden"></div>
+                        </div>
                     </div>
-                    <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div id="conversion-bar" class="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-500" style="width: 0%"></div>
-                    </div>
-                    <div class="flex justify-between mt-2 text-[10px] text-zinc-600 font-mono">
-                        <span>0%</span>
-                        <span id="stat-lost" class="text-red-400/60">0 przegranych</span>
-                        <span>100%</span>
+
+                    <!-- Pipeline Funnel -->
+                    <div class="section-card p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white">Pipeline</h3>
+                            <a href="/pipeline" class="text-[10px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                                Zobacz <i class="ph ph-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div id="pipeline-funnel" class="space-y-2">
+                            <!-- Funnel bars rendered by JS -->
+                        </div>
                     </div>
                 </div>
 
-                <!-- Table -->
-                <div class="border border-white/5 rounded-lg overflow-hidden bg-zinc-900/40">
-                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-zinc-900/80">
+                <!-- Three Column Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 animate-enter animate-enter-delay-3">
+                    <!-- Lead Sources -->
+                    <div class="section-card p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white">Źródła leadów</h3>
+                            <span id="sources-period" class="text-[10px] text-zinc-600 font-mono">30 dni</span>
+                        </div>
+                        <div id="lead-sources" class="space-y-3">
+                            <!-- Sources rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="section-card p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white">Ostatnia aktywność</h3>
+                            <a href="/logi" class="text-[10px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                                Logi <i class="ph ph-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div id="activity-feed" class="space-y-3 max-h-64 overflow-y-auto">
+                            <!-- Activity rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Alerts & Queue -->
+                    <div class="section-card p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white">Do zrobienia</h3>
+                        </div>
+                        <div id="alerts-section" class="space-y-3">
+                            <!-- Alerts rendered by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Leads Table -->
+                <div class="section-card overflow-hidden animate-enter animate-enter-delay-3">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/5">
                         <h3 class="text-sm font-medium text-white">Ostatnie leady</h3>
-                        <select id="filter-status" class="text-xs text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-1 rounded font-mono outline-none focus:border-zinc-500">
-                            <option value="">Wszystkie</option>
-                            <option value="new">Nowe</option>
-                            <option value="contacted">Skontaktowane</option>
-                            <option value="qualified">Zakwalifikowane</option>
-                            <option value="proposal">Propozycja</option>
-                            <option value="negotiation">Negocjacje</option>
-                            <option value="won">Wygrane</option>
-                            <option value="lost">Przegrane</option>
-                        </select>
+                        <a href="/leads" class="text-[10px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                            Zobacz wszystkie <i class="ph ph-arrow-right"></i>
+                        </a>
                     </div>
-
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-zinc-900/80 text-zinc-500 border-b border-white/5">
-                            <tr>
-                                <th class="px-5 py-3 font-medium">Lead</th>
-                                <th class="px-5 py-3 font-medium">Status</th>
-                                <th class="px-5 py-3 font-medium">Źródło</th>
-                                <th class="px-5 py-3 font-medium text-right">Data</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leads-table" class="divide-y divide-white/5"></tbody>
-                    </table>
-
-                    <div id="empty-state" class="hidden py-16 text-center">
-                        <i class="ph ph-inbox text-3xl text-zinc-700 mb-2"></i>
-                        <p class="text-zinc-500 text-sm">Brak leadów</p>
-                        <p class="text-zinc-600 text-xs mt-1 font-mono">Leady pojawią się po wypełnieniu formularza</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-zinc-500 border-b border-white/5 bg-zinc-900/30">
+                                <tr>
+                                    <th class="px-5 py-2.5 font-medium">Lead</th>
+                                    <th class="px-5 py-2.5 font-medium">Status</th>
+                                    <th class="px-5 py-2.5 font-medium">Źródło</th>
+                                    <th class="px-5 py-2.5 font-medium">Wartość</th>
+                                    <th class="px-5 py-2.5 font-medium text-right">Data</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-table" class="divide-y divide-white/5"></tbody>
+                        </table>
                     </div>
-
-                    <div id="loading-state" class="py-16 text-center">
-                        <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
-                        <p class="text-zinc-500 text-sm font-mono">Loading...</p>
+                    <div id="leads-empty" class="hidden py-12 text-center">
+                        <i class="ph ph-users text-2xl text-zinc-700 mb-2"></i>
+                        <p class="text-zinc-500 text-xs">Brak leadów</p>
+                    </div>
+                    <div id="leads-loading" class="py-12 text-center">
+                        <div class="w-5 h-5 mx-auto border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
                     </div>
                 </div>
+
             </div>
         </div>
     </main>
-
-    <!-- Modal -->
-    <div id="lead-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-md shadow-2xl">
-            <div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                <h2 class="text-sm font-medium text-white">Szczegóły leada</h2>
-                <button id="close-modal" class="text-zinc-500 hover:text-white transition-colors">
-                    <i class="ph ph-x text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-4">
-                <div id="modal-content" class="space-y-3 mb-4"></div>
-
-                <div class="space-y-3 pt-3 border-t border-white/5">
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Status</label>
-                        <select id="modal-status" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2 rounded outline-none focus:border-zinc-600">
-                            <option value="new">Nowy</option>
-                            <option value="contacted">Skontaktowany</option>
-                            <option value="qualified">Zakwalifikowany</option>
-                            <option value="rejected">Odrzucony</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Notatki</label>
-                        <textarea id="modal-notes" rows="2" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2 rounded outline-none focus:border-zinc-600 resize-none" placeholder="Dodaj notatki..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-3 px-4 py-3 border-t border-white/5 bg-zinc-900/50">
-                <button id="close-modal-btn" class="flex-1 text-sm text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded transition-colors">
-                    Anuluj
-                </button>
-                <button id="save-lead" class="flex-1 text-sm bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded font-medium transition-colors">
-                    Zapisz
-                </button>
-            </div>
-        </div>
-    </div>
 
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentLeadId = null;
+        // State
         let leads = [];
+        let orders = [];
+        let scheduledEmails = [];
+        let auditLogs = [];
         let teamMembers = [];
         let currentMember = null;
         let isAdmin = false;
+        let chartPeriod = '30d';
+        let pipelineStages = [];
 
         // Render sidebar
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
 
+        // ==================== AUTH ====================
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
@@ -310,246 +388,691 @@
         }
 
         async function loadTeamMembers(userId) {
-            const { data, error } = await supabaseClient
-                .from('team_members')
-                .select('*');
-
-            if (error) {
-                console.error('Error loading team members:', error);
-                return;
-            }
-
+            const { data } = await supabaseClient.from('team_members').select('*');
             teamMembers = data || [];
             currentMember = teamMembers.find(m => m.user_id === userId);
             isAdmin = currentMember?.role === 'admin';
 
-            // Update sidebar user info
             if (currentMember) {
                 Sidebar.setUserName(currentMember.name);
                 Sidebar.setUserColor(currentMember.color);
                 Sidebar.setupProfileClick();
             }
-
             Sidebar.showAdminNav(isAdmin);
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
+        // ==================== DATA LOADING ====================
+        async function loadAllData() {
             const now = new Date();
-            const diff = now - date;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const days = Math.floor(hours / 24);
+            const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-            if (hours < 1) return 'just now';
-            if (hours < 24) return `${hours}h ago`;
-            if (days < 7) return `${days}d ago`;
-            return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+            // Load all data in parallel
+            const [leadsRes, ordersRes, scheduledRes, auditRes, stagesRes] = await Promise.all([
+                supabaseClient.from('leads').select('*').order('created_at', { ascending: false }),
+                supabaseClient.from('orders').select('*').order('created_at', { ascending: false }),
+                supabaseClient.from('scheduled_emails').select('*, lead:leads(email, name)').is('sent_at', null).is('cancelled_at', null).order('scheduled_for', { ascending: true }).limit(10),
+                supabaseClient.from('audit_log').select('*').gte('created_at', thirtyDaysAgo).order('created_at', { ascending: false }).limit(20),
+                supabaseClient.from('settings').select('*').eq('key', 'pipeline_stages').single()
+            ]);
+
+            leads = leadsRes.data || [];
+            orders = ordersRes.data || [];
+            scheduledEmails = scheduledRes.data || [];
+            auditLogs = auditRes.data || [];
+
+            // Parse pipeline stages
+            if (stagesRes.data?.value) {
+                try {
+                    pipelineStages = JSON.parse(stagesRes.data.value);
+                } catch (e) {
+                    pipelineStages = [
+                        { id: 'new', name: 'Nowy' },
+                        { id: 'contacted', name: 'Skontaktowany' },
+                        { id: 'qualified', name: 'Zakwalifikowany' },
+                        { id: 'proposal', name: 'Propozycja' },
+                        { id: 'negotiation', name: 'Negocjacje' }
+                    ];
+                }
+            }
+
+            // Update last updated time
+            document.getElementById('last-updated').textContent = 'Zaktualizowano: ' + new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
         }
 
-        function getSource(lead) {
-            if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google', color: 'text-yellow-400', icon: 'ph-google-logo' };
-            if (lead.fbclid) return { name: 'Meta', color: 'text-blue-400', icon: 'ph-meta-logo' };
-            if (lead.ttclid) return { name: 'TikTok', color: 'text-pink-400', icon: 'ph-tiktok-logo' };
+        // ==================== CALCULATIONS ====================
+        function calculateStats() {
+            const now = new Date();
+            const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            // Revenue calculations
+            const paidOrders = orders.filter(o => o.status === 'paid');
+            const thisMonthRevenue = paidOrders
+                .filter(o => new Date(o.paid_at || o.created_at) >= thisMonth)
+                .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+            const lastMonthRevenue = paidOrders
+                .filter(o => {
+                    const d = new Date(o.paid_at || o.created_at);
+                    return d >= lastMonth && d <= lastMonthEnd;
+                })
+                .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+
+            // Leads calculations
+            const thisMonthLeads = leads.filter(l => new Date(l.created_at) >= thisMonth).length;
+            const lastMonthLeads = leads.filter(l => {
+                const d = new Date(l.created_at);
+                return d >= lastMonth && d <= lastMonthEnd;
+            }).length;
+
+            // Pipeline calculations
+            const activeStatuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation'];
+            const activeLeads = leads.filter(l => activeStatuses.includes(l.status || 'new'));
+            const pipelineValue = activeLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
+
+            // Conversion calculations
+            const wonLeads = leads.filter(l => l.status === 'won');
+            const lostLeads = leads.filter(l => l.status === 'lost');
+            const closedCount = wonLeads.length + lostLeads.length;
+            const conversionRate = closedCount > 0 ? (wonLeads.length / closedCount * 100) : 0;
+
+            // Last month conversion
+            const lastMonthWon = leads.filter(l => l.status === 'won' && new Date(l.updated_at) >= lastMonth && new Date(l.updated_at) <= lastMonthEnd).length;
+            const lastMonthLost = leads.filter(l => l.status === 'lost' && new Date(l.updated_at) >= lastMonth && new Date(l.updated_at) <= lastMonthEnd).length;
+            const lastMonthConversion = (lastMonthWon + lastMonthLost) > 0 ? (lastMonthWon / (lastMonthWon + lastMonthLost) * 100) : 0;
+
+            // Expected revenue (pipeline × conversion rate)
+            const expectedRevenue = pipelineValue * (conversionRate / 100);
+
+            return {
+                thisMonthRevenue,
+                lastMonthRevenue,
+                thisMonthLeads,
+                lastMonthLeads,
+                totalLeads: leads.length,
+                pipelineValue,
+                pipelineDeals: activeLeads.length,
+                expectedRevenue,
+                conversionRate,
+                lastMonthConversion,
+                wonCount: wonLeads.length,
+                lostCount: lostLeads.length,
+                activeLeads
+            };
+        }
+
+        // ==================== RENDER FUNCTIONS ====================
+        function formatCurrency(value, short = true) {
+            if (!value) return '0 zł';
+            if (short && value >= 1000) {
+                return (value / 1000).toFixed(value >= 10000 ? 0 : 1) + 'k zł';
+            }
+            return new Intl.NumberFormat('pl-PL').format(Math.round(value)) + ' zł';
+        }
+
+        function formatTrend(current, previous, suffix = '') {
+            if (!previous || previous === 0) return '';
+            const change = ((current - previous) / previous * 100);
+            const icon = change > 0 ? 'ph-trend-up' : change < 0 ? 'ph-trend-down' : 'ph-minus';
+            const colorClass = change > 0 ? 'trend-up' : change < 0 ? 'trend-down' : 'trend-neutral';
+            return `<i class="ph ${icon}"></i> <span class="${colorClass}">${change > 0 ? '+' : ''}${change.toFixed(0)}%${suffix}</span>`;
+        }
+
+        function renderKPIs() {
+            const stats = calculateStats();
+
+            // Revenue
+            document.getElementById('stat-revenue').textContent = formatCurrency(stats.thisMonthRevenue);
+            document.getElementById('revenue-trend').innerHTML = formatTrend(stats.thisMonthRevenue, stats.lastMonthRevenue);
+
+            // Pipeline
+            document.getElementById('stat-pipeline').textContent = formatCurrency(stats.pipelineValue);
+            document.getElementById('pipeline-deals-count').textContent = `${stats.pipelineDeals} ${stats.pipelineDeals === 1 ? 'oferta' : 'ofert'}`;
+            document.getElementById('stat-expected').textContent = formatCurrency(stats.expectedRevenue);
+
+            // Leads
+            document.getElementById('stat-new-leads').textContent = stats.thisMonthLeads;
+            document.getElementById('stat-total-leads').textContent = stats.totalLeads;
+            document.getElementById('leads-trend').innerHTML = formatTrend(stats.thisMonthLeads, stats.lastMonthLeads);
+
+            // Conversion
+            document.getElementById('stat-conversion').textContent = stats.conversionRate.toFixed(1) + '%';
+            document.getElementById('conversion-bar').style.width = stats.conversionRate + '%';
+            document.getElementById('stat-won-count').textContent = `${stats.wonCount} wygranych`;
+            document.getElementById('stat-lost-count').textContent = `${stats.lostCount} przegranych`;
+            document.getElementById('conversion-trend').innerHTML = formatTrend(stats.conversionRate, stats.lastMonthConversion);
+
+            // Update sidebar leads count
+            const newLeads = leads.filter(l => l.status === 'new' || !l.status).length;
+            document.getElementById('nav-leads-count').textContent = newLeads;
+
+            // Render sparkline
+            renderRevenueSparkline();
+        }
+
+        function renderRevenueSparkline() {
+            const svg = document.getElementById('revenue-sparkline');
+            const paidOrders = orders.filter(o => o.status === 'paid');
+
+            // Last 7 days
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                date.setHours(0, 0, 0, 0);
+                const nextDate = new Date(date);
+                nextDate.setDate(nextDate.getDate() + 1);
+
+                const dayRevenue = paidOrders
+                    .filter(o => {
+                        const d = new Date(o.paid_at || o.created_at);
+                        return d >= date && d < nextDate;
+                    })
+                    .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+                days.push(dayRevenue);
+            }
+
+            const max = Math.max(...days, 1);
+            const points = days.map((val, i) => {
+                const x = (i / 6) * 60 + 2;
+                const y = 30 - (val / max) * 26;
+                return `${x},${y}`;
+            }).join(' ');
+
+            svg.innerHTML = `
+                <polyline points="${points}" class="sparkline" stroke="#22c55e" stroke-width="2" />
+            `;
+        }
+
+        function renderRevenueChart() {
+            const svg = document.getElementById('revenue-chart');
+            const tooltip = document.getElementById('chart-tooltip');
+            const paidOrders = orders.filter(o => o.status === 'paid');
+
+            // Determine period
+            const days = chartPeriod === '7d' ? 7 : chartPeriod === '30d' ? 30 : 90;
+            const data = [];
+
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                date.setHours(0, 0, 0, 0);
+                const nextDate = new Date(date);
+                nextDate.setDate(nextDate.getDate() + 1);
+
+                const dayRevenue = paidOrders
+                    .filter(o => {
+                        const d = new Date(o.paid_at || o.created_at);
+                        return d >= date && d < nextDate;
+                    })
+                    .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+
+                data.push({ date, revenue: dayRevenue });
+            }
+
+            const width = svg.clientWidth || 600;
+            const height = svg.clientHeight || 192;
+            const padding = { top: 10, right: 10, bottom: 30, left: 50 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            const max = Math.max(...data.map(d => d.revenue), 1);
+
+            // Build path
+            const points = data.map((d, i) => {
+                const x = padding.left + (i / (data.length - 1)) * chartWidth;
+                const y = padding.top + chartHeight - (d.revenue / max) * chartHeight;
+                return { x, y, data: d };
+            });
+
+            const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+            const areaD = pathD + ` L ${points[points.length - 1].x} ${height - padding.bottom} L ${padding.left} ${height - padding.bottom} Z`;
+
+            // Grid lines
+            const gridLines = [0, 0.25, 0.5, 0.75, 1].map(pct => {
+                const y = padding.top + chartHeight * (1 - pct);
+                const value = max * pct;
+                return `
+                    <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.05)" />
+                    <text x="${padding.left - 8}" y="${y + 3}" fill="#52525b" font-size="9" text-anchor="end" font-family="JetBrains Mono">${formatCurrency(value, true)}</text>
+                `;
+            }).join('');
+
+            // X-axis labels (show every nth day)
+            const step = days <= 7 ? 1 : days <= 30 ? 5 : 15;
+            const xLabels = data.map((d, i) => {
+                if (i % step !== 0 && i !== data.length - 1) return '';
+                const x = padding.left + (i / (data.length - 1)) * chartWidth;
+                const label = d.date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                return `<text x="${x}" y="${height - 8}" fill="#52525b" font-size="9" text-anchor="middle" font-family="JetBrains Mono">${label}</text>`;
+            }).join('');
+
+            // Hover circles
+            const circles = points.map((p, i) => `
+                <circle cx="${p.x}" cy="${p.y}" r="4" fill="#0a0a0a" stroke="#22c55e" stroke-width="2" class="opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                    data-index="${i}" />
+            `).join('');
+
+            svg.innerHTML = `
+                ${gridLines}
+                ${xLabels}
+                <defs>
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#22c55e" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <path d="${areaD}" fill="url(#areaGradient)" />
+                <path d="${pathD}" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                ${circles}
+            `;
+
+            // Tooltip events
+            svg.querySelectorAll('circle').forEach(circle => {
+                circle.addEventListener('mouseenter', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const point = points[index];
+                    const dateStr = point.data.date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' });
+                    tooltip.innerHTML = `<div class="text-zinc-400 text-[10px]">${dateStr}</div><div class="text-white font-medium">${formatCurrency(point.data.revenue, false)}</div>`;
+                    tooltip.style.left = `${point.x}px`;
+                    tooltip.style.top = `${point.y - 50}px`;
+                    tooltip.classList.remove('hidden');
+                });
+                circle.addEventListener('mouseleave', () => {
+                    tooltip.classList.add('hidden');
+                });
+            });
+        }
+
+        function setChartPeriod(period) {
+            chartPeriod = period;
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.classList.toggle('bg-white/5', btn.dataset.period === period);
+                btn.classList.toggle('text-white', btn.dataset.period === period);
+                btn.classList.toggle('text-zinc-500', btn.dataset.period !== period);
+            });
+            renderRevenueChart();
+        }
+        window.setChartPeriod = setChartPeriod;
+
+        function renderPipelineFunnel() {
+            const container = document.getElementById('pipeline-funnel');
+            const stages = [
+                ...pipelineStages.map(s => ({ id: s.id, name: s.name })),
+                { id: 'won', name: 'Wygrany' },
+                { id: 'lost', name: 'Przegrany' }
+            ];
+
+            const stageCounts = {};
+            const stageValues = {};
+            stages.forEach(s => {
+                stageCounts[s.id] = 0;
+                stageValues[s.id] = 0;
+            });
+
+            leads.forEach(l => {
+                const status = l.status || 'new';
+                if (stageCounts[status] !== undefined) {
+                    stageCounts[status]++;
+                    stageValues[status] += parseFloat(l.deal_value) || 0;
+                }
+            });
+
+            const maxCount = Math.max(...Object.values(stageCounts), 1);
+
+            const colors = {
+                'new': 'bg-zinc-600',
+                'contacted': 'bg-blue-500',
+                'qualified': 'bg-violet-500',
+                'proposal': 'bg-amber-500',
+                'negotiation': 'bg-orange-500',
+                'won': 'bg-emerald-500',
+                'lost': 'bg-red-500'
+            };
+
+            container.innerHTML = stages.slice(0, 7).map(stage => {
+                const count = stageCounts[stage.id];
+                const value = stageValues[stage.id];
+                const width = Math.max((count / maxCount) * 100, 2);
+                const colorClass = colors[stage.id] || 'bg-zinc-600';
+
+                return `
+                    <div class="group">
+                        <div class="flex items-center justify-between text-[10px] mb-1">
+                            <span class="text-zinc-400">${stage.name}</span>
+                            <span class="text-zinc-500 font-mono">${count}</span>
+                        </div>
+                        <div class="funnel-bar ${colorClass}" style="width: ${width}%">
+                            <div class="absolute inset-y-0 right-2 flex items-center text-[9px] text-white/70 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${value > 0 ? formatCurrency(value) : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderLeadSources() {
+            const container = document.getElementById('lead-sources');
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            const recentLeads = leads.filter(l => new Date(l.created_at) >= thirtyDaysAgo);
+
+            // Count by source
+            const sources = {};
+            recentLeads.forEach(l => {
+                const source = getMarketingSource(l);
+                sources[source.name] = (sources[source.name] || { count: 0, ...source });
+                sources[source.name].count++;
+            });
+
+            const sorted = Object.values(sources).sort((a, b) => b.count - a.count);
+            const maxCount = sorted[0]?.count || 1;
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="text-center py-6 text-zinc-600 text-xs">Brak danych</div>';
+                return;
+            }
+
+            container.innerHTML = sorted.slice(0, 5).map(source => {
+                const pct = (source.count / recentLeads.length * 100).toFixed(0);
+                const width = (source.count / maxCount) * 100;
+                return `
+                    <div>
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ${source.icon} ${source.color}"></i>
+                                <span class="text-zinc-300">${source.name}</span>
+                            </div>
+                            <span class="text-zinc-500 font-mono">${source.count} <span class="text-zinc-600">(${pct}%)</span></span>
+                        </div>
+                        <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="source-bar ${source.bgColor}" style="width: ${width}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getMarketingSource(lead) {
+            if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google Ads', color: 'text-yellow-400', bgColor: 'bg-yellow-500', icon: 'ph-google-logo' };
+            if (lead.fbclid) return { name: 'Meta Ads', color: 'text-blue-400', bgColor: 'bg-blue-500', icon: 'ph-meta-logo' };
+            if (lead.ttclid) return { name: 'TikTok', color: 'text-pink-400', bgColor: 'bg-pink-500', icon: 'ph-tiktok-logo' };
             if (lead.utm_source) {
                 const src = lead.utm_source.toLowerCase();
-                if (src.includes('google')) return { name: 'Google', color: 'text-yellow-400', icon: 'ph-google-logo' };
-                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta', color: 'text-blue-400', icon: 'ph-meta-logo' };
-                if (src.includes('tiktok')) return { name: 'TikTok', color: 'text-pink-400', icon: 'ph-tiktok-logo' };
-                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', color: 'text-purple-400', icon: 'ph-envelope' };
+                if (src.includes('google')) return { name: 'Google Ads', color: 'text-yellow-400', bgColor: 'bg-yellow-500', icon: 'ph-google-logo' };
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta Ads', color: 'text-blue-400', bgColor: 'bg-blue-500', icon: 'ph-meta-logo' };
+                if (src.includes('tiktok')) return { name: 'TikTok', color: 'text-pink-400', bgColor: 'bg-pink-500', icon: 'ph-tiktok-logo' };
+                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', color: 'text-purple-400', bgColor: 'bg-purple-500', icon: 'ph-envelope' };
+                if (src.includes('youtube') || src.includes('yt')) return { name: 'YouTube', color: 'text-red-400', bgColor: 'bg-red-500', icon: 'ph-youtube-logo' };
             }
-            if (lead.utm_medium === 'email') return { name: 'Email', color: 'text-purple-400', icon: 'ph-envelope' };
-            return { name: 'Organic', color: 'text-emerald-400', icon: 'ph-leaf' };
+            if (lead.utm_medium === 'email') return { name: 'Email', color: 'text-purple-400', bgColor: 'bg-purple-500', icon: 'ph-envelope' };
+            if (lead.lead_source === 'outreach') return { name: 'Outreach', color: 'text-cyan-400', bgColor: 'bg-cyan-500', icon: 'ph-paper-plane-tilt' };
+            if (lead.lead_source === 'manual') return { name: 'Ręczny', color: 'text-zinc-400', bgColor: 'bg-zinc-500', icon: 'ph-pencil' };
+            return { name: 'Organiczny', color: 'text-emerald-400', bgColor: 'bg-emerald-500', icon: 'ph-leaf' };
+        }
+
+        function renderActivityFeed() {
+            const container = document.getElementById('activity-feed');
+
+            if (auditLogs.length === 0) {
+                container.innerHTML = '<div class="text-center py-6 text-zinc-600 text-xs">Brak aktywności</div>';
+                return;
+            }
+
+            const activityConfig = {
+                'create': { icon: 'ph-plus', color: 'bg-emerald-500', label: 'utworzono' },
+                'update': { icon: 'ph-pencil', color: 'bg-blue-500', label: 'zaktualizowano' },
+                'delete': { icon: 'ph-trash', color: 'bg-red-500', label: 'usunięto' },
+                'status_change': { icon: 'ph-arrows-left-right', color: 'bg-violet-500', label: 'zmieniono status' },
+                'batch_delete': { icon: 'ph-trash', color: 'bg-red-500', label: 'usunięto masowo' }
+            };
+
+            container.innerHTML = auditLogs.slice(0, 10).map(log => {
+                const config = activityConfig[log.action_type] || { icon: 'ph-circle', color: 'bg-zinc-500', label: log.action_type };
+                const timeAgo = formatTimeAgo(log.created_at);
+                const identifier = log.entity_identifier || log.entity_type;
+
+                return `
+                    <div class="flex items-start gap-3 text-xs">
+                        <div class="activity-dot ${config.color} mt-1"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-zinc-300">
+                                <span class="text-zinc-500">${config.label}</span>
+                                <span class="text-white truncate">${identifier}</span>
+                            </div>
+                            <div class="text-[10px] text-zinc-600 font-mono mt-0.5">
+                                ${timeAgo}${log.performed_by_name ? ` • ${log.performed_by_name}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAlerts() {
+            const container = document.getElementById('alerts-section');
+            const alerts = [];
+
+            // Stale leads (in status > 5 days without activity)
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+            const staleLeads = leads.filter(l => {
+                if (['won', 'lost', 'abandoned'].includes(l.status)) return false;
+                const lastActivity = l.activities?.length > 0
+                    ? new Date(l.activities[l.activities.length - 1].created_at)
+                    : new Date(l.created_at);
+                return lastActivity < fiveDaysAgo;
+            });
+
+            if (staleLeads.length > 0) {
+                alerts.push({
+                    icon: 'ph-warning-circle',
+                    color: 'text-amber-400',
+                    bgColor: 'bg-amber-500/10',
+                    borderColor: 'border-amber-500/20',
+                    title: `${staleLeads.length} nieaktywnych leadów`,
+                    desc: 'Leady bez aktywności > 5 dni',
+                    link: '/pipeline'
+                });
+            }
+
+            // Scheduled emails
+            if (scheduledEmails.length > 0) {
+                const nextEmail = scheduledEmails[0];
+                const scheduledFor = new Date(nextEmail.scheduled_for);
+                const timeUntil = scheduledFor > new Date()
+                    ? formatTimeAgo(scheduledFor.toISOString()).replace(' temu', '')
+                    : 'zaraz';
+
+                alerts.push({
+                    icon: 'ph-envelope',
+                    color: 'text-blue-400',
+                    bgColor: 'bg-blue-500/10',
+                    borderColor: 'border-blue-500/20',
+                    title: `${scheduledEmails.length} zaplanowanych maili`,
+                    desc: `Następny: za ${timeUntil}`,
+                    link: '/logi'
+                });
+            }
+
+            // New leads today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayLeads = leads.filter(l => new Date(l.created_at) >= today);
+            if (todayLeads.length > 0) {
+                alerts.push({
+                    icon: 'ph-user-plus',
+                    color: 'text-emerald-400',
+                    bgColor: 'bg-emerald-500/10',
+                    borderColor: 'border-emerald-500/20',
+                    title: `${todayLeads.length} nowych leadów dziś`,
+                    desc: 'Wymagają kontaktu',
+                    link: '/leads?status=new'
+                });
+            }
+
+            // Pending orders
+            const pendingOrders = orders.filter(o => o.status === 'pending');
+            if (pendingOrders.length > 0) {
+                const pendingValue = pendingOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+                alerts.push({
+                    icon: 'ph-clock',
+                    color: 'text-violet-400',
+                    bgColor: 'bg-violet-500/10',
+                    borderColor: 'border-violet-500/20',
+                    title: `${pendingOrders.length} oczekujących zamówień`,
+                    desc: formatCurrency(pendingValue, false),
+                    link: '/orders?status=pending'
+                });
+            }
+
+            if (alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="ph ph-check-circle text-2xl text-emerald-500 mb-2"></i>
+                        <p class="text-zinc-500 text-xs">Wszystko ogarnięte!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => `
+                <a href="${alert.link}" class="block p-3 rounded-lg border ${alert.borderColor} ${alert.bgColor} hover:bg-opacity-20 transition-colors">
+                    <div class="flex items-start gap-3">
+                        <i class="ph ${alert.icon} ${alert.color} text-lg"></i>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs text-white font-medium">${alert.title}</div>
+                            <div class="text-[10px] text-zinc-500 mt-0.5">${alert.desc}</div>
+                        </div>
+                        <i class="ph ph-caret-right text-zinc-600"></i>
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        function renderLeadsTable() {
+            const tbody = document.getElementById('leads-table');
+            const empty = document.getElementById('leads-empty');
+            const loading = document.getElementById('leads-loading');
+
+            loading.classList.add('hidden');
+
+            if (leads.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            const recentLeads = leads.slice(0, 10);
+
+            tbody.innerHTML = recentLeads.map(lead => {
+                const src = getMarketingSource(lead);
+                const status = getStatusBadge(lead.status || 'new');
+                const value = lead.deal_value ? formatCurrency(lead.deal_value) : '-';
+                const initial = (lead.name || lead.email).charAt(0).toUpperCase();
+                const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
+                const colorIndex = lead.email.charCodeAt(0) % colors.length;
+
+                return `
+                    <tr class="hover:bg-white/[0.02] transition-colors cursor-pointer" onclick="openLead('${lead.id}')">
+                        <td class="px-5 py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-lg bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">${initial}</div>
+                                <div class="min-w-0">
+                                    <div class="text-white truncate">${lead.name || lead.email}</div>
+                                    ${lead.name ? `<div class="text-[10px] text-zinc-600 font-mono truncate">${lead.email}</div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-5 py-3">${status}</td>
+                        <td class="px-5 py-3">
+                            <span class="font-mono text-[10px] ${src.color} flex items-center gap-1">
+                                <i class="ph ${src.icon}"></i>
+                                ${src.name}
+                            </span>
+                        </td>
+                        <td class="px-5 py-3">
+                            <span class="text-zinc-400 font-mono text-[11px]">${value}</span>
+                        </td>
+                        <td class="px-5 py-3 text-right">
+                            <span class="text-zinc-500 font-mono text-[10px]">${formatTimeAgo(lead.created_at)}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function getStatusBadge(status) {
             const config = {
-                'new': { label: 'Nowy', bg: 'bg-zinc-800', text: 'text-zinc-300', border: 'border-zinc-700', dot: 'bg-zinc-400' },
-                'contacted': { label: 'Skontaktowany', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', dot: 'bg-blue-400 animate-pulse' },
-                'qualified': { label: 'Zakwalifikowany', bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20', dot: 'bg-violet-400' },
-                'proposal': { label: 'Propozycja', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', dot: 'bg-amber-400' },
-                'negotiation': { label: 'Negocjacje', bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20', dot: 'bg-orange-400 animate-pulse' },
-                'won': { label: 'Wygrany', bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20', dot: 'bg-green-400' },
-                'lost': { label: 'Przegrany', bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', dot: 'bg-red-400' },
-                'abandoned': { label: 'Porzucony', bg: 'bg-zinc-500/10', text: 'text-zinc-400', border: 'border-zinc-500/20', dot: 'bg-zinc-400' }
+                'new': { label: 'Nowy', color: 'zinc' },
+                'contacted': { label: 'Skontaktowany', color: 'blue' },
+                'qualified': { label: 'Zakwalifikowany', color: 'violet' },
+                'proposal': { label: 'Propozycja', color: 'amber' },
+                'negotiation': { label: 'Negocjacje', color: 'orange' },
+                'won': { label: 'Wygrany', color: 'emerald' },
+                'lost': { label: 'Przegrany', color: 'red' },
+                'abandoned': { label: 'Porzucony', color: 'zinc' }
             };
             const c = config[status] || config['new'];
-            return `<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded border ${c.border} ${c.bg} ${c.text} text-[10px] font-medium">
-                <div class="w-1 h-1 rounded-full ${c.dot}"></div>
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-${c.color}-500/10 text-${c.color}-400 border border-${c.color}-500/20">
+                <span class="w-1 h-1 rounded-full bg-${c.color}-400"></span>
                 ${c.label}
-            </div>`;
+            </span>`;
         }
 
-        async function loadLeads() {
-            const { data, error } = await supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
-            if (error) { console.error('Error:', error); return; }
-            leads = data || [];
-            updateStats();
-            renderLeads();
-        }
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
 
-        function formatCurrency(value) {
-            if (!value) return '0 PLN';
-            if (value >= 1000) {
-                return (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'k PLN';
-            }
-            return new Intl.NumberFormat('pl-PL').format(value) + ' PLN';
-        }
-
-        function updateStats() {
-            const newCount = leads.filter(l => l.status === 'new' || !l.status).length;
-            const progressStatuses = ['contacted', 'qualified', 'proposal', 'negotiation'];
-            const progressCount = leads.filter(l => progressStatuses.includes(l.status)).length;
-            const wonLeads = leads.filter(l => l.status === 'won');
-            const lostLeads = leads.filter(l => l.status === 'lost');
-
-            // Calculate values
-            const wonValue = wonLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
-            const pipelineValue = leads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
-
-            // Conversion rate (won / (won + lost))
-            const closedCount = wonLeads.length + lostLeads.length;
-            const conversionRate = closedCount > 0 ? (wonLeads.length / closedCount * 100) : 0;
-
-            // Update DOM
-            document.getElementById('stat-all').textContent = leads.length;
-            document.getElementById('stat-new').textContent = newCount;
-            document.getElementById('stat-progress').textContent = progressCount;
-            document.getElementById('stat-won').textContent = wonLeads.length;
-            document.getElementById('stat-won-value').textContent = wonValue > 0 ? formatCurrency(wonValue) : '';
-            document.getElementById('stat-pipeline').textContent = formatCurrency(pipelineValue);
-            document.getElementById('stat-conversion').textContent = conversionRate.toFixed(1) + '%';
-            document.getElementById('conversion-bar').style.width = conversionRate + '%';
-            document.getElementById('stat-lost').textContent = lostLeads.length + ' przegranych';
-            document.getElementById('nav-leads-count').textContent = newCount;
-        }
-
-        function renderLeads() {
-            const tbody = document.getElementById('leads-table');
-            const emptyState = document.getElementById('empty-state');
-            const loadingState = document.getElementById('loading-state');
-            loadingState.classList.add('hidden');
-
-            const statusFilter = document.getElementById('filter-status').value;
-            const searchFilter = document.getElementById('filter-search').value.toLowerCase();
-
-            let filtered = leads.filter(lead => {
-                const leadStatus = lead.status || 'new';
-                if (statusFilter && leadStatus !== statusFilter) return false;
-                if (searchFilter && !lead.email.toLowerCase().includes(searchFilter)) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
-
-            tbody.innerHTML = filtered.map(lead => {
-                const src = getSource(lead);
-                const initial = lead.email.charAt(0).toUpperCase();
-                const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
-                const colorIndex = lead.email.charCodeAt(0) % colors.length;
-                return `
-                <tr class="hover:bg-white/[0.02] transition-colors cursor-pointer group" onclick="openLead('${lead.id}')">
-                    <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-6 h-6 rounded bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white text-[10px] font-bold">${initial}</div>
-                            <div>
-                                <div class="font-medium text-white">${lead.email}</div>
-                                <div class="text-[10px] text-zinc-600 font-mono">${lead.utm_campaign || 'direct'}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-5 py-3.5">${getStatusBadge(lead.status || 'new')}</td>
-                    <td class="px-5 py-3.5">
-                        <span class="font-mono text-[11px] ${src.color}">${src.name}</span>
-                    </td>
-                    <td class="px-5 py-3.5 text-right text-zinc-500 font-mono">${formatDate(lead.created_at)}</td>
-                </tr>
-            `}).join('');
+            if (minutes < 1) return 'teraz';
+            if (minutes < 60) return `${minutes}m temu`;
+            if (hours < 24) return `${hours}h temu`;
+            if (days < 7) return `${days}d temu`;
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
         }
 
         function openLead(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) return;
-            currentLeadId = id;
-            const src = getSource(lead);
-            const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
-            const colorIndex = lead.email.charCodeAt(0) % colors.length;
-
-            document.getElementById('modal-content').innerHTML = `
-                <div class="flex items-center gap-3 p-3 bg-zinc-900 rounded-lg border border-white/5">
-                    <div class="w-8 h-8 rounded bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white text-sm font-bold">${lead.email.charAt(0).toUpperCase()}</div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-sm text-white truncate">${lead.email}</div>
-                        <div class="text-[10px] text-zinc-500 font-mono">${formatDate(lead.created_at)}</div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="p-3 bg-zinc-900 rounded-lg border border-white/5">
-                        <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Źródło</div>
-                        <div class="text-white mt-1 font-mono ${src.color}">${src.name}</div>
-                    </div>
-                    <div class="p-3 bg-zinc-900 rounded-lg border border-white/5">
-                        <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Kampania</div>
-                        <div class="text-white mt-1 truncate">${lead.utm_campaign || '-'}</div>
-                    </div>
-                </div>
-                ${lead.landing_page ? `<div class="p-3 bg-zinc-900 rounded-lg border border-white/5 text-xs"><div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">Landing</div><div class="text-zinc-400 mt-1 truncate font-mono text-[11px]">${lead.landing_page}</div></div>` : ''}
-            `;
-            document.getElementById('modal-status').value = lead.status || 'new';
-            document.getElementById('modal-notes').value = lead.notes || '';
-            document.getElementById('lead-modal').classList.remove('hidden');
+            const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                ? Sidebar.getBasePath() + '/lead.html'
+                : '/lead';
+            window.location.href = `${basePath}?id=${id}`;
         }
         window.openLead = openLead;
 
-        function closeModal() {
-            document.getElementById('lead-modal').classList.add('hidden');
-            currentLeadId = null;
+        // ==================== INIT ====================
+        async function refreshDashboard() {
+            await loadAllData();
+            renderKPIs();
+            renderRevenueChart();
+            renderPipelineFunnel();
+            renderLeadSources();
+            renderActivityFeed();
+            renderAlerts();
+            renderLeadsTable();
         }
-        document.getElementById('close-modal').addEventListener('click', closeModal);
-        document.getElementById('close-modal-btn').addEventListener('click', closeModal);
-        document.getElementById('lead-modal').addEventListener('click', (e) => { if (e.target.id === 'lead-modal') closeModal(); });
-
-        document.getElementById('save-lead').addEventListener('click', async () => {
-            if (!currentLeadId) return;
-            const status = document.getElementById('modal-status').value;
-            const notes = document.getElementById('modal-notes').value;
-            const { error } = await supabaseClient.from('leads').update({ status, notes }).eq('id', currentLeadId);
-            if (error) { alert('Błąd'); return; }
-            const lead = leads.find(l => l.id === currentLeadId);
-            if (lead) { lead.status = status; lead.notes = notes; }
-            updateStats();
-            renderLeads();
-            closeModal();
-        });
-
-        document.getElementById('filter-status').addEventListener('change', renderLeads);
-        document.getElementById('filter-search').addEventListener('input', renderLeads);
-
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                document.getElementById('filter-search').focus();
-            }
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // Fix links for local development
-        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-            const base = getBasePath();
-            document.querySelectorAll('a[data-page]').forEach(link => {
-                link.href = base + '/' + link.dataset.page + '.html';
-            });
-        }
+        window.refreshDashboard = refreshDashboard;
 
         async function init() {
             const session = await checkAuth();
-            if (session) await loadLeads();
+            if (session) {
+                await refreshDashboard();
+            }
         }
         init();
+
+        // Fix links for local development
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const base = Sidebar.getBasePath();
+            document.querySelectorAll('a[href^="/"]').forEach(link => {
+                if (!link.href.includes('.html')) {
+                    link.href = base + link.getAttribute('href') + '.html';
+                }
+            });
+        }
 
         // Register service worker
         if ('serviceWorker' in navigator) {
