@@ -2790,6 +2790,19 @@
             // Calculate halfway point between now and expiration
             const halfwayTime = new Date(now.getTime() + (validUntilDate.getTime() - now.getTime()) / 2);
 
+            // Calculate next working day at 9:00 AM for offer_personal
+            function getNextWorkingDayMorning() {
+                const date = new Date();
+                date.setDate(date.getDate() + 1); // Start from tomorrow
+                date.setHours(10, 35, 0, 0); // 10:35 AM
+
+                // Skip weekends (0 = Sunday, 6 = Saturday)
+                while (date.getDay() === 0 || date.getDay() === 6) {
+                    date.setDate(date.getDate() + 1);
+                }
+                return date;
+            }
+
             // 1. Send first email (offer_created) immediately
             try {
                 await sendEmail('offer_created', {
@@ -2809,7 +2822,7 @@
             const emails = [
                 {
                     email_type: 'offer_personal',
-                    scheduled_for: new Date(now.getTime() + 20 * 60 * 1000).toISOString() // +20 min
+                    scheduled_for: getNextWorkingDayMorning().toISOString() // Next working day 9:00 AM
                 },
                 {
                     email_type: 'offer_reminder_halfway',
