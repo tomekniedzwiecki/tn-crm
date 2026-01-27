@@ -287,6 +287,86 @@
             }
         }
 
+        // Generate unique token for client offers
+        function generateUniqueToken() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let token = '';
+            for (let i = 0; i < 12; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        // Calculate date + N working days (excluding weekends and Polish holidays)
+        async function calculateWorkingDays(days) {
+            // Fetch Polish holidays
+            const { data: holidays } = await supabaseClient
+                .from('polish_holidays')
+                .select('date')
+                .gte('date', new Date().toISOString().split('T')[0]);
+
+            const holidayDates = new Set(holidays?.map(h => h.date) || []);
+
+            let date = new Date();
+            let addedDays = 0;
+
+            while (addedDays < days) {
+                date.setDate(date.getDate() + 1);
+                const dayOfWeek = date.getDay();
+                const dateStr = date.toISOString().split('T')[0];
+
+                // Skip weekends (0=Sunday, 6=Saturday) and holidays
+                if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDates.has(dateStr)) {
+                    addedDays++;
+                }
+            }
+
+            return date.toISOString().split('T')[0];
+        }
+
+        // Schedule offer flow emails (4 emails)
+        async function scheduleOfferEmails(lead, clientOffer, validUntil) {
+            const now = new Date();
+            const validUntilDate = new Date(validUntil + 'T23:59:59');
+
+            // Calculate halfway point between now and expiration
+            const halfwayTime = new Date(now.getTime() + (validUntilDate.getTime() - now.getTime()) / 2);
+
+            const emails = [
+                {
+                    email_type: 'offer_created',
+                    scheduled_for: now.toISOString()
+                },
+                {
+                    email_type: 'offer_personal',
+                    scheduled_for: new Date(now.getTime() + 20 * 60 * 1000).toISOString() // +20 min
+                },
+                {
+                    email_type: 'offer_reminder_halfway',
+                    scheduled_for: halfwayTime.toISOString() // halfway point
+                },
+                {
+                    email_type: 'offer_expired',
+                    scheduled_for: new Date(validUntilDate.getTime() + 60 * 1000).toISOString() // 1 min after midnight
+                }
+            ];
+
+            const emailRecords = emails.map(e => ({
+                lead_id: lead.id,
+                client_offer_id: clientOffer.id,
+                email_type: e.email_type,
+                scheduled_for: e.scheduled_for,
+                metadata: { offer_id: lead.offer_id }
+            }));
+
+            const { error } = await supabaseClient.from('scheduled_emails').insert(emailRecords);
+            if (error) {
+                console.error('Error scheduling emails:', error);
+            } else {
+                console.log('Scheduled 4 offer flow emails for lead:', lead.email);
+            }
+        }
+
         // Default pipeline stages (will be overwritten by settings)
         const DEFAULT_STAGES = [
             { id: 'new', name: 'Nowy', order: 0 },
@@ -914,6 +994,63 @@
             if (!lead) return;
 
             const oldStatus = lead.status || 'new';
+
+            // === OFFER FLOW: Validate and auto-generate when moving to 'proposal' ===
+            if (newStage === 'proposal' && oldStatus !== 'proposal') {
+                // 1. Check if lead has an assigned offer
+                if (!lead.offer_id) {
+                    alert('Nie można przenieść do "Propozycja" - lead nie ma przypisanej oferty.\n\nPrzejdź do profilu leada i wybierz ofertę w sekcji "Przypisana oferta".');
+                    return;
+                }
+
+                // 2. Check if client_offer already exists for this lead
+                const { data: existingOffer } = await supabaseClient
+                    .from('client_offers')
+                    .select('id')
+                    .eq('lead_id', leadId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                // 3. If no client_offer exists, create one and schedule emails
+                if (!existingOffer) {
+                    try {
+                        // Calculate validity: 2 working days
+                        const validUntil = await calculateWorkingDays(2);
+
+                        // Generate unique token
+                        const token = generateUniqueToken();
+
+                        // Create client_offer
+                        const { data: newClientOffer, error: offerError } = await supabaseClient
+                            .from('client_offers')
+                            .insert({
+                                lead_id: leadId,
+                                offer_id: lead.offer_id,
+                                unique_token: token,
+                                valid_until: validUntil
+                            })
+                            .select()
+                            .single();
+
+                        if (offerError) {
+                            console.error('Error creating client_offer:', offerError);
+                            alert('Błąd tworzenia oferty klienta: ' + offerError.message);
+                            return;
+                        }
+
+                        // Schedule 4 offer flow emails
+                        await scheduleOfferEmails(lead, newClientOffer, validUntil);
+
+                        console.log('Created client_offer and scheduled emails:', newClientOffer.id);
+                    } catch (err) {
+                        console.error('Error in offer flow:', err);
+                        alert('Błąd w procesie generowania oferty');
+                        return;
+                    }
+                }
+            }
+            // === END OFFER FLOW ===
 
             // Get leads in this stage sorted by position
             const stageLeads = leads

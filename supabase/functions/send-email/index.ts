@@ -18,15 +18,30 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 
 // Valid email types
-const VALID_EMAIL_TYPES = ['zapisy_confirmation', 'proforma_generated', 'offer_reminder', 'offer_created', 'direct']
+const VALID_EMAIL_TYPES = [
+  'zapisy_confirmation',
+  'proforma_generated',
+  'offer_reminder',
+  'offer_created',
+  'offer_personal',
+  'offer_reminder_halfway',
+  'offer_expired',
+  'direct'
+]
 
 // Fallback subjects only (body MUST come from database)
 const FALLBACK_SUBJECTS: Record<string, string> = {
   zapisy_confirmation: 'Dziękuję za zgłoszenie',
   proforma_generated: 'Faktura proforma - {{offerName}}',
   offer_reminder: 'Przypomnienie: oferta wygasa {{validUntil}}',
-  offer_created: 'Twoja oferta jest gotowa - {{offerName}}'
+  offer_created: 'Twoja oferta jest gotowa - {{offerName}}',
+  offer_personal: 'Re: {{offerName}}',
+  offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',
+  offer_expired: 'Twoja oferta wygasła'
 }
+
+// Offer flow email types (use special reply-to)
+const OFFER_FLOW_TYPES = ['offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired']
 
 // Extract first name for reply-to address (e.g. "Tomek Niedzwiecki" -> "tomek")
 function getFirstNameForReplyTo(name: string): string {
@@ -232,7 +247,8 @@ Deno.serve(async (req) => {
         .in('key', [
           `email_template_${type}_subject`,
           `email_template_${type}_body`,
-          'email_reply_to'
+          'email_reply_to',
+          'offer_flow_reply_to'
         ])
 
       if (settingsError) {
@@ -276,6 +292,18 @@ Deno.serve(async (req) => {
       // Replace variables in subject and body
       finalSubject = replaceVariables(subject, templateData)
       finalBody = replaceVariables(body, templateData)
+
+      // For offer_personal, add signature
+      if (type === 'offer_personal') {
+        senderName = 'Tomek Niedzwiecki'
+        finalBody = finalBody + getEmailSignature(senderName)
+      }
+
+      // For offer flow emails, use special reply-to
+      if (OFFER_FLOW_TYPES.includes(type)) {
+        senderDirectEmail = settingsMap['offer_flow_reply_to'] || 'ceo@tomekniedzwiecki.pl'
+        console.log('[send-email] Using offer flow reply-to:', senderDirectEmail)
+      }
     }
 
     // Send via Resend

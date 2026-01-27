@@ -363,6 +363,49 @@
                                     </div>
                                 </div>
 
+                                <!-- Flow ofertowe section -->
+                                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                            <i class="ph ph-flow-arrow text-amber-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-white font-medium">Flow ofertowe</h2>
+                                            <p class="text-zinc-500 text-xs">Automatyczna sekwencja maili po wygenerowaniu oferty</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-zinc-800/30 rounded-lg p-4 mb-4">
+                                        <div class="flex items-start gap-3">
+                                            <i class="ph ph-info text-amber-400 text-lg mt-0.5"></i>
+                                            <div class="text-xs text-zinc-400 space-y-1">
+                                                <p>Gdy lead przechodzi do statusu "Propozycja" w pipeline, automatycznie tworzona jest oferta i uruchamiany flow 4 emaili:</p>
+                                                <ol class="list-decimal list-inside pl-1 space-y-0.5">
+                                                    <li><strong>Oferta przygotowana</strong> - wysyłany natychmiast</li>
+                                                    <li><strong>Wiadomosc od Tomka</strong> - po 20 minutach</li>
+                                                    <li><strong>Przypomnienie</strong> - w polowie czasu waznosci oferty</li>
+                                                    <li><strong>Oferta wygasla</strong> - minutę po wygasnieciu</li>
+                                                </ol>
+                                                <p class="text-zinc-500 pt-1">Flow jest anulowane automatycznie jesli klient dokona zakupu.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Reply-To dla flow ofertowego</label>
+                                        <div class="flex gap-3">
+                                            <input type="email" id="offer-flow-reply-to"
+                                                   class="flex-1 text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                   placeholder="ceo@tomekniedzwiecki.pl">
+                                            <button onclick="saveOfferFlowReplyTo()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                <i class="ph ph-floppy-disk"></i>
+                                                Zapisz
+                                            </button>
+                                        </div>
+                                        <p class="text-zinc-600 text-xs mt-1">Wszystkie maile z flow ofertowego beda mialy ten adres jako Reply-To.</p>
+                                    </div>
+                                </div>
+
                                 <!-- Email templates list -->
                                 <div class="space-y-3">
                                     <!-- Template: zapisy_confirmation -->
@@ -409,19 +452,20 @@
                                         </div>
                                     </div>
 
-                                    <!-- Template: offer_created -->
+                                    <!-- Template: offer_created (Flow ofertowe - natychmiast) -->
                                     <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
                                         <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_created')">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-paper-plane-tilt text-violet-400 text-xl"></i>
+                                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                                    <i class="ph ph-paper-plane-tilt text-amber-400 text-xl"></i>
                                                 </div>
                                                 <div>
                                                     <div class="text-white font-medium">Oferta przygotowana</div>
-                                                    <div class="text-zinc-500 text-xs">Wysyłany po utworzeniu oferty dla klienta</div>
+                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany natychmiast po utworzeniu oferty</div>
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-3">
+                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
                                                 <span id="template-status-offer_created" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
                                                 <i id="template-arrow-offer_created" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
                                             </div>
@@ -456,6 +500,164 @@
                                                     Podgląd
                                                 </button>
                                                 <button onclick="saveEmailTemplate('offer_created')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-floppy-disk"></i>
+                                                    Zapisz szablon
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Template: offer_personal (Flow ofertowe - 20 min) -->
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
+                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_personal')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                                    <i class="ph ph-user text-amber-400 text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white font-medium">Wiadomosc od Tomka</div>
+                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany 20 minut po ofercie (z podpisem)</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
+                                                <span id="template-status-offer_personal" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
+                                                <i id="template-arrow-offer_personal" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-offer_personal" class="hidden border-t border-white/5 p-5 space-y-4">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
+                                                <input type="text" id="template-subject-offer_personal"
+                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       value="Re: {{offerName}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
+                                                <textarea id="template-body-offer_personal" rows="12"
+                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
+                                                          placeholder="Tresc emaila w HTML..."></textarea>
+                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
+                                                    <p>Dostepne zmienne:</p>
+                                                    <div class="flex flex-wrap gap-1.5">
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{senderName}}</code>
+                                                    </div>
+                                                    <p class="text-amber-400/70 mt-2">Podpis Tomka dodawany jest automatycznie.</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2 pt-2">
+                                                <button onclick="previewEmailTemplate('offer_personal')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-eye"></i>
+                                                    Podglad
+                                                </button>
+                                                <button onclick="saveEmailTemplate('offer_personal')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-floppy-disk"></i>
+                                                    Zapisz szablon
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Template: offer_reminder_halfway (Flow ofertowe - polowa czasu) -->
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
+                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_reminder_halfway')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                                    <i class="ph ph-bell text-amber-400 text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white font-medium">Przypomnienie (polowa czasu)</div>
+                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany w polowie waznosci oferty</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
+                                                <span id="template-status-offer_reminder_halfway" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
+                                                <i id="template-arrow-offer_reminder_halfway" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-offer_reminder_halfway" class="hidden border-t border-white/5 p-5 space-y-4">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
+                                                <input type="text" id="template-subject-offer_reminder_halfway"
+                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       value="Przypomnienie: Twoja oferta wygasa {{validUntil}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
+                                                <textarea id="template-body-offer_reminder_halfway" rows="12"
+                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
+                                                          placeholder="Tresc emaila w HTML..."></textarea>
+                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
+                                                    <p>Dostepne zmienne:</p>
+                                                    <div class="flex flex-wrap gap-1.5">
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerPrice}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{validUntil}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerUrl}}</code>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2 pt-2">
+                                                <button onclick="previewEmailTemplate('offer_reminder_halfway')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-eye"></i>
+                                                    Podglad
+                                                </button>
+                                                <button onclick="saveEmailTemplate('offer_reminder_halfway')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-floppy-disk"></i>
+                                                    Zapisz szablon
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Template: offer_expired (Flow ofertowe - po wygasnieciu) -->
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
+                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_expired')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                                                    <i class="ph ph-clock-countdown text-red-400 text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white font-medium">Oferta wygasla</div>
+                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany minute po wygasnieciu oferty</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
+                                                <span id="template-status-offer_expired" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
+                                                <i id="template-arrow-offer_expired" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-offer_expired" class="hidden border-t border-white/5 p-5 space-y-4">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
+                                                <input type="text" id="template-subject-offer_expired"
+                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       value="Twoja oferta wygasla">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
+                                                <textarea id="template-body-offer_expired" rows="12"
+                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
+                                                          placeholder="Tresc emaila w HTML..."></textarea>
+                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
+                                                    <p>Dostepne zmienne:</p>
+                                                    <div class="flex flex-wrap gap-1.5">
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
+                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2 pt-2">
+                                                <button onclick="previewEmailTemplate('offer_expired')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-eye"></i>
+                                                    Podglad
+                                                </button>
+                                                <button onclick="saveEmailTemplate('offer_expired')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                                                     <i class="ph ph-floppy-disk"></i>
                                                     Zapisz szablon
                                                 </button>
@@ -2057,6 +2259,38 @@
             showToast('Adres Reply-To zapisany');
         }
 
+        // Save Offer Flow Reply-To setting
+        async function saveOfferFlowReplyTo() {
+            const replyTo = document.getElementById('offer-flow-reply-to').value.trim();
+
+            const { error } = await supabaseClient
+                .from('settings')
+                .upsert({
+                    key: 'offer_flow_reply_to',
+                    value: replyTo || 'ceo@tomekniedzwiecki.pl',
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+
+            if (error) {
+                alert('Blad zapisu ustawienia Offer Flow Reply-To');
+                return;
+            }
+
+            settings.offer_flow_reply_to = replyTo || 'ceo@tomekniedzwiecki.pl';
+
+            await logAuditActivity(
+                'update',
+                'settings',
+                null,
+                'offer_flow_reply_to',
+                null,
+                { value: replyTo || 'ceo@tomekniedzwiecki.pl' },
+                { setting: 'offer_flow_reply_to' }
+            );
+
+            showToast('Reply-To dla flow ofertowego zapisany');
+        }
+
         // =============================================
         // EMAIL DOMAIN SETTINGS
         // =============================================
@@ -2077,6 +2311,12 @@
                 settings.email_from_name_outreach || DEFAULT_EMAIL_DOMAINS.email_from_name_outreach;
             document.getElementById('email-from-outreach').value =
                 settings.email_from_outreach || DEFAULT_EMAIL_DOMAINS.email_from_outreach;
+
+            // Load offer flow reply-to
+            const offerFlowReplyTo = document.getElementById('offer-flow-reply-to');
+            if (offerFlowReplyTo) {
+                offerFlowReplyTo.value = settings.offer_flow_reply_to || 'ceo@tomekniedzwiecki.pl';
+            }
         }
 
         async function saveEmailDomainSettings() {
