@@ -75,24 +75,6 @@
             white-space: nowrap;
         }
 
-        /* Funnel bar */
-        .funnel-bar {
-            height: 32px;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        .funnel-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
-        }
-
         /* Activity dot */
         .activity-dot {
             width: 8px;
@@ -252,34 +234,46 @@
                 </div>
 
                 <!-- Charts Row -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 animate-enter animate-enter-delay-2">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-enter animate-enter-delay-2">
                     <!-- Revenue Chart -->
-                    <div class="section-card p-5 lg:col-span-2">
+                    <div class="section-card p-5">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-sm font-medium text-white">Przychód w czasie</h3>
-                            <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-medium text-white">Przychód</h3>
+                            <div class="flex items-center gap-1">
                                 <button onclick="setChartPeriod('7d')" class="chart-period-btn text-[10px] px-2 py-1 rounded text-zinc-500 hover:text-white hover:bg-white/5 transition-colors" data-period="7d">7D</button>
                                 <button onclick="setChartPeriod('30d')" class="chart-period-btn text-[10px] px-2 py-1 rounded bg-white/5 text-white" data-period="30d">30D</button>
                                 <button onclick="setChartPeriod('90d')" class="chart-period-btn text-[10px] px-2 py-1 rounded text-zinc-500 hover:text-white hover:bg-white/5 transition-colors" data-period="90d">90D</button>
                             </div>
                         </div>
-                        <div class="relative h-48">
+                        <div class="relative h-40">
                             <svg id="revenue-chart" class="w-full h-full" preserveAspectRatio="none"></svg>
                             <div id="chart-tooltip" class="chart-tooltip hidden"></div>
                         </div>
                     </div>
 
-                    <!-- Pipeline Funnel -->
+                    <!-- Leads Chart -->
                     <div class="section-card p-5">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-sm font-medium text-white">Pipeline</h3>
-                            <a href="/pipeline" class="text-[10px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
-                                Zobacz <i class="ph ph-arrow-right"></i>
-                            </a>
+                            <h3 class="text-sm font-medium text-white">Nowe leady</h3>
+                            <span class="text-[10px] text-zinc-600 font-mono">30 dni</span>
                         </div>
-                        <div id="pipeline-funnel" class="space-y-2">
-                            <!-- Funnel bars rendered by JS -->
+                        <div class="relative h-40">
+                            <svg id="leads-chart" class="w-full h-full" preserveAspectRatio="none"></svg>
+                            <div id="leads-chart-tooltip" class="chart-tooltip hidden"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Row -->
+                <div class="section-card p-5 mb-6 animate-enter animate-enter-delay-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-white">Pipeline</h3>
+                        <a href="/pipeline" class="text-[10px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                            Zobacz wszystko <i class="ph ph-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div id="pipeline-funnel" class="space-y-2.5">
+                        <!-- Funnel bars rendered by JS -->
                     </div>
                 </div>
 
@@ -696,6 +690,88 @@
         }
         window.setChartPeriod = setChartPeriod;
 
+        function renderLeadsChart() {
+            const svg = document.getElementById('leads-chart');
+            const tooltip = document.getElementById('leads-chart-tooltip');
+
+            // Last 30 days
+            const days = 30;
+            const data = [];
+
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                date.setHours(0, 0, 0, 0);
+                const nextDate = new Date(date);
+                nextDate.setDate(nextDate.getDate() + 1);
+
+                const dayLeads = leads.filter(l => {
+                    const d = new Date(l.created_at);
+                    return d >= date && d < nextDate;
+                }).length;
+
+                data.push({ date, count: dayLeads });
+            }
+
+            const width = svg.clientWidth || 400;
+            const height = svg.clientHeight || 160;
+            const padding = { top: 10, right: 10, bottom: 25, left: 30 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            const max = Math.max(...data.map(d => d.count), 1);
+
+            // Build bars
+            const barWidth = Math.max((chartWidth / data.length) - 2, 2);
+            const bars = data.map((d, i) => {
+                const x = padding.left + (i / data.length) * chartWidth + 1;
+                const barHeight = (d.count / max) * chartHeight;
+                const y = padding.top + chartHeight - barHeight;
+                return { x, y, width: barWidth, height: barHeight, data: d };
+            });
+
+            // Grid lines
+            const gridLines = [0, 0.5, 1].map(pct => {
+                const y = padding.top + chartHeight * (1 - pct);
+                const value = Math.round(max * pct);
+                return `
+                    <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.05)" />
+                    <text x="${padding.left - 6}" y="${y + 3}" fill="#52525b" font-size="9" text-anchor="end" font-family="JetBrains Mono">${value}</text>
+                `;
+            }).join('');
+
+            // X-axis labels
+            const xLabels = [0, Math.floor(days / 2), days - 1].map(i => {
+                const x = padding.left + (i / data.length) * chartWidth + barWidth / 2;
+                const label = data[i].date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                return `<text x="${x}" y="${height - 6}" fill="#52525b" font-size="9" text-anchor="middle" font-family="JetBrains Mono">${label}</text>`;
+            }).join('');
+
+            // Bars
+            const barsHtml = bars.map((b, i) => `
+                <rect x="${b.x}" y="${b.y}" width="${b.width}" height="${Math.max(b.height, 1)}"
+                      fill="#3b82f6" rx="1" class="hover:fill-blue-400 transition-colors cursor-pointer" data-index="${i}" />
+            `).join('');
+
+            svg.innerHTML = `${gridLines}${xLabels}${barsHtml}`;
+
+            // Tooltip events
+            svg.querySelectorAll('rect').forEach(rect => {
+                rect.addEventListener('mouseenter', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const bar = bars[index];
+                    const dateStr = bar.data.date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' });
+                    tooltip.innerHTML = `<div class="text-zinc-400 text-[10px]">${dateStr}</div><div class="text-white font-medium">${bar.data.count} ${bar.data.count === 1 ? 'lead' : 'leadów'}</div>`;
+                    tooltip.style.left = `${bar.x + bar.width / 2}px`;
+                    tooltip.style.top = `${bar.y - 45}px`;
+                    tooltip.classList.remove('hidden');
+                });
+                rect.addEventListener('mouseleave', () => {
+                    tooltip.classList.add('hidden');
+                });
+            });
+        }
+
         function renderPipelineFunnel() {
             const container = document.getElementById('pipeline-funnel');
             const stages = [
@@ -722,31 +798,31 @@
             const maxCount = Math.max(...Object.values(stageCounts), 1);
 
             const colors = {
-                'new': 'bg-zinc-600',
-                'contacted': 'bg-blue-500',
-                'qualified': 'bg-violet-500',
-                'proposal': 'bg-amber-500',
-                'negotiation': 'bg-orange-500',
-                'won': 'bg-emerald-500',
-                'lost': 'bg-red-500'
+                'new': { bg: 'bg-zinc-500', text: 'text-zinc-400' },
+                'contacted': { bg: 'bg-blue-500', text: 'text-blue-400' },
+                'qualified': { bg: 'bg-violet-500', text: 'text-violet-400' },
+                'proposal': { bg: 'bg-amber-500', text: 'text-amber-400' },
+                'negotiation': { bg: 'bg-orange-500', text: 'text-orange-400' },
+                'won': { bg: 'bg-emerald-500', text: 'text-emerald-400' },
+                'lost': { bg: 'bg-red-500', text: 'text-red-400' }
             };
 
             container.innerHTML = stages.slice(0, 7).map(stage => {
                 const count = stageCounts[stage.id];
                 const value = stageValues[stage.id];
-                const width = Math.max((count / maxCount) * 100, 2);
-                const colorClass = colors[stage.id] || 'bg-zinc-600';
+                const pct = Math.round((count / maxCount) * 100);
+                const color = colors[stage.id] || colors['new'];
 
                 return `
-                    <div class="group">
-                        <div class="flex items-center justify-between text-[10px] mb-1">
-                            <span class="text-zinc-400">${stage.name}</span>
-                            <span class="text-zinc-500 font-mono">${count}</span>
+                    <div class="flex items-center gap-3 group">
+                        <div class="w-24 flex-shrink-0">
+                            <span class="text-xs text-zinc-400">${stage.name}</span>
                         </div>
-                        <div class="funnel-bar ${colorClass}" style="width: ${width}%">
-                            <div class="absolute inset-y-0 right-2 flex items-center text-[9px] text-white/70 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                                ${value > 0 ? formatCurrency(value) : ''}
-                            </div>
+                        <div class="flex-1 h-2 bg-zinc-800/50 rounded-full overflow-hidden">
+                            <div class="${color.bg} h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="w-8 text-right">
+                            <span class="text-xs font-mono ${color.text}">${count}</span>
                         </div>
                     </div>
                 `;
@@ -1048,6 +1124,7 @@
             await loadAllData();
             renderKPIs();
             renderRevenueChart();
+            renderLeadsChart();
             renderPipelineFunnel();
             renderLeadSources();
             renderActivityFeed();
