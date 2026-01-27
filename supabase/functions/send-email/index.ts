@@ -23,7 +23,6 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 const VALID_EMAIL_TYPES = [
   'zapisy_confirmation',
   'proforma_generated',
-  'offer_reminder',
   'offer_created',
   'offer_personal',
   'offer_reminder_halfway',
@@ -35,7 +34,6 @@ const VALID_EMAIL_TYPES = [
 const FALLBACK_SUBJECTS: Record<string, string> = {
   zapisy_confirmation: 'Dziękuję za zgłoszenie',
   proforma_generated: 'Faktura proforma - {{offerName}}',
-  offer_reminder: 'Przypomnienie: oferta wygasa {{validUntil}}',
   offer_created: 'Twoja oferta jest gotowa - {{offerName}}',
   offer_personal: 'Re: {{offerName}}',
   offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',
@@ -293,7 +291,8 @@ Deno.serve(async (req) => {
         offerPrice: data.offerPrice,
         pdfUrl: data.pdfUrl || '',
         offerUrl: data.offerUrl || '',
-        validUntil: data.validUntil || ''
+        validUntil: data.validUntil || '',
+        checkoutUrl: data.checkoutUrl || ''
       }
 
       // Replace variables in subject and body

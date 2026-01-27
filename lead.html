@@ -372,11 +372,16 @@
                     <span id="breadcrumb-email" class="text-white font-medium truncate max-w-[150px] md:max-w-[200px]">...</span>
                 </div>
                 <!-- Lead Navigation -->
-                <div class="flex items-center gap-1 ml-2 border-l border-white/10 pl-3">
-                    <button id="prev-lead-btn" disabled class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500" title="Poprzedni lead">
+                <div class="flex items-center gap-2 ml-2 border-l border-white/10 pl-3">
+                    <button id="prev-lead-btn" disabled class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500" title="Poprzedni lead w tym statusie">
                         <i class="ph ph-caret-left text-lg"></i>
                     </button>
-                    <button id="next-lead-btn" disabled class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500" title="Następny lead">
+                    <div id="nav-status-badge" class="hidden flex items-center gap-1.5">
+                        <i id="nav-status-icon" class="ph ph-circle text-xs"></i>
+                        <span id="nav-status-label" class="text-[11px] font-medium">Status</span>
+                        <span class="text-zinc-600 text-[10px] font-mono"><span id="nav-status-position">0</span>/<span id="nav-status-total">0</span></span>
+                    </div>
+                    <button id="next-lead-btn" disabled class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500" title="Następny lead w tym statusie">
                         <i class="ph ph-caret-right text-lg"></i>
                     </button>
                 </div>
@@ -1660,10 +1665,8 @@
             const timeline = document.getElementById('activity-timeline');
             const empty = document.getElementById('activity-empty');
             const countEl = document.getElementById('activity-count');
-            const tabCountEl = document.getElementById('activity-tab-count');
 
             countEl.textContent = activities.length;
-            tabCountEl.textContent = activities.length;
 
             if (activities.length === 0) {
                 timeline.innerHTML = '';
@@ -1702,6 +1705,11 @@
             const container = document.getElementById('notes-history');
             const list = document.getElementById('notes-history-list');
             const countEl = document.getElementById('notes-count');
+            const tabCountEl = document.getElementById('activity-tab-count');
+
+            // Update tab badge with actual notes count
+            const notesCount = notesHistory ? notesHistory.length : 0;
+            if (tabCountEl) tabCountEl.textContent = notesCount;
 
             if (!notesHistory || notesHistory.length === 0) {
                 container.classList.add('hidden');
@@ -3039,7 +3047,8 @@
                     clientName: lead.name,
                     offerName: selectedOffer.name,
                     offerPrice: selectedOffer.price,
-                    pdfUrl: result.pdfUrl
+                    pdfUrl: result.pdfUrl,
+                    checkoutUrl: `https://crm.tomekniedzwiecki.pl/checkout?offer=${selectedOffer.id}`
                 });
 
             } catch (error) {
@@ -3553,36 +3562,84 @@
             }
         }
 
-        // Lead navigation (prev/next)
+        // Lead navigation (prev/next) - within same status
         async function setupLeadNavigation() {
             const currentId = getLeadId();
             if (!currentId || !lead) return;
 
-            const createdAt = lead.created_at;
+            const currentStatus = lead.status || 'new';
             const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
                 ? `${getBasePath()}/lead.html`
                 : '/lead';
 
-            // Get previous lead (newer - created after current)
-            const { data: prevLead } = await supabaseClient
+            // Get all leads with same status, sorted by date in status (oldest first)
+            const { data: statusLeads } = await supabaseClient
                 .from('leads')
-                .select('id')
-                .gt('created_at', createdAt)
-                .order('created_at', { ascending: true })
-                .limit(1)
-                .single();
+                .select('id, created_at, activities')
+                .eq('status', currentStatus)
+                .order('created_at', { ascending: true });
 
-            // Get next lead (older - created before current)
-            const { data: nextLead } = await supabaseClient
-                .from('leads')
-                .select('id')
-                .lt('created_at', createdAt)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
+            if (!statusLeads || statusLeads.length === 0) return;
+
+            // Sort by date when entered current status (using activities)
+            const leadsWithStatusDate = statusLeads.map(l => {
+                const activities = l.activities || [];
+                const statusChanges = activities
+                    .filter(a => a.type === 'status_change')
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                const statusDate = statusChanges.length > 0
+                    ? new Date(statusChanges[0].created_at)
+                    : new Date(l.created_at);
+                return { ...l, statusDate };
+            }).sort((a, b) => a.statusDate - b.statusDate); // oldest first
+
+            // Find current lead position
+            const currentIndex = leadsWithStatusDate.findIndex(l => l.id === currentId);
+            if (currentIndex === -1) return;
+
+            const prevLead = currentIndex > 0 ? leadsWithStatusDate[currentIndex - 1] : null;
+            const nextLead = currentIndex < leadsWithStatusDate.length - 1 ? leadsWithStatusDate[currentIndex + 1] : null;
 
             const prevBtn = document.getElementById('prev-lead-btn');
             const nextBtn = document.getElementById('next-lead-btn');
+
+            // Show status badge with position and color
+            const statusBadge = document.getElementById('nav-status-badge');
+            const statusIcon = document.getElementById('nav-status-icon');
+            const statusLabel = document.getElementById('nav-status-label');
+            const statusPosition = document.getElementById('nav-status-position');
+            const statusTotal = document.getElementById('nav-status-total');
+
+            // Determine color and icon based on status
+            let colorClass = 'text-zinc-400';
+            let iconClass = 'ph-circle';
+
+            if (currentStatus === 'won') {
+                colorClass = 'text-green-400';
+                iconClass = 'ph-trophy';
+            } else if (currentStatus === 'lost') {
+                colorClass = 'text-red-400';
+                iconClass = 'ph-x-circle';
+            } else if (currentStatus === 'abandoned') {
+                colorClass = 'text-zinc-500';
+                iconClass = 'ph-prohibit';
+            } else {
+                // Regular pipeline stage - get color by index
+                const stageIndex = pipelineStages.findIndex(s => s.id === currentStatus);
+                if (stageIndex !== -1) {
+                    const colors = ['text-emerald-400', 'text-blue-400', 'text-violet-400', 'text-amber-400', 'text-orange-400', 'text-cyan-400', 'text-pink-400'];
+                    const icons = ['ph-user-plus', 'ph-chat-circle', 'ph-check-circle', 'ph-file-text', 'ph-handshake', 'ph-star', 'ph-flag'];
+                    colorClass = colors[stageIndex % colors.length];
+                    iconClass = icons[stageIndex % icons.length];
+                }
+            }
+
+            statusBadge.classList.remove('hidden');
+            statusIcon.className = `ph ${iconClass} text-xs ${colorClass}`;
+            statusLabel.className = `text-[11px] font-medium ${colorClass}`;
+            statusLabel.textContent = STATUS_LABELS[currentStatus] || currentStatus;
+            statusPosition.textContent = currentIndex + 1;
+            statusTotal.textContent = leadsWithStatusDate.length;
 
             if (prevLead) {
                 prevBtn.disabled = false;
