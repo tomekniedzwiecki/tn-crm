@@ -319,11 +319,6 @@ Deno.serve(async (req) => {
         const subject = replaceVariables(subjectTemplate, templateData)
         let body = replaceVariables(bodyTemplate, templateData)
 
-        // Add signature for offer_personal type
-        if (scheduledEmail.email_type === 'offer_personal') {
-          body = body + getEmailSignature('Tomek Niedzwiecki')
-        }
-
         // Send email via Resend
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
