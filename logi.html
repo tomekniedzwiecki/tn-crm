@@ -1082,16 +1082,41 @@
         }
 
         // ==================== SCHEDULED EMAILS ====================
+        // Email templates cache for preview
+        let emailTemplates = {};
+
+        async function loadEmailTemplates() {
+            const { data } = await supabaseClient
+                .from('settings')
+                .select('key, value')
+                .like('key', 'email_template_%');
+
+            if (data) {
+                data.forEach(s => { emailTemplates[s.key] = s.value; });
+            }
+        }
+
         async function loadScheduledEmails() {
             document.getElementById('scheduled-loading-state').classList.remove('hidden');
             document.getElementById('scheduled-empty-state').classList.add('hidden');
 
-            // Load scheduled emails with lead info
+            // Load templates for preview
+            if (Object.keys(emailTemplates).length === 0) {
+                await loadEmailTemplates();
+            }
+
+            // Load scheduled emails with lead and client_offer info
             const { data, error } = await supabaseClient
                 .from('scheduled_emails')
                 .select(`
                     *,
-                    lead:leads(id, name, email, company)
+                    lead:leads(id, name, email, company),
+                    client_offer:client_offers(
+                        id,
+                        unique_token,
+                        valid_until,
+                        offer:offers(id, name, price)
+                    )
                 `)
                 .order('scheduled_for', { ascending: true });
 
@@ -1210,11 +1235,16 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-center">
-                            ${canCancel ? `
-                                <button onclick="cancelScheduledEmail('${email.id}')" class="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Anuluj">
-                                    <i class="ph ph-x text-xs"></i>
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="previewScheduledEmail(${start + index})" class="p-1 text-zinc-500 hover:text-white hover:bg-white/10 rounded transition-colors" title="Podgląd">
+                                    <i class="ph ph-eye text-xs"></i>
                                 </button>
-                            ` : '-'}
+                                ${canCancel ? `
+                                    <button onclick="cancelScheduledEmail('${email.id}')" class="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Anuluj">
+                                        <i class="ph ph-x text-xs"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1242,6 +1272,57 @@
             scheduledEmails = [];
             loadScheduledEmails();
             loadStats();
+        }
+
+        function previewScheduledEmail(index) {
+            const email = filteredScheduledEmails[index];
+            if (!email) return;
+
+            const emailType = email.email_type;
+            const subjectTemplate = emailTemplates[`email_template_${emailType}_subject`] || emailType;
+            const bodyTemplate = emailTemplates[`email_template_${emailType}_body`] || '<p style="padding: 20px; color: #666;">Szablon nie znaleziony</p>';
+
+            // Prepare template data
+            const lead = email.lead || {};
+            const clientOffer = email.client_offer || {};
+            const offer = clientOffer.offer || {};
+
+            const clientName = lead.name || lead.company || 'Cześć';
+            const offerName = offer.name || '';
+            const offerPrice = offer.price ? offer.price.toLocaleString('pl-PL') : '';
+            const validUntil = clientOffer.valid_until ? formatValidUntil(clientOffer.valid_until) : '';
+            const offerUrl = clientOffer.unique_token ? `https://crm.tomekniedzwiecki.pl/p/${clientOffer.unique_token}` : '';
+
+            // Replace variables
+            const replaceVars = (template) => {
+                return template
+                    .replace(/\{\{clientName\}\}/g, clientName)
+                    .replace(/\{\{offerName\}\}/g, offerName)
+                    .replace(/\{\{offerPrice\}\}/g, offerPrice)
+                    .replace(/\{\{validUntil\}\}/g, validUntil)
+                    .replace(/\{\{offerUrl\}\}/g, offerUrl)
+                    .replace(/\{\{email\}\}/g, lead.email || '');
+            };
+
+            const subject = replaceVars(subjectTemplate);
+            const body = replaceVars(bodyTemplate);
+
+            document.getElementById('preview-subject').textContent = subject;
+            document.getElementById('preview-to').textContent = lead.email || '-';
+            document.getElementById('preview-date').textContent = `Zaplanowano: ${formatFutureDateTime(email.scheduled_for).full}`;
+            document.getElementById('preview-body').innerHTML = body;
+
+            document.getElementById('email-preview-modal').classList.remove('hidden');
+            document.getElementById('email-preview-modal').classList.add('flex');
+        }
+
+        function formatValidUntil(dateStr) {
+            try {
+                const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T12:00:00');
+                return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
         }
 
         // ==================== EVENT LISTENERS ====================
