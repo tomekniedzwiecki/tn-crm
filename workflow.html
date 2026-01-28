@@ -469,10 +469,18 @@
                         <!-- Contract Generation (visible when data is filled) -->
                         <div id="contract-generation-section" class="hidden">
                             <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mb-6">
-                                <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
-                                    <i class="ph ph-file-doc text-cyan-400"></i>
-                                    Generowanie umowy
-                                </h3>
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-file-doc text-cyan-400"></i>
+                                        Umowa
+                                    </h3>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="toggleContractCodeView()" id="toggle-code-btn" class="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded transition-colors flex items-center gap-1">
+                                            <i class="ph ph-code"></i>
+                                            <span id="toggle-code-label">Edytuj HTML</span>
+                                        </button>
+                                    </div>
+                                </div>
 
                                 <div id="no-template-warning" class="hidden p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
                                     <div class="flex items-center gap-2 text-amber-400 text-sm">
@@ -481,8 +489,24 @@
                                     </div>
                                 </div>
 
-                                <div id="contract-preview" class="bg-zinc-950 border border-white/5 rounded-lg p-4 mb-4 max-h-96 overflow-y-auto">
+                                <!-- Preview mode -->
+                                <div id="contract-preview-mode" class="bg-zinc-950 border border-white/5 rounded-lg p-4 mb-4 max-h-[500px] overflow-y-auto">
                                     <pre id="contract-text" class="text-xs text-zinc-300 whitespace-pre-wrap font-mono leading-relaxed"></pre>
+                                </div>
+
+                                <!-- Code editor mode -->
+                                <div id="contract-code-mode" class="hidden mb-4">
+                                    <textarea id="contract-html-editor" class="w-full h-[500px] bg-zinc-950 border border-white/5 rounded-lg p-4 text-xs text-zinc-300 font-mono resize-none focus:outline-none focus:border-cyan-500/50" spellcheck="false"></textarea>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <button onclick="saveContractHtml()" class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1">
+                                            <i class="ph ph-floppy-disk"></i>
+                                            Zapisz zmiany
+                                        </button>
+                                        <button onclick="resetContractHtml()" class="text-zinc-500 hover:text-zinc-300 px-3 py-1.5 rounded text-xs font-medium transition-colors">
+                                            Przywroc oryginał
+                                        </button>
+                                        <span id="contract-save-status" class="text-xs text-zinc-500 ml-2"></span>
+                                    </div>
                                 </div>
 
                                 <div class="flex items-center gap-3">
@@ -493,10 +517,6 @@
                                     <button onclick="downloadContractPDF()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                                         <i class="ph ph-file-pdf"></i>
                                         Pobierz PDF
-                                    </button>
-                                    <button onclick="sendContractToClient()" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                        <i class="ph ph-paper-plane-tilt"></i>
-                                        Wyslij do klienta
                                     </button>
                                 </div>
                             </div>
@@ -1891,6 +1911,67 @@
             }
         }
         window.generateContract = generateContract;
+
+        let isCodeViewMode = false;
+        let originalContractHtml = null;
+
+        function toggleContractCodeView() {
+            isCodeViewMode = !isCodeViewMode;
+            const previewEl = document.getElementById('contract-preview-mode');
+            const codeEl = document.getElementById('contract-code-mode');
+            const labelEl = document.getElementById('toggle-code-label');
+
+            if (isCodeViewMode) {
+                // Switch to code editor
+                previewEl.classList.add('hidden');
+                codeEl.classList.remove('hidden');
+                labelEl.textContent = 'Podglad tekstu';
+
+                // Load HTML into editor
+                if (contractHtml) {
+                    originalContractHtml = contractHtml;
+                    document.getElementById('contract-html-editor').value = contractHtml;
+                }
+            } else {
+                // Switch to preview
+                previewEl.classList.remove('hidden');
+                codeEl.classList.add('hidden');
+                labelEl.textContent = 'Edytuj HTML';
+
+                // Refresh preview with current HTML
+                if (contractHtml) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = contractHtml;
+                    document.getElementById('contract-text').textContent = tempDiv.textContent || tempDiv.innerText || '';
+                }
+            }
+        }
+        window.toggleContractCodeView = toggleContractCodeView;
+
+        function saveContractHtml() {
+            const editor = document.getElementById('contract-html-editor');
+            contractHtml = editor.value;
+
+            document.getElementById('contract-save-status').textContent = 'Zapisano (tylko w sesji)';
+            setTimeout(() => {
+                document.getElementById('contract-save-status').textContent = '';
+            }, 3000);
+
+            showToast('Zmiany zapisane', 'success');
+        }
+        window.saveContractHtml = saveContractHtml;
+
+        function resetContractHtml() {
+            if (originalContractHtml) {
+                document.getElementById('contract-html-editor').value = originalContractHtml;
+                contractHtml = originalContractHtml;
+                showToast('Przywrocono oryginał', 'info');
+            } else {
+                generateContract();
+                showToast('Pobrano ponownie z szablonu', 'info');
+            }
+        }
+        window.resetContractHtml = resetContractHtml;
 
         async function downloadContractPDF() {
             if (!contractHtml) {
