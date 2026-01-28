@@ -335,6 +335,27 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Section: Faktura (only visible when invoice exists) -->
+                    <div id="invoice-section" class="border-t border-[#222] pt-6 hidden">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-file-text text-emerald-400"></i>
+                            <span class="text-sm font-medium text-white">Faktura VAT</span>
+                        </div>
+
+                        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-emerald-400 font-medium" id="invoice-number-display">-</div>
+                                    <div class="text-zinc-500 text-xs mt-1">Faktura wystawiona</div>
+                                </div>
+                                <a id="invoice-pdf-link" href="#" target="_blank" class="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                    <i class="ph ph-file-pdf"></i>
+                                    Pobierz PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Modal Footer -->
@@ -540,6 +561,12 @@
                                         Projekt
                                     </a>
                                 ` : ''}
+                                ${order.invoice_number ? `
+                                    <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Faktura: ${order.invoice_number}">
+                                        <i class="ph ph-check-circle"></i>
+                                        FV
+                                    </span>
+                                ` : ''}
                             </div>
                         </td>
                         <td class="px-4 py-3">
@@ -576,10 +603,15 @@
                                     <i class="ph ph-credit-card text-sm"></i>
                                 </button>
                                 ` : ''}
-                                ${order.status === 'paid' ? `
+                                ${order.status === 'paid' && !order.invoice_number ? `
                                 <button onclick="generateInvoice('${order.id}')" class="p-1.5 text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded transition-colors" title="Wystaw fakture VAT">
                                     <i class="ph ph-file-text text-sm"></i>
                                 </button>
+                                ` : ''}
+                                ${order.invoice_id ? `
+                                <a href="https://tomekniedzwieckipl.fakturownia.pl/invoices/${order.invoice_id}.pdf" target="_blank" class="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded transition-colors" title="Pobierz fakture ${order.invoice_number}">
+                                    <i class="ph ph-file-pdf text-sm"></i>
+                                </a>
                                 ` : ''}
                                 <button onclick="editOrder('${order.id}')" class="p-1.5 text-zinc-500 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edytuj">
                                     <i class="ph ph-pencil-simple text-sm"></i>
@@ -719,6 +751,9 @@
             document.getElementById('order-id').value = orderId || '';
             document.getElementById('nip-status').classList.add('hidden');
 
+            // Hide invoice section by default
+            document.getElementById('invoice-section').classList.add('hidden');
+
             if (orderId) {
                 const order = orders.find(o => o.id === orderId);
                 if (order) {
@@ -739,6 +774,13 @@
                     document.getElementById('order-reference').value = order.payment_reference || '';
                     document.getElementById('order-lead').value = order.lead_id || '';
                     document.getElementById('order-notes').value = order.notes || '';
+
+                    // Show invoice section if invoice exists
+                    if (order.invoice_number && order.invoice_id) {
+                        document.getElementById('invoice-section').classList.remove('hidden');
+                        document.getElementById('invoice-number-display').textContent = order.invoice_number;
+                        document.getElementById('invoice-pdf-link').href = `https://tomekniedzwieckipl.fakturownia.pl/invoices/${order.invoice_id}.pdf`;
+                    }
                 }
             }
         }
