@@ -343,8 +343,30 @@
                 workflows = data || [];
             }
 
+            await loadUnreadComments();
             applyFilters();
             renderWorkflows();
+        }
+
+        let unreadCounts = {};
+
+        async function loadUnreadComments() {
+            const { data: comments, error } = await supabaseClient
+                .from('workflow_comments')
+                .select('workflow_id, created_at')
+                .eq('author_type', 'client')
+                .order('created_at', { ascending: false });
+
+            if (error || !comments) return;
+
+            unreadCounts = {};
+            for (const c of comments) {
+                const lastSeen = localStorage.getItem(`admin_comments_last_seen_${c.workflow_id}`);
+                const lastSeenDate = lastSeen ? new Date(lastSeen) : new Date(0);
+                if (new Date(c.created_at) > lastSeenDate) {
+                    unreadCounts[c.workflow_id] = (unreadCounts[c.workflow_id] || 0) + 1;
+                }
+            }
         }
 
         function applyFilters() {
@@ -495,6 +517,7 @@
             emptyState.classList.add('hidden');
 
             grid.innerHTML = filteredWorkflows.map(w => {
+                const unread = unreadCounts[w.workflow_id] || 0;
                 const customerDisplay = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
                 const progressPercent = w.progress_percent || 0;
                 const milestoneInfo = w.current_milestone_title
@@ -542,6 +565,12 @@
                                     ${formatDeadline(w.current_milestone_deadline)}
                                 </span>
                             ` : `<span class="text-zinc-600 font-mono">${new Date(w.started_at).toLocaleDateString('pl-PL')}</span>`}
+                            ${unread > 0 ? `
+                                <span class="flex items-center gap-1 text-amber-400">
+                                    <i class="ph-fill ph-chat-circle"></i>
+                                    ${unread}
+                                </span>
+                            ` : ''}
                         </div>
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                             <button onclick="event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
