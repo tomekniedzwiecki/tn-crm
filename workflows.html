@@ -329,6 +329,7 @@
                         status: w.status,
                         started_at: w.started_at,
                         unique_token: w.unique_token,
+                        contract_status: w.contract_status,
                         total_tasks: totalTasks,
                         completed_tasks: completedTasks,
                         progress_percent: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
@@ -413,6 +414,29 @@
                 cancelled: 'Anulowany'
             };
             return `<span class="text-xs px-2 py-0.5 rounded border ${styles[status] || styles.active}">${labels[status] || status}</span>`;
+        }
+
+        function getContractStatusBadge(status) {
+            if (!status || status === 'pending_data') return '';
+
+            const config = {
+                data_filled: { icon: 'ph-user-check', label: 'Dane', class: 'text-cyan-400' },
+                contract_sent: { icon: 'ph-paper-plane-tilt', label: 'Wysłano', class: 'text-violet-400' },
+                pending_signature: { icon: 'ph-pen', label: 'Do podpisu', class: 'text-amber-400' },
+                signed: { icon: 'ph-check-circle', label: 'Podpisana', class: 'text-emerald-400' },
+                rejected: { icon: 'ph-x-circle', label: 'Odrzucona', class: 'text-red-400' }
+            };
+
+            const c = config[status];
+            if (!c) return '';
+
+            return `
+                <span class="text-zinc-600">|</span>
+                <span class="flex items-center gap-1 text-[10px] ${c.class}">
+                    <i class="ph ${c.icon}"></i>
+                    ${c.label}
+                </span>
+            `;
         }
 
         function formatDeadline(deadline) {
@@ -504,6 +528,7 @@
                         <span class="text-zinc-300">${w.offer_name}</span>
                         <span class="text-zinc-600">|</span>
                         <span class="text-zinc-400 font-mono text-xs">${formatPrice(w.amount)}</span>
+                        ${getContractStatusBadge(w.contract_status)}
                     </div>
 
                     <!-- Progress Bar -->
