@@ -97,8 +97,7 @@ Deno.serve(async (req) => {
           name: order.description || 'Usluga',
           tax: 23,
           total_price_gross: brutto,
-          quantity: 1,
-          unit: 'szt.'
+          quantity: 1
         }],
         // Additional fields
         buyer_phone: order.customer_phone || '',
