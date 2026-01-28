@@ -23,32 +23,31 @@
         }
     </script>
     <style>
-        body { background: #050505; color: #e5e5e5; }
+        body { background: #000000; color: #ededed; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         ::selection { background: white; color: black; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
         .input-field {
             background: #0a0a0a;
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.15s ease;
         }
         .input-field:focus {
-            border-color: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.2);
             outline: none;
         }
 
         .glass-card {
-            background: rgba(24, 24, 27, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: linear-gradient(to bottom, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         .progress-bar {
@@ -57,14 +56,17 @@
         }
 
         .milestone-card {
-            transition: all 0.2s;
+            transition: all 0.15s ease;
+        }
+        .milestone-card:hover {
+            border-color: rgba(255,255,255,0.1);
         }
         .milestone-card.active {
-            border-color: rgba(139, 92, 246, 0.5);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+            border-color: rgba(255,255,255,0.15);
+            background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
         }
         .milestone-card.completed {
-            border-color: rgba(34, 197, 94, 0.3);
+            border-color: rgba(16, 185, 129, 0.2);
         }
 
         .milestone-content {
@@ -79,45 +81,50 @@
         }
 
         .responsible-badge {
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
             font-size: 10px;
             font-weight: 500;
             text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
-        .responsible-team { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-        .responsible-client { background: rgba(6, 182, 212, 0.2); color: #22d3ee; }
-        .responsible-shared { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .responsible-team { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .responsible-client { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.2); }
+        .responsible-shared { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
 
-        /* Contract form styles */
-        .form-group { margin-bottom: 1rem; }
+        /* Vercel-style form */
+        .form-group { margin-bottom: 1.25rem; }
         .form-label {
             display: block;
-            color: #a1a1aa;
-            font-size: 0.75rem;
-            font-weight: 500;
+            color: #888;
+            font-size: 0.8125rem;
+            font-weight: 400;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
         }
         .form-input {
             width: 100%;
-            background: #0a0a0a;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: white;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            padding: 0.625rem 0.875rem;
+            color: #ededed;
             font-size: 0.875rem;
-            transition: all 0.2s;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .form-input:hover {
+            border-color: #444;
         }
         .form-input:focus {
-            border-color: rgba(139, 92, 246, 0.5);
+            border-color: #888;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+            box-shadow: 0 0 0 1px #888;
         }
         .form-input.error {
-            border-color: rgba(239, 68, 68, 0.5);
+            border-color: #e5484d;
         }
         .form-input::placeholder {
-            color: #52525b;
+            color: #666;
         }
         .form-row {
             display: grid;
@@ -128,11 +135,16 @@
             .form-row { grid-template-columns: 1fr; }
         }
 
+        /* Vercel-style step indicator */
         .step-indicator {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
+            gap: 0;
+            margin-bottom: 2rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 9999px;
         }
         .step {
             display: flex;
@@ -140,47 +152,150 @@
             gap: 0.5rem;
         }
         .step-number {
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
         .step-number.active {
-            background: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
+            background: #fff;
+            color: #000;
         }
         .step-number.completed {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
+            background: #10b981;
+            color: #fff;
         }
         .step-number.pending {
-            background: rgba(63, 63, 70, 0.5);
-            color: #71717a;
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
         }
+        .step-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+        .step-text.active { color: #fff; }
+        .step-text.completed { color: #10b981; }
+        .step-text.pending { color: #666; }
         .step-line {
             flex: 1;
-            height: 2px;
-            background: rgba(255,255,255,0.1);
+            height: 1px;
+            background: #333;
+            margin: 0 1rem;
+        }
+        .step-line.completed {
+            background: #10b981;
         }
 
+        /* Vercel-style signing options */
         .signing-option {
-            background: rgba(24, 24, 27, 0.6);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 1rem;
+            background: transparent;
+            border: 1px solid #333;
+            border-radius: 0.75rem;
             padding: 1.25rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s ease;
+            position: relative;
         }
         .signing-option:hover {
-            border-color: rgba(139, 92, 246, 0.3);
+            border-color: #555;
+            background: rgba(255,255,255,0.02);
         }
         .signing-option.recommended {
-            border-color: rgba(34, 197, 94, 0.3);
-            background: rgba(34, 197, 94, 0.05);
+            border-color: #10b981;
+            background: linear-gradient(to bottom, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02));
+        }
+        .signing-option.recommended:hover {
+            border-color: #10b981;
+            background: linear-gradient(to bottom, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04));
+        }
+
+        /* Vercel-style section headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Vercel-style buttons */
+        .btn-primary {
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover {
+            background: #e5e5e5;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: transparent;
+            color: #888;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            padding: 0.625rem 1rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: #555;
+            color: #fff;
+        }
+
+        /* PDF download card */
+        .pdf-card {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .pdf-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -189,33 +304,32 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="min-h-screen flex items-center justify-center px-4">
         <div class="text-center animate-enter">
-            <div class="w-5 h-5 mx-auto mb-4 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
-            <p class="text-zinc-500 text-sm font-mono">Ladowanie projektu...</p>
+            <div class="w-5 h-5 mx-auto mb-4 border-2 border-[#333] border-t-white rounded-full animate-spin"></div>
+            <p class="text-[#666] text-sm">Ladowanie projektu...</p>
         </div>
     </div>
 
     <!-- Password Screen -->
     <div id="password-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
-        <div class="w-full max-w-md animate-enter">
+        <div class="w-full max-w-sm animate-enter">
             <div class="text-center mb-8">
-                <div class="w-14 h-14 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                    <i class="ph-bold ph-lightning text-2xl"></i>
+                <div class="w-12 h-12 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-5">
+                    <i class="ph-bold ph-lock-key text-xl"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-white mb-2">Twoj projekt</h1>
-                <p class="text-zinc-400">Wprowadz haslo, aby zobaczyc postep prac</p>
+                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Twoj projekt</h1>
+                <p class="text-[#888] text-sm">Wprowadz haslo, aby zobaczyc postep prac</p>
             </div>
 
-            <div class="glass-card rounded-2xl border border-white/10 p-6">
+            <div class="glass-card rounded-xl p-6">
                 <div class="mb-4">
-                    <label class="block text-zinc-400 text-xs font-medium mb-2">Haslo</label>
+                    <label class="form-label">Haslo</label>
                     <input type="password" id="password-input"
-                           class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                           class="form-input"
                            placeholder="Wprowadz haslo..."
                            autofocus>
                 </div>
                 <div id="password-error" class="text-red-400 text-sm mb-4 hidden">Nieprawidlowe haslo</div>
-                <button id="password-btn"
-                        class="w-full bg-white hover:bg-zinc-200 text-black px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                <button id="password-btn" class="btn-primary w-full">
                     <span>Zobacz projekt</span>
                     <i class="ph ph-arrow-right"></i>
                 </button>
@@ -225,83 +339,85 @@
 
     <!-- Not Found Screen -->
     <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
-        <div class="w-full max-w-md text-center animate-enter">
-            <div class="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="ph ph-question text-4xl text-zinc-400"></i>
+        <div class="w-full max-w-sm text-center animate-enter">
+            <div class="w-16 h-16 bg-[#111] border border-[#333] rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-question text-3xl text-[#666]"></i>
             </div>
-            <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono projektu</h1>
-            <p class="text-zinc-400">Ten link jest nieprawidlowy lub projekt zostal usuniety.</p>
+            <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Nie znaleziono projektu</h1>
+            <p class="text-[#888] text-sm">Ten link jest nieprawidlowy lub projekt zostal usuniety.</p>
         </div>
     </div>
 
     <!-- Contract Data Screen -->
     <div id="contract-data-screen" class="hidden">
-        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
-            <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <img src="/favicon-tn.svg" alt="TN" class="w-9 h-9 rounded-lg shadow-lg">
-                    <span class="font-semibold text-white">tomekniedzwiecki.pl</span>
+                    <img src="/favicon-tn.svg" alt="TN" class="w-8 h-8 rounded-lg">
+                    <span class="font-medium text-white text-sm">tomekniedzwiecki.pl</span>
                 </div>
             </div>
         </header>
 
-        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
+        <main class="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
             <!-- Step Indicator -->
             <div class="step-indicator">
                 <div class="step">
                     <div class="step-number active">1</div>
-                    <span class="text-sm text-zinc-400">Dane do umowy</span>
+                    <span class="step-text active">Dane do umowy</span>
                 </div>
                 <div class="step-line"></div>
                 <div class="step">
                     <div class="step-number pending">2</div>
-                    <span class="text-sm text-zinc-500">Podpis</span>
+                    <span class="step-text pending">Podpis</span>
                 </div>
                 <div class="step-line"></div>
                 <div class="step">
                     <div class="step-number pending">3</div>
-                    <span class="text-sm text-zinc-500">Projekt</span>
+                    <span class="step-text pending">Projekt</span>
                 </div>
             </div>
 
-            <div class="glass-card rounded-2xl border border-white/10 p-6 sm:p-8">
-                <div class="mb-6">
-                    <h1 class="text-xl sm:text-2xl font-bold text-white mb-2">Uzupelnij dane do umowy</h1>
-                    <p class="text-zinc-400">Przed rozpoczeciem projektu potrzebujemy Twoich danych do przygotowania umowy.</p>
+            <div class="glass-card rounded-xl p-6 sm:p-8">
+                <div class="mb-8">
+                    <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Dane do umowy</h1>
+                    <p class="text-[#888] text-[0.9375rem]">Potrzebujemy Twoich danych do przygotowania umowy przed rozpoczeciem projektu.</p>
                 </div>
 
                 <form id="contract-form" onsubmit="submitContractData(event)">
                     <!-- Personal Data -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                            <i class="ph ph-user text-violet-400"></i>
-                            Dane osobowe
-                        </h3>
+                    <div class="mb-8">
+                        <div class="section-header">
+                            <div class="section-icon bg-gradient-to-br from-violet-500/20 to-purple-600/20">
+                                <i class="ph ph-user text-violet-400"></i>
+                            </div>
+                            <span class="text-white font-medium">Dane osobowe</span>
+                        </div>
 
                         <div class="form-group">
-                            <label class="form-label">Imie i nazwisko *</label>
+                            <label class="form-label">Imie i nazwisko</label>
                             <input type="text" id="cd-name" class="form-input" required placeholder="Jan Kowalski">
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Firma (opcjonalnie)</label>
+                                <label class="form-label">Firma <span class="text-[#555]">(opcjonalnie)</span></label>
                                 <input type="text" id="cd-company" class="form-input" placeholder="Nazwa firmy">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">NIP (opcjonalnie)</label>
+                                <label class="form-label">NIP <span class="text-[#555]">(opcjonalnie)</span></label>
                                 <input type="text" id="cd-nip" class="form-input" placeholder="0000000000" maxlength="10">
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">PESEL *</label>
+                                <label class="form-label">PESEL</label>
                                 <input type="text" id="cd-pesel" class="form-input" required
                                        placeholder="00000000000" maxlength="11" pattern="[0-9]{11}">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Nr dowodu osobistego *</label>
+                                <label class="form-label">Nr dowodu osobistego</label>
                                 <input type="text" id="cd-id-number" class="form-input" required
                                        placeholder="ABC123456" maxlength="9">
                             </div>
@@ -309,61 +425,64 @@
                     </div>
 
                     <!-- Address -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                            <i class="ph ph-map-pin text-violet-400"></i>
-                            Adres zamieszkania
-                        </h3>
+                    <div class="mb-8">
+                        <div class="section-header">
+                            <div class="section-icon bg-gradient-to-br from-blue-500/20 to-cyan-600/20">
+                                <i class="ph ph-map-pin text-blue-400"></i>
+                            </div>
+                            <span class="text-white font-medium">Adres zamieszkania</span>
+                        </div>
 
                         <div class="form-group">
-                            <label class="form-label">Ulica i numer *</label>
+                            <label class="form-label">Ulica i numer</label>
                             <input type="text" id="cd-street" class="form-input" required placeholder="ul. Przykladowa 123/4">
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Kod pocztowy *</label>
+                                <label class="form-label">Kod pocztowy</label>
                                 <input type="text" id="cd-postal" class="form-input" required
                                        placeholder="00-000" maxlength="6">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Miejscowosc *</label>
+                                <label class="form-label">Miejscowosc</label>
                                 <input type="text" id="cd-city" class="form-input" required placeholder="Warszawa">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Kraj *</label>
+                            <label class="form-label">Kraj</label>
                             <input type="text" id="cd-country" class="form-input" required value="Polska">
                         </div>
                     </div>
 
                     <!-- Contact -->
                     <div class="mb-8">
-                        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                            <i class="ph ph-envelope text-violet-400"></i>
-                            Dane kontaktowe
-                        </h3>
+                        <div class="section-header">
+                            <div class="section-icon bg-gradient-to-br from-emerald-500/20 to-green-600/20">
+                                <i class="ph ph-envelope text-emerald-400"></i>
+                            </div>
+                            <span class="text-white font-medium">Dane kontaktowe</span>
+                        </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Email *</label>
+                                <label class="form-label">Email</label>
                                 <input type="email" id="cd-email" class="form-input" required placeholder="jan@email.pl">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Telefon *</label>
+                                <label class="form-label">Telefon</label>
                                 <input type="tel" id="cd-phone" class="form-input" required placeholder="+48 600 000 000">
                             </div>
                         </div>
                     </div>
 
-                    <div id="contract-form-error" class="hidden bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4 text-red-400 text-sm">
+                    <div id="contract-form-error" class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6 text-red-400 text-sm">
                         Wypelnij wszystkie wymagane pola poprawnie.
                     </div>
 
-                    <button type="submit" id="contract-submit-btn"
-                            class="w-full bg-white hover:bg-zinc-200 text-black px-6 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
-                        <span>Zapisz i kontynuuj</span>
+                    <button type="submit" id="contract-submit-btn" class="btn-primary w-full py-3">
+                        <span>Kontynuuj</span>
                         <i class="ph ph-arrow-right"></i>
                     </button>
                 </form>
@@ -373,145 +492,180 @@
 
     <!-- Contract Signing Screen -->
     <div id="contract-signing-screen" class="hidden">
-        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
-            <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <img src="/favicon-tn.svg" alt="TN" class="w-9 h-9 rounded-lg shadow-lg">
-                    <span class="font-semibold text-white">tomekniedzwiecki.pl</span>
+                    <img src="/favicon-tn.svg" alt="TN" class="w-8 h-8 rounded-lg">
+                    <span class="font-medium text-white text-sm">tomekniedzwiecki.pl</span>
                 </div>
             </div>
         </header>
 
-        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
+        <main class="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
             <!-- Step Indicator -->
             <div class="step-indicator">
                 <div class="step">
-                    <div class="step-number completed"><i class="ph-bold ph-check"></i></div>
-                    <span class="text-sm text-emerald-400">Dane do umowy</span>
+                    <div class="step-number completed"><i class="ph-bold ph-check text-xs"></i></div>
+                    <span class="step-text completed">Dane do umowy</span>
                 </div>
-                <div class="step-line"></div>
+                <div class="step-line completed"></div>
                 <div class="step">
                     <div class="step-number active">2</div>
-                    <span class="text-sm text-zinc-400">Podpis</span>
+                    <span class="step-text active">Podpis</span>
                 </div>
                 <div class="step-line"></div>
                 <div class="step">
                     <div class="step-number pending">3</div>
-                    <span class="text-sm text-zinc-500">Projekt</span>
+                    <span class="step-text pending">Projekt</span>
                 </div>
             </div>
 
-            <div class="glass-card rounded-2xl border border-white/10 p-6 sm:p-8 mb-6">
-                <div class="mb-6">
-                    <h1 class="text-xl sm:text-2xl font-bold text-white mb-2">Podpisz umowe</h1>
-                    <p class="text-zinc-400">Twoja umowa jest gotowa. Wybierz sposob podpisania dokumentu.</p>
+            <div class="glass-card rounded-xl p-6 sm:p-8 mb-4">
+                <div class="mb-8">
+                    <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Podpisz umowe</h1>
+                    <p class="text-[#888] text-[0.9375rem]">Twoja umowa jest gotowa. Pobierz ja i wybierz sposob podpisania.</p>
                 </div>
 
                 <!-- Download Contract -->
-                <div class="bg-zinc-900/50 rounded-xl p-4 mb-6 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
-                            <i class="ph ph-file-pdf text-red-400 text-xl"></i>
+                <div class="pdf-card mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="pdf-icon">
+                            <i class="ph-bold ph-file-pdf text-white text-xl"></i>
                         </div>
                         <div>
                             <div class="text-white font-medium" id="contract-filename">Umowa.pdf</div>
-                            <div class="text-zinc-500 text-xs">Pobierz i przeczytaj przed podpisaniem</div>
+                            <div class="text-[#666] text-sm">Pobierz i przeczytaj przed podpisaniem</div>
                         </div>
                     </div>
-                    <button onclick="downloadContract()" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                        <i class="ph ph-download"></i>
-                        Pobierz
+                    <button onclick="downloadContract()" class="btn-primary">
+                        <i class="ph ph-download-simple"></i>
+                        <span>Pobierz</span>
                     </button>
                 </div>
 
                 <!-- Signing Options -->
-                <h3 class="text-sm font-semibold text-white mb-4">Wybierz metode podpisu:</h3>
+                <div class="mb-6">
+                    <h3 class="text-[#888] text-sm font-medium mb-4">Wybierz metode podpisu</h3>
 
-                <div class="space-y-3">
-                    <!-- Option 1: Podpis Zaufany -->
-                    <div class="signing-option recommended" onclick="selectSigningMethod('zaufany')">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="ph ph-shield-check text-emerald-400 text-2xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-semibold text-white">Podpis zaufany (gov.pl)</h4>
-                                    <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full">Zalecane</span>
+                    <div class="space-y-3">
+                        <!-- Option 1: Podpis Zaufany -->
+                        <div class="signing-option recommended" onclick="selectSigningMethod('zaufany')">
+                            <div class="flex items-start gap-4">
+                                <div class="w-11 h-11 bg-gradient-to-br from-emerald-500/30 to-green-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="ph-bold ph-shield-check text-emerald-400 text-xl"></i>
                                 </div>
-                                <p class="text-zinc-400 text-sm mb-3">Darmowy podpis elektroniczny przez profil zaufany. Najszybsza i najwygodniejsza metoda.</p>
-                                <ol class="text-xs text-zinc-500 space-y-1">
-                                    <li>1. Pobierz umowe PDF powyzej</li>
-                                    <li>2. Wejdz na <a href="https://www.gov.pl/web/gov/podpisz-dokument-elektronicznie-wykorzystaj-podpis-zaufany" target="_blank" class="text-cyan-400 hover:underline">gov.pl/podpisz</a></li>
-                                    <li>3. Zaloguj sie profilem zaufanym i podpisz dokument</li>
-                                    <li>4. Wyslij podpisany plik na <span class="text-cyan-400">ceo@tomekniedzwiecki.pl</span></li>
-                                </ol>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <h4 class="font-medium text-white">Podpis zaufany (gov.pl)</h4>
+                                        <span class="bg-emerald-500/20 text-emerald-400 text-[11px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wide">Zalecane</span>
+                                    </div>
+                                    <p class="text-[#888] text-sm mb-4">Darmowy podpis elektroniczny przez profil zaufany. Najszybsza i najwygodniejsza metoda.</p>
+                                    <div class="bg-black/30 rounded-lg p-3 space-y-2">
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">1.</span>
+                                            <span class="text-[#888]">Pobierz umowe PDF powyzej</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">2.</span>
+                                            <span class="text-[#888]">Wejdz na <a href="https://www.gov.pl/web/gov/podpisz-dokument-elektronicznie-wykorzystaj-podpis-zaufany" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">gov.pl/podpisz</a></span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">3.</span>
+                                            <span class="text-[#888]">Zaloguj sie profilem zaufanym i podpisz</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">4.</span>
+                                            <span class="text-[#888]">Wyslij plik na <span class="text-blue-400">ceo@tomekniedzwiecki.pl</span></span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Option 2: Podpis Kwalifikowany -->
-                    <div class="signing-option" onclick="selectSigningMethod('kwalifikowany')">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 bg-violet-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="ph ph-certificate text-violet-400 text-2xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-white mb-1">Podpis kwalifikowany</h4>
-                                <p class="text-zinc-400 text-sm mb-3">Jesli posiadasz certyfikat kwalifikowany (np. Szafir, Certum, KIR).</p>
-                                <ol class="text-xs text-zinc-500 space-y-1">
-                                    <li>1. Pobierz umowe PDF powyzej</li>
-                                    <li>2. Podpisz dokument swoim podpisem kwalifikowanym</li>
-                                    <li>3. Wyslij podpisany plik na <span class="text-cyan-400">ceo@tomekniedzwiecki.pl</span></li>
-                                </ol>
+                        <!-- Option 2: Podpis Kwalifikowany -->
+                        <div class="signing-option" onclick="selectSigningMethod('kwalifikowany')">
+                            <div class="flex items-start gap-4">
+                                <div class="w-11 h-11 bg-gradient-to-br from-violet-500/30 to-purple-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="ph-bold ph-certificate text-violet-400 text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-white mb-1.5">Podpis kwalifikowany</h4>
+                                    <p class="text-[#888] text-sm mb-4">Jesli posiadasz certyfikat kwalifikowany (np. Szafir, Certum, KIR).</p>
+                                    <div class="bg-black/30 rounded-lg p-3 space-y-2">
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">1.</span>
+                                            <span class="text-[#888]">Pobierz umowe PDF powyzej</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">2.</span>
+                                            <span class="text-[#888]">Podpisz dokument swoim podpisem kwalifikowanym</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">3.</span>
+                                            <span class="text-[#888]">Wyslij plik na <span class="text-blue-400">ceo@tomekniedzwiecki.pl</span></span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Option 3: Podpis Fizyczny -->
-                    <div class="signing-option" onclick="selectSigningMethod('fizyczny')">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="ph ph-package text-amber-400 text-2xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-white mb-1">Podpis fizyczny (paczkomat)</h4>
-                                <p class="text-zinc-400 text-sm mb-3">Tradycyjny podpis na papierze. Wyslemy umowe do Twojego paczkomatu.</p>
-                                <ol class="text-xs text-zinc-500 space-y-1">
-                                    <li>1. Skontaktuj sie z nami podajac preferowany paczkomat</li>
-                                    <li>2. Odbierz przesylke i podpisz dokument</li>
-                                    <li>3. Odeslij podpisana umowe na nasz adres (znajdziesz w przesylce)</li>
-                                </ol>
+                        <!-- Option 3: Podpis Fizyczny -->
+                        <div class="signing-option" onclick="selectSigningMethod('fizyczny')">
+                            <div class="flex items-start gap-4">
+                                <div class="w-11 h-11 bg-gradient-to-br from-amber-500/30 to-orange-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="ph-bold ph-package text-amber-400 text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-white mb-1.5">Podpis fizyczny (paczkomat)</h4>
+                                    <p class="text-[#888] text-sm mb-4">Tradycyjny podpis na papierze. Wyslemy umowe do Twojego paczkomatu.</p>
+                                    <div class="bg-black/30 rounded-lg p-3 space-y-2">
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">1.</span>
+                                            <span class="text-[#888]">Skontaktuj sie z nami podajac paczkomat</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">2.</span>
+                                            <span class="text-[#888]">Odbierz przesylke i podpisz dokument</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-sm">
+                                            <span class="text-[#555] font-mono">3.</span>
+                                            <span class="text-[#888]">Odeslij umowe na nasz adres (w przesylce)</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Skip to project (temporary access) -->
-            <div class="text-center">
-                <button onclick="skipToProject()" class="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-                    Przejdz do podgladu projektu <i class="ph ph-arrow-right"></i>
+            <!-- Action buttons -->
+            <div class="flex items-center justify-between">
+                <button onclick="goBackToEditData()" class="btn-secondary">
+                    <i class="ph ph-arrow-left"></i>
+                    <span>Popraw dane</span>
                 </button>
-                <p class="text-zinc-600 text-xs mt-1">Mozesz kontynuowac, ale umowa musi byc podpisana przed zakonczeniem projektu</p>
+                <button onclick="skipToProject()" class="btn-secondary">
+                    <span>Przejdz do projektu</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
             </div>
+            <p class="text-[#555] text-xs text-center mt-3">Mozesz kontynuowac, ale umowa musi byc podpisana przed zakonczeniem projektu</p>
         </main>
     </div>
 
     <!-- Main Project View -->
     <div id="project-screen" class="hidden">
         <!-- Header -->
-        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+        <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <img src="/favicon-tn.svg" alt="TN" class="w-9 h-9 rounded-lg shadow-lg">
-                    <span class="font-semibold text-white">tomekniedzwiecki.pl</span>
+                    <img src="/favicon-tn.svg" alt="TN" class="w-8 h-8 rounded-lg">
+                    <span class="font-medium text-white text-sm">tomekniedzwiecki.pl</span>
                 </div>
-                <div class="flex items-center gap-4 text-sm">
-                    <span class="text-zinc-500 hidden sm:inline">Projekt:</span>
-                    <div class="text-right">
-                        <div id="header-customer" class="text-white font-medium">-</div>
-                    </div>
+                <div class="flex items-center gap-3 text-sm">
+                    <span class="text-[#666] hidden sm:inline">Projekt:</span>
+                    <div id="header-customer" class="text-white font-medium">-</div>
                 </div>
             </div>
         </header>
@@ -520,29 +674,29 @@
         <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
 
             <!-- Progress Overview -->
-            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8 mb-6 sm:mb-8 animate-enter">
+            <div class="glass-card rounded-xl p-5 sm:p-8 mb-6 sm:mb-8 animate-enter">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6">
                     <div>
-                        <h1 id="offer-name" class="text-xl sm:text-2xl font-bold text-white mb-1">-</h1>
-                        <div class="flex items-center gap-3 text-sm text-zinc-400">
+                        <h1 id="offer-name" class="text-xl sm:text-2xl font-semibold text-white mb-1 tracking-tight">-</h1>
+                        <div class="flex items-center gap-3 text-sm text-[#888]">
                             <span id="status-label" class="flex items-center gap-1.5">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                                 W realizacji
                             </span>
-                            <span class="text-zinc-600">|</span>
-                            <span>Start: <span id="started-at" class="text-zinc-200">-</span></span>
+                            <span class="text-[#333]">|</span>
+                            <span>Start: <span id="started-at" class="text-white">-</span></span>
                         </div>
                     </div>
                     <div class="text-left sm:text-right">
-                        <div class="text-3xl sm:text-4xl font-bold text-white mb-1">
+                        <div class="text-3xl sm:text-4xl font-semibold text-white mb-1">
                             <span id="progress-percent">0</span>%
                         </div>
-                        <div class="text-zinc-500 text-xs font-mono">ukonczono</div>
+                        <div class="text-[#666] text-xs">ukonczono</div>
                     </div>
                 </div>
 
                 <!-- Progress Bar -->
-                <div class="h-3 bg-zinc-800 rounded-full overflow-hidden mb-4">
+                <div class="h-2 bg-[#1a1a1a] rounded-full overflow-hidden mb-4">
                     <div id="progress-bar" class="progress-bar h-full rounded-full" style="width: 0%"></div>
                 </div>
 
@@ -550,17 +704,17 @@
                 <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm">
                     <div class="flex items-center gap-2">
                         <i class="ph ph-check-square text-emerald-400"></i>
-                        <span class="text-zinc-400">Zadania:</span>
-                        <span class="text-white font-mono"><span id="completed-tasks">0</span>/<span id="total-tasks">0</span></span>
+                        <span class="text-[#888]">Zadania:</span>
+                        <span class="text-white font-medium"><span id="completed-tasks">0</span>/<span id="total-tasks">0</span></span>
                     </div>
                     <div class="flex items-center gap-2">
                         <i class="ph ph-path text-violet-400"></i>
-                        <span class="text-zinc-400">Etapy:</span>
-                        <span class="text-white font-mono"><span id="completed-milestones">0</span>/<span id="total-milestones">0</span></span>
+                        <span class="text-[#888]">Etapy:</span>
+                        <span class="text-white font-medium"><span id="completed-milestones">0</span>/<span id="total-milestones">0</span></span>
                     </div>
                     <div id="deadline-info" class="flex items-center gap-2">
                         <i class="ph ph-clock text-amber-400"></i>
-                        <span class="text-zinc-400">Deadline etapu:</span>
+                        <span class="text-[#888]">Deadline:</span>
                         <span id="current-deadline" class="text-white">-</span>
                     </div>
                 </div>
@@ -568,7 +722,7 @@
 
             <!-- Milestones -->
             <div class="space-y-4 animate-enter" style="animation-delay: 0.1s">
-                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <h2 class="text-base font-medium text-white flex items-center gap-2">
                     <i class="ph ph-path text-violet-400"></i>
                     Etapy realizacji
                 </h2>
@@ -579,18 +733,18 @@
             </div>
 
             <!-- Contact Section -->
-            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8 mt-8 animate-enter" style="animation-delay: 0.2s">
+            <div class="glass-card rounded-xl p-5 sm:p-8 mt-8 animate-enter" style="animation-delay: 0.2s">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
                     <div>
-                        <h3 class="text-base sm:text-lg font-semibold text-white mb-1">Masz pytania?</h3>
-                        <p class="text-zinc-400 text-sm">Skontaktuj sie z nami, chetnie odpowiemy na wszystkie pytania.</p>
+                        <h3 class="text-base font-medium text-white mb-1">Masz pytania?</h3>
+                        <p class="text-[#888] text-sm">Skontaktuj sie z nami, chetnie odpowiemy.</p>
                     </div>
                     <div class="flex gap-2 sm:gap-3">
-                        <a href="mailto:ceo@tomekniedzwiecki.pl" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                        <a href="mailto:ceo@tomekniedzwiecki.pl" class="btn-secondary flex-1 sm:flex-initial">
                             <i class="ph ph-envelope"></i>
                             Email
                         </a>
-                        <a href="https://wa.me/48533308623" target="_blank" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                        <a href="https://wa.me/48533308623" target="_blank" class="btn-secondary flex-1 sm:flex-initial">
                             <i class="ph ph-whatsapp-logo"></i>
                             WhatsApp
                         </a>
@@ -601,10 +755,10 @@
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-white/5 mt-12">
+        <footer class="border-t border-white/[0.06] mt-12">
             <div class="max-w-5xl mx-auto px-6 py-8 text-center">
-                <p class="text-zinc-600 text-sm">
-                    Powered by <span class="text-zinc-400">tomekniedzwiecki.pl</span>
+                <p class="text-[#555] text-sm">
+                    Powered by <span class="text-[#888]">tomekniedzwiecki.pl</span>
                 </p>
             </div>
         </footer>
@@ -900,61 +1054,61 @@
                 const deliverables = milestone.deliverables || [];
 
                 return `
-                <div class="milestone-card glass-card border border-white/10 rounded-xl overflow-hidden ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
+                <div class="milestone-card glass-card rounded-xl overflow-hidden ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
                     <!-- Header -->
                     <div class="p-4 flex items-center justify-between cursor-pointer" onclick="toggleMilestone('${milestone.id}')">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium ${
                                 isCompleted ? 'bg-emerald-500/20 text-emerald-400' :
-                                isActive ? 'bg-violet-500/20 text-violet-400' :
-                                'bg-zinc-800 text-zinc-500'
+                                isActive ? 'bg-white text-black' :
+                                'bg-[#1a1a1a] text-[#666] border border-[#333]'
                             }">
-                                ${isCompleted ? '<i class="ph ph-check text-lg"></i>' : index + 1}
+                                ${isCompleted ? '<i class="ph-bold ph-check text-base"></i>' : index + 1}
                             </div>
                             <div>
-                                <h3 class="font-semibold ${isCompleted || isActive ? 'text-white' : 'text-zinc-400'}">${milestone.title}</h3>
-                                <div class="flex items-center gap-2 text-xs text-zinc-500">
+                                <h3 class="font-medium ${isCompleted || isActive ? 'text-white' : 'text-[#888]'}">${milestone.title}</h3>
+                                <div class="flex items-center gap-2 text-xs text-[#666]">
                                     <span>${formatDate(milestone.start_date)} - ${formatDate(milestone.deadline)}</span>
-                                    ${isActive ? `<span class="text-violet-400">(aktualny)</span>` : ''}
+                                    ${isActive ? `<span class="text-white bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-medium">AKTUALNY</span>` : ''}
                                 </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="text-right hidden sm:block">
-                                <div class="text-xs font-mono ${isCompleted ? 'text-emerald-400' : 'text-zinc-400'}">${progressPercent}%</div>
-                                <div class="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
-                                    <div class="h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-violet-500'}" style="width: ${progressPercent}%"></div>
+                                <div class="text-xs ${isCompleted ? 'text-emerald-400' : 'text-[#888]'}">${progressPercent}%</div>
+                                <div class="w-20 h-1 bg-[#1a1a1a] rounded-full overflow-hidden mt-1">
+                                    <div class="h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-white'}" style="width: ${progressPercent}%"></div>
                                 </div>
                             </div>
-                            <i class="ph ph-caret-down text-zinc-500 transition-transform" id="chevron-${milestone.id}"></i>
+                            <i class="ph ph-caret-down text-[#666] transition-transform" id="chevron-${milestone.id}"></i>
                         </div>
                     </div>
 
                     <!-- Content -->
                     <div class="milestone-content" id="content-${milestone.id}">
-                        <div class="border-t border-white/5">
+                        <div class="border-t border-white/[0.06]">
                             ${milestone.description ? `
-                                <div class="px-4 py-3 border-b border-white/5 text-zinc-400 text-sm">${milestone.description}</div>
+                                <div class="px-4 py-3 border-b border-white/[0.06] text-[#888] text-sm">${milestone.description}</div>
                             ` : ''}
 
                             <!-- Tasks -->
-                            <div class="divide-y divide-white/5">
+                            <div class="divide-y divide-white/[0.06]">
                                 ${milestoneTasks.map(task => `
                                     <div class="px-4 py-3 flex items-start gap-3">
                                         <div class="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
                                             task.completed
                                                 ? 'bg-emerald-500/20 text-emerald-400'
-                                                : 'border border-zinc-700 text-transparent'
+                                                : 'border border-[#333] text-transparent'
                                         }">
                                             ${task.completed ? '<i class="ph-bold ph-check text-xs"></i>' : ''}
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <span class="${task.completed ? 'text-zinc-500 line-through' : 'text-zinc-200'}">${task.title}</span>
-                                            ${task.notes ? `<p class="text-zinc-500 text-xs mt-1">${task.notes}</p>` : ''}
+                                            <span class="${task.completed ? 'text-[#666] line-through' : 'text-white'}">${task.title}</span>
+                                            ${task.notes ? `<p class="text-[#666] text-xs mt-1">${task.notes}</p>` : ''}
                                             ${task.links && task.links.length > 0 ? `
                                                 <div class="flex flex-wrap gap-2 mt-2">
                                                     ${task.links.map(link => `
-                                                        <a href="${link.url}" target="_blank" class="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2 py-1 rounded">
+                                                        <a href="${link.url}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded">
                                                             <i class="ph ph-link"></i>
                                                             ${link.title || 'Link'}
                                                         </a>
@@ -969,11 +1123,11 @@
 
                             <!-- Deliverables -->
                             ${deliverables.length > 0 ? `
-                                <div class="px-4 py-3 border-t border-white/5 bg-zinc-900/30">
-                                    <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Rezultaty etapu</div>
+                                <div class="px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
+                                    <div class="text-xs text-[#666] uppercase tracking-wider mb-2">Rezultaty etapu</div>
                                     <ul class="space-y-1.5">
                                         ${deliverables.map(d => `
-                                            <li class="flex items-start gap-2 text-sm text-zinc-400">
+                                            <li class="flex items-start gap-2 text-sm text-[#888]">
                                                 <i class="ph ph-check-circle text-emerald-400 mt-0.5 flex-shrink-0"></i>
                                                 <span>${d}</span>
                                             </li>
@@ -1174,14 +1328,31 @@
         function selectSigningMethod(method) {
             // Visual feedback
             document.querySelectorAll('.signing-option').forEach(el => {
-                el.style.borderColor = 'rgba(255,255,255,0.1)';
-                el.style.background = 'rgba(24, 24, 27, 0.6)';
+                el.style.borderColor = '#333';
+                el.style.background = 'transparent';
             });
-            event.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
-            event.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+            event.currentTarget.style.borderColor = '#888';
+            event.currentTarget.style.background = 'rgba(255,255,255,0.02)';
 
             // The actual signing happens outside the system
             // We just provide instructions here
+        }
+
+        async function goBackToEditData() {
+            // Reset contract status to pending_data to allow editing
+            const { error } = await supabaseClient
+                .from('workflows')
+                .update({ contract_status: 'pending_data' })
+                .eq('id', workflow.id);
+
+            if (error) {
+                console.error('Error resetting contract status:', error);
+                return;
+            }
+
+            workflow.contract_status = 'pending_data';
+            prefillContractForm();
+            showScreen('contract-data');
         }
 
         async function skipToProject() {
@@ -1236,6 +1407,7 @@
         window.downloadContract = downloadContract;
         window.selectSigningMethod = selectSigningMethod;
         window.skipToProject = skipToProject;
+        window.goBackToEditData = goBackToEditData;
 
         // Initialize
         loadProject();
