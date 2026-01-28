@@ -1,5 +1,8 @@
 -- Add contract_status and missing columns to workflow_progress view
-CREATE OR REPLACE VIEW workflow_progress AS
+-- Must DROP first because column order changed
+DROP VIEW IF EXISTS workflow_progress;
+
+CREATE VIEW workflow_progress AS
 SELECT
     w.id AS workflow_id,
     w.customer_email,
