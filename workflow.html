@@ -335,8 +335,69 @@
                             </div>
                         </div>
 
+                        <!-- Client Data Filled Info (visible when client filled data) -->
+                        <div id="client-data-filled-info" class="hidden bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-5 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                                        <i class="ph-bold ph-check-circle text-emerald-400 text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-white font-medium">Klient wypelnil dane</h3>
+                                        <p id="client-data-filled-date" class="text-emerald-400/70 text-xs"></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="downloadContractPDF()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                        <i class="ph ph-file-pdf"></i>
+                                        Pobierz PDF
+                                    </button>
+                                    <button onclick="toggleContractEdit()" id="edit-contract-btn" class="bg-zinc-700 hover:bg-zinc-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                        <i class="ph ph-pencil-simple"></i>
+                                        Edytuj
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Readonly data display -->
+                            <div id="contract-data-readonly" class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">Imie i nazwisko</span>
+                                    <span id="ro-name" class="text-white">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">Firma</span>
+                                    <span id="ro-company" class="text-zinc-400">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">Email</span>
+                                    <span id="ro-email" class="text-white">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">Telefon</span>
+                                    <span id="ro-phone" class="text-white">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3 md:col-span-2">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">Adres</span>
+                                    <span id="ro-address" class="text-white">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">PESEL</span>
+                                    <span id="ro-pesel" class="text-white font-mono">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">Nr dowodu</span>
+                                    <span id="ro-id" class="text-white font-mono">-</span>
+                                </div>
+                                <div class="bg-zinc-900/50 rounded-lg p-3">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase block mb-1">NIP</span>
+                                    <span id="ro-nip" class="text-zinc-400 font-mono">-</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Client Data Form (Admin can edit) -->
-                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mb-6">
+                        <div id="contract-data-form" class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mb-6">
                             <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
                                 <i class="ph ph-user text-violet-400"></i>
                                 Dane klienta do umowy
@@ -376,6 +437,10 @@
                                     <input type="text" id="contract-id-number" class="input-field w-full text-sm text-white px-3 py-2.5 rounded-lg font-mono" placeholder="ABC123456" maxlength="9">
                                 </div>
                                 <div>
+                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">NIP</label>
+                                    <input type="text" id="contract-nip" class="input-field w-full text-sm text-white px-3 py-2.5 rounded-lg font-mono" placeholder="0000000000" maxlength="10">
+                                </div>
+                                <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email *</label>
                                     <input type="email" id="contract-email" class="input-field w-full text-sm text-white px-3 py-2.5 rounded-lg" placeholder="email@example.com">
                                 </div>
@@ -390,9 +455,14 @@
                                     <i class="ph ph-info"></i>
                                     Wypelnij wszystkie wymagane pola
                                 </span>
-                                <button onclick="saveContractData()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                                    Zapisz dane
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="cancelContractEdit()" id="cancel-edit-btn" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                        Anuluj
+                                    </button>
+                                    <button onclick="saveContractData()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                        Zapisz dane
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1555,6 +1625,8 @@
         let contractHtml = null;
         let selectedSignatureType = null;
 
+        let isEditingContract = false;
+
         async function loadContractData() {
             if (!workflow) return;
 
@@ -1570,11 +1642,50 @@
             document.getElementById('contract-country').value = workflow.client_country || 'Polska';
             document.getElementById('contract-pesel').value = workflow.client_pesel || '';
             document.getElementById('contract-id-number').value = workflow.client_id_number || '';
+            document.getElementById('contract-nip').value = workflow.client_nip || '';
             document.getElementById('contract-email').value = workflow.customer_email || '';
             document.getElementById('contract-phone').value = workflow.customer_phone || '';
 
+            // Populate readonly view
+            document.getElementById('ro-name').textContent = workflow.customer_name || '-';
+            document.getElementById('ro-company').textContent = workflow.customer_company || '-';
+            document.getElementById('ro-email').textContent = workflow.customer_email || '-';
+            document.getElementById('ro-phone').textContent = workflow.customer_phone || '-';
+            document.getElementById('ro-pesel').textContent = workflow.client_pesel || '-';
+            document.getElementById('ro-id').textContent = workflow.client_id_number || '-';
+            document.getElementById('ro-nip').textContent = workflow.client_nip || '-';
+
+            const address = [
+                workflow.client_street,
+                [workflow.client_postal_code, workflow.client_city].filter(Boolean).join(' '),
+                workflow.client_country
+            ].filter(Boolean).join(', ');
+            document.getElementById('ro-address').textContent = address || '-';
+
+            // Set filled date
+            if (workflow.contract_data_filled_at) {
+                document.getElementById('client-data-filled-date').textContent =
+                    'Wypelniono ' + new Date(workflow.contract_data_filled_at).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+            }
+
             updateContractUI();
         }
+
+        function toggleContractEdit() {
+            isEditingContract = true;
+            document.getElementById('client-data-filled-info').classList.add('hidden');
+            document.getElementById('contract-data-form').classList.remove('hidden');
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+        }
+        window.toggleContractEdit = toggleContractEdit;
+
+        function cancelContractEdit() {
+            isEditingContract = false;
+            loadContractData();
+        }
+        window.cancelContractEdit = cancelContractEdit;
 
         function updateContractUI() {
             const status = workflow.contract_status || 'pending_data';
@@ -1620,6 +1731,12 @@
             const hasData = status !== 'pending_data';
             const isSent = ['contract_sent', 'pending_signature'].includes(status);
             const isSigned = status === 'signed';
+
+            // Show readonly info when client filled data (and not editing)
+            const showReadonly = hasData && !isEditingContract;
+            document.getElementById('client-data-filled-info').classList.toggle('hidden', !showReadonly);
+            document.getElementById('contract-data-form').classList.toggle('hidden', showReadonly);
+            document.getElementById('cancel-edit-btn').classList.toggle('hidden', !isEditingContract);
 
             document.getElementById('contract-generation-section').classList.toggle('hidden', !hasData || isSigned);
             document.getElementById('signing-section').classList.toggle('hidden', !isSent);
@@ -1677,6 +1794,7 @@
                 client_country: document.getElementById('contract-country').value.trim() || 'Polska',
                 client_pesel: document.getElementById('contract-pesel').value.trim(),
                 client_id_number: document.getElementById('contract-id-number').value.trim().toUpperCase(),
+                client_nip: document.getElementById('contract-nip').value.trim() || null,
                 customer_email: document.getElementById('contract-email').value.trim(),
                 customer_phone: document.getElementById('contract-phone').value.trim()
             };
@@ -1715,8 +1833,9 @@
             }
 
             Object.assign(workflow, updates);
+            isEditingContract = false;
             showToast('Dane zapisane', 'success');
-            updateContractUI();
+            loadContractData(); // Reload to update readonly view
         }
         window.saveContractData = saveContractData;
 
