@@ -773,6 +773,58 @@
                                         </div>
                                     </div>
 
+                                    <!-- Template: contract_sent -->
+                                    <div class="border border-white/5 rounded-lg overflow-hidden">
+                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('contract_sent')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                                    <i class="ph ph-file-doc text-violet-400 text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white font-medium">Umowa do podpisu</div>
+                                                    <div class="text-zinc-500 text-xs">Wysylana gdy uzytkownik wysyla umowe do klienta</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-contract_sent" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
+                                                <i id="template-arrow-contract_sent" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-contract_sent" class="hidden border-t border-white/5 p-5 space-y-4">
+                                            <div>
+                                                <label class="block text-zinc-500 text-xs mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-contract_sent"
+                                                    class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
+                                                    placeholder="Umowa do podpisu - {{offerName}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-xs mb-1.5">Tresc HTML</label>
+                                                <textarea id="template-body-contract_sent" rows="12"
+                                                    class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-white/20"
+                                                    placeholder="Kod HTML emaila..."></textarea>
+                                            </div>
+                                            <div class="text-xs text-zinc-600">
+                                                <p class="mb-1">Dostepne zmienne:</p>
+                                                <div class="flex flex-wrap gap-1">
+                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{clientName}}</code>
+                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{offerName}}</code>
+                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{projectUrl}}</code>
+                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{contractUrl}}</code>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2 pt-2">
+                                                <button onclick="previewEmailTemplate('contract_sent')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-eye"></i>
+                                                    Podglad
+                                                </button>
+                                                <button onclick="saveEmailTemplate('contract_sent')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-floppy-disk"></i>
+                                                    Zapisz szablon
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -1964,6 +2016,7 @@
             zapisy_confirmation: 'Dziękuję za zgłoszenie',
             proforma_generated: 'Faktura proforma - {{offerName}}',
             invoice_sent: 'Faktura VAT - {{invoiceNumber}}',
+            contract_sent: 'Umowa do podpisu - {{offerName}}',
             offer_created: 'Twoja oferta jest gotowa - {{offerName}}',
             offer_personal: 'Re: {{offerName}}',
             offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',
@@ -1989,7 +2042,7 @@
 
         async function loadEmailTemplates() {
             // Load templates from settings (including offer flow templates)
-            ['zapisy_confirmation', 'offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired', 'proforma_generated', 'invoice_sent'].forEach(templateId => {
+            ['zapisy_confirmation', 'offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired', 'proforma_generated', 'invoice_sent', 'contract_sent'].forEach(templateId => {
                 const subjectKey = `email_template_${templateId}_subject`;
                 const bodyKey = `email_template_${templateId}_body`;
 
@@ -2095,7 +2148,9 @@
                 invoiceNumber: 'FV/2026/01/001',
                 amount: '1 230,00',
                 description: 'Usługa',
-                checkoutUrl: '#'
+                checkoutUrl: '#',
+                projectUrl: '#',
+                contractUrl: '#'
             };
 
             try {
@@ -2183,6 +2238,27 @@
                             description: order.description || fallbackData.description,
                             viewUrl: order.invoice_id ? `https://tomekniedzwieckipl.fakturownia.pl/invoice/${order.invoice_token || ''}` : '#',
                             pdfUrl: order.invoice_id ? `https://tomekniedzwieckipl.fakturownia.pl/invoices/${order.invoice_id}.pdf` : '#'
+                        };
+                    }
+                }
+
+                // Contract sent
+                if (templateId === 'contract_sent') {
+                    const { data: workflow } = await supabaseClient
+                        .from('workflows')
+                        .select('*, offers(name)')
+                        .eq('contract_status', 'contract_sent')
+                        .order('contract_sent_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    if (workflow) {
+                        return {
+                            email: workflow.customer_email || fallbackData.email,
+                            clientName: workflow.customer_name || workflow.customer_company || fallbackData.clientName,
+                            offerName: workflow.offers?.name || workflow.offer_name || fallbackData.offerName,
+                            projectUrl: `https://tomekniedzwiecki.pl/projekt/${workflow.public_id}`,
+                            contractUrl: workflow.contract_seller_signed_url || `https://tomekniedzwiecki.pl/projekt/${workflow.public_id}`
                         };
                     }
                 }

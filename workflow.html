@@ -519,6 +519,39 @@
                                         Pobierz PDF
                                     </button>
                                 </div>
+
+                                <!-- Send to client section -->
+                                <div class="mt-6 pt-6 border-t border-white/5">
+                                    <h4 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                                        <i class="ph ph-paper-plane-tilt text-violet-400"></i>
+                                        Wyslij do klienta
+                                    </h4>
+
+                                    <div class="space-y-4">
+                                        <!-- Upload signed contract -->
+                                        <div class="p-4 bg-zinc-800/50 border border-white/5 rounded-lg">
+                                            <label class="block text-zinc-400 text-sm mb-2">Wgraj umowe z Twoim podpisem (opcjonalnie):</label>
+                                            <input type="file" id="seller-signed-contract" accept=".pdf" class="text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-zinc-700 file:text-white hover:file:bg-zinc-600">
+                                            <p class="text-zinc-500 text-xs mt-2">Klient otrzyma email z linkiem do umowy do podpisu.</p>
+                                        </div>
+
+                                        <!-- Uploaded file indicator -->
+                                        <div id="seller-contract-uploaded" class="hidden p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                            <div class="flex items-center gap-2 text-emerald-400 text-sm">
+                                                <i class="ph ph-check-circle"></i>
+                                                <span>Twoja podpisana umowa zostala zapisana</span>
+                                                <a id="seller-contract-link" href="#" target="_blank" class="ml-auto text-cyan-400 hover:text-cyan-300">
+                                                    <i class="ph ph-download-simple"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <button onclick="sendContractToClient()" class="w-full bg-violet-500 hover:bg-violet-600 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                            <i class="ph ph-paper-plane-tilt"></i>
+                                            Wyslij umowe do klienta
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -2004,11 +2037,44 @@
         window.downloadContractPDF = downloadContractPDF;
 
         async function sendContractToClient() {
+            const fileInput = document.getElementById('seller-signed-contract');
+            const file = fileInput?.files[0];
+
+            let sellerSignedUrl = null;
+
+            // Upload seller-signed contract PDF if provided
+            if (file) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `contracts/${workflow.id}/seller_signed_${Date.now()}.${fileExt}`;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('attachments')
+                    .upload(fileName, file);
+
+                if (uploadError) {
+                    showToast('Blad przesylania pliku', 'error');
+                    return;
+                }
+
+                const { data: urlData } = supabaseClient.storage
+                    .from('attachments')
+                    .getPublicUrl(fileName);
+
+                sellerSignedUrl = urlData.publicUrl;
+            }
+
+            const updateData = {
+                contract_status: 'contract_sent',
+                contract_sent_at: new Date().toISOString()
+            };
+
+            if (sellerSignedUrl) {
+                updateData.contract_seller_signed_url = sellerSignedUrl;
+            }
+
             const { error } = await supabaseClient
                 .from('workflows')
-                .update({
-                    contract_status: 'contract_sent'
-                })
+                .update(updateData)
                 .eq('id', workflow.id);
 
             if (error) {
@@ -2016,8 +2082,47 @@
                 return;
             }
 
+            // Send email to client
+            const clientEmail = workflow.customer_email;
+            const clientName = workflow.customer_name || workflow.customer_company || 'Klient';
+            const projectUrl = `https://tomekniedzwiecki.pl/projekt/${workflow.public_id}`;
+            const offerName = workflow.offer_name || 'Projekt';
+
+            if (clientEmail) {
+                try {
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            type: 'contract_sent',
+                            data: {
+                                email: clientEmail,
+                                clientName: clientName,
+                                offerName: offerName,
+                                projectUrl: projectUrl,
+                                contractUrl: sellerSignedUrl || projectUrl
+                            }
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (!result.success) {
+                        console.warn('Email failed:', result.error);
+                    }
+                } catch (emailError) {
+                    console.warn('Email error:', emailError);
+                }
+            }
+
             workflow.contract_status = 'contract_sent';
-            showToast('Status zmieniony na "Wyslano"', 'success');
+            workflow.contract_sent_at = new Date().toISOString();
+            if (sellerSignedUrl) {
+                workflow.contract_seller_signed_url = sellerSignedUrl;
+            }
+            showToast('Umowa wyslana do klienta!', 'success');
             updateContractUI();
         }
         window.sendContractToClient = sendContractToClient;

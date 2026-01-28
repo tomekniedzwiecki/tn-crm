@@ -24,6 +24,7 @@ const VALID_EMAIL_TYPES = [
   'zapisy_confirmation',
   'proforma_generated',
   'invoice_sent',
+  'contract_sent',
   'offer_created',
   'offer_personal',
   'offer_reminder_halfway',
@@ -36,6 +37,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   zapisy_confirmation: 'Dziękuję za zgłoszenie',
   proforma_generated: 'Faktura proforma - {{offerName}}',
   invoice_sent: 'Faktura VAT - {{invoiceNumber}}',
+  contract_sent: 'Umowa do podpisu - {{offerName}}',
   offer_created: 'Twoja oferta jest gotowa - {{offerName}}',
   offer_personal: 'Re: {{offerName}}',
   offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',
@@ -299,7 +301,10 @@ Deno.serve(async (req) => {
         invoiceNumber: data.invoiceNumber || '',
         amount: data.amount || '',
         description: data.description || '',
-        viewUrl: data.viewUrl || ''
+        viewUrl: data.viewUrl || '',
+        // Contract-specific variables
+        projectUrl: data.projectUrl || '',
+        contractUrl: data.contractUrl || ''
       }
 
       // Replace variables in subject and body
