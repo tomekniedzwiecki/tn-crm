@@ -1068,6 +1068,25 @@
         let comments = [];
         let isAuthenticated = false;
 
+        function getAuthKey() {
+            return `auth_${getToken()}`;
+        }
+
+        function checkSavedAuth() {
+            const saved = localStorage.getItem(getAuthKey());
+            if (!saved) return false;
+            try {
+                const { expires } = JSON.parse(saved);
+                if (Date.now() < expires) return true;
+                localStorage.removeItem(getAuthKey());
+            } catch (e) { localStorage.removeItem(getAuthKey()); }
+            return false;
+        }
+
+        function saveAuth() {
+            localStorage.setItem(getAuthKey(), JSON.stringify({ expires: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
+        }
+
         function getToken() {
             const path = window.location.pathname;
             const match = path.match(/\/projekt\/([a-f0-9]+)/i);
@@ -1124,6 +1143,7 @@
             workflow = workflowData;
 
             if (!workflow.client_password_hash) { showScreen('set-password'); return; }
+            if (!isAuthenticated && checkSavedAuth()) { isAuthenticated = true; }
             if (!isAuthenticated) { showScreen('password'); return; }
 
             await logAccess();
@@ -1192,6 +1212,7 @@
 
             workflow.client_password_hash = hash;
             isAuthenticated = true;
+            saveAuth();
             loadProject();
         }
         window.setPassword = setPassword;
@@ -1202,6 +1223,7 @@
 
             if (dcodeIO.bcrypt.compareSync(password, workflow.client_password_hash)) {
                 isAuthenticated = true;
+                saveAuth();
                 loadProject();
             } else {
                 showToast('Nieprawidlowe haslo', 'error');
