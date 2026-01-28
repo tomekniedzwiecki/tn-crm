@@ -411,9 +411,10 @@
                         <i class="ph ph-chart-line-up mr-1.5"></i>
                         Raporty
                     </button>
-                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="tab-btn">
+                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="tab-btn relative">
                         <i class="ph ph-chat-circle-text mr-1.5"></i>
                         Komentarze
+                        <span id="comments-badge" class="hidden absolute -top-1 -right-1 bg-emerald-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
                     </button>
                 </nav>
             </div>
@@ -800,6 +801,9 @@
             products = prodsRes.data || [];
             reports = repsRes.data || [];
             comments = comsRes.data || [];
+
+            // Update comments badge after loading
+            updateCommentsBadge();
         }
 
         async function logAccess() {
@@ -926,10 +930,45 @@
                 case 'strona': renderSalesPage(); break;
                 case 'produkty': renderProducts(); break;
                 case 'raporty': renderReports(); break;
-                case 'komentarze': renderComments(); break;
+                case 'komentarze':
+                    renderComments();
+                    markCommentsAsRead();
+                    break;
             }
         }
         window.switchTab = switchTab;
+
+        // Comments badge - track unread team comments for client
+        function getLastSeenKey() {
+            return `comments_last_seen_${workflow?.id || 'unknown'}`;
+        }
+
+        function updateCommentsBadge() {
+            const badge = document.getElementById('comments-badge');
+            if (!badge || !workflow) return;
+
+            const lastSeen = localStorage.getItem(getLastSeenKey());
+            const lastSeenDate = lastSeen ? new Date(lastSeen) : new Date(0);
+
+            // Count team comments newer than last seen
+            const unreadCount = comments.filter(c =>
+                c.author_type === 'team' && new Date(c.created_at) > lastSeenDate
+            ).length;
+
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function markCommentsAsRead() {
+            if (!workflow) return;
+            localStorage.setItem(getLastSeenKey(), new Date().toISOString());
+            const badge = document.getElementById('comments-badge');
+            if (badge) badge.classList.add('hidden');
+        }
 
         // Render functions
         function formatDate(dateStr) {

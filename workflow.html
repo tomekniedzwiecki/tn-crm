@@ -226,9 +226,10 @@
                             <i class="ph ph-chart-bar mr-1.5"></i>
                             Raporty
                         </button>
-                        <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
+                        <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap relative">
                             <i class="ph ph-chat-circle-text mr-1.5"></i>
                             Komentarze
+                            <span id="comments-badge" class="hidden absolute -top-1 -right-1 bg-emerald-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
                         </button>
                     </div>
 
@@ -1924,6 +1925,7 @@
                     break;
                 case 'komentarze':
                     loadComments();
+                    markCommentsAsRead();
                     break;
             }
         }
@@ -2951,6 +2953,39 @@
 
             comments = data || [];
             renderComments();
+            updateCommentsBadge();
+        }
+
+        // Comments badge - track unread client comments for admin
+        function getLastSeenKey() {
+            return `admin_comments_last_seen_${workflow?.id || 'unknown'}`;
+        }
+
+        function updateCommentsBadge() {
+            const badge = document.getElementById('comments-badge');
+            if (!badge || !workflow) return;
+
+            const lastSeen = localStorage.getItem(getLastSeenKey());
+            const lastSeenDate = lastSeen ? new Date(lastSeen) : new Date(0);
+
+            // Count client comments newer than last seen
+            const unreadCount = comments.filter(c =>
+                c.author_type === 'client' && new Date(c.created_at) > lastSeenDate
+            ).length;
+
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function markCommentsAsRead() {
+            if (!workflow) return;
+            localStorage.setItem(getLastSeenKey(), new Date().toISOString());
+            const badge = document.getElementById('comments-badge');
+            if (badge) badge.classList.add('hidden');
         }
 
         function renderComments() {
@@ -3017,7 +3052,7 @@
                 .insert({
                     workflow_id: workflow.id,
                     author_type: 'team',
-                    author_name: 'Zespol',
+                    author_name: 'Tomasz Niedzwiecki',
                     content: content
                 })
                 .select()
@@ -3042,8 +3077,24 @@
             const session = await checkAuth();
             if (session) {
                 await loadWorkflow();
+                // Load comments for badge (without rendering)
+                await loadCommentsForBadge();
             }
         }
+
+        async function loadCommentsForBadge() {
+            const workflowId = getWorkflowId();
+            if (!workflowId) return;
+
+            const { data } = await supabaseClient
+                .from('workflow_comments')
+                .select('id, author_type, created_at')
+                .eq('workflow_id', workflowId);
+
+            comments = data || [];
+            updateCommentsBadge();
+        }
+
         init();
 
         // Register service worker
