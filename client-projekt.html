@@ -309,7 +309,46 @@
         </div>
     </div>
 
-    <!-- Password Screen -->
+    <!-- Set Password Screen (first time) -->
+    <div id="set-password-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-sm animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-5">
+                    <i class="ph-bold ph-shield-check text-xl"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Zabezpiecz swoj projekt</h1>
+                <p class="text-[#888] text-sm">Ustaw haslo, ktore bedzie chronilo dostep do Twojego projektu i wrazliwych danych.</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-6">
+                <div class="mb-4">
+                    <label class="form-label">Nowe haslo</label>
+                    <input type="password" id="new-password-input"
+                           class="form-input"
+                           placeholder="Minimum 6 znakow..."
+                           minlength="6"
+                           autofocus>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Powtorz haslo</label>
+                    <input type="password" id="confirm-password-input"
+                           class="form-input"
+                           placeholder="Powtorz haslo...">
+                </div>
+                <div id="set-password-error" class="text-red-400 text-sm mb-4 hidden"></div>
+                <button id="set-password-btn" class="btn-primary w-full">
+                    <span>Ustaw haslo i kontynuuj</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+
+            <p class="text-[#555] text-xs text-center mt-4">
+                Haslo bedzie wymagane przy kazdym wejsciu na strone projektu.
+            </p>
+        </div>
+    </div>
+
+    <!-- Password Screen (login) -->
     <div id="password-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
         <div class="w-full max-w-sm animate-enter">
             <div class="text-center mb-8">
@@ -334,6 +373,10 @@
                     <i class="ph ph-arrow-right"></i>
                 </button>
             </div>
+
+            <p class="text-[#555] text-xs text-center mt-4">
+                Nie pamietasz hasla? Napisz na <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-blue-400 hover:text-blue-300">ceo@tomekniedzwiecki.pl</a>
+            </p>
         </div>
     </div>
 
@@ -894,6 +937,13 @@
             }
 
             // Check if password is required
+            // Check if password needs to be set (first time)
+            if (!workflow.client_password_hash) {
+                showScreen('set-password');
+                return;
+            }
+
+            // Check if password is required (already set)
             if (workflow.client_password_hash && !isAuthenticated) {
                 showScreen('password');
                 return;
@@ -949,7 +999,7 @@
         }
 
         function showScreen(screenName) {
-            ['loading', 'password', 'not-found', 'contract-data', 'contract-signing', 'project'].forEach(name => {
+            ['loading', 'set-password', 'password', 'not-found', 'contract-data', 'contract-signing', 'project'].forEach(name => {
                 const el = document.getElementById(`${name}-screen`);
                 if (el) el.classList.toggle('hidden', name !== screenName);
             });
@@ -1379,6 +1429,70 @@
         }
 
         // Password verification
+        // Set password (first time) listeners
+        document.getElementById('set-password-btn').addEventListener('click', setPassword);
+        document.getElementById('new-password-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('confirm-password-input').focus();
+        });
+        document.getElementById('confirm-password-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') setPassword();
+        });
+
+        async function setPassword() {
+            const password = document.getElementById('new-password-input').value;
+            const confirmPassword = document.getElementById('confirm-password-input').value;
+            const errorDiv = document.getElementById('set-password-error');
+            const btn = document.getElementById('set-password-btn');
+
+            // Validation
+            if (!password || password.length < 6) {
+                errorDiv.textContent = 'Haslo musi miec minimum 6 znakow.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorDiv.textContent = 'Hasla nie sa takie same.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>';
+
+            try {
+                // Hash the password
+                const salt = dcodeIO.bcrypt.genSaltSync(10);
+                const hash = dcodeIO.bcrypt.hashSync(password, salt);
+
+                // Save to database
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ client_password_hash: hash })
+                    .eq('id', workflow.id);
+
+                if (error) {
+                    throw error;
+                }
+
+                // Update local workflow and mark as authenticated
+                workflow.client_password_hash = hash;
+                isAuthenticated = true;
+
+                // Continue to the next step
+                await loadProject();
+
+            } catch (err) {
+                console.error('Error setting password:', err);
+                errorDiv.textContent = 'Wystapil blad. Sprobuj ponownie.';
+                errorDiv.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Ustaw haslo i kontynuuj</span><i class="ph ph-arrow-right"></i>';
+            }
+        }
+
+        // Login password listeners
         document.getElementById('password-btn').addEventListener('click', verifyPassword);
         document.getElementById('password-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') verifyPassword();
