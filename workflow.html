@@ -29,7 +29,7 @@
         }
     </script>
     <style>
-        body { background: #050505; color: #e5e5e5; }
+        body { background: #000; color: #e5e5e5; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -39,19 +39,54 @@
         ::selection { background: white; color: black; }
 
         @media (max-width: 768px) {
-            aside { display: none !important; }
+            aside#sidebar { display: none !important; }
             .mobile-back-btn { display: flex !important; }
+            .workflow-sidebar { display: none !important; }
         }
         @media (min-width: 769px) {
             .mobile-back-btn { display: none !important; }
         }
 
         .glass-header {
-            background: rgba(5, 5, 5, 0.7);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
+
+        .workflow-sidebar-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 450;
+            color: #888;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .workflow-sidebar-btn:hover {
+            color: #fafafa;
+            background: #111;
+        }
+        .workflow-sidebar-btn.active {
+            color: #fafafa;
+            background: #171717;
+        }
+        .workflow-sidebar-btn i {
+            font-size: 15px;
+            opacity: 0.6;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .workflow-sidebar-btn.active i { opacity: 1; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
@@ -126,7 +161,7 @@
         }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased" style="background:#000">
 
     <!-- Sidebar -->
     <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
@@ -134,7 +169,7 @@
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
         <!-- Header -->
-        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+        <header class="h-14 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
             <div class="flex items-center gap-3">
                 <a href="/workflows" data-page="workflows" class="mobile-back-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
                     <i class="ph ph-arrow-left text-xl"></i>
@@ -146,12 +181,12 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 md:gap-3">
-                <button id="copy-link-btn" class="text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 hover:border-cyan-500/50 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+                <button id="copy-link-btn" class="text-zinc-300 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2">
                     <i class="ph ph-link"></i>
                     <span class="hidden md:inline">Link klienta</span>
                 </button>
                 <div class="relative">
-                    <button id="actions-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+                    <button id="actions-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2">
                         <i class="ph ph-dots-three"></i>
                         <span class="hidden md:inline">Akcje</span>
                     </button>
@@ -178,60 +213,82 @@
             </div>
         </header>
 
+        <!-- Mobile Tab Bar -->
+        <div class="flex md:hidden overflow-x-auto border-b border-white/5 px-3 gap-1" style="scrollbar-width:none;-ms-overflow-style:none;">
+            <button onclick="switchTab('przeglad')" data-tab="przeglad" class="workflow-sidebar-btn active py-2.5 text-xs rounded-none border-b-2 border-transparent" style="border-radius:0">Przegląd</button>
+            <button onclick="switchTab('etapy')" data-tab="etapy" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Etapy</button>
+            <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Dokumenty</button>
+            <button onclick="switchTab('materialy')" data-tab="materialy" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Materiały</button>
+            <button onclick="switchTab('branding')" data-tab="branding" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Branding</button>
+            <button onclick="switchTab('strona')" data-tab="strona" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Strona</button>
+            <button onclick="switchTab('produkty')" data-tab="produkty" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Produkty</button>
+            <button onclick="switchTab('raporty')" data-tab="raporty" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Raporty</button>
+            <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Komentarze</button>
+        </div>
+
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10">
-            <div class="max-w-5xl mx-auto animate-enter">
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Workflow Sidebar -->
+            <div class="workflow-sidebar w-[200px] min-w-[200px] border-r border-white/5 bg-black py-4 px-2 overflow-y-auto flex-shrink-0">
+                <div class="mb-1">
+                    <p class="px-3 py-1.5 text-[10px] uppercase tracking-widest text-zinc-600 font-medium">Projekt</p>
+                </div>
+                <button onclick="switchTab('przeglad')" data-tab="przeglad" class="workflow-sidebar-btn active">
+                    <i class="ph ph-chart-line-up"></i>
+                    Przegląd
+                </button>
+                <button onclick="switchTab('etapy')" data-tab="etapy" class="workflow-sidebar-btn">
+                    <i class="ph ph-list-checks"></i>
+                    Etapy
+                </button>
+                <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="workflow-sidebar-btn">
+                    <i class="ph ph-file-text"></i>
+                    Dokumenty
+                    <span id="contract-status-badge" class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400">Oczekuje</span>
+                </button>
+                <button onclick="switchTab('materialy')" data-tab="materialy" class="workflow-sidebar-btn">
+                    <i class="ph ph-folder-open"></i>
+                    Materiały
+                </button>
+                <button onclick="switchTab('branding')" data-tab="branding" class="workflow-sidebar-btn">
+                    <i class="ph ph-paint-brush"></i>
+                    Branding
+                </button>
+
+                <div class="mb-1 mt-4">
+                    <p class="px-3 py-1.5 text-[10px] uppercase tracking-widest text-zinc-600 font-medium">Pozostałe</p>
+                </div>
+                <button onclick="switchTab('strona')" data-tab="strona" class="workflow-sidebar-btn">
+                    <i class="ph ph-globe"></i>
+                    Strona
+                </button>
+                <button onclick="switchTab('produkty')" data-tab="produkty" class="workflow-sidebar-btn">
+                    <i class="ph ph-package"></i>
+                    Produkty
+                </button>
+                <button onclick="switchTab('raporty')" data-tab="raporty" class="workflow-sidebar-btn">
+                    <i class="ph ph-chart-bar"></i>
+                    Raporty
+                </button>
+                <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-sidebar-btn relative">
+                    <i class="ph ph-chat-circle-text"></i>
+                    Komentarze
+                    <span id="comments-badge" class="hidden ml-auto bg-emerald-500 text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
+                </button>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-w-0">
+            <div class="max-w-4xl animate-enter">
 
                 <!-- Loading State -->
                 <div id="loading-state" class="py-16 text-center">
                     <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
-                    <p class="text-zinc-500 text-sm font-mono">Ladowanie...</p>
+                    <p class="text-zinc-500 text-sm font-mono">Ładowanie...</p>
                 </div>
 
                 <!-- Main Content (hidden until loaded) -->
                 <div id="main-content" class="hidden">
-
-                    <!-- Tabs Navigation -->
-                    <div class="flex items-center gap-1 mb-6 border-b border-white/5 pb-px overflow-x-auto scrollbar-hide">
-                        <button onclick="switchTab('przeglad')" data-tab="przeglad" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-white border-white whitespace-nowrap">
-                            <i class="ph ph-chart-line-up mr-1.5"></i>
-                            Przeglad
-                        </button>
-                        <button onclick="switchTab('etapy')" data-tab="etapy" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-list-checks mr-1.5"></i>
-                            Etapy
-                        </button>
-                        <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-file-text mr-1.5"></i>
-                            Dokumenty
-                            <span id="contract-status-badge" class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400">Oczekuje</span>
-                        </button>
-                        <button onclick="switchTab('materialy')" data-tab="materialy" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-folder-open mr-1.5"></i>
-                            Materialy
-                        </button>
-                        <button onclick="switchTab('branding')" data-tab="branding" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-paint-brush mr-1.5"></i>
-                            Branding
-                        </button>
-                        <button onclick="switchTab('strona')" data-tab="strona" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-globe mr-1.5"></i>
-                            Strona
-                        </button>
-                        <button onclick="switchTab('produkty')" data-tab="produkty" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-package mr-1.5"></i>
-                            Produkty
-                        </button>
-                        <button onclick="switchTab('raporty')" data-tab="raporty" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap">
-                            <i class="ph ph-chart-bar mr-1.5"></i>
-                            Raporty
-                        </button>
-                        <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-tab px-3 py-2.5 text-sm font-medium rounded-t-lg transition-all border-b-2 -mb-px text-zinc-500 border-transparent hover:text-zinc-300 whitespace-nowrap relative">
-                            <i class="ph ph-chat-circle-text mr-1.5"></i>
-                            Komentarze
-                            <span id="comments-badge" class="hidden absolute -top-1 -right-1 bg-emerald-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
-                        </button>
-                    </div>
 
                     <!-- TAB: Przeglad (Overview) -->
                     <div id="tab-przeglad" class="workflow-panel">
@@ -870,6 +927,7 @@
                     </div><!-- /tab-komentarze -->
 
                 </div>
+            </div>
             </div>
         </div>
     </main>
@@ -1888,13 +1946,9 @@
         // TABS
         // =============================================
         function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.workflow-tab').forEach(btn => {
-                const isActive = btn.dataset.tab === tabName;
-                btn.classList.toggle('text-white', isActive);
-                btn.classList.toggle('border-white', isActive);
-                btn.classList.toggle('text-zinc-500', !isActive);
-                btn.classList.toggle('border-transparent', !isActive);
+            // Update sidebar buttons
+            document.querySelectorAll('.workflow-sidebar-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
 
             // Update tab panels
