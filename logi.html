@@ -374,12 +374,6 @@
                                 <!-- Scheduled Emails Filters -->
                                 <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
                                     <div class="flex flex-wrap items-center gap-3">
-                                        <select id="scheduled-filter-status" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[140px]">
-                                            <option value="">Wszystkie statusy</option>
-                                            <option value="pending">Oczekujące</option>
-                                            <option value="sent">Wysłane</option>
-                                            <option value="cancelled">Anulowane</option>
-                                        </select>
                                         <select id="scheduled-filter-type" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[160px]">
                                             <option value="">Wszystkie typy</option>
                                             <option value="offer_created">Oferta utworzona</option>
@@ -1137,17 +1131,13 @@
         }
 
         function applyScheduledFilters() {
-            const statusFilter = document.getElementById('scheduled-filter-status').value;
             const typeFilter = document.getElementById('scheduled-filter-type').value;
             const searchFilter = document.getElementById('scheduled-filter-search').value.toLowerCase();
 
             filteredScheduledEmails = scheduledEmails.filter(email => {
-                // Status filter
-                if (statusFilter) {
-                    if (statusFilter === 'pending' && (email.sent_at || email.cancelled_at)) return false;
-                    if (statusFilter === 'sent' && !email.sent_at) return false;
-                    if (statusFilter === 'cancelled' && !email.cancelled_at) return false;
-                }
+                // Only show pending emails (not sent, not cancelled)
+                if (email.sent_at || email.cancelled_at) return false;
+
                 if (typeFilter && email.email_type !== typeFilter) return false;
                 if (searchFilter) {
                     const leadName = email.lead?.name || email.lead?.email || email.lead?.company || '';
@@ -1156,7 +1146,7 @@
                 return true;
             });
 
-            const hasFilters = statusFilter || typeFilter || searchFilter;
+            const hasFilters = typeFilter || searchFilter;
             document.getElementById('scheduled-clear-filters').classList.toggle('hidden', !hasFilters);
 
             document.getElementById('scheduled-filtered-count').textContent = filteredScheduledEmails.length;
@@ -1394,11 +1384,9 @@
         });
 
         // Scheduled filters
-        document.getElementById('scheduled-filter-status').addEventListener('change', applyScheduledFilters);
         document.getElementById('scheduled-filter-type').addEventListener('change', applyScheduledFilters);
         document.getElementById('scheduled-filter-search').addEventListener('input', applyScheduledFilters);
         document.getElementById('scheduled-clear-filters').addEventListener('click', () => {
-            document.getElementById('scheduled-filter-status').value = '';
             document.getElementById('scheduled-filter-type').value = '';
             document.getElementById('scheduled-filter-search').value = '';
             applyScheduledFilters();
