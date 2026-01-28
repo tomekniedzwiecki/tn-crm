@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
     }
 
     console.log('[fakturownia-invoice] Creating VAT invoice for order:', order.order_number)
+    console.log('[fakturownia-invoice] Subdomain:', subdomain)
+    console.log('[fakturownia-invoice] Invoice data:', JSON.stringify(invoiceData.invoice, null, 2))
 
     // Call Fakturownia API
     const response = await fetch(`https://${subdomain}.fakturownia.pl/invoices.json`, {
@@ -115,30 +117,21 @@ Deno.serve(async (req) => {
       body: JSON.stringify(invoiceData)
     })
 
-    const result = await response.json()
+    const responseText = await response.text()
+    console.log('[fakturownia-invoice] Raw API response:', responseText)
+
+    let result
+    try {
+      result = JSON.parse(responseText)
+    } catch (e) {
+      throw new Error(`Nieprawidlowa odpowiedz API: ${responseText.substring(0, 200)}`)
+    }
 
     if (!response.ok) {
-      console.error('[fakturownia-invoice] API error:', JSON.stringify(result))
-      // Build a proper error message
-      let errorMsg = 'Blad API Fakturownia'
-      if (result) {
-        if (typeof result === 'string') {
-          errorMsg = result
-        } else if (result.message && typeof result.message === 'string') {
-          errorMsg = result.message
-        } else if (result.error) {
-          errorMsg = typeof result.error === 'string' ? result.error : JSON.stringify(result.error)
-        } else if (result.code) {
-          errorMsg = `Kod bledu: ${result.code}`
-        } else {
-          try {
-            errorMsg = JSON.stringify(result)
-          } catch (e) {
-            errorMsg = 'Nieznany blad API'
-          }
-        }
-      }
-      throw new Error(errorMsg)
+      console.error('[fakturownia-invoice] API error - Status:', response.status)
+      console.error('[fakturownia-invoice] API error - Response:', responseText)
+      // Include raw response in error for debugging
+      throw new Error(`Blad Fakturownia (${response.status}): ${responseText.substring(0, 500)}`)
     }
 
     console.log('[fakturownia-invoice] Invoice created:', result.id, result.number)
