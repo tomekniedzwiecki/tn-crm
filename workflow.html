@@ -2040,13 +2040,45 @@
                 return;
             }
 
+            const fileInput = document.getElementById('signed-contract-file');
+            const file = fileInput?.files[0];
+
+            let signedFileUrl = null;
+
+            // Upload signed contract PDF if provided
+            if (file) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `contracts/${workflow.id}/signed_${Date.now()}.${fileExt}`;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('attachments')
+                    .upload(fileName, file);
+
+                if (uploadError) {
+                    showToast('Blad przesylania pliku', 'error');
+                    return;
+                }
+
+                const { data: urlData } = supabaseClient.storage
+                    .from('attachments')
+                    .getPublicUrl(fileName);
+
+                signedFileUrl = urlData.publicUrl;
+            }
+
+            const updateData = {
+                contract_status: 'signed',
+                contract_signed_at: new Date().toISOString(),
+                contract_signature_type: selectedSignatureType
+            };
+
+            if (signedFileUrl) {
+                updateData.contract_signed_file_url = signedFileUrl;
+            }
+
             const { error } = await supabaseClient
                 .from('workflows')
-                .update({
-                    contract_status: 'signed',
-                    contract_signed_at: new Date().toISOString(),
-                    contract_signature_type: selectedSignatureType
-                })
+                .update(updateData)
                 .eq('id', workflow.id);
 
             if (error) {
@@ -2057,6 +2089,9 @@
             workflow.contract_status = 'signed';
             workflow.contract_signed_at = new Date().toISOString();
             workflow.contract_signature_type = selectedSignatureType;
+            if (signedFileUrl) {
+                workflow.contract_signed_file_url = signedFileUrl;
+            }
             showToast('Umowa oznaczona jako podpisana!', 'success');
             updateContractUI();
         }
