@@ -28,6 +28,7 @@ Deno.serve(async (req) => {
     // Get secrets
     const apiToken = Deno.env.get('fakturownia_api_token')
     let subdomain = Deno.env.get('fakturownia_subdomain')
+    const departmentId = Deno.env.get('fakturownia_department_id')
 
     if (!apiToken || !subdomain) {
       throw new Error('Brak konfiguracji Fakturownia w secrets')
@@ -91,8 +92,11 @@ Deno.serve(async (req) => {
         status: 'paid', // Oplacona
         paid: brutto.toFixed(2),
         ...buyerData,
-        seller_name: seller?.name || 'Tomasz Niedzwiecki',
-        seller_tax_no: seller?.nip || '',
+        // Seller data - only set if not using department (department has its own seller data)
+        ...(departmentId ? {} : {
+          seller_name: seller?.name || 'Tomasz Niedzwiecki',
+          seller_tax_no: seller?.nip || '',
+        }),
         positions: [{
           name: order.description || 'Usluga',
           tax: 23,
@@ -103,11 +107,14 @@ Deno.serve(async (req) => {
         buyer_phone: order.customer_phone || '',
         description: `Zamowienie ${order.order_number || ''}`,
         internal_note: `Order ID: ${order.id}`,
+        // Department ID - required if account has security settings enabled
+        ...(departmentId ? { department_id: parseInt(departmentId) } : {}),
       }
     }
 
     console.log('[fakturownia-invoice] Creating VAT invoice for order:', order.order_number)
     console.log('[fakturownia-invoice] Subdomain:', subdomain)
+    console.log('[fakturownia-invoice] Department ID:', departmentId || 'not set')
     console.log('[fakturownia-invoice] Invoice data:', JSON.stringify(invoiceData.invoice, null, 2))
 
     // Call Fakturownia API
@@ -141,6 +148,45 @@ Deno.serve(async (req) => {
 
     // Get view URL (for sending to client)
     const viewUrl = `https://${subdomain}.fakturownia.pl/invoice/${result.token}`
+
+    // Send email notification to customer
+    if (order.customer_email) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+
+        console.log('[fakturownia-invoice] Sending email notification to:', order.customer_email)
+
+        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({
+            type: 'invoice_sent',
+            data: {
+              email: order.customer_email,
+              clientName: order.customer_name || order.customer_company || 'Cześć',
+              invoiceNumber: result.number,
+              amount: brutto.toLocaleString('pl-PL', { minimumFractionDigits: 2 }),
+              description: order.description || 'Usługa',
+              pdfUrl: pdfUrl,
+              viewUrl: viewUrl
+            }
+          })
+        })
+
+        const emailResult = await emailResponse.json()
+        console.log('[fakturownia-invoice] Email result:', emailResult)
+
+        if (!emailResult.success) {
+          console.warn('[fakturownia-invoice] Email failed but invoice created:', emailResult.error)
+        }
+      } catch (emailError) {
+        console.warn('[fakturownia-invoice] Email error (invoice still created):', emailError)
+      }
+    }
 
     return new Response(
       JSON.stringify({

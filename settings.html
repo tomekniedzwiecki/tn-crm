@@ -2063,30 +2063,135 @@
             showToast('Szablon zapisany');
         }
 
-        function previewEmailTemplate(templateId) {
+        async function previewEmailTemplate(templateId) {
             const bodyTextarea = document.getElementById(`template-body-${templateId}`);
             const body = bodyTextarea.value;
 
-            // Replace variables with example values
-            const exampleData = {
-                email: 'jan.kowalski@example.com',
-                clientName: 'Jan Kowalski',
-                offerName: 'Konsultacja strategiczna',
-                offerPrice: '5 000',
-                pdfUrl: '#',
-                offerUrl: '#',
-                validUntil: '31 stycznia 2026'
-            };
+            // Fetch real data based on template type
+            let previewData = await fetchPreviewData(templateId);
 
             let previewHtml = body;
-            Object.keys(exampleData).forEach(key => {
-                previewHtml = previewHtml.replace(new RegExp(`{{${key}}}`, 'g'), exampleData[key]);
+            Object.keys(previewData).forEach(key => {
+                previewHtml = previewHtml.replace(new RegExp(`{{${key}}}`, 'g'), previewData[key]);
             });
 
             // Open preview in new window
             const previewWindow = window.open('', '_blank', 'width=600,height=700');
             previewWindow.document.write(previewHtml);
             previewWindow.document.close();
+        }
+
+        async function fetchPreviewData(templateId) {
+            // Fallback example data
+            const fallbackData = {
+                email: 'jan.kowalski@example.com',
+                clientName: 'Jan Kowalski',
+                offerName: 'Przykładowa oferta',
+                offerPrice: '5 000',
+                pdfUrl: '#',
+                offerUrl: '#',
+                viewUrl: '#',
+                validUntil: '31 stycznia 2026',
+                invoiceNumber: 'FV/2026/01/001',
+                amount: '1 230,00',
+                description: 'Usługa',
+                checkoutUrl: '#'
+            };
+
+            try {
+                // Offer-related templates
+                if (['offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired'].includes(templateId)) {
+                    const { data: offer } = await supabaseClient
+                        .from('offers')
+                        .select('*, leads(name, email, company)')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    if (offer) {
+                        const lead = offer.leads;
+                        return {
+                            email: lead?.email || fallbackData.email,
+                            clientName: lead?.name || lead?.company || fallbackData.clientName,
+                            offerName: offer.name || fallbackData.offerName,
+                            offerPrice: offer.price ? offer.price.toLocaleString('pl-PL') : fallbackData.offerPrice,
+                            pdfUrl: offer.pdf_url || '#',
+                            offerUrl: `https://tomekniedzwiecki.pl/oferta/${offer.public_id || offer.id}`,
+                            validUntil: offer.valid_until ? new Date(offer.valid_until + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : fallbackData.validUntil,
+                            checkoutUrl: offer.checkout_url || '#'
+                        };
+                    }
+                }
+
+                // Zapisy confirmation
+                if (templateId === 'zapisy_confirmation') {
+                    const { data: lead } = await supabaseClient
+                        .from('leads')
+                        .select('*')
+                        .eq('source', 'zapisy')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    if (lead) {
+                        return {
+                            email: lead.email || fallbackData.email,
+                            clientName: lead.name || lead.company || fallbackData.clientName
+                        };
+                    }
+                }
+
+                // Proforma generated
+                if (templateId === 'proforma_generated') {
+                    const { data: offer } = await supabaseClient
+                        .from('offers')
+                        .select('*, leads(name, email, company)')
+                        .not('proforma_url', 'is', null)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    if (offer) {
+                        const lead = offer.leads;
+                        return {
+                            email: lead?.email || fallbackData.email,
+                            clientName: lead?.name || lead?.company || fallbackData.clientName,
+                            offerName: offer.name || fallbackData.offerName,
+                            offerPrice: offer.price ? offer.price.toLocaleString('pl-PL') : fallbackData.offerPrice,
+                            pdfUrl: offer.proforma_url || '#',
+                            checkoutUrl: offer.checkout_url || '#'
+                        };
+                    }
+                }
+
+                // Invoice sent
+                if (templateId === 'invoice_sent') {
+                    const { data: order } = await supabaseClient
+                        .from('orders')
+                        .select('*')
+                        .not('invoice_number', 'is', null)
+                        .order('updated_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    if (order) {
+                        return {
+                            email: order.customer_email || fallbackData.email,
+                            clientName: order.customer_name || order.customer_company || fallbackData.clientName,
+                            invoiceNumber: order.invoice_number || fallbackData.invoiceNumber,
+                            amount: order.amount ? order.amount.toLocaleString('pl-PL', { minimumFractionDigits: 2 }) : fallbackData.amount,
+                            description: order.description || fallbackData.description,
+                            viewUrl: order.invoice_id ? `https://tomekniedzwieckipl.fakturownia.pl/invoice/${order.invoice_token || ''}` : '#',
+                            pdfUrl: order.invoice_id ? `https://tomekniedzwieckipl.fakturownia.pl/invoices/${order.invoice_id}.pdf` : '#'
+                        };
+                    }
+                }
+
+            } catch (e) {
+                console.warn('[preview] Error fetching real data:', e);
+            }
+
+            return fallbackData;
         }
 
         // =============================================
