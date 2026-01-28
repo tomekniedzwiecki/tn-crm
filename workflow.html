@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="components/sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -1544,22 +1545,21 @@
         // =============================================
         // CONTRACT MANAGEMENT
         // =============================================
-        let contractTemplate = null;
+        // Contract template URLs by offer ID (static HTML files)
+        const CONTRACT_TEMPLATES = {
+            '30bf199b-8bc1-4810-8716-43dbffeb9113': '/umowy/umowa-budowa-sklepu.html',
+            'bc5212fd-3f57-46a8-a2e9-07c030e97a3f': '/umowy/umowa-mentoring-ai.html'
+        };
+
+        let contractTemplateUrl = null;
+        let contractHtml = null;
         let selectedSignatureType = null;
 
         async function loadContractData() {
             if (!workflow) return;
 
-            // Load offer to get contract template
-            if (workflow.offer_id) {
-                const { data: offer } = await supabaseClient
-                    .from('offers')
-                    .select('contract_template')
-                    .eq('id', workflow.offer_id)
-                    .single();
-
-                contractTemplate = offer?.contract_template || null;
-            }
+            // Get contract template URL from mapping
+            contractTemplateUrl = CONTRACT_TEMPLATES[workflow.offer_id] || null;
 
             // Populate form with existing data
             document.getElementById('contract-name').value = workflow.customer_name || '';
@@ -1626,14 +1626,14 @@
             document.getElementById('signed-section').classList.toggle('hidden', !isSigned);
 
             // Update no template warning
-            if (hasData && !contractTemplate) {
+            if (hasData && !contractTemplateUrl) {
                 document.getElementById('no-template-warning').classList.remove('hidden');
             } else {
                 document.getElementById('no-template-warning').classList.add('hidden');
             }
 
             // Generate contract preview
-            if (hasData && contractTemplate) {
+            if (hasData && contractTemplateUrl) {
                 generateContract();
             }
 
@@ -1720,44 +1720,85 @@
         }
         window.saveContractData = saveContractData;
 
-        function generateContract() {
-            if (!contractTemplate || !workflow) return;
+        async function generateContract() {
+            if (!contractTemplateUrl || !workflow) return;
 
-            const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+            try {
+                // Fetch the contract template HTML
+                const response = await fetch(contractTemplateUrl);
+                if (!response.ok) {
+                    throw new Error('Nie mozna pobrac szablonu umowy');
+                }
+                let html = await response.text();
 
-            const variables = {
-                '{{imie_nazwisko}}': workflow.customer_name || '',
-                '{{firma}}': workflow.customer_company || '',
-                '{{ulica}}': workflow.client_street || '',
-                '{{miasto}}': workflow.client_city || '',
-                '{{kod_pocztowy}}': workflow.client_postal_code || '',
-                '{{kraj}}': workflow.client_country || 'Polska',
-                '{{pesel}}': workflow.client_pesel || '',
-                '{{nr_dowodu}}': workflow.client_id_number || '',
-                '{{email}}': workflow.customer_email || '',
-                '{{telefon}}': workflow.customer_phone || '',
-                '{{nazwa_oferty}}': workflow.offer_name || '',
-                '{{cena}}': formatPrice(workflow.amount),
-                '{{data_dzis}}': today
-            };
+                const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+                const startDate = workflow.started_at
+                    ? new Date(workflow.started_at).toLocaleDateString('pl-PL')
+                    : today;
 
-            let text = contractTemplate;
-            Object.entries(variables).forEach(([key, value]) => {
-                text = text.replace(new RegExp(key, 'g'), value);
-            });
+                const variables = {
+                    '{{imie_nazwisko}}': workflow.customer_name || '',
+                    '{{firma}}': workflow.customer_company || '',
+                    '{{ulica}}': workflow.client_street || '',
+                    '{{miasto}}': workflow.client_city || '',
+                    '{{kod_pocztowy}}': workflow.client_postal_code || '',
+                    '{{kraj}}': workflow.client_country || 'Polska',
+                    '{{pesel}}': workflow.client_pesel || '',
+                    '{{dowod}}': workflow.client_id_number || '',
+                    '{{nr_dowodu}}': workflow.client_id_number || '',
+                    '{{email}}': workflow.customer_email || '',
+                    '{{telefon}}': workflow.customer_phone || '',
+                    '{{nazwa_oferty}}': workflow.offer_name || '',
+                    '{{kwota}}': formatPrice(workflow.amount),
+                    '{{cena}}': formatPrice(workflow.amount),
+                    '{{data}}': today,
+                    '{{data_dzis}}': today,
+                    '{{data_rozpoczecia}}': startDate
+                };
 
-            document.getElementById('contract-text').textContent = text;
+                Object.entries(variables).forEach(([key, value]) => {
+                    html = html.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+                });
+
+                contractHtml = html;
+
+                // Show preview (extract text content for display)
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                document.getElementById('contract-text').textContent = tempDiv.textContent || tempDiv.innerText || '';
+            } catch (err) {
+                console.error('Error generating contract:', err);
+                document.getElementById('contract-text').textContent = 'Blad ladowania szablonu umowy.';
+            }
         }
         window.generateContract = generateContract;
 
         async function downloadContractPDF() {
-            // For now, just copy text to clipboard
-            const text = document.getElementById('contract-text').textContent;
+            if (!contractHtml) {
+                showToast('Najpierw wygeneruj podglad umowy', 'error');
+                return;
+            }
+
             try {
-                await navigator.clipboard.writeText(text);
-                showToast('Tekst umowy skopiowany do schowka', 'success');
+                // Generate PDF using html2pdf.js
+                const container = document.createElement('div');
+                container.innerHTML = contractHtml;
+                document.body.appendChild(container);
+
+                const opt = {
+                    margin: 10,
+                    filename: `Umowa_${workflow.customer_name?.replace(/\s+/g, '_') || 'klient'}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                await html2pdf().set(opt).from(container).save();
+                document.body.removeChild(container);
+                showToast('PDF pobrany', 'success');
             } catch (err) {
-                showToast('Uzyj Ctrl+C aby skopiowac tekst', 'warning');
+                console.error('Error generating PDF:', err);
+                showToast('Blad generowania PDF', 'error');
             }
         }
         window.downloadContractPDF = downloadContractPDF;

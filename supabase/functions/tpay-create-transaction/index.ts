@@ -4,7 +4,11 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
   'https://tomekniedzwiecki.pl',
-  'http://localhost:3000', // Development
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
