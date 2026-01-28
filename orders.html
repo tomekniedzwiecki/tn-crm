@@ -1037,9 +1037,13 @@
                 });
 
                 const result = await response.json();
+                console.log('Invoice API response:', result);
 
                 if (!result.success) {
-                    throw new Error(result.error || 'Blad wystawiania faktury');
+                    const errorMsg = typeof result.error === 'string'
+                        ? result.error
+                        : JSON.stringify(result.error) || 'Blad wystawiania faktury';
+                    throw new Error(errorMsg);
                 }
 
                 // Update order with invoice info
