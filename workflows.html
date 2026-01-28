@@ -27,7 +27,7 @@
         }
     </script>
     <style>
-        body { background: #050505; color: #e5e5e5; }
+        body { background: #000; color: #e5e5e5; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -37,7 +37,7 @@
         ::selection { background: white; color: black; }
 
         .glass-header {
-            background: rgba(5, 5, 5, 0.7);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -93,7 +93,7 @@
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div class="max-w-5xl mx-auto animate-enter">
+            <div class="max-w-7xl mx-auto animate-enter">
                 <!-- Title & Stats -->
                 <div class="flex items-start justify-between mb-6">
                     <div>
@@ -120,16 +120,16 @@
                         <option value="cancelled">Anulowane</option>
                     </select>
                     <select id="sort-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
+                        <option value="deadline_asc">Deadline (blisko)</option>
                         <option value="created_desc">Najnowsze</option>
                         <option value="created_asc">Najstarsze</option>
-                        <option value="deadline_asc">Deadline (blisko)</option>
                         <option value="progress_desc">Postep (malejaco)</option>
                         <option value="progress_asc">Postep (rosnaco)</option>
                     </select>
                 </div>
 
                 <!-- Workflows Grid -->
-                <div id="workflows-grid" class="grid gap-4">
+                <div id="workflows-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     <!-- Workflows will be rendered here -->
                 </div>
 
@@ -379,8 +379,10 @@
                         return b.progress_percent - a.progress_percent;
                     case 'progress_asc':
                         return a.progress_percent - b.progress_percent;
-                    default: // created_desc
-                        return new Date(b.started_at) - new Date(a.started_at);
+                    default: // deadline_asc
+                        if (!a.current_milestone_deadline) return 1;
+                        if (!b.current_milestone_deadline) return -1;
+                        return new Date(a.current_milestone_deadline) - new Date(b.current_milestone_deadline);
                 }
             });
 
@@ -500,67 +502,53 @@
                     : 'Brak etapow';
 
                 return `
-                <div class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-5 transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${w.workflow_id}')">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center">
-                                <i class="ph ph-kanban text-lg text-violet-400"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-medium text-white">${customerDisplay}</h3>
-                                <span class="text-xs text-zinc-500">${w.customer_email}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
+                <div class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-4 transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${w.workflow_id}')">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
+                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                             ${getStatusBadge(w.status)}
                             ${w.status === 'cancelled' ? `
                                 <button onclick="event.stopPropagation(); openDeleteModal('${w.workflow_id}', '${customerDisplay.replace(/'/g, "\\'")}')"
-                                        class="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                                        class="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
                                         title="Usun projekt">
-                                    <i class="ph ph-trash text-sm"></i>
+                                    <i class="ph ph-trash text-xs"></i>
                                 </button>
                             ` : ''}
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 mb-3">
-                        <i class="ph ph-package text-zinc-500"></i>
-                        <span class="text-zinc-300">${w.offer_name}</span>
-                        <span class="text-zinc-600">|</span>
-                        <span class="text-zinc-400 font-mono text-xs">${formatPrice(w.amount)}</span>
+                    <div class="flex items-center gap-1.5 mb-2.5 text-xs text-zinc-400 truncate">
+                        <span class="truncate">${w.offer_name}</span>
+                        <span class="text-zinc-700">·</span>
+                        <span class="font-mono flex-shrink-0">${formatPrice(w.amount)}</span>
                         ${getContractStatusBadge(w.contract_status)}
                     </div>
 
-                    <!-- Progress Bar -->
-                    <div class="mb-3">
-                        <div class="flex items-center justify-between text-xs mb-1.5">
-                            <span class="text-zinc-400">${milestoneInfo}</span>
-                            <span class="text-zinc-500 font-mono">${progressPercent}%</span>
+                    <div class="mb-2.5">
+                        <div class="flex items-center justify-between text-[11px] mb-1">
+                            <span class="text-zinc-500 truncate">${milestoneInfo}</span>
+                            <span class="text-zinc-500 font-mono flex-shrink-0 ml-2">${progressPercent}%</span>
                         </div>
-                        <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-1 bg-zinc-800 rounded-full overflow-hidden">
                             <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between pt-3 border-t border-white/5">
-                        <div class="flex items-center gap-3 text-xs">
-                            <span class="text-zinc-600 font-mono">
-                                Start: ${new Date(w.started_at).toLocaleDateString('pl-PL')}
-                            </span>
+                    <div class="flex items-center justify-between pt-2 border-t border-white/5">
+                        <div class="flex items-center gap-2 text-[11px]">
                             ${w.current_milestone_deadline ? `
-                                <span class="text-zinc-700">|</span>
                                 <span class="flex items-center gap-1">
-                                    <i class="ph ph-clock text-zinc-500"></i>
-                                    Deadline: ${formatDeadline(w.current_milestone_deadline)}
+                                    <i class="ph ph-clock text-zinc-600"></i>
+                                    ${formatDeadline(w.current_milestone_deadline)}
                                 </span>
-                            ` : ''}
+                            ` : `<span class="text-zinc-600 font-mono">${new Date(w.started_at).toLocaleDateString('pl-PL')}</span>`}
                         </div>
-                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onclick="event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1.5 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded transition-colors" title="Kopiuj link klienta">
-                                <i class="ph ph-link text-sm"></i>
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
+                                <i class="ph ph-link text-xs"></i>
                             </button>
-                            <button onclick="event.stopPropagation(); window.location.href=getWorkflowPath('${w.workflow_id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded transition-colors" title="Szczegoly">
-                                <i class="ph ph-arrow-right text-sm"></i>
+                            <button onclick="event.stopPropagation(); window.location.href=getWorkflowPath('${w.workflow_id}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Szczegoly">
+                                <i class="ph ph-arrow-right text-xs"></i>
                             </button>
                         </div>
                     </div>
