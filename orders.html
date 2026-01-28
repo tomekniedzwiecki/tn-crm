@@ -248,6 +248,22 @@
                                 </div>
                                 <p id="nip-status" class="text-xs text-[#666] mt-1.5 hidden"></p>
                             </div>
+
+                            <div>
+                                <label class="block text-[#888] text-xs font-normal mb-2">Ulica i numer</label>
+                                <input type="text" id="order-street" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors" placeholder="ul. Przykladowa 123/4">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[#888] text-xs font-normal mb-2">Kod pocztowy</label>
+                                    <input type="text" id="order-postal-code" maxlength="6" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm font-mono focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors" placeholder="00-000">
+                                </div>
+                                <div>
+                                    <label class="block text-[#888] text-xs font-normal mb-2">Miasto</label>
+                                    <input type="text" id="order-city" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors" placeholder="Warszawa">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -701,6 +717,7 @@
             document.getElementById('modal-title').textContent = orderId ? 'Edytuj zamówienie' : 'Nowe zamówienie';
             document.getElementById('order-form').reset();
             document.getElementById('order-id').value = orderId || '';
+            document.getElementById('nip-status').classList.add('hidden');
 
             if (orderId) {
                 const order = orders.find(o => o.id === orderId);
@@ -710,6 +727,11 @@
                     document.getElementById('order-company').value = order.customer_company || '';
                     document.getElementById('order-phone').value = order.customer_phone || '';
                     document.getElementById('order-nip').value = order.customer_nip || '';
+                    // Address fields (stored as JSON in customer_address)
+                    const addr = order.customer_address || {};
+                    document.getElementById('order-street').value = addr.street || '';
+                    document.getElementById('order-postal-code').value = addr.postal_code || '';
+                    document.getElementById('order-city').value = addr.city || '';
                     document.getElementById('order-description').value = order.description || '';
                     document.getElementById('order-amount').value = order.amount || '';
                     document.getElementById('order-status').value = order.status || 'pending';
@@ -737,12 +759,23 @@
             const orderId = document.getElementById('order-id').value;
             const isEdit = !!orderId;
 
+            // Build address object
+            const street = document.getElementById('order-street').value.trim();
+            const postalCode = document.getElementById('order-postal-code').value.trim();
+            const city = document.getElementById('order-city').value.trim();
+            const customerAddress = (street || postalCode || city) ? {
+                street: street || null,
+                postal_code: postalCode || null,
+                city: city || null
+            } : null;
+
             const orderData = {
                 customer_email: document.getElementById('order-email').value.trim(),
                 customer_name: document.getElementById('order-name').value.trim() || null,
                 customer_company: document.getElementById('order-company').value.trim() || null,
                 customer_phone: document.getElementById('order-phone').value.trim() || null,
                 customer_nip: document.getElementById('order-nip').value.trim() || null,
+                customer_address: customerAddress,
                 description: document.getElementById('order-description').value.trim() || null,
                 amount: parseFloat(document.getElementById('order-amount').value) || 0,
                 status: document.getElementById('order-status').value,
@@ -921,6 +954,23 @@
 
                     document.getElementById('order-company').value = companyName;
 
+                    // Parse address from workingAddress or residenceAddress
+                    const address = subject.workingAddress || subject.residenceAddress || '';
+                    if (address) {
+                        // Format: "ul. Ulica 123, 00-000 Miasto" or similar
+                        // Try to extract postal code and city
+                        const postalMatch = address.match(/(\d{2}-\d{3})\s+(.+?)(?:,|$)/);
+                        if (postalMatch) {
+                            document.getElementById('order-postal-code').value = postalMatch[1];
+                            document.getElementById('order-city').value = postalMatch[2].trim();
+                        }
+                        // Extract street (everything before postal code)
+                        const streetMatch = address.match(/^(.+?),?\s*\d{2}-\d{3}/);
+                        if (streetMatch) {
+                            document.getElementById('order-street').value = streetMatch[1].trim();
+                        }
+                    }
+
                     statusEl.textContent = 'Dane pobrane: ' + companyName;
                     statusEl.className = 'text-xs text-emerald-400 mt-1.5';
                 } else {
@@ -978,6 +1028,7 @@
                             customer_company: order.customer_company,
                             customer_phone: order.customer_phone,
                             customer_nip: order.customer_nip,
+                            customer_address: order.customer_address,
                             description: order.description,
                             amount: order.amount,
                             paid_at: order.paid_at
