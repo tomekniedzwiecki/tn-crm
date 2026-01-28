@@ -185,6 +185,19 @@
         .task-cover.cover-pink { background: #ec4899; }
         .task-cover.cover-gray { background: #6b7280; }
 
+        .task-cover-image {
+            margin: -14px -14px 12px -14px;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+            max-height: 160px;
+        }
+        .task-cover-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
         /* Cover option selected */
         .cover-option.selected {
             box-shadow: 0 0 0 3px #fff;
@@ -342,6 +355,7 @@
             <input type="hidden" id="task-id">
             <input type="hidden" id="task-list-id">
             <input type="hidden" id="task-cover-color">
+            <input type="hidden" id="task-cover-image">
 
             <!-- Header with Title Input -->
             <div class="p-6 pb-0">
@@ -429,6 +443,22 @@
                             <button type="button" onclick="selectCover('purple')" class="w-10 h-10 rounded-lg bg-purple-500 hover:scale-105 transition-all cover-option" data-color="purple"></button>
                             <button type="button" onclick="selectCover('pink')" class="w-10 h-10 rounded-lg bg-pink-500 hover:scale-105 transition-all cover-option" data-color="pink"></button>
                         </div>
+                    </div>
+
+                    <!-- Cover Image -->
+                    <div>
+                        <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">Zdjęcie okładki</label>
+                        <div id="cover-image-preview" class="hidden mb-3 relative group rounded-lg overflow-hidden">
+                            <img id="cover-image-img" src="" alt="" class="w-full max-h-40 object-cover rounded-lg">
+                            <button type="button" onclick="removeCoverImage()" class="absolute top-2 right-2 w-7 h-7 bg-black/70 hover:bg-red-500/80 rounded-lg flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        </div>
+                        <label id="cover-image-upload-label" class="flex items-center gap-3 px-4 py-3 bg-neutral-900 border border-neutral-800 hover:border-neutral-600 rounded-lg cursor-pointer transition-all">
+                            <i class="ph ph-image text-neutral-400"></i>
+                            <span class="text-sm text-neutral-400">Dodaj zdjęcie</span>
+                            <input type="file" id="cover-image-input" class="hidden" accept="image/*" onchange="uploadCoverImage(event)">
+                        </label>
                     </div>
                 </div>
 
@@ -709,9 +739,12 @@
             if (isOverdue) dueBadgeClass = 'overdue';
             else if (isToday) dueBadgeClass = 'today';
 
-            const coverHtml = task.cover_color
-                ? `<div class="task-cover cover-${task.cover_color}"></div>`
-                : '';
+            let coverHtml = '';
+            if (task.cover_image) {
+                coverHtml = `<div class="task-cover-image"><img src="${escapeHtml(task.cover_image)}" alt="" loading="lazy"></div>`;
+            } else if (task.cover_color) {
+                coverHtml = `<div class="task-cover cover-${task.cover_color}"></div>`;
+            }
 
             const hasComments = task.comments_count > 0;
             const hasAttachments = task.attachments_count > 0;
@@ -1080,6 +1113,9 @@
             document.getElementById('task-due-date').value = '';
             document.getElementById('task-assigned').value = '';
             document.getElementById('task-cover-color').value = '';
+            document.getElementById('task-cover-image').value = '';
+            document.getElementById('cover-image-preview').classList.add('hidden');
+            document.getElementById('cover-image-upload-label').classList.remove('hidden');
 
             document.getElementById('task-delete-btn').classList.add('hidden');
             switchTaskTab('details');
@@ -1111,6 +1147,17 @@
             document.getElementById('task-due-date').value = task.due_date ? task.due_date.split('T')[0] : '';
             document.getElementById('task-assigned').value = task.assigned_to || '';
             document.getElementById('task-cover-color').value = task.cover_color || '';
+            document.getElementById('task-cover-image').value = task.cover_image || '';
+
+            // Show/hide cover image preview
+            if (task.cover_image) {
+                document.getElementById('cover-image-img').src = task.cover_image;
+                document.getElementById('cover-image-preview').classList.remove('hidden');
+                document.getElementById('cover-image-upload-label').classList.add('hidden');
+            } else {
+                document.getElementById('cover-image-preview').classList.add('hidden');
+                document.getElementById('cover-image-upload-label').classList.remove('hidden');
+            }
 
             document.getElementById('task-delete-btn').classList.remove('hidden');
             switchTaskTab('details');
@@ -1140,6 +1187,7 @@
             const dueDate = document.getElementById('task-due-date').value;
             const assignedTo = document.getElementById('task-assigned').value;
             const coverColor = document.getElementById('task-cover-color').value;
+            const coverImage = document.getElementById('task-cover-image').value;
 
             if (!title) {
                 showToast('Podaj tytuł zadania', 'error');
@@ -1152,7 +1200,8 @@
                 priority,
                 due_date: dueDate || null,
                 assigned_to: assignedTo || null,
-                cover_color: coverColor || null
+                cover_color: coverColor || null,
+                cover_image: coverImage || null
             };
 
             let error;
@@ -1264,6 +1313,51 @@
             } else {
                 preview.innerHTML = '';
             }
+        }
+
+        // Cover Image Upload
+        async function uploadCoverImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('Wybierz plik graficzny', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            const taskId = document.getElementById('task-id').value || 'new';
+            const fileExt = file.name.split('.').pop();
+            const fileName = `covers/${taskId}/${Date.now()}.${fileExt}`;
+
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from('attachments')
+                .upload(fileName, file);
+
+            if (uploadError) {
+                showToast('Błąd przesyłania zdjęcia', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            const { data: urlData } = supabaseClient.storage
+                .from('attachments')
+                .getPublicUrl(fileName);
+
+            const imageUrl = urlData.publicUrl;
+            document.getElementById('task-cover-image').value = imageUrl;
+            document.getElementById('cover-image-img').src = imageUrl;
+            document.getElementById('cover-image-preview').classList.remove('hidden');
+            document.getElementById('cover-image-upload-label').classList.add('hidden');
+            event.target.value = '';
+
+            showToast('Zdjęcie okładki dodane');
+        }
+
+        function removeCoverImage() {
+            document.getElementById('task-cover-image').value = '';
+            document.getElementById('cover-image-preview').classList.add('hidden');
+            document.getElementById('cover-image-upload-label').classList.remove('hidden');
         }
 
         // Comments
