@@ -119,7 +119,11 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       console.error('[fakturownia-invoice] API error:', result)
-      throw new Error(result.message || result.error || 'Blad API Fakturownia')
+      const errorMsg = result.message ||
+        (typeof result.error === 'string' ? result.error : JSON.stringify(result.error)) ||
+        JSON.stringify(result) ||
+        'Blad API Fakturownia'
+      throw new Error(errorMsg)
     }
 
     console.log('[fakturownia-invoice] Invoice created:', result.id, result.number)
