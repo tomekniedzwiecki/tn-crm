@@ -118,11 +118,26 @@ Deno.serve(async (req) => {
     const result = await response.json()
 
     if (!response.ok) {
-      console.error('[fakturownia-invoice] API error:', result)
-      const errorMsg = result.message ||
-        (typeof result.error === 'string' ? result.error : JSON.stringify(result.error)) ||
-        JSON.stringify(result) ||
-        'Blad API Fakturownia'
+      console.error('[fakturownia-invoice] API error:', JSON.stringify(result))
+      // Build a proper error message
+      let errorMsg = 'Blad API Fakturownia'
+      if (result) {
+        if (typeof result === 'string') {
+          errorMsg = result
+        } else if (result.message && typeof result.message === 'string') {
+          errorMsg = result.message
+        } else if (result.error) {
+          errorMsg = typeof result.error === 'string' ? result.error : JSON.stringify(result.error)
+        } else if (result.code) {
+          errorMsg = `Kod bledu: ${result.code}`
+        } else {
+          try {
+            errorMsg = JSON.stringify(result)
+          } catch (e) {
+            errorMsg = 'Nieznany blad API'
+          }
+        }
+      }
       throw new Error(errorMsg)
     }
 
@@ -151,10 +166,23 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('[fakturownia-invoice] Error:', error)
+    // Ensure error message is always a string
+    let errorMessage = 'Wystapil nieznany blad'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    } else {
+      try {
+        errorMessage = JSON.stringify(error)
+      } catch (e) {
+        errorMessage = String(error)
+      }
+    }
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: errorMessage
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
