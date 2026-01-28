@@ -9,7 +9,6 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -1162,24 +1161,17 @@
                     contractHtml = contractHtml.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
                 }
 
-                // Generate PDF using html2pdf.js
-                const container = document.createElement('div');
-                container.innerHTML = contractHtml;
-                document.body.appendChild(container);
-
-                const opt = {
-                    margin: 10,
-                    filename: `Umowa_${workflow.customer_name?.replace(/\s+/g, '_') || 'klient'}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-
-                await html2pdf().set(opt).from(container).save();
-                document.body.removeChild(container);
+                // Open contract in new window - user can use built-in "Pobierz PDF" button
+                const newWindow = window.open('', '_blank');
+                if (newWindow) {
+                    newWindow.document.write(contractHtml);
+                    newWindow.document.close();
+                } else {
+                    alert('Nie mozna otworzyc nowego okna. Odblokuj wyskakujace okna w przegladarce.');
+                }
 
             } catch (err) {
-                console.error('Error generating contract PDF:', err);
+                console.error('Error generating contract:', err);
                 alert('Wystapil blad podczas generowania umowy. Sprobuj ponownie lub skontaktuj sie z nami.');
             }
         }
