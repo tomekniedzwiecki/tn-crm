@@ -217,7 +217,7 @@
             try {
                 const { data: workflows, error } = await supabaseClient
                     .from('workflows')
-                    .select('id, token, created_at, contract_data, project_name, customer_name, customer_email')
+                    .select('id, unique_token, created_at, contract_data, project_name, customer_name, customer_email')
                     .ilike('customer_email', email)
                     .order('created_at', { ascending: false });
 
@@ -234,7 +234,7 @@
 
                 if (workflows.length === 1) {
                     // Single project - redirect directly
-                    window.location.href = `/projekt/${workflows[0].token}`;
+                    window.location.href = `/projekt/${workflows[0].unique_token}`;
                 } else {
                     // Multiple projects - show list
                     renderProjectsList();
@@ -261,7 +261,7 @@
                 });
 
                 return `
-                    <button class="project-card" onclick="selectProject('${project.token}')">
+                    <button class="project-card" onclick="selectProject('${project.unique_token}')">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-white font-medium text-sm mb-0.5">${projectName}</p>
