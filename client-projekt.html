@@ -23,159 +23,443 @@
         }
     </script>
     <style>
-        body { background: #0a0a0a; color: #ededed; }
+        /* ═══════════════════════════════════════════════════════════════════
+           VERCEL DESIGN SYSTEM - Premium Dark Theme
+           ═══════════════════════════════════════════════════════════════════ */
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        :root {
+            --background: #000;
+            --background-secondary: #0a0a0a;
+            --surface: #111;
+            --surface-hover: #171717;
+            --border: #1a1a1a;
+            --border-hover: #2a2a2a;
+            --border-active: #333;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1a1;
+            --text-tertiary: #666;
+            --accent: #fff;
+            --accent-secondary: #888;
+            --success: #00d084;
+            --success-muted: rgba(0, 208, 132, 0.1);
+            --warning: #f5a623;
+            --warning-muted: rgba(245, 166, 35, 0.1);
+            --error: #ee5050;
+            --info: #0070f3;
+            --info-muted: rgba(0, 112, 243, 0.1);
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text-primary);
+            font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-        ::selection { background: white; color: black; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #333; }
+        ::selection { background: var(--accent); color: var(--background); }
 
+        /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .animate-enter { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-slide { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* Vercel-style design tokens */
-        .border-default { border-color: #222; }
-        .bg-card { background: #111; }
-        .bg-hover { background: #171717; }
-        .text-secondary { color: #888; }
-        .text-tertiary { color: #666; }
+        /* Design Tokens */
+        .border-default { border-color: var(--border); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-tertiary { color: var(--text-tertiary); }
 
-        /* Tabs */
+        /* ═══════════════════════════════════════════════════════════════════
+           TABS - Vercel Navigation Style
+           ═══════════════════════════════════════════════════════════════════ */
         .tab-nav {
             display: flex;
-            gap: 0;
-            border-bottom: 1px solid #222;
+            gap: 2px;
+            border-bottom: 1px solid var(--border);
             overflow-x: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            padding: 0 0 0 0;
         }
         .tab-nav::-webkit-scrollbar { display: none; }
+
         .tab-btn {
-            padding: 12px 16px;
-            font-size: 14px;
-            color: #666;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
+            position: relative;
+            padding: 14px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            border: none;
+            background: transparent;
             white-space: nowrap;
-            transition: all 0.15s ease;
+            transition: color 0.2s ease;
+            letter-spacing: -0.01em;
         }
-        .tab-btn:hover { color: #888; }
-        .tab-btn.active { color: #fff; border-color: #fff; }
-
-        /* Progress ring */
-        .progress-ring { transform: rotate(-90deg); }
-        .progress-ring-bg { stroke: #222; }
-        .progress-ring-fill {
-            stroke: #10b981;
-            stroke-linecap: round;
-            transition: stroke-dashoffset 0.5s ease;
+        .tab-btn:hover { color: var(--text-secondary); }
+        .tab-btn.active {
+            color: var(--text-primary);
         }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--text-primary);
+        }
+        .tab-btn i { font-size: 15px; opacity: 0.8; }
 
-        /* Cards */
+        /* ═══════════════════════════════════════════════════════════════════
+           CARDS - Vercel Surface Style
+           ═══════════════════════════════════════════════════════════════════ */
         .card {
-            background: #111;
-            border: 1px solid #222;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .card-hover:hover {
-            border-color: #333;
-            background: #141414;
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+        .card-interactive {
+            cursor: pointer;
+        }
+        .card-interactive:hover {
+            border-color: var(--border-active);
+            background: var(--surface-hover);
         }
 
-        /* Milestone */
-        .milestone-card { transition: all 0.15s ease; }
-        .milestone-card:hover { border-color: #333; }
-        .milestone-card.active { border-color: #333; }
-        .milestone-card.completed { border-color: rgba(16, 185, 129, 0.3); }
+        /* ═══════════════════════════════════════════════════════════════════
+           PROGRESS RING - Animated Circle
+           ═══════════════════════════════════════════════════════════════════ */
+        .progress-ring { transform: rotate(-90deg); }
+        .progress-ring-bg { stroke: var(--border); }
+        .progress-ring-fill {
+            stroke: var(--success);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            filter: drop-shadow(0 0 6px rgba(0, 208, 132, 0.3));
+        }
 
-        /* Form inputs */
+        /* ═══════════════════════════════════════════════════════════════════
+           MILESTONES
+           ═══════════════════════════════════════════════════════════════════ */
+        .milestone-card {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            background: var(--surface);
+        }
+        .milestone-card:hover {
+            border-color: var(--border-hover);
+        }
+        .milestone-card.active {
+            border-color: var(--border-active);
+            background: linear-gradient(to right, var(--surface), var(--surface-hover));
+        }
+        .milestone-card.completed {
+            border-color: rgba(0, 208, 132, 0.2);
+            background: linear-gradient(to right, rgba(0, 208, 132, 0.02), transparent);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           FORM INPUTS - Vercel Style
+           ═══════════════════════════════════════════════════════════════════ */
         .form-input {
             width: 100%;
-            background: #0a0a0a;
-            border: 1px solid #333;
+            background: var(--background);
+            border: 1px solid var(--border-hover);
             border-radius: 8px;
-            padding: 10px 14px;
-            color: #ededed;
+            padding: 11px 14px;
+            color: var(--text-primary);
             font-size: 14px;
             transition: all 0.15s ease;
         }
-        .form-input:hover { border-color: #444; }
-        .form-input:focus { border-color: #666; outline: none; }
-        .form-input::placeholder { color: #555; }
+        .form-input:hover { border-color: var(--border-active); }
+        .form-input:focus {
+            border-color: var(--accent-secondary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+        }
+        .form-input::placeholder { color: var(--text-tertiary); }
 
-        /* Badges */
+        /* ═══════════════════════════════════════════════════════════════════
+           BADGES - Vercel Pill Style
+           ═══════════════════════════════════════════════════════════════════ */
         .badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 10px;
-            border-radius: 6px;
+            padding: 5px 10px;
+            border-radius: 9999px;
             font-size: 12px;
             font-weight: 500;
+            letter-spacing: -0.01em;
+            border: 1px solid transparent;
         }
-        .badge-emerald { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-        .badge-amber { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        .badge-blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-        .badge-violet { background: rgba(139, 92, 246, 0.1); color: #a78bfa; }
+        .badge-success {
+            background: var(--success-muted);
+            color: var(--success);
+            border-color: rgba(0, 208, 132, 0.15);
+        }
+        .badge-warning {
+            background: var(--warning-muted);
+            color: var(--warning);
+            border-color: rgba(245, 166, 35, 0.15);
+        }
+        .badge-info {
+            background: var(--info-muted);
+            color: var(--info);
+            border-color: rgba(0, 112, 243, 0.15);
+        }
+        .badge-neutral {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+        /* Legacy mappings */
+        .badge-emerald { background: var(--success-muted); color: var(--success); border-color: rgba(0, 208, 132, 0.15); }
+        .badge-amber { background: var(--warning-muted); color: var(--warning); border-color: rgba(245, 166, 35, 0.15); }
+        .badge-blue { background: var(--info-muted); color: var(--info); border-color: rgba(0, 112, 243, 0.15); }
+        .badge-violet { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border-color: rgba(139, 92, 246, 0.15); }
 
         /* Responsible badges */
-        .responsible-team { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
-        .responsible-client { background: rgba(6, 182, 212, 0.1); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.2); }
-        .responsible-shared { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .responsible-team {
+            background: rgba(139, 92, 246, 0.08);
+            color: #c4b5fd;
+            border: 1px solid rgba(139, 92, 246, 0.15);
+        }
+        .responsible-client {
+            background: rgba(34, 211, 238, 0.08);
+            color: #67e8f9;
+            border: 1px solid rgba(34, 211, 238, 0.15);
+        }
+        .responsible-shared {
+            background: rgba(251, 191, 36, 0.08);
+            color: #fcd34d;
+            border: 1px solid rgba(251, 191, 36, 0.15);
+        }
 
-        /* Comment bubbles */
-        .comment-team { background: #171717; border: 1px solid #222; }
-        .comment-client { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); }
+        /* ═══════════════════════════════════════════════════════════════════
+           COMMENTS
+           ═══════════════════════════════════════════════════════════════════ */
+        .comment-team {
+            background: var(--surface-hover);
+            border: 1px solid var(--border);
+            border-radius: 16px 16px 16px 4px;
+        }
+        .comment-client {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            border-radius: 16px 16px 4px 16px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           BUTTONS - Vercel Style
+           ═══════════════════════════════════════════════════════════════════ */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--accent);
+            color: var(--background);
+            font-weight: 500;
+            font-size: 14px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-primary:hover {
+            background: #e5e5e5;
+            transform: translateY(-1px);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-hover);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-secondary:hover {
+            background: var(--surface);
+            border-color: var(--border-active);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           SECTION HEADERS
+           ═══════════════════════════════════════════════════════════════════ */
+        .section-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           EMPTY STATES
+           ═══════════════════════════════════════════════════════════════════ */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+        }
+        .empty-state-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .empty-state-icon i {
+            font-size: 20px;
+            color: var(--text-tertiary);
+        }
+        .empty-state-text {
+            color: var(--text-tertiary);
+            font-size: 14px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           SPECIAL ELEMENTS
+           ═══════════════════════════════════════════════════════════════════ */
+        .gradient-border {
+            position: relative;
+            background: var(--surface);
+            border-radius: 12px;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 13px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent, rgba(0, 208, 132, 0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(180deg, #fff 0%, #999 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .glow-success {
+            box-shadow: 0 0 20px -5px rgba(0, 208, 132, 0.3);
+        }
+
+        /* File icons with colors */
+        .file-icon-pdf { color: #ee5050; }
+        .file-icon-doc { color: #0070f3; }
+        .file-icon-img { color: #00d084; }
+        .file-icon-video { color: #f5a623; }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            .tab-btn { padding: 12px 12px; font-size: 12px; }
+            .tab-btn i { display: none; }
+            .stat-value { font-size: 24px; }
+        }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased">
 
     <!-- Loading Screen -->
-    <div id="loading-screen" class="min-h-screen flex items-center justify-center">
+    <div id="loading-screen" class="min-h-screen flex items-center justify-center bg-black">
         <div class="text-center animate-enter">
-            <div class="w-8 h-8 mx-auto mb-4 border-2 border-zinc-800 border-t-white rounded-full animate-spin"></div>
-            <p class="text-secondary text-sm">Ladowanie projektu...</p>
+            <div class="w-7 h-7 mx-auto mb-5 border-2 border-[#222] border-t-white rounded-full animate-spin"></div>
+            <p class="text-tertiary text-sm">Ładowanie projektu...</p>
         </div>
     </div>
 
     <!-- Not Found Screen -->
-    <div id="not-found-screen" class="hidden min-h-screen flex items-center justify-center p-4">
+    <div id="not-found-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
         <div class="text-center animate-enter max-w-md">
-            <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-zinc-900 flex items-center justify-center">
-                <i class="ph ph-warning text-3xl text-amber-400"></i>
+            <div class="w-14 h-14 mx-auto mb-6 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
+                <i class="ph ph-warning text-2xl text-[#f5a623]"></i>
             </div>
-            <h1 class="text-2xl font-semibold text-white mb-3">Projekt nie znaleziony</h1>
-            <p class="text-secondary">Link do projektu jest nieprawidlowy lub wygasl. Skontaktuj sie z zespolem.</p>
+            <h1 class="text-xl font-semibold text-white mb-3">Projekt nie znaleziony</h1>
+            <p class="text-tertiary text-sm leading-relaxed">Link do projektu jest nieprawidłowy lub wygasł.<br>Skontaktuj się z zespołem.</p>
         </div>
     </div>
 
     <!-- Set Password Screen (First Time) -->
-    <div id="set-password-screen" class="hidden min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-md animate-enter">
+    <div id="set-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
+        <div class="w-full max-w-sm animate-enter">
             <div class="text-center mb-8">
-                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                    <i class="ph ph-lock-key text-xl text-emerald-400"></i>
+                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-[#00d084]/10 border border-[#00d084]/20 flex items-center justify-center">
+                    <i class="ph ph-lock-key text-xl text-[#00d084]"></i>
                 </div>
-                <h1 class="text-xl font-semibold text-white mb-2">Ustaw haslo dostepu</h1>
-                <p class="text-secondary text-sm">Utworz haslo, ktorego bedziesz uzywac do logowania do projektu.</p>
+                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Ustaw hasło dostępu</h1>
+                <p class="text-tertiary text-sm">Utwórz hasło do logowania do projektu.</p>
             </div>
 
             <div class="card p-6">
                 <form onsubmit="setPassword(event)">
                     <div class="mb-4">
-                        <label class="block text-secondary text-sm mb-2">Haslo</label>
-                        <input type="password" id="set-password-input" class="form-input" placeholder="Minimum 6 znakow" required minlength="6">
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Hasło</label>
+                        <input type="password" id="set-password-input" class="form-input" placeholder="Minimum 6 znaków" required minlength="6">
                     </div>
                     <div class="mb-6">
-                        <label class="block text-secondary text-sm mb-2">Potwierdz haslo</label>
-                        <input type="password" id="set-password-confirm" class="form-input" placeholder="Powtorz haslo" required>
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Potwierdź hasło</label>
+                        <input type="password" id="set-password-confirm" class="form-input" placeholder="Powtórz hasło" required>
                     </div>
-                    <button type="submit" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg font-medium transition-colors">
-                        Ustaw haslo
+                    <button type="submit" class="btn-primary w-full py-3">
+                        Ustaw hasło
                     </button>
                 </form>
             </div>
@@ -183,23 +467,23 @@
     </div>
 
     <!-- Password Screen (Login) -->
-    <div id="password-screen" class="hidden min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-md animate-enter">
+    <div id="password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
+        <div class="w-full max-w-sm animate-enter">
             <div class="text-center mb-8">
-                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                    <i class="ph ph-lock text-xl text-zinc-400"></i>
+                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
+                    <i class="ph ph-lock text-xl text-[#666]"></i>
                 </div>
-                <h1 class="text-xl font-semibold text-white mb-2">Zaloguj sie</h1>
-                <p class="text-secondary text-sm">Wprowadz haslo, aby uzyskac dostep do projektu.</p>
+                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Zaloguj się</h1>
+                <p class="text-tertiary text-sm">Wprowadź hasło, aby uzyskać dostęp.</p>
             </div>
 
             <div class="card p-6">
                 <form onsubmit="checkPassword(event)">
                     <div class="mb-6">
-                        <label class="block text-secondary text-sm mb-2">Haslo</label>
-                        <input type="password" id="password-input" class="form-input" placeholder="Wprowadz haslo" required>
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Hasło</label>
+                        <input type="password" id="password-input" class="form-input" placeholder="Wprowadź hasło" required>
                     </div>
-                    <button type="submit" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg font-medium transition-colors">
+                    <button type="submit" class="btn-primary w-full py-3">
                         Zaloguj
                     </button>
                 </form>
@@ -208,80 +492,80 @@
     </div>
 
     <!-- Contract Data Screen -->
-    <div id="contract-data-screen" class="hidden min-h-screen flex items-center justify-center p-4 py-12">
+    <div id="contract-data-screen" class="hidden min-h-screen flex items-center justify-center p-4 py-12 bg-black">
         <div class="w-full max-w-2xl animate-enter">
             <div class="text-center mb-8">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium mb-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00d084]/10 border border-[#00d084]/20 text-[#00d084] text-xs font-medium mb-5">
                     <i class="ph ph-check-circle"></i>
                     Krok 1 z 2
                 </div>
-                <h1 class="text-2xl font-semibold text-white mb-2">Dane do umowy</h1>
-                <p class="text-secondary">Wprowadz dane potrzebne do przygotowania umowy.</p>
+                <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Dane do umowy</h1>
+                <p class="text-tertiary text-sm">Wprowadź dane potrzebne do przygotowania umowy.</p>
             </div>
 
             <div class="card p-6 md:p-8">
                 <form onsubmit="submitContractData(event)">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Imie i nazwisko *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Imię i nazwisko *</label>
                             <input type="text" id="contract-name" class="form-input" required>
                         </div>
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Firma (opcjonalnie)</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Firma (opcjonalnie)</label>
                             <input type="text" id="contract-company" class="form-input">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                         <div>
-                            <label class="block text-secondary text-sm mb-2">PESEL *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">PESEL *</label>
                             <input type="text" id="contract-pesel" class="form-input" maxlength="11" required>
-                            <p id="pesel-error" class="text-red-400 text-xs mt-1 hidden"></p>
+                            <p id="pesel-error" class="text-[#ee5050] text-xs mt-1.5 hidden"></p>
                         </div>
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Nr dowodu osobistego *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Nr dowodu osobistego *</label>
                             <input type="text" id="contract-id" class="form-input" maxlength="9" required>
-                            <p id="id-error" class="text-red-400 text-xs mt-1 hidden"></p>
+                            <p id="id-error" class="text-[#ee5050] text-xs mt-1.5 hidden"></p>
                         </div>
                     </div>
 
-                    <div class="mb-6">
-                        <label class="block text-secondary text-sm mb-2">NIP (opcjonalnie)</label>
+                    <div class="mb-5">
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">NIP (opcjonalnie)</label>
                         <input type="text" id="contract-nip" class="form-input" maxlength="10">
                     </div>
 
-                    <div class="mb-6">
-                        <label class="block text-secondary text-sm mb-2">Ulica i numer *</label>
+                    <div class="mb-5">
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Ulica i numer *</label>
                         <input type="text" id="contract-street" class="form-input" required>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Kod pocztowy *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Kod pocztowy *</label>
                             <input type="text" id="contract-postal" class="form-input" placeholder="00-000" required>
                         </div>
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Miasto *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Miasto *</label>
                             <input type="text" id="contract-city" class="form-input" required>
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <label class="block text-secondary text-sm mb-2">Kraj *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Kraj *</label>
                             <input type="text" id="contract-country" class="form-input" value="Polska" required>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Email *</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Email *</label>
                             <input type="email" id="contract-email" class="form-input" required>
                         </div>
                         <div>
-                            <label class="block text-secondary text-sm mb-2">Telefon</label>
+                            <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Telefon</label>
                             <input type="tel" id="contract-phone" class="form-input">
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <button type="submit" class="btn-primary w-full py-3">
                         Dalej
                         <i class="ph ph-arrow-right"></i>
                     </button>
@@ -291,209 +575,208 @@
     </div>
 
     <!-- Contract Signing Screen -->
-    <div id="contract-signing-screen" class="hidden min-h-screen flex items-center justify-center p-4 py-12">
+    <div id="contract-signing-screen" class="hidden min-h-screen flex items-center justify-center p-4 py-12 bg-black">
         <div class="w-full max-w-2xl animate-enter">
             <div class="text-center mb-8">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 text-xs font-medium mb-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium mb-5">
                     <i class="ph ph-signature"></i>
                     Krok 2 z 2
                 </div>
-                <h1 class="text-2xl font-semibold text-white mb-2">Podpisanie umowy</h1>
-                <p class="text-secondary">Pobierz umowe, podpisz ja i przeslij do nas.</p>
+                <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Podpisanie umowy</h1>
+                <p class="text-tertiary text-sm">Pobierz umowę, podpisz ją i prześlij do nas.</p>
             </div>
 
-            <div class="card p-6 md:p-8 mb-6">
-                <div class="flex items-center gap-4 p-4 bg-zinc-900 rounded-lg mb-6">
-                    <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                        <i class="ph ph-file-pdf text-2xl text-red-400"></i>
+            <div class="card p-6 md:p-8 mb-4">
+                <div class="flex items-center gap-4 p-4 bg-black/50 rounded-xl border border-[#1a1a1a] mb-6">
+                    <div class="w-11 h-11 rounded-xl bg-[#ee5050]/10 flex items-center justify-center flex-shrink-0">
+                        <i class="ph ph-file-pdf text-xl text-[#ee5050]"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-white font-medium">Umowa do podpisu</p>
-                        <p class="text-secondary text-sm">Dokument PDF</p>
+                        <p class="text-white font-medium text-sm">Umowa do podpisu</p>
+                        <p class="text-tertiary text-xs">Dokument PDF</p>
                     </div>
-                    <a id="download-contract-btn" href="#" target="_blank" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <a id="download-contract-btn" href="#" target="_blank" class="btn-primary text-sm py-2">
                         <i class="ph ph-download-simple"></i>
                         Pobierz
                     </a>
                 </div>
 
-                <div class="space-y-4">
-                    <h3 class="text-white font-medium">Jak podpisac umowe?</h3>
+                <div class="space-y-3">
+                    <h3 class="text-white font-medium text-sm mb-4">Jak podpisać umowę?</h3>
 
-                    <div class="p-4 border border-emerald-500/20 bg-emerald-500/5 rounded-lg">
+                    <div class="p-4 border border-[#00d084]/20 bg-[#00d084]/5 rounded-xl">
                         <div class="flex items-start gap-3">
-                            <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="text-emerald-400 text-xs font-bold">1</span>
+                            <div class="w-6 h-6 rounded-full bg-[#00d084]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-[#00d084] text-xs font-bold">1</span>
                             </div>
                             <div>
-                                <p class="text-white font-medium mb-1">Podpis zaufany (gov.pl)</p>
-                                <p class="text-secondary text-sm">Najszybsza opcja. Podpisz bezplatnie przez profil zaufany na <a href="https://www.gov.pl/web/podpis-zaufany" target="_blank" class="text-emerald-400 hover:underline">gov.pl</a>.</p>
+                                <p class="text-white font-medium text-sm mb-1">Podpis zaufany (gov.pl)</p>
+                                <p class="text-tertiary text-sm">Najszybsza opcja. Podpisz bezpłatnie przez profil zaufany na <a href="https://www.gov.pl/web/podpis-zaufany" target="_blank" class="text-[#00d084] hover:underline">gov.pl</a>.</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="p-4 border border-white/5 rounded-lg">
+                    <div class="p-4 border border-[#1a1a1a] rounded-xl">
                         <div class="flex items-start gap-3">
-                            <div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="text-zinc-400 text-xs font-bold">2</span>
+                            <div class="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-tertiary text-xs font-bold">2</span>
                             </div>
                             <div>
-                                <p class="text-white font-medium mb-1">Podpis kwalifikowany</p>
-                                <p class="text-secondary text-sm">Jesli posiadasz certyfikat kwalifikowany (np. Certum, Sigillum).</p>
+                                <p class="text-white font-medium text-sm mb-1">Podpis kwalifikowany</p>
+                                <p class="text-tertiary text-sm">Jeśli posiadasz certyfikat kwalifikowany (np. Certum, Sigillum).</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card p-6">
-                <p class="text-secondary text-sm mb-4">
-                    <i class="ph ph-info text-blue-400 mr-1"></i>
-                    Po podpisaniu umowy wyslij ja do nas mailem. Otrzymasz powiadomienie gdy umowa zostanie zaakceptowana.
+            <div class="card p-5">
+                <p class="text-tertiary text-sm mb-4 flex items-start gap-2">
+                    <i class="ph ph-info text-[#0070f3] mt-0.5"></i>
+                    <span>Po podpisaniu umowy wyślij ją do nas mailem. Otrzymasz powiadomienie gdy umowa zostanie zaakceptowana.</span>
                 </p>
-                <button onclick="goToProject()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-lg font-medium transition-colors">
-                    Przejdz do projektu
+                <button onclick="goToProject()" class="btn-secondary w-full py-3">
+                    Przejdź do projektu
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Main Project Screen -->
-    <div id="project-screen" class="hidden min-h-screen">
+    <div id="project-screen" class="hidden min-h-screen flex flex-col">
         <!-- Header -->
-        <header class="border-b border-default sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-lg z-40">
+        <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-[#1a1a1a]">
             <div class="max-w-6xl mx-auto px-4 md:px-6">
-                <div class="flex items-center justify-between h-16">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                            <span class="text-white text-xs font-bold">TN</span>
-                        </div>
+                <!-- Top bar -->
+                <div class="flex items-center justify-between h-14">
+                    <div class="flex items-center gap-4">
+                        <!-- Logo -->
+                        <a href="/" class="flex items-center gap-3 group">
+                            <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center transition-transform group-hover:scale-105">
+                                <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
+                            </div>
+                            <svg class="w-4 h-4 text-[#333]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <!-- Project name -->
                         <div>
-                            <h1 id="project-title" class="text-white font-semibold">Projekt</h1>
-                            <p id="project-subtitle" class="text-tertiary text-xs hidden md:block">tomekniedzwiecki.pl</p>
+                            <h1 id="project-title" class="text-[15px] font-medium text-white tracking-tight">Projekt</h1>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span id="project-status-badge" class="badge badge-emerald">
-                            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                        <span id="project-status-badge" class="badge badge-success">
+                            <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
                             Aktywny
                         </span>
                     </div>
                 </div>
 
                 <!-- Tabs -->
-                <nav class="tab-nav -mb-px">
+                <nav class="tab-nav">
                     <button onclick="switchTab('projekt')" data-tab="projekt" class="tab-btn active">
-                        <i class="ph ph-house mr-1.5"></i>
-                        Projekt
+                        Przegląd
                     </button>
                     <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="tab-btn">
-                        <i class="ph ph-file-text mr-1.5"></i>
                         Dokumenty
                     </button>
                     <button onclick="switchTab('materialy')" data-tab="materialy" class="tab-btn">
-                        <i class="ph ph-folder-open mr-1.5"></i>
-                        Materialy
+                        Materiały
                     </button>
                     <button onclick="switchTab('branding')" data-tab="branding" class="tab-btn">
-                        <i class="ph ph-paint-brush mr-1.5"></i>
                         Branding
                     </button>
                     <button onclick="switchTab('strona')" data-tab="strona" class="tab-btn">
-                        <i class="ph ph-globe mr-1.5"></i>
                         Strona
                     </button>
                     <button onclick="switchTab('produkty')" data-tab="produkty" class="tab-btn">
-                        <i class="ph ph-package mr-1.5"></i>
                         Produkty
                     </button>
                     <button onclick="switchTab('raporty')" data-tab="raporty" class="tab-btn">
-                        <i class="ph ph-chart-line-up mr-1.5"></i>
                         Raporty
                     </button>
                     <button onclick="switchTab('komentarze')" data-tab="komentarze" class="tab-btn relative">
-                        <i class="ph ph-chat-circle-text mr-1.5"></i>
                         Komentarze
-                        <span id="comments-badge" class="hidden absolute -top-1 -right-1 bg-emerald-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                        <span id="comments-badge" class="hidden absolute -top-0.5 -right-0.5 bg-[#00d084] text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
                     </button>
                 </nav>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="max-w-6xl mx-auto px-4 md:px-6 py-8">
+        <main class="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-10">
 
             <!-- TAB: Projekt -->
             <div id="tab-projekt" class="tab-panel animate-enter">
                 <!-- Progress Overview -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
                     <!-- Progress Card -->
-                    <div class="card p-6 flex items-center gap-6">
-                        <div class="relative">
-                            <svg class="progress-ring w-24 h-24" viewBox="0 0 100 100">
-                                <circle class="progress-ring-bg" cx="50" cy="50" r="42" fill="none" stroke-width="8"/>
-                                <circle id="progress-ring-fill" class="progress-ring-fill" cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="264"/>
-                            </svg>
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <span id="progress-percent" class="text-2xl font-bold text-white">0%</span>
+                    <div class="card gradient-border p-6">
+                        <div class="flex items-center gap-6">
+                            <div class="relative">
+                                <svg class="progress-ring w-20 h-20" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="42" fill="none" stroke-width="6"/>
+                                    <circle id="progress-ring-fill" class="progress-ring-fill" cx="50" cy="50" r="42" fill="none" stroke-width="6" stroke-dasharray="264" stroke-dashoffset="264"/>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="progress-percent" class="text-xl font-bold text-white">0%</span>
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <p class="text-secondary text-sm mb-1">Postep projektu</p>
-                            <p class="text-white text-lg font-semibold"><span id="completed-tasks">0</span> / <span id="total-tasks">0</span> zadan</p>
+                            <div>
+                                <p class="text-tertiary text-xs uppercase tracking-wider mb-1">Postęp</p>
+                                <p class="text-white text-lg font-semibold"><span id="completed-tasks">0</span> <span class="text-tertiary font-normal">/ <span id="total-tasks">0</span> zadań</span></p>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Current Milestone Card -->
                     <div class="card p-6">
-                        <p class="text-secondary text-sm mb-2">Aktualny etap</p>
-                        <p id="current-milestone" class="text-white text-lg font-semibold mb-2">-</p>
+                        <p class="text-tertiary text-xs uppercase tracking-wider mb-3">Aktualny etap</p>
+                        <p id="current-milestone" class="text-white font-semibold mb-3 leading-tight">-</p>
                         <div class="flex items-center gap-2 text-sm">
-                            <i class="ph ph-calendar text-tertiary"></i>
-                            <span class="text-secondary">Deadline:</span>
-                            <span id="current-deadline" class="text-white">-</span>
+                            <span class="text-tertiary">Deadline</span>
+                            <span class="text-white font-medium" id="current-deadline">-</span>
                         </div>
                     </div>
 
                     <!-- Project Info Card -->
                     <div class="card p-6">
-                        <p class="text-secondary text-sm mb-2">Projekt</p>
-                        <p id="offer-name" class="text-white text-lg font-semibold mb-2">-</p>
+                        <p class="text-tertiary text-xs uppercase tracking-wider mb-3">Projekt</p>
+                        <p id="offer-name" class="text-white font-semibold mb-3 leading-tight">-</p>
                         <div class="flex items-center gap-2 text-sm">
-                            <i class="ph ph-calendar-check text-tertiary"></i>
-                            <span class="text-secondary">Start:</span>
-                            <span id="started-at" class="text-white">-</span>
+                            <span class="text-tertiary">Start</span>
+                            <span class="text-white font-medium" id="started-at">-</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Milestones -->
                 <div>
-                    <h2 class="text-lg font-semibold text-white mb-4">Etapy realizacji</h2>
-                    <div id="milestones-container" class="space-y-4">
+                    <h2 class="section-title">Etapy realizacji</h2>
+                    <div id="milestones-container" class="space-y-3">
                         <!-- Milestones rendered here -->
                     </div>
                 </div>
             </div>
 
             <!-- TAB: Dokumenty -->
-            <div id="tab-dokumenty" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Dokumenty</h2>
+            <div id="tab-dokumenty" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Dokumenty</h2>
 
                 <!-- Signed Contract Section -->
                 <div id="signed-contract-section" class="hidden mb-6">
-                    <div class="card p-5 border-emerald-500/20 bg-emerald-500/5">
-                        <div class="flex items-center justify-between">
+                    <div class="card p-5 glow-success" style="border-color: rgba(0, 208, 132, 0.2); background: linear-gradient(to right, rgba(0, 208, 132, 0.05), transparent);">
+                        <div class="flex items-center justify-between flex-wrap gap-4">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                    <i class="ph ph-seal-check text-2xl text-emerald-400"></i>
+                                <div class="w-11 h-11 rounded-xl bg-[#00d084]/10 flex items-center justify-center">
+                                    <i class="ph ph-seal-check text-xl text-[#00d084]"></i>
                                 </div>
                                 <div>
                                     <p class="text-white font-medium">Podpisana umowa</p>
-                                    <p class="text-emerald-400 text-sm">Umowa podpisana przez obie strony</p>
+                                    <p class="text-[#00d084] text-sm">Umowa podpisana przez obie strony</p>
                                 </div>
                             </div>
-                            <a id="signed-contract-download" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                            <a id="signed-contract-download" href="#" target="_blank" class="btn-primary bg-[#00d084] hover:bg-[#00b871]">
                                 <i class="ph ph-download-simple"></i>
                                 Pobierz
                             </a>
@@ -505,162 +788,162 @@
                     <!-- Documents rendered here -->
                 </div>
 
-                <div id="documents-empty" class="text-center py-16">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <i class="ph ph-file-text text-2xl text-zinc-600"></i>
+                <div id="documents-empty" class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="ph ph-file-text"></i>
                     </div>
-                    <p class="text-secondary">Brak dokumentow</p>
+                    <p class="empty-state-text">Brak dokumentów</p>
                 </div>
             </div>
 
             <!-- TAB: Materialy -->
-            <div id="tab-materialy" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Materialy projektowe</h2>
+            <div id="tab-materialy" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Materiały</h2>
 
                 <div id="materials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <!-- Materials rendered here -->
                 </div>
 
-                <div id="materials-empty" class="text-center py-16">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <i class="ph ph-folder-open text-2xl text-zinc-600"></i>
+                <div id="materials-empty" class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="ph ph-folder-open"></i>
                     </div>
-                    <p class="text-secondary">Brak materialow</p>
+                    <p class="empty-state-text">Brak materiałów</p>
                 </div>
             </div>
 
             <!-- TAB: Branding -->
-            <div id="tab-branding" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Branding</h2>
+            <div id="tab-branding" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Branding</h2>
 
                 <!-- Logos -->
-                <div class="mb-8">
-                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Logo</h3>
+                <div class="mb-10">
+                    <h3 class="section-title">Logo</h3>
                     <div id="branding-logos" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <!-- Logos rendered here -->
                     </div>
-                    <div id="branding-logos-empty" class="card p-8 text-center border-dashed">
-                        <p class="text-tertiary">Brak logo</p>
+                    <div id="branding-logos-empty" class="card p-8 text-center" style="border-style: dashed;">
+                        <p class="text-tertiary text-sm">Brak logo</p>
                     </div>
                 </div>
 
                 <!-- Colors -->
-                <div class="mb-8">
-                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Kolory</h3>
-                    <div id="branding-colors" class="flex flex-wrap gap-4">
+                <div class="mb-10">
+                    <h3 class="section-title">Kolory</h3>
+                    <div id="branding-colors" class="flex flex-wrap gap-3">
                         <!-- Colors rendered here -->
                     </div>
-                    <p id="branding-colors-empty" class="text-tertiary">Brak kolorow</p>
+                    <p id="branding-colors-empty" class="text-tertiary text-sm">Brak kolorów</p>
                 </div>
 
                 <!-- Fonts -->
-                <div class="mb-8">
-                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Czcionki</h3>
+                <div class="mb-10">
+                    <h3 class="section-title">Czcionki</h3>
                     <div id="branding-fonts" class="space-y-3">
                         <!-- Fonts rendered here -->
                     </div>
-                    <p id="branding-fonts-empty" class="text-tertiary">Brak czcionek</p>
+                    <p id="branding-fonts-empty" class="text-tertiary text-sm">Brak czcionek</p>
                 </div>
 
                 <!-- Guidelines -->
                 <div>
-                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Wytyczne</h3>
+                    <h3 class="section-title">Wytyczne</h3>
                     <div id="branding-guidelines" class="space-y-3">
                         <!-- Guidelines rendered here -->
                     </div>
-                    <p id="branding-guidelines-empty" class="text-tertiary">Brak wytycznych</p>
+                    <p id="branding-guidelines-empty" class="text-tertiary text-sm">Brak wytycznych</p>
                 </div>
             </div>
 
             <!-- TAB: Strona -->
-            <div id="tab-strona" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Strona sprzedazowa</h2>
+            <div id="tab-strona" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Strona sprzedażowa</h2>
 
                 <div id="sales-page-content" class="hidden">
                     <div class="card overflow-hidden">
-                        <div class="aspect-video bg-zinc-900">
+                        <div class="aspect-video bg-[#0a0a0a] relative">
                             <iframe id="sales-page-iframe" class="w-full h-full" src=""></iframe>
                         </div>
-                        <div class="p-4 flex items-center justify-between border-t border-default">
+                        <div class="p-4 flex items-center justify-between border-t border-[#1a1a1a] flex-wrap gap-3">
                             <div class="flex items-center gap-3">
-                                <span id="sales-page-status" class="badge badge-emerald">
+                                <span id="sales-page-status" class="badge badge-success">
                                     <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                                     Live
                                 </span>
-                                <span id="sales-page-url-display" class="text-secondary text-sm truncate max-w-xs"></span>
+                                <span id="sales-page-url-display" class="text-tertiary text-sm truncate max-w-xs font-mono"></span>
                             </div>
-                            <a id="sales-page-link" href="#" target="_blank" class="text-white hover:text-zinc-300 flex items-center gap-2 text-sm font-medium">
-                                Otworz
+                            <a id="sales-page-link" href="#" target="_blank" class="btn-secondary text-sm py-2">
+                                Otwórz stronę
                                 <i class="ph ph-arrow-square-out"></i>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <div id="sales-page-empty" class="text-center py-16">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <i class="ph ph-globe text-2xl text-zinc-600"></i>
+                <div id="sales-page-empty" class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="ph ph-globe"></i>
                     </div>
-                    <p class="text-secondary">Brak strony sprzedazowej</p>
+                    <p class="empty-state-text">Brak strony sprzedażowej</p>
                 </div>
             </div>
 
             <!-- TAB: Produkty -->
-            <div id="tab-produkty" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Produkty i dostawy</h2>
+            <div id="tab-produkty" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Produkty i dostawy</h2>
 
-                <div id="products-list" class="space-y-4">
+                <div id="products-list" class="space-y-3">
                     <!-- Products rendered here -->
                 </div>
 
-                <div id="products-empty" class="text-center py-16">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <i class="ph ph-package text-2xl text-zinc-600"></i>
+                <div id="products-empty" class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="ph ph-package"></i>
                     </div>
-                    <p class="text-secondary">Brak produktow</p>
+                    <p class="empty-state-text">Brak produktów</p>
                 </div>
             </div>
 
             <!-- TAB: Raporty -->
-            <div id="tab-raporty" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Raporty i analizy</h2>
+            <div id="tab-raporty" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Raporty</h2>
 
                 <div id="reports-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Reports rendered here -->
                 </div>
 
-                <div id="reports-empty" class="text-center py-16">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <i class="ph ph-chart-line-up text-2xl text-zinc-600"></i>
+                <div id="reports-empty" class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="ph ph-chart-line-up"></i>
                     </div>
-                    <p class="text-secondary">Brak raportow</p>
+                    <p class="empty-state-text">Brak raportów</p>
                 </div>
             </div>
 
             <!-- TAB: Komentarze -->
-            <div id="tab-komentarze" class="tab-panel hidden">
-                <h2 class="text-lg font-semibold text-white mb-6">Komentarze</h2>
+            <div id="tab-komentarze" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Komentarze</h2>
 
                 <div class="max-w-2xl">
                     <div id="comments-list" class="space-y-4 mb-6">
                         <!-- Comments rendered here -->
                     </div>
 
-                    <div id="comments-empty" class="text-center py-12 card mb-6">
-                        <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-800 flex items-center justify-center">
-                            <i class="ph ph-chat-circle-text text-xl text-zinc-600"></i>
+                    <div id="comments-empty" class="card p-8 text-center mb-6">
+                        <div class="empty-state-icon mx-auto">
+                            <i class="ph ph-chat-circle-text"></i>
                         </div>
-                        <p class="text-secondary text-sm">Brak komentarzy</p>
-                        <p class="text-tertiary text-xs mt-1">Rozpocznij rozmowe ponizej</p>
+                        <p class="text-tertiary text-sm mt-4">Brak komentarzy</p>
+                        <p class="text-tertiary/60 text-xs mt-1">Rozpocznij rozmowę poniżej</p>
                     </div>
 
                     <!-- Add Comment Form -->
-                    <div class="card p-4">
-                        <textarea id="new-comment" rows="3" class="form-input resize-none mb-3" placeholder="Napisz komentarz..."></textarea>
+                    <div class="card p-5">
+                        <textarea id="new-comment" rows="3" class="form-input resize-none mb-4" placeholder="Napisz komentarz..."></textarea>
                         <div class="flex justify-end">
-                            <button onclick="postComment()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                            <button onclick="postComment()" class="btn-primary">
                                 <i class="ph ph-paper-plane-tilt"></i>
-                                Wyslij
+                                Wyślij
                             </button>
                         </div>
                     </div>
@@ -670,11 +953,11 @@
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-default mt-auto">
-            <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
-                <div class="flex items-center justify-between text-sm text-tertiary">
-                    <span>tomekniedzwiecki.pl</span>
-                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="hover:text-secondary transition-colors">Kontakt</a>
+        <footer class="border-t border-[#1a1a1a] mt-auto">
+            <div class="max-w-6xl mx-auto px-4 md:px-6 py-5">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-tertiary">© tomekniedzwiecki.pl</span>
+                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="text-tertiary hover:text-secondary transition-colors">Kontakt</a>
                 </div>
             </div>
         </footer>
@@ -682,9 +965,9 @@
 
     <!-- Toast -->
     <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
-        <div class="bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
-            <i id="toast-icon" class="ph ph-check-circle text-emerald-400"></i>
-            <span id="toast-message">Sukces</span>
+        <div class="bg-[#111] border border-[#222] text-white pl-4 pr-5 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-slide">
+            <i id="toast-icon" class="ph ph-check-circle text-[#00d084]"></i>
+            <span id="toast-message" class="text-sm">Sukces</span>
         </div>
     </div>
 
