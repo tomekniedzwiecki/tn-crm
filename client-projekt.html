@@ -1062,14 +1062,20 @@
         function renderDocuments() {
             const container = document.getElementById('documents-list');
             const empty = document.getElementById('documents-empty');
+            const hasSignedContract = workflow.contract_seller_signed_url;
 
-            if (documents.length === 0) {
+            if (documents.length === 0 && !hasSignedContract) {
                 container.innerHTML = '';
                 empty.classList.remove('hidden');
                 return;
             }
 
             empty.classList.add('hidden');
+
+            if (documents.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
             container.innerHTML = documents.map(d => `
                 <div class="card card-hover p-4 flex items-center justify-between">
                     <div class="flex items-center gap-4">
