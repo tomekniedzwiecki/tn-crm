@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaloguj sie - tomekniedzwiecki.pl</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-tn.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000000; color: #ededed; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .glass-card {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .form-input {
+            width: 100%;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            color: #ededed;
+            font-size: 0.9375rem;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .form-input:hover {
+            border-color: #444;
+        }
+        .form-input:focus {
+            border-color: #888;
+            outline: none;
+            box-shadow: 0 0 0 1px #888;
+        }
+        .form-input.error {
+            border-color: #e5484d;
+        }
+        .form-input::placeholder {
+            color: #666;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #000;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.15s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9375rem;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #e5e5e5;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .project-card {
+            background: transparent;
+            border: 1px solid #333;
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+            width: 100%;
+        }
+        .project-card:hover {
+            border-color: #fff;
+            background: rgba(255,255,255,0.02);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex items-center justify-center px-4">
+
+    <!-- Email Input Screen -->
+    <div id="email-screen" class="w-full max-w-sm animate-enter">
+        <div class="text-center mb-8">
+            <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-2.5 mb-6 group">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-emerald-500/20">TN</div>
+                <span class="text-white/80 text-sm font-medium group-hover:text-white transition-colors">tomekniedzwiecki.pl</span>
+            </a>
+            <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Zaloguj sie do projektu</h1>
+            <p class="text-sm text-[#888]">Podaj adres email uzywany w projekcie</p>
+        </div>
+
+        <div class="glass-card rounded-xl p-6">
+            <div class="mb-4">
+                <input type="email" id="email-input" class="form-input" placeholder="jan@przyklad.pl" autocomplete="email">
+            </div>
+            <button id="find-project-btn" class="btn-primary w-full flex items-center justify-center gap-2">
+                <span>Znajdz projekt</span>
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </button>
+            <p id="email-error" class="text-red-400 text-xs mt-3 hidden"></p>
+        </div>
+
+        <p class="text-center text-xs text-[#666] mt-6">
+            Nie masz jeszcze projektu? <a href="https://tomekniedzwiecki.pl/zapisy" class="text-white/80 hover:text-white transition-colors">Aplikuj</a>
+        </p>
+    </div>
+
+    <!-- Projects List Screen (for multiple projects) -->
+    <div id="projects-screen" class="w-full max-w-sm animate-enter hidden">
+        <div class="text-center mb-8">
+            <a href="https://tomekniedzwiecki.pl" class="inline-flex items-center gap-2.5 mb-6 group">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-emerald-500/20">TN</div>
+                <span class="text-white/80 text-sm font-medium group-hover:text-white transition-colors">tomekniedzwiecki.pl</span>
+            </a>
+            <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Wybierz projekt</h1>
+            <p class="text-sm text-[#888]">Znaleziono kilka projektow powiazanych z tym emailem</p>
+        </div>
+
+        <div id="projects-list" class="space-y-3">
+            <!-- Projects will be rendered here -->
+        </div>
+
+        <button id="back-to-email-btn" class="mt-6 w-full text-center text-sm text-[#888] hover:text-white transition-colors">
+            <i class="ph-bold ph-arrow-left mr-1"></i> Wpisz inny email
+        </button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="w-full max-w-sm animate-enter hidden">
+        <div class="text-center">
+            <div class="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-[#888] text-sm">Szukam projektu...</p>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://gkcnpjynrxgfpvuyngct.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrY25wanlucnhnZnB2dXluZ2N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTU4NjAsImV4cCI6MjA2MTA3MTg2MH0.eR9W_b4G_9NQu9EhF-eFjCEPfKzbitZ8jkH6xub5vLQ';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let foundProjects = [];
+
+        // DOM elements
+        const emailScreen = document.getElementById('email-screen');
+        const projectsScreen = document.getElementById('projects-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const emailInput = document.getElementById('email-input');
+        const findProjectBtn = document.getElementById('find-project-btn');
+        const emailError = document.getElementById('email-error');
+        const projectsList = document.getElementById('projects-list');
+        const backToEmailBtn = document.getElementById('back-to-email-btn');
+
+        function showScreen(screenId) {
+            [emailScreen, projectsScreen, loadingScreen].forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            document.getElementById(screenId + '-screen').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            emailError.textContent = message;
+            emailError.classList.remove('hidden');
+            emailInput.classList.add('error');
+        }
+
+        function clearError() {
+            emailError.classList.add('hidden');
+            emailInput.classList.remove('error');
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        async function findProjects() {
+            const email = emailInput.value.trim().toLowerCase();
+
+            clearError();
+
+            if (!email) {
+                showError('Wpisz adres email');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                showError('Wpisz poprawny adres email');
+                return;
+            }
+
+            showScreen('loading');
+            findProjectBtn.disabled = true;
+
+            try {
+                const { data: workflows, error } = await supabaseClient
+                    .from('workflows')
+                    .select('id, token, created_at, contract_data, project_name, customer_name, customer_email')
+                    .ilike('customer_email', email)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!workflows || workflows.length === 0) {
+                    showScreen('email');
+                    showError('Nie znaleziono projektu z tym adresem email');
+                    findProjectBtn.disabled = false;
+                    return;
+                }
+
+                foundProjects = workflows;
+
+                if (workflows.length === 1) {
+                    // Single project - redirect directly
+                    window.location.href = `/projekt/${workflows[0].token}`;
+                } else {
+                    // Multiple projects - show list
+                    renderProjectsList();
+                    showScreen('projects');
+                }
+
+            } catch (err) {
+                console.error('Error finding projects:', err);
+                showScreen('email');
+                showError('Wystapil blad. Sprobuj ponownie.');
+            }
+
+            findProjectBtn.disabled = false;
+        }
+
+        function renderProjectsList() {
+            projectsList.innerHTML = foundProjects.map((project, index) => {
+                const clientName = project.customer_name || 'Klient';
+                const projectName = project.project_name || 'Wspolpraca';
+                const date = new Date(project.created_at).toLocaleDateString('pl-PL', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                return `
+                    <button class="project-card" onclick="selectProject('${project.token}')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white font-medium text-sm mb-0.5">${projectName}</p>
+                                <p class="text-[#888] text-xs">${clientName} &middot; ${date}</p>
+                            </div>
+                            <svg class="w-4 h-4 text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectProject(token) {
+            window.location.href = `/projekt/${token}`;
+        }
+
+        // Event listeners
+        findProjectBtn.addEventListener('click', findProjects);
+
+        emailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                findProjects();
+            }
+        });
+
+        emailInput.addEventListener('input', clearError);
+
+        backToEmailBtn.addEventListener('click', () => {
+            showScreen('email');
+            emailInput.focus();
+        });
+
+        // Focus email input on load
+        emailInput.focus();
+    </script>
+</body>
+</html>
