@@ -2242,15 +2242,28 @@
                     }
                 }
 
-                // Contract sent
+                // Contract sent - try contract_sent status first, then any workflow with customer data
                 if (templateId === 'contract_sent') {
-                    const { data: workflow } = await supabaseClient
+                    // First try workflows with signed contract
+                    let { data: workflow } = await supabaseClient
                         .from('workflows')
                         .select('*, offers(name)')
-                        .eq('contract_status', 'contract_sent')
-                        .order('contract_sent_at', { ascending: false })
+                        .not('contract_seller_signed_url', 'is', null)
+                        .order('contract_sent_at', { ascending: false, nullsFirst: false })
                         .limit(1)
                         .single();
+
+                    // If none found, get any recent workflow with customer data
+                    if (!workflow) {
+                        const { data: recentWorkflow } = await supabaseClient
+                            .from('workflows')
+                            .select('*, offers(name)')
+                            .not('customer_name', 'is', null)
+                            .order('created_at', { ascending: false })
+                            .limit(1)
+                            .single();
+                        workflow = recentWorkflow;
+                    }
 
                     if (workflow) {
                         return {
