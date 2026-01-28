@@ -23,798 +23,645 @@
         }
     </script>
     <style>
-        body { background: #000000; color: #ededed; }
-        ::-webkit-scrollbar { width: 6px; }
+        body { background: #0a0a0a; color: #ededed; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
         ::selection { background: white; color: black; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-enter { animation: fadeIn 0.3s ease-out forwards; }
 
-        .input-field {
-            background: #0a0a0a;
-            border: 1px solid rgba(255,255,255,0.08);
+        /* Vercel-style design tokens */
+        .border-default { border-color: #222; }
+        .bg-card { background: #111; }
+        .bg-hover { background: #171717; }
+        .text-secondary { color: #888; }
+        .text-tertiary { color: #666; }
+
+        /* Tabs */
+        .tab-nav {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid #222;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .tab-nav::-webkit-scrollbar { display: none; }
+        .tab-btn {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            white-space: nowrap;
             transition: all 0.15s ease;
         }
-        .input-field:focus {
-            border-color: rgba(255,255,255,0.2);
-            outline: none;
+        .tab-btn:hover { color: #888; }
+        .tab-btn.active { color: #fff; border-color: #fff; }
+
+        /* Progress ring */
+        .progress-ring { transform: rotate(-90deg); }
+        .progress-ring-bg { stroke: #222; }
+        .progress-ring-fill {
+            stroke: #10b981;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
         }
 
-        .glass-card {
-            background: linear-gradient(to bottom, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-            border: 1px solid rgba(255,255,255,0.06);
+        /* Cards */
+        .card {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 12px;
+        }
+        .card-hover:hover {
+            border-color: #333;
+            background: #141414;
         }
 
-        .progress-bar {
-            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-            transition: width 0.5s ease;
-        }
+        /* Milestone */
+        .milestone-card { transition: all 0.15s ease; }
+        .milestone-card:hover { border-color: #333; }
+        .milestone-card.active { border-color: #333; }
+        .milestone-card.completed { border-color: rgba(16, 185, 129, 0.3); }
 
-        .milestone-card {
-            transition: all 0.15s ease;
-        }
-        .milestone-card:hover {
-            border-color: rgba(255,255,255,0.1);
-        }
-        .milestone-card.active {
-            border-color: rgba(255,255,255,0.15);
-            background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-        }
-        .milestone-card.completed {
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .milestone-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
-            opacity: 0;
-        }
-        .milestone-content.expanded {
-            max-height: 2000px;
-            opacity: 1;
-        }
-
-        .responsible-badge {
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 10px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-        }
-        .responsible-team { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
-        .responsible-client { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.2); }
-        .responsible-shared { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
-
-        /* Vercel-style form */
-        .form-group { margin-bottom: 1.25rem; }
-        .form-label {
-            display: block;
-            color: #888;
-            font-size: 0.8125rem;
-            font-weight: 400;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.01em;
-        }
+        /* Form inputs */
         .form-input {
             width: 100%;
-            background: #000;
+            background: #0a0a0a;
             border: 1px solid #333;
-            border-radius: 0.5rem;
-            padding: 0.625rem 0.875rem;
-            color: #ededed;
-            font-size: 0.875rem;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        .form-input:hover {
-            border-color: #444;
-        }
-        .form-input:focus {
-            border-color: #888;
-            outline: none;
-            box-shadow: 0 0 0 1px #888;
-        }
-        .form-input.error {
-            border-color: #e5484d;
-        }
-        .form-input::placeholder {
-            color: #666;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-        @media (max-width: 640px) {
-            .form-row { grid-template-columns: 1fr; }
-        }
-
-        /* Vercel-style step indicator */
-        .step-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0;
-            margin-bottom: 2rem;
-            padding: 0.75rem 1rem;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 9999px;
-        }
-        .step {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .step-number {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        .step-number.active {
-            background: #fff;
-            color: #000;
-        }
-        .step-number.completed {
-            background: #10b981;
-            color: #fff;
-        }
-        .step-number.pending {
-            background: transparent;
-            border: 1px solid #333;
-            color: #666;
-        }
-        .step-text {
-            font-size: 0.875rem;
-            font-weight: 500;
-            letter-spacing: -0.01em;
-        }
-        .step-text.active { color: #fff; }
-        .step-text.completed { color: #10b981; }
-        .step-text.pending { color: #666; }
-        .step-line {
-            flex: 1;
-            height: 1px;
-            background: #333;
-            margin: 0 1rem;
-        }
-        .step-line.completed {
-            background: #10b981;
-        }
-
-        /* Vercel-style signing options */
-        .signing-option {
-            background: transparent;
-            border: 1px solid #333;
-            border-radius: 0.75rem;
-            padding: 1.25rem;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            position: relative;
-        }
-        .signing-option:hover {
-            border-color: #555;
-            background: rgba(255,255,255,0.02);
-        }
-        .signing-option.recommended {
-            border-color: #10b981;
-            background: linear-gradient(to bottom, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02));
-        }
-        .signing-option.recommended:hover {
-            border-color: #10b981;
-            background: linear-gradient(to bottom, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04));
-        }
-
-        /* Vercel-style section headers */
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .section-icon {
-            width: 32px;
-            height: 32px;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Vercel-style buttons */
-        .btn-primary {
-            background: #fff;
-            color: #000;
-            border: none;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            font-weight: 500;
-            font-size: 0.875rem;
+            padding: 10px 14px;
+            color: #ededed;
+            font-size: 14px;
             transition: all 0.15s ease;
+        }
+        .form-input:hover { border-color: #444; }
+        .form-input:focus { border-color: #666; outline: none; }
+        .form-input::placeholder { color: #555; }
+
+        /* Badges */
+        .badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        .btn-primary:hover {
-            background: #e5e5e5;
-        }
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .btn-secondary {
-            background: transparent;
-            color: #888;
-            border: 1px solid #333;
-            border-radius: 0.5rem;
-            padding: 0.625rem 1rem;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: 500;
-            font-size: 0.875rem;
-            transition: all 0.15s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
         }
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.05);
-            border-color: #555;
-            color: #fff;
-        }
+        .badge-emerald { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .badge-amber { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .badge-blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .badge-violet { background: rgba(139, 92, 246, 0.1); color: #a78bfa; }
 
-        /* PDF download card */
-        .pdf-card {
-            background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 0.75rem;
-            padding: 1rem 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-        .pdf-icon {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
+        /* Responsible badges */
+        .responsible-team { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .responsible-client { background: rgba(6, 182, 212, 0.1); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.2); }
+        .responsible-shared { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+        /* Comment bubbles */
+        .comment-team { background: #171717; border: 1px solid #222; }
+        .comment-client { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); }
     </style>
 </head>
-<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+<body class="min-h-screen font-sans antialiased">
 
     <!-- Loading Screen -->
-    <div id="loading-screen" class="min-h-screen flex items-center justify-center px-4">
+    <div id="loading-screen" class="min-h-screen flex items-center justify-center">
         <div class="text-center animate-enter">
-            <div class="w-5 h-5 mx-auto mb-4 border-2 border-[#333] border-t-white rounded-full animate-spin"></div>
-            <p class="text-[#666] text-sm">Ladowanie projektu...</p>
-        </div>
-    </div>
-
-    <!-- Set Password Screen (first time) -->
-    <div id="set-password-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
-        <div class="w-full max-w-sm animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-5">
-                    <i class="ph-bold ph-shield-check text-xl"></i>
-                </div>
-                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Zabezpiecz swoj projekt</h1>
-                <p class="text-[#888] text-sm">Ustaw haslo, ktore bedzie chronilo dostep do Twojego projektu i wrazliwych danych.</p>
-            </div>
-
-            <div class="glass-card rounded-xl p-6">
-                <div class="mb-4">
-                    <label class="form-label">Nowe haslo</label>
-                    <input type="password" id="new-password-input"
-                           class="form-input"
-                           placeholder="Minimum 6 znakow..."
-                           minlength="6"
-                           autofocus>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label">Powtorz haslo</label>
-                    <input type="password" id="confirm-password-input"
-                           class="form-input"
-                           placeholder="Powtorz haslo...">
-                </div>
-                <div id="set-password-error" class="text-red-400 text-sm mb-4 hidden"></div>
-                <button id="set-password-btn" class="btn-primary w-full">
-                    <span>Ustaw haslo i kontynuuj</span>
-                    <i class="ph ph-arrow-right"></i>
-                </button>
-            </div>
-
-            <div class="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <div class="flex items-start gap-2">
-                    <i class="ph ph-lightbulb text-amber-400 mt-0.5 flex-shrink-0"></i>
-                    <p class="text-amber-200/80 text-xs">
-                        <strong>Podpowiedz:</strong> Zapisz haslo w bezpiecznym miejscu (np. menedzer hasel). Bedzie wymagane przy kazdym wejsciu na strone projektu.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Password Screen (login) -->
-    <div id="password-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
-        <div class="w-full max-w-sm animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-5">
-                    <i class="ph-bold ph-lock-key text-xl"></i>
-                </div>
-                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Twoj projekt</h1>
-                <p class="text-[#888] text-sm">Wprowadz haslo, aby zobaczyc postep prac</p>
-            </div>
-
-            <div class="glass-card rounded-xl p-6">
-                <div class="mb-4">
-                    <label class="form-label">Haslo</label>
-                    <input type="password" id="password-input"
-                           class="form-input"
-                           placeholder="Wprowadz haslo..."
-                           autofocus>
-                </div>
-                <div id="password-error" class="text-red-400 text-sm mb-4 hidden">Nieprawidlowe haslo</div>
-                <button id="password-btn" class="btn-primary w-full">
-                    <span>Zobacz projekt</span>
-                    <i class="ph ph-arrow-right"></i>
-                </button>
-            </div>
-
-            <p class="text-[#555] text-xs text-center mt-4">
-                Nie pamietasz hasla? Napisz na <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-blue-400 hover:text-blue-300">ceo@tomekniedzwiecki.pl</a>
-            </p>
+            <div class="w-8 h-8 mx-auto mb-4 border-2 border-zinc-800 border-t-white rounded-full animate-spin"></div>
+            <p class="text-secondary text-sm">Ladowanie projektu...</p>
         </div>
     </div>
 
     <!-- Not Found Screen -->
-    <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
-        <div class="w-full max-w-sm text-center animate-enter">
-            <div class="w-16 h-16 bg-[#111] border border-[#333] rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <i class="ph ph-question text-3xl text-[#666]"></i>
+    <div id="not-found-screen" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="text-center animate-enter max-w-md">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-zinc-900 flex items-center justify-center">
+                <i class="ph ph-warning text-3xl text-amber-400"></i>
             </div>
-            <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Nie znaleziono projektu</h1>
-            <p class="text-[#888] text-sm">Ten link jest nieprawidlowy lub projekt zostal usuniety.</p>
+            <h1 class="text-2xl font-semibold text-white mb-3">Projekt nie znaleziony</h1>
+            <p class="text-secondary">Link do projektu jest nieprawidlowy lub wygasl. Skontaktuj sie z zespolem.</p>
+        </div>
+    </div>
+
+    <!-- Set Password Screen (First Time) -->
+    <div id="set-password-screen" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <i class="ph ph-lock-key text-xl text-emerald-400"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-white mb-2">Ustaw haslo dostepu</h1>
+                <p class="text-secondary text-sm">Utworz haslo, ktorego bedziesz uzywac do logowania do projektu.</p>
+            </div>
+
+            <div class="card p-6">
+                <form onsubmit="setPassword(event)">
+                    <div class="mb-4">
+                        <label class="block text-secondary text-sm mb-2">Haslo</label>
+                        <input type="password" id="set-password-input" class="form-input" placeholder="Minimum 6 znakow" required minlength="6">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-secondary text-sm mb-2">Potwierdz haslo</label>
+                        <input type="password" id="set-password-confirm" class="form-input" placeholder="Powtorz haslo" required>
+                    </div>
+                    <button type="submit" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg font-medium transition-colors">
+                        Ustaw haslo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Screen (Login) -->
+    <div id="password-screen" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                    <i class="ph ph-lock text-xl text-zinc-400"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-white mb-2">Zaloguj sie</h1>
+                <p class="text-secondary text-sm">Wprowadz haslo, aby uzyskac dostep do projektu.</p>
+            </div>
+
+            <div class="card p-6">
+                <form onsubmit="checkPassword(event)">
+                    <div class="mb-6">
+                        <label class="block text-secondary text-sm mb-2">Haslo</label>
+                        <input type="password" id="password-input" class="form-input" placeholder="Wprowadz haslo" required>
+                    </div>
+                    <button type="submit" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg font-medium transition-colors">
+                        Zaloguj
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- Contract Data Screen -->
-    <div id="contract-data-screen" class="hidden">
-        <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
-            <div class="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="/favicon-tn.svg" alt="TN" class="w-8 h-8 rounded-lg">
-                    <span class="font-medium text-white text-sm">tomekniedzwiecki.pl</span>
+    <div id="contract-data-screen" class="hidden min-h-screen flex items-center justify-center p-4 py-12">
+        <div class="w-full max-w-2xl animate-enter">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium mb-4">
+                    <i class="ph ph-check-circle"></i>
+                    Krok 1 z 2
                 </div>
-            </div>
-        </header>
-
-        <main class="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
-            <!-- Step Indicator -->
-            <div class="step-indicator">
-                <div class="step">
-                    <div class="step-number active">1</div>
-                    <span class="step-text active">Dane do umowy</span>
-                </div>
-                <div class="step-line"></div>
-                <div class="step">
-                    <div class="step-number pending">2</div>
-                    <span class="step-text pending">Podpis</span>
-                </div>
-                <div class="step-line"></div>
-                <div class="step">
-                    <div class="step-number pending">3</div>
-                    <span class="step-text pending">Projekt</span>
-                </div>
+                <h1 class="text-2xl font-semibold text-white mb-2">Dane do umowy</h1>
+                <p class="text-secondary">Wprowadz dane potrzebne do przygotowania umowy.</p>
             </div>
 
-            <div class="glass-card rounded-xl p-6 sm:p-8">
-                <div class="mb-8">
-                    <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Dane do umowy</h1>
-                    <p class="text-[#888] text-[0.9375rem]">Potrzebujemy Twoich danych do przygotowania umowy przed rozpoczeciem projektu.</p>
-                </div>
-
-                <form id="contract-form" onsubmit="submitContractData(event)">
-                    <!-- Personal Data -->
-                    <div class="mb-8">
-                        <div class="section-header">
-                            <div class="section-icon bg-gradient-to-br from-violet-500/20 to-purple-600/20">
-                                <i class="ph ph-user text-violet-400"></i>
-                            </div>
-                            <span class="text-white font-medium">Dane osobowe</span>
+            <div class="card p-6 md:p-8">
+                <form onsubmit="submitContractData(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Imie i nazwisko *</label>
+                            <input type="text" id="contract-name" class="form-input" required>
                         </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Imie i nazwisko</label>
-                            <input type="text" id="cd-name" class="form-input" required placeholder="Jan Kowalski">
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Firma <span class="text-[#555]">(opcjonalnie)</span></label>
-                                <input type="text" id="cd-company" class="form-input" placeholder="Nazwa firmy">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">NIP <span class="text-[#555]">(opcjonalnie)</span></label>
-                                <input type="text" id="cd-nip" class="form-input" placeholder="0000000000" maxlength="10">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">PESEL</label>
-                                <input type="text" id="cd-pesel" class="form-input" required
-                                       placeholder="00000000000" maxlength="11" pattern="[0-9]{11}">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Nr dowodu osobistego</label>
-                                <input type="text" id="cd-id-number" class="form-input" required
-                                       placeholder="ABC123456" maxlength="9">
-                            </div>
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Firma (opcjonalnie)</label>
+                            <input type="text" id="contract-company" class="form-input">
                         </div>
                     </div>
 
-                    <!-- Address -->
-                    <div class="mb-8">
-                        <div class="section-header">
-                            <div class="section-icon bg-gradient-to-br from-blue-500/20 to-cyan-600/20">
-                                <i class="ph ph-map-pin text-blue-400"></i>
-                            </div>
-                            <span class="text-white font-medium">Adres zamieszkania</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">PESEL *</label>
+                            <input type="text" id="contract-pesel" class="form-input" maxlength="11" required>
+                            <p id="pesel-error" class="text-red-400 text-xs mt-1 hidden"></p>
                         </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Ulica i numer</label>
-                            <input type="text" id="cd-street" class="form-input" required placeholder="ul. Przykladowa 123/4">
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Kod pocztowy</label>
-                                <input type="text" id="cd-postal" class="form-input" required
-                                       placeholder="00-000" maxlength="6">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Miejscowosc</label>
-                                <input type="text" id="cd-city" class="form-input" required placeholder="Warszawa">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Kraj</label>
-                            <input type="text" id="cd-country" class="form-input" required value="Polska">
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Nr dowodu osobistego *</label>
+                            <input type="text" id="contract-id" class="form-input" maxlength="9" required>
+                            <p id="id-error" class="text-red-400 text-xs mt-1 hidden"></p>
                         </div>
                     </div>
 
-                    <!-- Contact -->
-                    <div class="mb-8">
-                        <div class="section-header">
-                            <div class="section-icon bg-gradient-to-br from-emerald-500/20 to-green-600/20">
-                                <i class="ph ph-envelope text-emerald-400"></i>
-                            </div>
-                            <span class="text-white font-medium">Dane kontaktowe</span>
-                        </div>
+                    <div class="mb-6">
+                        <label class="block text-secondary text-sm mb-2">NIP (opcjonalnie)</label>
+                        <input type="text" id="contract-nip" class="form-input" maxlength="10">
+                    </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Email</label>
-                                <input type="email" id="cd-email" class="form-input" required placeholder="jan@email.pl">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Telefon</label>
-                                <input type="tel" id="cd-phone" class="form-input" required placeholder="+48 600 000 000">
-                            </div>
+                    <div class="mb-6">
+                        <label class="block text-secondary text-sm mb-2">Ulica i numer *</label>
+                        <input type="text" id="contract-street" class="form-input" required>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Kod pocztowy *</label>
+                            <input type="text" id="contract-postal" class="form-input" placeholder="00-000" required>
+                        </div>
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Miasto *</label>
+                            <input type="text" id="contract-city" class="form-input" required>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-secondary text-sm mb-2">Kraj *</label>
+                            <input type="text" id="contract-country" class="form-input" value="Polska" required>
                         </div>
                     </div>
 
-                    <div id="contract-form-error" class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6 text-red-400 text-sm">
-                        Wypelnij wszystkie wymagane pola poprawnie.
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Email *</label>
+                            <input type="email" id="contract-email" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-secondary text-sm mb-2">Telefon</label>
+                            <input type="tel" id="contract-phone" class="form-input">
+                        </div>
                     </div>
 
-                    <button type="submit" id="contract-submit-btn" class="btn-primary w-full py-3">
-                        <span>Kontynuuj</span>
+                    <button type="submit" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        Dalej
                         <i class="ph ph-arrow-right"></i>
                     </button>
                 </form>
             </div>
-        </main>
+        </div>
     </div>
 
     <!-- Contract Signing Screen -->
-    <div id="contract-signing-screen" class="hidden">
-        <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
-            <div class="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="/favicon-tn.svg" alt="TN" class="w-8 h-8 rounded-lg">
-                    <span class="font-medium text-white text-sm">tomekniedzwiecki.pl</span>
+    <div id="contract-signing-screen" class="hidden min-h-screen flex items-center justify-center p-4 py-12">
+        <div class="w-full max-w-2xl animate-enter">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 text-xs font-medium mb-4">
+                    <i class="ph ph-signature"></i>
+                    Krok 2 z 2
                 </div>
-            </div>
-        </header>
-
-        <main class="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
-            <!-- Step Indicator -->
-            <div class="step-indicator">
-                <div class="step">
-                    <div class="step-number completed"><i class="ph-bold ph-check text-xs"></i></div>
-                    <span class="step-text completed">Dane do umowy</span>
-                </div>
-                <div class="step-line completed"></div>
-                <div class="step">
-                    <div class="step-number active">2</div>
-                    <span class="step-text active">Podpis</span>
-                </div>
-                <div class="step-line"></div>
-                <div class="step">
-                    <div class="step-number pending">3</div>
-                    <span class="step-text pending">Projekt</span>
-                </div>
+                <h1 class="text-2xl font-semibold text-white mb-2">Podpisanie umowy</h1>
+                <p class="text-secondary">Pobierz umowe, podpisz ja i przeslij do nas.</p>
             </div>
 
-            <div class="glass-card rounded-xl p-6 sm:p-8 mb-4">
-                <div class="mb-8">
-                    <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Podpisz umowe</h1>
-                    <p class="text-[#888] text-[0.9375rem]">Twoja umowa jest gotowa. Pobierz ja i wybierz sposob podpisania.</p>
-                </div>
-
-                <!-- Download Contract -->
-                <div class="pdf-card mb-8">
-                    <div class="flex items-center gap-4">
-                        <div class="pdf-icon">
-                            <i class="ph-bold ph-file-pdf text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <div class="text-white font-medium" id="contract-filename">Umowa.pdf</div>
-                            <div class="text-[#666] text-sm">Pobierz i przeczytaj przed podpisaniem</div>
-                        </div>
+            <div class="card p-6 md:p-8 mb-6">
+                <div class="flex items-center gap-4 p-4 bg-zinc-900 rounded-lg mb-6">
+                    <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                        <i class="ph ph-file-pdf text-2xl text-red-400"></i>
                     </div>
-                    <button onclick="downloadContract()" class="btn-primary">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-medium">Umowa do podpisu</p>
+                        <p class="text-secondary text-sm">Dokument PDF</p>
+                    </div>
+                    <a id="download-contract-btn" href="#" target="_blank" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                         <i class="ph ph-download-simple"></i>
-                        <span>Pobierz</span>
-                    </button>
+                        Pobierz
+                    </a>
                 </div>
 
-                <!-- Signing Options -->
-                <div class="mb-6">
-                    <h3 class="text-[#888] text-sm font-medium mb-4">Wybierz metode podpisu</h3>
+                <div class="space-y-4">
+                    <h3 class="text-white font-medium">Jak podpisac umowe?</h3>
 
-                    <div class="space-y-3">
-                        <!-- Option 1: Podpis Zaufany -->
-                        <div class="signing-option recommended" onclick="selectSigningMethod('zaufany')">
-                            <div class="flex items-start gap-4">
-                                <div class="w-11 h-11 bg-gradient-to-br from-emerald-500/30 to-green-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <i class="ph-bold ph-shield-check text-emerald-400 text-xl"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1.5">
-                                        <h4 class="font-medium text-white">Podpis zaufany (gov.pl)</h4>
-                                        <span class="bg-emerald-500/20 text-emerald-400 text-[11px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wide">Zalecane</span>
-                                    </div>
-                                    <p class="text-[#888] text-sm mb-4">Darmowy podpis elektroniczny przez profil zaufany. Najszybsza i najwygodniejsza metoda.</p>
-                                    <div class="bg-black/30 rounded-lg p-3 space-y-2">
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">1.</span>
-                                            <span class="text-[#888]">Pobierz umowe PDF powyzej</span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">2.</span>
-                                            <span class="text-[#888]">Wejdz na <a href="https://www.gov.pl/web/gov/podpisz-dokument-elektronicznie-wykorzystaj-podpis-zaufany" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">gov.pl/podpisz</a></span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">3.</span>
-                                            <span class="text-[#888]">Zaloguj sie profilem zaufanym i podpisz</span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">4.</span>
-                                            <span class="text-[#888]">Wyslij plik na <span class="text-blue-400">ceo@tomekniedzwiecki.pl</span></span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div class="p-4 border border-emerald-500/20 bg-emerald-500/5 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-emerald-400 text-xs font-bold">1</span>
+                            </div>
+                            <div>
+                                <p class="text-white font-medium mb-1">Podpis zaufany (gov.pl)</p>
+                                <p class="text-secondary text-sm">Najszybsza opcja. Podpisz bezplatnie przez profil zaufany na <a href="https://www.gov.pl/web/podpis-zaufany" target="_blank" class="text-emerald-400 hover:underline">gov.pl</a>.</p>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Option 2: Podpis Kwalifikowany -->
-                        <div class="signing-option" onclick="selectSigningMethod('kwalifikowany')">
-                            <div class="flex items-start gap-4">
-                                <div class="w-11 h-11 bg-gradient-to-br from-violet-500/30 to-purple-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <i class="ph-bold ph-certificate text-violet-400 text-xl"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="font-medium text-white mb-1.5">Podpis kwalifikowany</h4>
-                                    <p class="text-[#888] text-sm mb-4">Jesli posiadasz certyfikat kwalifikowany (np. Szafir, Certum, KIR).</p>
-                                    <div class="bg-black/30 rounded-lg p-3 space-y-2">
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">1.</span>
-                                            <span class="text-[#888]">Pobierz umowe PDF powyzej</span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">2.</span>
-                                            <span class="text-[#888]">Podpisz dokument swoim podpisem kwalifikowanym</span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">3.</span>
-                                            <span class="text-[#888]">Wyslij plik na <span class="text-blue-400">ceo@tomekniedzwiecki.pl</span></span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div class="p-4 border border-white/5 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-zinc-400 text-xs font-bold">2</span>
                             </div>
-                        </div>
-
-                        <!-- Option 3: Podpis Fizyczny -->
-                        <div class="signing-option" onclick="selectSigningMethod('fizyczny')">
-                            <div class="flex items-start gap-4">
-                                <div class="w-11 h-11 bg-gradient-to-br from-amber-500/30 to-orange-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <i class="ph-bold ph-package text-amber-400 text-xl"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="font-medium text-white mb-1.5">Podpis fizyczny (paczkomat)</h4>
-                                    <p class="text-[#888] text-sm mb-4">Tradycyjny podpis na papierze. Wyslemy umowe do Twojego paczkomatu.</p>
-                                    <div class="bg-black/30 rounded-lg p-3 space-y-2">
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">1.</span>
-                                            <span class="text-[#888]">Skontaktuj sie z nami podajac paczkomat</span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">2.</span>
-                                            <span class="text-[#888]">Odbierz przesylke i podpisz dokument</span>
-                                        </div>
-                                        <div class="flex items-start gap-2 text-sm">
-                                            <span class="text-[#555] font-mono">3.</span>
-                                            <span class="text-[#888]">Odeslij umowe na nasz adres (w przesylce)</span>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div>
+                                <p class="text-white font-medium mb-1">Podpis kwalifikowany</p>
+                                <p class="text-secondary text-sm">Jesli posiadasz certyfikat kwalifikowany (np. Certum, Sigillum).</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Action buttons -->
-            <div class="flex items-center justify-between">
-                <button onclick="goBackToEditData()" class="btn-secondary">
-                    <i class="ph ph-arrow-left"></i>
-                    <span>Popraw dane</span>
-                </button>
-                <button onclick="skipToProject()" class="btn-secondary">
-                    <span>Przejdz do projektu</span>
-                    <i class="ph ph-arrow-right"></i>
+            <div class="card p-6">
+                <p class="text-secondary text-sm mb-4">
+                    <i class="ph ph-info text-blue-400 mr-1"></i>
+                    Po podpisaniu umowy wyslij ja do nas mailem. Otrzymasz powiadomienie gdy umowa zostanie zaakceptowana.
+                </p>
+                <button onclick="goToProject()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-lg font-medium transition-colors">
+                    Przejdz do projektu
                 </button>
             </div>
-            <p class="text-[#555] text-xs text-center mt-3">Mozesz kontynuowac, ale umowa musi byc podpisana przed zakonczeniem projektu</p>
-        </main>
+        </div>
     </div>
 
-    <!-- Main Project View -->
-    <div id="project-screen" class="hidden">
+    <!-- Main Project Screen -->
+    <div id="project-screen" class="hidden min-h-screen">
         <!-- Header -->
-        <header class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="/favicon-tn.svg" alt="TN" class="w-8 h-8 rounded-lg">
-                    <span class="font-medium text-white text-sm">tomekniedzwiecki.pl</span>
+        <header class="border-b border-default sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-lg z-40">
+            <div class="max-w-6xl mx-auto px-4 md:px-6">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                            <span class="text-white text-xs font-bold">TN</span>
+                        </div>
+                        <div>
+                            <h1 id="project-title" class="text-white font-semibold">Projekt</h1>
+                            <p id="project-subtitle" class="text-tertiary text-xs hidden md:block">tomekniedzwiecki.pl</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="project-status-badge" class="badge badge-emerald">
+                            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                            Aktywny
+                        </span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-3 text-sm">
-                    <span class="text-[#666] hidden sm:inline">Projekt:</span>
-                    <div id="header-customer" class="text-white font-medium">-</div>
-                </div>
+
+                <!-- Tabs -->
+                <nav class="tab-nav -mb-px">
+                    <button onclick="switchTab('projekt')" data-tab="projekt" class="tab-btn active">
+                        <i class="ph ph-house mr-1.5"></i>
+                        Projekt
+                    </button>
+                    <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="tab-btn">
+                        <i class="ph ph-file-text mr-1.5"></i>
+                        Dokumenty
+                    </button>
+                    <button onclick="switchTab('materialy')" data-tab="materialy" class="tab-btn">
+                        <i class="ph ph-folder-open mr-1.5"></i>
+                        Materialy
+                    </button>
+                    <button onclick="switchTab('branding')" data-tab="branding" class="tab-btn">
+                        <i class="ph ph-paint-brush mr-1.5"></i>
+                        Branding
+                    </button>
+                    <button onclick="switchTab('strona')" data-tab="strona" class="tab-btn">
+                        <i class="ph ph-globe mr-1.5"></i>
+                        Strona
+                    </button>
+                    <button onclick="switchTab('produkty')" data-tab="produkty" class="tab-btn">
+                        <i class="ph ph-package mr-1.5"></i>
+                        Produkty
+                    </button>
+                    <button onclick="switchTab('raporty')" data-tab="raporty" class="tab-btn">
+                        <i class="ph ph-chart-line-up mr-1.5"></i>
+                        Raporty
+                    </button>
+                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="tab-btn">
+                        <i class="ph ph-chat-circle-text mr-1.5"></i>
+                        Komentarze
+                    </button>
+                </nav>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <main class="max-w-6xl mx-auto px-4 md:px-6 py-8">
 
-            <!-- Progress Overview -->
-            <div class="glass-card rounded-xl p-5 sm:p-8 mb-6 sm:mb-8 animate-enter">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6">
-                    <div>
-                        <h1 id="offer-name" class="text-xl sm:text-2xl font-semibold text-white mb-1 tracking-tight">-</h1>
-                        <div class="flex items-center gap-3 text-sm text-[#888]">
-                            <span id="status-label" class="flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                                W realizacji
-                            </span>
-                            <span class="text-[#333]">|</span>
-                            <span>Start: <span id="started-at" class="text-white">-</span></span>
-                        </div>
-                    </div>
-                    <div class="text-left sm:text-right">
-                        <div class="text-3xl sm:text-4xl font-semibold text-white mb-1">
-                            <span id="progress-percent">0</span>%
-                        </div>
-                        <div class="text-[#666] text-xs">ukonczono</div>
-                    </div>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="h-2 bg-[#1a1a1a] rounded-full overflow-hidden mb-4">
-                    <div id="progress-bar" class="progress-bar h-full rounded-full" style="width: 0%"></div>
-                </div>
-
-                <!-- Stats -->
-                <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm">
-                    <div class="flex items-center gap-2">
-                        <i class="ph ph-check-square text-emerald-400"></i>
-                        <span class="text-[#888]">Zadania:</span>
-                        <span class="text-white font-medium"><span id="completed-tasks">0</span>/<span id="total-tasks">0</span></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="ph ph-path text-violet-400"></i>
-                        <span class="text-[#888]">Etapy:</span>
-                        <span class="text-white font-medium"><span id="completed-milestones">0</span>/<span id="total-milestones">0</span></span>
-                    </div>
-                    <div id="deadline-info" class="flex items-center gap-2">
-                        <i class="ph ph-clock text-amber-400"></i>
-                        <span class="text-[#888]">Deadline:</span>
-                        <span id="current-deadline" class="text-white">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Milestones -->
-            <div class="space-y-4 animate-enter" style="animation-delay: 0.1s">
-                <h2 class="text-base font-medium text-white flex items-center gap-2">
-                    <i class="ph ph-path text-violet-400"></i>
-                    Etapy realizacji
-                </h2>
-
-                <div id="milestones-container" class="space-y-3">
-                    <!-- Milestones rendered here -->
-                </div>
-            </div>
-
-            <!-- Signed Contract Section -->
-            <div id="signed-contract-section" class="glass-card rounded-xl p-5 sm:p-8 mt-8 animate-enter hidden" style="animation-delay: 0.15s">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                            <i class="ph ph-file-pdf text-emerald-400 text-2xl"></i>
+            <!-- TAB: Projekt -->
+            <div id="tab-projekt" class="tab-panel animate-enter">
+                <!-- Progress Overview -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Progress Card -->
+                    <div class="card p-6 flex items-center gap-6">
+                        <div class="relative">
+                            <svg class="progress-ring w-24 h-24" viewBox="0 0 100 100">
+                                <circle class="progress-ring-bg" cx="50" cy="50" r="42" fill="none" stroke-width="8"/>
+                                <circle id="progress-ring-fill" class="progress-ring-fill" cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="264"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="progress-percent" class="text-2xl font-bold text-white">0%</span>
+                            </div>
                         </div>
                         <div>
-                            <h3 class="text-base font-medium text-white mb-1">Umowa podpisana</h3>
-                            <p class="text-[#888] text-sm">Pobierz kopie podpisanej umowy</p>
+                            <p class="text-secondary text-sm mb-1">Postep projektu</p>
+                            <p class="text-white text-lg font-semibold"><span id="completed-tasks">0</span> / <span id="total-tasks">0</span> zadan</p>
                         </div>
                     </div>
-                    <a id="signed-contract-download" href="#" target="_blank" class="btn-primary flex-1 sm:flex-initial">
-                        <i class="ph ph-download-simple"></i>
-                        Pobierz umowe
-                    </a>
+
+                    <!-- Current Milestone Card -->
+                    <div class="card p-6">
+                        <p class="text-secondary text-sm mb-2">Aktualny etap</p>
+                        <p id="current-milestone" class="text-white text-lg font-semibold mb-2">-</p>
+                        <div class="flex items-center gap-2 text-sm">
+                            <i class="ph ph-calendar text-tertiary"></i>
+                            <span class="text-secondary">Deadline:</span>
+                            <span id="current-deadline" class="text-white">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Project Info Card -->
+                    <div class="card p-6">
+                        <p class="text-secondary text-sm mb-2">Projekt</p>
+                        <p id="offer-name" class="text-white text-lg font-semibold mb-2">-</p>
+                        <div class="flex items-center gap-2 text-sm">
+                            <i class="ph ph-calendar-check text-tertiary"></i>
+                            <span class="text-secondary">Start:</span>
+                            <span id="started-at" class="text-white">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Milestones -->
+                <div>
+                    <h2 class="text-lg font-semibold text-white mb-4">Etapy realizacji</h2>
+                    <div id="milestones-container" class="space-y-4">
+                        <!-- Milestones rendered here -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Contact Section -->
-            <div class="glass-card rounded-xl p-5 sm:p-8 mt-8 animate-enter" style="animation-delay: 0.2s">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
-                    <div>
-                        <h3 class="text-base font-medium text-white mb-1">Masz pytania?</h3>
-                        <p class="text-[#888] text-sm">Skontaktuj sie z nami, chetnie odpowiemy.</p>
+            <!-- TAB: Dokumenty -->
+            <div id="tab-dokumenty" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Dokumenty</h2>
+
+                <!-- Signed Contract Section -->
+                <div id="signed-contract-section" class="hidden mb-6">
+                    <div class="card p-5 border-emerald-500/20 bg-emerald-500/5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                    <i class="ph ph-seal-check text-2xl text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-medium">Podpisana umowa</p>
+                                    <p class="text-emerald-400 text-sm">Umowa podpisana przez obie strony</p>
+                                </div>
+                            </div>
+                            <a id="signed-contract-download" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                <i class="ph ph-download-simple"></i>
+                                Pobierz
+                            </a>
+                        </div>
                     </div>
-                    <div class="flex gap-2 sm:gap-3">
-                        <a href="mailto:ceo@tomekniedzwiecki.pl" class="btn-secondary flex-1 sm:flex-initial">
-                            <i class="ph ph-envelope"></i>
-                            Email
-                        </a>
-                        <a href="https://wa.me/48533308623" target="_blank" class="btn-secondary flex-1 sm:flex-initial">
-                            <i class="ph ph-whatsapp-logo"></i>
-                            WhatsApp
-                        </a>
+                </div>
+
+                <div id="documents-list" class="space-y-3">
+                    <!-- Documents rendered here -->
+                </div>
+
+                <div id="documents-empty" class="text-center py-16">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-file-text text-2xl text-zinc-600"></i>
+                    </div>
+                    <p class="text-secondary">Brak dokumentow</p>
+                </div>
+            </div>
+
+            <!-- TAB: Materialy -->
+            <div id="tab-materialy" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Materialy projektowe</h2>
+
+                <div id="materials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Materials rendered here -->
+                </div>
+
+                <div id="materials-empty" class="text-center py-16">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-folder-open text-2xl text-zinc-600"></i>
+                    </div>
+                    <p class="text-secondary">Brak materialow</p>
+                </div>
+            </div>
+
+            <!-- TAB: Branding -->
+            <div id="tab-branding" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Branding</h2>
+
+                <!-- Logos -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Logo</h3>
+                    <div id="branding-logos" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Logos rendered here -->
+                    </div>
+                    <div id="branding-logos-empty" class="card p-8 text-center border-dashed">
+                        <p class="text-tertiary">Brak logo</p>
+                    </div>
+                </div>
+
+                <!-- Colors -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Kolory</h3>
+                    <div id="branding-colors" class="flex flex-wrap gap-4">
+                        <!-- Colors rendered here -->
+                    </div>
+                    <p id="branding-colors-empty" class="text-tertiary">Brak kolorow</p>
+                </div>
+
+                <!-- Fonts -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Czcionki</h3>
+                    <div id="branding-fonts" class="space-y-3">
+                        <!-- Fonts rendered here -->
+                    </div>
+                    <p id="branding-fonts-empty" class="text-tertiary">Brak czcionek</p>
+                </div>
+
+                <!-- Guidelines -->
+                <div>
+                    <h3 class="text-sm font-medium text-secondary uppercase tracking-wider mb-4">Wytyczne</h3>
+                    <div id="branding-guidelines" class="space-y-3">
+                        <!-- Guidelines rendered here -->
+                    </div>
+                    <p id="branding-guidelines-empty" class="text-tertiary">Brak wytycznych</p>
+                </div>
+            </div>
+
+            <!-- TAB: Strona -->
+            <div id="tab-strona" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Strona sprzedazowa</h2>
+
+                <div id="sales-page-content" class="hidden">
+                    <div class="card overflow-hidden">
+                        <div class="aspect-video bg-zinc-900">
+                            <iframe id="sales-page-iframe" class="w-full h-full" src=""></iframe>
+                        </div>
+                        <div class="p-4 flex items-center justify-between border-t border-default">
+                            <div class="flex items-center gap-3">
+                                <span id="sales-page-status" class="badge badge-emerald">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                    Live
+                                </span>
+                                <span id="sales-page-url-display" class="text-secondary text-sm truncate max-w-xs"></span>
+                            </div>
+                            <a id="sales-page-link" href="#" target="_blank" class="text-white hover:text-zinc-300 flex items-center gap-2 text-sm font-medium">
+                                Otworz
+                                <i class="ph ph-arrow-square-out"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sales-page-empty" class="text-center py-16">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-globe text-2xl text-zinc-600"></i>
+                    </div>
+                    <p class="text-secondary">Brak strony sprzedazowej</p>
+                </div>
+            </div>
+
+            <!-- TAB: Produkty -->
+            <div id="tab-produkty" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Produkty i dostawy</h2>
+
+                <div id="products-list" class="space-y-4">
+                    <!-- Products rendered here -->
+                </div>
+
+                <div id="products-empty" class="text-center py-16">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-package text-2xl text-zinc-600"></i>
+                    </div>
+                    <p class="text-secondary">Brak produktow</p>
+                </div>
+            </div>
+
+            <!-- TAB: Raporty -->
+            <div id="tab-raporty" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Raporty i analizy</h2>
+
+                <div id="reports-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Reports rendered here -->
+                </div>
+
+                <div id="reports-empty" class="text-center py-16">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-chart-line-up text-2xl text-zinc-600"></i>
+                    </div>
+                    <p class="text-secondary">Brak raportow</p>
+                </div>
+            </div>
+
+            <!-- TAB: Komentarze -->
+            <div id="tab-komentarze" class="tab-panel hidden">
+                <h2 class="text-lg font-semibold text-white mb-6">Komentarze</h2>
+
+                <div class="max-w-2xl">
+                    <div id="comments-list" class="space-y-4 mb-6">
+                        <!-- Comments rendered here -->
+                    </div>
+
+                    <div id="comments-empty" class="text-center py-12 card mb-6">
+                        <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-800 flex items-center justify-center">
+                            <i class="ph ph-chat-circle-text text-xl text-zinc-600"></i>
+                        </div>
+                        <p class="text-secondary text-sm">Brak komentarzy</p>
+                        <p class="text-tertiary text-xs mt-1">Rozpocznij rozmowe ponizej</p>
+                    </div>
+
+                    <!-- Add Comment Form -->
+                    <div class="card p-4">
+                        <textarea id="new-comment" rows="3" class="form-input resize-none mb-3" placeholder="Napisz komentarz..."></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="postComment()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                <i class="ph ph-paper-plane-tilt"></i>
+                                Wyslij
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -822,13 +669,22 @@
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-white/[0.06] mt-12">
-            <div class="max-w-5xl mx-auto px-6 py-8 text-center">
-                <p class="text-[#555] text-sm">
-                    Powered by <span class="text-[#888]">tomekniedzwiecki.pl</span>
-                </p>
+        <footer class="border-t border-default mt-auto">
+            <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
+                <div class="flex items-center justify-between text-sm text-tertiary">
+                    <span>tomekniedzwiecki.pl</span>
+                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="hover:text-secondary transition-colors">Kontakt</a>
+                </div>
             </div>
         </footer>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <i id="toast-icon" class="ph ph-check-circle text-emerald-400"></i>
+            <span id="toast-message">Sukces</span>
+        </div>
     </div>
 
     <script>
@@ -839,188 +695,18 @@
         let workflow = null;
         let milestones = [];
         let tasks = [];
+        let documents = [];
+        let materials = [];
+        let brandingItems = [];
+        let products = [];
+        let reports = [];
+        let comments = [];
         let isAuthenticated = false;
-        let contractData = {};
-        let offer = null;
 
         function getToken() {
             const path = window.location.pathname;
             const match = path.match(/\/projekt\/([a-f0-9]+)/i);
             return match ? match[1] : null;
-        }
-
-        // PESEL validation with checksum
-        function validatePesel(pesel) {
-            if (!/^[0-9]{11}$/.test(pesel)) {
-                return { valid: false, error: 'PESEL musi skladac sie z 11 cyfr.' };
-            }
-
-            const weights = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
-            let sum = 0;
-            for (let i = 0; i < 10; i++) {
-                sum += parseInt(pesel[i]) * weights[i];
-            }
-            const checkDigit = (10 - (sum % 10)) % 10;
-
-            if (checkDigit !== parseInt(pesel[10])) {
-                return { valid: false, error: 'Nieprawidlowy numer PESEL (bledna suma kontrolna).' };
-            }
-
-            return { valid: true };
-        }
-
-        // Polish ID number validation (3 letters + 6 digits with checksum)
-        function validateIdNumber(idNumber) {
-            const id = idNumber.toUpperCase().replace(/\s/g, '');
-
-            if (!/^[A-Z]{3}[0-9]{6}$/.test(id)) {
-                return { valid: false, error: 'Nr dowodu musi skladac sie z 3 liter i 6 cyfr (np. ABC123456).' };
-            }
-
-            // Convert letters to numbers (A=10, B=11, ..., Z=35)
-            const letterToNumber = (char) => char.charCodeAt(0) - 55;
-
-            const weights = [7, 3, 1, 7, 3, 1, 7, 3, 1];
-            let sum = 0;
-
-            // First 3 characters are letters
-            for (let i = 0; i < 3; i++) {
-                sum += letterToNumber(id[i]) * weights[i];
-            }
-            // Next 6 characters are digits
-            for (let i = 3; i < 9; i++) {
-                sum += parseInt(id[i]) * weights[i];
-            }
-
-            // The check digit is the 4th character (index 3)
-            const checkDigit = parseInt(id[3]);
-            const calculatedCheck = sum % 10;
-
-            // For Polish ID, the check digit validation is different
-            // The sum of weighted values should be divisible by 10
-            // Actually, Polish ID uses the 4th position as check digit
-            // Let me recalculate properly:
-            // Series: 3 letters (positions 0-2)
-            // Check digit: position 3 (first digit)
-            // Number: positions 4-8
-
-            // Simpler approach: validate format and basic checksum
-            const seriesWeights = [7, 3, 1];
-            const numberWeights = [7, 3, 1, 7, 3, 1];
-
-            let checkSum = 0;
-            // Series (letters)
-            for (let i = 0; i < 3; i++) {
-                checkSum += letterToNumber(id[i]) * seriesWeights[i];
-            }
-            // Check digit (first digit of number part - position 3)
-            const expectedCheck = parseInt(id[3]);
-            // Remaining digits (positions 4-8)
-            for (let i = 0; i < 5; i++) {
-                checkSum += parseInt(id[4 + i]) * numberWeights[i + 1];
-            }
-
-            // The check digit should make (checkSum + checkDigit * 7) % 10 == 0
-            // Actually Polish ID validation: sum all weighted, check digit included, should give remainder
-            // Simplified: just validate format for now, full checksum is complex
-            // Most important is format validation
-
-            return { valid: true };
-        }
-
-        async function loadProject() {
-            const token = getToken();
-            if (!token) {
-                showScreen('not-found');
-                return;
-            }
-
-            // Load workflow by token
-            const { data: workflowData, error: workflowError } = await supabaseClient
-                .from('workflows')
-                .select('*')
-                .eq('unique_token', token)
-                .single();
-
-            if (workflowError || !workflowData) {
-                console.error('Error loading workflow:', workflowError);
-                showScreen('not-found');
-                return;
-            }
-
-            workflow = workflowData;
-
-            // Load offer to get contract template URL
-            if (workflow.offer_id) {
-                const { data: offerData } = await supabaseClient
-                    .from('offers')
-                    .select('contract_template_url')
-                    .eq('id', workflow.offer_id)
-                    .single();
-                offer = offerData;
-            }
-
-            // Check if password is required
-            // Check if password needs to be set (first time)
-            if (!workflow.client_password_hash) {
-                showScreen('set-password');
-                return;
-            }
-
-            // Check if password is required (already set)
-            if (workflow.client_password_hash && !isAuthenticated) {
-                showScreen('password');
-                return;
-            }
-
-            // Log access
-            await logAccess();
-
-            // If contract is already signed (has seller-signed URL), skip directly to project
-            if (workflow.contract_seller_signed_url || workflow.contract_status === 'signed') {
-                // Contract is fully signed - continue to load project
-            } else if (workflow.contract_status === 'pending_data') {
-                // Show data form first
-                prefillContractForm();
-                showScreen('contract-data');
-                return;
-            } else if (workflow.contract_status === 'data_filled' || workflow.contract_status === 'pending_signature') {
-                // If data filled but not signed, show signing instructions
-                showScreen('contract-signing');
-                return;
-            }
-
-            // Load milestones
-            const { data: milestonesData } = await supabaseClient
-                .from('workflow_milestones')
-                .select('*')
-                .eq('workflow_id', workflow.id)
-                .order('milestone_index');
-
-            milestones = milestonesData || [];
-
-            // Load tasks
-            const { data: tasksData } = await supabaseClient
-                .from('workflow_tasks')
-                .select('*')
-                .eq('workflow_id', workflow.id)
-                .order('task_index');
-
-            tasks = tasksData || [];
-
-            renderProject();
-            showScreen('project');
-        }
-
-        async function logAccess() {
-            try {
-                await supabaseClient.from('workflow_access_log').insert({
-                    workflow_id: workflow.id,
-                    user_agent: navigator.userAgent
-                });
-            } catch (err) {
-                console.log('Could not log access');
-            }
         }
 
         function showScreen(screenName) {
@@ -1030,94 +716,277 @@
             });
         }
 
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            icon.className = `ph ph-${type === 'success' ? 'check-circle text-emerald-400' : type === 'error' ? 'x-circle text-red-400' : 'info text-blue-400'}`;
+            msg.textContent = message;
+
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // PESEL validation
+        function validatePesel(pesel) {
+            if (!/^[0-9]{11}$/.test(pesel)) return { valid: false, error: 'PESEL musi miec 11 cyfr.' };
+            const weights = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
+            let sum = 0;
+            for (let i = 0; i < 10; i++) sum += parseInt(pesel[i]) * weights[i];
+            if ((10 - (sum % 10)) % 10 !== parseInt(pesel[10])) return { valid: false, error: 'Nieprawidlowy PESEL.' };
+            return { valid: true };
+        }
+
+        // ID validation
+        function validateIdNumber(idNumber) {
+            const id = idNumber.toUpperCase().replace(/\s/g, '');
+            if (!/^[A-Z]{3}[0-9]{6}$/.test(id)) return { valid: false, error: 'Format: 3 litery + 6 cyfr.' };
+            return { valid: true };
+        }
+
+        async function loadProject() {
+            const token = getToken();
+            if (!token) { showScreen('not-found'); return; }
+
+            const { data: workflowData, error } = await supabaseClient
+                .from('workflows')
+                .select('*')
+                .eq('unique_token', token)
+                .single();
+
+            if (error || !workflowData) { showScreen('not-found'); return; }
+            workflow = workflowData;
+
+            if (!workflow.client_password_hash) { showScreen('set-password'); return; }
+            if (!isAuthenticated) { showScreen('password'); return; }
+
+            await logAccess();
+
+            // Contract flow
+            if (workflow.contract_seller_signed_url || workflow.contract_status === 'signed') {
+                // Continue to project
+            } else if (workflow.contract_status === 'pending_data') {
+                prefillContractForm();
+                showScreen('contract-data');
+                return;
+            } else if (['data_filled', 'pending_signature'].includes(workflow.contract_status)) {
+                showScreen('contract-signing');
+                return;
+            }
+
+            await loadAllData();
+            renderProject();
+            showScreen('project');
+        }
+
+        async function loadAllData() {
+            const [milestonesRes, tasksRes, docsRes, matsRes, brandRes, prodsRes, repsRes, comsRes] = await Promise.all([
+                supabaseClient.from('workflow_milestones').select('*').eq('workflow_id', workflow.id).order('milestone_index'),
+                supabaseClient.from('workflow_tasks').select('*').eq('workflow_id', workflow.id).order('task_index'),
+                supabaseClient.from('workflow_documents').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
+                supabaseClient.from('workflow_materials').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
+                supabaseClient.from('workflow_branding').select('*').eq('workflow_id', workflow.id).order('sort_order'),
+                supabaseClient.from('workflow_products').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: false }),
+                supabaseClient.from('workflow_reports').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
+                supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true })
+            ]);
+
+            milestones = milestonesRes.data || [];
+            tasks = tasksRes.data || [];
+            documents = docsRes.data || [];
+            materials = matsRes.data || [];
+            brandingItems = brandRes.data || [];
+            products = prodsRes.data || [];
+            reports = repsRes.data || [];
+            comments = comsRes.data || [];
+        }
+
+        async function logAccess() {
+            try {
+                await supabaseClient.from('workflow_access_log').insert({ workflow_id: workflow.id, user_agent: navigator.userAgent });
+            } catch (e) {}
+        }
+
+        // Password functions
+        async function setPassword(e) {
+            e.preventDefault();
+            const password = document.getElementById('set-password-input').value;
+            const confirm = document.getElementById('set-password-confirm').value;
+
+            if (password !== confirm) { showToast('Hasla nie pasuja', 'error'); return; }
+            if (password.length < 6) { showToast('Haslo za krotkie', 'error'); return; }
+
+            const hash = bcrypt.hashSync(password, 10);
+            const { error } = await supabaseClient.from('workflows').update({ client_password_hash: hash }).eq('id', workflow.id);
+
+            if (error) { showToast('Blad zapisu', 'error'); return; }
+
+            workflow.client_password_hash = hash;
+            isAuthenticated = true;
+            loadProject();
+        }
+        window.setPassword = setPassword;
+
+        async function checkPassword(e) {
+            e.preventDefault();
+            const password = document.getElementById('password-input').value;
+
+            if (bcrypt.compareSync(password, workflow.client_password_hash)) {
+                isAuthenticated = true;
+                loadProject();
+            } else {
+                showToast('Nieprawidlowe haslo', 'error');
+            }
+        }
+        window.checkPassword = checkPassword;
+
+        // Contract functions
+        function prefillContractForm() {
+            document.getElementById('contract-name').value = workflow.customer_name || '';
+            document.getElementById('contract-company').value = workflow.customer_company || '';
+            document.getElementById('contract-email').value = workflow.customer_email || '';
+            document.getElementById('contract-phone').value = workflow.customer_phone || '';
+            document.getElementById('contract-pesel').value = workflow.client_pesel || '';
+            document.getElementById('contract-id').value = workflow.client_id_number || '';
+            document.getElementById('contract-nip').value = workflow.client_nip || '';
+            document.getElementById('contract-street').value = workflow.client_street || '';
+            document.getElementById('contract-postal').value = workflow.client_postal_code || '';
+            document.getElementById('contract-city').value = workflow.client_city || '';
+            document.getElementById('contract-country').value = workflow.client_country || 'Polska';
+        }
+
+        async function submitContractData(e) {
+            e.preventDefault();
+
+            const pesel = document.getElementById('contract-pesel').value;
+            const idNumber = document.getElementById('contract-id').value;
+
+            const peselResult = validatePesel(pesel);
+            if (!peselResult.valid) {
+                document.getElementById('pesel-error').textContent = peselResult.error;
+                document.getElementById('pesel-error').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('pesel-error').classList.add('hidden');
+
+            const idResult = validateIdNumber(idNumber);
+            if (!idResult.valid) {
+                document.getElementById('id-error').textContent = idResult.error;
+                document.getElementById('id-error').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('id-error').classList.add('hidden');
+
+            const updateData = {
+                customer_name: document.getElementById('contract-name').value,
+                customer_company: document.getElementById('contract-company').value,
+                customer_email: document.getElementById('contract-email').value,
+                customer_phone: document.getElementById('contract-phone').value,
+                client_pesel: pesel,
+                client_id_number: idNumber.toUpperCase(),
+                client_nip: document.getElementById('contract-nip').value,
+                client_street: document.getElementById('contract-street').value,
+                client_postal_code: document.getElementById('contract-postal').value,
+                client_city: document.getElementById('contract-city').value,
+                client_country: document.getElementById('contract-country').value,
+                contract_status: 'data_filled',
+                contract_data_filled_at: new Date().toISOString()
+            };
+
+            const { error } = await supabaseClient.from('workflows').update(updateData).eq('id', workflow.id);
+
+            if (error) { showToast('Blad zapisu', 'error'); return; }
+
+            Object.assign(workflow, updateData);
+            showScreen('contract-signing');
+        }
+        window.submitContractData = submitContractData;
+
+        function goToProject() {
+            loadProject();
+        }
+        window.goToProject = goToProject;
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            // Load tab-specific data
+            switch(tabName) {
+                case 'dokumenty': renderDocuments(); break;
+                case 'materialy': renderMaterials(); break;
+                case 'branding': renderBranding(); break;
+                case 'strona': renderSalesPage(); break;
+                case 'produkty': renderProducts(); break;
+                case 'raporty': renderReports(); break;
+                case 'komentarze': renderComments(); break;
+            }
+        }
+        window.switchTab = switchTab;
+
+        // Render functions
         function formatDate(dateStr) {
             if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+            return new Date(dateStr).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
-        function formatDeadline(deadline) {
-            if (!deadline) return '-';
-            const date = new Date(deadline);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const deadlineDate = new Date(deadline);
-            deadlineDate.setHours(0, 0, 0, 0);
-
-            const diffDays = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
-
-            if (diffDays < 0) {
-                return `<span class="text-red-400">${Math.abs(diffDays)} dni temu</span>`;
-            } else if (diffDays === 0) {
-                return `<span class="text-amber-400">dzisiaj</span>`;
-            } else if (diffDays <= 3) {
-                return `<span class="text-amber-400">za ${diffDays} dni</span>`;
-            }
-            return formatDate(deadline);
-        }
-
-        function getStatusLabel(status) {
-            const labels = {
-                active: { text: 'W realizacji', color: 'bg-emerald-400' },
-                completed: { text: 'Ukonczony', color: 'bg-blue-400' },
-                paused: { text: 'Wstrzymany', color: 'bg-amber-400' },
-                cancelled: { text: 'Anulowany', color: 'bg-red-400' }
-            };
-            return labels[status] || labels.active;
-        }
-
-        function getResponsibleBadge(responsible) {
-            const labels = { team: 'TN', client: 'Ty', shared: 'Wspolne' };
-            return `<span class="responsible-badge responsible-${responsible}">${labels[responsible] || responsible}</span>`;
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         }
 
         function renderProject() {
-            const customerDisplay = workflow.customer_name || workflow.customer_company || workflow.customer_email.split('@')[0];
-
             // Header
-            document.getElementById('header-customer').textContent = customerDisplay;
-            document.title = `${customerDisplay} - tomekniedzwiecki.pl`;
-
-            // Overview
-            document.getElementById('offer-name').textContent = workflow.offer_name;
+            document.getElementById('project-title').textContent = workflow.offer_name || 'Projekt';
+            document.getElementById('offer-name').textContent = workflow.offer_name || '-';
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);
 
             // Status
-            const statusInfo = getStatusLabel(workflow.status);
-            document.getElementById('status-label').innerHTML = `
-                <span class="w-2 h-2 rounded-full ${statusInfo.color}"></span>
-                ${statusInfo.text}
-            `;
+            const statusBadge = document.getElementById('project-status-badge');
+            const statusConfig = {
+                active: { class: 'badge-emerald', text: 'Aktywny' },
+                completed: { class: 'badge-blue', text: 'Ukonczony' },
+                paused: { class: 'badge-amber', text: 'Wstrzymany' },
+                cancelled: { class: 'badge-red', text: 'Anulowany' }
+            };
+            const status = statusConfig[workflow.status] || statusConfig.active;
+            statusBadge.className = `badge ${status.class}`;
+            statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-current"></span>${status.text}`;
 
-            // Calculate progress
+            // Progress
             const totalTasks = tasks.length;
             const completedTasks = tasks.filter(t => t.completed).length;
             const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            const completedMilestones = milestones.filter(m => m.status === 'completed').length;
 
-            document.getElementById('progress-percent').textContent = progressPercent;
-            document.getElementById('progress-bar').style.width = progressPercent + '%';
+            document.getElementById('progress-percent').textContent = progressPercent + '%';
             document.getElementById('completed-tasks').textContent = completedTasks;
             document.getElementById('total-tasks').textContent = totalTasks;
-            document.getElementById('completed-milestones').textContent = completedMilestones;
-            document.getElementById('total-milestones').textContent = milestones.length;
 
-            // Current deadline
+            // Progress ring
+            const ring = document.getElementById('progress-ring-fill');
+            const circumference = 264;
+            ring.style.strokeDashoffset = circumference - (progressPercent / 100 * circumference);
+
+            // Current milestone
             const currentMilestone = milestones.find(m => m.status === 'in_progress');
-            if (currentMilestone) {
-                document.getElementById('current-deadline').innerHTML = formatDeadline(currentMilestone.deadline);
-            } else {
-                document.getElementById('deadline-info').classList.add('hidden');
-            }
+            document.getElementById('current-milestone').textContent = currentMilestone ? currentMilestone.title : 'Brak';
+            document.getElementById('current-deadline').textContent = currentMilestone ? formatDate(currentMilestone.deadline) : '-';
 
-            // Render milestones
-            renderMilestones();
-
-            // Show signed contract section if available
+            // Signed contract
             if (workflow.contract_seller_signed_url) {
                 document.getElementById('signed-contract-section').classList.remove('hidden');
                 document.getElementById('signed-contract-download').href = workflow.contract_seller_signed_url;
             }
+
+            // Milestones
+            renderMilestones();
         }
 
         function renderMilestones() {
@@ -1132,431 +1001,385 @@
                 const isActive = milestone.status === 'in_progress';
                 const isCompleted = milestone.status === 'completed';
 
-                const deliverables = milestone.deliverables || [];
-
                 return `
-                <div class="milestone-card glass-card rounded-xl overflow-hidden ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
-                    <!-- Header -->
-                    <div class="p-4 flex items-center justify-between cursor-pointer" onclick="toggleMilestone('${milestone.id}')">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium ${
-                                isCompleted ? 'bg-emerald-500/20 text-emerald-400' :
-                                isActive ? 'bg-white text-black' :
-                                'bg-[#1a1a1a] text-[#666] border border-[#333]'
-                            }">
-                                ${isCompleted ? '<i class="ph-bold ph-check text-base"></i>' : index + 1}
-                            </div>
-                            <div>
-                                <h3 class="font-medium ${isCompleted || isActive ? 'text-white' : 'text-[#888]'}">${milestone.title}</h3>
-                                <div class="flex items-center gap-2 text-xs text-[#666]">
-                                    <span>${formatDate(milestone.start_date)} - ${formatDate(milestone.deadline)}</span>
-                                    ${isActive ? `<span class="text-white bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-medium">AKTUALNY</span>` : ''}
+                    <div class="card milestone-card ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} overflow-hidden">
+                        <div class="p-4 cursor-pointer" onclick="toggleMilestone('${milestone.id}')">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ${
+                                        isCompleted ? 'bg-emerald-500/10 text-emerald-400' :
+                                        isActive ? 'bg-white/10 text-white' :
+                                        'bg-zinc-800 text-zinc-500'
+                                    }">
+                                        ${isCompleted ? '<i class="ph ph-check"></i>' : index + 1}
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium ${isCompleted || isActive ? 'text-white' : 'text-zinc-400'}">${milestone.title}</h3>
+                                        <p class="text-tertiary text-xs">${formatDate(milestone.start_date)} - ${formatDate(milestone.deadline)}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="text-right hidden sm:block">
+                                        <p class="text-secondary text-xs">${completedCount}/${totalCount}</p>
+                                        <div class="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                                            <div class="h-full ${isCompleted ? 'bg-emerald-500' : 'bg-white'}" style="width: ${progressPercent}%"></div>
+                                        </div>
+                                    </div>
+                                    <i class="ph ph-caret-down text-zinc-500 transition-transform" id="chevron-${milestone.id}"></i>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right hidden sm:block">
-                                <div class="text-xs ${isCompleted ? 'text-emerald-400' : 'text-[#888]'}">${progressPercent}%</div>
-                                <div class="w-20 h-1 bg-[#1a1a1a] rounded-full overflow-hidden mt-1">
-                                    <div class="h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-white'}" style="width: ${progressPercent}%"></div>
-                                </div>
-                            </div>
-                            <i class="ph ph-caret-down text-[#666] transition-transform" id="chevron-${milestone.id}"></i>
-                        </div>
-                    </div>
 
-                    <!-- Content -->
-                    <div class="milestone-content" id="content-${milestone.id}">
-                        <div class="border-t border-white/[0.06]">
-                            ${milestone.description ? `
-                                <div class="px-4 py-3 border-b border-white/[0.06] text-[#888] text-sm">${milestone.description}</div>
-                            ` : ''}
-
-                            <!-- Tasks -->
-                            <div class="divide-y divide-white/[0.06]">
+                        <div id="content-${milestone.id}" class="hidden border-t border-default">
+                            <div class="p-4 space-y-2">
                                 ${milestoneTasks.map(task => `
-                                    <div class="px-4 py-3 flex items-start gap-3">
-                                        <div class="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                                            task.completed
-                                                ? 'bg-emerald-500/20 text-emerald-400'
-                                                : 'border border-[#333] text-transparent'
-                                        }">
-                                            ${task.completed ? '<i class="ph-bold ph-check text-xs"></i>' : ''}
+                                    <div class="flex items-center gap-3 py-2">
+                                        <div class="w-5 h-5 rounded flex items-center justify-center ${task.completed ? 'bg-emerald-500' : 'border border-zinc-700'}">
+                                            ${task.completed ? '<i class="ph ph-check text-white text-xs"></i>' : ''}
                                         </div>
-                                        <div class="flex-1 min-w-0">
-                                            <span class="${task.completed ? 'text-[#666] line-through' : 'text-white'}">${task.title}</span>
-                                            ${task.notes ? `<p class="text-[#666] text-xs mt-1">${task.notes}</p>` : ''}
-                                            ${task.links && task.links.length > 0 ? `
-                                                <div class="flex flex-wrap gap-2 mt-2">
-                                                    ${task.links.map(link => `
-                                                        <a href="${link.url}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded">
-                                                            <i class="ph ph-link"></i>
-                                                            ${link.title || 'Link'}
-                                                        </a>
-                                                    `).join('')}
-                                                </div>
-                                            ` : ''}
-                                        </div>
-                                        ${getResponsibleBadge(task.responsible)}
+                                        <span class="${task.completed ? 'text-zinc-500 line-through' : 'text-white'}">${task.title}</span>
+                                        <span class="badge text-[10px] px-2 py-1 responsible-${task.responsible || 'team'}">${
+                                            task.responsible === 'client' ? 'Ty' : task.responsible === 'shared' ? 'Wspolnie' : 'Zespol'
+                                        }</span>
                                     </div>
                                 `).join('')}
+                                ${milestoneTasks.length === 0 ? '<p class="text-tertiary text-sm py-2">Brak zadan</p>' : ''}
                             </div>
-
-                            <!-- Deliverables -->
-                            ${deliverables.length > 0 ? `
-                                <div class="px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
-                                    <div class="text-xs text-[#666] uppercase tracking-wider mb-2">Rezultaty etapu</div>
-                                    <ul class="space-y-1.5">
-                                        ${deliverables.map(d => `
-                                            <li class="flex items-start gap-2 text-sm text-[#888]">
-                                                <i class="ph ph-check-circle text-emerald-400 mt-0.5 flex-shrink-0"></i>
-                                                <span>${d}</span>
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
                         </div>
                     </div>
+                `;
+            }).join('');
+        }
+
+        function toggleMilestone(id) {
+            const content = document.getElementById(`content-${id}`);
+            const chevron = document.getElementById(`chevron-${id}`);
+            content.classList.toggle('hidden');
+            chevron.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+        window.toggleMilestone = toggleMilestone;
+
+        function renderDocuments() {
+            const container = document.getElementById('documents-list');
+            const empty = document.getElementById('documents-empty');
+
+            if (documents.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = documents.map(d => `
+                <div class="card card-hover p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                            <i class="ph ph-file-pdf text-red-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-white font-medium">${d.title}</p>
+                            <p class="text-tertiary text-xs">${d.category || 'Dokument'} • ${formatDate(d.uploaded_at)}</p>
+                        </div>
+                    </div>
+                    <a href="${d.file_url}" target="_blank" class="text-white hover:text-zinc-300 p-2">
+                        <i class="ph ph-download-simple text-lg"></i>
+                    </a>
                 </div>
-            `}).join('');
-
-            // Expand active milestone by default
-            const activeMilestone = milestones.find(m => m.status === 'in_progress');
-            if (activeMilestone) {
-                toggleMilestone(activeMilestone.id, true);
-            }
+            `).join('');
         }
 
-        function toggleMilestone(milestoneId, forceOpen = false) {
-            const content = document.getElementById(`content-${milestoneId}`);
-            const chevron = document.getElementById(`chevron-${milestoneId}`);
+        function renderMaterials() {
+            const container = document.getElementById('materials-grid');
+            const empty = document.getElementById('materials-empty');
 
-            if (forceOpen || !content.classList.contains('expanded')) {
-                content.classList.add('expanded');
-                chevron.style.transform = 'rotate(180deg)';
+            if (materials.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            const fileIcons = { pdf: 'file-pdf', doc: 'file-doc', docx: 'file-doc', jpg: 'file-image', jpeg: 'file-image', png: 'file-image', gif: 'file-image', svg: 'file-image', mp4: 'file-video', zip: 'file-zip' };
+
+            container.innerHTML = materials.map(m => `
+                <div class="card card-hover p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-${fileIcons[m.file_type?.toLowerCase()] || 'file'} text-cyan-400"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white font-medium truncate">${m.title}</p>
+                            ${m.description ? `<p class="text-tertiary text-xs line-clamp-2 mt-1">${m.description}</p>` : ''}
+                            <p class="text-tertiary text-xs mt-2">${m.category || 'Plik'}</p>
+                        </div>
+                    </div>
+                    <a href="${m.file_url}" target="_blank" class="mt-3 block text-center bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm transition-colors">
+                        Pobierz
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function renderBranding() {
+            const logos = brandingItems.filter(b => b.type === 'logo');
+            const colors = brandingItems.filter(b => b.type === 'color');
+            const fonts = brandingItems.filter(b => b.type === 'font');
+            const guidelines = brandingItems.filter(b => b.type === 'guideline');
+
+            // Logos
+            const logosContainer = document.getElementById('branding-logos');
+            const logosEmpty = document.getElementById('branding-logos-empty');
+            if (logos.length > 0) {
+                logosEmpty.classList.add('hidden');
+                logosContainer.innerHTML = logos.map(l => `
+                    <div class="card p-4 aspect-square flex items-center justify-center">
+                        <img src="${l.file_url}" alt="${l.title}" class="max-w-full max-h-full object-contain">
+                    </div>
+                `).join('');
             } else {
-                content.classList.remove('expanded');
-                chevron.style.transform = 'rotate(0deg)';
+                logosEmpty.classList.remove('hidden');
+                logosContainer.innerHTML = '';
+            }
+
+            // Colors
+            const colorsContainer = document.getElementById('branding-colors');
+            const colorsEmpty = document.getElementById('branding-colors-empty');
+            if (colors.length > 0) {
+                colorsEmpty.classList.add('hidden');
+                colorsContainer.innerHTML = colors.map(c => `
+                    <div class="flex items-center gap-3 card px-4 py-3">
+                        <div class="w-10 h-10 rounded-lg" style="background: ${c.value}"></div>
+                        <div>
+                            <p class="text-white text-sm">${c.title}</p>
+                            <p class="text-tertiary text-xs font-mono">${c.value}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                colorsEmpty.classList.remove('hidden');
+                colorsContainer.innerHTML = '';
+            }
+
+            // Fonts
+            const fontsContainer = document.getElementById('branding-fonts');
+            const fontsEmpty = document.getElementById('branding-fonts-empty');
+            if (fonts.length > 0) {
+                fontsEmpty.classList.add('hidden');
+                fontsContainer.innerHTML = fonts.map(f => `
+                    <div class="card px-4 py-3 flex items-center justify-between">
+                        <div>
+                            <p class="text-white">${f.title}</p>
+                            <p class="text-tertiary text-sm">${f.value || ''}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                fontsEmpty.classList.remove('hidden');
+                fontsContainer.innerHTML = '';
+            }
+
+            // Guidelines
+            const guidelinesContainer = document.getElementById('branding-guidelines');
+            const guidelinesEmpty = document.getElementById('branding-guidelines-empty');
+            if (guidelines.length > 0) {
+                guidelinesEmpty.classList.add('hidden');
+                guidelinesContainer.innerHTML = guidelines.map(g => `
+                    <div class="card card-hover px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="ph ph-file-pdf text-red-400"></i>
+                            <p class="text-white">${g.title}</p>
+                        </div>
+                        <a href="${g.file_url}" target="_blank" class="text-white hover:text-zinc-300">
+                            <i class="ph ph-download-simple"></i>
+                        </a>
+                    </div>
+                `).join('');
+            } else {
+                guidelinesEmpty.classList.remove('hidden');
+                guidelinesContainer.innerHTML = '';
             }
         }
 
-        // Contract form functions
-        function prefillContractForm() {
-            if (!workflow) return;
+        function renderSalesPage() {
+            const content = document.getElementById('sales-page-content');
+            const empty = document.getElementById('sales-page-empty');
 
-            // Pre-fill known data from workflow
-            document.getElementById('cd-name').value = workflow.customer_name || '';
-            document.getElementById('cd-company').value = workflow.customer_company || '';
-            document.getElementById('cd-nip').value = workflow.client_nip || '';
-            document.getElementById('cd-email').value = workflow.customer_email || '';
-            document.getElementById('cd-phone').value = workflow.customer_phone || '';
-            document.getElementById('cd-street').value = workflow.client_street || '';
-            document.getElementById('cd-postal').value = workflow.client_postal_code || '';
-            document.getElementById('cd-city').value = workflow.client_city || '';
-            document.getElementById('cd-country').value = workflow.client_country || 'Polska';
-            document.getElementById('cd-pesel').value = workflow.client_pesel || '';
-            document.getElementById('cd-id-number').value = workflow.client_id_number || '';
+            if (workflow.sales_page_url) {
+                empty.classList.add('hidden');
+                content.classList.remove('hidden');
+                document.getElementById('sales-page-iframe').src = workflow.sales_page_url;
+                document.getElementById('sales-page-link').href = workflow.sales_page_url;
+                document.getElementById('sales-page-url-display').textContent = workflow.sales_page_url;
+
+                const statusBadge = document.getElementById('sales-page-status');
+                if (workflow.sales_page_status === 'live') {
+                    statusBadge.className = 'badge badge-emerald';
+                    statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-current"></span>Live';
+                } else {
+                    statusBadge.className = 'badge badge-amber';
+                    statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-current"></span>Draft';
+                }
+            } else {
+                content.classList.add('hidden');
+                empty.classList.remove('hidden');
+            }
         }
 
-        async function submitContractData(event) {
-            event.preventDefault();
+        function renderProducts() {
+            const container = document.getElementById('products-list');
+            const empty = document.getElementById('products-empty');
 
-            const form = document.getElementById('contract-form');
-            const errorDiv = document.getElementById('contract-form-error');
-            const submitBtn = document.getElementById('contract-submit-btn');
-
-            // Validate form
-            if (!form.checkValidity()) {
-                errorDiv.classList.remove('hidden');
+            if (products.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
                 return;
             }
 
-            // Validate PESEL
-            const pesel = document.getElementById('cd-pesel').value.trim();
-            const peselValidation = validatePesel(pesel);
-            if (!peselValidation.valid) {
-                errorDiv.textContent = peselValidation.error;
-                errorDiv.classList.remove('hidden');
-                document.getElementById('cd-pesel').focus();
-                return;
-            }
-
-            // Validate ID number
-            const idNumber = document.getElementById('cd-id-number').value.trim();
-            const idValidation = validateIdNumber(idNumber);
-            if (!idValidation.valid) {
-                errorDiv.textContent = idValidation.error;
-                errorDiv.classList.remove('hidden');
-                document.getElementById('cd-id-number').focus();
-                return;
-            }
-
-            errorDiv.classList.add('hidden');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>';
-
-            // Collect form data
-            contractData = {
-                customer_name: document.getElementById('cd-name').value.trim(),
-                customer_company: document.getElementById('cd-company').value.trim() || null,
-                client_nip: document.getElementById('cd-nip').value.trim() || null,
-                client_street: document.getElementById('cd-street').value.trim(),
-                client_postal_code: document.getElementById('cd-postal').value.trim(),
-                client_city: document.getElementById('cd-city').value.trim(),
-                client_country: document.getElementById('cd-country').value.trim(),
-                client_pesel: pesel,
-                client_id_number: document.getElementById('cd-id-number').value.trim().toUpperCase(),
-                customer_email: document.getElementById('cd-email').value.trim(),
-                customer_phone: document.getElementById('cd-phone').value.trim(),
-                contract_status: 'data_filled',
-                contract_data_filled_at: new Date().toISOString()
+            empty.classList.add('hidden');
+            const statusConfig = {
+                pending: { class: 'badge-amber', text: 'Oczekuje' },
+                in_production: { class: 'badge-blue', text: 'W produkcji' },
+                shipped: { class: 'badge-violet', text: 'Wyslany' },
+                delivered: { class: 'badge-emerald', text: 'Dostarczony' }
             };
 
-            // Save to database
-            const { error } = await supabaseClient
-                .from('workflows')
-                .update(contractData)
-                .eq('id', workflow.id);
+            container.innerHTML = products.map(p => {
+                const status = statusConfig[p.status] || statusConfig.pending;
+                return `
+                    <div class="card p-4">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                                    <i class="ph ph-package text-orange-400"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-medium">${p.name}</p>
+                                    ${p.description ? `<p class="text-tertiary text-xs">${p.description}</p>` : ''}
+                                </div>
+                            </div>
+                            <span class="badge ${status.class}">${status.text}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <p class="text-tertiary text-xs">Ilosc</p>
+                                <p class="text-white">${p.quantity || 1}</p>
+                            </div>
+                            <div>
+                                <p class="text-tertiary text-xs">Dostawa</p>
+                                <p class="text-white">${p.estimated_delivery ? formatDate(p.estimated_delivery) : '-'}</p>
+                            </div>
+                            <div>
+                                <p class="text-tertiary text-xs">Nr sledzenia</p>
+                                <p class="text-white">${p.tracking_number || '-'}</p>
+                            </div>
+                        </div>
+                        ${p.tracking_url ? `
+                            <a href="${p.tracking_url}" target="_blank" class="mt-4 block text-center bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm transition-colors">
+                                <i class="ph ph-map-pin-line mr-1"></i>
+                                Sledz przesylke
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderReports() {
+            const container = document.getElementById('reports-list');
+            const empty = document.getElementById('reports-empty');
+
+            if (reports.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = reports.map(r => `
+                <div class="card p-4">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                            <i class="ph ph-chart-line-up text-green-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">${r.title}</p>
+                            <p class="text-tertiary text-xs">${r.type || 'Raport'}</p>
+                        </div>
+                    </div>
+                    ${r.period_start && r.period_end ? `
+                        <p class="text-tertiary text-xs mb-3">Okres: ${formatDate(r.period_start)} - ${formatDate(r.period_end)}</p>
+                    ` : ''}
+                    ${r.file_url ? `
+                        <a href="${r.file_url}" target="_blank" class="block text-center bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm transition-colors">
+                            <i class="ph ph-file-pdf mr-1"></i>
+                            Pobierz PDF
+                        </a>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderComments() {
+            const container = document.getElementById('comments-list');
+            const empty = document.getElementById('comments-empty');
+
+            if (comments.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = comments.map(c => {
+                const isTeam = c.author_type === 'team';
+                return `
+                    <div class="flex gap-3 ${isTeam ? '' : 'flex-row-reverse'}">
+                        <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${isTeam ? 'bg-violet-500/10' : 'bg-cyan-500/10'}">
+                            <i class="ph ph-user text-sm ${isTeam ? 'text-violet-400' : 'text-cyan-400'}"></i>
+                        </div>
+                        <div class="${isTeam ? '' : 'text-right'} flex-1">
+                            <div class="inline-block ${isTeam ? 'comment-team' : 'comment-client'} rounded-xl px-4 py-3 max-w-[85%] ${isTeam ? '' : 'text-left'}">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-white text-sm font-medium">${c.author_name}</span>
+                                    <span class="text-tertiary text-xs">${formatDateTime(c.created_at)}</span>
+                                </div>
+                                <p class="text-zinc-300 text-sm whitespace-pre-wrap">${c.content}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll to bottom
+            setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+        }
+
+        async function postComment() {
+            const content = document.getElementById('new-comment').value.trim();
+            if (!content) return;
+
+            const { data, error } = await supabaseClient
+                .from('workflow_comments')
+                .insert({
+                    workflow_id: workflow.id,
+                    author_type: 'client',
+                    author_name: workflow.customer_name || 'Klient',
+                    content: content
+                })
+                .select()
+                .single();
 
             if (error) {
-                console.error('Error saving contract data:', error);
-                errorDiv.textContent = 'Wystapil blad podczas zapisywania danych. Sprobuj ponownie.';
-                errorDiv.classList.remove('hidden');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>Zapisz i kontynuuj</span><i class="ph ph-arrow-right"></i>';
+                showToast('Blad wysylania', 'error');
                 return;
             }
 
-            // Update local workflow
-            Object.assign(workflow, contractData);
-
-            // Show signing screen
-            showScreen('contract-signing');
+            comments.push(data);
+            renderComments();
+            document.getElementById('new-comment').value = '';
+            showToast('Komentarz wyslany');
         }
-
-        async function downloadContract() {
-            // Priority: 1) Seller's signed contract, 2) Generated contract file, 3) Generate from template
-            if (workflow.contract_seller_signed_url) {
-                window.open(workflow.contract_seller_signed_url, '_blank');
-                return;
-            }
-            if (workflow.contract_file_url) {
-                window.open(workflow.contract_file_url, '_blank');
-                return;
-            }
-
-            // Get contract template URL from offer
-            const templateUrl = offer?.contract_template_url;
-            if (!templateUrl) {
-                alert('Szablon umowy nie zostal jeszcze skonfigurowany dla tej oferty. Skontaktuj sie z nami.');
-                return;
-            }
-
-            try {
-                // Fetch the contract template HTML
-                const response = await fetch(templateUrl);
-                if (!response.ok) {
-                    throw new Error('Nie mozna pobrac szablonu umowy');
-                }
-                let contractHtml = await response.text();
-
-                // Build full address
-                const fullAddress = [
-                    workflow.client_street,
-                    [workflow.client_postal_code, workflow.client_city].filter(Boolean).join(' '),
-                    workflow.client_country
-                ].filter(Boolean).join(', ');
-
-                // Build firma line (add after name if company exists)
-                const firmaLinia = workflow.customer_company ? ` / ${workflow.customer_company}` : '';
-
-                // Generate contract number from workflow
-                const nrUmowy = workflow.order_number || `TN-${new Date().getFullYear()}-${workflow.id?.substring(0, 6).toUpperCase() || '000000'}`;
-
-                // Replace template variables with actual data
-                const replacements = {
-                    '{{imie_nazwisko}}': workflow.customer_name || '',
-                    '{{firma_linia}}': firmaLinia,
-                    '{{nip}}': workflow.client_nip || '-',
-                    '{{pesel}}': workflow.client_pesel || '',
-                    '{{dowod}}': workflow.client_id_number || '',
-                    '{{adres}}': fullAddress,
-                    '{{email}}': workflow.customer_email || '',
-                    '{{telefon}}': workflow.customer_phone || '',
-                    '{{nr_umowy}}': nrUmowy,
-                    '{{data_zawarcia}}': new Date().toLocaleDateString('pl-PL'),
-                    '{{nazwa_oferty}}': workflow.offer_name || '',
-                    '{{kwota}}': workflow.amount ? workflow.amount.toLocaleString('pl-PL') + ' PLN' : '',
-                    '{{data_rozpoczecia}}': formatDate(workflow.started_at)
-                };
-
-                for (const [placeholder, value] of Object.entries(replacements)) {
-                    contractHtml = contractHtml.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
-                }
-
-                // Open contract in new window - user can use built-in "Pobierz PDF" button
-                const newWindow = window.open('', '_blank');
-                if (newWindow) {
-                    newWindow.document.write(contractHtml);
-                    newWindow.document.close();
-                } else {
-                    alert('Nie mozna otworzyc nowego okna. Odblokuj wyskakujace okna w przegladarce.');
-                }
-
-            } catch (err) {
-                console.error('Error generating contract:', err);
-                alert('Wystapil blad podczas generowania umowy. Sprobuj ponownie lub skontaktuj sie z nami.');
-            }
-        }
-
-        function selectSigningMethod(method) {
-            // Visual feedback
-            document.querySelectorAll('.signing-option').forEach(el => {
-                el.style.borderColor = '#333';
-                el.style.background = 'transparent';
-            });
-            event.currentTarget.style.borderColor = '#888';
-            event.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-
-            // The actual signing happens outside the system
-            // We just provide instructions here
-        }
-
-        async function goBackToEditData() {
-            // Reset contract status to pending_data to allow editing
-            const { error } = await supabaseClient
-                .from('workflows')
-                .update({ contract_status: 'pending_data' })
-                .eq('id', workflow.id);
-
-            if (error) {
-                console.error('Error resetting contract status:', error);
-                return;
-            }
-
-            workflow.contract_status = 'pending_data';
-            prefillContractForm();
-            showScreen('contract-data');
-        }
-
-        async function skipToProject() {
-            // Allow viewing project even without signed contract
-            // Load milestones and tasks
-            const { data: milestonesData } = await supabaseClient
-                .from('workflow_milestones')
-                .select('*')
-                .eq('workflow_id', workflow.id)
-                .order('milestone_index');
-
-            milestones = milestonesData || [];
-
-            const { data: tasksData } = await supabaseClient
-                .from('workflow_tasks')
-                .select('*')
-                .eq('workflow_id', workflow.id)
-                .order('task_index');
-
-            tasks = tasksData || [];
-
-            renderProject();
-            showScreen('project');
-        }
-
-        // Password verification
-        // Set password (first time) listeners
-        document.getElementById('set-password-btn').addEventListener('click', setPassword);
-        document.getElementById('new-password-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') document.getElementById('confirm-password-input').focus();
-        });
-        document.getElementById('confirm-password-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') setPassword();
-        });
-
-        async function setPassword() {
-            const password = document.getElementById('new-password-input').value;
-            const confirmPassword = document.getElementById('confirm-password-input').value;
-            const errorDiv = document.getElementById('set-password-error');
-            const btn = document.getElementById('set-password-btn');
-
-            // Validation
-            if (!password || password.length < 6) {
-                errorDiv.textContent = 'Haslo musi miec minimum 6 znakow.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                errorDiv.textContent = 'Hasla nie sa takie same.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            errorDiv.classList.add('hidden');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>';
-
-            try {
-                // Hash the password
-                const salt = dcodeIO.bcrypt.genSaltSync(10);
-                const hash = dcodeIO.bcrypt.hashSync(password, salt);
-
-                // Save to database
-                const { error } = await supabaseClient
-                    .from('workflows')
-                    .update({ client_password_hash: hash })
-                    .eq('id', workflow.id);
-
-                if (error) {
-                    throw error;
-                }
-
-                // Update local workflow and mark as authenticated
-                workflow.client_password_hash = hash;
-                isAuthenticated = true;
-
-                // Continue to the next step
-                await loadProject();
-
-            } catch (err) {
-                console.error('Error setting password:', err);
-                errorDiv.textContent = 'Wystapil blad. Sprobuj ponownie.';
-                errorDiv.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerHTML = '<span>Ustaw haslo i kontynuuj</span><i class="ph ph-arrow-right"></i>';
-            }
-        }
-
-        // Login password listeners
-        document.getElementById('password-btn').addEventListener('click', verifyPassword);
-        document.getElementById('password-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') verifyPassword();
-        });
-
-        async function verifyPassword() {
-            const password = document.getElementById('password-input').value;
-            if (!password) return;
-
-            const isValid = dcodeIO.bcrypt.compareSync(password, workflow.client_password_hash);
-
-            if (isValid) {
-                isAuthenticated = true;
-                document.getElementById('password-error').classList.add('hidden');
-                await loadProject();
-            } else {
-                document.getElementById('password-error').classList.remove('hidden');
-                document.getElementById('password-input').value = '';
-                document.getElementById('password-input').focus();
-            }
-        }
-
-        // Make functions global
-        window.toggleMilestone = toggleMilestone;
-        window.submitContractData = submitContractData;
-        window.downloadContract = downloadContract;
-        window.selectSigningMethod = selectSigningMethod;
-        window.skipToProject = skipToProject;
-        window.goBackToEditData = goBackToEditData;
+        window.postComment = postComment;
 
         // Initialize
         loadProject();
