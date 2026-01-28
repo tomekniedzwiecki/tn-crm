@@ -976,15 +976,15 @@
             // Log access
             await logAccess();
 
-            // If contract is already signed, skip directly to project
-            if (workflow.contract_status === 'signed') {
-                // Contract is signed - continue to load project
+            // If contract is already signed (has seller-signed URL), skip directly to project
+            if (workflow.contract_seller_signed_url || workflow.contract_status === 'signed') {
+                // Contract is fully signed - continue to load project
             } else if (workflow.contract_status === 'pending_data') {
-                // Check contract status - if pending_data, show data form first
+                // Show data form first
                 prefillContractForm();
                 showScreen('contract-data');
                 return;
-            } else if (workflow.contract_status === 'data_filled' || workflow.contract_status === 'contract_sent' || workflow.contract_status === 'pending_signature') {
+            } else if (workflow.contract_status === 'data_filled' || workflow.contract_status === 'pending_signature') {
                 // If data filled but not signed, show signing instructions
                 showScreen('contract-signing');
                 return;
