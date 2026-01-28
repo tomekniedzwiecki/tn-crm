@@ -305,6 +305,7 @@
         // State
         let orders = [];
         let leads = [];
+        let orderWorkflows = {}; // order_id -> workflow data
         let currentPage = 1;
         const PAGE_SIZE = 50;
         let totalOrders = 0;
@@ -399,10 +400,32 @@
             orders = data || [];
             totalOrders = count || 0;
 
+            // Load workflows for these orders
+            await loadOrderWorkflows();
+
             renderOrders();
             updatePagination();
             updateStats();
             updateFiltersVisibility();
+        }
+
+        // Load workflows associated with current orders
+        async function loadOrderWorkflows() {
+            if (orders.length === 0) {
+                orderWorkflows = {};
+                return;
+            }
+
+            const orderIds = orders.map(o => o.id);
+            const { data: workflows } = await supabaseClient
+                .from('workflows')
+                .select('id, order_id, unique_token, status')
+                .in('order_id', orderIds);
+
+            orderWorkflows = {};
+            (workflows || []).forEach(w => {
+                orderWorkflows[w.order_id] = w;
+            });
         }
 
         // Load leads for dropdown
@@ -443,6 +466,7 @@
                 const statusConfig = STATUS_CONFIG[order.status] || { label: order.status, color: 'zinc' };
                 const sourceConfig = SOURCE_CONFIG[order.payment_source] || { label: order.payment_source || '-', icon: 'ph-question' };
                 const date = new Date(order.created_at);
+                const workflow = orderWorkflows[order.id];
 
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
@@ -450,7 +474,15 @@
                             <input type="checkbox" class="order-checkbox rounded bg-zinc-800 border-zinc-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 cursor-pointer" data-id="${order.id}" ${selectedOrders.has(order.id) ? 'checked' : ''}>
                         </td>
                         <td class="px-4 py-3">
-                            <span class="font-mono text-xs text-white">${order.order_number}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white">${order.order_number}</span>
+                                ${workflow ? `
+                                    <a href="/workflow?id=${workflow.id}" class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors" title="Przejdz do projektu">
+                                        <i class="ph ph-kanban"></i>
+                                        Projekt
+                                    </a>
+                                ` : ''}
+                            </div>
                         </td>
                         <td class="px-4 py-3">
                             <div class="text-white text-sm">${order.customer_email}</div>
