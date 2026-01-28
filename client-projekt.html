@@ -817,7 +817,7 @@
             if (password !== confirm) { showToast('Hasla nie pasuja', 'error'); return; }
             if (password.length < 6) { showToast('Haslo za krotkie', 'error'); return; }
 
-            const hash = bcrypt.hashSync(password, 10);
+            const hash = dcodeIO.bcrypt.hashSync(password, 10);
             const { error } = await supabaseClient.from('workflows').update({ client_password_hash: hash }).eq('id', workflow.id);
 
             if (error) { showToast('Blad zapisu', 'error'); return; }
@@ -832,7 +832,7 @@
             e.preventDefault();
             const password = document.getElementById('password-input').value;
 
-            if (bcrypt.compareSync(password, workflow.client_password_hash)) {
+            if (dcodeIO.bcrypt.compareSync(password, workflow.client_password_hash)) {
                 isAuthenticated = true;
                 loadProject();
             } else {
