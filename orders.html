@@ -883,7 +883,7 @@
             showToast('Zamowienie usuniete');
         }
 
-        // Lookup NIP - pobierz dane firmy z rejestru
+        // Lookup NIP - pobierz dane firmy z Bialej Listy VAT (API MF)
         async function lookupNip() {
             const nipInput = document.getElementById('order-nip');
             const nip = nipInput.value.replace(/\D/g, '');
@@ -905,28 +905,31 @@
             statusEl.classList.remove('hidden');
 
             try {
-                // Use rejestr.io API (free, no auth required for basic lookup)
-                const response = await fetch(`https://rejestr.io/api/v2/org?nip=${nip}`);
+                // Use official Polish Ministry of Finance API (Biala Lista VAT)
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`https://wl-api.mf.gov.pl/api/search/nip/${nip}?date=${today}`);
 
                 if (!response.ok) {
-                    throw new Error('Nie znaleziono firmy');
+                    throw new Error('Blad API');
                 }
 
                 const data = await response.json();
 
-                if (data && data.name) {
-                    document.getElementById('order-company').value = data.name;
+                if (data?.result?.subject) {
+                    const subject = data.result.subject;
+                    const companyName = subject.name;
 
-                    statusEl.textContent = 'Dane pobrane: ' + data.name;
+                    document.getElementById('order-company').value = companyName;
+
+                    statusEl.textContent = 'Dane pobrane: ' + companyName;
                     statusEl.className = 'text-xs text-emerald-400 mt-1.5';
                 } else {
-                    throw new Error('Brak danych');
+                    throw new Error('Nie znaleziono firmy w rejestrze VAT');
                 }
 
             } catch (err) {
                 console.log('NIP lookup error:', err);
-                // Fallback - try CEIDG/KRS via simple approach
-                statusEl.textContent = 'Nie znaleziono firmy. Wprowadz dane recznie.';
+                statusEl.textContent = err.message || 'Nie znaleziono firmy. Wprowadz dane recznie.';
                 statusEl.className = 'text-xs text-amber-400 mt-1.5';
             }
 
