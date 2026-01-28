@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Projekty</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            transition: width 0.5s ease;
+        }
+
+        .workflow-card:hover {
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">projekty</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3">
+                <a href="https://crm.tomekniedzwiecki.pl/orders" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 md:px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+                    <i class="ph ph-shopping-cart"></i>
+                    <span class="hidden md:inline">Zamowienia</span>
+                </a>
+                <button onclick="openAddModal()" class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
+                    <i class="ph ph-plus"></i>
+                    <span class="hidden md:inline">Dodaj</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-5xl mx-auto animate-enter">
+                <!-- Title & Stats -->
+                <div class="flex items-start justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Projekty</h1>
+                        <p class="text-zinc-500">Zarzadzaj projektami klientow po oplaceniu zamowienia.</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-semibold text-white" id="total-active">-</div>
+                        <div class="text-zinc-500 text-xs font-mono">aktywnych</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap items-center gap-3 mb-6">
+                    <div class="relative flex-1 min-w-[200px] max-w-xs">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                        <input type="text" id="search-input" placeholder="Szukaj klienta..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 transition-colors">
+                    </div>
+                    <select id="status-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
+                        <option value="">Wszystkie statusy</option>
+                        <option value="active">Aktywne</option>
+                        <option value="completed">Ukonczone</option>
+                        <option value="paused">Wstrzymane</option>
+                        <option value="cancelled">Anulowane</option>
+                    </select>
+                    <select id="sort-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
+                        <option value="created_desc">Najnowsze</option>
+                        <option value="created_asc">Najstarsze</option>
+                        <option value="deadline_asc">Deadline (blisko)</option>
+                        <option value="progress_desc">Postep (malejaco)</option>
+                        <option value="progress_asc">Postep (rosnaco)</option>
+                    </select>
+                </div>
+
+                <!-- Workflows Grid -->
+                <div id="workflows-grid" class="grid gap-4">
+                    <!-- Workflows will be rendered here -->
+                </div>
+
+                <div id="empty-state" class="hidden py-16 text-center">
+                    <i class="ph ph-kanban text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-400 text-sm mb-1">Brak projektow</p>
+                    <p class="text-zinc-600 text-xs font-mono">Projekty tworza sie automatycznie po oplaceniu zamowienia</p>
+                </div>
+
+                <div id="loading-state" class="py-16 text-center">
+                    <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
+                    <p class="text-zinc-500 text-sm font-mono">Ladowanie...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Workflow Modal -->
+    <div id="add-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-md shadow-2xl">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-plus-circle text-emerald-400"></i>
+                    Dodaj projekt recznie
+                </h2>
+                <button onclick="closeAddModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <p class="text-zinc-400 text-sm">Wprowadz numer zamowienia, aby utworzyc projekt. Zamowienie musi miec status "paid".</p>
+
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Numer zamowienia</label>
+                    <input type="text" id="order-number-input" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="ORD-202601-0001">
+                </div>
+
+                <div id="order-preview" class="hidden bg-zinc-900/50 border border-white/5 rounded-lg p-4">
+                    <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Podglad zamowienia</div>
+                    <div class="space-y-1 text-sm">
+                        <div><span class="text-zinc-500">Klient:</span> <span id="preview-customer" class="text-white">-</span></div>
+                        <div><span class="text-zinc-500">Oferta:</span> <span id="preview-offer" class="text-zinc-300">-</span></div>
+                        <div><span class="text-zinc-500">Kwota:</span> <span id="preview-amount" class="text-white font-mono">-</span></div>
+                        <div><span class="text-zinc-500">Status:</span> <span id="preview-status" class="text-emerald-400">-</span></div>
+                    </div>
+                </div>
+
+                <div id="add-error" class="hidden text-red-400 text-sm"></div>
+            </div>
+
+            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <button onclick="searchOrder()" id="search-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                    <i class="ph ph-magnifying-glass"></i>
+                    Szukaj
+                </button>
+                <div class="flex-1"></div>
+                <button onclick="closeAddModal()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="createWorkflowFromOrder()" id="create-btn" disabled class="bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-700 disabled:text-zinc-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Utworz projekt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let workflows = [];
+        let filteredWorkflows = [];
+
+        let teamMembers = [];
+        let currentMember = null;
+        let isAdmin = false;
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            await loadTeamMembers(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient
+                .from('team_members')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading team members:', error);
+                return;
+            }
+
+            teamMembers = data || [];
+            currentMember = teamMembers.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+
+            Sidebar.showAdminNav(isAdmin);
+        }
+
+        async function loadWorkflows() {
+            // Load workflows with progress data using the view
+            const { data, error } = await supabaseClient
+                .from('workflow_progress')
+                .select('*')
+                .order('workflow_id');
+
+            if (error) {
+                console.error('Error loading workflows:', error);
+                // Fallback: load from workflows table directly
+                const { data: fallbackData, error: fallbackError } = await supabaseClient
+                    .from('workflows')
+                    .select(`
+                        *,
+                        workflow_milestones (
+                            id,
+                            milestone_index,
+                            title,
+                            status,
+                            deadline
+                        ),
+                        workflow_tasks (
+                            id,
+                            completed
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (fallbackError) {
+                    console.error('Fallback error:', fallbackError);
+                    document.getElementById('loading-state').classList.add('hidden');
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    return;
+                }
+
+                // Calculate progress manually
+                workflows = (fallbackData || []).map(w => {
+                    const totalTasks = w.workflow_tasks?.length || 0;
+                    const completedTasks = w.workflow_tasks?.filter(t => t.completed).length || 0;
+                    const currentMilestone = w.workflow_milestones?.find(m => m.status === 'in_progress');
+                    const totalMilestones = w.workflow_milestones?.length || 0;
+                    const completedMilestones = w.workflow_milestones?.filter(m => m.status === 'completed').length || 0;
+
+                    return {
+                        workflow_id: w.id,
+                        customer_email: w.customer_email,
+                        customer_name: w.customer_name,
+                        customer_company: w.customer_company,
+                        offer_name: w.offer_name,
+                        amount: w.amount,
+                        status: w.status,
+                        started_at: w.started_at,
+                        unique_token: w.unique_token,
+                        total_tasks: totalTasks,
+                        completed_tasks: completedTasks,
+                        progress_percent: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+                        current_milestone_title: currentMilestone?.title,
+                        current_milestone_deadline: currentMilestone?.deadline,
+                        total_milestones: totalMilestones,
+                        completed_milestones: completedMilestones
+                    };
+                });
+            } else {
+                workflows = data || [];
+            }
+
+            applyFilters();
+            renderWorkflows();
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const sortFilter = document.getElementById('sort-filter').value;
+
+            filteredWorkflows = workflows.filter(w => {
+                // Search filter
+                const searchMatch = !searchTerm ||
+                    (w.customer_name || '').toLowerCase().includes(searchTerm) ||
+                    (w.customer_company || '').toLowerCase().includes(searchTerm) ||
+                    w.customer_email.toLowerCase().includes(searchTerm) ||
+                    w.offer_name.toLowerCase().includes(searchTerm);
+
+                // Status filter
+                const statusMatch = !statusFilter || w.status === statusFilter;
+
+                return searchMatch && statusMatch;
+            });
+
+            // Sort
+            filteredWorkflows.sort((a, b) => {
+                switch (sortFilter) {
+                    case 'created_asc':
+                        return new Date(a.started_at) - new Date(b.started_at);
+                    case 'deadline_asc':
+                        if (!a.current_milestone_deadline) return 1;
+                        if (!b.current_milestone_deadline) return -1;
+                        return new Date(a.current_milestone_deadline) - new Date(b.current_milestone_deadline);
+                    case 'progress_desc':
+                        return b.progress_percent - a.progress_percent;
+                    case 'progress_asc':
+                        return a.progress_percent - b.progress_percent;
+                    default: // created_desc
+                        return new Date(b.started_at) - new Date(a.started_at);
+                }
+            });
+
+            // Update active count
+            const activeCount = workflows.filter(w => w.status === 'active').length;
+            document.getElementById('total-active').textContent = activeCount;
+        }
+
+        function getWorkflowPath(id) {
+            const base = Sidebar.getBasePath();
+            const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                ? `${base}/workflow.html` : '/workflow';
+            return `${basePath}?id=${id}`;
+        }
+
+        function getClientUrl(token) {
+            return `https://crm.tomekniedzwiecki.pl/projekt/${token}`;
+        }
+
+        function getStatusBadge(status) {
+            const styles = {
+                active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                completed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                paused: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                cancelled: 'bg-red-500/10 text-red-400 border-red-500/20'
+            };
+            const labels = {
+                active: 'Aktywny',
+                completed: 'Ukonczony',
+                paused: 'Wstrzymany',
+                cancelled: 'Anulowany'
+            };
+            return `<span class="text-xs px-2 py-0.5 rounded border ${styles[status] || styles.active}">${labels[status] || status}</span>`;
+        }
+
+        function formatDeadline(deadline) {
+            if (!deadline) return '';
+            const date = new Date(deadline);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const deadlineDate = new Date(deadline);
+            deadlineDate.setHours(0, 0, 0, 0);
+
+            const diffDays = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+
+            let color = 'text-zinc-400';
+            let label = '';
+
+            if (diffDays < 0) {
+                color = 'text-red-400';
+                label = `${Math.abs(diffDays)} dni temu`;
+            } else if (diffDays === 0) {
+                color = 'text-amber-400';
+                label = 'dzisiaj';
+            } else if (diffDays <= 3) {
+                color = 'text-amber-400';
+                label = `za ${diffDays} dni`;
+            } else {
+                label = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+            }
+
+            return `<span class="${color}">${label}</span>`;
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('pl-PL', {
+                style: 'currency',
+                currency: 'PLN',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(price || 0);
+        }
+
+        function renderWorkflows() {
+            const grid = document.getElementById('workflows-grid');
+            const emptyState = document.getElementById('empty-state');
+            const loadingState = document.getElementById('loading-state');
+
+            loadingState.classList.add('hidden');
+
+            if (filteredWorkflows.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = filteredWorkflows.map(w => {
+                const customerDisplay = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
+                const progressPercent = w.progress_percent || 0;
+                const milestoneInfo = w.current_milestone_title
+                    ? `[${w.completed_milestones + 1}/${w.total_milestones}] ${w.current_milestone_title}`
+                    : 'Brak etapow';
+
+                return `
+                <div class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-5 transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${w.workflow_id}')">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center">
+                                <i class="ph ph-kanban text-lg text-violet-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium text-white">${customerDisplay}</h3>
+                                <span class="text-xs text-zinc-500">${w.customer_email}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${getStatusBadge(w.status)}
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-package text-zinc-500"></i>
+                        <span class="text-zinc-300">${w.offer_name}</span>
+                        <span class="text-zinc-600">|</span>
+                        <span class="text-zinc-400 font-mono text-xs">${formatPrice(w.amount)}</span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                            <span class="text-zinc-400">${milestoneInfo}</span>
+                            <span class="text-zinc-500 font-mono">${progressPercent}%</span>
+                        </div>
+                        <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-3 border-t border-white/5">
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="text-zinc-600 font-mono">
+                                Start: ${new Date(w.started_at).toLocaleDateString('pl-PL')}
+                            </span>
+                            ${w.current_milestone_deadline ? `
+                                <span class="text-zinc-700">|</span>
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-clock text-zinc-500"></i>
+                                    Deadline: ${formatDeadline(w.current_milestone_deadline)}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1.5 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded transition-colors" title="Kopiuj link klienta">
+                                <i class="ph ph-link text-sm"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); window.location.href=getWorkflowPath('${w.workflow_id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded transition-colors" title="Szczegoly">
+                                <i class="ph ph-arrow-right text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        async function copyClientLink(token, customerName) {
+            const url = getClientUrl(token);
+
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast(`Link skopiowany: ${customerName}`);
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast(`Link skopiowany: ${customerName}`);
+            }
+        }
+
+        function showToast(message) {
+            const existing = document.getElementById('toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-enter';
+            toast.innerHTML = `<i class="ph ph-check-circle text-emerald-400"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Event listeners for filters
+        document.getElementById('search-input').addEventListener('input', () => {
+            applyFilters();
+            renderWorkflows();
+        });
+
+        document.getElementById('status-filter').addEventListener('change', () => {
+            applyFilters();
+            renderWorkflows();
+        });
+
+        document.getElementById('sort-filter').addEventListener('change', () => {
+            applyFilters();
+            renderWorkflows();
+        });
+
+        // =============================================
+        // ADD WORKFLOW MODAL
+        // =============================================
+        let selectedOrder = null;
+
+        function openAddModal() {
+            selectedOrder = null;
+            document.getElementById('order-number-input').value = '';
+            document.getElementById('order-preview').classList.add('hidden');
+            document.getElementById('add-error').classList.add('hidden');
+            document.getElementById('create-btn').disabled = true;
+            document.getElementById('add-modal').classList.remove('hidden');
+            document.getElementById('order-number-input').focus();
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-modal').classList.add('hidden');
+            selectedOrder = null;
+        }
+
+        async function searchOrder() {
+            const orderNumber = document.getElementById('order-number-input').value.trim();
+            if (!orderNumber) return;
+
+            const searchBtn = document.getElementById('search-btn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Szukam...';
+
+            document.getElementById('add-error').classList.add('hidden');
+            document.getElementById('order-preview').classList.add('hidden');
+
+            try {
+                // Search by order_number or id
+                let query = supabaseClient
+                    .from('orders')
+                    .select('*');
+
+                // Try to match by order_number first
+                if (orderNumber.startsWith('ORD-')) {
+                    query = query.eq('order_number', orderNumber);
+                } else {
+                    // Try as UUID
+                    query = query.eq('id', orderNumber);
+                }
+
+                const { data: orders, error } = await query.limit(1);
+
+                if (error) throw error;
+
+                if (!orders || orders.length === 0) {
+                    throw new Error('Nie znaleziono zamowienia o podanym numerze');
+                }
+
+                const order = orders[0];
+
+                // Check if workflow already exists
+                const { data: existingWorkflow } = await supabaseClient
+                    .from('workflows')
+                    .select('id')
+                    .eq('order_id', order.id)
+                    .single();
+
+                if (existingWorkflow) {
+                    throw new Error('Projekt dla tego zamowienia juz istnieje');
+                }
+
+                // Show preview
+                selectedOrder = order;
+                document.getElementById('preview-customer').textContent = order.customer_name || order.customer_company || order.customer_email;
+                document.getElementById('preview-offer').textContent = order.description || '-';
+                document.getElementById('preview-amount').textContent = formatPrice(order.amount);
+                document.getElementById('preview-status').textContent = order.status;
+                document.getElementById('preview-status').className = order.status === 'paid' ? 'text-emerald-400' : 'text-amber-400';
+
+                document.getElementById('order-preview').classList.remove('hidden');
+                document.getElementById('create-btn').disabled = false;
+
+            } catch (err) {
+                document.getElementById('add-error').textContent = err.message;
+                document.getElementById('add-error').classList.remove('hidden');
+                selectedOrder = null;
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="ph ph-magnifying-glass"></i> Szukaj';
+            }
+        }
+
+        async function createWorkflowFromOrder() {
+            if (!selectedOrder) return;
+
+            const createBtn = document.getElementById('create-btn');
+            createBtn.disabled = true;
+            createBtn.textContent = 'Tworzenie...';
+
+            try {
+                // Find offer by name
+                const { data: offer } = await supabaseClient
+                    .from('offers')
+                    .select('id, name, milestones')
+                    .eq('name', selectedOrder.description)
+                    .single();
+
+                const milestones = offer?.milestones || [];
+
+                // Create workflow
+                const { data: workflow, error: workflowError } = await supabaseClient
+                    .from('workflows')
+                    .insert({
+                        order_id: selectedOrder.id,
+                        customer_email: selectedOrder.customer_email,
+                        customer_name: selectedOrder.customer_name,
+                        customer_company: selectedOrder.customer_company,
+                        customer_phone: selectedOrder.customer_phone,
+                        offer_name: selectedOrder.description || 'Zamowienie',
+                        offer_id: offer?.id || null,
+                        amount: selectedOrder.amount,
+                        started_at: selectedOrder.paid_at || new Date().toISOString(),
+                        milestones_snapshot: milestones
+                    })
+                    .select()
+                    .single();
+
+                if (workflowError) throw workflowError;
+
+                // Create milestones and tasks
+                let startDate = new Date(selectedOrder.paid_at || new Date());
+                startDate.setHours(0, 0, 0, 0);
+
+                for (let i = 0; i < milestones.length; i++) {
+                    const m = milestones[i];
+                    const durationDays = m.duration_days || 1;
+                    const deadline = new Date(startDate);
+                    deadline.setDate(deadline.getDate() + durationDays - 1);
+
+                    const { data: milestone, error: milestoneError } = await supabaseClient
+                        .from('workflow_milestones')
+                        .insert({
+                            workflow_id: workflow.id,
+                            milestone_index: i,
+                            title: m.title || `Etap ${i + 1}`,
+                            description: m.description || null,
+                            duration_days: durationDays,
+                            start_date: startDate.toISOString().split('T')[0],
+                            deadline: deadline.toISOString().split('T')[0],
+                            deliverables: m.deliverables || [],
+                            status: i === 0 ? 'in_progress' : 'pending',
+                            started_at: i === 0 ? new Date().toISOString() : null
+                        })
+                        .select()
+                        .single();
+
+                    if (milestoneError) throw milestoneError;
+
+                    // Create tasks
+                    const tasks = m.tasks || [];
+                    for (let j = 0; j < tasks.length; j++) {
+                        const t = tasks[j];
+                        await supabaseClient
+                            .from('workflow_tasks')
+                            .insert({
+                                milestone_id: milestone.id,
+                                workflow_id: workflow.id,
+                                task_index: j,
+                                title: t.title || `Zadanie ${j + 1}`,
+                                responsible: t.responsible || 'team'
+                            });
+                    }
+
+                    // Next milestone starts day after deadline
+                    startDate = new Date(deadline);
+                    startDate.setDate(startDate.getDate() + 1);
+                }
+
+                closeAddModal();
+                showToast('Projekt utworzony!');
+                await loadWorkflows();
+
+            } catch (err) {
+                console.error('Error creating workflow:', err);
+                document.getElementById('add-error').textContent = 'Blad tworzenia projektu: ' + err.message;
+                document.getElementById('add-error').classList.remove('hidden');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Utworz projekt';
+            }
+        }
+
+        // Enter key in order number input
+        document.getElementById('order-number-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchOrder();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('add-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeAddModal();
+        });
+
+        // Make functions available globally
+        window.getWorkflowPath = getWorkflowPath;
+        window.copyClientLink = copyClientLink;
+        window.openAddModal = openAddModal;
+        window.closeAddModal = closeAddModal;
+        window.searchOrder = searchOrder;
+        window.createWorkflowFromOrder = createWorkflowFromOrder;
+
+        async function init() {
+            const session = await checkAuth();
+            if (session) {
+                await loadWorkflows();
+            }
+        }
+        init();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

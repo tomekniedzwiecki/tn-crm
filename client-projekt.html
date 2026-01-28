@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twoj projekt - TN Digital</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
+        .glass-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            transition: width 0.5s ease;
+        }
+
+        .milestone-card {
+            transition: all 0.2s;
+        }
+        .milestone-card.active {
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+        }
+        .milestone-card.completed {
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .milestone-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            opacity: 0;
+        }
+        .milestone-content.expanded {
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        .responsible-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .responsible-team { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .responsible-client { background: rgba(6, 182, 212, 0.2); color: #22d3ee; }
+        .responsible-shared { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+        /* Contract form styles */
+        .form-group { margin-bottom: 1rem; }
+        .form-label {
+            display: block;
+            color: #a1a1aa;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .form-input {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: white;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            border-color: rgba(139, 92, 246, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        .form-input.error {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .form-input::placeholder {
+            color: #52525b;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 640px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .step-number.active {
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+        }
+        .step-number.completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        .step-number.pending {
+            background: rgba(63, 63, 70, 0.5);
+            color: #71717a;
+        }
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .signing-option {
+            background: rgba(24, 24, 27, 0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .signing-option:hover {
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        .signing-option.recommended {
+            border-color: rgba(34, 197, 94, 0.3);
+            background: rgba(34, 197, 94, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="text-center animate-enter">
+            <div class="w-5 h-5 mx-auto mb-4 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
+            <p class="text-zinc-500 text-sm font-mono">Ladowanie projektu...</p>
+        </div>
+    </div>
+
+    <!-- Password Screen -->
+    <div id="password-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-14 h-14 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                    <i class="ph-bold ph-lightning text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-2">Twoj projekt</h1>
+                <p class="text-zinc-400">Wprowadz haslo, aby zobaczyc postep prac</p>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-white/10 p-6">
+                <div class="mb-4">
+                    <label class="block text-zinc-400 text-xs font-medium mb-2">Haslo</label>
+                    <input type="password" id="password-input"
+                           class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                           placeholder="Wprowadz haslo..."
+                           autofocus>
+                </div>
+                <div id="password-error" class="text-red-400 text-sm mb-4 hidden">Nieprawidlowe haslo</div>
+                <button id="password-btn"
+                        class="w-full bg-white hover:bg-zinc-200 text-black px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span>Zobacz projekt</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Not Found Screen -->
+    <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md text-center animate-enter">
+            <div class="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-question text-4xl text-zinc-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono projektu</h1>
+            <p class="text-zinc-400">Ten link jest nieprawidlowy lub projekt zostal usuniety.</p>
+        </div>
+    </div>
+
+    <!-- Contract Data Screen -->
+    <div id="contract-data-screen" class="hidden">
+        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-white text-black rounded-lg flex items-center justify-center shadow-lg">
+                        <i class="ph-bold ph-lightning text-lg"></i>
+                    </div>
+                    <span class="font-semibold text-white">TN Digital</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step">
+                    <div class="step-number active">1</div>
+                    <span class="text-sm text-zinc-400">Dane do umowy</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-number pending">2</div>
+                    <span class="text-sm text-zinc-500">Podpis</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-number pending">3</div>
+                    <span class="text-sm text-zinc-500">Projekt</span>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-white/10 p-6 sm:p-8">
+                <div class="mb-6">
+                    <h1 class="text-xl sm:text-2xl font-bold text-white mb-2">Uzupelnij dane do umowy</h1>
+                    <p class="text-zinc-400">Przed rozpoczeciem projektu potrzebujemy Twoich danych do przygotowania umowy.</p>
+                </div>
+
+                <form id="contract-form" onsubmit="submitContractData(event)">
+                    <!-- Personal Data -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-user text-violet-400"></i>
+                            Dane osobowe
+                        </h3>
+
+                        <div class="form-group">
+                            <label class="form-label">Imie i nazwisko *</label>
+                            <input type="text" id="cd-name" class="form-input" required placeholder="Jan Kowalski">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Firma (opcjonalnie)</label>
+                            <input type="text" id="cd-company" class="form-input" placeholder="Nazwa firmy">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">PESEL *</label>
+                                <input type="text" id="cd-pesel" class="form-input" required
+                                       placeholder="00000000000" maxlength="11" pattern="[0-9]{11}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nr dowodu osobistego *</label>
+                                <input type="text" id="cd-id-number" class="form-input" required
+                                       placeholder="ABC123456" maxlength="9">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-map-pin text-violet-400"></i>
+                            Adres zamieszkania
+                        </h3>
+
+                        <div class="form-group">
+                            <label class="form-label">Ulica i numer *</label>
+                            <input type="text" id="cd-street" class="form-input" required placeholder="ul. Przykladowa 123/4">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Kod pocztowy *</label>
+                                <input type="text" id="cd-postal" class="form-input" required
+                                       placeholder="00-000" maxlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Miejscowosc *</label>
+                                <input type="text" id="cd-city" class="form-input" required placeholder="Warszawa">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Kraj *</label>
+                            <input type="text" id="cd-country" class="form-input" required value="Polska">
+                        </div>
+                    </div>
+
+                    <!-- Contact -->
+                    <div class="mb-8">
+                        <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-envelope text-violet-400"></i>
+                            Dane kontaktowe
+                        </h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Email *</label>
+                                <input type="email" id="cd-email" class="form-input" required placeholder="jan@email.pl">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon *</label>
+                                <input type="tel" id="cd-phone" class="form-input" required placeholder="+48 600 000 000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="contract-form-error" class="hidden bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4 text-red-400 text-sm">
+                        Wypelnij wszystkie wymagane pola poprawnie.
+                    </div>
+
+                    <button type="submit" id="contract-submit-btn"
+                            class="w-full bg-white hover:bg-zinc-200 text-black px-6 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                        <span>Zapisz i kontynuuj</span>
+                        <i class="ph ph-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Contract Signing Screen -->
+    <div id="contract-signing-screen" class="hidden">
+        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-white text-black rounded-lg flex items-center justify-center shadow-lg">
+                        <i class="ph-bold ph-lightning text-lg"></i>
+                    </div>
+                    <span class="font-semibold text-white">TN Digital</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-enter">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step">
+                    <div class="step-number completed"><i class="ph-bold ph-check"></i></div>
+                    <span class="text-sm text-emerald-400">Dane do umowy</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-number active">2</div>
+                    <span class="text-sm text-zinc-400">Podpis</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-number pending">3</div>
+                    <span class="text-sm text-zinc-500">Projekt</span>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-white/10 p-6 sm:p-8 mb-6">
+                <div class="mb-6">
+                    <h1 class="text-xl sm:text-2xl font-bold text-white mb-2">Podpisz umowe</h1>
+                    <p class="text-zinc-400">Twoja umowa jest gotowa. Wybierz sposob podpisania dokumentu.</p>
+                </div>
+
+                <!-- Download Contract -->
+                <div class="bg-zinc-900/50 rounded-xl p-4 mb-6 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                            <i class="ph ph-file-pdf text-red-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="text-white font-medium" id="contract-filename">Umowa.pdf</div>
+                            <div class="text-zinc-500 text-xs">Pobierz i przeczytaj przed podpisaniem</div>
+                        </div>
+                    </div>
+                    <button onclick="downloadContract()" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="ph ph-download"></i>
+                        Pobierz
+                    </button>
+                </div>
+
+                <!-- Signing Options -->
+                <h3 class="text-sm font-semibold text-white mb-4">Wybierz metode podpisu:</h3>
+
+                <div class="space-y-3">
+                    <!-- Option 1: Podpis Zaufany -->
+                    <div class="signing-option recommended" onclick="selectSigningMethod('zaufany')">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-shield-check text-emerald-400 text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-semibold text-white">Podpis zaufany (gov.pl)</h4>
+                                    <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full">Zalecane</span>
+                                </div>
+                                <p class="text-zinc-400 text-sm mb-3">Darmowy podpis elektroniczny przez profil zaufany. Najszybsza i najwygodniejsza metoda.</p>
+                                <ol class="text-xs text-zinc-500 space-y-1">
+                                    <li>1. Pobierz umowe PDF powyzej</li>
+                                    <li>2. Wejdz na <a href="https://www.gov.pl/web/gov/podpisz-dokument-elektronicznie-wykorzystaj-podpis-zaufany" target="_blank" class="text-cyan-400 hover:underline">gov.pl/podpisz</a></li>
+                                    <li>3. Zaloguj sie profilem zaufanym i podpisz dokument</li>
+                                    <li>4. Wyslij podpisany plik na <span class="text-cyan-400">ceo@tomekniedzwiecki.pl</span></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option 2: Podpis Kwalifikowany -->
+                    <div class="signing-option" onclick="selectSigningMethod('kwalifikowany')">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-violet-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-certificate text-violet-400 text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-white mb-1">Podpis kwalifikowany</h4>
+                                <p class="text-zinc-400 text-sm mb-3">Jesli posiadasz certyfikat kwalifikowany (np. Szafir, Certum, KIR).</p>
+                                <ol class="text-xs text-zinc-500 space-y-1">
+                                    <li>1. Pobierz umowe PDF powyzej</li>
+                                    <li>2. Podpisz dokument swoim podpisem kwalifikowanym</li>
+                                    <li>3. Wyslij podpisany plik na <span class="text-cyan-400">ceo@tomekniedzwiecki.pl</span></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option 3: Podpis Fizyczny -->
+                    <div class="signing-option" onclick="selectSigningMethod('fizyczny')">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-package text-amber-400 text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-white mb-1">Podpis fizyczny (paczkomat)</h4>
+                                <p class="text-zinc-400 text-sm mb-3">Tradycyjny podpis na papierze. Wyslemy umowe do Twojego paczkomatu.</p>
+                                <ol class="text-xs text-zinc-500 space-y-1">
+                                    <li>1. Skontaktuj sie z nami podajac preferowany paczkomat</li>
+                                    <li>2. Odbierz przesylke i podpisz dokument</li>
+                                    <li>3. Odeslij podpisana umowe na nasz adres (znajdziesz w przesylce)</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skip to project (temporary access) -->
+            <div class="text-center">
+                <button onclick="skipToProject()" class="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                    Przejdz do podgladu projektu <i class="ph ph-arrow-right"></i>
+                </button>
+                <p class="text-zinc-600 text-xs mt-1">Mozesz kontynuowac, ale umowa musi byc podpisana przed zakonczeniem projektu</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Main Project View -->
+    <div id="project-screen" class="hidden">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-white text-black rounded-lg flex items-center justify-center shadow-lg">
+                        <i class="ph-bold ph-lightning text-lg"></i>
+                    </div>
+                    <span class="font-semibold text-white">TN Digital</span>
+                </div>
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="text-zinc-500 hidden sm:inline">Projekt:</span>
+                    <div class="text-right">
+                        <div id="header-customer" class="text-white font-medium">-</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+            <!-- Progress Overview -->
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8 mb-6 sm:mb-8 animate-enter">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6">
+                    <div>
+                        <h1 id="offer-name" class="text-xl sm:text-2xl font-bold text-white mb-1">-</h1>
+                        <div class="flex items-center gap-3 text-sm text-zinc-400">
+                            <span id="status-label" class="flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                W realizacji
+                            </span>
+                            <span class="text-zinc-600">|</span>
+                            <span>Start: <span id="started-at" class="text-zinc-200">-</span></span>
+                        </div>
+                    </div>
+                    <div class="text-left sm:text-right">
+                        <div class="text-3xl sm:text-4xl font-bold text-white mb-1">
+                            <span id="progress-percent">0</span>%
+                        </div>
+                        <div class="text-zinc-500 text-xs font-mono">ukonczono</div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="h-3 bg-zinc-800 rounded-full overflow-hidden mb-4">
+                    <div id="progress-bar" class="progress-bar h-full rounded-full" style="width: 0%"></div>
+                </div>
+
+                <!-- Stats -->
+                <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm">
+                    <div class="flex items-center gap-2">
+                        <i class="ph ph-check-square text-emerald-400"></i>
+                        <span class="text-zinc-400">Zadania:</span>
+                        <span class="text-white font-mono"><span id="completed-tasks">0</span>/<span id="total-tasks">0</span></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="ph ph-path text-violet-400"></i>
+                        <span class="text-zinc-400">Etapy:</span>
+                        <span class="text-white font-mono"><span id="completed-milestones">0</span>/<span id="total-milestones">0</span></span>
+                    </div>
+                    <div id="deadline-info" class="flex items-center gap-2">
+                        <i class="ph ph-clock text-amber-400"></i>
+                        <span class="text-zinc-400">Deadline etapu:</span>
+                        <span id="current-deadline" class="text-white">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Milestones -->
+            <div class="space-y-4 animate-enter" style="animation-delay: 0.1s">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="ph ph-path text-violet-400"></i>
+                    Etapy realizacji
+                </h2>
+
+                <div id="milestones-container" class="space-y-3">
+                    <!-- Milestones rendered here -->
+                </div>
+            </div>
+
+            <!-- Contact Section -->
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8 mt-8 animate-enter" style="animation-delay: 0.2s">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold text-white mb-1">Masz pytania?</h3>
+                        <p class="text-zinc-400 text-sm">Skontaktuj sie z nami, chetnie odpowiemy na wszystkie pytania.</p>
+                    </div>
+                    <div class="flex gap-2 sm:gap-3">
+                        <a href="mailto:ceo@tomekniedzwiecki.pl" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                            <i class="ph ph-envelope"></i>
+                            Email
+                        </a>
+                        <a href="https://wa.me/48533308623" target="_blank" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                            <i class="ph ph-whatsapp-logo"></i>
+                            WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/5 mt-12">
+            <div class="max-w-5xl mx-auto px-6 py-8 text-center">
+                <p class="text-zinc-600 text-sm">
+                    Powered by <span class="text-zinc-400">TN Digital</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let workflow = null;
+        let milestones = [];
+        let tasks = [];
+        let isAuthenticated = false;
+        let contractData = {};
+
+        function getToken() {
+            const path = window.location.pathname;
+            const match = path.match(/\/projekt\/([a-f0-9]+)/i);
+            return match ? match[1] : null;
+        }
+
+        async function loadProject() {
+            const token = getToken();
+            if (!token) {
+                showScreen('not-found');
+                return;
+            }
+
+            // Load workflow by token
+            const { data: workflowData, error: workflowError } = await supabaseClient
+                .from('workflows')
+                .select('*')
+                .eq('unique_token', token)
+                .single();
+
+            if (workflowError || !workflowData) {
+                console.error('Error loading workflow:', workflowError);
+                showScreen('not-found');
+                return;
+            }
+
+            workflow = workflowData;
+
+            // Check if password is required
+            if (workflow.client_password_hash && !isAuthenticated) {
+                showScreen('password');
+                return;
+            }
+
+            // Log access
+            await logAccess();
+
+            // Check contract status - if pending_data, show data form first
+            if (workflow.contract_status === 'pending_data') {
+                prefillContractForm();
+                showScreen('contract-data');
+                return;
+            }
+
+            // If data filled but not signed, show signing instructions
+            if (workflow.contract_status === 'data_filled' || workflow.contract_status === 'contract_sent' || workflow.contract_status === 'pending_signature') {
+                showScreen('contract-signing');
+                return;
+            }
+
+            // Load milestones
+            const { data: milestonesData } = await supabaseClient
+                .from('workflow_milestones')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('milestone_index');
+
+            milestones = milestonesData || [];
+
+            // Load tasks
+            const { data: tasksData } = await supabaseClient
+                .from('workflow_tasks')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('task_index');
+
+            tasks = tasksData || [];
+
+            renderProject();
+            showScreen('project');
+        }
+
+        async function logAccess() {
+            try {
+                await supabaseClient.from('workflow_access_log').insert({
+                    workflow_id: workflow.id,
+                    user_agent: navigator.userAgent
+                });
+            } catch (err) {
+                console.log('Could not log access');
+            }
+        }
+
+        function showScreen(screenName) {
+            ['loading', 'password', 'not-found', 'contract-data', 'contract-signing', 'project'].forEach(name => {
+                const el = document.getElementById(`${name}-screen`);
+                if (el) el.classList.toggle('hidden', name !== screenName);
+            });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function formatDeadline(deadline) {
+            if (!deadline) return '-';
+            const date = new Date(deadline);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const deadlineDate = new Date(deadline);
+            deadlineDate.setHours(0, 0, 0, 0);
+
+            const diffDays = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                return `<span class="text-red-400">${Math.abs(diffDays)} dni temu</span>`;
+            } else if (diffDays === 0) {
+                return `<span class="text-amber-400">dzisiaj</span>`;
+            } else if (diffDays <= 3) {
+                return `<span class="text-amber-400">za ${diffDays} dni</span>`;
+            }
+            return formatDate(deadline);
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                active: { text: 'W realizacji', color: 'bg-emerald-400' },
+                completed: { text: 'Ukonczony', color: 'bg-blue-400' },
+                paused: { text: 'Wstrzymany', color: 'bg-amber-400' },
+                cancelled: { text: 'Anulowany', color: 'bg-red-400' }
+            };
+            return labels[status] || labels.active;
+        }
+
+        function getResponsibleBadge(responsible) {
+            const labels = { team: 'TN', client: 'Ty', shared: 'Wspolne' };
+            return `<span class="responsible-badge responsible-${responsible}">${labels[responsible] || responsible}</span>`;
+        }
+
+        function renderProject() {
+            const customerDisplay = workflow.customer_name || workflow.customer_company || workflow.customer_email.split('@')[0];
+
+            // Header
+            document.getElementById('header-customer').textContent = customerDisplay;
+            document.title = `${customerDisplay} - TN Digital`;
+
+            // Overview
+            document.getElementById('offer-name').textContent = workflow.offer_name;
+            document.getElementById('started-at').textContent = formatDate(workflow.started_at);
+
+            // Status
+            const statusInfo = getStatusLabel(workflow.status);
+            document.getElementById('status-label').innerHTML = `
+                <span class="w-2 h-2 rounded-full ${statusInfo.color}"></span>
+                ${statusInfo.text}
+            `;
+
+            // Calculate progress
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(t => t.completed).length;
+            const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const completedMilestones = milestones.filter(m => m.status === 'completed').length;
+
+            document.getElementById('progress-percent').textContent = progressPercent;
+            document.getElementById('progress-bar').style.width = progressPercent + '%';
+            document.getElementById('completed-tasks').textContent = completedTasks;
+            document.getElementById('total-tasks').textContent = totalTasks;
+            document.getElementById('completed-milestones').textContent = completedMilestones;
+            document.getElementById('total-milestones').textContent = milestones.length;
+
+            // Current deadline
+            const currentMilestone = milestones.find(m => m.status === 'in_progress');
+            if (currentMilestone) {
+                document.getElementById('current-deadline').innerHTML = formatDeadline(currentMilestone.deadline);
+            } else {
+                document.getElementById('deadline-info').classList.add('hidden');
+            }
+
+            // Render milestones
+            renderMilestones();
+        }
+
+        function renderMilestones() {
+            const container = document.getElementById('milestones-container');
+
+            container.innerHTML = milestones.map((milestone, index) => {
+                const milestoneTasks = tasks.filter(t => t.milestone_id === milestone.id);
+                const completedCount = milestoneTasks.filter(t => t.completed).length;
+                const totalCount = milestoneTasks.length;
+                const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+                const isActive = milestone.status === 'in_progress';
+                const isCompleted = milestone.status === 'completed';
+
+                const deliverables = milestone.deliverables || [];
+
+                return `
+                <div class="milestone-card glass-card border border-white/10 rounded-xl overflow-hidden ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
+                    <!-- Header -->
+                    <div class="p-4 flex items-center justify-between cursor-pointer" onclick="toggleMilestone('${milestone.id}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
+                                isCompleted ? 'bg-emerald-500/20 text-emerald-400' :
+                                isActive ? 'bg-violet-500/20 text-violet-400' :
+                                'bg-zinc-800 text-zinc-500'
+                            }">
+                                ${isCompleted ? '<i class="ph ph-check text-lg"></i>' : index + 1}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold ${isCompleted || isActive ? 'text-white' : 'text-zinc-400'}">${milestone.title}</h3>
+                                <div class="flex items-center gap-2 text-xs text-zinc-500">
+                                    <span>${formatDate(milestone.start_date)} - ${formatDate(milestone.deadline)}</span>
+                                    ${isActive ? `<span class="text-violet-400">(aktualny)</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right hidden sm:block">
+                                <div class="text-xs font-mono ${isCompleted ? 'text-emerald-400' : 'text-zinc-400'}">${progressPercent}%</div>
+                                <div class="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                                    <div class="h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-violet-500'}" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>
+                            <i class="ph ph-caret-down text-zinc-500 transition-transform" id="chevron-${milestone.id}"></i>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="milestone-content" id="content-${milestone.id}">
+                        <div class="border-t border-white/5">
+                            ${milestone.description ? `
+                                <div class="px-4 py-3 border-b border-white/5 text-zinc-400 text-sm">${milestone.description}</div>
+                            ` : ''}
+
+                            <!-- Tasks -->
+                            <div class="divide-y divide-white/5">
+                                ${milestoneTasks.map(task => `
+                                    <div class="px-4 py-3 flex items-start gap-3">
+                                        <div class="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                            task.completed
+                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                : 'border border-zinc-700 text-transparent'
+                                        }">
+                                            ${task.completed ? '<i class="ph-bold ph-check text-xs"></i>' : ''}
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <span class="${task.completed ? 'text-zinc-500 line-through' : 'text-zinc-200'}">${task.title}</span>
+                                            ${task.notes ? `<p class="text-zinc-500 text-xs mt-1">${task.notes}</p>` : ''}
+                                            ${task.links && task.links.length > 0 ? `
+                                                <div class="flex flex-wrap gap-2 mt-2">
+                                                    ${task.links.map(link => `
+                                                        <a href="${link.url}" target="_blank" class="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2 py-1 rounded">
+                                                            <i class="ph ph-link"></i>
+                                                            ${link.title || 'Link'}
+                                                        </a>
+                                                    `).join('')}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        ${getResponsibleBadge(task.responsible)}
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <!-- Deliverables -->
+                            ${deliverables.length > 0 ? `
+                                <div class="px-4 py-3 border-t border-white/5 bg-zinc-900/30">
+                                    <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Rezultaty etapu</div>
+                                    <ul class="space-y-1.5">
+                                        ${deliverables.map(d => `
+                                            <li class="flex items-start gap-2 text-sm text-zinc-400">
+                                                <i class="ph ph-check-circle text-emerald-400 mt-0.5 flex-shrink-0"></i>
+                                                <span>${d}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            // Expand active milestone by default
+            const activeMilestone = milestones.find(m => m.status === 'in_progress');
+            if (activeMilestone) {
+                toggleMilestone(activeMilestone.id, true);
+            }
+        }
+
+        function toggleMilestone(milestoneId, forceOpen = false) {
+            const content = document.getElementById(`content-${milestoneId}`);
+            const chevron = document.getElementById(`chevron-${milestoneId}`);
+
+            if (forceOpen || !content.classList.contains('expanded')) {
+                content.classList.add('expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.remove('expanded');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Contract form functions
+        function prefillContractForm() {
+            if (!workflow) return;
+
+            // Pre-fill known data from workflow
+            document.getElementById('cd-name').value = workflow.customer_name || '';
+            document.getElementById('cd-company').value = workflow.customer_company || '';
+            document.getElementById('cd-email').value = workflow.customer_email || '';
+            document.getElementById('cd-phone').value = workflow.customer_phone || '';
+            document.getElementById('cd-street').value = workflow.client_street || '';
+            document.getElementById('cd-postal').value = workflow.client_postal_code || '';
+            document.getElementById('cd-city').value = workflow.client_city || '';
+            document.getElementById('cd-country').value = workflow.client_country || 'Polska';
+            document.getElementById('cd-pesel').value = workflow.client_pesel || '';
+            document.getElementById('cd-id-number').value = workflow.client_id_number || '';
+        }
+
+        async function submitContractData(event) {
+            event.preventDefault();
+
+            const form = document.getElementById('contract-form');
+            const errorDiv = document.getElementById('contract-form-error');
+            const submitBtn = document.getElementById('contract-submit-btn');
+
+            // Validate form
+            if (!form.checkValidity()) {
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Validate PESEL (11 digits)
+            const pesel = document.getElementById('cd-pesel').value.trim();
+            if (!/^[0-9]{11}$/.test(pesel)) {
+                errorDiv.textContent = 'PESEL musi skladac sie z 11 cyfr.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>';
+
+            // Collect form data
+            contractData = {
+                customer_name: document.getElementById('cd-name').value.trim(),
+                customer_company: document.getElementById('cd-company').value.trim() || null,
+                client_street: document.getElementById('cd-street').value.trim(),
+                client_postal_code: document.getElementById('cd-postal').value.trim(),
+                client_city: document.getElementById('cd-city').value.trim(),
+                client_country: document.getElementById('cd-country').value.trim(),
+                client_pesel: pesel,
+                client_id_number: document.getElementById('cd-id-number').value.trim().toUpperCase(),
+                customer_email: document.getElementById('cd-email').value.trim(),
+                customer_phone: document.getElementById('cd-phone').value.trim(),
+                contract_status: 'data_filled',
+                contract_data_filled_at: new Date().toISOString()
+            };
+
+            // Save to database
+            const { error } = await supabaseClient
+                .from('workflows')
+                .update(contractData)
+                .eq('id', workflow.id);
+
+            if (error) {
+                console.error('Error saving contract data:', error);
+                errorDiv.textContent = 'Wystapil blad podczas zapisywania danych. Sprobuj ponownie.';
+                errorDiv.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Zapisz i kontynuuj</span><i class="ph ph-arrow-right"></i>';
+                return;
+            }
+
+            // Update local workflow
+            Object.assign(workflow, contractData);
+
+            // Show signing screen
+            showScreen('contract-signing');
+        }
+
+        function downloadContract() {
+            // If there's a contract file URL, open it
+            if (workflow.contract_file_url) {
+                window.open(workflow.contract_file_url, '_blank');
+            } else {
+                // Show message that contract is being prepared
+                alert('Umowa jest w trakcie przygotowywania. Skontaktuj sie z nami, jesli potrzebujesz jej szybciej.');
+            }
+        }
+
+        function selectSigningMethod(method) {
+            // Visual feedback
+            document.querySelectorAll('.signing-option').forEach(el => {
+                el.style.borderColor = 'rgba(255,255,255,0.1)';
+                el.style.background = 'rgba(24, 24, 27, 0.6)';
+            });
+            event.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+            event.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+
+            // The actual signing happens outside the system
+            // We just provide instructions here
+        }
+
+        async function skipToProject() {
+            // Allow viewing project even without signed contract
+            // Load milestones and tasks
+            const { data: milestonesData } = await supabaseClient
+                .from('workflow_milestones')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('milestone_index');
+
+            milestones = milestonesData || [];
+
+            const { data: tasksData } = await supabaseClient
+                .from('workflow_tasks')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('task_index');
+
+            tasks = tasksData || [];
+
+            renderProject();
+            showScreen('project');
+        }
+
+        // Password verification
+        document.getElementById('password-btn').addEventListener('click', verifyPassword);
+        document.getElementById('password-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyPassword();
+        });
+
+        async function verifyPassword() {
+            const password = document.getElementById('password-input').value;
+            if (!password) return;
+
+            const isValid = dcodeIO.bcrypt.compareSync(password, workflow.client_password_hash);
+
+            if (isValid) {
+                isAuthenticated = true;
+                document.getElementById('password-error').classList.add('hidden');
+                await loadProject();
+            } else {
+                document.getElementById('password-error').classList.remove('hidden');
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+            }
+        }
+
+        // Make functions global
+        window.toggleMilestone = toggleMilestone;
+        window.submitContractData = submitContractData;
+        window.downloadContract = downloadContract;
+        window.selectSigningMethod = selectSigningMethod;
+        window.skipToProject = skipToProject;
+
+        // Initialize
+        loadProject();
+    </script>
+</body>
+</html>

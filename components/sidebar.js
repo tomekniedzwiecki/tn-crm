@@ -8,16 +8,33 @@
 // ============================================
 const APPS = [
     { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black' },
+    { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white' },
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white' },
     { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white' }
 ];
 
-const CURRENT_APP = 'crm';
+// Detect current app based on URL
+function detectCurrentApp() {
+    const path = location.pathname;
+    if (path.includes('/workflows') || path.includes('/workflow')) {
+        return 'workflow';
+    }
+    if (path.includes('/tn-todo')) {
+        return 'todo';
+    }
+    if (path.includes('/tn-stack')) {
+        return 'stack';
+    }
+    return 'crm';
+}
 
 function getAppPath(appId) {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const base = getBasePath();
     if (appId === 'crm') {
-        return isLocal ? '/tn-crm/dashboard.html' : '/dashboard';
+        return isLocal ? `${base}/dashboard.html` : '/dashboard';
+    } else if (appId === 'workflow') {
+        return isLocal ? `${base}/workflows.html` : '/workflows';
     } else if (appId === 'todo') {
         return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards';
     } else if (appId === 'stack') {
@@ -27,9 +44,9 @@ function getAppPath(appId) {
 }
 
 // ============================================
-// NAVIGATION ITEMS - EDIT HERE TO CHANGE MENU
+// NAVIGATION ITEMS PER APP
 // ============================================
-const NAV_ITEMS = [
+const NAV_ITEMS_CRM = [
     { id: 'dashboard', icon: 'ph-house', label: 'Overview', adminOnly: false },
     { id: 'leads', icon: 'ph-users', label: 'Leady', adminOnly: false, showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline', adminOnly: false },
@@ -40,6 +57,17 @@ const NAV_ITEMS = [
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
     { id: 'logi', icon: 'ph-list-bullets', label: 'Logi', adminOnly: false },
 ];
+
+const NAV_ITEMS_WORKFLOW = [
+    { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty', adminOnly: false },
+];
+
+function getNavItems(appId) {
+    switch (appId) {
+        case 'workflow': return NAV_ITEMS_WORKFLOW;
+        default: return NAV_ITEMS_CRM;
+    }
+}
 
 // ============================================
 // CSS ANIMATIONS
@@ -143,6 +171,13 @@ const SIDEBAR_CSS = `
     }
     nav a:hover .ph-shopping-cart { animation: cartBounce 0.4s ease-out; }
 
+    @keyframes pathFlow {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(3px); }
+        100% { transform: translateX(0); }
+    }
+    nav a:hover .ph-path { animation: pathFlow 0.5s ease-in-out; }
+
     @keyframes megaphoneShake {
         0% { transform: rotate(0deg); }
         20% { transform: rotate(-10deg); }
@@ -238,10 +273,12 @@ function renderSidebar(containerId = 'sidebar') {
     }
 
     const currentPage = getCurrentPage();
-    const currentApp = APPS.find(a => a.id === CURRENT_APP);
+    const currentAppId = detectCurrentApp();
+    const currentApp = APPS.find(a => a.id === currentAppId);
+    const navItems = getNavItems(currentAppId);
 
     // Build app switcher dropdown HTML
-    const appSwitcherDropdown = APPS.filter(a => a.id !== CURRENT_APP).map(app => `
+    const appSwitcherDropdown = APPS.filter(a => a.id !== currentAppId).map(app => `
         <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
             <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
                 <i class="ph-bold ${app.icon} text-xs"></i>
@@ -251,7 +288,7 @@ function renderSidebar(containerId = 'sidebar') {
     `).join('');
 
     // Build navigation HTML
-    const navHtml = NAV_ITEMS.map(item => {
+    const navHtml = navItems.map(item => {
         const isActive = item.id === currentPage;
         const hiddenClass = item.adminOnly ? ' hidden' : '';
         const itemId = `id="nav-${item.id}"`;
@@ -360,7 +397,8 @@ function updateNavLinks() {
 
 function showAdminNav(isAdmin) {
     if (!isAdmin) return;
-    NAV_ITEMS.filter(item => item.adminOnly).forEach(item => {
+    const navItems = getNavItems(detectCurrentApp());
+    navItems.filter(item => item.adminOnly).forEach(item => {
         const el = document.getElementById(`nav-${item.id}`);
         if (el) el.classList.remove('hidden');
     });
