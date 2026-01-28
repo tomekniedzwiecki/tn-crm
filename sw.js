@@ -1,5 +1,5 @@
 // TN CRM Service Worker
-const CACHE_NAME = 'tn-crm-v2';
+const CACHE_NAME = 'tn-crm-v3';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
