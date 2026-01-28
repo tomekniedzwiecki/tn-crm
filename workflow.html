@@ -555,51 +555,6 @@
                             </div>
                         </div>
 
-                        <!-- Signing Instructions (visible when contract is sent) -->
-                        <div id="signing-section" class="hidden">
-                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mb-6">
-                                <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
-                                    <i class="ph ph-pen text-emerald-400"></i>
-                                    Podpisanie umowy
-                                </h3>
-
-                                <div class="space-y-4">
-                                    <!-- Signed file upload -->
-                                    <div class="p-4 bg-zinc-800/50 border border-white/5 rounded-lg">
-                                        <label class="block text-zinc-400 text-sm mb-2">Klient podpisal umowe? Wgraj podpisany plik:</label>
-                                        <input type="file" id="signed-contract-file" accept=".pdf" class="text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-zinc-700 file:text-white hover:file:bg-zinc-600">
-                                    </div>
-
-                                    <!-- Signature type -->
-                                    <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Typ podpisu</label>
-                                        <div class="flex gap-2">
-                                            <button onclick="setSignatureType('zaufany')" class="sig-type-btn flex-1 p-3 rounded-lg border border-white/5 bg-zinc-800/50 hover:border-violet-500/50 transition-colors text-center" data-type="zaufany">
-                                                <i class="ph ph-identification-badge text-xl text-violet-400 mb-1"></i>
-                                                <div class="text-xs text-zinc-300">Podpis zaufany</div>
-                                                <div class="text-[10px] text-zinc-500">gov.pl</div>
-                                            </button>
-                                            <button onclick="setSignatureType('kwalifikowany')" class="sig-type-btn flex-1 p-3 rounded-lg border border-white/5 bg-zinc-800/50 hover:border-cyan-500/50 transition-colors text-center" data-type="kwalifikowany">
-                                                <i class="ph ph-certificate text-xl text-cyan-400 mb-1"></i>
-                                                <div class="text-xs text-zinc-300">Kwalifikowany</div>
-                                                <div class="text-[10px] text-zinc-500">e-podpis</div>
-                                            </button>
-                                            <button onclick="setSignatureType('fizyczny')" class="sig-type-btn flex-1 p-3 rounded-lg border border-white/5 bg-zinc-800/50 hover:border-amber-500/50 transition-colors text-center" data-type="fizyczny">
-                                                <i class="ph ph-package text-xl text-amber-400 mb-1"></i>
-                                                <div class="text-xs text-zinc-300">Fizyczny</div>
-                                                <div class="text-[10px] text-zinc-500">paczkomat</div>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <button onclick="confirmSignature()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                                        <i class="ph ph-check-circle"></i>
-                                        Potwierdz podpisanie umowy
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Signed Contract Info (visible when signed) -->
                         <div id="signed-section" class="hidden">
                             <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-5">
@@ -1676,7 +1631,6 @@
 
         let contractTemplateUrl = null;
         let contractHtml = null;
-        let selectedSignatureType = null;
 
         let isEditingContract = false;
 
@@ -1792,7 +1746,6 @@
             document.getElementById('cancel-edit-btn').classList.toggle('hidden', !isEditingContract);
 
             document.getElementById('contract-generation-section').classList.toggle('hidden', !hasData || isSigned);
-            document.getElementById('signing-section').classList.toggle('hidden', !isSent);
             document.getElementById('signed-section').classList.toggle('hidden', !isSigned);
 
             // Update no template warning
@@ -2064,8 +2017,8 @@
             }
 
             const updateData = {
-                contract_status: 'contract_sent',
-                contract_sent_at: new Date().toISOString()
+                contract_status: 'signed',
+                contract_signed_at: new Date().toISOString()
             };
 
             if (sellerSignedUrl) {
@@ -2117,8 +2070,8 @@
                 }
             }
 
-            workflow.contract_status = 'contract_sent';
-            workflow.contract_sent_at = new Date().toISOString();
+            workflow.contract_status = 'signed';
+            workflow.contract_signed_at = new Date().toISOString();
             if (sellerSignedUrl) {
                 workflow.contract_seller_signed_url = sellerSignedUrl;
             }
@@ -2126,81 +2079,6 @@
             updateContractUI();
         }
         window.sendContractToClient = sendContractToClient;
-
-        function setSignatureType(type) {
-            selectedSignatureType = type;
-            document.querySelectorAll('.sig-type-btn').forEach(btn => {
-                const isSelected = btn.dataset.type === type;
-                btn.classList.toggle('border-violet-500', isSelected && type === 'zaufany');
-                btn.classList.toggle('border-cyan-500', isSelected && type === 'kwalifikowany');
-                btn.classList.toggle('border-amber-500', isSelected && type === 'fizyczny');
-                btn.classList.toggle('border-white/5', !isSelected);
-            });
-        }
-        window.setSignatureType = setSignatureType;
-
-        async function confirmSignature() {
-            if (!selectedSignatureType) {
-                showToast('Wybierz typ podpisu', 'error');
-                return;
-            }
-
-            const fileInput = document.getElementById('signed-contract-file');
-            const file = fileInput?.files[0];
-
-            let signedFileUrl = null;
-
-            // Upload signed contract PDF if provided
-            if (file) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `contracts/${workflow.id}/signed_${Date.now()}.${fileExt}`;
-
-                const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                    .from('attachments')
-                    .upload(fileName, file);
-
-                if (uploadError) {
-                    showToast('Blad przesylania pliku', 'error');
-                    return;
-                }
-
-                const { data: urlData } = supabaseClient.storage
-                    .from('attachments')
-                    .getPublicUrl(fileName);
-
-                signedFileUrl = urlData.publicUrl;
-            }
-
-            const updateData = {
-                contract_status: 'signed',
-                contract_signed_at: new Date().toISOString(),
-                contract_signature_type: selectedSignatureType
-            };
-
-            if (signedFileUrl) {
-                updateData.contract_signed_file_url = signedFileUrl;
-            }
-
-            const { error } = await supabaseClient
-                .from('workflows')
-                .update(updateData)
-                .eq('id', workflow.id);
-
-            if (error) {
-                showToast('Blad potwierdzania', 'error');
-                return;
-            }
-
-            workflow.contract_status = 'signed';
-            workflow.contract_signed_at = new Date().toISOString();
-            workflow.contract_signature_type = selectedSignatureType;
-            if (signedFileUrl) {
-                workflow.contract_signed_file_url = signedFileUrl;
-            }
-            showToast('Umowa oznaczona jako podpisana!', 'success');
-            updateContractUI();
-        }
-        window.confirmSignature = confirmSignature;
 
         async function init() {
             const session = await checkAuth();
