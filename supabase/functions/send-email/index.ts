@@ -37,7 +37,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   zapisy_confirmation: 'Dziękuję za zgłoszenie',
   proforma_generated: 'Faktura proforma - {{offerName}}',
   invoice_sent: 'Faktura VAT - {{invoiceNumber}}',
-  contract_sent: 'Umowa do podpisu - {{offerName}}',
+  contract_sent: 'Umowa podpisana - {{offerName}}',
   offer_created: 'Twoja oferta jest gotowa - {{offerName}}',
   offer_personal: 'Re: {{offerName}}',
   offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',

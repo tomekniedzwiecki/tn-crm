@@ -1,14 +1,14 @@
--- Add columns for seller-signed contract and send timestamp
+-- Add columns for fully signed contract and send timestamp
 ALTER TABLE workflows ADD COLUMN IF NOT EXISTS contract_seller_signed_url TEXT;
 ALTER TABLE workflows ADD COLUMN IF NOT EXISTS contract_sent_at TIMESTAMPTZ;
 
 -- Add comments
-COMMENT ON COLUMN workflows.contract_seller_signed_url IS 'URL to the contract signed by seller before sending to client';
-COMMENT ON COLUMN workflows.contract_sent_at IS 'Timestamp when contract was sent to client';
+COMMENT ON COLUMN workflows.contract_seller_signed_url IS 'URL to the fully signed contract (both parties)';
+COMMENT ON COLUMN workflows.contract_sent_at IS 'Timestamp when signed contract was added and client notified';
 
 -- Add default email template for contract_sent
 INSERT INTO settings (key, value) VALUES
-('email_template_contract_sent_subject', 'Umowa do podpisu - {{offerName}}'),
+('email_template_contract_sent_subject', 'Umowa podpisana - {{offerName}}'),
 ('email_template_contract_sent_body', '<!DOCTYPE html>
 <html>
 <head>
@@ -23,25 +23,25 @@ INSERT INTO settings (key, value) VALUES
                     <tr>
                         <td style="padding: 48px 40px 40px 40px;">
                             <!-- Label -->
-                            <p style="margin: 0 0 8px 0; color: #8b5cf6; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
-                                Umowa
+                            <p style="margin: 0 0 8px 0; color: #10b981; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                Umowa podpisana
                             </p>
 
                             <!-- Headline -->
                             <h1 style="margin: 0 0 24px 0; color: #ffffff; font-size: 28px; font-weight: 600; line-height: 1.3;">
-                                {{clientName}}, Twoja umowa czeka na podpis
+                                {{clientName}}, Twoja umowa zostala podpisana!
                             </h1>
 
                             <!-- Intro text -->
                             <p style="margin: 0 0 32px 0; color: #a3a3a3; font-size: 15px; line-height: 1.6;">
-                                Przygotowalismy umowe dla projektu <span style="color: #ffffff;">{{offerName}}</span>. Pobierz ja, przeczytaj i podpisz jednym z dostepnych sposobow.
+                                Umowa dla projektu <span style="color: #ffffff;">{{offerName}}</span> zostala podpisana przez obie strony. Mozesz ja pobrac na stronie projektu.
                             </p>
 
                             <!-- Info box -->
                             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #171717; border-radius: 8px; margin-bottom: 24px;">
                                 <tr>
                                     <td style="padding: 24px;">
-                                        <div style="margin-bottom: 16px;">
+                                        <div class="flex items-center gap-3" style="margin-bottom: 16px;">
                                             <p style="margin: 0 0 4px 0; color: #737373; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
                                                 Projekt
                                             </p>
@@ -49,9 +49,10 @@ INSERT INTO settings (key, value) VALUES
                                                 {{offerName}}
                                             </p>
                                         </div>
-                                        <p style="margin: 0; color: #a3a3a3; font-size: 13px; line-height: 1.5;">
-                                            Na stronie projektu znajdziesz umowe do pobrania oraz instrukcje podpisania.
-                                        </p>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+                                            <span style="color: #10b981; font-size: 13px; font-weight: 500;">Umowa podpisana</span>
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
@@ -60,8 +61,8 @@ INSERT INTO settings (key, value) VALUES
                             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{projectUrl}}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 14px; font-weight: 600; text-align: center;">
-                                            Przejdz do projektu
+                                        <a href="{{projectUrl}}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 14px; font-weight: 600; text-align: center;">
+                                            Pobierz umowe
                                         </a>
                                     </td>
                                 </tr>
@@ -69,7 +70,7 @@ INSERT INTO settings (key, value) VALUES
 
                             <!-- Note -->
                             <p style="margin: 0; color: #737373; font-size: 13px; line-height: 1.5; text-align: center;">
-                                Masz pytania? Odpowiedz na tego maila.
+                                Dziekujemy za zaufanie!
                             </p>
                         </td>
                     </tr>
