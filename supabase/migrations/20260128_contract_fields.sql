@@ -9,6 +9,7 @@ ALTER TABLE workflows ADD COLUMN IF NOT EXISTS client_postal_code TEXT;
 ALTER TABLE workflows ADD COLUMN IF NOT EXISTS client_country TEXT DEFAULT 'Polska';
 ALTER TABLE workflows ADD COLUMN IF NOT EXISTS client_pesel TEXT;
 ALTER TABLE workflows ADD COLUMN IF NOT EXISTS client_id_number TEXT;
+ALTER TABLE workflows ADD COLUMN IF NOT EXISTS client_nip TEXT;
 
 -- Contract status tracking
 ALTER TABLE workflows ADD COLUMN IF NOT EXISTS contract_status TEXT DEFAULT 'pending_data'

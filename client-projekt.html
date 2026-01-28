@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -285,9 +286,15 @@
                             <input type="text" id="cd-name" class="form-input" required placeholder="Jan Kowalski">
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Firma (opcjonalnie)</label>
-                            <input type="text" id="cd-company" class="form-input" placeholder="Nazwa firmy">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Firma (opcjonalnie)</label>
+                                <input type="text" id="cd-company" class="form-input" placeholder="Nazwa firmy">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">NIP (opcjonalnie)</label>
+                                <input type="text" id="cd-nip" class="form-input" placeholder="0000000000" maxlength="10">
+                            </div>
                         </div>
 
                         <div class="form-row">
@@ -729,11 +736,11 @@
 
             workflow = workflowData;
 
-            // Load offer to get contract template
+            // Load offer to get contract template URL
             if (workflow.offer_id) {
                 const { data: offerData } = await supabaseClient
                     .from('offers')
-                    .select('contract_template')
+                    .select('contract_template_url')
                     .eq('id', workflow.offer_id)
                     .single();
                 offer = offerData;
@@ -1013,6 +1020,7 @@
             // Pre-fill known data from workflow
             document.getElementById('cd-name').value = workflow.customer_name || '';
             document.getElementById('cd-company').value = workflow.customer_company || '';
+            document.getElementById('cd-nip').value = workflow.client_nip || '';
             document.getElementById('cd-email').value = workflow.customer_email || '';
             document.getElementById('cd-phone').value = workflow.customer_phone || '';
             document.getElementById('cd-street').value = workflow.client_street || '';
@@ -1064,6 +1072,7 @@
             contractData = {
                 customer_name: document.getElementById('cd-name').value.trim(),
                 customer_company: document.getElementById('cd-company').value.trim() || null,
+                client_nip: document.getElementById('cd-nip').value.trim() || null,
                 client_street: document.getElementById('cd-street').value.trim(),
                 client_postal_code: document.getElementById('cd-postal').value.trim(),
                 client_city: document.getElementById('cd-city').value.trim(),
@@ -1098,21 +1107,15 @@
             showScreen('contract-signing');
         }
 
-        // Contract template URLs by offer ID
-        const CONTRACT_TEMPLATES = {
-            '30bf199b-8bc1-4810-8716-43dbffeb9113': '/umowy/umowa-budowa-sklepu.html',
-            'bc5212fd-3f57-46a8-a2e9-07c030e97a3f': '/umowy/umowa-mentoring-ai.html'
-        };
-
         async function downloadContract() {
-            // If there's a contract file URL, open it
+            // If there's a signed contract file, open it directly
             if (workflow.contract_file_url) {
                 window.open(workflow.contract_file_url, '_blank');
                 return;
             }
 
-            // Get contract template URL for this offer
-            const templateUrl = CONTRACT_TEMPLATES[workflow.offer_id];
+            // Get contract template URL from offer
+            const templateUrl = offer?.contract_template_url;
             if (!templateUrl) {
                 alert('Szablon umowy nie zostal jeszcze skonfigurowany dla tej oferty. Skontaktuj sie z nami.');
                 return;
@@ -1126,21 +1129,32 @@
                 }
                 let contractHtml = await response.text();
 
+                // Build full address
+                const fullAddress = [
+                    workflow.client_street,
+                    [workflow.client_postal_code, workflow.client_city].filter(Boolean).join(' '),
+                    workflow.client_country
+                ].filter(Boolean).join(', ');
+
+                // Build firma line (add after name if company exists)
+                const firmaLinia = workflow.customer_company ? ` / ${workflow.customer_company}` : '';
+
+                // Generate contract number from workflow
+                const nrUmowy = workflow.order_number || `TN-${new Date().getFullYear()}-${workflow.id?.substring(0, 6).toUpperCase() || '000000'}`;
+
                 // Replace template variables with actual data
                 const replacements = {
                     '{{imie_nazwisko}}': workflow.customer_name || '',
-                    '{{firma}}': workflow.customer_company || '',
+                    '{{firma_linia}}': firmaLinia,
+                    '{{nip}}': workflow.client_nip || '-',
+                    '{{pesel}}': workflow.client_pesel || '',
+                    '{{adres}}': fullAddress,
                     '{{email}}': workflow.customer_email || '',
                     '{{telefon}}': workflow.customer_phone || '',
-                    '{{ulica}}': workflow.client_street || '',
-                    '{{kod_pocztowy}}': workflow.client_postal_code || '',
-                    '{{miasto}}': workflow.client_city || '',
-                    '{{kraj}}': workflow.client_country || 'Polska',
-                    '{{pesel}}': workflow.client_pesel || '',
-                    '{{dowod}}': workflow.client_id_number || '',
+                    '{{nr_umowy}}': nrUmowy,
+                    '{{data_zawarcia}}': new Date().toLocaleDateString('pl-PL'),
                     '{{nazwa_oferty}}': workflow.offer_name || '',
                     '{{kwota}}': workflow.amount ? workflow.amount.toLocaleString('pl-PL') + ' PLN' : '',
-                    '{{data}}': new Date().toLocaleDateString('pl-PL'),
                     '{{data_rozpoczecia}}': formatDate(workflow.started_at)
                 };
 
@@ -1148,14 +1162,25 @@
                     contractHtml = contractHtml.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
                 }
 
-                // Open in new window for printing
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(contractHtml);
-                printWindow.document.close();
+                // Generate PDF using html2pdf.js
+                const container = document.createElement('div');
+                container.innerHTML = contractHtml;
+                document.body.appendChild(container);
+
+                const opt = {
+                    margin: 10,
+                    filename: `Umowa_${workflow.customer_name?.replace(/\s+/g, '_') || 'klient'}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                await html2pdf().set(opt).from(container).save();
+                document.body.removeChild(container);
 
             } catch (err) {
-                console.error('Error loading contract template:', err);
-                alert('Wystapil blad podczas ladowania umowy. Sprobuj ponownie lub skontaktuj sie z nami.');
+                console.error('Error generating contract PDF:', err);
+                alert('Wystapil blad podczas generowania umowy. Sprobuj ponownie lub skontaktuj sie z nami.');
             }
         }
 
