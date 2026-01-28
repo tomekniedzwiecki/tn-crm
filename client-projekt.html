@@ -90,47 +90,6 @@
         .text-tertiary { color: var(--text-tertiary); }
 
         /* ═══════════════════════════════════════════════════════════════════
-           TABS - Vercel Navigation Style
-           ═══════════════════════════════════════════════════════════════════ */
-        .tab-nav {
-            display: flex;
-            gap: 2px;
-            border-bottom: 1px solid var(--border);
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            padding: 0 0 0 0;
-        }
-        .tab-nav::-webkit-scrollbar { display: none; }
-
-        .tab-btn {
-            position: relative;
-            padding: 14px 16px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-tertiary);
-            border: none;
-            background: transparent;
-            white-space: nowrap;
-            transition: color 0.2s ease;
-            letter-spacing: -0.01em;
-        }
-        .tab-btn:hover { color: var(--text-secondary); }
-        .tab-btn.active {
-            color: var(--text-primary);
-        }
-        .tab-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: var(--text-primary);
-        }
-        .tab-btn i { font-size: 15px; opacity: 0.8; }
-
-        /* ═══════════════════════════════════════════════════════════════════
            CARDS - Vercel Surface Style
            ═══════════════════════════════════════════════════════════════════ */
         .card {
@@ -409,9 +368,43 @@
         /* ═══════════════════════════════════════════════════════════════════
            RESPONSIVE
            ═══════════════════════════════════════════════════════════════════ */
+        /* ═══════════════════════════════════════════════════════════════════
+           SIDEBAR NAVIGATION
+           ═══════════════════════════════════════════════════════════════════ */
+        .sidebar-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 450;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+        }
+        .sidebar-btn:hover {
+            color: var(--text-primary);
+            background: var(--surface);
+        }
+        .sidebar-btn.active {
+            color: var(--text-primary);
+            background: var(--surface-hover);
+        }
+        .sidebar-btn i {
+            font-size: 16px;
+            opacity: 0.7;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .sidebar-btn.active i { opacity: 1; }
+
         @media (max-width: 768px) {
-            .tab-btn { padding: 12px 12px; font-size: 12px; }
-            .tab-btn i { display: none; }
             .stat-value { font-size: 24px; }
         }
     </style>
@@ -644,67 +637,136 @@
 
     <!-- Main Project Screen -->
     <div id="project-screen" class="hidden min-h-screen flex flex-col">
-        <!-- Header -->
-        <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-[#1a1a1a]">
-            <div class="max-w-6xl mx-auto px-4 md:px-6">
-                <!-- Top bar -->
-                <div class="flex items-center justify-between h-14">
-                    <div class="flex items-center gap-4">
-                        <!-- Logo -->
-                        <a href="/" class="flex items-center gap-3 group">
-                            <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center transition-transform group-hover:scale-105">
-                                <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
-                            </div>
-                            <svg class="w-4 h-4 text-[#333]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </a>
-                        <!-- Project name -->
-                        <div>
-                            <h1 id="project-title" class="text-[15px] font-medium text-white tracking-tight">Projekt</h1>
-                        </div>
+        <!-- Top Header Bar -->
+        <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-[#1a1a1a] md:hidden">
+            <div class="flex items-center justify-between h-14 px-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
+                        <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span id="project-status-badge" class="badge badge-success">
-                            <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
-                            Aktywny
-                        </span>
-                    </div>
+                    <h1 id="project-title-mobile" class="text-[15px] font-medium text-white tracking-tight truncate max-w-[200px]">Projekt</h1>
                 </div>
-
-                <!-- Tabs -->
-                <nav class="tab-nav">
-                    <button onclick="switchTab('projekt')" data-tab="projekt" class="tab-btn active">
-                        Przegląd
-                    </button>
-                    <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="tab-btn">
-                        Dokumenty
-                    </button>
-                    <button onclick="switchTab('materialy')" data-tab="materialy" class="tab-btn">
-                        Materiały
-                    </button>
-                    <button onclick="switchTab('branding')" data-tab="branding" class="tab-btn">
-                        Branding
-                    </button>
-                    <button onclick="switchTab('strona')" data-tab="strona" class="tab-btn">
-                        Strona
-                    </button>
-                    <button onclick="switchTab('produkty')" data-tab="produkty" class="tab-btn">
-                        Produkty
-                    </button>
-                    <button onclick="switchTab('raporty')" data-tab="raporty" class="tab-btn">
-                        Raporty
-                    </button>
-                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="tab-btn relative">
-                        Komentarze
-                        <span id="comments-badge" class="hidden absolute -top-0.5 -right-0.5 bg-[#00d084] text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
-                    </button>
-                </nav>
+                <button onclick="toggleMobileMenu()" id="mobile-menu-btn" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#111] transition-colors">
+                    <i class="ph ph-list text-xl text-white"></i>
+                </button>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-10">
+        <!-- Layout: Sidebar + Content -->
+        <div class="flex flex-1">
+            <!-- Sidebar -->
+            <aside id="sidebar" class="hidden md:flex flex-col w-[240px] min-w-[240px] border-r border-[#1a1a1a] bg-black sticky top-0 h-screen overflow-y-auto">
+                <!-- Logo & Project -->
+                <div class="p-4 border-b border-[#1a1a1a]">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center flex-shrink-0">
+                            <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
+                        </div>
+                        <span class="text-[13px] text-tertiary">tomekniedzwiecki.pl</span>
+                    </div>
+                    <h1 id="project-title" class="text-[15px] font-medium text-white tracking-tight leading-tight mb-2">Projekt</h1>
+                    <span id="project-status-badge" class="badge badge-success">
+                        <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+                        Aktywny
+                    </span>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex-1 py-3 px-2">
+                    <div class="mb-1">
+                        <p class="px-3 py-2 text-[10px] uppercase tracking-widest text-tertiary font-medium">Projekt</p>
+                    </div>
+                    <button onclick="switchTab('projekt')" data-tab="projekt" class="sidebar-btn active">
+                        <i class="ph ph-house-simple"></i>
+                        Przegląd
+                    </button>
+                    <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="sidebar-btn">
+                        <i class="ph ph-file-text"></i>
+                        Dokumenty
+                    </button>
+                    <button onclick="switchTab('materialy')" data-tab="materialy" class="sidebar-btn">
+                        <i class="ph ph-folder-open"></i>
+                        Materiały
+                    </button>
+                    <button onclick="switchTab('branding')" data-tab="branding" class="sidebar-btn">
+                        <i class="ph ph-paint-brush"></i>
+                        Branding
+                    </button>
+
+                    <div class="mb-1 mt-4">
+                        <p class="px-3 py-2 text-[10px] uppercase tracking-widest text-tertiary font-medium">Pozostałe</p>
+                    </div>
+                    <button onclick="switchTab('strona')" data-tab="strona" class="sidebar-btn">
+                        <i class="ph ph-globe"></i>
+                        Strona
+                    </button>
+                    <button onclick="switchTab('produkty')" data-tab="produkty" class="sidebar-btn">
+                        <i class="ph ph-package"></i>
+                        Produkty
+                    </button>
+                    <button onclick="switchTab('raporty')" data-tab="raporty" class="sidebar-btn">
+                        <i class="ph ph-chart-line-up"></i>
+                        Raporty
+                    </button>
+                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="sidebar-btn relative">
+                        <i class="ph ph-chat-circle-text"></i>
+                        Komentarze
+                        <span id="comments-badge" class="hidden ml-auto bg-[#00d084] text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
+                    </button>
+                </nav>
+
+                <!-- Footer -->
+                <div class="p-4 border-t border-[#1a1a1a]">
+                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="text-tertiary hover:text-secondary text-xs transition-colors">Kontakt</a>
+                </div>
+            </aside>
+
+            <!-- Mobile Menu Overlay -->
+            <div id="mobile-menu" class="hidden fixed inset-0 z-50 md:hidden">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
+                <div class="absolute left-0 top-0 bottom-0 w-[260px] bg-black border-r border-[#1a1a1a] animate-slide overflow-y-auto">
+                    <div class="p-4 border-b border-[#1a1a1a] flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
+                                <span class="text-black text-[10px] font-bold">TN</span>
+                            </div>
+                            <span class="text-[13px] text-tertiary">Projekt</span>
+                        </div>
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#111]">
+                            <i class="ph ph-x text-lg text-white"></i>
+                        </button>
+                    </div>
+                    <nav class="py-3 px-2" id="mobile-nav">
+                        <button onclick="switchTab('projekt');toggleMobileMenu()" data-tab="projekt" class="sidebar-btn active">
+                            <i class="ph ph-house-simple"></i> Przegląd
+                        </button>
+                        <button onclick="switchTab('dokumenty');toggleMobileMenu()" data-tab="dokumenty" class="sidebar-btn">
+                            <i class="ph ph-file-text"></i> Dokumenty
+                        </button>
+                        <button onclick="switchTab('materialy');toggleMobileMenu()" data-tab="materialy" class="sidebar-btn">
+                            <i class="ph ph-folder-open"></i> Materiały
+                        </button>
+                        <button onclick="switchTab('branding');toggleMobileMenu()" data-tab="branding" class="sidebar-btn">
+                            <i class="ph ph-paint-brush"></i> Branding
+                        </button>
+                        <button onclick="switchTab('strona');toggleMobileMenu()" data-tab="strona" class="sidebar-btn">
+                            <i class="ph ph-globe"></i> Strona
+                        </button>
+                        <button onclick="switchTab('produkty');toggleMobileMenu()" data-tab="produkty" class="sidebar-btn">
+                            <i class="ph ph-package"></i> Produkty
+                        </button>
+                        <button onclick="switchTab('raporty');toggleMobileMenu()" data-tab="raporty" class="sidebar-btn">
+                            <i class="ph ph-chart-line-up"></i> Raporty
+                        </button>
+                        <button onclick="switchTab('komentarze');toggleMobileMenu()" data-tab="komentarze" class="sidebar-btn">
+                            <i class="ph ph-chat-circle-text"></i> Komentarze
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="flex-1 min-w-0 px-4 md:px-10 py-8 md:py-10">
 
             <!-- TAB: Projekt -->
             <div id="tab-projekt" class="tab-panel animate-enter">
@@ -951,16 +1013,7 @@
             </div>
 
         </main>
-
-        <!-- Footer -->
-        <footer class="border-t border-[#1a1a1a] mt-auto">
-            <div class="max-w-6xl mx-auto px-4 md:px-6 py-5">
-                <div class="flex items-center justify-between text-xs">
-                    <span class="text-tertiary">© tomekniedzwiecki.pl</span>
-                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="text-tertiary hover:text-secondary transition-colors">Kontakt</a>
-                </div>
-            </div>
-        </footer>
+        </div><!-- /flex layout -->
     </div>
 
     <!-- Toast -->
@@ -1197,7 +1250,7 @@
 
         // Tab switching
         function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
+            document.querySelectorAll('.sidebar-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
             document.querySelectorAll('.tab-panel').forEach(panel => {
@@ -1220,6 +1273,13 @@
             }
         }
         window.switchTab = switchTab;
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+        window.toggleMobileMenu = toggleMobileMenu;
 
         // Comments badge - track unread team comments for client
         function getLastSeenKey() {
@@ -1267,6 +1327,7 @@
         function renderProject() {
             // Header
             document.getElementById('project-title').textContent = workflow.offer_name || 'Projekt';
+            document.getElementById('project-title-mobile').textContent = workflow.offer_name || 'Projekt';
             document.getElementById('offer-name').textContent = workflow.offer_name || '-';
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);
 
