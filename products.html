@@ -69,10 +69,6 @@
                 <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty</span></span>
             </div>
             <div class="flex items-center gap-2">
-                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var d={_v:5,url:location.href};var t=document.querySelector('h1[data-pl]')||document.querySelector('h1');d.name=t?t.textContent.trim():'';var imgs=[];document.querySelectorAll('div[class*=slider--img] img, div[class*=gallery] img, .images-view-item img').forEach(function(i){var s=i.src||i.getAttribute('data-src')||'';if(s){s=s.replace(/(\.\w{3,4})_\d+x\d+.*$/,'$1');if(imgs.indexOf(s)<0)imgs.push(s)}});if(!imgs.length){var m=document.querySelector('img.magnifier_image')||document.querySelector('.pdp-info img');if(m)imgs.push(m.src)}d.images=imgs;var pe=document.querySelector('span[class*=price-default--current]')||document.querySelector('span[class*=price--current]')||document.querySelector('span[class*=product-price-value]');d.price=pe?pe.textContent.trim().replace(/[^0-9.,]/g,''):'';var re=document.querySelector('a[class*=reviewer--reviews]')||document.querySelector('span[class*=reviews]');if(re){var rt=re.textContent.match(/[0-9,.]+/);if(rt)d.review_count=rt[0].replace(/[,.]/g,'')}var oe=document.querySelector('span[class*=reviewer--sold]')||document.querySelector('span[class*=trade]');if(!oe){document.querySelectorAll('span').forEach(function(s){if(!oe&&/sold|zamówi/i.test(s.textContent)&&s.textContent.length<30)oe=s})}if(oe){var ot=oe.textContent.match(/[0-9,.]+/);if(ot)d.orders_sold=ot[0].replace(/[,.]/g,'')}var ra=document.querySelector('span[class*=rating--num]')||document.querySelector('span[class*=overview-rating-average]');if(ra){var rv=ra.textContent.match(/[0-9.]+/);if(rv)d.rating=rv[0]}var se=document.querySelector('a[data-pl=store-name]')||document.querySelector('a[class*=store-header--name]')||document.querySelector('.shop-name a');d.store_name=se?se.textContent.trim():'';navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano: '+d.name.substring(0,40);document.body.appendChild(b);setTimeout(function(){b.remove()},2500)})}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
-                    <i class="ph ph-bookmark-simple"></i>
-                    AliExpress Bookmarklet
-                </a>
                 <button onclick="openAddProductModal()" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
                     <i class="ph ph-plus"></i>
                     Dodaj produkt
@@ -119,7 +115,7 @@
                 <div id="empty-state" class="hidden py-16 text-center">
                     <i class="ph ph-package text-4xl text-zinc-700 mb-3"></i>
                     <p class="text-zinc-400 text-sm mb-1">Brak produktów</p>
-                    <p class="text-zinc-600 text-xs font-mono">Dodaj produkty przyciskiem powyżej lub bookmarkletem AliExpress</p>
+                    <p class="text-zinc-600 text-xs font-mono">Dodaj produkty przyciskiem powyżej</p>
                 </div>
             </div>
         </div>
@@ -141,75 +137,20 @@
             <div class="p-5 space-y-4 overflow-y-auto flex-1">
                 <input type="hidden" id="product-edit-id">
 
-                <!-- Paste from AliExpress -->
-                <button onclick="pasteFromAliExpress()" class="w-full border border-dashed border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 text-orange-400 rounded-lg py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                    <i class="ph ph-clipboard-text"></i>
-                    Wklej z AliExpress (schowek)
-                </button>
-
-                <!-- Image Gallery -->
-                <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Zdjęcia produktu</label>
-                    <div id="product-images-gallery" class="flex flex-wrap gap-2 mb-2"></div>
-                    <p id="product-images-hint" class="text-zinc-600 text-xs hidden">Kliknij zdjęcie aby ustawić jako główne. × aby usunąć.</p>
-                </div>
-
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Nazwa produktu</label>
                     <input type="text" id="product-name" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="Nazwa produktu...">
                 </div>
                 <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis</label>
-                    <textarea id="product-description" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" rows="2" placeholder="Krótki opis..."></textarea>
-                </div>
-                <!-- Ceny -->
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena AliExpress</label>
-                        <input type="number" step="0.01" id="product-wholesale-price" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Prop. cena detal.</label>
-                        <input type="number" step="0.01" id="product-price" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Waluta</label>
-                        <select id="product-currency" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600">
-                            <option value="USD">USD</option>
-                            <option value="PLN">PLN</option>
-                            <option value="EUR">EUR</option>
-                        </select>
-                    </div>
-                </div>
-                <!-- Opinie AliExpress -->
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Rating</label>
-                        <input type="number" step="0.1" min="0" max="5" id="product-rating" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="4.8">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Liczba opinii</label>
-                        <input type="number" id="product-review-count" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="1234">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Zamówienia</label>
-                        <input type="number" id="product-orders-sold" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="5000">
-                    </div>
-                </div>
-                <!-- Sklep i link -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Sklep AliExpress</label>
-                        <input type="text" id="product-store-name" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="Nazwa sklepu...">
-                    </div>
-                    <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Link źródłowy</label>
-                        <input type="url" id="product-source-url" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="https://aliexpress.com/...">
-                    </div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Link źródłowy</label>
+                    <input type="url" id="product-source-url" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="https://aliexpress.com/...">
                 </div>
                 <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Notatki</label>
-                    <textarea id="product-notes" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" rows="2" placeholder="Notatki wewnętrzne..."></textarea>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Link do zdjęcia głównego</label>
+                    <input type="url" id="product-image-url" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="https://...">
+                    <div id="product-image-preview" class="mt-2 hidden">
+                        <img id="product-image-preview-img" class="w-24 h-24 object-cover rounded-lg border border-zinc-800" src="">
+                    </div>
                 </div>
             </div>
 
@@ -233,12 +174,9 @@
         Sidebar.setupLogout(supabaseClient);
 
         let products = [];
-        let productImages = {}; // keyed by product_id
         let filteredProducts = [];
         let currentMember = null;
         let isAdmin = false;
-        let modalImages = []; // temp images for modal
-        let modalMainIndex = 0;
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -265,24 +203,14 @@
         }
 
         async function loadProducts() {
-            const [productsRes, imagesRes] = await Promise.all([
-                supabaseClient.from('workflow_products').select('*').is('workflow_id', null).order('created_at', { ascending: false }),
-                supabaseClient.from('product_images').select('*').order('sort_order')
-            ]);
+            const { data, error } = await supabaseClient.from('workflow_products').select('*').is('workflow_id', null).order('created_at', { ascending: false });
 
-            if (productsRes.error) {
-                console.error('Error loading products:', productsRes.error);
+            if (error) {
+                console.error('Error loading products:', error);
                 return;
             }
 
-            products = productsRes.data || [];
-
-            // Build images lookup
-            productImages = {};
-            (imagesRes.data || []).forEach(img => {
-                if (!productImages[img.product_id]) productImages[img.product_id] = [];
-                productImages[img.product_id].push(img);
-            });
+            products = data || [];
 
             applyFilters();
             renderProducts();
@@ -313,26 +241,6 @@
             'delivered': { text: 'Dostarczony', class: 'bg-emerald-500/20 text-emerald-400' }
         };
 
-        function getMainImage(productId) {
-            const imgs = productImages[productId] || [];
-            const main = imgs.find(i => i.is_main);
-            return main ? main.url : (imgs.length > 0 ? imgs[0].url : null);
-        }
-
-        function renderStars(rating) {
-            if (!rating) return '';
-            const full = Math.floor(rating);
-            const half = rating - full >= 0.5;
-            let html = '<span class="flex items-center gap-0.5">';
-            for (let i = 0; i < 5; i++) {
-                if (i < full) html += '<i class="ph-fill ph-star text-amber-400 text-xs"></i>';
-                else if (i === full && half) html += '<i class="ph-fill ph-star-half text-amber-400 text-xs"></i>';
-                else html += '<i class="ph ph-star text-zinc-600 text-xs"></i>';
-            }
-            html += '</span>';
-            return html;
-        }
-
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
@@ -347,30 +255,18 @@
 
             grid.innerHTML = filteredProducts.map(p => {
                 const status = statusLabels[p.status] || statusLabels.proposal;
-                const mainImg = getMainImage(p.id) || p.image_url;
-                const imgCount = (productImages[p.id] || []).length;
 
                 return `
                     <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all">
                         <div class="relative aspect-square bg-zinc-800 overflow-hidden">
-                            ${mainImg
-                                ? `<img src="${mainImg}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
+                            ${p.image_url
+                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
                                 : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-zinc-700"></i></div>`
                             }
                             <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
-                            ${imgCount > 1 ? `<span class="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-md backdrop-blur-sm"><i class="ph ph-images"></i> ${imgCount}</span>` : ''}
                         </div>
                         <div class="p-4">
-                            <h4 class="text-white font-medium text-sm leading-tight mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
-                            ${p.store_name ? `<div class="text-zinc-500 text-xs mb-1.5 truncate"><i class="ph ph-storefront"></i> ${p.store_name}</div>` : ''}
-                            ${p.rating || p.orders_sold ? `<div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                ${p.rating ? `<span class="flex items-center gap-1">${renderStars(p.rating)}<span class="text-zinc-500 text-xs">${parseFloat(p.rating).toFixed(1)}</span>${p.review_count ? `<span class="text-zinc-600 text-xs">(${p.review_count})</span>` : ''}</span>` : ''}
-                                ${p.orders_sold ? `<span class="text-zinc-500 text-xs"><i class="ph ph-shopping-cart"></i> ${p.orders_sold.toLocaleString()}</span>` : ''}
-                            </div>` : ''}
-                            <div class="flex items-baseline gap-2 mb-2">
-                                ${p.wholesale_price ? `<span class="text-orange-400 font-semibold text-lg">${parseFloat(p.wholesale_price).toFixed(2)} <span class="text-zinc-500 text-xs font-normal">${p.currency || 'USD'}</span></span>` : ''}
-                                ${p.price ? `<span class="text-emerald-400 text-xs font-medium">detal: ${parseFloat(p.price).toFixed(2)}</span>` : ''}
-                            </div>
+                            <h4 class="text-white font-medium text-sm leading-tight mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
                             <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
                                 ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
                                 <button onclick="openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
@@ -382,36 +278,6 @@
             }).join('');
         }
 
-        function renderModalGallery() {
-            const gallery = document.getElementById('product-images-gallery');
-            const hint = document.getElementById('product-images-hint');
-            if (modalImages.length === 0) {
-                gallery.innerHTML = '<div class="text-zinc-600 text-xs py-4 w-full text-center border border-dashed border-zinc-800 rounded-lg">Brak zdjęć — użyj bookmarkletu AliExpress</div>';
-                hint.classList.add('hidden');
-                return;
-            }
-            hint.classList.remove('hidden');
-            gallery.innerHTML = modalImages.map((url, i) => `
-                <div class="relative group/thumb cursor-pointer ${i === modalMainIndex ? 'ring-2 ring-emerald-500' : 'ring-1 ring-zinc-700'} rounded-lg overflow-hidden w-20 h-20 flex-shrink-0" onclick="setMainImage(${i})">
-                    <img src="${url}" class="w-full h-full object-cover" loading="lazy">
-                    ${i === modalMainIndex ? '<div class="absolute inset-0 bg-emerald-500/20 flex items-center justify-center"><i class="ph-fill ph-star text-emerald-400 text-sm"></i></div>' : ''}
-                    <button onclick="event.stopPropagation(); removeModalImage(${i})" class="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">×</button>
-                </div>
-            `).join('');
-        }
-
-        function setMainImage(index) {
-            modalMainIndex = index;
-            renderModalGallery();
-        }
-
-        function removeModalImage(index) {
-            modalImages.splice(index, 1);
-            if (modalMainIndex >= modalImages.length) modalMainIndex = Math.max(0, modalImages.length - 1);
-            if (index < modalMainIndex) modalMainIndex--;
-            renderModalGallery();
-        }
-
         function openAddProductModal(editId) {
             const modal = document.getElementById('product-modal');
             const title = document.getElementById('product-modal-title');
@@ -419,18 +285,9 @@
             // Reset
             document.getElementById('product-edit-id').value = '';
             document.getElementById('product-name').value = '';
-            document.getElementById('product-description').value = '';
-            document.getElementById('product-price').value = '';
-            document.getElementById('product-wholesale-price').value = '';
-            document.getElementById('product-currency').value = 'USD';
-            document.getElementById('product-rating').value = '';
-            document.getElementById('product-review-count').value = '';
-            document.getElementById('product-orders-sold').value = '';
-            document.getElementById('product-store-name').value = '';
             document.getElementById('product-source-url').value = '';
-            document.getElementById('product-notes').value = '';
-            modalImages = [];
-            modalMainIndex = 0;
+            document.getElementById('product-image-url').value = '';
+            updateImagePreview();
 
             if (editId) {
                 const p = products.find(x => x.id === editId);
@@ -438,28 +295,14 @@
                     title.innerHTML = '<i class="ph ph-pencil-simple text-orange-400"></i> Edytuj produkt';
                     document.getElementById('product-edit-id').value = p.id;
                     document.getElementById('product-name').value = p.name || '';
-                    document.getElementById('product-description').value = p.description || '';
-                    document.getElementById('product-price').value = p.price || '';
-                    document.getElementById('product-wholesale-price').value = p.wholesale_price || '';
-                    document.getElementById('product-currency').value = p.currency || 'USD';
-                    document.getElementById('product-rating').value = p.rating || '';
-                    document.getElementById('product-review-count').value = p.review_count || '';
-                    document.getElementById('product-orders-sold').value = p.orders_sold || '';
-                    document.getElementById('product-store-name').value = p.store_name || '';
                     document.getElementById('product-source-url').value = p.source_url || '';
-                    document.getElementById('product-notes').value = p.notes || '';
-
-                    // Load existing images
-                    const imgs = productImages[p.id] || [];
-                    modalImages = imgs.map(i => i.url);
-                    const mainIdx = imgs.findIndex(i => i.is_main);
-                    modalMainIndex = mainIdx >= 0 ? mainIdx : 0;
+                    document.getElementById('product-image-url').value = p.image_url || '';
+                    updateImagePreview();
                 }
             } else {
                 title.innerHTML = '<i class="ph ph-package text-orange-400"></i> Dodaj produkt';
             }
 
-            renderModalGallery();
             modal.classList.remove('hidden');
         }
 
@@ -467,124 +310,24 @@
             document.getElementById('product-modal').classList.add('hidden');
         }
 
-        // Helper: safely dig into nested object
-        function dig(obj, ...keys) {
-            let v = obj;
-            for (const k of keys) {
-                if (v == null) return undefined;
-                v = v[k];
-            }
-            return v;
-        }
-
-        // Parse raw AliExpress runParams.data into form fields
-        // Supports BOTH old format (*Module) and new 2024+ format (*Component)
-        function parseAliExpressRaw(raw) {
-            const result = { images: [], name: '', price: '', currency: '', rating: null, review_count: null, orders_sold: null, store_name: '' };
-
-            // Images — old: imageModule.imagePathList, new: imageComponent.imagePathList
-            const imgMod = raw.imageModule || raw.imageComponent;
-            if (imgMod) {
-                const imgList = imgMod.imagePathList;
-                if (Array.isArray(imgList)) {
-                    result.images = imgList.map(u => typeof u === 'string' ? (u.startsWith('//') ? 'https:' + u : u) : '').filter(Boolean);
-                }
-            }
-
-            // Title — old: titleModule.subject, new: productInfoComponent.subject
-            const tm = raw.titleModule || raw.productInfoComponent;
-            if (tm) result.name = tm.subject || tm.title || '';
-
-            // Price — old: priceModule, new: priceComponent
-            const pm = raw.priceModule || raw.priceComponent;
-            if (pm) {
-                // New format: discountPrice / origPrice objects with min/max
-                const dp = pm.discountPrice || pm.activityPrice || {};
-                const op = pm.origPrice || {};
-                const priceStr = dp.minPrice || dp.min || pm.formatedActivityPrice || pm.formatedPrice || pm.minActivityPrice || pm.minPrice || op.minPrice || op.min || pm.maxPrice || '';
-                result.price = priceStr.toString().replace(/[^0-9.,]/g, '');
-                result.currency = pm.currencyCode || dp.currency || op.currency || '';
-            }
-
-            // Rating — old: feedbackModule, new: feedbackComponent
-            const fm = raw.feedbackModule || raw.feedbackComponent;
-            if (fm) {
-                const starVal = fm.averageStar || fm.evarageStar || fm.averageStarRage;
-                if (starVal != null) {
-                    const r = parseFloat(starVal);
-                    if (!isNaN(r)) result.rating = r;
-                }
-                const rcVal = fm.totalValidNum || fm.totalValidcount || fm.totalStartCount;
-                if (rcVal != null) {
-                    const rc = parseInt(rcVal);
-                    if (!isNaN(rc)) result.review_count = rc;
-                }
-            }
-
-            // Orders sold — old: tradeModule.tradeCount, new: tradeComponent.formatTradeCount
-            const trade = raw.tradeModule || raw.tradeComponent;
-            if (trade) {
-                const tc = trade.tradeCount || trade.formatTradeCount;
-                if (tc != null) {
-                    const os = parseInt(tc.toString().replace(/[^0-9]/g, ''));
-                    if (!isNaN(os)) result.orders_sold = os;
-                }
-            }
-
-            // Store name — old: storeModule.storeName, new: sellerComponent.storeName
-            const sm = raw.storeModule || raw.sellerComponent;
-            if (sm) result.store_name = sm.storeName || sm.storeTitle || '';
-
-            return result;
-        }
-
-        async function pasteFromAliExpress() {
-            try {
-                const text = await navigator.clipboard.readText();
-                const data = JSON.parse(text);
-                console.log('[AliExpress] Pasted data:', data);
-
-                // v5+: DOM-scraped fields directly on data object
-                // Also supports legacy formats with same field names
-                if (data.name) document.getElementById('product-name').value = data.name;
-                if (data.price) document.getElementById('product-wholesale-price').value = data.price.replace(',', '.');
-                if (data.url) document.getElementById('product-source-url').value = data.url;
-                if (data.source_url) document.getElementById('product-source-url').value = data.source_url;
-                if (data.rating) document.getElementById('product-rating').value = data.rating;
-                if (data.review_count) document.getElementById('product-review-count').value = data.review_count;
-                if (data.orders_sold) document.getElementById('product-orders-sold').value = data.orders_sold;
-                if (data.store_name) document.getElementById('product-store-name').value = data.store_name;
-                if (data.currency) {
-                    const sel = document.getElementById('product-currency');
-                    if (![...sel.options].some(o => o.value === data.currency)) {
-                        sel.add(new Option(data.currency, data.currency));
-                    }
-                    sel.value = data.currency;
-                }
-
-                if (data.images && data.images.length > 0) {
-                    modalImages = data.images;
-                    modalMainIndex = 0;
-                } else if (data.image_url) {
-                    modalImages = [data.image_url];
-                    modalMainIndex = 0;
-                }
-                renderModalGallery();
-
-                const parts = [];
-                if (modalImages.length) parts.push(`${modalImages.length} zdjęć`);
-                if (data.name) parts.push(data.name.substring(0, 30));
-                if (data.price) parts.push(`cena: ${data.price}`);
-                if (data.rating) parts.push(`rating: ${data.rating}`);
-                if (data.review_count) parts.push(`${data.review_count} opinii`);
-                if (data.orders_sold) parts.push(`${data.orders_sold} zamówień`);
-                if (data.store_name) parts.push(data.store_name);
-                showToast(`Wklejono: ${parts.join(' · ')}`, 'success');
-            } catch (e) {
-                console.error('[AliExpress paste error]', e);
-                showToast('Brak danych w schowku. Użyj bookmarkletu na stronie AliExpress.', 'error');
+        function updateImagePreview() {
+            const url = document.getElementById('product-image-url').value.trim();
+            const preview = document.getElementById('product-image-preview');
+            const img = document.getElementById('product-image-preview-img');
+            if (url) {
+                img.src = url;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+                img.src = '';
             }
         }
+
+        // Live preview on image URL change
+        document.addEventListener('DOMContentLoaded', () => {
+            const imgInput = document.getElementById('product-image-url');
+            if (imgInput) imgInput.addEventListener('input', updateImagePreview);
+        });
 
         async function saveProduct() {
             const id = document.getElementById('product-edit-id').value;
@@ -595,52 +338,25 @@
             const payload = {
                 workflow_id: null,
                 name,
-                description: document.getElementById('product-description').value.trim() || null,
-                price: parseFloat(document.getElementById('product-price').value) || null,
-                wholesale_price: parseFloat(document.getElementById('product-wholesale-price').value) || null,
-                currency: document.getElementById('product-currency').value,
-                rating: parseFloat(document.getElementById('product-rating').value) || null,
-                review_count: parseInt(document.getElementById('product-review-count').value) || null,
-                orders_sold: parseInt(document.getElementById('product-orders-sold').value) || null,
-                store_name: document.getElementById('product-store-name').value.trim() || null,
-                image_url: modalImages.length > 0 ? modalImages[modalMainIndex] : null,
+                image_url: document.getElementById('product-image-url').value.trim() || null,
                 source_url: document.getElementById('product-source-url').value.trim() || null,
-                notes: document.getElementById('product-notes').value.trim() || null,
                 visible_to_client: true,
             };
 
-            // Only set status on new products
             if (!id) payload.status = 'proposal';
 
-            let productId = id;
             let error;
             if (id) {
                 ({ error } = await supabaseClient.from('workflow_products').update(payload).eq('id', id));
             } else {
                 const res = await supabaseClient.from('workflow_products').insert(payload).select('id').single();
                 error = res.error;
-                if (res.data) productId = res.data.id;
             }
 
             if (error) {
                 console.error('Error saving product:', error);
                 showToast('Błąd zapisu: ' + error.message, 'error');
                 return;
-            }
-
-            // Save images: delete old, insert new
-            if (productId) {
-                await supabaseClient.from('product_images').delete().eq('product_id', productId);
-                if (modalImages.length > 0) {
-                    const imageRows = modalImages.map((url, i) => ({
-                        product_id: productId,
-                        url,
-                        is_main: i === modalMainIndex,
-                        sort_order: i
-                    }));
-                    const { error: imgError } = await supabaseClient.from('product_images').insert(imageRows);
-                    if (imgError) console.error('Error saving images:', imgError);
-                }
             }
 
             closeProductModal();
