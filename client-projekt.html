@@ -1027,6 +1027,25 @@
     </div>
 
     <!-- Toast -->
+    <!-- Product Selection Confirmation Modal -->
+    <div id="product-confirm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl w-full max-w-md shadow-2xl">
+            <div class="p-6">
+                <div id="confirm-product-image" class="w-full aspect-[3/2] rounded-lg bg-[#111] overflow-hidden mb-5"></div>
+                <h3 id="confirm-product-name" class="text-white font-semibold text-lg mb-2"></h3>
+                <p class="text-[#888] text-sm leading-relaxed">Czy na pewno wybierasz ten produkt? Wokół niego zbudujemy Twój sklep i markę.</p>
+            </div>
+            <div class="flex gap-3 px-6 py-4 border-t border-[#222]">
+                <button onclick="closeConfirmModal()" class="flex-1 text-[#888] hover:text-white border border-[#333] hover:border-[#555] py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="confirmProductSelection()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                    Tak, wybieram
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
         <div class="bg-[#111] border border-[#222] text-white pl-4 pr-5 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-slide">
             <i id="toast-icon" class="ph ph-check-circle text-[#00d084]"></i>
@@ -1046,7 +1065,7 @@
         let materials = [];
         let brandingItems = [];
         let products = [];
-        let productImages = {};
+
         let reports = [];
         let comments = [];
         let isAuthenticated = false;
@@ -1149,7 +1168,7 @@
         }
 
         async function loadAllData() {
-            const [milestonesRes, tasksRes, docsRes, matsRes, brandRes, prodsRes, repsRes, comsRes, imgsRes] = await Promise.all([
+            const [milestonesRes, tasksRes, docsRes, matsRes, brandRes, prodsRes, repsRes, comsRes] = await Promise.all([
                 supabaseClient.from('workflow_milestones').select('*').eq('workflow_id', workflow.id).order('milestone_index'),
                 supabaseClient.from('workflow_tasks').select('*').eq('workflow_id', workflow.id).order('task_index'),
                 supabaseClient.from('workflow_documents').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
@@ -1157,8 +1176,7 @@
                 supabaseClient.from('workflow_branding').select('*').eq('workflow_id', workflow.id).order('sort_order'),
                 supabaseClient.from('workflow_products').select('*').is('workflow_id', null).eq('visible_to_client', true).order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_reports').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
-                supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true }),
-                supabaseClient.from('product_images').select('*').order('sort_order')
+                supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true })
             ]);
 
             milestones = milestonesRes.data || [];
@@ -1169,13 +1187,6 @@
             products = prodsRes.data || [];
             reports = repsRes.data || [];
             comments = comsRes.data || [];
-
-            // Build images lookup
-            productImages = {};
-            (imgsRes.data || []).forEach(img => {
-                if (!productImages[img.product_id]) productImages[img.product_id] = [];
-                productImages[img.product_id].push(img);
-            });
 
             // Update comments badge after loading
             updateCommentsBadge();
@@ -1411,6 +1422,12 @@
 
             // Milestones
             renderMilestones();
+
+            // Show/hide Produkty tab based on sharing
+            const produktyBtns = document.querySelectorAll('[data-tab="produkty"]');
+            produktyBtns.forEach(btn => {
+                btn.style.display = workflow.products_shared_at ? '' : 'none';
+            });
         }
 
         function renderMilestones() {
@@ -1655,25 +1672,9 @@
             }
         }
 
-        function getMainImage(productId) {
-            const imgs = productImages[productId] || [];
-            const main = imgs.find(i => i.is_main);
-            return main ? main.url : (imgs.length > 0 ? imgs[0].url : null);
-        }
 
-        function renderStars(rating) {
-            if (!rating) return '';
-            const full = Math.floor(rating);
-            const half = rating - full >= 0.5;
-            let html = '<span class="flex items-center gap-0.5">';
-            for (let i = 0; i < 5; i++) {
-                if (i < full) html += '<i class="ph-fill ph-star text-amber-400 text-xs"></i>';
-                else if (i === full && half) html += '<i class="ph-fill ph-star-half text-amber-400 text-xs"></i>';
-                else html += '<i class="ph ph-star text-[#444] text-xs"></i>';
-            }
-            html += '</span>';
-            return html;
-        }
+
+        let pendingProductId = null;
 
         function renderProducts() {
             const container = document.getElementById('products-list');
@@ -1693,25 +1694,21 @@
             // Show selected product hero
             const selected = selectedId ? products.find(p => p.id === selectedId) : null;
             if (selected) {
-                const heroImg = getMainImage(selected.id) || selected.image_url;
-                const heroImgs = productImages[selected.id] || [];
                 heroEl.classList.remove('hidden');
                 heroEl.innerHTML = `
-                    <div class="card overflow-hidden border-emerald-500/30" style="border-color: rgba(16,185,129,0.3);">
-                        <div class="flex flex-col md:flex-row">
-                            ${heroImg ? `<div class="md:w-64 h-64 md:h-auto bg-[#0a0a0a] flex-shrink-0"><img src="${heroImg}" alt="" class="w-full h-full object-cover"></div>` : ''}
-                            <div class="p-6 flex-1">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 text-xs font-medium px-2 py-1 rounded-md">
-                                        <i class="ph-fill ph-check-circle"></i> Twój wybrany produkt
-                                    </span>
-                                </div>
-                                <h3 class="text-white font-semibold text-lg mb-1">${selected.name}</h3>
-                                ${selected.description ? `<p class="text-tertiary text-sm mb-3">${selected.description}</p>` : ''}
-                                ${selected.rating ? `<div class="flex items-center gap-1.5 mb-2">${renderStars(selected.rating)}<span class="text-tertiary text-xs">${parseFloat(selected.rating).toFixed(1)}</span>${selected.review_count ? `<span class="text-[#444] text-xs">(${selected.review_count} opinii)</span>` : ''}</div>` : ''}
-                                ${selected.price ? `<p class="text-white font-bold text-2xl">${parseFloat(selected.price).toFixed(2)} <span class="text-tertiary text-sm font-normal">${selected.currency || 'USD'}</span></p>` : ''}
-                                ${heroImgs.length > 1 ? `<div class="flex gap-2 mt-4">${heroImgs.slice(0, 6).map(img => `<img src="${img.url}" class="w-12 h-12 rounded-md object-cover border border-[#222]" loading="lazy">`).join('')}${heroImgs.length > 6 ? `<span class="w-12 h-12 rounded-md bg-[#111] border border-[#222] flex items-center justify-center text-[#666] text-xs">+${heroImgs.length - 6}</span>` : ''}</div>` : ''}
+                    <div class="card overflow-hidden" style="border-color: rgba(16,185,129,0.3);">
+                        <div class="flex items-center gap-4 p-4">
+                            ${selected.image_url
+                                ? `<img src="${selected.image_url}" alt="" class="w-16 h-16 rounded-lg object-cover border border-[#222] flex-shrink-0">`
+                                : `<div class="w-16 h-16 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center flex-shrink-0"><i class="ph ph-package text-2xl text-[#444]"></i></div>`
+                            }
+                            <div class="flex-1 min-w-0">
+                                <span class="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-medium px-2 py-0.5 rounded-md mb-1">
+                                    <i class="ph-fill ph-check-circle"></i> Twój wybrany produkt
+                                </span>
+                                <h3 class="text-white font-medium text-sm truncate">${selected.name}</h3>
                             </div>
+                            ${selected.source_url ? `<a href="${selected.source_url}" target="_blank" class="text-[#666] hover:text-orange-400 transition-colors flex-shrink-0"><i class="ph ph-arrow-square-out text-lg"></i></a>` : ''}
                         </div>
                     </div>
                 `;
@@ -1720,7 +1717,7 @@
                 heroEl.innerHTML = '';
             }
 
-            // Render product cards (exclude selected from grid if shown in hero)
+            // Render product cards
             const gridProducts = selected ? products.filter(p => p.id !== selectedId) : products;
             const hasAnySelected = !!selected;
 
@@ -1729,52 +1726,68 @@
                 return;
             }
 
-            container.innerHTML = gridProducts.map(p => {
-                const mainImg = getMainImage(p.id) || p.image_url;
-                const imgCount = (productImages[p.id] || []).length;
-
-                return `
-                    <div class="card overflow-hidden group hover:border-[#333] transition-all duration-200">
-                        <div class="relative aspect-square bg-[#0a0a0a] overflow-hidden">
-                            ${mainImg
-                                ? `<img src="${mainImg}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">`
-                                : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-5xl text-[#333]"></i></div>`
-                            }
-                            ${imgCount > 1 ? `<span class="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-md backdrop-blur-sm"><i class="ph ph-images"></i> ${imgCount}</span>` : ''}
-                        </div>
-                        <div class="p-5">
-                            <h4 class="text-white font-medium text-sm mb-1 leading-tight" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
-                            ${p.rating ? `<div class="flex items-center gap-1.5 mb-2">${renderStars(p.rating)}<span class="text-tertiary text-xs">${parseFloat(p.rating).toFixed(1)}</span>${p.review_count ? `<span class="text-[#444] text-xs">(${p.review_count})</span>` : ''}</div>` : ''}
-                            ${p.description ? `<p class="text-tertiary text-xs mb-3" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.description}</p>` : '<div class="mb-3"></div>'}
-                            ${p.price ? `<p class="text-white font-bold text-xl mb-4">${parseFloat(p.price).toFixed(2)} <span class="text-tertiary text-xs font-normal">${p.currency || 'USD'}</span></p>` : '<div class="mb-4"></div>'}
-                            ${!hasAnySelected ? `
-                                <button onclick="selectProduct('${p.id}')" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                                    <i class="ph ph-check-circle"></i>
-                                    Wybieram ten produkt
-                                </button>
-                            ` : ''}
+            container.innerHTML = gridProducts.map(p => `
+                <div class="card overflow-hidden group hover:border-[#333] transition-all duration-200">
+                    <div class="relative aspect-[3/2] bg-[#0a0a0a] overflow-hidden">
+                        ${p.image_url
+                            ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
+                            : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-[#333]"></i></div>`
+                        }
+                    </div>
+                    <div class="p-4">
+                        <h4 class="text-white font-medium text-sm mb-3 leading-tight" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
+                        <div class="flex gap-2">
+                            ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="flex-1 text-center text-[#888] hover:text-white border border-[#333] hover:border-[#555] py-2 rounded-lg text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5"><i class="ph ph-arrow-square-out"></i>AliExpress</a>` : ''}
+                            ${!hasAnySelected ? `<button onclick="openConfirmModal('${p.id}')" class="flex-1 bg-white text-black hover:bg-zinc-200 py-2 rounded-lg text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1.5"><i class="ph ph-check-circle"></i>Wybieram</button>` : ''}
                         </div>
                     </div>
-                `;
-            }).join('');
+                </div>
+            `).join('');
         }
 
-        async function selectProduct(id) {
-            const product = products.find(p => p.id === id);
+        function openConfirmModal(productId) {
+            pendingProductId = productId;
+            const product = products.find(p => p.id === productId);
             if (!product) return;
-            if (!confirm(`Czy na pewno chcesz wybrać "${product.name}" jako swój produkt? Wokół niego zbudujemy Twój sklep i markę.`)) return;
+
+            const imgContainer = document.getElementById('confirm-product-image');
+            imgContainer.innerHTML = product.image_url
+                ? `<img src="${product.image_url}" alt="" class="w-full h-full object-cover">`
+                : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-[#444]"></i></div>`;
+
+            document.getElementById('confirm-product-name').textContent = product.name;
+            document.getElementById('product-confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('product-confirm-modal').classList.add('hidden');
+            pendingProductId = null;
+        }
+
+        async function confirmProductSelection() {
+            if (!pendingProductId) return;
+            const id = pendingProductId;
 
             const { error } = await supabaseClient
                 .from('workflows')
                 .update({ selected_product_id: id })
                 .eq('id', workflow.id);
 
-            if (error) { console.error(error); return; }
+            closeConfirmModal();
+
+            if (error) {
+                console.error(error);
+                showToast('Wystąpił błąd', 'error');
+                return;
+            }
 
             workflow.selected_product_id = id;
             renderProducts();
+            showToast('Produkt wybrany!', 'success');
         }
-        window.selectProduct = selectProduct;
+        window.openConfirmModal = openConfirmModal;
+        window.closeConfirmModal = closeConfirmModal;
+        window.confirmProductSelection = confirmProductSelection;
 
         function renderReports() {
             const container = document.getElementById('reports-list');
