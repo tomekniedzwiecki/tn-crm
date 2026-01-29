@@ -2321,21 +2321,32 @@
             }
 
             try {
-                // Generate PDF using html2pdf.js
-                const container = document.createElement('div');
-                container.innerHTML = contractHtml;
-                document.body.appendChild(container);
+                // Use iframe so the full HTML document (with its own <style>) renders correctly
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;height:297mm;border:none;';
+                document.body.appendChild(iframe);
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(contractHtml);
+                iframeDoc.close();
+
+                // Wait for fonts and images to load
+                await new Promise(resolve => {
+                    iframe.onload = resolve;
+                    setTimeout(resolve, 2000);
+                });
 
                 const opt = {
-                    margin: 10,
+                    margin: 0,
                     filename: `Umowa_${workflow.customer_name?.replace(/\s+/g, '_') || 'klient'}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
+                    html2canvas: { scale: 2, useCORS: true, width: iframeDoc.body.scrollWidth, windowWidth: iframeDoc.body.scrollWidth },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
 
-                await html2pdf().set(opt).from(container).save();
-                document.body.removeChild(container);
+                await html2pdf().set(opt).from(iframeDoc.body).save();
+                document.body.removeChild(iframe);
                 showToast('PDF pobrany', 'success');
             } catch (err) {
                 console.error('Error generating PDF:', err);
