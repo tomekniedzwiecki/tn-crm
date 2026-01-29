@@ -69,7 +69,7 @@
                 <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty</span></span>
             </div>
             <div class="flex items-center gap-2">
-                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var rp=window.runParams&&window.runParams.data;var images=[];if(rp&&rp.imageModule&&rp.imageModule.imagePathList){images=rp.imageModule.imagePathList.map(function(u){return u.startsWith('//')?'https:'+u:u;});}if(!images.length){var allImgs=document.querySelectorAll('img[src*=alicdn]');var seen={};allImgs.forEach(function(el){var s=(el.src||'').split('?')[0];if(s&&!seen[s]&&s.indexOf('_50x50')===-1&&s.indexOf('icon')===-1&&el.naturalWidth>100){seen[s]=1;images.push(s);}});}var n='';if(rp&&rp.titleModule){n=rp.titleModule.subject||rp.titleModule.title||'';}if(!n)n=document.title.replace(/\s*[-|].*$/,'').trim();var p='';if(rp&&rp.priceModule){var pm=rp.priceModule;p=(pm.formatedActivityPrice||pm.formatedPrice||pm.minActivityPrice||pm.minPrice||'').toString().replace(/[^0-9.,]/g,'');}if(!p){var pe=document.querySelector('[class*=Price] span')||document.querySelector('.uniform-banner-box-price');if(pe)p=pe.textContent.replace(/[^0-9.,]/g,'');}var cur='';if(rp&&rp.priceModule&&rp.priceModule.currencyCode){cur=rp.priceModule.currencyCode;}var rt=null;if(rp&&rp.feedbackModule){rt=parseFloat(rp.feedbackModule.averageStar||'');if(isNaN(rt))rt=null;}if(rt===null){var re=document.querySelector('[class*=rating] [class*=text]')||document.querySelector('[class*=middle--rating]');if(re){var rv=parseFloat(re.textContent);if(!isNaN(rv))rt=rv;}}var rc=null;if(rp&&rp.feedbackModule&&rp.feedbackModule.totalValidNum!=null){rc=parseInt(rp.feedbackModule.totalValidNum);if(isNaN(rc))rc=null;}if(rc===null){var rce=document.querySelector('[class*=review] [class*=count]')||document.querySelector('[class*=rating--count]');if(rce){var rci=parseInt(rce.textContent.replace(/[^0-9]/g,''));if(!isNaN(rci))rc=rci;}}var os=null;if(rp&&rp.tradeModule){var tc=rp.tradeModule.tradeCount;if(tc){os=parseInt(tc.toString().replace(/[^0-9]/g,''));if(isNaN(os))os=null;}}if(os===null){var ose=document.querySelector('[class*=trade] [class*=count]')||document.querySelector('[class*=sold]');if(ose){os=parseInt(ose.textContent.replace(/[^0-9]/g,''));if(isNaN(os))os=null;}}var sn='';if(rp&&rp.storeModule){sn=rp.storeModule.storeName||rp.storeModule.storeTitle||'';}if(!sn){var sne=document.querySelector('[class*=store-name] a')||document.querySelector('[class*=StoreName]');if(sne)sn=sne.textContent.trim();}var d={name:n,images:images,price:p,currency:cur,source_url:location.href,rating:rt,review_count:rc,orders_sold:os,store_name:sn};navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var parts=[];parts.push(images.length+' zdjec');if(p)parts.push('cena: '+p);if(rt)parts.push('rating: '+rt);if(rc)parts.push(rc+' opinii');if(os)parts.push(os+' zamowien');if(sn)parts.push(sn);var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:13px/1.5 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:320px';b.textContent='Skopiowano: '+parts.join(', ');document.body.appendChild(b);setTimeout(function(){b.remove()},3000)});}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
+                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var d={_v:2,url:location.href,title:document.title};var rp=window.runParams;if(rp&&rp.data)d.raw=rp.data;navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano dane produktu!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
                     <i class="ph ph-bookmark-simple"></i>
                     AliExpress Bookmarklet
                 </a>
@@ -467,13 +467,118 @@
             document.getElementById('product-modal').classList.add('hidden');
         }
 
+        // Helper: safely dig into nested object
+        function dig(obj, ...keys) {
+            let v = obj;
+            for (const k of keys) {
+                if (v == null) return undefined;
+                v = v[k];
+            }
+            return v;
+        }
+
+        // Parse raw AliExpress runParams.data into form fields
+        function parseAliExpressRaw(raw) {
+            const result = { images: [], name: '', price: '', currency: '', rating: null, review_count: null, orders_sold: null, store_name: '' };
+
+            // Images — imageModule.imagePathList
+            const imgList = dig(raw, 'imageModule', 'imagePathList');
+            if (Array.isArray(imgList)) {
+                result.images = imgList.map(u => typeof u === 'string' ? (u.startsWith('//') ? 'https:' + u : u) : '').filter(Boolean);
+            }
+
+            // Title — titleModule
+            const tm = dig(raw, 'titleModule');
+            if (tm) result.name = tm.subject || tm.title || '';
+
+            // Price — priceModule (try many known keys)
+            const pm = dig(raw, 'priceModule');
+            if (pm) {
+                // Try activity/sale price first, then regular
+                const priceStr = pm.formatedActivityPrice || pm.formatedPrice || pm.minActivityPrice || pm.minPrice || pm.maxPrice || '';
+                result.price = priceStr.toString().replace(/[^0-9.,]/g, '');
+                result.currency = pm.currencyCode || '';
+            }
+
+            // Rating — feedbackModule
+            const fm = dig(raw, 'feedbackModule');
+            if (fm) {
+                // Try multiple known field names
+                const starVal = fm.averageStar || fm.evarageStar || fm.averageStarRage;
+                if (starVal != null) {
+                    const r = parseFloat(starVal);
+                    if (!isNaN(r)) result.rating = r;
+                }
+                // Review count
+                const rcVal = fm.totalValidNum || fm.totalValidcount;
+                if (rcVal != null) {
+                    const rc = parseInt(rcVal);
+                    if (!isNaN(rc)) result.review_count = rc;
+                }
+            }
+
+            // Orders sold — tradeModule
+            const trade = dig(raw, 'tradeModule');
+            if (trade && trade.tradeCount != null) {
+                const os = parseInt(trade.tradeCount.toString().replace(/[^0-9]/g, ''));
+                if (!isNaN(os)) result.orders_sold = os;
+            }
+
+            // Store name — storeModule
+            const sm = dig(raw, 'storeModule');
+            if (sm) result.store_name = sm.storeName || sm.storeTitle || '';
+
+            return result;
+        }
+
         async function pasteFromAliExpress() {
             try {
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
 
+                // v2 format: raw dump from bookmarklet
+                if (data._v === 2 && data.raw) {
+                    console.log('[AliExpress] Raw data keys:', Object.keys(data.raw));
+                    console.log('[AliExpress] Raw data:', data.raw);
+
+                    const parsed = parseAliExpressRaw(data.raw);
+
+                    // Fill form
+                    if (parsed.name) document.getElementById('product-name').value = parsed.name;
+                    if (parsed.price) document.getElementById('product-wholesale-price').value = parsed.price;
+                    if (parsed.currency) {
+                        const sel = document.getElementById('product-currency');
+                        // Add currency option if not in list
+                        if (parsed.currency && ![...sel.options].some(o => o.value === parsed.currency)) {
+                            sel.add(new Option(parsed.currency, parsed.currency));
+                        }
+                        sel.value = parsed.currency;
+                    }
+                    if (data.url) document.getElementById('product-source-url').value = data.url;
+                    if (parsed.rating != null) document.getElementById('product-rating').value = parsed.rating;
+                    if (parsed.review_count != null) document.getElementById('product-review-count').value = parsed.review_count;
+                    if (parsed.orders_sold != null) document.getElementById('product-orders-sold').value = parsed.orders_sold;
+                    if (parsed.store_name) document.getElementById('product-store-name').value = parsed.store_name;
+
+                    if (parsed.images.length > 0) {
+                        modalImages = parsed.images;
+                        modalMainIndex = 0;
+                    }
+                    renderModalGallery();
+
+                    const parts = [];
+                    if (modalImages.length) parts.push(`${modalImages.length} zdjęć`);
+                    if (parsed.price) parts.push(`cena: ${parsed.price} ${parsed.currency}`);
+                    if (parsed.rating != null) parts.push(`rating: ${parsed.rating}`);
+                    if (parsed.review_count != null) parts.push(`${parsed.review_count} opinii`);
+                    if (parsed.orders_sold != null) parts.push(`${parsed.orders_sold} zamówień`);
+                    if (parsed.store_name) parts.push(parsed.store_name);
+                    showToast(`Wklejono: ${parts.join(' · ')}`, 'success');
+                    return;
+                }
+
+                // Legacy v1 format (old bookmarklet with pre-parsed fields)
                 if (data.name) document.getElementById('product-name').value = data.name;
-                // AliExpress price → cena hurtowa (wholesale)
                 if (data.price) document.getElementById('product-wholesale-price').value = data.price;
                 if (data.currency) document.getElementById('product-currency').value = data.currency;
                 if (data.source_url) document.getElementById('product-source-url').value = data.source_url;
@@ -481,8 +586,6 @@
                 if (data.review_count) document.getElementById('product-review-count').value = data.review_count;
                 if (data.orders_sold) document.getElementById('product-orders-sold').value = data.orders_sold;
                 if (data.store_name) document.getElementById('product-store-name').value = data.store_name;
-
-                // Handle images array (new format) or single image_url (old format)
                 if (data.images && data.images.length > 0) {
                     modalImages = data.images;
                     modalMainIndex = 0;
@@ -491,16 +594,9 @@
                     modalMainIndex = 0;
                 }
                 renderModalGallery();
-
-                const parts = [];
-                if (modalImages.length) parts.push(`${modalImages.length} zdjęć`);
-                if (data.price) parts.push(`cena: ${data.price}`);
-                if (data.rating) parts.push(`rating: ${data.rating}`);
-                if (data.review_count) parts.push(`${data.review_count} opinii`);
-                if (data.orders_sold) parts.push(`${data.orders_sold} zamówień`);
-                if (data.store_name) parts.push(`sklep: ${data.store_name}`);
-                showToast(`Wklejono: ${parts.join(' · ')}`, 'success');
+                showToast(`Wklejono: ${modalImages.length} zdjęć`, 'success');
             } catch (e) {
+                console.error('[AliExpress paste error]', e);
                 showToast('Brak danych w schowku. Użyj bookmarkletu na stronie AliExpress.', 'error');
             }
         }
