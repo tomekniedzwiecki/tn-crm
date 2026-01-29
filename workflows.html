@@ -330,6 +330,8 @@
                         started_at: w.started_at,
                         unique_token: w.unique_token,
                         contract_status: w.contract_status,
+                        products_shared_at: w.products_shared_at,
+                        selected_product_id: w.selected_product_id,
                         total_tasks: totalTasks,
                         completed_tasks: completedTasks,
                         progress_percent: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
@@ -440,27 +442,31 @@
             return `<span class="text-xs px-2 py-0.5 rounded border ${styles[status] || styles.active}">${labels[status] || status}</span>`;
         }
 
-        function getContractStatusBadge(status) {
-            if (!status || status === 'pending_data') return '';
+        function getStatusIcons(w) {
+            const icons = [];
 
-            const config = {
+            // Contract status
+            const contractConfig = {
                 data_filled: { icon: 'ph-user-check', label: 'Dane', class: 'text-cyan-400' },
                 contract_sent: { icon: 'ph-paper-plane-tilt', label: 'Wysłano', class: 'text-violet-400' },
                 pending_signature: { icon: 'ph-pen', label: 'Do podpisu', class: 'text-amber-400' },
                 signed: { icon: 'ph-check-circle', label: 'Podpisana', class: 'text-emerald-400' },
                 rejected: { icon: 'ph-x-circle', label: 'Odrzucona', class: 'text-red-400' }
             };
+            const cc = w.contract_status && w.contract_status !== 'pending_data' ? contractConfig[w.contract_status] : null;
+            if (cc) {
+                icons.push(`<span class="flex items-center gap-1 ${cc.class}"><i class="ph ${cc.icon}"></i><i class="ph ph-file-text"></i>${cc.label}</span>`);
+            }
 
-            const c = config[status];
-            if (!c) return '';
+            // Product status
+            if (w.selected_product_id) {
+                icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-check-circle"></i><i class="ph ph-package"></i>Wybrany</span>`);
+            } else if (w.products_shared_at) {
+                icons.push(`<span class="flex items-center gap-1 text-violet-400"><i class="ph ph-paper-plane-tilt"></i><i class="ph ph-package"></i>Wysłano</span>`);
+            }
 
-            return `
-                <span class="text-zinc-600">|</span>
-                <span class="flex items-center gap-1 text-[10px] ${c.class}">
-                    <i class="ph ${c.icon}"></i>
-                    ${c.label}
-                </span>
-            `;
+            if (!icons.length) return '';
+            return `<div class="flex items-center gap-3 text-[10px] mb-2">${icons.join('')}</div>`;
         }
 
         function formatDeadline(deadline) {
@@ -540,12 +546,12 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-1.5 mb-2.5 text-xs text-zinc-400 truncate">
+                    <div class="flex items-center gap-1.5 mb-1.5 text-xs text-zinc-400 truncate">
                         <span class="truncate">${w.offer_name}</span>
                         <span class="text-zinc-700">·</span>
                         <span class="font-mono flex-shrink-0">${formatPrice(w.amount)}</span>
-                        ${getContractStatusBadge(w.contract_status)}
                     </div>
+                    ${getStatusIcons(w)}
 
                     <div class="mb-2.5">
                         <div class="flex items-center justify-between text-[11px] mb-1">
