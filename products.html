@@ -69,7 +69,7 @@
                 <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty</span></span>
             </div>
             <div class="flex items-center gap-2">
-                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var d={_v:3,url:location.href,title:document.title};var rp=window.runParams;if(rp&&rp.data){var r=rp.data;if(r.imageModule)d.imageModule=r.imageModule;if(r.titleModule)d.titleModule=r.titleModule;if(r.priceModule)d.priceModule=r.priceModule;if(r.feedbackModule)d.feedbackModule=r.feedbackModule;if(r.tradeModule)d.tradeModule=r.tradeModule;if(r.storeModule)d.storeModule=r.storeModule}navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano dane produktu!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
+                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var d={_v:4,url:location.href,title:document.title};var rp=window.runParams;if(rp&&rp.data){var r=rp.data;var keys=['imageModule','imageComponent','titleModule','productInfoComponent','priceModule','priceComponent','feedbackModule','feedbackComponent','tradeModule','tradeComponent','storeModule','sellerComponent'];keys.forEach(function(k){if(r[k])d[k]=r[k]})}navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano dane produktu!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
                     <i class="ph ph-bookmark-simple"></i>
                     AliExpress Bookmarklet
                 </a>
@@ -478,54 +478,61 @@
         }
 
         // Parse raw AliExpress runParams.data into form fields
+        // Supports BOTH old format (*Module) and new 2024+ format (*Component)
         function parseAliExpressRaw(raw) {
             const result = { images: [], name: '', price: '', currency: '', rating: null, review_count: null, orders_sold: null, store_name: '' };
 
-            // Images — imageModule.imagePathList
-            const imgList = dig(raw, 'imageModule', 'imagePathList');
-            if (Array.isArray(imgList)) {
-                result.images = imgList.map(u => typeof u === 'string' ? (u.startsWith('//') ? 'https:' + u : u) : '').filter(Boolean);
+            // Images — old: imageModule.imagePathList, new: imageComponent.imagePathList
+            const imgMod = raw.imageModule || raw.imageComponent;
+            if (imgMod) {
+                const imgList = imgMod.imagePathList;
+                if (Array.isArray(imgList)) {
+                    result.images = imgList.map(u => typeof u === 'string' ? (u.startsWith('//') ? 'https:' + u : u) : '').filter(Boolean);
+                }
             }
 
-            // Title — titleModule
-            const tm = dig(raw, 'titleModule');
+            // Title — old: titleModule.subject, new: productInfoComponent.subject
+            const tm = raw.titleModule || raw.productInfoComponent;
             if (tm) result.name = tm.subject || tm.title || '';
 
-            // Price — priceModule (try many known keys)
-            const pm = dig(raw, 'priceModule');
+            // Price — old: priceModule, new: priceComponent
+            const pm = raw.priceModule || raw.priceComponent;
             if (pm) {
-                // Try activity/sale price first, then regular
-                const priceStr = pm.formatedActivityPrice || pm.formatedPrice || pm.minActivityPrice || pm.minPrice || pm.maxPrice || '';
+                // New format: discountPrice / origPrice objects with min/max
+                const dp = pm.discountPrice || pm.activityPrice || {};
+                const op = pm.origPrice || {};
+                const priceStr = dp.minPrice || dp.min || pm.formatedActivityPrice || pm.formatedPrice || pm.minActivityPrice || pm.minPrice || op.minPrice || op.min || pm.maxPrice || '';
                 result.price = priceStr.toString().replace(/[^0-9.,]/g, '');
-                result.currency = pm.currencyCode || '';
+                result.currency = pm.currencyCode || dp.currency || op.currency || '';
             }
 
-            // Rating — feedbackModule
-            const fm = dig(raw, 'feedbackModule');
+            // Rating — old: feedbackModule, new: feedbackComponent
+            const fm = raw.feedbackModule || raw.feedbackComponent;
             if (fm) {
-                // Try multiple known field names
                 const starVal = fm.averageStar || fm.evarageStar || fm.averageStarRage;
                 if (starVal != null) {
                     const r = parseFloat(starVal);
                     if (!isNaN(r)) result.rating = r;
                 }
-                // Review count
-                const rcVal = fm.totalValidNum || fm.totalValidcount;
+                const rcVal = fm.totalValidNum || fm.totalValidcount || fm.totalStartCount;
                 if (rcVal != null) {
                     const rc = parseInt(rcVal);
                     if (!isNaN(rc)) result.review_count = rc;
                 }
             }
 
-            // Orders sold — tradeModule
-            const trade = dig(raw, 'tradeModule');
-            if (trade && trade.tradeCount != null) {
-                const os = parseInt(trade.tradeCount.toString().replace(/[^0-9]/g, ''));
-                if (!isNaN(os)) result.orders_sold = os;
+            // Orders sold — old: tradeModule.tradeCount, new: tradeComponent.formatTradeCount
+            const trade = raw.tradeModule || raw.tradeComponent;
+            if (trade) {
+                const tc = trade.tradeCount || trade.formatTradeCount;
+                if (tc != null) {
+                    const os = parseInt(tc.toString().replace(/[^0-9]/g, ''));
+                    if (!isNaN(os)) result.orders_sold = os;
+                }
             }
 
-            // Store name — storeModule
-            const sm = dig(raw, 'storeModule');
+            // Store name — old: storeModule.storeName, new: sellerComponent.storeName
+            const sm = raw.storeModule || raw.sellerComponent;
             if (sm) result.store_name = sm.storeName || sm.storeTitle || '';
 
             return result;
@@ -536,8 +543,8 @@
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
 
-                // v3 format: specific modules from bookmarklet (also supports v2 with data.raw)
-                const raw = data._v === 3 ? data : (data._v === 2 && data.raw ? data.raw : null);
+                // v4/v3: specific modules from bookmarklet; v2: raw dump
+                const raw = (data._v >= 3) ? data : (data._v === 2 && data.raw ? data.raw : null);
                 if (raw) {
                     console.log('[AliExpress] Data keys:', Object.keys(raw));
 
