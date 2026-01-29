@@ -69,7 +69,7 @@
                 <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty</span></span>
             </div>
             <div class="flex items-center gap-2">
-                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var n=document.title.replace(/\s*[-|].*$/,'').trim();var img='';var m=document.querySelector('img.magnifier_image')||document.querySelector('.image-view-magnifier-wrap img')||document.querySelector('.product-image img')||document.querySelector('[class*=gallery] img');if(m)img=m.src||m.getAttribute('data-src')||'';if(!img){var imgs=document.querySelectorAll('.images-view-item img, .slider--img--D7MJNPZ img');if(imgs.length)img=imgs[0].src||'';}var p='';var pe=document.querySelector('[class*=product-price-current] span')||document.querySelector('.uniform-banner-box-price')||document.querySelector('[class*=Price] span');if(pe)p=pe.textContent.replace(/[^0-9.,]/g,'');var d={name:n,image_url:img.split('?')[0],price:p,source_url:location.href};navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:12px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano do schowka!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Błąd: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
+                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var n=document.title.replace(/\s*[-|].*$/,'').trim();var images=[];var allImgs=document.querySelectorAll('.images-view-item img,.slider--img--D7MJNPZ img,[class*=gallery] img,img.magnifier_image,.image-view-magnifier-wrap img,.product-image img');allImgs.forEach(function(el){var s=(el.src||el.getAttribute('data-src')||'').split('?')[0];if(s&&images.indexOf(s)===-1)images.push(s);});if(!images.length){var fb=document.querySelector('img[src*=alicdn]');if(fb)images.push(fb.src.split('?')[0]);}var p='';var pe=document.querySelector('[class*=product-price-current] span')||document.querySelector('.uniform-banner-box-price')||document.querySelector('[class*=Price] span');if(pe)p=pe.textContent.replace(/[^0-9.,]/g,'');var rt=null;var re=document.querySelector('[class*=rating] [class*=text]')||document.querySelector('[class*=ReviewStar] span')||document.querySelector('[class*=middle--rating]');if(re){var rv=parseFloat(re.textContent);if(!isNaN(rv))rt=rv;}var rc=null;var rce=document.querySelector('[class*=review] [class*=count]')||document.querySelector('[class*=Reviews]')||document.querySelector('[class*=rating--count]');if(rce){var rci=parseInt(rce.textContent.replace(/[^0-9]/g,''));if(!isNaN(rci))rc=rci;}var d={name:n,images:images,price:p,source_url:location.href,rating:rt,review_count:rc};navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:12px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano '+images.length+' zdjęć do schowka!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Błąd: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
                     <i class="ph ph-bookmark-simple"></i>
                     AliExpress Bookmarklet
                 </a>
@@ -127,8 +127,8 @@
 
     <!-- Product Modal -->
     <div id="product-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-lg shadow-2xl">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-xl shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5 flex-shrink-0">
                 <h2 id="product-modal-title" class="text-sm font-medium text-white flex items-center gap-2">
                     <i class="ph ph-package text-orange-400"></i>
                     Dodaj produkt
@@ -138,7 +138,7 @@
                 </button>
             </div>
 
-            <div class="p-5 space-y-4">
+            <div class="p-5 space-y-4 overflow-y-auto flex-1">
                 <input type="hidden" id="product-edit-id">
 
                 <!-- Paste from AliExpress -->
@@ -147,9 +147,11 @@
                     Wklej z AliExpress (schowek)
                 </button>
 
-                <!-- Image preview -->
-                <div id="product-image-preview" class="hidden">
-                    <img id="product-image-preview-img" src="" alt="" class="w-full h-48 object-contain bg-zinc-900 rounded-lg border border-white/5">
+                <!-- Image Gallery -->
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Zdjęcia produktu</label>
+                    <div id="product-images-gallery" class="flex flex-wrap gap-2 mb-2"></div>
+                    <p id="product-images-hint" class="text-zinc-600 text-xs hidden">Kliknij zdjęcie aby ustawić jako główne. × aby usunąć.</p>
                 </div>
 
                 <div>
@@ -160,10 +162,14 @@
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis</label>
                     <textarea id="product-description" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" rows="2" placeholder="Krótki opis..."></textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena</label>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena detaliczna</label>
                         <input type="number" step="0.01" id="product-price" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena hurtowa</label>
+                        <input type="number" step="0.01" id="product-wholesale-price" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="0.00">
                     </div>
                     <div>
                         <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Waluta</label>
@@ -174,9 +180,15 @@
                         </select>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">URL zdjęcia</label>
-                    <input type="url" id="product-image-url" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="https://..." oninput="updateProductImagePreview()">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Rating</label>
+                        <input type="number" step="0.1" min="0" max="5" id="product-rating" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="4.8">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Liczba opinii</label>
+                        <input type="number" id="product-review-count" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="1234">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Link źródłowy (AliExpress)</label>
@@ -188,7 +200,7 @@
                 </div>
             </div>
 
-            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50 flex-shrink-0">
                 <div class="flex-1"></div>
                 <button onclick="closeProductModal()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
                     Anuluj
@@ -208,9 +220,12 @@
         Sidebar.setupLogout(supabaseClient);
 
         let products = [];
+        let productImages = {}; // keyed by product_id
         let filteredProducts = [];
         let currentMember = null;
         let isAdmin = false;
+        let modalImages = []; // temp images for modal
+        let modalMainIndex = 0;
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -237,18 +252,25 @@
         }
 
         async function loadProducts() {
-            const { data, error } = await supabaseClient
-                .from('workflow_products')
-                .select('*')
-                .is('workflow_id', null)
-                .order('created_at', { ascending: false });
+            const [productsRes, imagesRes] = await Promise.all([
+                supabaseClient.from('workflow_products').select('*').is('workflow_id', null).order('created_at', { ascending: false }),
+                supabaseClient.from('product_images').select('*').order('sort_order')
+            ]);
 
-            if (error) {
-                console.error('Error loading products:', error);
+            if (productsRes.error) {
+                console.error('Error loading products:', productsRes.error);
                 return;
             }
 
-            products = data || [];
+            products = productsRes.data || [];
+
+            // Build images lookup
+            productImages = {};
+            (imagesRes.data || []).forEach(img => {
+                if (!productImages[img.product_id]) productImages[img.product_id] = [];
+                productImages[img.product_id].push(img);
+            });
+
             applyFilters();
             renderProducts();
         }
@@ -278,6 +300,26 @@
             'delivered': { text: 'Dostarczony', class: 'bg-emerald-500/20 text-emerald-400' }
         };
 
+        function getMainImage(productId) {
+            const imgs = productImages[productId] || [];
+            const main = imgs.find(i => i.is_main);
+            return main ? main.url : (imgs.length > 0 ? imgs[0].url : null);
+        }
+
+        function renderStars(rating) {
+            if (!rating) return '';
+            const full = Math.floor(rating);
+            const half = rating - full >= 0.5;
+            let html = '<span class="flex items-center gap-0.5">';
+            for (let i = 0; i < 5; i++) {
+                if (i < full) html += '<i class="ph-fill ph-star text-amber-400 text-xs"></i>';
+                else if (i === full && half) html += '<i class="ph-fill ph-star-half text-amber-400 text-xs"></i>';
+                else html += '<i class="ph ph-star text-zinc-600 text-xs"></i>';
+            }
+            html += '</span>';
+            return html;
+        }
+
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
@@ -292,19 +334,26 @@
 
             grid.innerHTML = filteredProducts.map(p => {
                 const status = statusLabels[p.status] || statusLabels.proposal;
+                const mainImg = getMainImage(p.id) || p.image_url;
+                const imgCount = (productImages[p.id] || []).length;
 
                 return `
                     <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all">
                         <div class="relative aspect-square bg-zinc-800 overflow-hidden">
-                            ${p.image_url
-                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
+                            ${mainImg
+                                ? `<img src="${mainImg}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
                                 : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-zinc-700"></i></div>`
                             }
                             <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
+                            ${imgCount > 1 ? `<span class="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-md backdrop-blur-sm"><i class="ph ph-images"></i> ${imgCount}</span>` : ''}
                         </div>
                         <div class="p-4">
                             <h4 class="text-white font-medium text-sm leading-tight mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
-                            ${p.price ? `<p class="text-white font-semibold text-lg mb-2">${parseFloat(p.price).toFixed(2)} <span class="text-zinc-500 text-xs font-normal">${p.currency || 'USD'}</span></p>` : ''}
+                            ${p.rating ? `<div class="flex items-center gap-1.5 mb-1.5">${renderStars(p.rating)}<span class="text-zinc-500 text-xs">${parseFloat(p.rating).toFixed(1)}</span>${p.review_count ? `<span class="text-zinc-600 text-xs">(${p.review_count})</span>` : ''}</div>` : ''}
+                            <div class="flex items-baseline gap-2 mb-2">
+                                ${p.price ? `<span class="text-white font-semibold text-lg">${parseFloat(p.price).toFixed(2)} <span class="text-zinc-500 text-xs font-normal">${p.currency || 'USD'}</span></span>` : ''}
+                                ${p.wholesale_price ? `<span class="text-zinc-500 text-xs">hurt: ${parseFloat(p.wholesale_price).toFixed(2)}</span>` : ''}
+                            </div>
                             <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
                                 ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
                                 <button onclick="openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
@@ -316,6 +365,36 @@
             }).join('');
         }
 
+        function renderModalGallery() {
+            const gallery = document.getElementById('product-images-gallery');
+            const hint = document.getElementById('product-images-hint');
+            if (modalImages.length === 0) {
+                gallery.innerHTML = '<div class="text-zinc-600 text-xs py-4 w-full text-center border border-dashed border-zinc-800 rounded-lg">Brak zdjęć — użyj bookmarkletu AliExpress</div>';
+                hint.classList.add('hidden');
+                return;
+            }
+            hint.classList.remove('hidden');
+            gallery.innerHTML = modalImages.map((url, i) => `
+                <div class="relative group/thumb cursor-pointer ${i === modalMainIndex ? 'ring-2 ring-emerald-500' : 'ring-1 ring-zinc-700'} rounded-lg overflow-hidden w-20 h-20 flex-shrink-0" onclick="setMainImage(${i})">
+                    <img src="${url}" class="w-full h-full object-cover" loading="lazy">
+                    ${i === modalMainIndex ? '<div class="absolute inset-0 bg-emerald-500/20 flex items-center justify-center"><i class="ph-fill ph-star text-emerald-400 text-sm"></i></div>' : ''}
+                    <button onclick="event.stopPropagation(); removeModalImage(${i})" class="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">×</button>
+                </div>
+            `).join('');
+        }
+
+        function setMainImage(index) {
+            modalMainIndex = index;
+            renderModalGallery();
+        }
+
+        function removeModalImage(index) {
+            modalImages.splice(index, 1);
+            if (modalMainIndex >= modalImages.length) modalMainIndex = Math.max(0, modalImages.length - 1);
+            if (index < modalMainIndex) modalMainIndex--;
+            renderModalGallery();
+        }
+
         function openAddProductModal(editId) {
             const modal = document.getElementById('product-modal');
             const title = document.getElementById('product-modal-title');
@@ -325,11 +404,14 @@
             document.getElementById('product-name').value = '';
             document.getElementById('product-description').value = '';
             document.getElementById('product-price').value = '';
+            document.getElementById('product-wholesale-price').value = '';
             document.getElementById('product-currency').value = 'USD';
-            document.getElementById('product-image-url').value = '';
+            document.getElementById('product-rating').value = '';
+            document.getElementById('product-review-count').value = '';
             document.getElementById('product-source-url').value = '';
             document.getElementById('product-notes').value = '';
-            document.getElementById('product-image-preview').classList.add('hidden');
+            modalImages = [];
+            modalMainIndex = 0;
 
             if (editId) {
                 const p = products.find(x => x.id === editId);
@@ -339,16 +421,24 @@
                     document.getElementById('product-name').value = p.name || '';
                     document.getElementById('product-description').value = p.description || '';
                     document.getElementById('product-price').value = p.price || '';
+                    document.getElementById('product-wholesale-price').value = p.wholesale_price || '';
                     document.getElementById('product-currency').value = p.currency || 'USD';
-                    document.getElementById('product-image-url').value = p.image_url || '';
+                    document.getElementById('product-rating').value = p.rating || '';
+                    document.getElementById('product-review-count').value = p.review_count || '';
                     document.getElementById('product-source-url').value = p.source_url || '';
                     document.getElementById('product-notes').value = p.notes || '';
-                    updateProductImagePreview();
+
+                    // Load existing images
+                    const imgs = productImages[p.id] || [];
+                    modalImages = imgs.map(i => i.url);
+                    const mainIdx = imgs.findIndex(i => i.is_main);
+                    modalMainIndex = mainIdx >= 0 ? mainIdx : 0;
                 }
             } else {
                 title.innerHTML = '<i class="ph ph-package text-orange-400"></i> Dodaj produkt';
             }
 
+            renderModalGallery();
             modal.classList.remove('hidden');
         }
 
@@ -356,28 +446,26 @@
             document.getElementById('product-modal').classList.add('hidden');
         }
 
-        function updateProductImagePreview() {
-            const url = document.getElementById('product-image-url').value.trim();
-            const preview = document.getElementById('product-image-preview');
-            const img = document.getElementById('product-image-preview-img');
-            if (url) {
-                img.src = url;
-                preview.classList.remove('hidden');
-            } else {
-                preview.classList.add('hidden');
-            }
-        }
-
         async function pasteFromAliExpress() {
             try {
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
                 if (data.name) document.getElementById('product-name').value = data.name;
-                if (data.image_url) document.getElementById('product-image-url').value = data.image_url;
                 if (data.price) document.getElementById('product-price').value = data.price;
                 if (data.source_url) document.getElementById('product-source-url').value = data.source_url;
-                updateProductImagePreview();
-                showToast('Dane wklejone z AliExpress', 'success');
+                if (data.rating) document.getElementById('product-rating').value = data.rating;
+                if (data.review_count) document.getElementById('product-review-count').value = data.review_count;
+
+                // Handle images array (new format) or single image_url (old format)
+                if (data.images && data.images.length > 0) {
+                    modalImages = data.images;
+                    modalMainIndex = 0;
+                } else if (data.image_url) {
+                    modalImages = [data.image_url];
+                    modalMainIndex = 0;
+                }
+                renderModalGallery();
+                showToast(`Wklejono: ${modalImages.length} zdjęć`, 'success');
             } catch (e) {
                 showToast('Brak danych w schowku. Użyj bookmarkletu na stronie AliExpress.', 'error');
             }
@@ -394,25 +482,46 @@
                 name,
                 description: document.getElementById('product-description').value.trim() || null,
                 price: parseFloat(document.getElementById('product-price').value) || null,
+                wholesale_price: parseFloat(document.getElementById('product-wholesale-price').value) || null,
                 currency: document.getElementById('product-currency').value,
-                image_url: document.getElementById('product-image-url').value.trim() || null,
+                rating: parseFloat(document.getElementById('product-rating').value) || null,
+                review_count: parseInt(document.getElementById('product-review-count').value) || null,
+                image_url: modalImages.length > 0 ? modalImages[modalMainIndex] : null,
                 source_url: document.getElementById('product-source-url').value.trim() || null,
                 notes: document.getElementById('product-notes').value.trim() || null,
                 status: 'proposal',
                 visible_to_client: true,
             };
 
+            let productId = id;
             let error;
             if (id) {
                 ({ error } = await supabaseClient.from('workflow_products').update(payload).eq('id', id));
             } else {
-                ({ error } = await supabaseClient.from('workflow_products').insert(payload));
+                const res = await supabaseClient.from('workflow_products').insert(payload).select('id').single();
+                error = res.error;
+                if (res.data) productId = res.data.id;
             }
 
             if (error) {
                 console.error('Error saving product:', error);
                 showToast('Błąd zapisu: ' + error.message, 'error');
                 return;
+            }
+
+            // Save images: delete old, insert new
+            if (productId) {
+                await supabaseClient.from('product_images').delete().eq('product_id', productId);
+                if (modalImages.length > 0) {
+                    const imageRows = modalImages.map((url, i) => ({
+                        product_id: productId,
+                        url,
+                        is_main: i === modalMainIndex,
+                        sort_order: i
+                    }));
+                    const { error: imgError } = await supabaseClient.from('product_images').insert(imageRows);
+                    if (imgError) console.error('Error saving images:', imgError);
+                }
             }
 
             closeProductModal();
