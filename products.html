@@ -87,7 +87,7 @@
                 <div class="flex items-start justify-between mb-6">
                     <div>
                         <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Produkty</h1>
-                        <p class="text-zinc-500">Wszystkie propozycje produktowe z projektów.</p>
+                        <p class="text-zinc-500">Globalna baza produktów. Klienci wybierają z tej listy.</p>
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-semibold text-white" id="total-products">-</div>
@@ -110,11 +110,6 @@
                         <option value="shipped">Wysłane</option>
                         <option value="delivered">Dostarczone</option>
                     </select>
-                    <select id="selected-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
-                        <option value="">Wszystkie</option>
-                        <option value="selected">Wybrane przez klienta</option>
-                        <option value="not_selected">Niewybrane</option>
-                    </select>
                 </div>
 
                 <!-- Products Grid -->
@@ -124,7 +119,7 @@
                 <div id="empty-state" class="hidden py-16 text-center">
                     <i class="ph ph-package text-4xl text-zinc-700 mb-3"></i>
                     <p class="text-zinc-400 text-sm mb-1">Brak produktów</p>
-                    <p class="text-zinc-600 text-xs font-mono">Produkty dodajesz w zakładce Produkty wewnątrz projektu</p>
+                    <p class="text-zinc-600 text-xs font-mono">Dodaj produkty przyciskiem powyżej lub bookmarkletem AliExpress</p>
                 </div>
             </div>
         </div>
@@ -157,12 +152,6 @@
                     <img id="product-image-preview-img" src="" alt="" class="w-full h-48 object-contain bg-zinc-900 rounded-lg border border-white/5">
                 </div>
 
-                <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Projekt</label>
-                    <select id="product-workflow" class="input-field w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600">
-                        <option value="">Wybierz projekt...</option>
-                    </select>
-                </div>
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Nazwa produktu</label>
                     <input type="text" id="product-name" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="Nazwa produktu...">
@@ -219,7 +208,6 @@
         Sidebar.setupLogout(supabaseClient);
 
         let products = [];
-        let workflows = {};
         let filteredProducts = [];
         let currentMember = null;
         let isAdmin = false;
@@ -249,26 +237,18 @@
         }
 
         async function loadProducts() {
-            // Load all products with workflow info
-            const [productsRes, workflowsRes] = await Promise.all([
-                supabaseClient.from('workflow_products').select('*').order('created_at', { ascending: false }),
-                supabaseClient.from('workflows').select('id, customer_name, customer_company, customer_email, offer_name').order('started_at', { ascending: false })
-            ]);
+            const { data, error } = await supabaseClient
+                .from('workflow_products')
+                .select('*')
+                .is('workflow_id', null)
+                .order('created_at', { ascending: false });
 
-            if (productsRes.error) {
-                console.error('Error loading products:', productsRes.error);
+            if (error) {
+                console.error('Error loading products:', error);
                 return;
             }
 
-            products = productsRes.data || [];
-
-            // Build workflow lookup + list
-            workflows = {};
-            workflowsList = workflowsRes.data || [];
-            workflowsList.forEach(w => {
-                workflows[w.id] = w;
-            });
-
+            products = data || [];
             applyFilters();
             renderProducts();
         }
@@ -276,17 +256,13 @@
         function applyFilters() {
             const search = document.getElementById('search-input').value.toLowerCase();
             const statusFilter = document.getElementById('status-filter').value;
-            const selectedFilter = document.getElementById('selected-filter').value;
 
             filteredProducts = products.filter(p => {
                 if (search) {
-                    const w = workflows[p.workflow_id] || {};
-                    const searchText = [p.name, p.description, w.customer_name, w.customer_company, w.offer_name].filter(Boolean).join(' ').toLowerCase();
+                    const searchText = [p.name, p.description].filter(Boolean).join(' ').toLowerCase();
                     if (!searchText.includes(search)) return false;
                 }
                 if (statusFilter && p.status !== statusFilter) return false;
-                if (selectedFilter === 'selected' && !p.selected_by_client) return false;
-                if (selectedFilter === 'not_selected' && p.selected_by_client) return false;
                 return true;
             });
 
@@ -302,11 +278,6 @@
             'delivered': { text: 'Dostarczony', class: 'bg-emerald-500/20 text-emerald-400' }
         };
 
-        function getWorkflowPath(workflowId) {
-            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            return isLocal ? `/workflow.html?id=${workflowId}` : `/workflow?id=${workflowId}`;
-        }
-
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
@@ -321,40 +292,29 @@
 
             grid.innerHTML = filteredProducts.map(p => {
                 const status = statusLabels[p.status] || statusLabels.proposal;
-                const w = workflows[p.workflow_id] || {};
-                const customer = w.customer_name || w.customer_company || (w.customer_email ? w.customer_email.split('@')[0] : '');
 
                 return `
-                    <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${p.workflow_id}')+'&tab=produkty'">
+                    <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all">
                         <div class="relative aspect-square bg-zinc-800 overflow-hidden">
                             ${p.image_url
                                 ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
                                 : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-zinc-700"></i></div>`
                             }
-                            ${p.selected_by_client ? `<div class="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex items-center gap-1"><i class="ph ph-check-circle"></i> Wybrany</div>` : ''}
                             <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
                         </div>
                         <div class="p-4">
                             <h4 class="text-white font-medium text-sm leading-tight mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
                             ${p.price ? `<p class="text-white font-semibold text-lg mb-2">${parseFloat(p.price).toFixed(2)} <span class="text-zinc-500 text-xs font-normal">${p.currency || 'USD'}</span></p>` : ''}
-                            <div class="flex items-center justify-between pt-2 border-t border-white/5">
-                                <span class="text-zinc-500 text-xs truncate">${customer}</span>
-                                <div class="flex items-center gap-2">
-                                    ${p.source_url ? `<a href="${p.source_url}" target="_blank" onclick="event.stopPropagation()" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
-                                    <button onclick="event.stopPropagation(); openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
-                                    <button onclick="deleteProduct('${p.id}', event)" class="text-zinc-500 hover:text-red-400 text-xs transition-colors"><i class="ph ph-trash"></i></button>
-                                </div>
+                            <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
+                                ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
+                                <button onclick="openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
+                                <button onclick="deleteProduct('${p.id}')" class="text-zinc-500 hover:text-red-400 text-xs transition-colors"><i class="ph ph-trash"></i></button>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
-
-        // =============================================
-        // ADD/EDIT PRODUCT MODAL
-        // =============================================
-        let workflowsList = [];
 
         function openAddProductModal(editId) {
             const modal = document.getElementById('product-modal');
@@ -371,20 +331,11 @@
             document.getElementById('product-notes').value = '';
             document.getElementById('product-image-preview').classList.add('hidden');
 
-            // Populate workflow dropdown
-            const select = document.getElementById('product-workflow');
-            select.innerHTML = '<option value="">Wybierz projekt...</option>' +
-                workflowsList.map(w => {
-                    const name = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
-                    return `<option value="${w.id}">${name} — ${w.offer_name || 'brak oferty'}</option>`;
-                }).join('');
-
             if (editId) {
                 const p = products.find(x => x.id === editId);
                 if (p) {
                     title.innerHTML = '<i class="ph ph-pencil-simple text-orange-400"></i> Edytuj produkt';
                     document.getElementById('product-edit-id').value = p.id;
-                    document.getElementById('product-workflow').value = p.workflow_id || '';
                     document.getElementById('product-name').value = p.name || '';
                     document.getElementById('product-description').value = p.description || '';
                     document.getElementById('product-price').value = p.price || '';
@@ -434,14 +385,12 @@
 
         async function saveProduct() {
             const id = document.getElementById('product-edit-id').value;
-            const workflowId = document.getElementById('product-workflow').value;
             const name = document.getElementById('product-name').value.trim();
 
-            if (!workflowId) { showToast('Wybierz projekt', 'error'); return; }
             if (!name) { showToast('Podaj nazwę produktu', 'error'); return; }
 
             const payload = {
-                workflow_id: workflowId,
+                workflow_id: null,
                 name,
                 description: document.getElementById('product-description').value.trim() || null,
                 price: parseFloat(document.getElementById('product-price').value) || null,
@@ -471,8 +420,7 @@
             await loadProducts();
         }
 
-        async function deleteProduct(id, e) {
-            if (e) e.stopPropagation();
+        async function deleteProduct(id) {
             if (!confirm('Usunąć ten produkt?')) return;
 
             const { error } = await supabaseClient.from('workflow_products').delete().eq('id', id);

@@ -1154,7 +1154,7 @@
                 supabaseClient.from('workflow_documents').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
                 supabaseClient.from('workflow_materials').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
                 supabaseClient.from('workflow_branding').select('*').eq('workflow_id', workflow.id).order('sort_order'),
-                supabaseClient.from('workflow_products').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
+                supabaseClient.from('workflow_products').select('*').is('workflow_id', null).eq('visible_to_client', true).order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_reports').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true })
             ]);
@@ -1650,6 +1650,7 @@
             const container = document.getElementById('products-list');
             const empty = document.getElementById('products-empty');
             const heroEl = document.getElementById('product-selected-hero');
+            const selectedId = workflow.selected_product_id;
 
             if (products.length === 0) {
                 container.innerHTML = '';
@@ -1661,7 +1662,7 @@
             empty.classList.add('hidden');
 
             // Show selected product hero
-            const selected = products.find(p => p.selected_by_client);
+            const selected = selectedId ? products.find(p => p.id === selectedId) : null;
             if (selected) {
                 heroEl.classList.remove('hidden');
                 heroEl.innerHTML = `
@@ -1687,7 +1688,7 @@
             }
 
             // Render product cards (exclude selected from grid if shown in hero)
-            const gridProducts = selected ? products.filter(p => !p.selected_by_client) : products;
+            const gridProducts = selected ? products.filter(p => p.id !== selectedId) : products;
             const hasAnySelected = !!selected;
 
             if (gridProducts.length === 0 && hasAnySelected) {
@@ -1725,23 +1726,14 @@
             if (!product) return;
             if (!confirm(`Czy na pewno chcesz wybrać "${product.name}" jako swój produkt? Wokół niego zbudujemy Twój sklep i markę.`)) return;
 
-            // Unselect all, then select this one
-            const { error: resetError } = await supabaseClient
-                .from('workflow_products')
-                .update({ selected_by_client: false })
-                .eq('workflow_id', workflow.id);
-
-            if (resetError) { console.error(resetError); return; }
-
             const { error } = await supabaseClient
-                .from('workflow_products')
-                .update({ selected_by_client: true })
-                .eq('id', id);
+                .from('workflows')
+                .update({ selected_product_id: id })
+                .eq('id', workflow.id);
 
             if (error) { console.error(error); return; }
 
-            // Update local data
-            products.forEach(p => p.selected_by_client = (p.id === id));
+            workflow.selected_product_id = id;
             renderProducts();
         }
         window.selectProduct = selectProduct;
