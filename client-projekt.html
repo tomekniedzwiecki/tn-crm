@@ -952,9 +952,13 @@
 
             <!-- TAB: Produkty -->
             <div id="tab-produkty" class="tab-panel hidden animate-enter">
-                <h2 class="page-title">Produkty i dostawy</h2>
+                <h2 class="page-title">Propozycje produktowe</h2>
+                <p class="text-tertiary text-sm mb-6">Wybierz produkt, wokół którego zbudujemy Twój sklep i markę.</p>
 
-                <div id="products-list" class="space-y-3">
+                <!-- Selected product hero -->
+                <div id="product-selected-hero" class="hidden mb-8"></div>
+
+                <div id="products-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     <!-- Products rendered here -->
                 </div>
 
@@ -964,7 +968,7 @@
                             <i class="ph ph-package text-3xl text-[#444]"></i>
                         </div>
                         <h3 class="text-white font-medium text-lg mb-2">Brak produktów</h3>
-                        <p class="text-tertiary text-sm leading-relaxed">Informacje o produktach fizycznych i statusie dostaw pojawią się tutaj.</p>
+                        <p class="text-tertiary text-sm leading-relaxed">Propozycje produktowe pojawią się tutaj wkrótce.</p>
                     </div>
                 </div>
             </div>
@@ -1150,7 +1154,7 @@
                 supabaseClient.from('workflow_documents').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
                 supabaseClient.from('workflow_materials').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
                 supabaseClient.from('workflow_branding').select('*').eq('workflow_id', workflow.id).order('sort_order'),
-                supabaseClient.from('workflow_products').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: false }),
+                supabaseClient.from('workflow_products').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_reports').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true })
             ]);
@@ -1645,61 +1649,102 @@
         function renderProducts() {
             const container = document.getElementById('products-list');
             const empty = document.getElementById('products-empty');
+            const heroEl = document.getElementById('product-selected-hero');
 
             if (products.length === 0) {
                 container.innerHTML = '';
+                heroEl.classList.add('hidden');
                 empty.classList.remove('hidden');
                 return;
             }
 
             empty.classList.add('hidden');
-            const statusConfig = {
-                pending: { class: 'badge-amber', text: 'Oczekuje' },
-                in_production: { class: 'badge-blue', text: 'W produkcji' },
-                shipped: { class: 'badge-violet', text: 'Wyslany' },
-                delivered: { class: 'badge-emerald', text: 'Dostarczony' }
-            };
 
-            container.innerHTML = products.map(p => {
-                const status = statusConfig[p.status] || statusConfig.pending;
+            // Show selected product hero
+            const selected = products.find(p => p.selected_by_client);
+            if (selected) {
+                heroEl.classList.remove('hidden');
+                heroEl.innerHTML = `
+                    <div class="card overflow-hidden border-emerald-500/30" style="border-color: rgba(16,185,129,0.3);">
+                        <div class="flex flex-col md:flex-row">
+                            ${selected.image_url ? `<div class="md:w-48 h-48 md:h-auto bg-[#0a0a0a] flex-shrink-0"><img src="${selected.image_url}" alt="" class="w-full h-full object-cover"></div>` : ''}
+                            <div class="p-6 flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 text-xs font-medium px-2 py-1 rounded-md">
+                                        <i class="ph-fill ph-check-circle"></i> Twój wybrany produkt
+                                    </span>
+                                </div>
+                                <h3 class="text-white font-semibold text-lg mb-1">${selected.name}</h3>
+                                ${selected.description ? `<p class="text-tertiary text-sm mb-3">${selected.description}</p>` : ''}
+                                ${selected.price ? `<p class="text-white font-bold text-2xl">${parseFloat(selected.price).toFixed(2)} <span class="text-tertiary text-sm font-normal">${selected.currency || 'USD'}</span></p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                heroEl.classList.add('hidden');
+                heroEl.innerHTML = '';
+            }
+
+            // Render product cards (exclude selected from grid if shown in hero)
+            const gridProducts = selected ? products.filter(p => !p.selected_by_client) : products;
+            const hasAnySelected = !!selected;
+
+            if (gridProducts.length === 0 && hasAnySelected) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = gridProducts.map(p => {
                 return `
-                    <div class="card p-4">
-                        <div class="flex items-start justify-between mb-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                    <i class="ph ph-package text-orange-400"></i>
-                                </div>
-                                <div>
-                                    <p class="text-white font-medium">${p.name}</p>
-                                    ${p.description ? `<p class="text-tertiary text-xs">${p.description}</p>` : ''}
-                                </div>
-                            </div>
-                            <span class="badge ${status.class}">${status.text}</span>
+                    <div class="card overflow-hidden group hover:border-[#333] transition-all duration-200">
+                        <div class="relative aspect-square bg-[#0a0a0a] overflow-hidden">
+                            ${p.image_url
+                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">`
+                                : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-5xl text-[#333]"></i></div>`
+                            }
                         </div>
-                        <div class="grid grid-cols-3 gap-4 text-sm">
-                            <div>
-                                <p class="text-tertiary text-xs">Ilosc</p>
-                                <p class="text-white">${p.quantity || 1}</p>
-                            </div>
-                            <div>
-                                <p class="text-tertiary text-xs">Dostawa</p>
-                                <p class="text-white">${p.estimated_delivery ? formatDate(p.estimated_delivery) : '-'}</p>
-                            </div>
-                            <div>
-                                <p class="text-tertiary text-xs">Nr sledzenia</p>
-                                <p class="text-white">${p.tracking_number || '-'}</p>
-                            </div>
+                        <div class="p-5">
+                            <h4 class="text-white font-medium text-sm mb-1 leading-tight" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
+                            ${p.description ? `<p class="text-tertiary text-xs mb-3" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.description}</p>` : '<div class="mb-3"></div>'}
+                            ${p.price ? `<p class="text-white font-bold text-xl mb-4">${parseFloat(p.price).toFixed(2)} <span class="text-tertiary text-xs font-normal">${p.currency || 'USD'}</span></p>` : '<div class="mb-4"></div>'}
+                            ${!hasAnySelected ? `
+                                <button onclick="selectProduct('${p.id}')" class="w-full bg-white text-black hover:bg-zinc-200 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                                    <i class="ph ph-check-circle"></i>
+                                    Wybieram ten produkt
+                                </button>
+                            ` : ''}
                         </div>
-                        ${p.tracking_url ? `
-                            <a href="${p.tracking_url}" target="_blank" class="mt-4 block text-center bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm transition-colors">
-                                <i class="ph ph-map-pin-line mr-1"></i>
-                                Sledz przesylke
-                            </a>
-                        ` : ''}
                     </div>
                 `;
             }).join('');
         }
+
+        async function selectProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+            if (!confirm(`Czy na pewno chcesz wybrać "${product.name}" jako swój produkt? Wokół niego zbudujemy Twój sklep i markę.`)) return;
+
+            // Unselect all, then select this one
+            const { error: resetError } = await supabaseClient
+                .from('workflow_products')
+                .update({ selected_by_client: false })
+                .eq('workflow_id', workflow.id);
+
+            if (resetError) { console.error(resetError); return; }
+
+            const { error } = await supabaseClient
+                .from('workflow_products')
+                .update({ selected_by_client: true })
+                .eq('id', id);
+
+            if (error) { console.error(error); return; }
+
+            // Update local data
+            products.forEach(p => p.selected_by_client = (p.id === id));
+            renderProducts();
+        }
+        window.selectProduct = selectProduct;
 
         function renderReports() {
             const container = document.getElementById('reports-list');
