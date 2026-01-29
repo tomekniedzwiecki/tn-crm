@@ -16,7 +16,7 @@ const APPS = [
 // Detect current app based on URL
 function detectCurrentApp() {
     const path = location.pathname;
-    if (path.includes('/workflows') || path.includes('/workflow')) {
+    if (path.includes('/workflows') || path.includes('/workflow') || path.includes('/products')) {
         return 'workflow';
     }
     if (path.includes('/tn-todo')) {
