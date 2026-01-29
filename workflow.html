@@ -2216,9 +2216,17 @@
                     ? new Date(workflow.started_at).toLocaleDateString('pl-PL')
                     : today;
 
+                const adresParts = [workflow.client_street, [workflow.client_postal_code, workflow.client_city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                const firmaLinia = workflow.customer_company ? (' / ' + workflow.customer_company) : '';
+
                 const variables = {
                     '{{imie_nazwisko}}': workflow.customer_name || '',
                     '{{firma}}': workflow.customer_company || '',
+                    '{{firma_linia}}': firmaLinia,
+                    '{{nip}}': workflow.client_nip || '',
+                    '{{adres}}': adresParts,
+                    '{{nr_umowy}}': workflow.contract_number || (workflow.id ? workflow.id.substring(0, 8).toUpperCase() : ''),
+                    '{{data_zawarcia}}': today,
                     '{{ulica}}': workflow.client_street || '',
                     '{{miasto}}': workflow.client_city || '',
                     '{{kod_pocztowy}}': workflow.client_postal_code || '',
