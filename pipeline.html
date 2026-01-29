@@ -112,6 +112,11 @@
 
         <!-- Filters Bar -->
         <div class="px-6 py-3 border-b border-white/5 flex items-center gap-4 bg-zinc-950/50">
+            <div class="relative">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 text-xs"></i>
+                <input type="text" id="filter-search" placeholder="Szukaj po nazwie, email, telefonie..." class="w-56 bg-zinc-900 border border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-zinc-600 outline-none hover:border-zinc-700 focus:border-zinc-600">
+            </div>
+            <div class="w-px h-5 bg-zinc-800"></div>
             <div class="flex items-center gap-2 text-xs text-zinc-500">
                 <i class="ph ph-funnel"></i>
                 <span>Filtry:</span>
@@ -528,6 +533,7 @@
         }
 
         function applyFilters() {
+            const searchTerm = document.getElementById('filter-search').value.trim().toLowerCase();
             const sourceFilter = document.getElementById('filter-source').value;
             const minValue = document.getElementById('filter-value-min').value;
             const maxValue = document.getElementById('filter-value-max').value;
@@ -536,6 +542,15 @@
             filteredLeads = leads.filter(lead => {
                 // Only show leads that have a pipeline status (not null)
                 if (!lead.status) return false;
+
+                // Search filter
+                if (searchTerm) {
+                    const name = (lead.name || '').toLowerCase();
+                    const email = (lead.email || '').toLowerCase();
+                    const phone = (lead.phone || '').replace(/\s/g, '').toLowerCase();
+                    const searchNorm = searchTerm.replace(/\s/g, '');
+                    if (!name.includes(searchTerm) && !email.includes(searchTerm) && !phone.includes(searchNorm)) return false;
+                }
 
                 // Team member filter (admin only)
                 if (teamFilter && lead.assigned_to !== teamFilter) return false;
@@ -552,7 +567,7 @@
             });
 
             // Show/hide clear button
-            const hasFilters = sourceFilter || minValue || maxValue || teamFilter;
+            const hasFilters = searchTerm || sourceFilter || minValue || maxValue || teamFilter;
             document.getElementById('clear-pipeline-filters').classList.toggle('hidden', !hasFilters);
 
             // Update counts
@@ -563,11 +578,13 @@
         }
 
         // Filter event listeners
+        document.getElementById('filter-search').addEventListener('input', applyFilters);
         document.getElementById('filter-source').addEventListener('change', applyFilters);
         document.getElementById('filter-value-min').addEventListener('input', applyFilters);
         document.getElementById('filter-value-max').addEventListener('input', applyFilters);
         document.getElementById('filter-team')?.addEventListener('change', applyFilters);
         document.getElementById('clear-pipeline-filters').addEventListener('click', () => {
+            document.getElementById('filter-search').value = '';
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-value-min').value = '';
             document.getElementById('filter-value-max').value = '';
