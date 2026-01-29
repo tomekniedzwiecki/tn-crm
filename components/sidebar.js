@@ -60,6 +60,7 @@ const NAV_ITEMS_CRM = [
 
 const NAV_ITEMS_WORKFLOW = [
     { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty', adminOnly: false },
+    { id: 'products', icon: 'ph-package', label: 'Produkty', adminOnly: false },
 ];
 
 function getNavItems(appId) {

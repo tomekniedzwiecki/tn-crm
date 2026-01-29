@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Produkty</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .product-card:hover {
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var n=document.title.replace(/\s*[-|].*$/,'').trim();var img='';var m=document.querySelector('img.magnifier_image')||document.querySelector('.image-view-magnifier-wrap img')||document.querySelector('.product-image img')||document.querySelector('[class*=gallery] img');if(m)img=m.src||m.getAttribute('data-src')||'';if(!img){var imgs=document.querySelectorAll('.images-view-item img, .slider--img--D7MJNPZ img');if(imgs.length)img=imgs[0].src||'';}var p='';var pe=document.querySelector('[class*=product-price-current] span')||document.querySelector('.uniform-banner-box-price')||document.querySelector('[class*=Price] span');if(pe)p=pe.textContent.replace(/[^0-9.,]/g,'');var d={name:n,image_url:img.split('?')[0],price:p,source_url:location.href};navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:12px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano do schowka!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Błąd: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
+                    <i class="ph ph-bookmark-simple"></i>
+                    AliExpress Bookmarklet
+                </a>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+                <!-- Title & Stats -->
+                <div class="flex items-start justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Produkty</h1>
+                        <p class="text-zinc-500">Wszystkie propozycje produktowe z projektów.</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-semibold text-white" id="total-products">-</div>
+                        <div class="text-xs text-zinc-500">produktów</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                        <input id="search-input" type="text" placeholder="Szukaj produktów..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 placeholder-zinc-600" oninput="applyFilters()">
+                    </div>
+                    <select id="status-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
+                        <option value="">Wszystkie statusy</option>
+                        <option value="proposal">Propozycje</option>
+                        <option value="approved">Zatwierdzone</option>
+                        <option value="pending">Oczekujące</option>
+                        <option value="in_production">W produkcji</option>
+                        <option value="shipped">Wysłane</option>
+                        <option value="delivered">Dostarczone</option>
+                    </select>
+                    <select id="selected-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
+                        <option value="">Wszystkie</option>
+                        <option value="selected">Wybrane przez klienta</option>
+                        <option value="not_selected">Niewybrane</option>
+                    </select>
+                </div>
+
+                <!-- Products Grid -->
+                <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                </div>
+
+                <div id="empty-state" class="hidden py-16 text-center">
+                    <i class="ph ph-package text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-400 text-sm mb-1">Brak produktów</p>
+                    <p class="text-zinc-600 text-xs font-mono">Produkty dodajesz w zakładce Produkty wewnątrz projektu</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let products = [];
+        let workflows = {};
+        let filteredProducts = [];
+        let currentMember = null;
+        let isAdmin = false;
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            await loadTeamMember(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMember(userId) {
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const members = data || [];
+            currentMember = members.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+            Sidebar.showAdminNav(isAdmin);
+        }
+
+        async function loadProducts() {
+            // Load all products with workflow info
+            const [productsRes, workflowsRes] = await Promise.all([
+                supabaseClient.from('workflow_products').select('*').order('created_at', { ascending: false }),
+                supabaseClient.from('workflows').select('id, customer_name, customer_company, customer_email, offer_name')
+            ]);
+
+            if (productsRes.error) {
+                console.error('Error loading products:', productsRes.error);
+                return;
+            }
+
+            products = productsRes.data || [];
+
+            // Build workflow lookup
+            workflows = {};
+            (workflowsRes.data || []).forEach(w => {
+                workflows[w.id] = w;
+            });
+
+            applyFilters();
+            renderProducts();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const selectedFilter = document.getElementById('selected-filter').value;
+
+            filteredProducts = products.filter(p => {
+                if (search) {
+                    const w = workflows[p.workflow_id] || {};
+                    const searchText = [p.name, p.description, w.customer_name, w.customer_company, w.offer_name].filter(Boolean).join(' ').toLowerCase();
+                    if (!searchText.includes(search)) return false;
+                }
+                if (statusFilter && p.status !== statusFilter) return false;
+                if (selectedFilter === 'selected' && !p.selected_by_client) return false;
+                if (selectedFilter === 'not_selected' && p.selected_by_client) return false;
+                return true;
+            });
+
+            document.getElementById('total-products').textContent = filteredProducts.length;
+        }
+
+        const statusLabels = {
+            'proposal': { text: 'Propozycja', class: 'bg-cyan-500/20 text-cyan-400' },
+            'approved': { text: 'Zatwierdzony', class: 'bg-emerald-500/20 text-emerald-400' },
+            'pending': { text: 'Oczekuje', class: 'bg-amber-500/20 text-amber-400' },
+            'in_production': { text: 'W produkcji', class: 'bg-blue-500/20 text-blue-400' },
+            'shipped': { text: 'Wysłany', class: 'bg-violet-500/20 text-violet-400' },
+            'delivered': { text: 'Dostarczony', class: 'bg-emerald-500/20 text-emerald-400' }
+        };
+
+        function getWorkflowPath(workflowId) {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            return isLocal ? `/workflow.html?id=${workflowId}` : `/workflow?id=${workflowId}`;
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('products-grid');
+            const emptyState = document.getElementById('empty-state');
+
+            if (filteredProducts.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = filteredProducts.map(p => {
+                const status = statusLabels[p.status] || statusLabels.proposal;
+                const w = workflows[p.workflow_id] || {};
+                const customer = w.customer_name || w.customer_company || (w.customer_email ? w.customer_email.split('@')[0] : '');
+
+                return `
+                    <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${p.workflow_id}')+'&tab=produkty'">
+                        <div class="relative aspect-square bg-zinc-800 overflow-hidden">
+                            ${p.image_url
+                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
+                                : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-zinc-700"></i></div>`
+                            }
+                            ${p.selected_by_client ? `<div class="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex items-center gap-1"><i class="ph ph-check-circle"></i> Wybrany</div>` : ''}
+                            <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
+                        </div>
+                        <div class="p-4">
+                            <h4 class="text-white font-medium text-sm leading-tight mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
+                            ${p.price ? `<p class="text-white font-semibold text-lg mb-2">${parseFloat(p.price).toFixed(2)} <span class="text-zinc-500 text-xs font-normal">${p.currency || 'USD'}</span></p>` : ''}
+                            <div class="flex items-center justify-between pt-2 border-t border-white/5">
+                                <span class="text-zinc-500 text-xs truncate">${customer}</span>
+                                ${p.source_url ? `<a href="${p.source_url}" target="_blank" onclick="event.stopPropagation()" class="text-orange-400 hover:text-orange-300 text-xs flex items-center gap-1"><i class="ph ph-arrow-square-out"></i></a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (session) {
+                await loadProducts();
+            }
+        }
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
