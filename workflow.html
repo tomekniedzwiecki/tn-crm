@@ -2322,7 +2322,11 @@
 
             // Open contract HTML in a new tab — the template has @media print CSS
             // User saves as PDF via browser print dialog (Ctrl+P → Save as PDF)
-            const blob = new Blob([contractHtml], { type: 'text/html;charset=utf-8' });
+            const clientName = workflow.customer_name?.trim() || 'klient';
+            const pdfTitle = `Umowa_${clientName.replace(/\s+/g, '_')}`;
+            // Set document title so browser uses it as default PDF filename
+            let html = contractHtml.replace(/<title>[^<]*<\/title>/, `<title>${pdfTitle}</title>`);
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const win = window.open(url, '_blank');
             if (win) {
