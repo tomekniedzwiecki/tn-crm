@@ -69,7 +69,7 @@
                 <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty</span></span>
             </div>
             <div class="flex items-center gap-2">
-                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var d={_v:2,url:location.href,title:document.title};var rp=window.runParams;if(rp&&rp.data)d.raw=rp.data;navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano dane produktu!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
+                <a class="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-grab active:cursor-grabbing" href="javascript:void(function(){try{var d={_v:3,url:location.href,title:document.title};var rp=window.runParams;if(rp&&rp.data){var r=rp.data;if(r.imageModule)d.imageModule=r.imageModule;if(r.titleModule)d.titleModule=r.titleModule;if(r.priceModule)d.priceModule=r.priceModule;if(r.feedbackModule)d.feedbackModule=r.feedbackModule;if(r.tradeModule)d.tradeModule=r.tradeModule;if(r.storeModule)d.storeModule=r.storeModule}navigator.clipboard.writeText(JSON.stringify(d)).then(function(){var b=document.createElement('div');b.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:%2310b981;color:%23fff;padding:14px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)';b.textContent='Skopiowano dane produktu!';document.body.appendChild(b);setTimeout(function(){b.remove()},2500)});}catch(e){alert('Blad: '+e.message)}}());" title="Przeciągnij na pasek zakładek w Chrome">
                     <i class="ph ph-bookmark-simple"></i>
                     AliExpress Bookmarklet
                 </a>
@@ -536,12 +536,12 @@
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
 
-                // v2 format: raw dump from bookmarklet
-                if (data._v === 2 && data.raw) {
-                    console.log('[AliExpress] Raw data keys:', Object.keys(data.raw));
-                    console.log('[AliExpress] Raw data:', data.raw);
+                // v3 format: specific modules from bookmarklet (also supports v2 with data.raw)
+                const raw = data._v === 3 ? data : (data._v === 2 && data.raw ? data.raw : null);
+                if (raw) {
+                    console.log('[AliExpress] Data keys:', Object.keys(raw));
 
-                    const parsed = parseAliExpressRaw(data.raw);
+                    const parsed = parseAliExpressRaw(raw);
 
                     // Fill form
                     if (parsed.name) document.getElementById('product-name').value = parsed.name;
