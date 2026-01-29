@@ -567,10 +567,10 @@
                         <p class="text-white font-medium text-sm">Umowa do podpisu</p>
                         <p class="text-tertiary text-xs">Dokument PDF</p>
                     </div>
-                    <a id="download-contract-btn" href="#" target="_blank" class="btn-primary text-sm py-2">
+                    <button onclick="generateAndDownloadContract()" class="btn-primary text-sm py-2">
                         <i class="ph ph-download-simple"></i>
                         Pobierz
-                    </a>
+                    </button>
                 </div>
 
                 <div class="space-y-3">
@@ -1070,6 +1070,88 @@
         let comments = [];
         let isAuthenticated = false;
 
+        const CONTRACT_TEMPLATES = {
+            '30bf199b-8bc1-4810-8716-43dbffeb9113': '/umowy/umowa-budowa-sklepu.html',
+            'bc5212fd-3f57-46a8-a2e9-07c030e97a3f': '/umowy/umowa-mentoring-ai.html'
+        };
+
+        function formatPrice(v) {
+            const n = parseFloat(v);
+            if (isNaN(n)) return '0 zł';
+            return n.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' zł';
+        }
+
+        let clientContractHtml = null;
+
+        async function prepareContractHtml() {
+            if (clientContractHtml) return;
+            const templateUrl = CONTRACT_TEMPLATES[workflow.offer_id];
+            if (!templateUrl) return;
+            try {
+                const response = await fetch(templateUrl);
+                if (!response.ok) throw new Error('Nie mozna pobrac szablonu');
+                let html = await response.text();
+
+                const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+                const startDate = workflow.started_at ? new Date(workflow.started_at).toLocaleDateString('pl-PL') : today;
+                const adresParts = [workflow.client_street, [workflow.client_postal_code, workflow.client_city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                const firmaLinia = workflow.customer_company ? (' / ' + workflow.customer_company) : '';
+
+                const variables = {
+                    '{{imie_nazwisko}}': workflow.customer_name || '',
+                    '{{firma}}': workflow.customer_company || '',
+                    '{{firma_linia}}': firmaLinia,
+                    '{{nip}}': workflow.client_nip || '',
+                    '{{adres}}': adresParts,
+                    '{{nr_umowy}}': workflow.contract_number || (workflow.id ? workflow.id.substring(0, 8).toUpperCase() : ''),
+                    '{{data_zawarcia}}': today,
+                    '{{ulica}}': workflow.client_street || '',
+                    '{{miasto}}': workflow.client_city || '',
+                    '{{kod_pocztowy}}': workflow.client_postal_code || '',
+                    '{{kraj}}': workflow.client_country || 'Polska',
+                    '{{pesel}}': workflow.client_pesel || '',
+                    '{{dowod}}': workflow.client_id_number || '',
+                    '{{nr_dowodu}}': workflow.client_id_number || '',
+                    '{{email}}': workflow.customer_email || '',
+                    '{{telefon}}': workflow.customer_phone || '',
+                    '{{nazwa_oferty}}': workflow.offer_name || '',
+                    '{{kwota}}': formatPrice(workflow.amount),
+                    '{{cena}}': formatPrice(workflow.amount),
+                    '{{data}}': today,
+                    '{{data_dzis}}': today,
+                    '{{data_rozpoczecia}}': startDate
+                };
+
+                Object.entries(variables).forEach(([key, value]) => {
+                    html = html.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+                });
+
+                const clientName = workflow.customer_name?.trim() || 'klient';
+                const pdfTitle = `Umowa_${clientName.replace(/\s+/g, '_')}`;
+                html = html.replace(/<title>[^<]*<\/title>/, `<title>${pdfTitle}</title>`);
+
+                clientContractHtml = html;
+            } catch (err) {
+                console.error('Error preparing contract:', err);
+            }
+        }
+
+        function generateAndDownloadContract() {
+            if (!clientContractHtml) {
+                showToast('Umowa nie jest jeszcze gotowa, spróbuj ponownie', 'error');
+                return;
+            }
+            const blob = new Blob([clientContractHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const win = window.open(url, '_blank');
+            if (win) {
+                win.onload = () => { URL.revokeObjectURL(url); win.print(); };
+            } else {
+                URL.revokeObjectURL(url);
+                showToast('Odblokuj wyskakujące okna w przeglądarce', 'error');
+            }
+        }
+
         function getAuthKey() {
             return `auth_${getToken()}`;
         }
@@ -1158,6 +1240,7 @@
                 showScreen('contract-data');
                 return;
             } else if (['data_filled', 'pending_signature'].includes(workflow.contract_status)) {
+                prepareContractHtml();
                 showScreen('contract-signing');
                 return;
             }
