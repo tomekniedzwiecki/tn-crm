@@ -45,6 +45,15 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        /* Mobile settings nav */
+        .settings-mobile-tabs { display: none; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .settings-mobile-tabs::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) {
+            .settings-mobile-tabs { display: flex; }
+            #settings-nav { display: none !important; }
+            textarea[rows="14"] { min-height: 160px; max-height: 260px; }
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -70,7 +79,32 @@
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto">
-            <div class="flex h-full">
+            <!-- Mobile tab bar -->
+            <div class="settings-mobile-tabs gap-1 px-3 py-2 border-b border-white/5 bg-zinc-950/80 sticky top-0 z-20">
+                <button onclick="switchSettingsTab('account')" data-tab="account" class="settings-tab-mobile whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-user-circle"></i> Konto
+                </button>
+                <button onclick="switchSettingsTab('general')" data-tab="general" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-gear-six"></i> Ogólne
+                </button>
+                <button onclick="switchSettingsTab('team')" data-tab="team" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-users-three"></i> Zespół
+                </button>
+                <button onclick="switchSettingsTab('pipeline')" data-tab="pipeline" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-kanban"></i> Pipeline
+                </button>
+                <button onclick="switchSettingsTab('messages')" data-tab="messages" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-envelope"></i> Wiadomości
+                </button>
+                <button onclick="switchSettingsTab('integrations')" data-tab="integrations" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-plugs-connected"></i> Integracje
+                </button>
+                <button onclick="switchSettingsTab('legal')" data-tab="legal" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-scales"></i> Prawne
+                </button>
+            </div>
+
+            <div class="flex flex-col md:flex-row h-full">
                 <!-- Settings Navigation -->
                 <nav id="settings-nav" class="w-56 flex-shrink-0 border-r border-white/5 p-4">
                     <div class="space-y-1">
@@ -112,7 +146,7 @@
                 </nav>
 
                 <!-- Settings Content Area -->
-                <div class="flex-1 p-6 lg:p-10">
+                <div class="flex-1 p-4 sm:p-6 lg:p-10">
                     <div class="max-w-2xl animate-enter">
 
                         <!-- TAB: Account (visible for all users) -->
@@ -209,12 +243,12 @@
 
                             <!-- TAB: Team -->
                             <div id="tab-team" class="settings-panel hidden space-y-6">
-                                <div class="flex items-center justify-between">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div>
                                         <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Zespół</h1>
                                         <p class="text-zinc-500 text-sm">Zarządzanie członkami zespołu CRM</p>
                                     </div>
-                                    <button id="add-member-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                                    <button id="add-member-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 self-start sm:self-auto">
                                         <i class="ph ph-plus"></i>
                                         Dodaj członka
                                     </button>
@@ -227,12 +261,12 @@
 
                             <!-- TAB: Pipeline -->
                             <div id="tab-pipeline" class="settings-panel hidden space-y-6">
-                                <div class="flex items-center justify-between">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div>
                                         <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Pipeline</h1>
                                         <p class="text-zinc-500 text-sm">Etapy procesu sprzedaży</p>
                                     </div>
-                                    <button id="add-stage-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                                    <button id="add-stage-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 self-start sm:self-auto">
                                         <i class="ph ph-plus"></i>
                                         Dodaj etap
                                     </button>
@@ -334,20 +368,20 @@
                                             <div class="space-y-3">
                                                 <div>
                                                     <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1">Transakcyjny</label>
-                                                    <div class="flex gap-1.5 items-center">
-                                                        <input type="text" id="email-from-name-transactional" class="w-36 text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20 transition-colors" placeholder="Tomek Niedzwiecki">
-                                                        <span class="text-zinc-600 text-xs">&lt;</span>
+                                                    <div class="flex flex-col sm:flex-row gap-1.5 sm:items-center">
+                                                        <input type="text" id="email-from-name-transactional" class="w-full sm:w-36 text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20 transition-colors" placeholder="Tomek Niedzwiecki">
+                                                        <span class="text-zinc-600 text-xs hidden sm:inline">&lt;</span>
                                                         <input type="email" id="email-from-transactional" class="flex-1 text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20 transition-colors" placeholder="biuro@tomekniedzwiecki.pl">
-                                                        <span class="text-zinc-600 text-xs">&gt;</span>
+                                                        <span class="text-zinc-600 text-xs hidden sm:inline">&gt;</span>
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1">Outreach</label>
-                                                    <div class="flex gap-1.5 items-center">
-                                                        <input type="text" id="email-from-name-outreach" class="w-36 text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20 transition-colors" placeholder="Tomek Niedzwiecki">
-                                                        <span class="text-zinc-600 text-xs">&lt;</span>
+                                                    <div class="flex flex-col sm:flex-row gap-1.5 sm:items-center">
+                                                        <input type="text" id="email-from-name-outreach" class="w-full sm:w-36 text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20 transition-colors" placeholder="Tomek Niedzwiecki">
+                                                        <span class="text-zinc-600 text-xs hidden sm:inline">&lt;</span>
                                                         <input type="email" id="email-from-outreach" class="flex-1 text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20 transition-colors" placeholder="tomek@m.tomekniedzwiecki.pl">
-                                                        <span class="text-zinc-600 text-xs">&gt;</span>
+                                                        <span class="text-zinc-600 text-xs hidden sm:inline">&gt;</span>
                                                     </div>
                                                 </div>
                                                 <button onclick="saveEmailDomainSettings()" class="bg-white text-black hover:bg-zinc-200 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors">Zapisz domeny</button>
@@ -365,7 +399,7 @@
 
                                     <div class="border border-white/[0.06] rounded-xl overflow-hidden">
                                         <!-- 1 -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_created')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_created')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full border border-amber-500/30 flex items-center justify-center flex-shrink-0">
                                                     <span class="text-amber-400 text-[10px] font-bold">1</span>
@@ -380,7 +414,7 @@
                                                 <i id="template-arrow-offer_created" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-offer_created" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-offer_created" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-offer_created" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Twoja oferta jest gotowa - {{offerName}}">
@@ -399,7 +433,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- 2 -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_personal')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_personal')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full border border-amber-500/30 flex items-center justify-center flex-shrink-0">
                                                     <span class="text-amber-400 text-[10px] font-bold">2</span>
@@ -414,7 +448,7 @@
                                                 <i id="template-arrow-offer_personal" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-offer_personal" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-offer_personal" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-offer_personal" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Re: {{offerName}}">
@@ -433,7 +467,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- 3 -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_reminder_halfway')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_reminder_halfway')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full border border-amber-500/30 flex items-center justify-center flex-shrink-0">
                                                     <span class="text-amber-400 text-[10px] font-bold">3</span>
@@ -448,7 +482,7 @@
                                                 <i id="template-arrow-offer_reminder_halfway" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-offer_reminder_halfway" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-offer_reminder_halfway" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-offer_reminder_halfway" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Przypomnienie: Twoja oferta wygasa {{validUntil}}">
@@ -467,7 +501,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- 4 -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_expired')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('offer_expired')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full border border-amber-500/30 flex items-center justify-center flex-shrink-0">
                                                     <span class="text-amber-400 text-[10px] font-bold">4</span>
@@ -482,7 +516,7 @@
                                                 <i id="template-arrow-offer_expired" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-offer_expired" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-offer_expired" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-offer_expired" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Twoja oferta wygasła">
@@ -509,7 +543,7 @@
 
                                     <div class="border border-white/[0.06] rounded-xl overflow-hidden">
                                         <!-- workflow_created -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('workflow_created')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('workflow_created')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                                                     <i class="ph-fill ph-check-circle text-emerald-400 text-xs"></i>
@@ -524,7 +558,7 @@
                                                 <i id="template-arrow-workflow_created" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-workflow_created" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-workflow_created" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-workflow_created" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Płatność przyjęta — czas na podpisanie umowy">
@@ -543,7 +577,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- contract_sent -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('contract_sent')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('contract_sent')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0">
                                                     <i class="ph-fill ph-seal-check text-violet-400 text-xs"></i>
@@ -558,7 +592,7 @@
                                                 <i id="template-arrow-contract_sent" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-contract_sent" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-contract_sent" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-contract_sent" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" placeholder="Umowa podpisana - {{offerName}}">
@@ -577,7 +611,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- products_shared -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('products_shared')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('products_shared')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
                                                     <i class="ph-fill ph-package text-orange-400 text-xs"></i>
@@ -592,7 +626,7 @@
                                                 <i id="template-arrow-products_shared" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-products_shared" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-products_shared" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-products_shared" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Propozycje produktowe — wybierz swój produkt">
@@ -619,7 +653,7 @@
 
                                     <div class="border border-white/[0.06] rounded-xl overflow-hidden">
                                         <!-- zapisy -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('zapisy_confirmation')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('zapisy_confirmation')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
                                                     <i class="ph ph-user-plus text-zinc-400 text-xs"></i>
@@ -634,7 +668,7 @@
                                                 <i id="template-arrow-zapisy_confirmation" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-zapisy_confirmation" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-zapisy_confirmation" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-zapisy_confirmation" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Dziękuję za zgłoszenie">
@@ -653,7 +687,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- proforma -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('proforma_generated')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('proforma_generated')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
                                                     <i class="ph ph-file-pdf text-zinc-400 text-xs"></i>
@@ -668,7 +702,7 @@
                                                 <i id="template-arrow-proforma_generated" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-proforma_generated" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-proforma_generated" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-proforma_generated" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Faktura proforma - {{offerName}}">
@@ -687,7 +721,7 @@
                                         <div class="border-t border-white/[0.06]"></div>
 
                                         <!-- invoice -->
-                                        <div class="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('invoice_sent')">
+                                        <div class="flex items-center justify-between px-3 sm:px-5 py-3.5 cursor-pointer hover:bg-white/[0.015] transition-colors" onclick="toggleEmailTemplate('invoice_sent')">
                                             <div class="flex items-center gap-4">
                                                 <div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
                                                     <i class="ph ph-file-text text-zinc-400 text-xs"></i>
@@ -702,7 +736,7 @@
                                                 <i id="template-arrow-invoice_sent" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-invoice_sent" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+                                        <div id="template-editor-invoice_sent" class="hidden border-t border-white/[0.06] bg-white/[0.01] p-3 sm:p-5 space-y-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
                                                 <input type="text" id="template-subject-invoice_sent" class="w-full text-sm text-white bg-black/40 border border-white/[0.06] px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Faktura VAT - {{invoiceNumber}}">
@@ -963,7 +997,7 @@
                                                    class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
                                                    placeholder="ul. Grawerska 30L, 51-180 Wrocław">
                                         </div>
-                                        <div class="grid grid-cols-2 gap-4">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">NIP</label>
                                                 <input type="text" id="legal-company-nip"
@@ -1007,7 +1041,7 @@
                 </button>
             </div>
 
-            <form id="add-member-form" class="p-5 space-y-4">
+            <form id="add-member-form" class="p-3 sm:p-5 space-y-4">
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email (konto Supabase) *</label>
                     <input type="email" id="member-email" required class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="email@example.com">
@@ -1017,7 +1051,7 @@
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Imię i nazwisko *</label>
                     <input type="text" id="member-name" required class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600" placeholder="Jan Kowalski">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Rola</label>
                         <select id="member-role" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600">
@@ -1040,7 +1074,7 @@
                 </div>
             </form>
 
-            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+            <div class="flex gap-3 px-3 sm:px-5 py-4 border-t border-white/5 bg-zinc-900/50">
                 <div class="flex-1"></div>
                 <button id="cancel-add-member" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
                     Anuluj
@@ -1097,7 +1131,7 @@
                 </div>
             </div>
 
-            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+            <div class="flex gap-3 px-3 sm:px-5 py-4 border-t border-white/5 bg-zinc-900/50">
                 <div class="flex-1"></div>
                 <button id="cancel-edit-member" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
                     Anuluj
@@ -1878,7 +1912,7 @@
         function switchSettingsTab(tabName) {
             currentSettingsTab = tabName;
 
-            // Update tab buttons
+            // Update desktop tab buttons
             document.querySelectorAll('.settings-tab').forEach(btn => {
                 if (btn.dataset.tab === tabName) {
                     btn.classList.remove('text-zinc-400', 'hover:text-white', 'hover:bg-white/5');
@@ -1886,6 +1920,17 @@
                 } else {
                     btn.classList.add('text-zinc-400', 'hover:text-white', 'hover:bg-white/5');
                     btn.classList.remove('bg-white/10', 'text-white', 'border', 'border-white/5');
+                }
+            });
+
+            // Update mobile tab buttons
+            document.querySelectorAll('.settings-tab-mobile').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.remove('text-zinc-500');
+                    btn.classList.add('bg-white/10', 'text-white');
+                } else {
+                    btn.classList.add('text-zinc-500');
+                    btn.classList.remove('bg-white/10', 'text-white');
                 }
             });
 
@@ -2720,6 +2765,7 @@
                 // Show admin tabs if admin
                 if (isAdmin) {
                     document.getElementById('admin-tabs').classList.remove('hidden');
+                    document.querySelectorAll('.admin-only-mobile').forEach(btn => btn.classList.remove('hidden'));
                     document.getElementById('settings-content').classList.remove('hidden');
 
                     // Load admin-specific settings
