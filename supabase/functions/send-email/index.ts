@@ -30,6 +30,7 @@ const VALID_EMAIL_TYPES = [
   'offer_reminder_halfway',
   'offer_expired',
   'products_shared',
+  'workflow_created',
   'direct'
 ]
 
@@ -43,7 +44,8 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   offer_personal: 'Re: {{offerName}}',
   offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',
   offer_expired: 'Twoja oferta wygasła',
-  products_shared: 'Propozycje produktowe — wybierz swój produkt'
+  products_shared: 'Propozycje produktowe — wybierz swój produkt',
+  workflow_created: 'Płatność przyjęta — podpisz umowę'
 }
 
 // Offer flow email types (use special reply-to)

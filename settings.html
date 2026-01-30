@@ -825,6 +825,50 @@
                                         </div>
                                     </div>
 
+                                    <!-- Template: workflow_created -->
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
+                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('workflow_created')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                                    <i class="ph ph-check-circle text-emerald-400 text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white font-medium">Projekt utworzony (płatność przyjęta)</div>
+                                                    <div class="text-zinc-500 text-xs">Wysyłany po utworzeniu projektu — informuje o płatności i podpisaniu umowy</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <span id="template-status-workflow_created" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
+                                                <i id="template-arrow-workflow_created" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-workflow_created" class="hidden border-t border-white/5 p-5 space-y-4">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomości</label>
+                                                <input type="text" id="template-subject-workflow_created"
+                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                       value="Płatność przyjęta — czas na podpisanie umowy">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść wiadomości (HTML)</label>
+                                                <textarea id="template-body-workflow_created" rows="12"
+                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
+                                                          placeholder="Treść emaila w HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Dostępne zmienne: <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code> <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code> <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{projectUrl}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-2">
+                                                <button onclick="previewEmailTemplate('workflow_created')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-eye"></i>
+                                                    Podgląd
+                                                </button>
+                                                <button onclick="saveEmailTemplate('workflow_created')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                    <i class="ph ph-floppy-disk"></i>
+                                                    Zapisz szablon
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Template: products_shared -->
                                     <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
                                         <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('products_shared')">
@@ -2065,7 +2109,8 @@
             offer_personal: 'Re: {{offerName}}',
             offer_reminder_halfway: 'Przypomnienie: Twoja oferta wygasa {{validUntil}}',
             offer_expired: 'Twoja oferta wygasła',
-            products_shared: 'Propozycje produktowe — wybierz swój produkt'
+            products_shared: 'Propozycje produktowe — wybierz swój produkt',
+            workflow_created: 'Płatność przyjęta — czas na podpisanie umowy'
         };
 
         const DEFAULT_EMAIL_BODY_SIMPLE = 'Treść emaila - skonfiguruj szablon w ustawieniach.';
@@ -2087,7 +2132,7 @@
 
         async function loadEmailTemplates() {
             // Load templates from settings (including offer flow templates)
-            ['zapisy_confirmation', 'offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired', 'proforma_generated', 'invoice_sent', 'contract_sent', 'products_shared'].forEach(templateId => {
+            ['zapisy_confirmation', 'offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired', 'proforma_generated', 'invoice_sent', 'contract_sent', 'workflow_created', 'products_shared'].forEach(templateId => {
                 const subjectKey = `email_template_${templateId}_subject`;
                 const bodyKey = `email_template_${templateId}_body`;
 
@@ -2283,6 +2328,26 @@
                             description: order.description || fallbackData.description,
                             viewUrl: order.invoice_id ? `https://tomekniedzwieckipl.fakturownia.pl/invoice/${order.invoice_token || ''}` : '#',
                             pdfUrl: order.invoice_id ? `https://tomekniedzwieckipl.fakturownia.pl/invoices/${order.invoice_id}.pdf` : '#'
+                        };
+                    }
+                }
+
+                // Workflow created - get recent workflow
+                if (templateId === 'workflow_created') {
+                    const { data: workflow } = await supabaseClient
+                        .from('workflows')
+                        .select('*, offers(name)')
+                        .not('customer_name', 'is', null)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    if (workflow) {
+                        return {
+                            email: workflow.customer_email || fallbackData.email,
+                            clientName: workflow.customer_name || workflow.customer_company || fallbackData.clientName,
+                            offerName: workflow.offers?.name || workflow.offer_name || fallbackData.offerName,
+                            projectUrl: `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
                         };
                     }
                 }
