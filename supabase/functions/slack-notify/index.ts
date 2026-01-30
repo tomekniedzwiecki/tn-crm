@@ -93,6 +93,14 @@ Deno.serve(async (req) => {
   }
 })
 
+function leadLink(email: string, label?: string, leadId?: string): string {
+  const display = label || email
+  if (leadId) {
+    return `<https://crm.tomekniedzwiecki.pl/lead?id=${leadId}|${display}>`
+  }
+  return `<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(email)}|${display}>`
+}
+
 function formatNewLeadMessage(data: {
   name?: string
   email: string
@@ -100,6 +108,7 @@ function formatNewLeadMessage(data: {
   company?: string
   source?: string
   deal_value?: number
+  lead_id?: string
   // Zapisy form fields
   traffic_source?: string
   direction?: string
@@ -120,7 +129,7 @@ function formatNewLeadMessage(data: {
   if (data.name) {
     fields.push({ type: 'mrkdwn', text: `*Imię:*\n${data.name}` })
   }
-  fields.push({ type: 'mrkdwn', text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.email)}|${data.email}>` })
+  fields.push({ type: 'mrkdwn', text: `*Email:*\n${leadLink(data.email, data.email, data.lead_id)}` })
   if (data.phone) {
     fields.push({ type: 'mrkdwn', text: `*Telefon:*\n${data.phone}` })
   }
@@ -164,6 +173,7 @@ function formatNewLeadMessage(data: {
 function formatZapisyLeadMessage(data: {
   email: string
   phone?: string
+  lead_id?: string
   traffic_source?: string
   direction?: string
   weekly_hours?: string
@@ -214,7 +224,7 @@ function formatZapisyLeadMessage(data: {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.email)}|${data.email}>*${data.phone ? ` · ${data.phone}` : ''}`
+        text: `*${leadLink(data.email, data.email, data.lead_id)}*${data.phone ? ` · ${data.phone}` : ''}`
       }
     },
     {
@@ -279,6 +289,7 @@ function formatOfferViewedMessage(data: {
   lead_name?: string
   lead_email: string
   lead_company?: string
+  lead_id?: string
   offer_name: string
   offer_price?: number
   first_view?: boolean
@@ -287,7 +298,7 @@ function formatOfferViewedMessage(data: {
   const viewText = data.first_view ? '👀 Pierwsze otwarcie oferty!' : '👁️ Oferta przeglądana'
 
   const fields = [
-    { type: 'mrkdwn', text: `*Klient:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.lead_email)}|${displayName}>` },
+    { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
     { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` }
   ]
 
@@ -296,7 +307,7 @@ function formatOfferViewedMessage(data: {
   }
 
   if (data.lead_email !== displayName) {
-    fields.push({ type: 'mrkdwn', text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.lead_email)}|${data.lead_email}>` })
+    fields.push({ type: 'mrkdwn', text: `*Email:*\n${leadLink(data.lead_email, data.lead_email, data.lead_id)}` })
   }
 
   return {
@@ -330,6 +341,7 @@ function formatProformaMessage(data: {
   lead_name?: string
   lead_email: string
   lead_company?: string
+  lead_id?: string
   offer_name: string
   offer_price?: number
   generated_by: 'client' | 'salesperson'
@@ -341,7 +353,7 @@ function formatProformaMessage(data: {
     : `przez ${data.salesperson_name || 'handlowca'}`
 
   const fields = [
-    { type: 'mrkdwn', text: `*Klient:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(data.lead_email)}|${displayName}>` },
+    { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
     { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` }
   ]
 

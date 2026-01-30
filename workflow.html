@@ -1277,7 +1277,15 @@
 
             // Customer info
             document.getElementById('customer-name').textContent = customerDisplay;
-            document.getElementById('customer-email').textContent = workflow.customer_email;
+            // Link email to lead if found
+            if (workflow.customer_email) {
+                const { data: leadMatch } = await supabaseClient.from('leads').select('id').eq('email', workflow.customer_email).maybeSingle();
+                if (leadMatch) {
+                    document.getElementById('customer-email').innerHTML = `<a href="/lead?id=${leadMatch.id}" class="text-zinc-500 hover:text-blue-400 transition-colors">${workflow.customer_email}</a>`;
+                } else {
+                    document.getElementById('customer-email').textContent = workflow.customer_email;
+                }
+            }
             document.getElementById('customer-company').textContent = workflow.customer_company || '-';
             document.getElementById('customer-phone').textContent = workflow.customer_phone || '-';
             document.getElementById('offer-name').textContent = workflow.offer_name;

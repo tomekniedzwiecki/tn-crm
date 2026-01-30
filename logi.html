@@ -1067,8 +1067,7 @@
                             <div class="text-zinc-600 text-[10px] font-mono">${dateTime.time}</div>
                         </td>
                         <td class="px-4 py-3">
-                            <div class="text-white text-xs truncate max-w-[180px]" title="${email.to_email}">${email.to_email}</div>
-                            ${email.lead_id ? `<a href="/lead?id=${email.lead_id}" class="text-zinc-600 text-[10px] hover:text-blue-400">Zobacz lead →</a>` : ''}
+                            ${email.lead_id ? `<a href="/lead?id=${email.lead_id}" class="text-white hover:text-blue-400 text-xs truncate max-w-[180px] block transition-colors" title="${email.to_email}">${email.to_email}</a>` : `<div class="text-white text-xs truncate max-w-[180px]" title="${email.to_email}">${email.to_email}</div>`}
                         </td>
                         <td class="px-4 py-3">
                             <div class="text-zinc-300 text-xs truncate max-w-[300px]" title="${email.subject}">${email.subject || '-'}</div>
@@ -1094,7 +1093,11 @@
             if (!email) return;
 
             document.getElementById('preview-subject').textContent = email.subject || '(bez tematu)';
-            document.getElementById('preview-to').textContent = email.to_email;
+            if (email.lead_id) {
+                document.getElementById('preview-to').innerHTML = `<a href="/lead?id=${email.lead_id}" class="text-white hover:text-blue-400 transition-colors">${email.to_email}</a>`;
+            } else {
+                document.getElementById('preview-to').textContent = email.to_email;
+            }
             document.getElementById('preview-date').textContent = formatDateTime(email.sent_at).full;
             document.getElementById('preview-body').innerHTML = email.body_html || '<p style="padding: 20px; color: #666;">Brak treści</p>';
 
