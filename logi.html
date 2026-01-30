@@ -891,10 +891,14 @@
                                         ? `<a href="${linkUrl}" class="text-white text-xs hover:text-blue-400 transition-colors">${entity.label}</a>`
                                         : `<span class="text-white text-xs">${entity.label}</span>`
                                     }
-                                    ${linkUrl
-                                        ? `<a href="${linkUrl}" class="text-zinc-600 hover:text-blue-400 text-[10px] truncate max-w-[200px] block transition-colors" title="${log.entity_identifier || ''}">${log.entity_identifier || '-'}</a>`
-                                        : `<div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${log.entity_identifier || ''}">${log.entity_identifier || '-'}</div>`
-                                    }
+                                    ${(() => {
+                                        const ident = log.entity_identifier || '-';
+                                        const isEmail = ident.includes('@');
+                                        const href = linkUrl || (isEmail ? '/leads?search=' + encodeURIComponent(ident) : null);
+                                        return href
+                                            ? `<a href="${href}" class="text-zinc-600 hover:text-blue-400 text-[10px] truncate max-w-[200px] block transition-colors" title="${ident}">${ident}</a>`
+                                            : `<div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${ident}">${ident}</div>`;
+                                    })()}
                                 </div>
                             </div>
                         </td>
