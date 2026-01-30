@@ -46,6 +46,14 @@
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
+        /* Mobile logs nav */
+        .logs-mobile-tabs { display: none; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .logs-mobile-tabs::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) {
+            .logs-mobile-tabs { display: flex; }
+            #logs-nav { display: none !important; }
+        }
+
         .log-tab.active {
             background: rgba(255,255,255,0.05);
             color: white;
@@ -114,9 +122,22 @@
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto">
-            <div class="flex h-full">
+            <!-- Mobile tab bar -->
+            <div class="logs-mobile-tabs gap-1 px-3 py-2 border-b border-white/5 bg-zinc-950/80 sticky top-0 z-20">
+                <button onclick="switchLogsTab('activity')" data-tab="activity" class="log-tab-mobile whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-pulse"></i> Aktywność
+                </button>
+                <button onclick="switchLogsTab('sent-emails')" data-tab="sent-emails" class="log-tab-mobile whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-paper-plane-tilt"></i> Wysłane
+                </button>
+                <button onclick="switchLogsTab('scheduled-emails')" data-tab="scheduled-emails" class="log-tab-mobile whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-clock"></i> Zaplanowane
+                </button>
+            </div>
+
+            <div class="flex flex-col md:flex-row h-full">
                 <!-- Logs Navigation -->
-                <nav id="logs-nav" class="w-56 flex-shrink-0 border-r border-white/5 p-4">
+                <nav id="logs-nav" class="hidden md:block w-56 flex-shrink-0 border-r border-white/5 p-4">
                     <div class="space-y-1">
                         <button onclick="switchLogsTab('activity')" data-tab="activity" class="log-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
                             <i class="ph ph-pulse text-lg"></i>
@@ -162,7 +183,7 @@
                 </nav>
 
                 <!-- Logs Content Area -->
-                <div class="flex-1 p-6 lg:p-8 overflow-y-auto">
+                <div class="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
                     <div class="max-w-6xl animate-enter">
 
                         <!-- Access denied message for non-admins -->
@@ -191,10 +212,10 @@
                                 <!-- Activity Filters -->
                                 <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
                                     <div class="flex flex-wrap items-center gap-3">
-                                        <select id="activity-filter-user" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[140px]">
+                                        <select id="activity-filter-user" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-0 sm:min-w-[140px]">
                                             <option value="">Wszyscy</option>
                                         </select>
-                                        <select id="activity-filter-action" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[130px]">
+                                        <select id="activity-filter-action" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-0 sm:min-w-[130px]">
                                             <option value="">Wszystkie akcje</option>
                                             <option value="create">Utworzono</option>
                                             <option value="update">Zaktualizowano</option>
@@ -202,7 +223,7 @@
                                             <option value="status_change">Zmiana statusu</option>
                                             <option value="batch_delete">Usunięto wiele</option>
                                         </select>
-                                        <select id="activity-filter-entity" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[130px]">
+                                        <select id="activity-filter-entity" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-0 sm:min-w-[130px]">
                                             <option value="">Wszystkie encje</option>
                                             <option value="lead">Lead</option>
                                             <option value="meeting">Spotkanie</option>
@@ -216,7 +237,7 @@
                                         </select>
                                         <input type="date" id="activity-filter-date-from" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
                                         <input type="date" id="activity-filter-date-to" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
-                                        <div class="relative flex-1 min-w-[180px]">
+                                        <div class="relative flex-1 min-w-0 sm:min-w-[180px]">
                                             <input type="text" id="activity-filter-search" placeholder="Szukaj..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
                                             <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
                                         </div>
@@ -234,7 +255,7 @@
                                 </div>
 
                                 <!-- Activity Table -->
-                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-hidden">
+                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-x-auto">
                                     <table class="w-full text-left text-xs">
                                         <thead class="bg-zinc-900/50 text-zinc-500 border-b border-white/5">
                                             <tr>
@@ -289,7 +310,7 @@
                                 <!-- Sent Emails Filters -->
                                 <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
                                     <div class="flex flex-wrap items-center gap-3">
-                                        <select id="emails-filter-status" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[120px]">
+                                        <select id="emails-filter-status" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-0 sm:min-w-[120px]">
                                             <option value="">Wszystkie statusy</option>
                                             <option value="sent">Wysłane</option>
                                             <option value="delivered">Dostarczone</option>
@@ -299,7 +320,7 @@
                                         </select>
                                         <input type="date" id="emails-filter-date-from" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
                                         <input type="date" id="emails-filter-date-to" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
-                                        <div class="relative flex-1 min-w-[200px]">
+                                        <div class="relative flex-1 min-w-0 sm:min-w-[200px]">
                                             <input type="text" id="emails-filter-search" placeholder="Szukaj po adresie lub temacie..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
                                             <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
                                         </div>
@@ -317,7 +338,7 @@
                                 </div>
 
                                 <!-- Sent Emails Table -->
-                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-hidden">
+                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-x-auto">
                                     <table class="w-full text-left text-xs">
                                         <thead class="bg-zinc-900/50 text-zinc-500 border-b border-white/5">
                                             <tr>
@@ -374,14 +395,14 @@
                                 <!-- Scheduled Emails Filters -->
                                 <div class="bg-zinc-900/30 border border-white/5 rounded-lg p-4 mb-6">
                                     <div class="flex flex-wrap items-center gap-3">
-                                        <select id="scheduled-filter-type" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-[160px]">
+                                        <select id="scheduled-filter-type" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600 min-w-0 sm:min-w-[160px]">
                                             <option value="">Wszystkie typy</option>
                                             <option value="offer_created">Oferta utworzona</option>
                                             <option value="offer_personal">Wiadomość od Tomka</option>
                                             <option value="offer_reminder_halfway">Przypomnienie</option>
                                             <option value="offer_expired">Oferta wygasła</option>
                                         </select>
-                                        <div class="relative flex-1 min-w-[200px]">
+                                        <div class="relative flex-1 min-w-0 sm:min-w-[200px]">
                                             <input type="text" id="scheduled-filter-search" placeholder="Szukaj po leadzie..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-zinc-300 outline-none hover:border-zinc-700 focus:border-zinc-600">
                                             <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
                                         </div>
@@ -399,7 +420,7 @@
                                 </div>
 
                                 <!-- Scheduled Emails Table -->
-                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-hidden">
+                                <div class="bg-zinc-900/20 border border-white/5 rounded-lg overflow-x-auto">
                                     <table class="w-full text-left text-xs">
                                         <thead class="bg-zinc-900/50 text-zinc-500 border-b border-white/5">
                                             <tr>
@@ -595,15 +616,26 @@
             // Hide all panels
             document.querySelectorAll('.logs-panel').forEach(panel => panel.classList.add('hidden'));
 
-            // Deactivate all tabs
+            // Deactivate all tabs (desktop)
             document.querySelectorAll('.log-tab').forEach(tab => tab.classList.remove('active'));
+
+            // Update mobile tabs
+            document.querySelectorAll('.log-tab-mobile').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.remove('text-zinc-500');
+                    btn.classList.add('bg-white/10', 'text-white');
+                } else {
+                    btn.classList.add('text-zinc-500');
+                    btn.classList.remove('bg-white/10', 'text-white');
+                }
+            });
 
             // Show selected panel
             const panel = document.getElementById(`tab-${tabName}`);
             if (panel) panel.classList.remove('hidden');
 
-            // Activate selected tab
-            const tab = document.querySelector(`[data-tab="${tabName}"]`);
+            // Activate selected tab (desktop)
+            const tab = document.querySelector(`.log-tab[data-tab="${tabName}"]`);
             if (tab) tab.classList.add('active');
 
             // Load data for the selected tab
