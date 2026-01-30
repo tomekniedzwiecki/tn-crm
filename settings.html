@@ -363,556 +363,370 @@
                                     </div>
                                 </div>
 
-                                <!-- Flow ofertowe section -->
-                                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                            <i class="ph ph-flow-arrow text-amber-400 text-xl"></i>
+                                <!-- ============================================= -->
+                                <!-- FLOW OFERTOWE -->
+                                <!-- ============================================= -->
+                                <div>
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                            <i class="ph ph-flow-arrow text-amber-400"></i>
                                         </div>
                                         <div>
-                                            <h2 class="text-white font-medium">Flow ofertowe</h2>
-                                            <p class="text-zinc-500 text-xs">Automatyczna sekwencja maili po wygenerowaniu oferty</p>
+                                            <h2 class="text-white font-medium text-sm">Flow ofertowe</h2>
+                                            <p class="text-zinc-500 text-xs">Automatyczna sekwencja 4 maili po wygenerowaniu oferty</p>
                                         </div>
                                     </div>
 
-                                    <div class="mb-4">
+                                    <!-- Reply-To -->
+                                    <div class="border border-white/5 rounded-lg p-4 mb-3">
                                         <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Reply-To dla flow ofertowego</label>
                                         <div class="flex gap-3">
                                             <input type="email" id="offer-flow-reply-to"
-                                                   class="flex-1 text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
+                                                   class="flex-1 text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20"
                                                    placeholder="ceo@tomekniedzwiecki.pl">
-                                            <button onclick="saveOfferFlowReplyTo()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                <i class="ph ph-floppy-disk"></i>
+                                            <button onclick="saveOfferFlowReplyTo()" class="bg-white text-black hover:bg-zinc-200 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
                                                 Zapisz
                                             </button>
                                         </div>
-                                        <p class="text-zinc-600 text-xs mt-1">Wszystkie maile z flow ofertowego beda mialy ten adres jako Reply-To.</p>
                                     </div>
 
-                                    <!-- Flow templates label -->
-                                    <div class="mt-4 mb-2">
-                                        <label class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider">Szablony flow (4 emaile)</label>
-                                    </div>
-
-                                    <!-- Flow templates list -->
-                                    <div class="space-y-3">
-                                    <!-- Template: offer_created (Flow ofertowe - natychmiast) -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_created')">
+                                    <!-- Flow templates -->
+                                    <div class="border border-white/5 rounded-lg divide-y divide-white/5 overflow-hidden">
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('offer_created')">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-paper-plane-tilt text-amber-400 text-xl"></i>
-                                                </div>
+                                                <span class="text-zinc-600 text-[10px] font-mono w-4">1.</span>
                                                 <div>
-                                                    <div class="text-white font-medium">Oferta przygotowana</div>
-                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany natychmiast po utworzeniu oferty</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
-                                                <span id="template-status-offer_created" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-offer_created" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-offer_created" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomości</label>
-                                                <input type="text" id="template-subject-offer_created"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Twoja oferta jest gotowa - {{offerName}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść wiadomości (HTML)</label>
-                                                <textarea id="template-body-offer_created" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Treść emaila w HTML..."></textarea>
-                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
-                                                    <p>Dostępne zmienne:</p>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerPrice}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{validUntil}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerUrl}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{email}}</code>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('offer_created')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podgląd
-                                                </button>
-                                                <button onclick="saveEmailTemplate('offer_created')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Template: offer_personal (Flow ofertowe - 20 min) -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_personal')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-user text-amber-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Wiadomosc od Tomka</div>
-                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: nastepny dzien roboczy o 9:00 (z podpisem)</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
-                                                <span id="template-status-offer_personal" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-offer_personal" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-offer_personal" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
-                                                <input type="text" id="template-subject-offer_personal"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Re: {{offerName}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
-                                                <textarea id="template-body-offer_personal" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Tresc emaila w HTML..."></textarea>
-                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
-                                                    <p>Dostepne zmienne:</p>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{senderName}}</code>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('offer_personal')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podglad
-                                                </button>
-                                                <button onclick="saveEmailTemplate('offer_personal')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Template: offer_reminder_halfway (Flow ofertowe - polowa czasu) -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_reminder_halfway')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-bell text-amber-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Przypomnienie (polowa czasu)</div>
-                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany w polowie waznosci oferty</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
-                                                <span id="template-status-offer_reminder_halfway" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-offer_reminder_halfway" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-offer_reminder_halfway" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
-                                                <input type="text" id="template-subject-offer_reminder_halfway"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Przypomnienie: Twoja oferta wygasa {{validUntil}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
-                                                <textarea id="template-body-offer_reminder_halfway" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Tresc emaila w HTML..."></textarea>
-                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
-                                                    <p>Dostepne zmienne:</p>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerPrice}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{validUntil}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerUrl}}</code>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('offer_reminder_halfway')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podglad
-                                                </button>
-                                                <button onclick="saveEmailTemplate('offer_reminder_halfway')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Template: offer_expired (Flow ofertowe - po wygasnieciu) -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('offer_expired')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-clock-countdown text-red-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Oferta wygasla</div>
-                                                    <div class="text-zinc-500 text-xs">Flow ofertowe: wysylany minute po wygasnieciu oferty</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">FLOW</span>
-                                                <span id="template-status-offer_expired" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-offer_expired" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-offer_expired" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
-                                                <input type="text" id="template-subject-offer_expired"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Twoja oferta wygasla">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
-                                                <textarea id="template-body-offer_expired" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Tresc emaila w HTML..."></textarea>
-                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
-                                                    <p>Dostepne zmienne:</p>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('offer_expired')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podglad
-                                                </button>
-                                                <button onclick="saveEmailTemplate('offer_expired')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    </div>
-                                </div>
-
-                                <!-- Podstawowe szablony section -->
-                                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                            <i class="ph ph-envelope text-blue-400 text-xl"></i>
-                                        </div>
-                                        <div>
-                                            <h2 class="text-white font-medium">Podstawowe szablony</h2>
-                                            <p class="text-zinc-500 text-xs">Szablony dla pozostalych typow wiadomosci</p>
-                                        </div>
-                                    </div>
-
-                                    <div class="space-y-3">
-                                    <!-- Template: zapisy_confirmation -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('zapisy_confirmation')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-user-plus text-emerald-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Potwierdzenie zgłoszenia</div>
-                                                    <div class="text-zinc-500 text-xs">Wysyłany po wypełnieniu formularza zapisy</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span id="template-status-zapisy_confirmation" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-zapisy_confirmation" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-zapisy_confirmation" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomości</label>
-                                                <input type="text" id="template-subject-zapisy_confirmation"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Dziękuję za zgłoszenie">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść wiadomości (HTML)</label>
-                                                <textarea id="template-body-zapisy_confirmation" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Treść emaila w HTML..."></textarea>
-                                                <p class="text-zinc-600 text-xs mt-1.5">Dostępne zmienne: <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{email}}</code></p>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('zapisy_confirmation')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podgląd
-                                                </button>
-                                                <button onclick="saveEmailTemplate('zapisy_confirmation')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Template: proforma_generated -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('proforma_generated')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-file-pdf text-blue-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Faktura proforma</div>
-                                                    <div class="text-zinc-500 text-xs">Wysyłany po wygenerowaniu proformy z linkiem do PDF</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span id="template-status-proforma_generated" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-proforma_generated" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-proforma_generated" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomości</label>
-                                                <input type="text" id="template-subject-proforma_generated"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Faktura proforma - {{offerName}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść wiadomości (HTML)</label>
-                                                <textarea id="template-body-proforma_generated" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Treść emaila w HTML..."></textarea>
-                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
-                                                    <p>Dostępne zmienne:</p>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerPrice}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{pdfUrl}}</code>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('proforma_generated')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podgląd
-                                                </button>
-                                                <button onclick="saveEmailTemplate('proforma_generated')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Template: invoice_sent -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('invoice_sent')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-file-text text-emerald-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Faktura VAT wystawiona</div>
-                                                    <div class="text-zinc-500 text-xs">Wysylany po wystawieniu faktury VAT z linkiem do PDF</div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span id="template-status-invoice_sent" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-invoice_sent" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
-                                            </div>
-                                        </div>
-                                        <div id="template-editor-invoice_sent" class="hidden border-t border-white/5 p-5 space-y-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomosci</label>
-                                                <input type="text" id="template-subject-invoice_sent"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Faktura VAT - {{invoiceNumber}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tresc wiadomosci (HTML)</label>
-                                                <textarea id="template-body-invoice_sent" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Tresc emaila w HTML..."></textarea>
-                                                <div class="text-zinc-600 text-xs mt-1.5 space-y-1">
-                                                    <p>Dostepne zmienne:</p>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{invoiceNumber}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{amount}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{description}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{pdfUrl}}</code>
-                                                        <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{viewUrl}}</code>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('invoice_sent')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podglad
-                                                </button>
-                                                <button onclick="saveEmailTemplate('invoice_sent')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Template: contract_sent -->
-                                    <div class="border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('contract_sent')">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-file-doc text-violet-400 text-xl"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="text-white font-medium">Umowa podpisana</div>
-                                                    <div class="text-zinc-500 text-xs">Wysylana gdy dodasz w pelni podpisana umowe</div>
+                                                    <div class="text-white text-sm">Oferta przygotowana</div>
+                                                    <div class="text-zinc-600 text-xs">Natychmiast po utworzeniu oferty</div>
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <span id="template-status-contract_sent" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-contract_sent" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                                <span id="template-status-offer_created" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-offer_created" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-contract_sent" class="hidden border-t border-white/5 p-5 space-y-4">
+                                        <div id="template-editor-offer_created" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
                                             <div>
-                                                <label class="block text-zinc-500 text-xs mb-1.5">Temat</label>
-                                                <input type="text" id="template-subject-contract_sent"
-                                                    class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
-                                                    placeholder="Umowa do podpisu - {{offerName}}">
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-offer_created" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Twoja oferta jest gotowa - {{offerName}}">
                                             </div>
                                             <div>
-                                                <label class="block text-zinc-500 text-xs mb-1.5">Tresc HTML</label>
-                                                <textarea id="template-body-contract_sent" rows="12"
-                                                    class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-white/20"
-                                                    placeholder="Kod HTML emaila..."></textarea>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-offer_created" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerPrice}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{validUntil}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerUrl}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{email}}</code></p>
                                             </div>
-                                            <div class="text-xs text-zinc-600">
-                                                <p class="mb-1">Dostepne zmienne:</p>
-                                                <div class="flex flex-wrap gap-1">
-                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{clientName}}</code>
-                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{offerName}}</code>
-                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{projectUrl}}</code>
-                                                    <code class="bg-zinc-800 px-1.5 py-0.5 rounded">{{contractUrl}}</code>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('offer_created')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('offer_created')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('offer_personal')">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-zinc-600 text-[10px] font-mono w-4">2.</span>
+                                                <div>
+                                                    <div class="text-white text-sm">Wiadomość od Tomka</div>
+                                                    <div class="text-zinc-600 text-xs">Następny dzień roboczy o 9:00 (z podpisem)</div>
                                                 </div>
                                             </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('contract_sent')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podglad
-                                                </button>
-                                                <button onclick="saveEmailTemplate('contract_sent')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-offer_personal" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-offer_personal" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-offer_personal" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-offer_personal" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Re: {{offerName}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-offer_personal" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{senderName}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('offer_personal')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('offer_personal')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('offer_reminder_halfway')">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-zinc-600 text-[10px] font-mono w-4">3.</span>
+                                                <div>
+                                                    <div class="text-white text-sm">Przypomnienie (połowa czasu)</div>
+                                                    <div class="text-zinc-600 text-xs">W połowie ważności oferty</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-offer_reminder_halfway" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-offer_reminder_halfway" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-offer_reminder_halfway" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-offer_reminder_halfway" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Przypomnienie: Twoja oferta wygasa {{validUntil}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-offer_reminder_halfway" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerPrice}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{validUntil}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerUrl}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('offer_reminder_halfway')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('offer_reminder_halfway')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('offer_expired')">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-zinc-600 text-[10px] font-mono w-4">4.</span>
+                                                <div>
+                                                    <div class="text-white text-sm">Oferta wygasła</div>
+                                                    <div class="text-zinc-600 text-xs">Minutę po wygaśnięciu oferty</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-offer_expired" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-offer_expired" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-offer_expired" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-offer_expired" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Twoja oferta wygasła">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-offer_expired" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('offer_expired')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('offer_expired')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- Template: workflow_created -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('workflow_created')">
+                                <!-- ============================================= -->
+                                <!-- PROJEKTOWE -->
+                                <!-- ============================================= -->
+                                <div>
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                            <i class="ph ph-kanban text-violet-400"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-white font-medium text-sm">Projektowe</h2>
+                                            <p class="text-zinc-500 text-xs">Wiadomości związane z cyklem życia projektu klienta</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="border border-white/5 rounded-lg divide-y divide-white/5 overflow-hidden">
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('workflow_created')">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-check-circle text-emerald-400 text-xl"></i>
+                                                <div class="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <i class="ph ph-check-circle text-emerald-400 text-sm"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="text-white font-medium">Projekt utworzony (płatność przyjęta)</div>
-                                                    <div class="text-zinc-500 text-xs">Wysyłany po utworzeniu projektu — informuje o płatności i podpisaniu umowy</div>
+                                                    <div class="text-white text-sm">Płatność przyjęta</div>
+                                                    <div class="text-zinc-600 text-xs">Po utworzeniu projektu — zaloguj się i podpisz umowę</div>
                                                 </div>
                                             </div>
-                                            <div class="flex items-center gap-3">
-                                                <span id="template-status-workflow_created" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-workflow_created" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-workflow_created" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-workflow_created" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-workflow_created" class="hidden border-t border-white/5 p-5 space-y-4">
+                                        <div id="template-editor-workflow_created" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
                                             <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomości</label>
-                                                <input type="text" id="template-subject-workflow_created"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Płatność przyjęta — czas na podpisanie umowy">
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-workflow_created" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Płatność przyjęta — czas na podpisanie umowy">
                                             </div>
                                             <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść wiadomości (HTML)</label>
-                                                <textarea id="template-body-workflow_created" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Treść emaila w HTML..."></textarea>
-                                                <p class="text-zinc-600 text-xs mt-1.5">Dostępne zmienne: <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code> <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{offerName}}</code> <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{projectUrl}}</code></p>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-workflow_created" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{projectUrl}}</code></p>
                                             </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('workflow_created')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podgląd
-                                                </button>
-                                                <button onclick="saveEmailTemplate('workflow_created')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('workflow_created')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('workflow_created')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Template: products_shared -->
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden">
-                                        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleEmailTemplate('products_shared')">
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('contract_sent')">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                                    <i class="ph ph-package text-orange-400 text-xl"></i>
+                                                <div class="w-7 h-7 rounded-md bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <i class="ph ph-file-doc text-violet-400 text-sm"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="text-white font-medium">Udostępnienie produktów</div>
-                                                    <div class="text-zinc-500 text-xs">Wysyłany po udostępnieniu propozycji produktowych klientowi</div>
+                                                    <div class="text-white text-sm">Umowa podpisana</div>
+                                                    <div class="text-zinc-600 text-xs">Po dodaniu w pełni podpisanej umowy</div>
                                                 </div>
                                             </div>
-                                            <div class="flex items-center gap-3">
-                                                <span id="template-status-products_shared" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">AKTYWNY</span>
-                                                <i id="template-arrow-products_shared" class="ph ph-caret-down text-zinc-500 transition-transform"></i>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-contract_sent" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-contract_sent" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
                                             </div>
                                         </div>
-                                        <div id="template-editor-products_shared" class="hidden border-t border-white/5 p-5 space-y-4">
+                                        <div id="template-editor-contract_sent" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
                                             <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat wiadomości</label>
-                                                <input type="text" id="template-subject-products_shared"
-                                                       class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600"
-                                                       value="Propozycje produktowe — wybierz swój produkt">
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-contract_sent" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" placeholder="Umowa podpisana - {{offerName}}">
                                             </div>
                                             <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść wiadomości (HTML)</label>
-                                                <textarea id="template-body-products_shared" rows="12"
-                                                          class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono text-xs leading-relaxed resize-y"
-                                                          placeholder="Treść emaila w HTML..."></textarea>
-                                                <p class="text-zinc-600 text-xs mt-1.5">Dostępne zmienne: <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{clientName}}</code> <code class="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{{projectUrl}}</code></p>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-contract_sent" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{projectUrl}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{contractUrl}}</code></p>
                                             </div>
-                                            <div class="flex gap-2 pt-2">
-                                                <button onclick="previewEmailTemplate('products_shared')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-eye"></i>
-                                                    Podgląd
-                                                </button>
-                                                <button onclick="saveEmailTemplate('products_shared')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                    <i class="ph ph-floppy-disk"></i>
-                                                    Zapisz szablon
-                                                </button>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('contract_sent')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('contract_sent')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('products_shared')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-7 h-7 rounded-md bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <i class="ph ph-package text-orange-400 text-sm"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white text-sm">Udostępnienie produktów</div>
+                                                    <div class="text-zinc-600 text-xs">Po udostępnieniu propozycji produktowych</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-products_shared" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-products_shared" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-products_shared" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-products_shared" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Propozycje produktowe — wybierz swój produkt">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-products_shared" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{projectUrl}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('products_shared')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('products_shared')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
+                                <!-- ============================================= -->
+                                <!-- SYSTEMOWE -->
+                                <!-- ============================================= -->
+                                <div>
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                            <i class="ph ph-gear text-blue-400"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-white font-medium text-sm">Systemowe</h2>
+                                            <p class="text-zinc-500 text-xs">Potwierdzenia, faktury i inne wiadomości transakcyjne</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="border border-white/5 rounded-lg divide-y divide-white/5 overflow-hidden">
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('zapisy_confirmation')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <i class="ph ph-user-plus text-emerald-400 text-sm"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white text-sm">Potwierdzenie zgłoszenia</div>
+                                                    <div class="text-zinc-600 text-xs">Po wypełnieniu formularza zapisy</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-zapisy_confirmation" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-zapisy_confirmation" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-zapisy_confirmation" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-zapisy_confirmation" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Dziękuję za zgłoszenie">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-zapisy_confirmation" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{email}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('zapisy_confirmation')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('zapisy_confirmation')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('proforma_generated')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <i class="ph ph-file-pdf text-blue-400 text-sm"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white text-sm">Faktura proforma</div>
+                                                    <div class="text-zinc-600 text-xs">Po wygenerowaniu proformy z linkiem do PDF</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-proforma_generated" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-proforma_generated" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-proforma_generated" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-proforma_generated" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Faktura proforma - {{offerName}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-proforma_generated" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{offerPrice}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{pdfUrl}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('proforma_generated')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('proforma_generated')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="toggleEmailTemplate('invoice_sent')">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <i class="ph ph-file-text text-emerald-400 text-sm"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white text-sm">Faktura VAT</div>
+                                                    <div class="text-zinc-600 text-xs">Po wystawieniu faktury z linkiem do PDF</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span id="template-status-invoice_sent" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">OK</span>
+                                                <i id="template-arrow-invoice_sent" class="ph ph-caret-down text-zinc-600 transition-transform text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div id="template-editor-invoice_sent" class="hidden border-t border-white/5 p-5 space-y-4 bg-black/20">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Temat</label>
+                                                <input type="text" id="template-subject-invoice_sent" class="w-full text-sm text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20" value="Faktura VAT - {{invoiceNumber}}">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">HTML</label>
+                                                <textarea id="template-body-invoice_sent" rows="12" class="w-full text-white bg-black border border-white/10 px-3 py-2 rounded-lg outline-none focus:border-white/20 font-mono text-xs leading-relaxed resize-y" placeholder="HTML..."></textarea>
+                                                <p class="text-zinc-600 text-xs mt-1.5">Zmienne: <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{clientName}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{invoiceNumber}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{amount}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{description}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{pdfUrl}}</code> <code class="bg-zinc-800 px-1 py-0.5 rounded text-zinc-500 text-[10px]">{{viewUrl}}</code></p>
+                                            </div>
+                                            <div class="flex gap-2 pt-1">
+                                                <button onclick="previewEmailTemplate('invoice_sent')" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-eye"></i> Podgląd</button>
+                                                <button onclick="saveEmailTemplate('invoice_sent')" class="bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
