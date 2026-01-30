@@ -238,6 +238,12 @@
                         Zapłać online
                     </button>
                 </div>
+
+                <!-- Installment info -->
+                <div class="mt-4 flex items-center gap-2 text-zinc-400 text-xs sm:text-sm">
+                    <i class="ph ph-split text-amber-400"></i>
+                    <span>Możliwość rozłożenia na <strong class="text-white">raty 0%</strong> — wybierzesz przy płatności</span>
+                </div>
             </div>
 
             <!-- Timeline Section -->
@@ -284,7 +290,21 @@
 
         </main>
 
-        <!-- Footer -->
+        <!-- Sticky bottom payment bar -->
+        <div id="sticky-pay-bar" class="fixed bottom-0 left-0 right-0 z-50 translate-y-full transition-transform duration-300" style="background:rgba(5,5,5,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.08);">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-white font-semibold text-sm truncate" id="sticky-price">-</div>
+                    <div class="text-zinc-500 text-[11px]">raty 0% dostępne</div>
+                </div>
+                <button onclick="proceedToPayment()" class="flex-shrink-0 inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/20 text-sm">
+                    <i class="ph ph-credit-card"></i>
+                    Zapłać online
+                </button>
+            </div>
+        </div>
+
+    <!-- Footer -->
         <footer class="border-t border-white/5 mt-12">
             <div class="max-w-5xl mx-auto px-6 py-8 text-center">
                 <p class="text-zinc-600 text-sm">
@@ -367,6 +387,9 @@
                 document.getElementById(id).classList.add('hidden');
             });
             document.getElementById(screenId).classList.remove('hidden');
+            if (screenId === 'offer-screen') {
+                setTimeout(initStickyBar, 100);
+            }
         }
 
         async function loadOffer() {
@@ -517,6 +540,7 @@
             document.getElementById('offer-name').textContent = offer.name;
             document.getElementById('offer-description').textContent = offer.description || '';
             document.getElementById('offer-price').textContent = formatPrice(offer.price);
+            document.getElementById('sticky-price').textContent = formatPrice(offer.price) + ' PLN';
             document.getElementById('valid-until-display').textContent = formatDate(clientOffer.valid_until);
 
             // Render timeline
@@ -797,6 +821,20 @@
             if (e.key === 'Enter') verifyEmail();
         });
 
+        // Sticky pay bar — show when CTA card scrolls out of view
+        const stickyBar = document.getElementById('sticky-pay-bar');
+        function initStickyBar() {
+            const ctaCard = document.querySelector('.border-amber-500\\/20');
+            if (!ctaCard || !stickyBar) return;
+            const observer = new IntersectionObserver(([entry]) => {
+                if (entry.isIntersecting) {
+                    stickyBar.classList.add('translate-y-full');
+                } else {
+                    stickyBar.classList.remove('translate-y-full');
+                }
+            }, { threshold: 0 });
+            observer.observe(ctaCard);
+        }
         // Init
         loadOffer();
     </script>
