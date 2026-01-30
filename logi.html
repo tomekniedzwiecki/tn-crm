@@ -850,12 +850,15 @@
                 // Link for entity
                 let linkUrl = null;
                 if (log.entity_id) {
+                    const relatedLeadId = log.new_value?.lead_id || log.old_value?.lead_id;
                     switch (log.entity_type) {
                         case 'lead': linkUrl = `/lead?id=${log.entity_id}`; break;
                         case 'offer': linkUrl = `/offer?id=${log.entity_id}`; break;
                         case 'client_offer':
-                            const leadId = log.new_value?.lead_id || log.old_value?.lead_id;
-                            if (leadId) linkUrl = `/lead?id=${leadId}`;
+                        case 'note':
+                        case 'activity':
+                        case 'meeting':
+                            if (relatedLeadId) linkUrl = `/lead?id=${relatedLeadId}`;
                             break;
                     }
                 }
@@ -888,7 +891,10 @@
                                         ? `<a href="${linkUrl}" class="text-white text-xs hover:text-blue-400 transition-colors">${entity.label}</a>`
                                         : `<span class="text-white text-xs">${entity.label}</span>`
                                     }
-                                    <div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${log.entity_identifier || ''}">${log.entity_identifier || '-'}</div>
+                                    ${linkUrl
+                                        ? `<a href="${linkUrl}" class="text-zinc-600 hover:text-blue-400 text-[10px] truncate max-w-[200px] block transition-colors" title="${log.entity_identifier || ''}">${log.entity_identifier || '-'}</a>`
+                                        : `<div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${log.entity_identifier || ''}">${log.entity_identifier || '-'}</div>`
+                                    }
                                 </div>
                             </div>
                         </td>
