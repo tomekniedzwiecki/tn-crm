@@ -1872,72 +1872,19 @@
         window.confirmProductSelection = confirmProductSelection;
 
         // =============================================
-        // REPORT CONSTANTS & HELPERS
+        // REPORT TYPE CONFIG
         // =============================================
-        const REPORT_SECTION_ICONS = {
-            1: 'ph-magnifying-glass',
-            2: 'ph-heart',
-            3: 'ph-users',
-            4: 'ph-binoculars',
-            5: 'ph-flag-banner',
-            6: 'ph-megaphone'
+        const REPORT_TYPE_CONFIG_CLIENT = {
+            report_pdf: { icon: 'ph-file-pdf', label: 'Raport PDF', color: 'bg-red-500/10 text-red-400' },
+            report_infographic: { icon: 'ph-image', label: 'Infografika', color: 'bg-violet-500/10 text-violet-400' },
+            report_presentation: { icon: 'ph-presentation-chart', label: 'Prezentacja', color: 'bg-blue-500/10 text-blue-400' },
+            product_analysis: { icon: 'ph-chart-line-up', label: 'Analiza produktu', color: 'bg-green-500/10 text-green-400' }
         };
 
-        const REPORT_SECTION_COLORS = {
-            1: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/10' },
-            2: { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/10' },
-            3: { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/10' },
-            4: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/10' },
-            5: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/10' },
-            6: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/10' }
-        };
 
-        function renderMarkdownToHtml(md) {
-            let html = md
-                .replace(/^####\s+(.+)$/gm, '<h5 class="text-white font-medium text-sm mt-4 mb-2">$1</h5>')
-                .replace(/^###\s+(.+)$/gm, '<h4 class="text-white font-semibold mt-5 mb-2">$1</h4>')
-                .replace(/^##\s+(.+)$/gm, '<h3 class="text-white font-semibold text-lg mt-5 mb-2">$1</h3>')
-                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong class="text-white"><em>$1</em></strong>')
-                .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline">$1</a>');
-
-            const lines = html.split('\n');
-            let result = [];
-            let inUl = false;
-            let inOl = false;
-
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const ulMatch = line.match(/^\s*[-•]\s+(.+)/);
-                const olMatch = line.match(/^\s*\d+[.)]\s+(.+)/);
-
-                if (ulMatch) {
-                    if (!inUl) { result.push('<ul class="space-y-2 my-3">'); inUl = true; }
-                    result.push(`<li class="flex gap-2.5 text-[#ccc] leading-relaxed"><span class="text-emerald-400 mt-2 text-[5px]">●</span><span>${ulMatch[1]}</span></li>`);
-                } else if (olMatch) {
-                    if (!inOl) { result.push('<ol class="space-y-2 my-3">'); inOl = true; }
-                    result.push(`<li class="flex gap-2.5 text-[#ccc] leading-relaxed"><span class="text-emerald-400 font-mono text-xs min-w-[1.2rem] mt-0.5">${i + 1}.</span><span>${olMatch[1]}</span></li>`);
-                } else {
-                    if (inUl) { result.push('</ul>'); inUl = false; }
-                    if (inOl) { result.push('</ol>'); inOl = false; }
-                    if (line.trim() === '') {
-                        result.push('<div class="h-3"></div>');
-                    } else if (!line.startsWith('<h')) {
-                        result.push(`<p class="text-[#bbb] leading-relaxed">${line}</p>`);
-                    } else {
-                        result.push(line);
-                    }
-                }
-            }
-            if (inUl) result.push('</ul>');
-            if (inOl) result.push('</ol>');
-            return result.join('\n');
-        }
-
-        // =============================================
+        // ===================================
         // RENDER REPORTS
-        // =============================================
+        // ===================================
         function renderReports() {
             const container = document.getElementById('reports-list');
             const empty = document.getElementById('reports-empty');
@@ -1949,117 +1896,57 @@
             }
 
             empty.classList.add('hidden');
+            const isMobile = window.innerWidth < 768;
 
-            // Separate product analysis reports from regular ones
-            const productReports = reports.filter(r => r.type === 'product_analysis' && r.content?.sections);
-            const otherReports = reports.filter(r => !(r.type === 'product_analysis' && r.content?.sections));
+            container.innerHTML = reports.map(r => {
+                const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || { icon: 'ph-file', label: r.type, color: 'bg-zinc-800 text-zinc-400' };
+                const isImage = r.type === 'report_infographic';
+                const isPdf = r.file_url && (r.content?.mime_type === 'application/pdf' || r.file_url.endsWith('.pdf'));
 
-            let html = '';
+                let contentHtml = '';
 
-            // Render product analysis reports as full documents
-            productReports.forEach(r => {
-                const sections = r.content.sections;
-
-                // Section navigation
-                const navHtml = sections.map(s => {
-                    const color = REPORT_SECTION_COLORS[s.number] || REPORT_SECTION_COLORS[1];
-                    return `<button onclick="scrollToReportSection('section-${r.id}-${s.number}')" class="text-xs ${color.text} hover:bg-white/5 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap border border-white/5">${s.number}. ${s.title}</button>`;
-                }).join('');
-
-                // Sections
-                const sectionsHtml = sections.map(s => {
-                    const icon = REPORT_SECTION_ICONS[s.number] || 'ph-file-text';
-                    const color = REPORT_SECTION_COLORS[s.number] || REPORT_SECTION_COLORS[1];
-                    return `
-                        <div id="section-${r.id}-${s.number}" class="report-section card p-6 md:p-8" style="opacity: 0; transform: translateY(20px); transition: all 0.5s ease;">
-                            <div class="flex items-center gap-3 mb-5">
-                                <div class="w-10 h-10 rounded-xl ${color.bg} flex items-center justify-center">
-                                    <i class="ph ${icon} ${color.text} text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="text-[10px] font-mono uppercase tracking-wider ${color.text}">Sekcja ${s.number}</div>
-                                    <h3 class="text-white font-semibold text-lg">${s.title}</h3>
-                                </div>
-                            </div>
-                            <div class="report-content text-sm leading-relaxed">${renderMarkdownToHtml(s.content)}</div>
+                if (isImage && r.file_url) {
+                    contentHtml = `
+                        <a href="${r.file_url}" target="_blank" class="block mt-4">
+                            <img src="${r.file_url}" alt="${r.title}" class="w-full rounded-lg border border-white/5 hover:border-white/10 transition-colors cursor-pointer">
+                        </a>
+                    `;
+                } else if (isPdf && !isMobile) {
+                    contentHtml = `
+                        <div class="mt-4 rounded-lg overflow-hidden border border-white/5">
+                            <iframe src="${r.file_url}" class="w-full bg-white" style="height: 80vh;" frameborder="0"></iframe>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <a href="${r.file_url}" target="_blank" class="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors">
+                                <i class="ph ph-download-simple"></i> Pobierz plik
+                            </a>
                         </div>
                     `;
-                }).join('');
+                } else if (r.file_url) {
+                    contentHtml = `
+                        <div class="mt-4">
+                            <a href="${r.file_url}" target="_blank" class="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-lg text-sm font-medium transition-colors">
+                                <i class="ph ${config.icon}"></i> Otwórz ${config.label}
+                            </a>
+                        </div>
+                    `;
+                }
 
-                html += `
-                    <div class="space-y-6">
-                        <!-- Report Header -->
-                        <div class="card p-6 md:p-8 text-center">
-                            <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                                <i class="ph ph-chart-line-up text-emerald-400 text-2xl"></i>
+                return `
+                    <div class="card p-5 md:p-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl ${config.color} flex items-center justify-center">
+                                <i class="ph ${config.icon} text-lg"></i>
                             </div>
-                            <h2 class="text-white text-xl md:text-2xl font-semibold mb-2">${r.title}</h2>
-                            <p class="text-tertiary text-sm">Przygotowano ${formatDate(r.created_at)}</p>
+                            <div>
+                                <h3 class="text-white font-semibold">${r.title}</h3>
+                                <p class="text-tertiary text-xs mt-0.5">${config.label} · ${formatDate(r.created_at)}</p>
+                            </div>
                         </div>
-
-                        <!-- Section Navigation -->
-                        <div class="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                            ${navHtml}
-                        </div>
-
-                        <!-- Sections -->
-                        ${sectionsHtml}
+                        ${contentHtml}
                     </div>
                 `;
-            });
-
-            // Render regular reports as before
-            if (otherReports.length > 0) {
-                html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 ${productReports.length > 0 ? 'mt-8' : ''}">`;
-                html += otherReports.map(r => `
-                    <div class="card p-4">
-                        <div class="flex items-start gap-3 mb-3">
-                            <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                                <i class="ph ph-chart-line-up text-green-400"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-white font-medium">${r.title}</p>
-                                <p class="text-tertiary text-xs">${r.type || 'Raport'}</p>
-                            </div>
-                        </div>
-                        ${r.period_start && r.period_end ? `
-                            <p class="text-tertiary text-xs mb-3">Okres: ${formatDate(r.period_start)} - ${formatDate(r.period_end)}</p>
-                        ` : ''}
-                        ${r.file_url ? `
-                            <a href="${r.file_url}" target="_blank" class="block text-center bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm transition-colors">
-                                <i class="ph ph-file-pdf mr-1"></i> Pobierz PDF
-                            </a>
-                        ` : ''}
-                    </div>
-                `).join('');
-                html += '</div>';
-            }
-
-            container.innerHTML = html;
-
-            // Animate sections in with Intersection Observer
-            setTimeout(() => {
-                const sectionEls = container.querySelectorAll('.report-section');
-                if ('IntersectionObserver' in window) {
-                    const observer = new IntersectionObserver((entries) => {
-                        entries.forEach(entry => {
-                            if (entry.isIntersecting) {
-                                entry.target.style.opacity = '1';
-                                entry.target.style.transform = 'translateY(0)';
-                                observer.unobserve(entry.target);
-                            }
-                        });
-                    }, { threshold: 0.1 });
-                    sectionEls.forEach(el => observer.observe(el));
-                } else {
-                    sectionEls.forEach(el => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
-                }
-            }, 100);
-        }
-
-        function scrollToReportSection(id) {
-            const el = document.getElementById(id);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }).join('');
         }
 
         function renderComments() {
