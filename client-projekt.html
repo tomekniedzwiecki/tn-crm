@@ -980,8 +980,7 @@
                             <i class="ph ph-info text-amber-400"></i>
                         </div>
                         <div class="text-sm text-zinc-400 leading-relaxed">
-                            <p>Raporty zostaly przygotowane przy uzyciu AI. Ich celem jest analiza produktu, grupy docelowej, wskazanie problemow, ktore produkt rozwiazuje. Dodatkowo analizujemy jak pozycjonowac marke oraz bierzemy pod uwage inne elementy strategii.</p>
-                            <p class="mt-2 text-zinc-500">Raport nie jest ostatecznym zrodlem decyzyjnym, a jedynie podpowiedzia i tak nalezy go traktowac. Prosimy o zapoznanie sie.</p>
+                            <p>Raporty zostały przygotowane przy pomocy AI. Nie są ostatecznym źródłem decyzyjnym a jedynie podpowiedzią. Proszę o zapoznanie się.</p>
                         </div>
                     </div>
                 </div>
@@ -1257,6 +1256,12 @@
             await loadAllData();
             renderProject();
             showScreen('project');
+
+            // Handle hash in URL (e.g. #raporty from email link)
+            const hash = window.location.hash.replace('#', '');
+            if (hash && document.getElementById(`tab-${hash}`)) {
+                switchTab(hash);
+            }
         }
 
         async function loadAllData() {
@@ -1419,12 +1424,6 @@
             }
         }
         window.switchTab = switchTab;
-
-        // Handle hash in URL (e.g. #raporty)
-        const initialHash = window.location.hash.replace('#', '');
-        if (initialHash && document.getElementById(`tab-${initialHash}`)) {
-            switchTab(initialHash);
-        }
 
         // Mobile menu toggle
         function toggleMobileMenu() {
@@ -1914,6 +1913,7 @@
                 const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || { icon: 'ph-file', label: r.type, color: 'bg-zinc-800 text-zinc-400' };
                 const isImage = r.type === 'report_infographic';
                 const isPdf = r.file_url && (r.content?.mime_type === 'application/pdf' || r.file_url.endsWith('.pdf'));
+                const isFullWidth = !isImage; // PDF and presentation get full width
 
                 let contentHtml = '';
 
@@ -1926,7 +1926,7 @@
                 } else if (isPdf && !isMobile) {
                     contentHtml = `
                         <div class="mt-4 rounded-lg overflow-hidden border border-white/5">
-                            <iframe src="${r.file_url}" class="w-full bg-white" style="height: 80vh;" frameborder="0"></iframe>
+                            <iframe src="${r.file_url}" class="w-full bg-white" style="height: 70vh; min-height: 500px;" frameborder="0"></iframe>
                         </div>
                         <div class="mt-3 text-center">
                             <a href="${r.file_url}" target="_blank" class="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors">
@@ -1945,7 +1945,7 @@
                 }
 
                 return `
-                    <div class="card p-5 md:p-6">
+                    <div class="card p-5 md:p-6 ${isFullWidth ? 'md:col-span-2' : ''}">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl ${config.color} flex items-center justify-center">
                                 <i class="ph ${config.icon} text-lg"></i>
