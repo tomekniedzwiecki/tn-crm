@@ -370,6 +370,11 @@
                         <div id="products-sharing-content"></div>
                     </div>
 
+                    <!-- Reports Card -->
+                    <div id="reports-overview-card" class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mt-4">
+                        <div id="reports-overview-content"></div>
+                    </div>
+
                     </div><!-- /tab-przeglad -->
 
                     <!-- TAB: Etapy (Milestones) -->
@@ -3032,6 +3037,52 @@
 
             reports = data || [];
             renderReports();
+            renderReportsOverviewCard();
+        }
+
+        function renderReportsOverviewCard() {
+            const container = document.getElementById('reports-overview-content');
+            if (!container) return;
+
+            const fileReports = reports.filter(r => ['report_pdf', 'report_infographic', 'report_presentation'].includes(r.type));
+            const publishedCount = fileReports.filter(r => r.visible_to_client).length;
+            const totalCount = fileReports.length;
+
+            if (totalCount === 0) {
+                container.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-zinc-800 border border-white/5 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-chart-bar text-lg text-zinc-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-white font-medium text-sm mb-1">Raporty</h3>
+                            <p class="text-zinc-500 text-xs">Brak raportów. Dodaj raporty w zakładce Raporty.</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const allPublished = publishedCount === totalCount;
+                const iconBg = allPublished ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20';
+                const iconClass = allPublished ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-clock text-amber-400';
+                const statusText = allPublished
+                    ? `Udostępnione klientowi (${totalCount})`
+                    : `${publishedCount} z ${totalCount} udostępnionych`;
+
+                container.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg ${iconBg} border flex items-center justify-center flex-shrink-0">
+                            <i class="${iconClass} text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="text-white font-medium text-sm">Raporty</h3>
+                                <span class="text-zinc-600 text-xs">${totalCount} ${totalCount === 1 ? 'plik' : 'pliki'}</span>
+                            </div>
+                            <p class="text-zinc-500 text-xs">${statusText}</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         // =============================================
