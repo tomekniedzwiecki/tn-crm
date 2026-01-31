@@ -384,6 +384,31 @@
         }
         .sidebar-btn.active i { opacity: 1; }
 
+        /* Top nav tabs (Vercel style) */
+        .topnav-btn {
+            position: relative;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 450;
+            color: var(--text-tertiary);
+            transition: color 0.15s;
+            white-space: nowrap;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        .topnav-btn:hover { color: var(--text-secondary); }
+        .topnav-btn.active { color: var(--text-primary); }
+        .topnav-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 12px;
+            right: 12px;
+            height: 1px;
+            background: var(--text-primary);
+        }
+
         @media (max-width: 768px) {
             .stat-value { font-size: 24px; }
         }
@@ -614,129 +639,69 @@
 
     <!-- Main Project Screen -->
     <div id="project-screen" class="hidden min-h-screen flex flex-col">
-        <!-- Top Header Bar -->
-        <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-[#1a1a1a] md:hidden">
-            <div class="flex items-center justify-between h-14 px-4">
+        <!-- Header -->
+        <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-[#1a1a1a]">
+            <!-- Top row: logo + project name -->
+            <div class="flex items-center justify-between h-14 px-4 md:px-8">
                 <div class="flex items-center gap-3">
-                    <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
+                    <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center flex-shrink-0">
                         <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
                     </div>
-                    <h1 id="project-title-mobile" class="text-[15px] font-medium text-white tracking-tight truncate max-w-[200px]">Projekt</h1>
-                </div>
-                <button onclick="toggleMobileMenu()" id="mobile-menu-btn" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#111] transition-colors">
-                    <i class="ph ph-list text-xl text-white"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- Layout: Sidebar + Content -->
-        <div class="flex flex-1">
-            <!-- Sidebar -->
-            <aside id="sidebar" class="hidden md:flex flex-col w-[240px] min-w-[240px] border-r border-[#1a1a1a] bg-black sticky top-0 h-screen overflow-y-auto">
-                <!-- Logo & Project -->
-                <div class="p-4 border-b border-[#1a1a1a]">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center flex-shrink-0">
-                            <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
-                        </div>
-                        <span class="text-[13px] text-tertiary">tomekniedzwiecki.pl</span>
-                    </div>
-                    <h1 id="project-title" class="text-[15px] font-medium text-white tracking-tight leading-tight mb-2">Projekt</h1>
-                    <span id="project-status-badge" class="badge badge-success">
+                    <span class="text-[13px] text-zinc-500 hidden sm:inline">/</span>
+                    <h1 id="project-title" class="text-[14px] font-medium text-white tracking-tight truncate max-w-[240px]">Projekt</h1>
+                    <span id="project-status-badge" class="badge badge-success ml-1 hidden sm:inline-flex">
                         <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
                         Aktywny
                     </span>
                 </div>
-
-                <!-- Navigation -->
-                <nav class="flex-1 py-4 px-3 space-y-0.5">
-                    <button onclick="switchTab('projekt')" data-tab="projekt" class="sidebar-btn active">
-                        <i class="ph ph-house-simple"></i>
-                        Przegląd
+                <div class="flex items-center gap-3">
+                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="text-zinc-500 hover:text-white text-xs transition-colors hidden sm:inline">Kontakt</a>
+                    <button onclick="toggleMobileMenu()" id="mobile-menu-btn" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#111] transition-colors md:hidden">
+                        <i class="ph ph-list text-xl text-white"></i>
                     </button>
-                    <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="sidebar-btn">
-                        <i class="ph ph-file-text"></i>
-                        Dokumenty
-                    </button>
-                    <button onclick="switchTab('produkty')" data-tab="produkty" class="sidebar-btn">
-                        <i class="ph ph-package"></i>
-                        Produkty
-                    </button>
-                    <button onclick="switchTab('raporty')" data-tab="raporty" class="sidebar-btn">
-                        <i class="ph ph-chart-line-up"></i>
-                        Raporty
-                    </button>
-                    <button onclick="switchTab('branding')" data-tab="branding" class="sidebar-btn">
-                        <i class="ph ph-paint-brush"></i>
-                        Branding
-                    </button>
-                    <button onclick="switchTab('strona')" data-tab="strona" class="sidebar-btn">
-                        <i class="ph ph-globe"></i>
-                        Strona
-                    </button>
-                    <button onclick="switchTab('materialy')" data-tab="materialy" class="sidebar-btn">
-                        <i class="ph ph-folder-open"></i>
-                        Materiały
-                    </button>
-                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="sidebar-btn relative">
-                        <i class="ph ph-chat-circle-text"></i>
-                        Komentarze
-                        <span id="comments-badge" class="hidden ml-auto bg-[#00d084] text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
-                    </button>
-                </nav>
-
-                <!-- Footer -->
-                <div class="p-4 border-t border-[#1a1a1a]">
-                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="text-tertiary hover:text-secondary text-xs transition-colors">Kontakt</a>
-                </div>
-            </aside>
-
-            <!-- Mobile Menu Overlay -->
-            <div id="mobile-menu" class="hidden fixed inset-0 z-50 md:hidden">
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
-                <div class="absolute left-0 top-0 bottom-0 w-[260px] bg-black border-r border-[#1a1a1a] animate-slide overflow-y-auto">
-                    <div class="p-4 border-b border-[#1a1a1a] flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
-                                <span class="text-black text-[10px] font-bold">TN</span>
-                            </div>
-                            <span class="text-[13px] text-tertiary">Projekt</span>
-                        </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#111]">
-                            <i class="ph ph-x text-lg text-white"></i>
-                        </button>
-                    </div>
-                    <nav class="py-4 px-3 space-y-0.5" id="mobile-nav">
-                        <button onclick="switchTab('projekt');toggleMobileMenu()" data-tab="projekt" class="sidebar-btn active">
-                            <i class="ph ph-house-simple"></i> Przegląd
-                        </button>
-                        <button onclick="switchTab('dokumenty');toggleMobileMenu()" data-tab="dokumenty" class="sidebar-btn">
-                            <i class="ph ph-file-text"></i> Dokumenty
-                        </button>
-                        <button onclick="switchTab('produkty');toggleMobileMenu()" data-tab="produkty" class="sidebar-btn">
-                            <i class="ph ph-package"></i> Produkty
-                        </button>
-                        <button onclick="switchTab('raporty');toggleMobileMenu()" data-tab="raporty" class="sidebar-btn">
-                            <i class="ph ph-chart-line-up"></i> Raporty
-                        </button>
-                        <button onclick="switchTab('branding');toggleMobileMenu()" data-tab="branding" class="sidebar-btn">
-                            <i class="ph ph-paint-brush"></i> Branding
-                        </button>
-                        <button onclick="switchTab('strona');toggleMobileMenu()" data-tab="strona" class="sidebar-btn">
-                            <i class="ph ph-globe"></i> Strona
-                        </button>
-                        <button onclick="switchTab('materialy');toggleMobileMenu()" data-tab="materialy" class="sidebar-btn">
-                            <i class="ph ph-folder-open"></i> Materiały
-                        </button>
-                        <button onclick="switchTab('komentarze');toggleMobileMenu()" data-tab="komentarze" class="sidebar-btn">
-                            <i class="ph ph-chat-circle-text"></i> Komentarze
-                        </button>
-                    </nav>
                 </div>
             </div>
+            <!-- Nav tabs row (desktop) -->
+            <nav class="hidden md:flex items-center gap-1 px-6 -mb-px" id="desktop-nav">
+                <button onclick="switchTab('projekt')" data-tab="projekt" class="topnav-btn active">Przegląd</button>
+                <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="topnav-btn">Dokumenty</button>
+                <button onclick="switchTab('produkty')" data-tab="produkty" class="topnav-btn">Produkty</button>
+                <button onclick="switchTab('raporty')" data-tab="raporty" class="topnav-btn">Raporty</button>
+                <button onclick="switchTab('branding')" data-tab="branding" class="topnav-btn">Branding</button>
+                <button onclick="switchTab('strona')" data-tab="strona" class="topnav-btn">Strona</button>
+                <button onclick="switchTab('materialy')" data-tab="materialy" class="topnav-btn">Materiały</button>
+                <button onclick="switchTab('komentarze')" data-tab="komentarze" class="topnav-btn relative">
+                    Komentarze
+                    <span id="comments-badge" class="hidden ml-1 bg-[#00d084] text-black text-[9px] font-bold rounded-full min-w-[16px] h-[16px] inline-flex items-center justify-center px-1">0</span>
+                </button>
+            </nav>
+        </header>
 
-            <!-- Main Content -->
-            <main class="flex-1 min-w-0 px-4 md:px-10 py-8 md:py-10">
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="hidden fixed inset-0 z-50 md:hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
+            <div class="absolute right-0 top-0 bottom-0 w-[260px] bg-black border-l border-[#1a1a1a] animate-slide overflow-y-auto">
+                <div class="p-4 border-b border-[#1a1a1a] flex items-center justify-between">
+                    <span class="text-[13px] text-zinc-400 font-medium">Menu</span>
+                    <button onclick="toggleMobileMenu()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#111]">
+                        <i class="ph ph-x text-lg text-white"></i>
+                    </button>
+                </div>
+                <nav class="py-3 px-3 space-y-0.5" id="mobile-nav">
+                    <button onclick="switchTab('projekt');toggleMobileMenu()" data-tab="projekt" class="sidebar-btn active">Przegląd</button>
+                    <button onclick="switchTab('dokumenty');toggleMobileMenu()" data-tab="dokumenty" class="sidebar-btn">Dokumenty</button>
+                    <button onclick="switchTab('produkty');toggleMobileMenu()" data-tab="produkty" class="sidebar-btn">Produkty</button>
+                    <button onclick="switchTab('raporty');toggleMobileMenu()" data-tab="raporty" class="sidebar-btn">Raporty</button>
+                    <button onclick="switchTab('branding');toggleMobileMenu()" data-tab="branding" class="sidebar-btn">Branding</button>
+                    <button onclick="switchTab('strona');toggleMobileMenu()" data-tab="strona" class="sidebar-btn">Strona</button>
+                    <button onclick="switchTab('materialy');toggleMobileMenu()" data-tab="materialy" class="sidebar-btn">Materiały</button>
+                    <button onclick="switchTab('komentarze');toggleMobileMenu()" data-tab="komentarze" class="sidebar-btn">Komentarze</button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0 px-4 md:px-10 lg:px-16 py-8 md:py-10 max-w-6xl mx-auto w-full">
 
             <!-- TAB: Projekt -->
             <div id="tab-projekt" class="tab-panel animate-enter">
@@ -1016,7 +981,6 @@
             </div>
 
         </main>
-        </div><!-- /flex layout -->
     </div>
 
     <!-- Toast -->
@@ -1386,7 +1350,7 @@
 
         // Tab switching
         function switchTab(tabName) {
-            document.querySelectorAll('.sidebar-btn').forEach(btn => {
+            document.querySelectorAll('.sidebar-btn, .topnav-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
             document.querySelectorAll('.tab-panel').forEach(panel => {
@@ -1463,7 +1427,6 @@
         function renderProject() {
             // Header
             document.getElementById('project-title').textContent = workflow.offer_name || 'Projekt';
-            document.getElementById('project-title-mobile').textContent = workflow.offer_name || 'Projekt';
             document.getElementById('offer-name').textContent = workflow.offer_name || '-';
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);
 
