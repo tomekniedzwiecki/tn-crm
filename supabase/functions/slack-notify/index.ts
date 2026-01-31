@@ -98,7 +98,7 @@ function leadLink(email: string, label?: string, leadId?: string): string {
   if (leadId) {
     return `<https://crm.tomekniedzwiecki.pl/lead?id=${leadId}|${display}>`
   }
-  return `<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(email)}|${display}>`
+  return display
 }
 
 function formatNewLeadMessage(data: {

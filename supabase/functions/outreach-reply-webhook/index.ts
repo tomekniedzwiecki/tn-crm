@@ -132,6 +132,11 @@ Deno.serve(async (req) => {
     const slackWebhookUrl = Deno.env.get('slack_webhook_url')
     if (slackWebhookUrl) {
       try {
+        const { data: leadMatch } = await supabase.from('leads').select('id').eq('email', cleanEmail).maybeSingle()
+        const emailLink = leadMatch
+          ? `<https://crm.tomekniedzwiecki.pl/lead?id=${leadMatch.id}|${cleanEmail}>`
+          : cleanEmail
+
         await fetch(slackWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -143,7 +148,7 @@ Deno.serve(async (req) => {
               },
               {
                 type: 'section',
-                text: { type: 'mrkdwn', text: `*Od:* <https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(cleanEmail)}|${cleanEmail}>\n*Temat:* ${subject}` }
+                text: { type: 'mrkdwn', text: `*Od:* ${emailLink}\n*Temat:* ${subject}` }
               },
               {
                 type: 'section',

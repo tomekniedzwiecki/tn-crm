@@ -22,7 +22,7 @@ const TPAY_STATUS = {
 // Slack webhook for successful payments (from environment variable)
 
 // Send Slack notification for successful payment
-async function sendSlackPaidNotification(order: any) {
+async function sendSlackPaidNotification(order: any, supabase?: any) {
   const webhookUrl = Deno.env.get('SLACK_PAID_WEBHOOK')
   if (!webhookUrl) {
     console.log('[slack] SLACK_PAID_WEBHOOK not configured, skipping notification')
@@ -30,6 +30,14 @@ async function sendSlackPaidNotification(order: any) {
   }
 
   try {
+    let emailLink = order.customer_email
+    if (supabase && order.customer_email) {
+      const { data: leadMatch } = await supabase.from('leads').select('id').eq('email', order.customer_email).maybeSingle()
+      if (leadMatch) {
+        emailLink = `<https://crm.tomekniedzwiecki.pl/lead?id=${leadMatch.id}|${order.customer_email}>`
+      }
+    }
+
     const message = {
       blocks: [
         {
@@ -58,7 +66,7 @@ async function sendSlackPaidNotification(order: any) {
           fields: [
             {
               type: 'mrkdwn',
-              text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(order.customer_email)}|${order.customer_email}>`
+              text: `*Email:*\n${emailLink}`
             },
             {
               type: 'mrkdwn',
@@ -383,7 +391,7 @@ Deno.serve(async (req) => {
       console.log('[tpay-webhook] Payment successful!')
 
       // Send Slack notification for successful payment
-      await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' })
+      await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' }, supabase)
 
       // Send Meta Conversions API event
       await sendMetaConversion(order, supabase)

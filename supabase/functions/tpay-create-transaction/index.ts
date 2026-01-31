@@ -29,7 +29,7 @@ const TPAY_SANDBOX_URL = 'https://openapi.sandbox.tpay.com'
 // Slack webhook for payment attempts (from environment variable)
 
 // Send Slack notification for checkout attempt
-async function sendSlackCheckoutNotification(order: any, paymentMethod: string) {
+async function sendSlackCheckoutNotification(order: any, paymentMethod: string, supabase?: any) {
   const webhookUrl = Deno.env.get('SLACK_CHECKOUT_WEBHOOK')
   if (!webhookUrl) {
     console.log('[slack] SLACK_CHECKOUT_WEBHOOK not configured, skipping notification')
@@ -37,6 +37,14 @@ async function sendSlackCheckoutNotification(order: any, paymentMethod: string) 
   }
 
   try {
+    let emailLink = order.customer_email
+    if (supabase && order.customer_email) {
+      const { data: leadMatch } = await supabase.from('leads').select('id').eq('email', order.customer_email).maybeSingle()
+      if (leadMatch) {
+        emailLink = `<https://crm.tomekniedzwiecki.pl/lead?id=${leadMatch.id}|${order.customer_email}>`
+      }
+    }
+
     const methodNames: Record<string, string> = {
       'blik': 'BLIK',
       'card': 'Karta',
@@ -75,7 +83,7 @@ async function sendSlackCheckoutNotification(order: any, paymentMethod: string) 
           fields: [
             {
               type: 'mrkdwn',
-              text: `*Email:*\n<https://crm.tomekniedzwiecki.pl/leads?search=${encodeURIComponent(order.customer_email)}|${order.customer_email}>`
+              text: `*Email:*\n${emailLink}`
             },
             {
               type: 'mrkdwn',
@@ -433,7 +441,7 @@ Deno.serve(async (req) => {
     console.log('[tpay-create-transaction] SUCCESS - Payment URL generated')
 
     // Send Slack notification for checkout attempt
-    await sendSlackCheckoutNotification(order, paymentType || 'unknown')
+    await sendSlackCheckoutNotification(order, paymentType || 'unknown', supabase)
 
     // For BLIK inline, we don't redirect - the payment is processed immediately
     // Frontend should poll for status

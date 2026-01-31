@@ -1,77 +1,76 @@
 /**
- * TN CRM Sidebar Component
- * Single source of truth for navigation - edit only this file!
+ * TN Shared Sidebar Component
+ * Single source of truth for navigation across all apps (CRM, Workflow, Todo, Stack)
+ *
+ * Usage: Sidebar.render({ appId: 'crm' })
  */
 
 // ============================================
 // APP CONFIGURATION
 // ============================================
 const APPS = [
-    { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black' },
-    { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white' },
-    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white' },
-    { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white' }
+    { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard' },
+    { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white', defaultPage: 'workflows' },
+    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
+    { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' }
 ];
 
-// Detect current app based on URL
-function detectCurrentApp() {
-    const path = location.pathname;
-    if (path.includes('/workflows') || path.includes('/workflow') || path.includes('/products')) {
-        return 'workflow';
-    }
-    if (path.includes('/tn-todo')) {
-        return 'todo';
-    }
-    if (path.includes('/tn-stack')) {
-        return 'stack';
-    }
-    return 'crm';
-}
+const APP_BASES = {
+    crm: '',
+    workflow: '',
+    todo: '/tn-todo',
+    stack: '/tn-stack'
+};
 
-function getAppPath(appId) {
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    const base = getBasePath();
-    if (appId === 'crm') {
-        return isLocal ? `${base}/dashboard.html` : '/dashboard';
-    } else if (appId === 'workflow') {
-        return isLocal ? `${base}/workflows.html` : '/workflows';
-    } else if (appId === 'todo') {
-        return isLocal ? '/tn-todo/boards.html' : '/tn-todo/boards';
-    } else if (appId === 'stack') {
-        return isLocal ? '/tn-stack/dashboard.html' : '/tn-stack/dashboard';
-    }
-    return '/';
-}
+const APP_AVATAR_COLORS = {
+    crm: 'from-emerald-600 to-emerald-700',
+    workflow: 'from-emerald-600 to-emerald-700',
+    todo: 'from-violet-600 to-violet-700',
+    stack: 'from-amber-600 to-amber-700'
+};
 
 // ============================================
 // NAVIGATION ITEMS PER APP
 // ============================================
 const NAV_ITEMS_CRM = [
-    { id: 'dashboard', icon: 'ph-house', label: 'Overview', adminOnly: false },
-    { id: 'leads', icon: 'ph-users', label: 'Leady', adminOnly: false, showCount: true },
-    { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline', adminOnly: false },
-    { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz', adminOnly: false },
-    { id: 'offers', icon: 'ph-package', label: 'Oferty', adminOnly: false },
-    { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia', adminOnly: false },
-    { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie', adminOnly: false },
+    { id: 'dashboard', icon: 'ph-house', label: 'Overview' },
+    { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
+    { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
+    { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz' },
+    { id: 'offers', icon: 'ph-package', label: 'Oferty' },
+    { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia' },
+    { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie' },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
-    { id: 'logi', icon: 'ph-list-bullets', label: 'Logi', adminOnly: false },
+    { id: 'logi', icon: 'ph-list-bullets', label: 'Logi' },
 ];
 
 const NAV_ITEMS_WORKFLOW = [
-    { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty', adminOnly: false },
-    { id: 'products', icon: 'ph-package', label: 'Produkty', adminOnly: false },
+    { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty' },
+    { id: 'products', icon: 'ph-package', label: 'Produkty' },
 ];
 
-function getNavItems(appId) {
+const NAV_ITEMS_TODO = [
+    { id: 'boards', icon: 'ph-kanban', label: 'Tablice' },
+    { id: 'my-tasks', icon: 'ph-user-circle', label: 'Moje zadania' },
+    { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki' },
+];
+
+const NAV_ITEMS_STACK = [
+    { id: 'dashboard', icon: 'ph-chart-pie', label: 'Dashboard' },
+    { id: 'categories', icon: 'ph-folders', label: 'Kategorie' },
+];
+
+function getNavItemsForApp(appId) {
     switch (appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
+        case 'todo': return NAV_ITEMS_TODO;
+        case 'stack': return NAV_ITEMS_STACK;
         default: return NAV_ITEMS_CRM;
     }
 }
 
 // ============================================
-// CSS ANIMATIONS
+// CSS ANIMATIONS (merged from all apps)
 // ============================================
 const SIDEBAR_CSS = `
     /* Mobile sidebar */
@@ -118,6 +117,7 @@ const SIDEBAR_CSS = `
     /* Nav icon animations */
     nav a i { display: inline-block; }
 
+    /* CRM animations */
     @keyframes houseBounce {
         0% { transform: translateY(0); }
         30% { transform: translateY(-4px); }
@@ -212,6 +212,39 @@ const SIDEBAR_CSS = `
     }
     nav a:hover .ph-note-pencil { animation: noteWiggle 0.4s ease-out; }
 
+    @keyframes listBulletSlide {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(3px); }
+        100% { transform: translateX(0); }
+    }
+    nav a:hover .ph-list-bullets { animation: listBulletSlide 0.4s ease-out; }
+
+    nav a:hover .ph-list-checks { animation: listBulletSlide 0.4s ease-out; }
+
+    /* Todo animations */
+    @keyframes userBounce {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+    }
+    nav a:hover .ph-user-circle { animation: userBounce 0.4s ease-out; }
+
+    /* Stack animations */
+    @keyframes chartSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    nav a:hover .ph-chart-pie { animation: chartSpin 0.6s ease-out; }
+
+    @keyframes folderBounce {
+        0% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+        50% { transform: translateY(0); }
+        70% { transform: translateY(-2px); }
+        100% { transform: translateY(0); }
+    }
+    nav a:hover .ph-folders { animation: folderBounce 0.5s ease-out; }
+
     /* App switcher dropdown */
     .app-switcher-dropdown {
         opacity: 0;
@@ -227,10 +260,19 @@ const SIDEBAR_CSS = `
 `;
 
 // ============================================
+// INTERNAL STATE
+// ============================================
+let _currentAppId = 'crm';
+
+// ============================================
 // PATH HELPERS
 // ============================================
+function isLocalhost() {
+    return location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+}
+
 function getBasePath() {
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    if (isLocalhost()) {
         const path = location.pathname;
         const match = path.match(/^(\/[^\/]+)\//);
         return match ? match[1] : '';
@@ -239,13 +281,29 @@ function getBasePath() {
 }
 
 function getPagePath(page) {
-    const base = getBasePath();
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    return isLocal ? `${base}/${page}.html` : `/${page}`;
+    if (isLocalhost()) {
+        return `${getBasePath()}/${page}.html`;
+    }
+    const base = APP_BASES[_currentAppId] || '';
+    return `${base}/${page}`;
+}
+
+function getAppPath(appId) {
+    const app = APPS.find(a => a.id === appId);
+    if (!app) return '/';
+    const base = APP_BASES[appId] || '';
+    if (isLocalhost()) {
+        const localBase = base || '/tn-crm';
+        return `${localBase}/${app.defaultPage}.html`;
+    }
+    return `${base}/${app.defaultPage}`;
 }
 
 function getLoginPath() {
-    return getPagePath('index');
+    if (isLocalhost()) {
+        return '/tn-crm/index.html';
+    }
+    return '/';
 }
 
 function getCurrentPage() {
@@ -253,15 +311,44 @@ function getCurrentPage() {
     const match = path.match(/\/([^\/]+)\.html$/) || path.match(/\/([^\/]+)$/);
     if (match) {
         const page = match[1];
-        return page === 'index' ? 'dashboard' : page;
+        if (page === 'index') {
+            // Default page per app
+            const app = APPS.find(a => a.id === _currentAppId);
+            return app ? app.defaultPage : 'dashboard';
+        }
+        return page;
     }
-    return 'dashboard';
+    const app = APPS.find(a => a.id === _currentAppId);
+    return app ? app.defaultPage : 'dashboard';
+}
+
+// Detect current app based on URL (fallback if no appId provided)
+function detectCurrentApp() {
+    const path = location.pathname;
+    if (path.includes('/tn-todo')) return 'todo';
+    if (path.includes('/tn-stack')) return 'stack';
+    if (path.includes('/workflows') || path.includes('/workflow') || path.includes('/products')) return 'workflow';
+    return 'crm';
 }
 
 // ============================================
 // RENDER SIDEBAR
 // ============================================
-function renderSidebar(containerId = 'sidebar') {
+function renderSidebar(config = {}) {
+    // Support old signature: renderSidebar('sidebar') or renderSidebar({ appId: 'todo' })
+    let containerId = 'sidebar';
+    let appId = null;
+
+    if (typeof config === 'string') {
+        containerId = config;
+    } else {
+        containerId = config.containerId || 'sidebar';
+        appId = config.appId || null;
+    }
+
+    // Set current app
+    _currentAppId = appId || detectCurrentApp();
+
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -274,12 +361,12 @@ function renderSidebar(containerId = 'sidebar') {
     }
 
     const currentPage = getCurrentPage();
-    const currentAppId = detectCurrentApp();
-    const currentApp = APPS.find(a => a.id === currentAppId);
-    const navItems = getNavItems(currentAppId);
+    const currentApp = APPS.find(a => a.id === _currentAppId);
+    const navItems = getNavItemsForApp(_currentAppId);
+    const avatarColor = APP_AVATAR_COLORS[_currentAppId] || APP_AVATAR_COLORS.crm;
 
     // Build app switcher dropdown HTML
-    const appSwitcherDropdown = APPS.filter(a => a.id !== currentAppId).map(app => `
+    const appSwitcherDropdown = APPS.filter(a => a.id !== _currentAppId).map(app => `
         <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
             <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
                 <i class="ph-bold ${app.icon} text-xs"></i>
@@ -348,7 +435,7 @@ function renderSidebar(containerId = 'sidebar') {
         <!-- User -->
         <div class="p-4 border-t border-white/5">
             <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" id="user-profile-btn">
-                <div id="user-avatar" class="w-9 h-9 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 border border-white/10 flex items-center justify-center text-sm font-medium text-white">--</div>
+                <div id="user-avatar" class="w-9 h-9 rounded-full bg-gradient-to-b ${avatarColor} border border-white/10 flex items-center justify-center text-sm font-medium text-white">--</div>
                 <div class="flex-1 min-w-0">
                     <div id="user-name" class="text-sm font-medium text-zinc-200 truncate"></div>
                     <div id="user-email" class="text-xs text-zinc-500 truncate"></div>
@@ -360,7 +447,7 @@ function renderSidebar(containerId = 'sidebar') {
         </div>
     `;
 
-    // Update hrefs for local development
+    // Update hrefs for correct paths
     updateNavLinks();
 
     // Setup app switcher
@@ -383,9 +470,16 @@ function setupAppSwitcher() {
         dropdown.classList.toggle('open');
     });
 
-    // Close on outside click
-    document.addEventListener('click', () => {
-        dropdown.classList.remove('open');
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            dropdown.classList.remove('open');
+        }
     });
 }
 
@@ -398,7 +492,7 @@ function updateNavLinks() {
 
 function showAdminNav(isAdmin) {
     if (!isAdmin) return;
-    const navItems = getNavItems(detectCurrentApp());
+    const navItems = getNavItemsForApp(_currentAppId);
     navItems.filter(item => item.adminOnly).forEach(item => {
         const el = document.getElementById(`nav-${item.id}`);
         if (el) el.classList.remove('hidden');
@@ -414,7 +508,6 @@ function setUserName(name) {
     const el = document.getElementById('user-name');
     if (el) el.textContent = name || '';
 
-    // Update avatar initials
     const avatar = document.getElementById('user-avatar');
     if (avatar && name) {
         const parts = name.trim().split(' ');
@@ -438,9 +531,7 @@ function setUserColor(color) {
         'cyan': 'from-cyan-500 to-cyan-600'
     };
 
-    // Remove old gradient classes
     avatar.className = avatar.className.replace(/from-\w+-\d+ to-\w+-\d+/g, '');
-
     const gradientClass = colorClasses[color] || colorClasses['emerald'];
     avatar.classList.add(...gradientClass.split(' '));
 }
@@ -464,11 +555,13 @@ function setupProfileClick() {
     const btn = document.getElementById('user-profile-btn');
     if (btn) {
         btn.addEventListener('click', (e) => {
-            // Don't trigger if clicking logout button
             if (e.target.closest('#logout-btn')) return;
-
-            // Navigate to settings account tab
-            window.location.href = getPagePath('settings') + '?tab=account';
+            // Always navigate to CRM settings
+            if (isLocalhost()) {
+                window.location.href = '/tn-crm/settings.html?tab=account';
+            } else {
+                window.location.href = '/settings?tab=account';
+            }
         });
     }
 }

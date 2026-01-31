@@ -12,7 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="components/sidebar.js"></script>
+    <script src="components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -969,6 +969,14 @@
             }
         }
 
+        // Navigate to lead by email
+        async function goToLead(email) {
+            const { data } = await supabaseClient.from('leads').select('id').eq('email', email).maybeSingle();
+            if (data) {
+                window.location.href = '/lead?id=' + data.id;
+            }
+        }
+
         // Load contacts
         async function loadContacts() {
             const search = document.getElementById('search-input').value.trim().toLowerCase();
@@ -1035,7 +1043,7 @@
                         <input type="checkbox" data-id="${c.id}" onchange="toggleContactSelection('${c.id}')" ${selectedContactIds.has(c.id) ? 'checked' : ''} class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer">
                     </td>
                     <td class="px-4 py-3">
-                        <a href="/leads?search=${encodeURIComponent(c.email)}" class="font-mono text-xs text-white hover:text-blue-400 transition-colors">${c.email}</a>
+                        <a href="#" onclick="event.preventDefault();goToLead('${c.email.replace(/'/g, "\\'")}')" class="font-mono text-xs text-white hover:text-blue-400 transition-colors cursor-pointer">${c.email}</a>
                     </td>
                     <td class="px-4 py-3 text-zinc-400 text-xs font-mono">
                         ${c.phone || '-'}
@@ -1666,7 +1674,7 @@
 
             tbody.innerHTML = detailsSends.map(s => `
                 <tr class="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td class="px-4 py-2 text-xs font-mono">${s.contact?.email ? `<a href="/leads?search=${encodeURIComponent(s.contact.email)}" class="text-white hover:text-blue-400 transition-colors">${s.contact.email}</a>` : '-'}</td>
+                    <td class="px-4 py-2 text-xs font-mono">${s.contact?.email ? `<a href="#" onclick="event.preventDefault();goToLead('${s.contact.email.replace(/'/g, "\\'")}')" class="text-white hover:text-blue-400 transition-colors cursor-pointer">${s.contact.email}</a>` : '-'}</td>
                     <td class="px-4 py-2">${statusLabels[s.status] || s.status}</td>
                     <td class="px-4 py-2 text-xs text-zinc-500">${s.email_1_sent_at ? new Date(s.email_1_sent_at).toLocaleString('pl-PL') : '-'}</td>
                     <td class="px-4 py-2 text-xs text-zinc-500">${s.email_2_sent_at ? new Date(s.email_2_sent_at).toLocaleString('pl-PL') : '-'}</td>
@@ -2584,7 +2592,7 @@
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs text-white">${contact.email}</div>
+                            <a href="#" onclick="event.preventDefault();goToLead('${contact.email.replace(/'/g, "\\'")}')" class="font-mono text-xs text-white hover:text-blue-400 transition-colors cursor-pointer">${contact.email}</a>
                         </td>
                         <td class="px-4 py-3">
                             <span class="font-mono text-xs text-zinc-400">${contact.phone || '-'}</span>

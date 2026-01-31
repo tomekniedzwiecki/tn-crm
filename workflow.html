@@ -14,7 +14,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="components/sidebar.js"></script>
+    <script src="components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -1099,6 +1099,67 @@
                 <button onclick="saveNewTask()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                     Dodaj
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-4xl shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-chart-line-up text-green-400"></i>
+                    <span id="report-modal-title">Dodaj raport analizy produktu</span>
+                </h2>
+                <button onclick="closeReportModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Paste mode -->
+            <div id="report-paste-mode" class="flex-1 overflow-y-auto p-5 space-y-4">
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wklej raport z Gemini</label>
+                    <textarea id="report-raw-input" rows="24" class="input-field w-full text-sm text-white px-4 py-3 rounded-lg resize-y font-mono leading-relaxed" placeholder="Wklej tutaj pełny raport z Gemini Deep Research..."></textarea>
+                </div>
+                <div id="report-parse-warning" class="hidden text-amber-400 text-xs flex items-center gap-2">
+                    <i class="ph ph-warning"></i>
+                    <span>Nie wykryto struktury sekcji. Sprawdź format raportu (nagłówki: 1. TYTUŁ, 2. TYTUŁ...)</span>
+                </div>
+            </div>
+
+            <!-- Preview mode -->
+            <div id="report-preview-mode" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="report-preview-content" class="space-y-4">
+                    <!-- Rendered sections here -->
+                </div>
+            </div>
+
+            <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <div class="flex-1">
+                    <span id="report-section-count" class="text-zinc-600 text-xs"></span>
+                </div>
+                <!-- Paste mode buttons -->
+                <div id="report-paste-buttons">
+                    <button onclick="closeReportModal()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors mr-2">
+                        Anuluj
+                    </button>
+                    <button onclick="previewReport()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-eye mr-1"></i> Podgląd raportu
+                    </button>
+                </div>
+                <!-- Preview mode buttons -->
+                <div id="report-preview-buttons" class="hidden flex gap-2">
+                    <button onclick="backToEditReport()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                        <i class="ph ph-pencil mr-1"></i> Edytuj
+                    </button>
+                    <button onclick="saveReport(false)" class="text-zinc-300 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                        Zapisz szkic
+                    </button>
+                    <button onclick="saveReport(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph ph-check mr-1"></i> Zatwierdź i udostępnij
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -2996,6 +3057,111 @@
             renderReports();
         }
 
+        // =============================================
+        // REPORT SECTION ICONS
+        // =============================================
+        const REPORT_SECTION_ICONS = {
+            1: 'ph-magnifying-glass',
+            2: 'ph-heart',
+            3: 'ph-users',
+            4: 'ph-binoculars',
+            5: 'ph-flag-banner',
+            6: 'ph-megaphone'
+        };
+
+        const REPORT_SECTION_COLORS = {
+            1: 'bg-blue-500/10 text-blue-400',
+            2: 'bg-rose-500/10 text-rose-400',
+            3: 'bg-violet-500/10 text-violet-400',
+            4: 'bg-amber-500/10 text-amber-400',
+            5: 'bg-emerald-500/10 text-emerald-400',
+            6: 'bg-cyan-500/10 text-cyan-400'
+        };
+
+        // =============================================
+        // MARKDOWN PARSING
+        // =============================================
+        function parseReportSections(markdown) {
+            const lines = markdown.split('\n');
+            const sections = [];
+            let currentSection = null;
+            let contentLines = [];
+
+            for (const line of lines) {
+                const match = line.match(/^#{0,3}\s*(\d+)\.\s+(.+)$/);
+                if (match) {
+                    if (currentSection) {
+                        currentSection.content = contentLines.join('\n').trim();
+                        sections.push(currentSection);
+                    }
+                    currentSection = {
+                        number: parseInt(match[1]),
+                        title: match[2].replace(/\*+/g, '').trim(),
+                        content: ''
+                    };
+                    contentLines = [];
+                } else if (currentSection) {
+                    contentLines.push(line);
+                }
+            }
+            if (currentSection) {
+                currentSection.content = contentLines.join('\n').trim();
+                sections.push(currentSection);
+            }
+            return sections;
+        }
+
+        function renderMarkdownToHtml(md) {
+            let html = md
+                // Headers
+                .replace(/^####\s+(.+)$/gm, '<h5 class="text-white font-medium text-sm mt-4 mb-2">$1</h5>')
+                .replace(/^###\s+(.+)$/gm, '<h4 class="text-white font-semibold mt-5 mb-2">$1</h4>')
+                .replace(/^##\s+(.+)$/gm, '<h3 class="text-white font-semibold text-lg mt-5 mb-2">$1</h3>')
+                // Bold and italic
+                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong class="text-white"><em>$1</em></strong>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                // Links
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline">$1</a>');
+
+            // Process lines into paragraphs and lists
+            const lines = html.split('\n');
+            let result = [];
+            let inUl = false;
+            let inOl = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const ulMatch = line.match(/^\s*[-•]\s+(.+)/);
+                const olMatch = line.match(/^\s*\d+[.)]\s+(.+)/);
+
+                if (ulMatch) {
+                    if (!inUl) { result.push('<ul class="space-y-1.5 my-3 ml-1">'); inUl = true; }
+                    result.push(`<li class="flex gap-2 text-zinc-300"><span class="text-emerald-400 mt-1.5 text-[6px]">●</span><span>${ulMatch[1]}</span></li>`);
+                } else if (olMatch) {
+                    if (!inOl) { result.push('<ol class="space-y-1.5 my-3 ml-1 list-none counter-reset-item">'); inOl = true; }
+                    result.push(`<li class="flex gap-2 text-zinc-300"><span class="text-emerald-400 font-mono text-xs min-w-[1.2rem]">${i + 1}.</span><span>${olMatch[1]}</span></li>`);
+                } else {
+                    if (inUl) { result.push('</ul>'); inUl = false; }
+                    if (inOl) { result.push('</ol>'); inOl = false; }
+                    if (line.trim() === '') {
+                        result.push('<div class="h-2"></div>');
+                    } else if (!line.startsWith('<h')) {
+                        result.push(`<p class="text-zinc-300 leading-relaxed">${line}</p>`);
+                    } else {
+                        result.push(line);
+                    }
+                }
+            }
+            if (inUl) result.push('</ul>');
+            if (inOl) result.push('</ol>');
+
+            return result.join('\n');
+        }
+
+        // =============================================
+        // REPORT RENDERING (Admin)
+        // =============================================
         function renderReports() {
             const container = document.getElementById('reports-list');
             const empty = document.getElementById('reports-empty');
@@ -3007,39 +3173,88 @@
             }
 
             empty.classList.add('hidden');
-            container.innerHTML = reports.map(r => `
-                <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                                <i class="ph ph-chart-line-up text-green-400"></i>
+            container.innerHTML = reports.map(r => {
+                const isProductAnalysis = r.type === 'product_analysis' && r.content?.sections;
+                const statusBadge = r.visible_to_client
+                    ? '<span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">Udostępniony</span>'
+                    : '<span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full">Szkic</span>';
+
+                const approveBtn = !r.visible_to_client
+                    ? `<button onclick="approveAndPublishReport('${r.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                           <i class="ph ph-check"></i> Zatwierdź i udostępnij
+                       </button>`
+                    : '';
+
+                const previewBtn = isProductAnalysis
+                    ? `<button onclick="toggleReportPreview('${r.id}')" class="text-zinc-400 hover:text-white text-xs flex items-center gap-1 transition-colors">
+                           <i class="ph ph-eye"></i> Podgląd
+                       </button>`
+                    : '';
+
+                const editBtn = isProductAnalysis
+                    ? `<button onclick="editReport('${r.id}')" class="text-zinc-400 hover:text-white text-xs flex items-center gap-1 transition-colors">
+                           <i class="ph ph-pencil"></i> Edytuj
+                       </button>`
+                    : '';
+
+                const sectionCount = isProductAnalysis ? `${r.content.sections.length} sekcji` : '';
+
+                return `
+                    <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4 ${isProductAnalysis ? 'md:col-span-2' : ''}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                                    <i class="ph ph-chart-line-up text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-medium">${r.title}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        ${statusBadge}
+                                        ${sectionCount ? `<span class="text-zinc-600 text-[10px]">${sectionCount}</span>` : ''}
+                                        <span class="text-zinc-600 text-[10px]">${formatDate(r.created_at)}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <h4 class="text-white font-medium">${r.title}</h4>
-                                <p class="text-zinc-500 text-xs">${r.type || 'Raport'}</p>
+                            <div class="flex items-center gap-2">
+                                ${approveBtn}
+                                <button onclick="toggleReportVisibility('${r.id}')" class="${r.visible_to_client ? 'text-emerald-400' : 'text-zinc-600'}" title="${r.visible_to_client ? 'Widoczny' : 'Ukryty'}">
+                                    <i class="ph ph-eye${r.visible_to_client ? '' : '-slash'}"></i>
+                                </button>
                             </div>
                         </div>
-                        <button onclick="toggleReportVisibility('${r.id}')" class="${r.visible_to_client ? 'text-emerald-400' : 'text-zinc-600'}" title="${r.visible_to_client ? 'Widoczny' : 'Ukryty'}">
-                            <i class="ph ph-eye${r.visible_to_client ? '' : '-slash'}"></i>
-                        </button>
+                        <div class="flex items-center gap-3 mt-2">
+                            ${previewBtn}
+                            ${editBtn}
+                            ${r.file_url ? `<a href="${r.file_url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1"><i class="ph ph-file-pdf"></i> PDF</a>` : ''}
+                            <button onclick="deleteReport('${r.id}')" class="text-zinc-500 hover:text-red-400 text-xs flex items-center gap-1">
+                                <i class="ph ph-trash"></i> Usuń
+                            </button>
+                        </div>
+                        <div id="report-preview-${r.id}" class="hidden mt-4 pt-4 border-t border-white/5 space-y-4 max-h-96 overflow-y-auto">
+                            ${isProductAnalysis ? r.content.sections.map(s => {
+                                const icon = REPORT_SECTION_ICONS[s.number] || 'ph-file-text';
+                                const color = REPORT_SECTION_COLORS[s.number] || 'bg-zinc-800 text-zinc-400';
+                                return `
+                                    <div class="border border-white/5 rounded-lg p-4">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <div class="w-7 h-7 rounded-lg ${color} flex items-center justify-center">
+                                                <i class="ph ${icon} text-sm"></i>
+                                            </div>
+                                            <h5 class="text-white font-medium text-sm">${s.number}. ${s.title}</h5>
+                                        </div>
+                                        <div class="text-xs leading-relaxed">${renderMarkdownToHtml(s.content)}</div>
+                                    </div>
+                                `;
+                            }).join('') : ''}
+                        </div>
                     </div>
-                    ${r.period_start && r.period_end ? `
-                        <p class="text-zinc-500 text-xs mb-3">
-                            Okres: ${formatDate(r.period_start)} - ${formatDate(r.period_end)}
-                        </p>
-                    ` : ''}
-                    <div class="flex items-center gap-3">
-                        ${r.file_url ? `
-                            <a href="${r.file_url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-1">
-                                <i class="ph ph-file-pdf"></i> Pobierz PDF
-                            </a>
-                        ` : ''}
-                        <button onclick="deleteReport('${r.id}')" class="text-zinc-500 hover:text-red-400 text-sm flex items-center gap-1">
-                            <i class="ph ph-trash"></i> Usun
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        function toggleReportPreview(id) {
+            const el = document.getElementById(`report-preview-${id}`);
+            if (el) el.classList.toggle('hidden');
         }
 
         async function toggleReportVisibility(id) {
@@ -3057,8 +3272,58 @@
             }
         }
 
+        async function approveAndPublishReport(id) {
+            const report = reports.find(r => r.id === id);
+            if (!report) return;
+
+            if (!confirm('Zatwierdź raport i udostępnij klientowi? Zostanie wysłany email z powiadomieniem.')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_reports')
+                    .update({
+                        visible_to_client: true,
+                        content: { ...report.content, approved_at: new Date().toISOString() }
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                report.visible_to_client = true;
+                if (report.content) report.content.approved_at = new Date().toISOString();
+
+                // Send email notification
+                const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+
+                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        type: 'report_published',
+                        data: {
+                            email: workflow.customer_email,
+                            clientName,
+                            projectUrl,
+                            reportTitle: report.title
+                        }
+                    })
+                });
+
+                renderReports();
+                showToast('Raport zatwierdzony — email wysłany do klienta', 'success');
+            } catch (err) {
+                console.error('Error approving report:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.approveAndPublishReport = approveAndPublishReport;
+
         async function deleteReport(id) {
-            if (!confirm('Usunac ten raport?')) return;
+            if (!confirm('Usunąć ten raport?')) return;
 
             const { error } = await supabaseClient
                 .from('workflow_reports')
@@ -3068,15 +3333,173 @@
             if (!error) {
                 reports = reports.filter(r => r.id !== id);
                 renderReports();
-                showToast('Raport usuniety', 'success');
+                showToast('Raport usunięty', 'success');
             }
         }
 
+        // =============================================
+        // REPORT MODAL
+        // =============================================
+        let editingReportId = null;
+
         function openReportModal() {
-            // TODO: Implement report modal
-            showToast('Funkcja w przygotowaniu', 'info');
+            editingReportId = null;
+            document.getElementById('report-raw-input').value = '';
+            document.getElementById('report-modal-title').textContent = 'Dodaj raport analizy produktu';
+            document.getElementById('report-parse-warning').classList.add('hidden');
+            document.getElementById('report-section-count').textContent = '';
+            showReportPasteMode();
+            document.getElementById('report-modal').classList.remove('hidden');
         }
         window.openReportModal = openReportModal;
+
+        function editReport(id) {
+            const report = reports.find(r => r.id === id);
+            if (!report || !report.content?.raw_markdown) return;
+
+            editingReportId = id;
+            document.getElementById('report-raw-input').value = report.content.raw_markdown;
+            document.getElementById('report-modal-title').textContent = 'Edytuj raport';
+            document.getElementById('report-parse-warning').classList.add('hidden');
+            showReportPasteMode();
+            document.getElementById('report-modal').classList.remove('hidden');
+        }
+        window.editReport = editReport;
+
+        function closeReportModal() {
+            document.getElementById('report-modal').classList.add('hidden');
+            editingReportId = null;
+        }
+        window.closeReportModal = closeReportModal;
+
+        function showReportPasteMode() {
+            document.getElementById('report-paste-mode').classList.remove('hidden');
+            document.getElementById('report-preview-mode').classList.add('hidden');
+            document.getElementById('report-paste-buttons').classList.remove('hidden');
+            document.getElementById('report-preview-buttons').classList.add('hidden');
+        }
+
+        function previewReport() {
+            const raw = document.getElementById('report-raw-input').value.trim();
+            if (!raw) {
+                showToast('Wklej treść raportu', 'error');
+                return;
+            }
+
+            const sections = parseReportSections(raw);
+
+            if (sections.length < 2) {
+                document.getElementById('report-parse-warning').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('report-parse-warning').classList.add('hidden');
+            document.getElementById('report-section-count').textContent = `${sections.length} sekcji wykrytych`;
+
+            // Render preview
+            const container = document.getElementById('report-preview-content');
+            container.innerHTML = sections.map(s => {
+                const icon = REPORT_SECTION_ICONS[s.number] || 'ph-file-text';
+                const color = REPORT_SECTION_COLORS[s.number] || 'bg-zinc-800 text-zinc-400';
+                return `
+                    <div class="border border-white/5 rounded-xl p-5">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-lg ${color} flex items-center justify-center">
+                                <i class="ph ${icon} text-base"></i>
+                            </div>
+                            <h3 class="text-white font-semibold">${s.number}. ${s.title}</h3>
+                        </div>
+                        <div class="text-sm leading-relaxed">${renderMarkdownToHtml(s.content)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Switch to preview mode
+            document.getElementById('report-paste-mode').classList.add('hidden');
+            document.getElementById('report-preview-mode').classList.remove('hidden');
+            document.getElementById('report-paste-buttons').classList.add('hidden');
+            document.getElementById('report-preview-buttons').classList.remove('hidden');
+        }
+        window.previewReport = previewReport;
+
+        function backToEditReport() {
+            showReportPasteMode();
+        }
+        window.backToEditReport = backToEditReport;
+
+        async function saveReport(publishImmediately = false) {
+            const raw = document.getElementById('report-raw-input').value.trim();
+            if (!raw) return;
+
+            const sections = parseReportSections(raw);
+            const content = {
+                raw_markdown: raw,
+                sections: sections,
+                ...(publishImmediately ? { approved_at: new Date().toISOString() } : {})
+            };
+
+            try {
+                if (editingReportId) {
+                    // Update existing
+                    const { error } = await supabaseClient
+                        .from('workflow_reports')
+                        .update({
+                            content,
+                            visible_to_client: publishImmediately
+                        })
+                        .eq('id', editingReportId);
+
+                    if (error) throw error;
+                } else {
+                    // Insert new
+                    const { error } = await supabaseClient
+                        .from('workflow_reports')
+                        .insert({
+                            workflow_id: workflow.id,
+                            title: 'Analiza produktu i strategia marki',
+                            type: 'product_analysis',
+                            content,
+                            visible_to_client: publishImmediately
+                        });
+
+                    if (error) throw error;
+                }
+
+                // Send email if publishing
+                if (publishImmediately) {
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+
+                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            type: 'report_published',
+                            data: {
+                                email: workflow.customer_email,
+                                clientName,
+                                projectUrl,
+                                reportTitle: 'Analiza produktu i strategia marki'
+                            }
+                        })
+                    });
+                }
+
+                closeReportModal();
+                await loadReports();
+                showToast(publishImmediately ? 'Raport zatwierdzony i udostępniony — email wysłany' : 'Raport zapisany jako szkic', 'success');
+            } catch (err) {
+                console.error('Error saving report:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.saveReport = saveReport;
+        window.toggleReportVisibility = toggleReportVisibility;
+        window.toggleReportPreview = toggleReportPreview;
+        window.deleteReport = deleteReport;
 
         // =============================================
         // COMMENTS MANAGEMENT

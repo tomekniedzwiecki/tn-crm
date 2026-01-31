@@ -12,7 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="components/sidebar.js"></script>
+    <script src="components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -749,6 +749,11 @@
             return { relative, time, dateStr, full: date.toLocaleString('pl-PL') };
         }
 
+        async function goToLead(email) {
+            const { data } = await supabaseClient.from('leads').select('id').eq('email', email).maybeSingle();
+            if (data) window.location.href = '/lead?id=' + data.id;
+        }
+
         // ==================== ACTIVITY (AUDIT LOGS) ====================
         async function loadAuditLogs() {
             document.getElementById('activity-loading-state').classList.remove('hidden');
@@ -894,10 +899,11 @@
                                     ${(() => {
                                         const ident = log.entity_identifier || '-';
                                         const isEmail = ident.includes('@');
-                                        const href = linkUrl || (isEmail ? '/leads?search=' + encodeURIComponent(ident) : null);
-                                        return href
-                                            ? `<a href="${href}" class="text-zinc-600 hover:text-blue-400 text-[10px] truncate max-w-[200px] block transition-colors" title="${ident}">${ident}</a>`
-                                            : `<div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${ident}">${ident}</div>`;
+                                        return isEmail
+                                            ? `<a href="#" onclick="event.preventDefault();goToLead('${ident.replace(/'/g, "\\'")}')" class="text-zinc-600 hover:text-blue-400 text-[10px] truncate max-w-[200px] block transition-colors cursor-pointer" title="${ident}">${ident}</a>`
+                                            : (linkUrl
+                                                ? `<a href="${linkUrl}" class="text-zinc-600 hover:text-blue-400 text-[10px] truncate max-w-[200px] block transition-colors" title="${ident}">${ident}</a>`
+                                                : `<div class="text-zinc-600 text-[10px] truncate max-w-[200px]" title="${ident}">${ident}</div>`);
                                     })()}
                                 </div>
                             </div>
