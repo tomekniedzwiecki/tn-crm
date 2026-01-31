@@ -976,7 +976,7 @@
 
                 <p class="text-zinc-500 text-sm mb-8 leading-relaxed">Raporty zostały przygotowane przy pomocy AI. Nie są ostatecznym źródłem decyzyjnym a jedynie podpowiedzią.</p>
 
-                <div id="reports-list" class="space-y-3">
+                <div id="reports-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <!-- Reports rendered here -->
                 </div>
 
@@ -1877,12 +1877,37 @@
         // REPORT TYPE CONFIG
         // =============================================
         const REPORT_TYPE_CONFIG_CLIENT = {
-            report_pdf: { icon: 'ph-file-pdf', label: 'Raport PDF', accent: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
-            report_infographic: { icon: 'ph-image', label: 'Infografika', accent: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
-            report_presentation: { icon: 'ph-presentation-chart', label: 'Prezentacja', accent: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
-            product_analysis: { icon: 'ph-chart-line-up', label: 'Analiza produktu', accent: '#00d084', bg: 'rgba(0,208,132,0.08)' }
+            report_pdf: {
+                icon: 'ph-file-pdf',
+                label: 'PDF',
+                accent: '#ef4444',
+                gradient: 'linear-gradient(135deg, #1a0505 0%, #0a0a0a 50%, #150808 100%)',
+                pattern: `<svg class="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="pp" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M0 10h20M10 0v20" stroke="#ef4444" stroke-width="0.5"/></pattern></defs><rect fill="url(#pp)" width="100%" height="100%"/></svg>`
+            },
+            report_infographic: {
+                icon: 'ph-image',
+                label: 'Infografika',
+                accent: '#8b5cf6',
+                gradient: 'linear-gradient(135deg, #0d0519 0%, #0a0a0a 50%, #0f0720 100%)',
+                pattern: `<svg class="absolute inset-0 w-full h-full opacity-[0.05]" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="pi" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="12" cy="12" r="1.5" fill="#8b5cf6"/></pattern></defs><rect fill="url(#pi)" width="100%" height="100%"/></svg>`
+            },
+            report_presentation: {
+                icon: 'ph-presentation-chart',
+                label: 'Prezentacja',
+                accent: '#3b82f6',
+                gradient: 'linear-gradient(135deg, #050d1a 0%, #0a0a0a 50%, #081020 100%)',
+                pattern: `<svg class="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="pb" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M0 16h32" stroke="#3b82f6" stroke-width="0.5"/></pattern></defs><rect fill="url(#pb)" width="100%" height="100%"/></svg>`
+            },
+            product_analysis: {
+                icon: 'ph-chart-line-up',
+                label: 'Analiza',
+                accent: '#00d084',
+                gradient: 'linear-gradient(135deg, #021a0f 0%, #0a0a0a 50%, #041a10 100%)',
+                pattern: `<svg class="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="pg" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M0 10h20M10 0v20" stroke="#00d084" stroke-width="0.5"/></pattern></defs><rect fill="url(#pg)" width="100%" height="100%"/></svg>`
+            }
         };
 
+        const REPORT_FALLBACK_CONFIG = { icon: 'ph-file', label: 'Plik', accent: '#666', gradient: 'linear-gradient(135deg, #111 0%, #0a0a0a 100%)', pattern: '' };
 
         // ===================================
         // RENDER REPORTS
@@ -1900,31 +1925,35 @@
             empty.classList.add('hidden');
 
             container.innerHTML = reports.map((r, i) => {
-                const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || { icon: 'ph-file', label: r.type, accent: '#666', bg: 'rgba(102,102,102,0.08)' };
+                const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
                 const fileSize = r.content?.file_size ? formatFileSize(r.content.file_size) : '';
-                return `
-                    <div class="group relative rounded-xl border border-[#1a1a1a] hover:border-[#2a2a2a] bg-[#111] hover:bg-[#141414] transition-all duration-200" style="animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.06}s both;">
-                        <div class="flex items-center gap-4 p-4 md:p-5">
-                            <!-- Icon -->
-                            <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105" style="background: ${config.bg};">
-                                <i class="ph ${config.icon} text-xl" style="color: ${config.accent};"></i>
-                            </div>
 
-                            <!-- Info -->
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-[15px] font-medium text-white truncate">${r.title}</h3>
-                                <p class="text-zinc-500 text-xs mt-0.5">${config.label}${fileSize ? ' · ' + fileSize : ''} · ${formatDate(r.created_at)}</p>
+                return `
+                    <div class="group rounded-xl border border-[#1a1a1a] hover:border-[#2a2a2a] bg-[#111] overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/20" style="animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.08}s both;">
+                        <!-- Visual header -->
+                        <div class="relative h-36 overflow-hidden" style="background: ${config.gradient};">
+                            ${config.pattern}
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style="background: ${config.accent}12; backdrop-filter: blur(8px); border: 1px solid ${config.accent}20;">
+                                    <i class="ph ${config.icon} text-3xl" style="color: ${config.accent};"></i>
+                                </div>
                             </div>
+                            <!-- Glow effect -->
+                            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-16 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" style="background: ${config.accent};"></div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="p-4">
+                            <h3 class="text-[15px] font-semibold text-white">${r.title}</h3>
+                            <p class="text-zinc-500 text-xs mt-1">${config.label}${fileSize ? ' · ' + fileSize : ''}</p>
 
                             <!-- Actions -->
-                            <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <a href="${r.file_url}" target="_blank" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-[#2a2a2a] text-zinc-300 hover:text-white hover:border-[#444] hover:bg-white/5 transition-all">
-                                    <i class="ph ph-arrow-square-out text-sm"></i>
-                                    <span class="hidden sm:inline">Otwórz</span>
+                            <div class="flex gap-2 mt-4">
+                                <a href="${r.file_url}" target="_blank" class="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium rounded-lg border border-[#2a2a2a] text-zinc-300 hover:text-white hover:border-[#444] hover:bg-white/5 transition-all">
+                                    <i class="ph ph-arrow-square-out text-sm"></i> Otwórz
                                 </a>
-                                <a href="${r.file_url}" target="_blank" download class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg text-black bg-white hover:bg-zinc-200 transition-all">
-                                    <i class="ph ph-download-simple text-sm"></i>
-                                    <span class="hidden sm:inline">Pobierz</span>
+                                <a href="${r.file_url}" target="_blank" download class="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium rounded-lg text-black bg-white hover:bg-zinc-200 transition-all">
+                                    <i class="ph ph-download-simple text-sm"></i> Pobierz
                                 </a>
                             </div>
                         </div>
