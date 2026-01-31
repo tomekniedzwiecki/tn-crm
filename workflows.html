@@ -345,12 +345,13 @@
                 workflows = data || [];
             }
 
-            await loadUnreadComments();
+            await Promise.all([loadUnreadComments(), loadReportCounts()]);
             applyFilters();
             renderWorkflows();
         }
 
         let unreadCounts = {};
+        let reportCounts = {};
 
         async function loadUnreadComments() {
             const { data: comments, error } = await supabaseClient
@@ -368,6 +369,22 @@
                 if (new Date(c.created_at) > lastSeenDate) {
                     unreadCounts[c.workflow_id] = (unreadCounts[c.workflow_id] || 0) + 1;
                 }
+            }
+        }
+
+        async function loadReportCounts() {
+            const { data, error } = await supabaseClient
+                .from('workflow_reports')
+                .select('workflow_id, visible_to_client, type')
+                .in('type', ['report_pdf', 'report_infographic', 'report_presentation']);
+
+            if (error || !data) return;
+
+            reportCounts = {};
+            for (const r of data) {
+                if (!reportCounts[r.workflow_id]) reportCounts[r.workflow_id] = { total: 0, published: 0 };
+                reportCounts[r.workflow_id].total++;
+                if (r.visible_to_client) reportCounts[r.workflow_id].published++;
             }
         }
 
@@ -463,6 +480,14 @@
                 icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-check-circle"></i><i class="ph ph-package"></i>Wybrany</span>`);
             } else if (w.products_shared_at) {
                 icons.push(`<span class="flex items-center gap-1 text-violet-400"><i class="ph ph-paper-plane-tilt"></i><i class="ph ph-package"></i>Wysłano</span>`);
+            }
+
+            // Report status
+            const rc = reportCounts[w.workflow_id];
+            if (rc && rc.published > 0) {
+                icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-check-circle"></i><i class="ph ph-chart-bar"></i>Raport</span>`);
+            } else if (rc && rc.total > 0) {
+                icons.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-clock"></i><i class="ph ph-chart-bar"></i>Raport</span>`);
             }
 
             if (!icons.length) return '';
