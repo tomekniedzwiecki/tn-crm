@@ -3138,11 +3138,15 @@
             }
         }
 
+        // Throttle: max 1 email per 30 min per workflow
+        let lastReportEmailSentAt = 0;
+        const REPORT_EMAIL_COOLDOWN = 30 * 60 * 1000; // 30 min
+
         async function approveAndPublishReport(id) {
             const report = reports.find(r => r.id === id);
             if (!report) return;
 
-            if (!confirm('Zatwierdź raport i udostępnij klientowi? Zostanie wysłany email z powiadomieniem.')) return;
+            if (!confirm('Zatwierdź raport i udostępnij klientowi?')) return;
 
             try {
                 const { error } = await supabaseClient
@@ -3157,29 +3161,38 @@
 
                 report.visible_to_client = true;
 
-                // Send email notification
-                const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
-                const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#raporty`;
+                // Send email only if cooldown passed
+                const now = Date.now();
+                const shouldSendEmail = (now - lastReportEmailSentAt) > REPORT_EMAIL_COOLDOWN;
 
-                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({
-                        type: 'report_published',
-                        data: {
-                            email: workflow.customer_email,
-                            clientName,
-                            projectUrl,
-                            reportTitle: report.title
-                        }
-                    })
-                });
+                if (shouldSendEmail) {
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#raporty`;
 
-                renderReports();
-                showToast('Raport zatwierdzony — email wysłany do klienta', 'success');
+                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            type: 'report_published',
+                            data: {
+                                email: workflow.customer_email,
+                                clientName,
+                                projectUrl,
+                                reportTitle: report.title
+                            }
+                        })
+                    });
+
+                    lastReportEmailSentAt = now;
+                    renderReports();
+                    showToast('Raport zatwierdzony — email wysłany do klienta', 'success');
+                } else {
+                    renderReports();
+                    showToast('Raport zatwierdzony (email już wysłany wcześniej)', 'success');
+                }
             } catch (err) {
                 console.error('Error approving report:', err);
                 showToast('Błąd: ' + err.message, 'error');
