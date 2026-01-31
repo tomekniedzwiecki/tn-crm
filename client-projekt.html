@@ -981,27 +981,28 @@
                 </div>
 
                 <!-- Report preview modal -->
-                <div id="report-preview-modal" class="fixed inset-0 z-50 hidden">
+                <div id="report-preview-modal" class="fixed inset-0 z-50 hidden" style="display:none;">
                     <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeReportPreview()"></div>
-                    <div class="absolute inset-3 md:inset-6 lg:inset-10 flex flex-col rounded-xl overflow-hidden border border-[#222] bg-[#0a0a0a]">
-                        <div class="flex items-center justify-between px-5 py-3 border-b border-[#1a1a1a] bg-[#111]">
-                            <div class="flex items-center gap-3">
-                                <div id="preview-icon-wrap" class="w-8 h-8 rounded-lg flex items-center justify-center"></div>
-                                <div>
-                                    <h3 id="preview-title" class="text-white text-sm font-medium"></h3>
+                    <div class="absolute inset-0 md:inset-6 lg:inset-10 flex flex-col rounded-none md:rounded-xl overflow-hidden border-0 md:border border-[#222] bg-[#0a0a0a]">
+                        <div class="flex items-center justify-between px-4 md:px-5 py-3 border-b border-[#1a1a1a] bg-[#111] flex-shrink-0" style="min-height: 56px;">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div id="preview-icon-wrap" class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"></div>
+                                <div class="min-w-0">
+                                    <h3 id="preview-title" class="text-white text-sm font-medium truncate"></h3>
                                     <p id="preview-meta" class="text-zinc-500 text-xs"></p>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-3">
                                 <a id="preview-download" href="#" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white border border-[#2a2a2a] hover:border-[#444] rounded-lg transition-all hover:bg-white/5">
-                                    <i class="ph ph-download-simple text-sm"></i> Pobierz
+                                    <i class="ph ph-download-simple text-sm"></i>
+                                    <span class="hidden sm:inline">Pobierz</span>
                                 </a>
                                 <button onclick="closeReportPreview()" class="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors">
                                     <i class="ph ph-x text-lg"></i>
                                 </button>
                             </div>
                         </div>
-                        <div id="preview-content" class="flex-1 overflow-auto bg-white"></div>
+                        <div id="preview-content" style="flex: 1 1 0%; overflow: hidden; position: relative;"></div>
                     </div>
                 </div>
 
@@ -1984,20 +1985,26 @@
 
             const content = document.getElementById('preview-content');
             if (isImage) {
-                content.className = 'flex-1 overflow-auto bg-[#0a0a0a] flex items-center justify-center p-4';
-                content.innerHTML = `<img src="${r.file_url}" alt="${r.title}" class="max-w-full max-h-full rounded-lg" style="object-fit: contain;">`;
+                content.style.background = '#0a0a0a';
+                content.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;">
+                    <img src="${r.file_url}" alt="${r.title}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;">
+                </div>`;
             } else {
-                content.className = 'flex-1 overflow-auto bg-white';
-                content.innerHTML = `<iframe src="${r.file_url}" class="w-full h-full border-0"></iframe>`;
+                content.style.background = '#fff';
+                content.innerHTML = `<iframe src="${r.file_url}" style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe>`;
             }
 
-            document.getElementById('report-preview-modal').classList.remove('hidden');
+            const modal = document.getElementById('report-preview-modal');
+            modal.classList.remove('hidden');
+            modal.style.display = '';
             document.body.style.overflow = 'hidden';
         }
         window.openReportPreview = openReportPreview;
 
         function closeReportPreview() {
-            document.getElementById('report-preview-modal').classList.add('hidden');
+            const modal = document.getElementById('report-preview-modal');
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
             document.getElementById('preview-content').innerHTML = '';
             document.body.style.overflow = '';
         }
