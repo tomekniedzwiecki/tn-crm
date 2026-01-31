@@ -1120,14 +1120,10 @@
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Typ pliku</label>
                     <select id="report-file-type" class="input-field w-full text-sm text-white px-3 py-2 rounded-lg" onchange="updateReportFileAccept()">
-                        <option value="report_pdf">Raport PDF</option>
-                        <option value="report_infographic">Infografika (obrazek)</option>
+                        <option value="report_pdf">Raport</option>
+                        <option value="report_infographic">Infografika</option>
                         <option value="report_presentation">Prezentacja</option>
                     </select>
-                </div>
-                <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Tytuł</label>
-                    <input type="text" id="report-file-title" class="input-field w-full text-sm text-white px-3 py-2 rounded-lg" placeholder="Raport strategiczny">
                 </div>
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Plik</label>
@@ -3220,7 +3216,6 @@
         // =============================================
         function openReportModal() {
             document.getElementById('report-file-type').value = 'report_pdf';
-            document.getElementById('report-file-title').value = '';
             document.getElementById('report-file-input').value = '';
             document.getElementById('report-upload-progress').classList.add('hidden');
             updateReportFileAccept();
@@ -3233,23 +3228,25 @@
         }
         window.closeReportModal = closeReportModal;
 
+        const REPORT_TITLES = {
+            report_pdf: 'Raport',
+            report_infographic: 'Infografika',
+            report_presentation: 'Prezentacja'
+        };
+
         function updateReportFileAccept() {
             const type = document.getElementById('report-file-type').value;
             const fileInput = document.getElementById('report-file-input');
-            const titleInput = document.getElementById('report-file-title');
 
             switch (type) {
                 case 'report_pdf':
                     fileInput.accept = '.pdf';
-                    titleInput.placeholder = 'Raport strategiczny';
                     break;
                 case 'report_infographic':
                     fileInput.accept = '.png,.jpg,.jpeg,.webp';
-                    titleInput.placeholder = 'Infografika marki';
                     break;
                 case 'report_presentation':
                     fileInput.accept = '.pdf';
-                    titleInput.placeholder = 'Prezentacja strategii';
                     break;
             }
             fileInput.value = '';
@@ -3258,11 +3255,9 @@
 
         async function uploadReport() {
             const type = document.getElementById('report-file-type').value;
-            const title = document.getElementById('report-file-title').value.trim();
+            const title = REPORT_TITLES[type] || type;
             const fileInput = document.getElementById('report-file-input');
             const file = fileInput.files[0];
-
-            if (!title) { showToast('Podaj tytuł raportu', 'error'); return; }
             if (!file) { showToast('Wybierz plik', 'error'); return; }
 
             document.getElementById('report-upload-progress').classList.remove('hidden');
