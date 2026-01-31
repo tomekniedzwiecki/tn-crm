@@ -3342,6 +3342,70 @@
         // =============================================
         let editingReportId = null;
 
+        // Convert pasted HTML (from Gemini) back to markdown
+        document.getElementById('report-raw-input').addEventListener('paste', function(e) {
+            const html = e.clipboardData.getData('text/html');
+            if (!html) return; // plain text paste — let default handle it
+
+            e.preventDefault();
+            const md = htmlToMarkdown(html);
+
+            // Insert at cursor position
+            const ta = this;
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            ta.value = ta.value.substring(0, start) + md + ta.value.substring(end);
+            ta.selectionStart = ta.selectionEnd = start + md.length;
+        });
+
+        function htmlToMarkdown(html) {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+
+            function walk(node) {
+                if (node.nodeType === 3) return node.textContent;
+                if (node.nodeType !== 1) return '';
+
+                const tag = node.tagName.toLowerCase();
+                const children = Array.from(node.childNodes).map(walk).join('');
+
+                switch (tag) {
+                    case 'h1': return `# ${children.trim()}\n\n`;
+                    case 'h2': return `## ${children.trim()}\n\n`;
+                    case 'h3': return `### ${children.trim()}\n\n`;
+                    case 'h4': return `#### ${children.trim()}\n\n`;
+                    case 'strong': case 'b': return `**${children}**`;
+                    case 'em': case 'i': return `*${children}*`;
+                    case 'a': return `[${children}](${node.getAttribute('href') || ''})`;
+                    case 'br': return '\n';
+                    case 'p': return `${children.trim()}\n\n`;
+                    case 'ul': return `${children}\n`;
+                    case 'ol': return `${children}\n`;
+                    case 'li': {
+                        const parent = node.parentElement?.tagName?.toLowerCase();
+                        const idx = Array.from(node.parentElement.children).indexOf(node) + 1;
+                        const prefix = parent === 'ol' ? `${idx}. ` : '- ';
+                        return `${prefix}${children.trim()}\n`;
+                    }
+                    case 'blockquote': return children.trim().split('\n').map(l => `> ${l}`).join('\n') + '\n\n';
+                    case 'code':
+                        if (node.parentElement?.tagName?.toLowerCase() === 'pre') return children;
+                        return `\`${children}\``;
+                    case 'pre': return `\`\`\`\n${children.trim()}\n\`\`\`\n\n`;
+                    case 'div': case 'section': case 'article': return `${children}\n`;
+                    case 'span': return children;
+                    case 'table': return children + '\n';
+                    case 'tr': return children + '\n';
+                    case 'td': case 'th': return children + ' | ';
+                    default: return children;
+                }
+            }
+
+            let result = walk(doc.body);
+            // Clean up excessive newlines
+            result = result.replace(/\n{3,}/g, '\n\n').trim();
+            return result;
+        }
+
         function openReportModal() {
             editingReportId = null;
             document.getElementById('report-raw-input').value = '';
