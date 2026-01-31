@@ -3086,22 +3086,47 @@
             const sections = [];
             let currentSection = null;
             let contentLines = [];
+            let sectionNum = 0;
+
+            function isHeading(line) {
+                // Markdown headings: # Title, ## Title, ### Title
+                const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
+                if (mdMatch) return mdMatch[2].replace(/\*+/g, '').trim();
+
+                // Numbered headings: 1. Title, 2. Title (with optional ##)
+                const numMatch = line.match(/^#{0,3}\s*\d+\.\s+(.+)$/);
+                if (numMatch) return numMatch[1].replace(/\*+/g, '').trim();
+
+                return null;
+            }
 
             for (const line of lines) {
-                const match = line.match(/^#{0,3}\s*(\d+)\.\s+(.+)$/);
-                if (match) {
+                const heading = isHeading(line);
+                if (heading) {
                     if (currentSection) {
                         currentSection.content = contentLines.join('\n').trim();
                         sections.push(currentSection);
                     }
+                    sectionNum++;
                     currentSection = {
-                        number: parseInt(match[1]),
-                        title: match[2].replace(/\*+/g, '').trim(),
+                        number: sectionNum,
+                        title: heading,
                         content: ''
                     };
                     contentLines = [];
                 } else if (currentSection) {
                     contentLines.push(line);
+                } else {
+                    // Text before first heading — treat as intro section
+                    if (line.trim()) {
+                        sectionNum++;
+                        currentSection = {
+                            number: sectionNum,
+                            title: line.trim().substring(0, 80),
+                            content: ''
+                        };
+                        contentLines = [];
+                    }
                 }
             }
             if (currentSection) {
