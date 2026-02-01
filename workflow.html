@@ -87,6 +87,7 @@
             flex-shrink: 0;
         }
         .workflow-sidebar-btn.active i { opacity: 1; }
+        .workflow-sidebar-btn .ph-check-circle { opacity: 1 !important; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
@@ -1260,24 +1261,32 @@
         }
 
         async function updateNavChecks() {
-            const [docsRes, matsRes, brandRes, repsRes] = await Promise.all([
-                supabaseClient.from('workflow_documents').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId),
-                supabaseClient.from('workflow_materials').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId),
-                supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId),
-                supabaseClient.from('workflow_reports').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId).in('type', ['report_pdf', 'report_infographic', 'report_presentation'])
-            ]);
+            try {
+                const toggle = (id, show) => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.toggle('hidden', !show);
+                };
 
-            const toggle = (id, show) => {
-                const el = document.getElementById(id);
-                if (el) el.classList.toggle('hidden', !show);
-            };
+                // These don't need DB queries
+                toggle('nav-check-dokumenty', workflow.contract_status === 'signed');
+                toggle('nav-check-produkty', !!workflow.products_shared_at);
+                toggle('nav-check-strona', !!workflow.sales_page_url);
 
-            toggle('nav-check-dokumenty', workflow.contract_status === 'signed');
-            toggle('nav-check-produkty', !!workflow.products_shared_at);
-            toggle('nav-check-raporty', (repsRes.count || 0) > 0);
-            toggle('nav-check-branding', (brandRes.count || 0) > 0);
-            toggle('nav-check-strona', !!workflow.sales_page_url);
-            toggle('nav-check-materialy', (matsRes.count || 0) > 0);
+                // These need DB queries
+                const [matsRes, brandRes, repsRes] = await Promise.all([
+                    supabaseClient.from('workflow_materials').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
+                    supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
+                    supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation'])
+                ]);
+
+
+                const hasPublished = (repsRes.data || []).some(r => r.visible_to_client);
+                toggle('nav-check-raporty', hasPublished);
+                toggle('nav-check-branding', (brandRes.count || 0) > 0);
+                toggle('nav-check-materialy', (matsRes.count || 0) > 0);
+            } catch (e) {
+                console.error('updateNavChecks error:', e);
+            }
         }
 
         function formatPrice(price) {
@@ -3068,6 +3077,7 @@
             reports = data || [];
             renderReports();
             renderReportsOverviewCard();
+            updateNavChecks();
         }
 
         function renderReportsOverviewCard() {
