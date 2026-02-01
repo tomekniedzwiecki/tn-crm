@@ -241,27 +241,32 @@
                 <button onclick="switchTab('dokumenty')" data-tab="dokumenty" class="workflow-sidebar-btn">
                     <i class="ph ph-file-text"></i>
                     Dokumenty
-                    <span id="contract-status-badge" class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400">Oczekuje</span>
+                    <span id="nav-check-dokumenty" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                 </button>
                 <button onclick="switchTab('produkty')" data-tab="produkty" class="workflow-sidebar-btn">
                     <i class="ph ph-package"></i>
                     Produkty
+                    <span id="nav-check-produkty" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                 </button>
                 <button onclick="switchTab('raporty')" data-tab="raporty" class="workflow-sidebar-btn">
                     <i class="ph ph-chart-bar"></i>
                     Raporty
+                    <span id="nav-check-raporty" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                 </button>
                 <button onclick="switchTab('branding')" data-tab="branding" class="workflow-sidebar-btn">
                     <i class="ph ph-paint-brush"></i>
                     Branding
+                    <span id="nav-check-branding" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                 </button>
                 <button onclick="switchTab('strona')" data-tab="strona" class="workflow-sidebar-btn">
                     <i class="ph ph-globe"></i>
                     Strona
+                    <span id="nav-check-strona" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                 </button>
                 <button onclick="switchTab('materialy')" data-tab="materialy" class="workflow-sidebar-btn">
                     <i class="ph ph-folder-open"></i>
                     Materiały
+                    <span id="nav-check-materialy" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                 </button>
                 <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-sidebar-btn relative">
                     <i class="ph ph-chat-circle-text"></i>
@@ -1251,6 +1256,36 @@
 
             renderWorkflow();
             renderProductSharingCard();
+            updateNavChecks();
+        }
+
+        async function updateNavChecks() {
+            // Load counts for all sections in parallel
+            const [docsRes, matsRes, brandRes, repsRes, strRes] = await Promise.all([
+                supabaseClient.from('workflow_documents').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId),
+                supabaseClient.from('workflow_materials').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId),
+                supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId),
+                supabaseClient.from('workflow_reports').select('id', { count: 'exact', head: true }).eq('workflow_id', workflowId).in('type', ['report_pdf', 'report_infographic', 'report_presentation']),
+                Promise.resolve(workflow.sales_page_url)
+            ]);
+
+            const toggle = (id, show) => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden', !show);
+            };
+
+            // Dokumenty: contract signed
+            toggle('nav-check-dokumenty', workflow.contract_status === 'signed');
+            // Produkty: shared to client
+            toggle('nav-check-produkty', !!workflow.products_shared_at);
+            // Raporty: has file reports
+            toggle('nav-check-raporty', (repsRes.count || 0) > 0);
+            // Branding: has items
+            toggle('nav-check-branding', (brandRes.count || 0) > 0);
+            // Strona: has URL
+            toggle('nav-check-strona', !!workflow.sales_page_url);
+            // Materiały: has items
+            toggle('nav-check-materialy', (matsRes.count || 0) > 0);
         }
 
         function formatPrice(price) {
@@ -2112,17 +2147,19 @@
 
             // Update status badge in tab
             const badge = document.getElementById('contract-status-badge');
-            const statusLabels = {
-                'pending_data': { text: 'Oczekuje', class: 'bg-amber-500/20 text-amber-400' },
-                'data_filled': { text: 'Dane OK', class: 'bg-cyan-500/20 text-cyan-400' },
-                'contract_sent': { text: 'Wysłano', class: 'bg-violet-500/20 text-violet-400' },
-                'pending_signature': { text: 'Do podpisu', class: 'bg-violet-500/20 text-violet-400' },
-                'signed': { text: 'Podpisana', class: 'bg-emerald-500/20 text-emerald-400' },
-                'rejected': { text: 'Odrzucona', class: 'bg-red-500/20 text-red-400' }
-            };
-            const statusInfo = statusLabels[status] || statusLabels['pending_data'];
-            badge.textContent = statusInfo.text;
-            badge.className = `ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.class}`;
+            if (badge) {
+                const statusLabels = {
+                    'pending_data': { text: 'Oczekuje', class: 'bg-amber-500/20 text-amber-400' },
+                    'data_filled': { text: 'Dane OK', class: 'bg-cyan-500/20 text-cyan-400' },
+                    'contract_sent': { text: 'Wysłano', class: 'bg-violet-500/20 text-violet-400' },
+                    'pending_signature': { text: 'Do podpisu', class: 'bg-violet-500/20 text-violet-400' },
+                    'signed': { text: 'Podpisana', class: 'bg-emerald-500/20 text-emerald-400' },
+                    'rejected': { text: 'Odrzucona', class: 'bg-red-500/20 text-red-400' }
+                };
+                const statusInfo = statusLabels[status] || statusLabels['pending_data'];
+                badge.textContent = statusInfo.text;
+                badge.className = `ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.class}`;
+            }
 
             // Update status indicator
             const indicator = document.getElementById('contract-status-indicator');
