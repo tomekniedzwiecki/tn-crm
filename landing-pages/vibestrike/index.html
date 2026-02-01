@@ -1804,17 +1804,17 @@
 
     /* Logo: remove white background + trim whitespace */
     function processLogo(img) {
+      if (img.dataset.processed) return;
+      img.dataset.processed = '1';
       const c = document.createElement('canvas');
-      const ctx = c.getContext('2d');
+      const ctx = c.getContext('2d', { willReadFrequently: true });
       c.width = img.naturalWidth;
       c.height = img.naturalHeight;
       ctx.drawImage(img, 0, 0);
       const data = ctx.getImageData(0, 0, c.width, c.height);
       const d = data.data;
       for (let i = 0; i < d.length; i += 4) {
-        if (d[i] > 230 && d[i+1] > 230 && d[i+2] > 230) {
-          d[i+3] = 0;
-        }
+        if (d[i] > 230 && d[i+1] > 230 && d[i+2] > 230) d[i+3] = 0;
       }
       ctx.putImageData(data, 0, 0);
       let t = c.height, b = 0, l = c.width, r = 0;
@@ -1822,18 +1822,14 @@
       for (let y = 0; y < c.height; y++) {
         for (let x = 0; x < c.width; x++) {
           if (trimData[(y * c.width + x) * 4 + 3] > 10) {
-            if (y < t) t = y;
-            if (y > b) b = y;
-            if (x < l) l = x;
-            if (x > r) r = x;
+            if (y < t) t = y; if (y > b) b = y;
+            if (x < l) l = x; if (x > r) r = x;
           }
         }
       }
       const pad = 4;
-      l = Math.max(0, l - pad);
-      t = Math.max(0, t - pad);
-      r = Math.min(c.width - 1, r + pad);
-      b = Math.min(c.height - 1, b + pad);
+      l = Math.max(0, l - pad); t = Math.max(0, t - pad);
+      r = Math.min(c.width - 1, r + pad); b = Math.min(c.height - 1, b + pad);
       const tw = r - l + 1, th = b - t + 1;
       const tc = document.createElement('canvas');
       tc.width = tw; tc.height = th;
