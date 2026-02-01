@@ -712,6 +712,14 @@
                                 <i class="ph ph-paint-brush text-pink-400"></i>
                                 Branding
                             </h3>
+                            <div class="flex items-center gap-3">
+                                <span id="branding-delivered-badge" class="hidden text-xs text-emerald-400 flex items-center gap-1">
+                                    <i class="ph ph-check-circle"></i> Przekazano klientowi
+                                </span>
+                                <button id="branding-deliver-btn" onclick="deliverBranding()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-paper-plane-tilt"></i> Przekaż klientowi
+                                </button>
+                            </div>
                         </div>
 
                         <!-- 1. Brand Info -->
@@ -1648,7 +1656,7 @@
 
                 const hasPublished = (repsRes.data || []).some(r => r.visible_to_client);
                 toggle('nav-check-raporty', hasPublished);
-                toggle('nav-check-branding', (brandRes.count || 0) > 0);
+                toggle('nav-check-branding', !!workflow.branding_shared_at);
                 toggle('nav-check-materialy', (matsRes.count || 0) > 0);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
@@ -3254,6 +3262,8 @@
                 guidelinesEmpty.classList.remove('hidden');
                 guidelinesContainer.innerHTML = '';
             }
+
+            updateBrandingDeliverUI();
         }
 
         async function deleteBrandingItem(id) {
@@ -3670,6 +3680,72 @@
         window.togglePromptExpand = togglePromptExpand;
         window.copyPrompt = copyPrompt;
         window.generateBrandingPrompts = generateBrandingPrompts;
+
+        // Branding delivery
+        let lastBrandingEmailSentAt = 0;
+        const BRANDING_EMAIL_COOLDOWN = 30 * 60 * 1000;
+
+        function updateBrandingDeliverUI() {
+            const btn = document.getElementById('branding-deliver-btn');
+            const badge = document.getElementById('branding-delivered-badge');
+            const hasItems = brandingItems.length > 0;
+            const delivered = !!workflow.branding_shared_at;
+
+            if (btn) btn.classList.toggle('hidden', !hasItems || delivered);
+            if (badge) badge.classList.toggle('hidden', !delivered);
+        }
+
+        async function deliverBranding() {
+            if (!confirm('Przekazać branding klientowi i wysłać email?')) return;
+
+            try {
+                const now = new Date().toISOString();
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ branding_shared_at: now })
+                    .eq('id', workflow.id);
+
+                if (error) throw error;
+
+                workflow.branding_shared_at = now;
+                updateBrandingDeliverUI();
+                updateNavChecks();
+
+                // Send email
+                const emailNow = Date.now();
+                const shouldSend = (emailNow - lastBrandingEmailSentAt) > BRANDING_EMAIL_COOLDOWN;
+
+                if (shouldSend && workflow.customer_email) {
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#branding`;
+
+                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            type: 'branding_delivered',
+                            data: {
+                                email: workflow.customer_email,
+                                clientName,
+                                projectUrl
+                            }
+                        })
+                    });
+
+                    lastBrandingEmailSentAt = emailNow;
+                    showToast('Branding przekazany — email wysłany do klienta', 'success');
+                } else {
+                    showToast('Branding przekazany klientowi', 'success');
+                }
+            } catch (err) {
+                console.error('Error delivering branding:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.deliverBranding = deliverBranding;
 
         // =============================================
         // SALES PAGE MANAGEMENT
