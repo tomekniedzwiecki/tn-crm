@@ -959,31 +959,53 @@
                 <h2 class="page-title">Strona sprzedażowa</h2>
 
                 <div id="sales-page-content" class="hidden">
-                    <!-- Info banner about graphics -->
-                    <div class="card p-4 mb-6" style="background: linear-gradient(135deg, rgba(234,179,8,0.06) 0%, rgba(234,179,8,0.02) 100%); border-color: rgba(234,179,8,0.15);">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <i class="ph ph-paint-brush text-amber-400"></i>
-                            </div>
-                            <div>
-                                <p class="text-amber-200 text-sm font-medium mb-1">Grafiki i zdjęcia w przygotowaniu</p>
-                                <p class="text-amber-200/60 text-xs leading-relaxed">Strona zawiera aktualnie treści tekstowe i układ. Profesjonalne grafiki, zdjęcia produktowe i elementy wizualne zostaną dodane w kolejnym etapie realizacji.</p>
-                            </div>
+                    <!-- Deployment-style card -->
+                    <div class="card overflow-hidden">
+                        <!-- Success header bar -->
+                        <div class="px-6 py-4 flex items-center gap-3 border-b border-white/5" style="background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, transparent 100%);">
+                            <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                            <span class="text-emerald-400 text-xs font-medium uppercase tracking-wider">Live</span>
+                            <span class="text-zinc-600 text-xs">&middot;</span>
+                            <span class="text-zinc-500 text-xs">Strona opublikowana</span>
                         </div>
-                    </div>
 
-                    <!-- CTA card -->
-                    <div class="card p-8 md:p-12 text-center">
-                        <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                            <i class="ph ph-globe text-3xl text-emerald-400"></i>
+                        <!-- Main content -->
+                        <div class="p-8 md:p-12">
+                            <!-- Checkmark animation -->
+                            <div class="w-14 h-14 mx-auto mb-6 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%); border: 1px solid rgba(16,185,129,0.2);">
+                                <i class="ph ph-check-circle text-2xl text-emerald-400"></i>
+                            </div>
+
+                            <div class="text-center mb-8">
+                                <h3 class="text-white font-semibold text-lg mb-2">Twoja strona jest gotowa</h3>
+                                <p class="text-zinc-500 text-sm">Przygotowałem Twoją stronę sprzedażową. Znajdziesz ją pod linkiem poniżej.</p>
+                            </div>
+
+                            <!-- URL bar -->
+                            <div class="max-w-lg mx-auto mb-6">
+                                <div class="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg px-4 py-3">
+                                    <i class="ph ph-link text-zinc-600 text-sm"></i>
+                                    <span id="sales-page-url-display" class="text-zinc-400 text-sm truncate flex-1 font-mono"></span>
+                                    <a id="sales-page-link-copy" href="#" onclick="navigator.clipboard.writeText(this.dataset.url); this.querySelector('i').className='ph ph-check text-emerald-400 text-sm'; setTimeout(() => this.querySelector('i').className='ph ph-copy text-zinc-500 text-sm', 1500); return false;" class="flex-shrink-0 p-1 hover:bg-white/5 rounded transition-colors" title="Kopiuj link">
+                                        <i class="ph ph-copy text-zinc-500 text-sm"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- CTA button -->
+                            <div class="text-center">
+                                <a id="sales-page-link" href="#" target="_blank" class="inline-flex items-center gap-2.5 bg-white text-black font-medium px-8 py-3 rounded-lg transition-all text-sm hover:bg-zinc-200">
+                                    Otwórz stronę
+                                    <i class="ph ph-arrow-square-out"></i>
+                                </a>
+                            </div>
                         </div>
-                        <h3 class="text-white font-semibold text-xl mb-3">Twoja strona jest gotowa</h3>
-                        <p class="text-tertiary text-sm leading-relaxed max-w-md mx-auto mb-8">Przygotowałem Twoją stronę sprzedażową. Kliknij przycisk poniżej, aby ją zobaczyć.</p>
-                        <a id="sales-page-link" href="#" target="_blank" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-8 py-3.5 rounded-xl transition-colors text-sm">
-                            <i class="ph ph-arrow-square-out text-lg"></i>
-                            Otwórz stronę sprzedażową
-                        </a>
-                        <p id="sales-page-url-display" class="text-tertiary text-xs mt-4 font-mono opacity-50"></p>
+
+                        <!-- Footer note -->
+                        <div class="px-6 py-3.5 border-t border-white/5 flex items-center gap-2">
+                            <i class="ph ph-paint-brush text-amber-500/60 text-xs"></i>
+                            <span class="text-zinc-600 text-xs">Grafiki i zdjęcia produktowe zostaną dodane w kolejnym etapie.</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1962,6 +1984,8 @@
                 content.classList.remove('hidden');
                 document.getElementById('sales-page-link').href = workflow.sales_page_url;
                 document.getElementById('sales-page-url-display').textContent = workflow.sales_page_url;
+                const copyBtn = document.getElementById('sales-page-link-copy');
+                if (copyBtn) copyBtn.dataset.url = workflow.sales_page_url;
             } else {
                 content.classList.add('hidden');
                 empty.classList.remove('hidden');
