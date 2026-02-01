@@ -998,9 +998,7 @@
 
   <!-- ═══ HERO ═══ -->
   <section class="hero" id="hero">
-    <video class="hero-video-bg" autoplay loop muted playsinline>
-      <source src="hero.mp4" type="video/mp4">
-    </video>
+    <video class="hero-video-bg" loop muted playsinline preload="none" id="heroVideo"></video>
     <div class="hero-content">
       <p class="section-label fade-in">Smart Oral Care</p>
       <h1 class="fade-in delay-1">
@@ -1694,6 +1692,14 @@
     document.querySelectorAll('.logo img, .footer-logo img').forEach(img => {
       if (img.complete && img.naturalWidth) processLogo(img);
       else img.onload = () => processLogo(img);
+    });
+
+    /* Lazy load hero video after page is interactive */
+    window.addEventListener('load', () => {
+      const v = document.getElementById('heroVideo');
+      v.src = 'hero.mp4';
+      v.load();
+      v.play().catch(() => {});
     });
   </script>
 </body>
