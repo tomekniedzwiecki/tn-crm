@@ -3057,6 +3057,7 @@
         // BRANDING MANAGEMENT
         // =============================================
         let brandingItems = [];
+        let brandingProduct = null;
 
         async function loadBranding() {
             const { data, error } = await supabaseClient
@@ -3071,6 +3072,17 @@
             }
 
             brandingItems = data || [];
+
+            // Load product for prompt generation
+            if (workflow.selected_product_id) {
+                const { data: prod } = await supabaseClient
+                    .from('workflow_products')
+                    .select('name, description, image_url')
+                    .eq('id', workflow.selected_product_id)
+                    .single();
+                brandingProduct = prod;
+            }
+
             renderBranding();
         }
 
@@ -3547,75 +3559,101 @@
             const bodyFont = fonts.find(f => { const m = parseNotes(f.notes); return m.role === 'body'; });
             const accentFont = fonts.find(f => { const m = parseNotes(f.notes); return m.role === 'accent'; });
 
-            const colorPalette = colors.map(c => `${c.title} (${c.value})`).join(', ');
             const primaryHex = primaryColor?.value || '#00D4FF';
+            const primaryName = primaryColor?.title || 'primary';
             const secondaryHex = secondaryColor?.value || '#FF2D78';
+            const secondaryName = secondaryColor?.title || 'secondary';
             const accentHex = accentColor?.value || '#C8FF00';
+            const accentName = accentColor?.title || 'accent';
+            const darkNeutral = neutralColors[0]?.value || '#111827';
+            const darkNeutralName = neutralColors[0]?.title || 'dark';
+            const midNeutral = neutralColors[1]?.value || '#475569';
+            const lightNeutral = neutralColors[2]?.value || '#F8FAFC';
+            const lightNeutralName = neutralColors[2]?.title || 'light';
             const headingFontName = headingFont?.title || 'Bebas Neue';
+            const bodyFontName = bodyFont?.title || 'Inter';
+            const accentFontName = accentFont?.title || 'Space Mono';
 
-            const brandContext = `Brand: "${name}". ${tagline ? `Tagline: "${tagline}".` : ''} ${description ? `Description: ${description}` : ''} Color palette: ${colorPalette}. Primary font: ${headingFontName}. Style: modern, energetic, electric, dark theme with neon accents.`;
+            const colorPalette = colors.map(c => `${c.title} (${c.value})`).join(', ');
+
+            // Product context
+            const productName = brandingProduct?.name || '';
+            const productDesc = brandingProduct?.description || '';
+            const productContext = productName ? `The brand's flagship product is: ${productName}${productDesc ? ' — ' + productDesc : ''}.` : '';
+
+            // Full brand brief for AI — used inside every prompt
+            const brandBrief = [
+                `Brand "${name}"`,
+                tagline ? `Tagline: "${tagline}"` : '',
+                description ? `About: ${description}` : '',
+                productContext,
+                `Color palette: ${colorPalette}`,
+                `Typography: ${headingFontName} (headings), ${bodyFontName} (body), ${accentFontName} (accent)`
+            ].filter(Boolean).join('. ') + '.';
+
+            const brandContext = brandBrief;
 
             // --- LOGO PROMPTS ---
             const logoPrompts = [
                 {
                     label: 'Logo główne (ciemne tło)',
-                    prompt: `Design a minimalist, modern logo for the brand "${name}". The logo should be typography-based using a bold, dynamic font similar to ${headingFontName}. Use ${primaryHex} (electric blue) as the primary color with subtle ${secondaryHex} (neon magenta) accents. The logo must work on a pure black (#0A0A0A) background. Style: sleek, tech-forward, energetic. No gradients — flat neon colors. The typography should feel like it has kinetic energy — slightly italic or with motion lines. Output on transparent background, PNG, high resolution.`
+                    prompt: `Design a minimalist, modern logo for the brand "${name}". The logo should be typography-based using a ${headingFontName}-style font — the letterforms should reflect the brand's personality and product category. Create a distinctive visual element within the letters that subtly references the product (${productName || 'the brand\'s core offering'}). Use ${primaryHex} (${primaryName}) as the primary color with subtle ${secondaryHex} (${secondaryName}) accents. The logo must work on a ${darkNeutral} (${darkNeutralName}) background. ${description} ${productContext} Output on transparent background, PNG, high resolution.`
                 },
                 {
                     label: 'Logo na jasnym tle',
-                    prompt: `Design a minimalist logo for "${name}" brand, optimized for white/light backgrounds. Use dark anthracite (#1A1A2E) as the main text color with ${primaryHex} accent. Same typography style as the dark version — bold, dynamic ${headingFontName}-style font. Clean, professional, easily readable on paper and light interfaces. Output on transparent background, PNG, high resolution.`
+                    prompt: `Design a minimalist logo for "${name}" brand, optimized for white/light backgrounds. Use ${darkNeutral} (${darkNeutralName}) as the main text color with ${primaryHex} (${primaryName}) accent on the distinctive brand element. Same ${headingFontName}-style typography and visual motif as the dark version. Clean, professional, suitable for packaging and retail contexts. The logo should feel trustworthy and aligned with the ${productName ? productName + ' category' : 'brand identity'}. Output on transparent background, PNG, high resolution.`
                 },
                 {
                     label: 'Logo monochromatyczne',
-                    prompt: `Create a monochrome version of the "${name}" logo. Pure white version on transparent background (for dark contexts) and pure black version on transparent background (for light contexts). Same bold, dynamic typography as the main logo. No colors — single tone only. Suitable for watermarks, embossing, engraving. Output both versions, PNG, high resolution.`
+                    prompt: `Create a monochrome version of the "${name}" logo. Pure white version on transparent background (for dark contexts) and pure black version on transparent background (for light contexts). Same typography and distinctive brand element as the main logo. No colors — single tone only. Suitable for embossing on product packaging, watermarks, engraving on the physical ${productName || 'product'}. Output both versions, PNG, high resolution.`
                 },
                 {
                     label: 'Favicon / ikona',
-                    prompt: `Design a compact app icon / favicon for the brand "${name}". It should be a single lettermark or abstract symbol that represents the brand (boxing + music + energy). Use ${primaryHex} neon blue on dark (#0A0A0A) background. Must be recognizable at 32x32px and 512x512px. Rounded square shape. Minimalist, bold, no text — just the icon/symbol. Output as PNG, square format, high resolution.`
+                    prompt: `Design a compact app icon / favicon for the brand "${name}". Extract the most recognizable visual element from the logo — the distinctive letterform or symbol — and use it as a standalone icon. ${primaryHex} (${primaryName}) on ${darkNeutral} (${darkNeutralName}) background. The icon should instantly evoke "${name}" and its connection to ${productName || 'the product'}. Must be recognizable at 32x32px and 512x512px. Rounded square shape. Minimalist, bold, no text. Output as PNG, square format, high resolution.`
                 },
                 {
                     label: 'Logo z ikoną (combo)',
-                    prompt: `Create a logo combination mark for "${name}" — a dynamic icon/symbol paired with the wordmark. The icon should abstractly represent: a fist, a sound wave, or a lightning strike (choose what looks best). Colors: ${primaryHex} for the icon, white for the text on black background. Typography: bold, ${headingFontName}-style. The icon should be usable separately as well. Modern, tech-sport aesthetic. Output on transparent background, PNG, high resolution.`
+                    prompt: `Create a combination mark logo for "${name}" — an abstract icon paired with the wordmark. The icon should visually represent the brand's core concept: ${description ? description.split('.')[0] + '.' : productName || name}. Colors: ${primaryHex} (${primaryName}) for the icon with ${secondaryHex} (${secondaryName}) details, ${lightNeutral} text for the wordmark, on ${darkNeutral} (${darkNeutralName}) background. Typography: ${headingFontName}-style. The icon should be usable separately as a standalone mark. ${productContext} Output on transparent background, PNG, high resolution.`
                 },
                 {
                     label: 'Logo animowane (concept)',
-                    prompt: `Design a logo animation concept sheet for "${name}". Show 4-6 keyframes of the logo animating: the text appears with an electric pulse effect, neon ${primaryHex} blue glows intensify, then ${secondaryHex} magenta sparks fly off. Dark background (#0A0A0A). The animation should feel like a boxing punch impact combined with a bass drop. Show the frames as a storyboard on one image. Modern motion design aesthetic.`
+                    prompt: `Design a logo animation concept sheet for "${name}". Show 4-6 keyframes: 1) Dark ${darkNeutral} screen, a ${primaryHex} (${primaryName}) element appears — inspired by the brand's product (${productName || 'core offering'}). 2) The element transforms/moves with fluid motion. 3) It resolves into the distinctive brand symbol. 4) The full wordmark "${name}" assembles around or alongside the symbol. 5) ${accentHex} (${accentName}) highlight flashes, logo settles with a subtle glow. Dark ${darkNeutral} background throughout. The animation should feel like: ${tagline || description.split('.')[0] || name}. Show as storyboard on one image.`
                 }
             ];
 
             // --- MOCKUP PROMPTS ---
             const mockupPrompts = [
                 {
-                    label: 'Czarna koszulka z logo',
-                    prompt: `Professional product mockup: black premium cotton t-shirt with the "${name}" logo printed on the chest. The logo is in ${primaryHex} (electric blue) neon color. T-shirt laid flat on a dark concrete surface or worn by an athletic model in a dimly lit gym environment. Dramatic lighting with ${primaryHex} blue LED glow accents. Photography style: high-end streetwear brand campaign. 4K, photorealistic.`
+                    label: 'Koszulka z logo',
+                    prompt: `Professional product mockup: premium cotton t-shirt with the "${name}" logo printed on the chest. Logo in ${primaryHex} (${primaryName}) with subtle ${secondaryHex} (${secondaryName}) accent. The t-shirt color and setting should match the brand's aesthetic — ${description ? description.split('.').slice(0, 2).join('.') + '.' : ''}. Model or flat-lay in a lifestyle environment appropriate for the ${productName || 'brand'} category. Photography style: modern DTC brand campaign like Quip, Hims, or Glossier. 4K, photorealistic.`
                 },
                 {
                     label: 'Czapka z logo',
-                    prompt: `Professional product mockup: black structured snapback cap with the "${name}" logo embroidered on the front in ${primaryHex} (electric blue). Side view and front view. The cap is placed on a dark surface with subtle neon light reflections. Background: dark, moody, gym/urban aesthetic. Secondary accent: small ${secondaryHex} tag on the side. Photorealistic, studio quality, 4K.`
+                    prompt: `Professional product mockup: structured cap with the "${name}" logo embroidered on the front in ${primaryHex} (${primaryName}). The distinctive brand icon on the side in ${secondaryHex} (${secondaryName}). Small ${accentHex} (${accentName}) accent stitching on the back strap. Clean, minimal design. Photographed on a styled surface with props that reference the ${productName || 'brand'} world — subtle, tasteful. Bright, premium feel. Photorealistic, studio quality, 4K.`
                 },
                 {
-                    label: 'Kubek z logo',
-                    prompt: `Professional product mockup: matte black ceramic mug with the "${name}" logo and tagline "${tagline}" printed in ${primaryHex} and white. The mug is photographed in a modern, dark kitchen or on a dark desk. Steam rising from hot coffee. Dramatic side lighting creating ${primaryHex} blue reflections on the mug surface. Photorealistic, 4K, product photography style.`
+                    label: 'Kubek / termos z logo',
+                    prompt: `Professional product mockup: premium drinkware (mug or travel thermos) with the "${name}" logo and tagline "${tagline}" printed in ${primaryHex} (${primaryName}) and ${darkNeutral}. Photographed on a clean, styled surface next to the ${productName || 'main product'} or in a lifestyle setting that matches the brand's world. Soft natural lighting, warm tones. The drinkware style (matte/glossy, color) should match the brand's palette — base color ${lightNeutral} or ${darkNeutral}. Photorealistic, 4K, product photography.`
                 },
                 {
                     label: 'Opakowanie produktu',
-                    prompt: `Design a premium product packaging box for the "${name}" brand — a smart boxing machine. The box is predominantly black (#0A0A0A) with ${primaryHex} neon blue accent lines and the logo prominently displayed. Features: product silhouette graphic on the side in ${accentHex} (lime), key features listed in white text using clean ${bodyFont?.title || 'Inter'} font. The box has a premium laminat finish. Show 3/4 angle view. Photorealistic mockup, 4K.`
+                    prompt: `Design a premium product packaging box for "${name}" brand's ${productName || 'flagship product'}. The box is predominantly ${lightNeutral} (${lightNeutralName}) with ${primaryHex} (${primaryName}) accent lines and patterns that reflect the product's function. "${name}" logo prominently displayed on front. Side panel shows product silhouette or photo with ${accentHex} (${accentName}) highlight details. Key features listed in ${bodyFontName} font. Subtitle in ${accentFontName}. Soft-touch matte finish with spot UV on the logo. Show 3/4 angle view. Premium unboxing feel — think Apple meets ${productName ? 'the ' + productName + ' category' : 'modern DTC'}. Photorealistic mockup, 4K.`
                 },
                 {
-                    label: 'Rękawice bokserskie z logo',
-                    prompt: `Professional product mockup: black boxing gloves with the "${name}" logo in ${primaryHex} (electric blue) on the knuckle area. Premium leather texture, ${secondaryHex} magenta stitching accents. Photographed hanging by their laces against a dark gym wall with dramatic lighting. Neon glow effect around the logo. Photorealistic, 4K, commercial product photography.`
+                    label: `${productName || 'Produkt'} z brandingiem`,
+                    prompt: `Professional product mockup: ${productName ? 'a ' + productName : 'the main product'} branded with the "${name}" logo in ${primaryHex} (${primaryName}), subtly applied on the product body. Premium finish — ${secondaryHex} (${secondaryName}) accent details on functional elements. Photographed in a lifestyle setting natural for this product — ${productName ? 'where someone would actually use a ' + productName : 'appropriate for the brand'}. Soft, professional lighting with subtle ${primaryHex} color cast. ${description ? description.split('.')[0] + '.' : ''} Photorealistic, 4K, commercial product photography.`
                 },
                 {
                     label: 'Social media avatar',
-                    prompt: `Design a social media profile picture for the "${name}" brand. Square format (1:1). The favicon/icon version of the logo centered on a dark (#0A0A0A) background with a subtle radial gradient of ${primaryHex} blue glow behind it. Clean, bold, instantly recognizable at small sizes. Output 1080x1080px, PNG.`
+                    prompt: `Design a social media profile picture for the "${name}" brand. Square format (1:1). The favicon/icon version of the logo (the distinctive brand symbol) centered on a ${lightNeutral} (${lightNeutralName}) background with a subtle radial ${primaryHex} (${primaryName}) glow behind it. Clean, bold, instantly recognizable at small sizes. The icon style should reflect the brand's personality — ${tagline || name}. Output 1080x1080px, PNG.`
                 },
                 {
                     label: 'Banner social media',
-                    prompt: `Design a social media cover/banner for the "${name}" brand. Wide format (16:9). Dark background with dynamic neon light trails in ${primaryHex} blue and ${secondaryHex} magenta. Logo on the left side, tagline "${tagline}" in ${headingFontName}-style font on the right. Subtle boxing glove silhouette or sound wave pattern integrated into the background. Modern, electric, high-energy aesthetic. Output 1920x1080px.`
+                    prompt: `Design a social media cover/banner for "${name}". Wide format (16:9). Left side: the ${productName || 'product'} shown in use or a close-up detail shot with ${primaryHex} (${primaryName}) color tint. Right side: clean space with the "${name}" logo and tagline "${tagline}" in ${headingFontName} font. A flowing design element in ${primaryHex} and ${secondaryHex} connects both halves. Bottom accent in ${accentHex} (${accentName}). ${darkNeutral} or ${lightNeutral} base depending on brand mood. ${description ? description.split('.')[0] + '.' : ''} Output 1920x1080px.`
                 },
                 {
-                    label: 'Naklejka / sticker',
-                    prompt: `Design a set of 4 brand stickers for "${name}": 1) Logo die-cut sticker (${primaryHex} on black), 2) Round sticker with icon + brand name, 3) Rectangular sticker with tagline "${tagline}" in ${accentHex} lime, 4) Holographic-style sticker with abstract pattern from brand colors. All on one sheet, mockup style on a dark surface. Sticker aesthetic: streetwear/gaming/sport. High resolution.`
+                    label: 'Naklejki / stickery',
+                    prompt: `Design a set of 4 brand stickers for "${name}": 1) Logo die-cut sticker (${primaryHex} ${primaryName} on ${lightNeutral}). 2) Round sticker with the brand icon + "${name}" text. 3) Rectangular sticker with tagline "${tagline}" in ${secondaryHex} (${secondaryName}). 4) Holographic-style sticker with abstract pattern inspired by the ${productName || 'product'} and brand colors (${primaryHex}, ${secondaryHex}, ${accentHex}). All on one sheet, mockup style on a surface appropriate for the brand. Premium sticker aesthetic. High resolution.`
                 }
             ];
 
@@ -3689,7 +3727,7 @@
 
         // Branding delivery
         let lastBrandingEmailSentAt = 0;
-        const BRANDING_EMAIL_COOLDOWN = 30 * 60 * 1000;
+        const BRANDING_EMAIL_COOLDOWN = 60 * 1000; // 1 min (prevent double-click only)
 
         function updateBrandingDeliverUI() {
             const btn = document.getElementById('branding-deliver-btn');
@@ -3725,7 +3763,7 @@
                     const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#branding`;
 
-                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -3741,8 +3779,14 @@
                         })
                     });
 
-                    lastBrandingEmailSentAt = emailNow;
-                    showToast('Branding przekazany — email wysłany do klienta', 'success');
+                    const emailResult = await emailRes.json();
+                    if (!emailRes.ok || !emailResult.success) {
+                        console.error('Email send failed:', emailResult);
+                        showToast('Branding przekazany, ale email nie został wysłany: ' + (emailResult.error || 'Nieznany błąd'), 'error');
+                    } else {
+                        lastBrandingEmailSentAt = emailNow;
+                        showToast('Branding przekazany — email wysłany do klienta', 'success');
+                    }
                 } else {
                     showToast('Branding przekazany klientowi', 'success');
                 }
@@ -3799,7 +3843,7 @@
         window.saveSalesPageUrl = saveSalesPageUrl;
 
         let lastSalesPageEmailSentAt = 0;
-        const SALES_PAGE_EMAIL_COOLDOWN = 30 * 60 * 1000;
+        const SALES_PAGE_EMAIL_COOLDOWN = 60 * 1000; // 1 min (prevent double-click only)
 
         function updateSalesPageDeliverUI() {
             const btn = document.getElementById('sales-page-deliver-btn');
@@ -3847,7 +3891,7 @@
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#strona`;
                     const salesPageUrl = workflow.sales_page_url || '';
 
-                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -3864,8 +3908,14 @@
                         })
                     });
 
-                    lastSalesPageEmailSentAt = emailNow;
-                    showToast('Strona przekazana — email wysłany do klienta', 'success');
+                    const emailResult = await emailRes.json();
+                    if (!emailRes.ok || !emailResult.success) {
+                        console.error('Email send failed:', emailResult);
+                        showToast('Strona przekazana, ale email nie został wysłany: ' + (emailResult.error || 'Nieznany błąd'), 'error');
+                    } else {
+                        lastSalesPageEmailSentAt = emailNow;
+                        showToast('Strona przekazana — email wysłany do klienta', 'success');
+                    }
                 } else {
                     showToast('Strona przekazana klientowi', 'success');
                 }
@@ -4244,7 +4294,7 @@
 
         // Throttle: max 1 email per 30 min per workflow
         let lastReportEmailSentAt = 0;
-        const REPORT_EMAIL_COOLDOWN = 30 * 60 * 1000; // 30 min
+        const REPORT_EMAIL_COOLDOWN = 60 * 1000; // 1 min (prevent double-click only)
 
         async function approveAndPublishReport(id) {
             const report = reports.find(r => r.id === id);
