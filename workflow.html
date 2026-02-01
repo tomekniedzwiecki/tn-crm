@@ -1319,10 +1319,6 @@
             </div>
             <div class="p-5 space-y-4">
                 <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Nazwa / wariant</label>
-                    <input type="text" id="logo-title-input" class="input-field w-full text-sm text-white px-3 py-3 rounded-lg" placeholder="np. Logo główne, Logo ciemne tło...">
-                </div>
-                <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wariant</label>
                     <select id="logo-variant-input" class="input-field w-full text-sm text-white px-3 py-2 rounded-lg">
                         <option value="main">Główne</option>
@@ -1445,10 +1441,6 @@
             </div>
             <div class="p-5 space-y-4">
                 <div>
-                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Nazwa</label>
-                    <input type="text" id="mockup-title-input" class="input-field w-full text-sm text-white px-3 py-3 rounded-lg" placeholder="np. Koszulka, Czapka, Kubek...">
-                </div>
-                <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Plik graficzny</label>
                     <input type="file" id="mockup-file-input" accept=".png,.jpg,.jpeg,.webp" class="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-zinc-700 file:text-white hover:file:bg-zinc-600">
                 </div>
@@ -1509,7 +1501,24 @@
         </div>
     </div>
 
+    <!-- Image Lightbox -->
+    <div id="image-lightbox" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 z-[60] cursor-pointer" onclick="closeImageLightbox()">
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
+        <button onclick="closeImageLightbox()" class="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors">
+            <i class="ph ph-x text-xl"></i>
+        </button>
+    </div>
+
     <script>
+        function openImageLightbox(url) {
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('image-lightbox').classList.remove('hidden');
+        }
+        function closeImageLightbox() {
+            document.getElementById('image-lightbox').classList.add('hidden');
+            document.getElementById('lightbox-img').src = '';
+        }
+
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -3113,18 +3122,15 @@
                 logosEmpty.classList.add('hidden');
                 logosContainer.innerHTML = logos.map(l => {
                     const meta = parseNotes(l.notes);
-                    const variant = variantLabels[meta.variant] || meta.variant || '';
                     const bgClass = meta.variant === 'light' ? 'bg-white' : 'bg-zinc-900';
                     return `
                     <div class="relative group">
-                        <div class="${bgClass} border border-white/5 rounded-lg p-4 aspect-square flex items-center justify-center">
+                        <div class="${bgClass} border border-white/5 rounded-lg p-4 aspect-square flex items-center justify-center cursor-pointer" onclick="openImageLightbox('${l.file_url}')">
                             <img src="${l.file_url}" alt="${l.title}" class="max-w-full max-h-full object-contain">
                         </div>
                         <button onclick="deleteBrandingItem('${l.id}')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <i class="ph ph-x text-xs"></i>
                         </button>
-                        <p class="text-zinc-400 text-xs mt-2 text-center">${l.title}</p>
-                        ${variant ? `<p class="text-zinc-600 text-[10px] text-center">${variant}</p>` : ''}
                     </div>`;
                 }).join('');
             } else {
@@ -3204,13 +3210,12 @@
                 mockupsEmpty.classList.add('hidden');
                 mockupsContainer.innerHTML = mockups.map(m => `
                     <div class="relative group">
-                        <div class="bg-zinc-900 border border-white/5 rounded-lg overflow-hidden aspect-square">
+                        <div class="bg-zinc-900 border border-white/5 rounded-lg overflow-hidden aspect-square cursor-pointer" onclick="openImageLightbox('${m.file_url}')">
                             <img src="${m.file_url}" alt="${m.title}" class="w-full h-full object-cover">
                         </div>
                         <button onclick="deleteBrandingItem('${m.id}')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <i class="ph ph-x text-xs"></i>
                         </button>
-                        <p class="text-zinc-400 text-xs mt-2 text-center">${m.title}</p>
                     </div>
                 `).join('');
             } else {
@@ -3323,10 +3328,10 @@
         function closeLogoModal() { document.getElementById('logo-modal').classList.add('hidden'); }
 
         async function saveLogo() {
-            const title = document.getElementById('logo-title-input').value.trim();
             const variant = document.getElementById('logo-variant-input').value;
             const file = document.getElementById('logo-file-input').files[0];
-            if (!title || !file) { showToast('Podaj nazwę i wybierz plik', 'error'); return; }
+            if (!file) { showToast('Wybierz plik', 'error'); return; }
+            const title = variantLabels[variant] || variant;
 
             document.getElementById('logo-upload-progress').classList.remove('hidden');
             const ext = file.name.split('.').pop();
@@ -3414,9 +3419,9 @@
         function closeMockupModal() { document.getElementById('mockup-modal').classList.add('hidden'); }
 
         async function saveMockup() {
-            const title = document.getElementById('mockup-title-input').value.trim();
             const file = document.getElementById('mockup-file-input').files[0];
-            if (!title || !file) { showToast('Podaj nazwę i wybierz plik', 'error'); return; }
+            if (!file) { showToast('Wybierz plik', 'error'); return; }
+            const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
 
             document.getElementById('mockup-upload-progress').classList.remove('hidden');
             const ext = file.name.split('.').pop();

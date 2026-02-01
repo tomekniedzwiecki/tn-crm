@@ -1105,7 +1105,24 @@
         </div>
     </div>
 
+    <!-- Image Lightbox -->
+    <div id="image-lightbox" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 z-[60] cursor-pointer" onclick="closeImageLightbox()">
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
+        <button onclick="closeImageLightbox()" class="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors">
+            <i class="ph ph-x text-xl"></i>
+        </button>
+    </div>
+
     <script>
+        function openImageLightbox(url) {
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('image-lightbox').classList.remove('hidden');
+        }
+        function closeImageLightbox() {
+            document.getElementById('image-lightbox').classList.add('hidden');
+            document.getElementById('lightbox-img').src = '';
+        }
+
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1822,15 +1839,10 @@
                 logosEmpty.classList.add('hidden');
                 logosContainer.innerHTML = logos.map(l => {
                     const meta = parseBrandNotes(l.notes);
-                    const variant = clientVariantLabels[meta.variant] || '';
                     const bgClass = meta.variant === 'light' ? 'bg-white' : 'bg-[#0a0a0a]';
                     return `
-                    <div>
-                        <div class="card ${bgClass} p-5 aspect-square flex items-center justify-center">
-                            <img src="${l.file_url}" alt="${l.title}" class="max-w-full max-h-full object-contain">
-                        </div>
-                        <p class="text-white text-xs mt-2 text-center">${l.title}</p>
-                        ${variant ? `<p class="text-tertiary text-[10px] text-center">${variant}</p>` : ''}
+                    <div class="card ${bgClass} p-5 aspect-square flex items-center justify-center cursor-pointer hover:ring-1 hover:ring-white/10 transition-all" onclick="openImageLightbox('${l.file_url}')">
+                        <img src="${l.file_url}" alt="${l.title}" class="max-w-full max-h-full object-contain">
                     </div>`;
                 }).join('');
             } else {
@@ -1903,11 +1915,8 @@
             if (mockups.length > 0) {
                 mockupsEmpty.classList.add('hidden');
                 mockupsContainer.innerHTML = mockups.map(m => `
-                    <div class="card overflow-hidden">
+                    <div class="card overflow-hidden cursor-pointer hover:ring-1 hover:ring-white/10 transition-all" onclick="openImageLightbox('${m.file_url}')">
                         <img src="${m.file_url}" alt="${m.title}" class="w-full aspect-square object-cover">
-                        <div class="p-3 text-center">
-                            <p class="text-white text-sm">${m.title}</p>
-                        </div>
                     </div>
                 `).join('');
             } else {
