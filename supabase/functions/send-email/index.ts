@@ -33,6 +33,7 @@ const VALID_EMAIL_TYPES = [
   'workflow_created',
   'report_published',
   'branding_delivered',
+  'sales_page_shared',
   'direct'
 ]
 
@@ -49,7 +50,8 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   products_shared: 'Propozycje produktowe — wybierz swój produkt',
   workflow_created: 'Płatność przyjęta — podpisz umowę',
   report_published: 'Raport dotyczący Twojego produktu jest gotowy',
-  branding_delivered: 'Branding Twojej marki jest gotowy!'
+  branding_delivered: 'Branding Twojej marki jest gotowy!',
+  sales_page_shared: 'Twoja strona sprzedażowa jest gotowa!'
 }
 
 // Offer flow email types (use special reply-to)

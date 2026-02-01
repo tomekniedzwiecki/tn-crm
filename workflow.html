@@ -893,22 +893,31 @@
                                 <i class="ph ph-globe text-blue-400"></i>
                                 Strona sprzedazowa
                             </h3>
+                            <div class="flex items-center gap-3">
+                                <span id="sales-page-delivered-badge" class="hidden text-xs text-emerald-400 flex items-center gap-1">
+                                    <i class="ph ph-check-circle"></i> Przekazano klientowi
+                                </span>
+                                <button id="sales-page-deliver-btn" onclick="deliverSalesPage()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-paper-plane-tilt"></i> Przekaz klientowi
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-6 mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
+                        <!-- URL + Status bar -->
+                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mb-6">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="flex-1">
                                     <label class="block text-zinc-500 text-xs font-mono uppercase tracking-wider mb-2">URL strony</label>
                                     <div class="flex gap-2">
-                                        <input type="url" id="sales-page-url" class="input-field flex-1 text-sm text-white px-3 py-2.5 rounded-lg" placeholder="https://...">
-                                        <button onclick="saveSalesPageUrl()" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                            Zapisz
+                                        <input type="url" id="sales-page-url" class="input-field flex-1 text-sm text-white px-3 py-2.5 rounded-lg" placeholder="https://twoja-strona.pl">
+                                        <button onclick="saveSalesPageUrl()" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+                                            <i class="ph ph-floppy-disk"></i> Zapisz
                                         </button>
                                     </div>
                                 </div>
-                                <div>
+                                <div class="sm:w-40">
                                     <label class="block text-zinc-500 text-xs font-mono uppercase tracking-wider mb-2">Status</label>
-                                    <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-4 h-[42px]">
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <input type="radio" name="sales-page-status" value="draft" class="accent-zinc-500" checked>
                                             <span class="text-zinc-400 text-sm">Draft</span>
@@ -922,25 +931,30 @@
                             </div>
                         </div>
 
+                        <!-- Sharing status banner -->
+                        <div id="sales-page-sharing-banner" class="mb-6"></div>
+
+                        <!-- Preview -->
                         <div id="sales-page-preview" class="hidden">
-                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Podglad</h4>
-                            <div class="bg-zinc-900 border border-white/5 rounded-lg overflow-hidden aspect-video">
-                                <iframe id="sales-page-iframe" class="w-full h-full" src=""></iframe>
-                            </div>
-                            <div class="mt-4 flex gap-3">
-                                <a id="sales-page-link" href="#" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-2">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider">Podglad strony</h4>
+                                <a id="sales-page-link" href="#" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-1.5 transition-colors">
                                     <i class="ph ph-arrow-square-out"></i>
                                     Otworz w nowej karcie
                                 </a>
                             </div>
+                            <div class="bg-zinc-900 border border-white/5 rounded-xl overflow-hidden" style="height: 600px;">
+                                <iframe id="sales-page-iframe" class="w-full h-full" src=""></iframe>
+                            </div>
                         </div>
 
+                        <!-- Empty state -->
                         <div id="sales-page-empty" class="text-center py-16">
                             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
                                 <i class="ph ph-globe text-2xl text-zinc-600"></i>
                             </div>
                             <p class="text-zinc-500 text-sm">Brak strony sprzedazowej</p>
-                            <p class="text-zinc-600 text-xs mt-1">Dodaj URL strony powyzej</p>
+                            <p class="text-zinc-600 text-xs mt-1">Wklej URL strony powyzej i kliknij Zapisz</p>
                         </div>
                     </div><!-- /tab-strona -->
 
@@ -1644,7 +1658,7 @@
                 // These don't need DB queries
                 toggle('nav-check-dokumenty', workflow.contract_status === 'signed');
                 toggle('nav-check-produkty', !!workflow.products_shared_at);
-                toggle('nav-check-strona', !!workflow.sales_page_url);
+                toggle('nav-check-strona', !!workflow.sales_page_shared_at);
 
                 // These need DB queries
                 const [matsRes, brandRes, repsRes] = await Promise.all([
@@ -3770,6 +3784,8 @@
                 empty.classList.remove('hidden');
                 preview.classList.add('hidden');
             }
+
+            updateSalesPageDeliverUI();
         }
 
         async function saveSalesPageUrl() {
@@ -3789,6 +3805,84 @@
             }
         }
         window.saveSalesPageUrl = saveSalesPageUrl;
+
+        let lastSalesPageEmailSentAt = 0;
+        const SALES_PAGE_EMAIL_COOLDOWN = 30 * 60 * 1000;
+
+        function updateSalesPageDeliverUI() {
+            const btn = document.getElementById('sales-page-deliver-btn');
+            const badge = document.getElementById('sales-page-delivered-badge');
+            const banner = document.getElementById('sales-page-sharing-banner');
+            const hasUrl = !!workflow.sales_page_url;
+            const delivered = !!workflow.sales_page_shared_at;
+
+            if (btn) btn.classList.toggle('hidden', !hasUrl || delivered);
+            if (badge) badge.classList.toggle('hidden', !delivered);
+
+            if (banner) {
+                if (delivered) {
+                    const d = new Date(workflow.sales_page_shared_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+                    banner.innerHTML = `<div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-2.5 text-sm"><i class="ph-fill ph-check-circle text-emerald-400"></i><span class="text-emerald-300 text-xs">Strona udostępniona klientowi ${d}</span></div>`;
+                } else if (hasUrl) {
+                    banner.innerHTML = `<div class="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-2.5 text-sm"><i class="ph ph-warning text-amber-400"></i><span class="text-amber-300 text-xs">Strona jeszcze nie udostępniona klientowi</span></div>`;
+                } else {
+                    banner.innerHTML = '';
+                }
+            }
+        }
+
+        async function deliverSalesPage() {
+            if (!confirm('Przekazać stronę klientowi i wysłać email?')) return;
+
+            try {
+                const now = new Date().toISOString();
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ sales_page_shared_at: now })
+                    .eq('id', workflow.id);
+
+                if (error) throw error;
+
+                workflow.sales_page_shared_at = now;
+                updateSalesPageDeliverUI();
+                updateNavChecks();
+
+                const emailNow = Date.now();
+                const shouldSend = (emailNow - lastSalesPageEmailSentAt) > SALES_PAGE_EMAIL_COOLDOWN;
+
+                if (shouldSend && workflow.customer_email) {
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#strona`;
+                    const salesPageUrl = workflow.sales_page_url || '';
+
+                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            type: 'sales_page_shared',
+                            data: {
+                                email: workflow.customer_email,
+                                clientName,
+                                projectUrl,
+                                salesPageUrl
+                            }
+                        })
+                    });
+
+                    lastSalesPageEmailSentAt = emailNow;
+                    showToast('Strona przekazana — email wysłany do klienta', 'success');
+                } else {
+                    showToast('Strona przekazana klientowi', 'success');
+                }
+            } catch (err) {
+                console.error('Error delivering sales page:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.deliverSalesPage = deliverSalesPage;
 
         // =============================================
         // PRODUCTS MANAGEMENT

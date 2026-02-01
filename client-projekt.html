@@ -959,23 +959,31 @@
                 <h2 class="page-title">Strona sprzedażowa</h2>
 
                 <div id="sales-page-content" class="hidden">
-                    <div class="card overflow-hidden">
-                        <div class="aspect-video bg-[#0a0a0a] relative">
-                            <iframe id="sales-page-iframe" class="w-full h-full" src=""></iframe>
-                        </div>
-                        <div class="p-4 flex items-center justify-between border-t border-[#1a1a1a] flex-wrap gap-3">
-                            <div class="flex items-center gap-3">
-                                <span id="sales-page-status" class="badge badge-success">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                    Live
-                                </span>
-                                <span id="sales-page-url-display" class="text-tertiary text-sm truncate max-w-xs font-mono"></span>
+                    <!-- Info banner about graphics -->
+                    <div class="card p-4 mb-6" style="background: linear-gradient(135deg, rgba(234,179,8,0.06) 0%, rgba(234,179,8,0.02) 100%); border-color: rgba(234,179,8,0.15);">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i class="ph ph-paint-brush text-amber-400"></i>
                             </div>
-                            <a id="sales-page-link" href="#" target="_blank" class="btn-secondary text-sm py-2">
-                                Otwórz stronę
-                                <i class="ph ph-arrow-square-out"></i>
-                            </a>
+                            <div>
+                                <p class="text-amber-200 text-sm font-medium mb-1">Grafiki i zdjęcia w przygotowaniu</p>
+                                <p class="text-amber-200/60 text-xs leading-relaxed">Strona zawiera aktualnie treści tekstowe i układ. Profesjonalne grafiki, zdjęcia produktowe i elementy wizualne zostaną dodane w kolejnym etapie realizacji.</p>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- CTA card -->
+                    <div class="card p-8 md:p-12 text-center">
+                        <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <i class="ph ph-globe text-3xl text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-white font-semibold text-xl mb-3">Twoja strona jest gotowa</h3>
+                        <p class="text-tertiary text-sm leading-relaxed max-w-md mx-auto mb-8">Przygotowaliśmy Twoją stronę sprzedażową. Kliknij przycisk poniżej, aby ją zobaczyć.</p>
+                        <a id="sales-page-link" href="#" target="_blank" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-8 py-3.5 rounded-xl transition-colors text-sm">
+                            <i class="ph ph-arrow-square-out text-lg"></i>
+                            Otwórz stronę sprzedażową
+                        </a>
+                        <p id="sales-page-url-display" class="text-tertiary text-xs mt-4 font-mono opacity-50"></p>
                     </div>
                 </div>
 
@@ -984,8 +992,8 @@
                         <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
                             <i class="ph ph-globe text-3xl text-[#444]"></i>
                         </div>
-                        <h3 class="text-white font-medium text-lg mb-2">Brak strony sprzedażowej</h3>
-                        <p class="text-tertiary text-sm leading-relaxed">Link do Twojej strony sprzedażowej pojawi się tutaj, gdy zostanie przygotowana.</p>
+                        <h3 class="text-white font-medium text-lg mb-2">Strona w przygotowaniu</h3>
+                        <p class="text-tertiary text-sm leading-relaxed">Twoja strona sprzedażowa jest w trakcie realizacji. Pojawi się tutaj, gdy będzie gotowa.</p>
                     </div>
                 </div>
             </div>
@@ -1949,21 +1957,11 @@
             const content = document.getElementById('sales-page-content');
             const empty = document.getElementById('sales-page-empty');
 
-            if (workflow.sales_page_url) {
+            if (workflow.sales_page_url && workflow.sales_page_shared_at) {
                 empty.classList.add('hidden');
                 content.classList.remove('hidden');
-                document.getElementById('sales-page-iframe').src = workflow.sales_page_url;
                 document.getElementById('sales-page-link').href = workflow.sales_page_url;
                 document.getElementById('sales-page-url-display').textContent = workflow.sales_page_url;
-
-                const statusBadge = document.getElementById('sales-page-status');
-                if (workflow.sales_page_status === 'live') {
-                    statusBadge.className = 'badge badge-emerald';
-                    statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-current"></span>Live';
-                } else {
-                    statusBadge.className = 'badge badge-amber';
-                    statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-current"></span>Draft';
-                }
             } else {
                 content.classList.add('hidden');
                 empty.classList.remove('hidden');
