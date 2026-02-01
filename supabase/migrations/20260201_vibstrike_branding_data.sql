@@ -1,17 +1,17 @@
--- VibeStrike Branding Data for workflow 01523ee9-c545-4748-9f18-ebf00eca17e8
+-- VibeStrike Branding Data for workflow 4795bd40-c483-4499-8d68-a8fc6ae3641f
 -- Uruchom w Supabase SQL Editor
 -- UWAGA: Najpierw uruchom migrację 20260201_branding_extended_types.sql
 
 -- Wyczyść istniejące dane brandingowe dla tego workflow
 DELETE FROM workflow_branding
-WHERE workflow_id = '01523ee9-c545-4748-9f18-ebf00eca17e8'
+WHERE workflow_id = '4795bd40-c483-4499-8d68-a8fc6ae3641f'
   AND type IN ('brand_info', 'color', 'font');
 
 -- ═══════════════════════════════════════════════════════
 -- 1. BRAND INFO
 -- ═══════════════════════════════════════════════════════
 INSERT INTO workflow_branding (workflow_id, type, title, value, sort_order) VALUES (
-  '01523ee9-c545-4748-9f18-ebf00eca17e8',
+  '4795bd40-c483-4499-8d68-a8fc6ae3641f',
   'brand_info',
   'VibeStrike',
   '{"name":"VibeStrike","domain":"vibestrike.pl","tagline":"Uderz w rytm. Poczuj energię.","description":"VibeStrike to marka inteligentnych systemów treningowych, które łączą dynamikę boksu z energią muzyki. Zamieniamy Twój salon w interaktywną arenę fitness — bez nudy, bez wymówek, bez wychodzenia z domu. Nasz flagowy produkt to muzyczna maszyna bokserska z systemem LED i Bluetooth, która sprawia, że każdy trening staje się wciągającą grą. Dla tych, którzy chcą rozładować stres, spalić kalorie i bawić się przy tym lepiej niż na imprezie."}',
@@ -23,21 +23,21 @@ INSERT INTO workflow_branding (workflow_id, type, title, value, sort_order) VALU
 -- ═══════════════════════════════════════════════════════
 
 INSERT INTO workflow_branding (workflow_id, type, title, value, notes, sort_order) VALUES
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'color', 'Electric Blue',  '#00D4FF', '{"role":"primary"}',   0),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'color', 'Neon Magenta',   '#FF2D78', '{"role":"secondary"}', 1),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'color', 'Acid Lime',      '#C8FF00', '{"role":"accent"}',    2),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'color', 'Deep Black',     '#0A0A0A', '{"role":"neutral"}',   3),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'color', 'Anthracite',     '#1A1A2E', '{"role":"neutral"}',   4),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'color', 'Pure White',     '#FFFFFF', '{"role":"neutral"}',   5);
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'color', 'Electric Blue',  '#00D4FF', '{"role":"primary"}',   0),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'color', 'Neon Magenta',   '#FF2D78', '{"role":"secondary"}', 1),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'color', 'Acid Lime',      '#C8FF00', '{"role":"accent"}',    2),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'color', 'Deep Black',     '#0A0A0A', '{"role":"neutral"}',   3),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'color', 'Anthracite',     '#1A1A2E', '{"role":"neutral"}',   4),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'color', 'Pure White',     '#FFFFFF', '{"role":"neutral"}',   5);
 
 -- ═══════════════════════════════════════════════════════
 -- 3. CZCIONKI — dynamiczna typografia, sportowa ale przystępna
 -- ═══════════════════════════════════════════════════════
 
 INSERT INTO workflow_branding (workflow_id, type, title, value, notes, sort_order) VALUES
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'font', 'Bebas Neue', 'heading', '{"role":"heading","weights":["400"]}',              0),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'font', 'Inter',      'body',    '{"role":"body","weights":["400","500","600","700"]}', 1),
-  ('01523ee9-c545-4748-9f18-ebf00eca17e8', 'font', 'Orbitron',   'accent',  '{"role":"accent","weights":["400","500","700","900"]}', 2);
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'font', 'Bebas Neue', 'heading', '{"role":"heading","weights":["400"]}',              0),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'font', 'Inter',      'body',    '{"role":"body","weights":["400","500","600","700"]}', 1),
+  ('4795bd40-c483-4499-8d68-a8fc6ae3641f', 'font', 'Orbitron',   'accent',  '{"role":"accent","weights":["400","500","700","900"]}', 2);
 
 
 -- ═══════════════════════════════════════════════════════════════════════

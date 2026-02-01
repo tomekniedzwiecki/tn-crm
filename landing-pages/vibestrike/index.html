@@ -109,9 +109,8 @@
       display: flex; justify-content: space-between; align-items: center;
       max-width: 1200px; margin: 0 auto; padding: 0 24px;
     }
-    .logo { font-family: var(--font-heading); font-size: 28px; letter-spacing: 2px; text-decoration: none; }
-    .logo-vibe { color: var(--blue); }
-    .logo-strike { color: var(--white); }
+    .logo { display: flex; align-items: center; text-decoration: none; }
+    .logo img { height: 48px; width: auto; object-fit: contain; }
     .header-nav { display: flex; align-items: center; gap: 32px; }
     .header-nav a {
       font-family: var(--font-body); font-size: 13px; font-weight: 500;
@@ -127,8 +126,171 @@
       transition: background 0.3s, color 0.3s;
     }
     .header-cta:hover { background: var(--blue); color: var(--black); }
+    /* Hamburger */
+    .hamburger {
+      display: none; background: none; border: none; cursor: pointer; padding: 4px;
+      flex-direction: column; gap: 5px; z-index: 101;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px; background: var(--white);
+      border-radius: 2px; transition: transform 0.3s, opacity 0.3s;
+    }
+    .hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.active span:nth-child(2) { opacity: 0; }
+    .hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-menu {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,10,0.97); backdrop-filter: blur(20px);
+      z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      font-family: var(--font-heading); font-size: 32px; letter-spacing: 2px;
+      color: var(--white); text-decoration: none; transition: color 0.3s;
+    }
+    .mobile-menu a:hover { color: var(--blue); }
+    .mobile-menu .mobile-cta {
+      font-family: var(--font-accent); font-size: 14px; padding: 16px 40px;
+      border-radius: 10px; background: var(--blue); color: var(--black);
+      text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+    }
     @media (max-width: 768px) {
       .header-nav a:not(.header-cta) { display: none; }
+      .header-cta { display: none; }
+      .hamburger { display: flex; }
+    }
+
+    /* Sticky mobile CTA */
+    .sticky-cta {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 98;
+      padding: 12px 16px; background: rgba(10,10,10,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(0,212,255,0.1);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    }
+    .sticky-cta a {
+      display: block; width: 100%; text-align: center; padding: 14px 24px;
+      font-family: var(--font-accent); font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px; border-radius: 10px;
+      background: var(--blue); color: var(--black);
+      text-decoration: none; box-shadow: 0 0 20px rgba(0,212,255,0.3);
+    }
+    @media (max-width: 768px) {
+      .sticky-cta { display: block; }
+      .footer { padding-bottom: 80px; }
+    }
+
+    /* How it works */
+    .how-it-works { padding: 120px 24px; background: var(--black); }
+    .how-header { text-align: center; margin-bottom: 64px; }
+    .how-header h2 {
+      font-family: var(--font-heading); font-size: clamp(36px, 5vw, 60px);
+      color: var(--white); margin-bottom: 16px;
+    }
+    .how-header p { font-size: 16px; color: rgba(255,255,255,0.5); max-width: 500px; margin: 0 auto; }
+    .how-steps {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      max-width: 900px; margin: 0 auto; position: relative;
+    }
+    .how-steps::before {
+      content: ''; position: absolute; top: 40px; left: 16%; right: 16%; height: 2px;
+      background: linear-gradient(90deg, var(--blue), var(--magenta), var(--lime));
+      opacity: 0.2;
+    }
+    .how-step { text-align: center; position: relative; }
+    .how-step-num {
+      width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-heading); font-size: 32px;
+      background: rgba(0,212,255,0.08); color: var(--blue);
+      border: 2px solid rgba(0,212,255,0.15);
+      position: relative; z-index: 1;
+    }
+    .how-step h3 {
+      font-family: var(--font-heading); font-size: 22px;
+      color: var(--white); margin-bottom: 8px; letter-spacing: 1px;
+    }
+    .how-step p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; }
+    @media (max-width: 768px) {
+      .how-it-works { padding: 80px 16px; }
+      .how-steps { grid-template-columns: 1fr; gap: 40px; }
+      .how-steps::before { display: none; }
+    }
+
+    /* Comparison table */
+    .comparison { padding: 120px 24px; background: linear-gradient(180deg, var(--black), var(--anthracite)); }
+    .comparison-header { text-align: center; margin-bottom: 64px; }
+    .comparison-header h2 {
+      font-family: var(--font-heading); font-size: clamp(36px, 5vw, 60px);
+      color: var(--white); margin-bottom: 16px;
+    }
+    .comparison-table {
+      max-width: 800px; margin: 0 auto; border-radius: 16px; overflow: hidden;
+      border: 1px solid rgba(0,212,255,0.1);
+    }
+    .comparison-table table { width: 100%; border-collapse: collapse; }
+    .comparison-table th, .comparison-table td {
+      padding: 16px 20px; text-align: center; font-size: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .comparison-table th {
+      font-family: var(--font-heading); font-size: 14px; letter-spacing: 1px;
+      color: rgba(255,255,255,0.4); background: rgba(26,26,46,0.6);
+    }
+    .comparison-table th:first-child { text-align: left; }
+    .comparison-table td:first-child { text-align: left; font-weight: 600; color: var(--white); }
+    .comparison-table td { color: rgba(255,255,255,0.6); }
+    .comparison-table th.highlight { color: var(--blue); background: rgba(0,212,255,0.06); }
+    .comparison-table td.highlight { background: rgba(0,212,255,0.02); }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .cmp-yes { color: var(--lime); font-weight: 700; }
+    .cmp-no { color: var(--magenta); }
+    .cmp-mid { color: rgba(255,255,255,0.35); }
+    @media (max-width: 768px) {
+      .comparison { padding: 64px 16px; }
+      .comparison-table th, .comparison-table td { padding: 12px 10px; font-size: 12px; }
+    }
+
+    /* Guarantee section */
+    .guarantee-section { padding: 100px 24px; background: var(--black); }
+    .guarantee-inner {
+      max-width: 900px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    }
+    .guarantee-item {
+      text-align: center; padding: 32px 16px;
+      background: rgba(26,26,46,0.4); border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .guarantee-item svg { color: var(--blue); margin-bottom: 16px; }
+    .guarantee-item h4 {
+      font-family: var(--font-heading); font-size: 18px;
+      color: var(--white); margin-bottom: 6px; letter-spacing: 1px;
+    }
+    .guarantee-item p { font-size: 12px; color: rgba(255,255,255,0.4); line-height: 1.6; }
+    @media (max-width: 768px) {
+      .guarantee-section { padding: 64px 16px; }
+      .guarantee-inner { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) { .guarantee-inner { grid-template-columns: 1fr; } }
+
+    /* Cookie banner */
+    .cookie-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      padding: 16px 24px; background: var(--anthracite); color: rgba(255,255,255,0.6);
+      font-size: 13px; display: flex; align-items: center; justify-content: center;
+      gap: 16px; flex-wrap: wrap; border-top: 1px solid rgba(0,212,255,0.1);
+      transform: translateY(100%); transition: transform 0.4s ease;
+    }
+    .cookie-banner.show { transform: translateY(0); }
+    .cookie-banner a { color: var(--blue); text-decoration: underline; }
+    .cookie-btn {
+      padding: 8px 24px; border-radius: 8px; border: none; cursor: pointer;
+      font-family: var(--font-accent); font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      background: var(--blue); color: var(--black);
+    }
+    @media (max-width: 768px) {
+      .cookie-banner { flex-direction: column; text-align: center; padding-bottom: 70px; }
     }
 
     /* ═══ HERO ═══ */
@@ -851,7 +1013,7 @@
   <!-- ═══ HEADER ═══ -->
   <header class="header">
     <div class="header-inner">
-      <a href="#" class="logo"><span class="logo-vibe">VIBE</span><span class="logo-strike">STRIKE</span></a>
+      <a href="#" class="logo"><img crossorigin="anonymous" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/branding/4795bd40-c483-4499-8d68-a8fc6ae3641f/logo_main_1769956913375.png" alt="VibeStrike"></a>
       <nav class="header-nav">
         <a href="#product">Produkt</a>
         <a href="#features">Funkcje</a>
@@ -859,8 +1021,20 @@
         <a href="#faq">FAQ</a>
         <a href="#offer" class="header-cta">Zamów teraz</a>
       </nav>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </header>
+
+  <!-- Mobile menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#product" class="mobile-link">Produkt</a>
+    <a href="#features" class="mobile-link">Funkcje</a>
+    <a href="#reviews" class="mobile-link">Opinie</a>
+    <a href="#faq" class="mobile-link">FAQ</a>
+    <a href="#offer" class="mobile-link mobile-cta">Zamów teraz</a>
+  </div>
 
   <!-- ═══ HERO ═══ -->
   <section class="hero" id="hero">
@@ -940,6 +1114,32 @@
           <span class="ph-size">800 &times; 1067 px &middot; 3:4</span>
           <span class="ph-overlay-text">STRESS / BURNOUT</span>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ HOW IT WORKS ═══ -->
+  <section class="how-it-works" id="how">
+    <div class="how-header">
+      <p class="section-label fade-in">Jak to działa</p>
+      <h2 class="fade-in delay-1">3 kroki do lepszego wieczoru</h2>
+      <p class="fade-in delay-2">Od rozpakowania do pierwszego ciosu — szybciej niż zamówisz pizzę.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step fade-in">
+        <div class="how-step-num">1</div>
+        <h3>Przyklej na ścianę</h3>
+        <p>Rzepy przemysłowe, zero wiercenia, zero śladów. 60 sekund — Twoja arena jest gotowa.</p>
+      </div>
+      <div class="how-step fade-in delay-1">
+        <div class="how-step-num">2</div>
+        <h3>Połącz Bluetooth</h3>
+        <p>Sparuj telefon, włącz ulubioną playlistę. Cele LED synchronizują się z beatem.</p>
+      </div>
+      <div class="how-step fade-in delay-2">
+        <div class="how-step-num">3</div>
+        <h3>Uderz w rytm</h3>
+        <p>Trafiaj w świecące cele. 15 minut — i cały stres dnia zostaje na piankach.</p>
       </div>
     </div>
   </section>
@@ -1296,6 +1496,96 @@
     </div>
   </section>
 
+  <!-- ═══ COMPARISON ═══ -->
+  <section class="comparison">
+    <div class="comparison-header">
+      <p class="section-label fade-in" style="color: var(--magenta);">Porównanie</p>
+      <h2 class="fade-in delay-1">VibeStrike vs. alternatywy</h2>
+    </div>
+    <div class="comparison-table fade-in delay-2">
+      <table>
+        <thead>
+          <tr>
+            <th>Cecha</th>
+            <th class="highlight">VibeStrike</th>
+            <th>Worek bokserski</th>
+            <th>Siłownia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Montaż bez wiercenia</td>
+            <td class="highlight"><span class="cmp-yes">✓ Rzepy 60s</span></td>
+            <td><span class="cmp-no">✗ Wymaga haka</span></td>
+            <td><span class="cmp-mid">—</span></td>
+          </tr>
+          <tr>
+            <td>Głośność</td>
+            <td class="highlight"><span class="cmp-yes">&lt;30 dB</span></td>
+            <td><span class="cmp-no">70+ dB</span></td>
+            <td><span class="cmp-mid">—</span></td>
+          </tr>
+          <tr>
+            <td>Synchronizacja z muzyką</td>
+            <td class="highlight"><span class="cmp-yes">✓ BeatSync BT</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Śledzenie wyników</td>
+            <td class="highlight"><span class="cmp-yes">✓ Aplikacja</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-mid">Częściowo</span></td>
+          </tr>
+          <tr>
+            <td>Koszt miesięczny</td>
+            <td class="highlight"><span class="cmp-yes">0 PLN</span></td>
+            <td><span class="cmp-mid">0 PLN</span></td>
+            <td><span class="cmp-no">150–300 PLN</span></td>
+          </tr>
+          <tr>
+            <td>Miejsce na podłodze</td>
+            <td class="highlight"><span class="cmp-yes">0 m² (ściana)</span></td>
+            <td><span class="cmp-no">1+ m²</span></td>
+            <td><span class="cmp-mid">Dojazd</span></td>
+          </tr>
+          <tr>
+            <td>Dla całej rodziny</td>
+            <td class="highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗ Niebezpieczny</span></td>
+            <td><span class="cmp-no">✗ Karnety</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ GUARANTEE ═══ -->
+  <section class="guarantee-section">
+    <div class="guarantee-inner">
+      <div class="guarantee-item fade-in">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <h4>14 dni na zwrot</h4>
+        <p>Bez podawania przyczyny. Pełny zwrot pieniędzy.</p>
+      </div>
+      <div class="guarantee-item fade-in delay-1">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <h4>Gwarancja 24 msc</h4>
+        <p>Pełna gwarancja producenta na elektronikę i pianki.</p>
+      </div>
+      <div class="guarantee-item fade-in delay-2">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="m16 8 5 3-5 3z"/></svg>
+        <h4>Darmowa dostawa</h4>
+        <p>Kurier 24h na terenie całej Polski. Bez minimalnej kwoty.</p>
+      </div>
+      <div class="guarantee-item fade-in delay-3">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <h4>Bezpieczna płatność</h4>
+        <p>BLIK, karta, PayU, za pobraniem. Szyfrowane SSL.</p>
+      </div>
+    </div>
+  </section>
+
   <div class="section-divider"></div>
 
   <!-- ═══ OFFER ═══ -->
@@ -1371,7 +1661,7 @@
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <div class="footer-logo"><span class="vibe">VIBE</span>STRIKE</div>
+        <div class="footer-logo"><img crossorigin="anonymous" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/branding/4795bd40-c483-4499-8d68-a8fc6ae3641f/logo_main_1769956913375.png" alt="VibeStrike" style="height:28px; width:auto; filter:brightness(1.2);"></div>
         <p>Uderz w rytm. Poczuj energię. Zamień salon w arenę, a frustrację w endorfiny.</p>
       </div>
       <div class="footer-links">
@@ -1394,7 +1684,52 @@
     </div>
   </footer>
 
+  <!-- Sticky mobile CTA -->
+  <div class="sticky-cta" id="stickyCta">
+    <a href="#offer">Zamów VibeStrike — 349 PLN</a>
+  </div>
+
+  <!-- Cookie banner -->
+  <div class="cookie-banner" id="cookieBanner">
+    <span>Ta strona używa plików cookies w celu zapewnienia najlepszej jakości usług. <a href="#">Polityka prywatności</a></span>
+    <button class="cookie-btn" id="cookieAccept">Akceptuję</button>
+  </div>
+
   <script>
+    /* Hamburger menu */
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('active');
+      mobileMenu.classList.toggle('open');
+      document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+    });
+    document.querySelectorAll('.mobile-link').forEach(a => {
+      a.addEventListener('click', () => {
+        hamburger.classList.remove('active');
+        mobileMenu.classList.remove('open');
+        document.body.style.overflow = '';
+      });
+    });
+
+    /* Sticky CTA — show after scrolling past hero */
+    const stickyCta = document.getElementById('stickyCta');
+    const heroEl = document.getElementById('hero');
+    window.addEventListener('scroll', () => {
+      if (window.innerWidth <= 768) {
+        stickyCta.style.display = window.scrollY > heroEl.offsetHeight ? 'block' : 'none';
+      }
+    });
+
+    /* Cookie banner */
+    if (!localStorage.getItem('cookiesAccepted')) {
+      setTimeout(() => document.getElementById('cookieBanner').classList.add('show'), 2000);
+    }
+    document.getElementById('cookieAccept').addEventListener('click', () => {
+      document.getElementById('cookieBanner').classList.remove('show');
+      localStorage.setItem('cookiesAccepted', '1');
+    });
+
     /* ═══ SCROLL ANIMATIONS ═══ */
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -1465,6 +1800,49 @@
       } else {
         h.style.background = 'rgba(10,10,10,0.7)';
       }
+    });
+
+    /* Logo: remove white background + trim whitespace */
+    function processLogo(img) {
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      const d = data.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] > 230 && d[i+1] > 230 && d[i+2] > 230) {
+          d[i+3] = 0;
+        }
+      }
+      ctx.putImageData(data, 0, 0);
+      let t = c.height, b = 0, l = c.width, r = 0;
+      const trimData = ctx.getImageData(0, 0, c.width, c.height).data;
+      for (let y = 0; y < c.height; y++) {
+        for (let x = 0; x < c.width; x++) {
+          if (trimData[(y * c.width + x) * 4 + 3] > 10) {
+            if (y < t) t = y;
+            if (y > b) b = y;
+            if (x < l) l = x;
+            if (x > r) r = x;
+          }
+        }
+      }
+      const pad = 4;
+      l = Math.max(0, l - pad);
+      t = Math.max(0, t - pad);
+      r = Math.min(c.width - 1, r + pad);
+      b = Math.min(c.height - 1, b + pad);
+      const tw = r - l + 1, th = b - t + 1;
+      const tc = document.createElement('canvas');
+      tc.width = tw; tc.height = th;
+      tc.getContext('2d').putImageData(ctx.getImageData(l, t, tw, th), 0, 0);
+      img.src = tc.toDataURL('image/png');
+    }
+    document.querySelectorAll('.logo img, .footer-logo img').forEach(img => {
+      if (img.complete && img.naturalWidth) processLogo(img);
+      else img.onload = () => processLogo(img);
     });
   </script>
 </body>
