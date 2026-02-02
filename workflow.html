@@ -4438,7 +4438,8 @@
             try {
                 // Upload to Supabase Storage
                 const fileExt = file.name.split('.').pop();
-                const fileName = `reports/${workflow.id}/${Date.now()}_${file.name}`;
+                const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u0142/g, 'l').replace(/\u0141/g, 'L').replace(/[^a-zA-Z0-9._-]/g, '_');
+                const fileName = `reports/${workflow.id}/${Date.now()}_${safeName}`;
 
                 const { error: uploadError } = await supabaseClient.storage
                     .from('attachments')
