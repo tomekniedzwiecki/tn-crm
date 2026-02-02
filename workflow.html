@@ -3161,8 +3161,10 @@
                         </button>
                     </div>`;
                 }).join('');
-                // Set favicon to favicon variant logo if available
-                const faviconLogo = logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'favicon'; });
+                // Set favicon to favicon variant logo, fallback to main logo
+                const faviconLogo = logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'favicon'; })
+                    || logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'main'; })
+                    || logos[0];
                 if (faviconLogo) {
                     const link = document.querySelector('link[rel="icon"]');
                     if (link) { link.href = faviconLogo.file_url; link.type = 'image/png'; }
@@ -4618,12 +4620,32 @@
         }
         window.attachToComment = attachToComment;
 
+        async function setFaviconFromBranding() {
+            const wId = getWorkflowId();
+            if (!wId) return;
+            const { data: logos } = await supabaseClient
+                .from('workflow_branding')
+                .select('file_url, notes')
+                .eq('workflow_id', wId)
+                .eq('type', 'logo');
+            if (!logos || !logos.length) return;
+            const logo = logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'favicon'; })
+                || logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'main'; })
+                || logos[0];
+            if (logo) {
+                const link = document.querySelector('link[rel="icon"]');
+                if (link) { link.href = logo.file_url; link.type = 'image/png'; }
+            }
+        }
+
         async function init() {
             const session = await checkAuth();
             if (session) {
                 await loadWorkflow();
                 // Load comments for badge (without rendering)
                 await loadCommentsForBadge();
+                // Set favicon from branding logo
+                setFaviconFromBranding();
             }
         }
 
