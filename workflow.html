@@ -3166,8 +3166,12 @@
                     || logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'main'; })
                     || logos[0];
                 if (faviconLogo) {
-                    const link = document.querySelector('link[rel="icon"]');
-                    if (link) { link.href = faviconLogo.file_url; link.type = 'image/png'; }
+                    document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(l => l.remove());
+                    const link = document.createElement('link');
+                    link.rel = 'icon';
+                    link.href = faviconLogo.file_url + '?v=' + Date.now();
+                    link.type = 'image/png';
+                    document.head.appendChild(link);
                 }
             } else {
                 logosEmpty.classList.remove('hidden');
@@ -4633,8 +4637,13 @@
                 || logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'main'; })
                 || logos[0];
             if (logo) {
-                const link = document.querySelector('link[rel="icon"]');
-                if (link) { link.href = logo.file_url; link.type = 'image/png'; }
+                // Remove existing favicon links and create fresh ones to force browser update
+                document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(l => l.remove());
+                const link = document.createElement('link');
+                link.rel = 'icon';
+                link.href = logo.file_url + '?v=' + Date.now();
+                link.type = 'image/png';
+                document.head.appendChild(link);
             }
         }
 
