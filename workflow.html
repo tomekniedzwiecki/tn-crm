@@ -3166,12 +3166,7 @@
                     || logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'main'; })
                     || logos[0];
                 if (faviconLogo) {
-                    document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(l => l.remove());
-                    const link = document.createElement('link');
-                    link.rel = 'icon';
-                    link.href = faviconLogo.file_url + '?v=' + Date.now();
-                    link.type = 'image/png';
-                    document.head.appendChild(link);
+                    setFaviconHref(faviconLogo.file_url + '?v=' + Date.now(), 'image/png');
                 }
             } else {
                 logosEmpty.classList.remove('hidden');
@@ -4624,27 +4619,37 @@
         }
         window.attachToComment = attachToComment;
 
+        function setFaviconHref(href, type) {
+            document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(l => l.remove());
+            const link = document.createElement('link');
+            link.rel = 'icon';
+            link.href = href;
+            link.type = type || 'image/png';
+            document.head.appendChild(link);
+        }
+
         async function setFaviconFromBranding() {
             const wId = getWorkflowId();
-            if (!wId) return;
+            if (!wId) { setDefaultWorkflowFavicon(); return; }
             const { data: logos } = await supabaseClient
                 .from('workflow_branding')
                 .select('file_url, notes')
                 .eq('workflow_id', wId)
                 .eq('type', 'logo');
-            if (!logos || !logos.length) return;
+            if (!logos || !logos.length) { setDefaultWorkflowFavicon(); return; }
             const logo = logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'favicon'; })
                 || logos.find(l => { const m = parseNotes(l.notes); return m.variant === 'main'; })
                 || logos[0];
             if (logo) {
-                // Remove existing favicon links and create fresh ones to force browser update
-                document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(l => l.remove());
-                const link = document.createElement('link');
-                link.rel = 'icon';
-                link.href = logo.file_url + '?v=' + Date.now();
-                link.type = 'image/png';
-                document.head.appendChild(link);
+                setFaviconHref(logo.file_url + '?v=' + Date.now(), 'image/png');
+            } else {
+                setDefaultWorkflowFavicon();
             }
+        }
+
+        function setDefaultWorkflowFavicon() {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#10b981"/><path d="M8 11h6v2H8zm0 4h10v2H8zm0 4h16v2H8zm18-8l-4 4-2-2-1.4 1.4L22 18l5.4-5.4z" fill="white"/></svg>`;
+            setFaviconHref('data:image/svg+xml,' + encodeURIComponent(svg), 'image/svg+xml');
         }
 
         async function init() {
