@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Oferta wynagrodzeń</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(5, 5, 5, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.08); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+        .sim-tab { transition: all 0.2s; }
+        .sim-tab.active { background: rgba(255,255,255,0.1); color: white; }
+        .sim-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; font-weight: 500; }
+        .sim-table td { font-variant-numeric: tabular-nums; }
+        .sim-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .bar-fill { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .phase-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .row-highlight td { background: rgba(59, 130, 246, 0.05); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">oferta wynagrodzeń</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600 bg-zinc-900 px-2 py-1 rounded">poufne</span>
+            </div>
+        </header>
+
+        <!-- Access denied -->
+        <div id="access-denied" class="hidden flex-1 flex items-center justify-center">
+            <div class="text-center">
+                <i class="ph ph-lock text-4xl text-zinc-700 mb-3"></i>
+                <p class="text-zinc-500">Brak dostępu do tej strony</p>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div id="main-content" class="hidden flex-1 overflow-y-auto">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-8 animate-enter">
+
+                <!-- Hero -->
+                <div class="mb-10">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                            <i class="ph ph-handshake text-blue-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-semibold text-white tracking-tight">Oferta dla Macieja Kanczewskiego</h1>
+                            <p class="text-zinc-500 text-xs">Symulacja wynagrodzenia · UoP vs B2B Ryczałt 8,5% · Przepisy 2025</p>
+                        </div>
+                    </div>
+                    <p class="text-zinc-500 text-sm max-w-2xl">Poniżej widzisz dokładnie ile firma przeznacza na Twoje wynagrodzenie (budżet) i ile z tego dostajesz na rękę — w zależności od formy współpracy i poziomu sprzedaży.</p>
+                </div>
+
+                <!-- ============== OFFER STRUCTURE ============== -->
+                <div class="mb-10">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-blue-400 mb-2">Struktura oferty</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center">
+                                    <i class="ph ph-wallet text-blue-400 text-sm"></i>
+                                </div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600">Podstawa</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white tracking-tight">9 000 zł</div>
+                            <div class="text-xs text-zinc-600 mt-1">stały budżet miesięczny</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                                    <i class="ph ph-percent text-emerald-400 text-sm"></i>
+                                </div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600">Prowizja</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white tracking-tight">7%</div>
+                            <div class="text-xs text-zinc-600 mt-1">od sprzedaży powyżej targetu</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center">
+                                    <i class="ph ph-target text-amber-400 text-sm"></i>
+                                </div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600">Target minimum</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white tracking-tight">30 000 zł</div>
+                            <div class="text-xs text-zinc-600 mt-1">próg — nie wlicza się do prowizji</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commission explainer -->
+                <div class="mb-10 bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                    <div class="text-xs font-medium text-white mb-3">Jak działa prowizja?</div>
+                    <div class="flex flex-col sm:flex-row gap-4 text-xs text-zinc-500">
+                        <div class="flex-1">
+                            <div class="text-zinc-600 mb-1">Przykład: sprzedaż 70 000 zł</div>
+                            <div class="font-mono bg-zinc-950 rounded p-3 space-y-1 text-[12px]">
+                                <div>Sprzedaż:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="text-white">70 000 zł</span></div>
+                                <div>Target:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="text-red-400">− 30 000 zł</span></div>
+                                <div class="border-t border-white/5 pt-1">Baza prowizji:&nbsp; <span class="text-white">40 000 zł</span></div>
+                                <div>Prowizja 7%:&nbsp;&nbsp;&nbsp; <span class="text-emerald-400">2 800 zł</span></div>
+                                <div class="border-t border-white/5 pt-1">Podstawa:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="text-white">9 000 zł</span></div>
+                                <div class="text-white font-semibold">Budżet łącznie:&nbsp; <span class="text-blue-400">11 800 zł</span></div>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-zinc-600 mb-1">Scenariusze sprzedaży</div>
+                            <div class="space-y-1.5 font-mono text-[12px]">
+                                <div class="flex justify-between"><span>≤ 30 000 zł</span><span class="text-white">0 zł prowizji</span></div>
+                                <div class="flex justify-between"><span>50 000 zł</span><span class="text-white">1 400 zł <span class="text-zinc-600">(7% × 20k)</span></span></div>
+                                <div class="flex justify-between bg-blue-500/5 rounded px-2 py-0.5 -mx-2"><span class="text-blue-400">70 000 zł ← prognoza</span><span class="text-blue-400">2 800 zł <span class="text-zinc-600">(7% × 40k)</span></span></div>
+                                <div class="flex justify-between"><span>100 000 zł</span><span class="text-white">4 900 zł <span class="text-zinc-600">(7% × 70k)</span></span></div>
+                                <div class="flex justify-between"><span>150 000 zł</span><span class="text-white">8 400 zł <span class="text-zinc-600">(7% × 120k)</span></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex gap-1 p-1 bg-zinc-900/50 border border-white/5 rounded-lg w-fit mb-8">
+                    <button onclick="switchTab('overview')" data-stab="overview" class="sim-tab active px-4 py-2 rounded-md text-xs font-medium text-zinc-400 hover:text-white">Co dostajesz na rękę</button>
+                    <button onclick="switchTab('uop')" data-stab="uop" class="sim-tab px-4 py-2 rounded-md text-xs font-medium text-zinc-400 hover:text-white">Szczegóły UoP</button>
+                    <button onclick="switchTab('b2b')" data-stab="b2b" class="sim-tab px-4 py-2 rounded-md text-xs font-medium text-zinc-400 hover:text-white">Szczegóły B2B</button>
+                    <button onclick="switchTab('compare')" data-stab="compare" class="sim-tab px-4 py-2 rounded-md text-xs font-medium text-zinc-400 hover:text-white">Porównanie</button>
+                </div>
+
+                <!-- ============== OVERVIEW TAB ============== -->
+                <div id="tab-overview" class="tab-panel">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white tracking-tight mb-1">Ile dostajesz na rękę?</h2>
+                        <p class="text-zinc-500 text-xs">Ten sam budżet firmy — różne kwoty na koncie, w zależności od formy współpracy.</p>
+                    </div>
+
+                    <!-- Main comparison table -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden mb-6">
+                        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs font-medium text-white">Budżet firmy → Twoje netto</span>
+                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">B2B = więcej na rękę</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="sim-table w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left px-5 py-3">Scenariusz</th>
+                                        <th class="text-right px-5 py-3">Sprzedaż</th>
+                                        <th class="text-right px-5 py-3">Budżet firmy</th>
+                                        <th class="text-right px-5 py-3">Na rękę UoP</th>
+                                        <th class="text-right px-5 py-3">Na rękę B2B</th>
+                                        <th class="text-right px-5 py-3">Różnica</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sama podstawa</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">≤ 30k</td>
+                                        <td class="px-5 py-3.5 text-right font-medium text-white">9 000 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">5 423 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">7 466 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+2 043 zł</span></td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Dobry miesiąc</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">50k</td>
+                                        <td class="px-5 py-3.5 text-right font-medium text-white">10 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">6 214 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">8 747 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+2 533 zł</span></td>
+                                    </tr>
+                                    <tr class="border-b border-white/5 row-highlight">
+                                        <td class="px-5 py-3.5 text-left">
+                                            <span class="text-blue-400 font-medium">Prognoza</span>
+                                        </td>
+                                        <td class="px-5 py-3.5 text-right text-blue-400">70k</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-blue-400">11 800 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">7 007 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-bold">10 028 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-bold">+3 021 zł</span></td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Świetny miesiąc</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">100k</td>
+                                        <td class="px-5 py-3.5 text-right font-medium text-white">13 900 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">8 195 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">11 950 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+3 755 zł</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Top performer</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">150k</td>
+                                        <td class="px-5 py-3.5 text-right font-medium text-white">17 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">9 731 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">15 152 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+5 421 zł</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="px-5 py-2 border-t border-white/5 text-[10px] text-zinc-600">
+                            B2B = ryczałt 8,5% z ulgą na start (pierwsze 6 mies. — brak ZUS społecznego). Budżet firmy = CPK na UoP lub faktura netto na B2B.
+                        </div>
+                    </div>
+
+                    <!-- Visual bars -->
+                    <div class="mb-6">
+                        <div class="text-xs font-medium text-white mb-4">Wizualnie — ten sam budżet, różne netto</div>
+                        <div class="space-y-5" id="bars-overview"></div>
+                    </div>
+
+                    <!-- Key insight -->
+                    <div class="bg-blue-500/5 border border-blue-500/10 rounded-lg p-5">
+                        <div class="flex items-start gap-3">
+                            <i class="ph ph-lightbulb text-blue-400 text-lg mt-0.5"></i>
+                            <div>
+                                <div class="text-sm font-medium text-white mb-1">Co to oznacza?</div>
+                                <p class="text-zinc-400 text-sm">Firma przeznacza na Ciebie <span class="text-white font-medium">dokładnie tę samą kwotę</span> — ale na B2B dostajesz na rękę znacznie więcej. Przy prognozowanej sprzedaży 70k to <span class="text-emerald-400 font-medium">10 028 zł</span> na B2B vs <span class="text-red-400">7 007 zł</span> na UoP. Różnica <span class="text-emerald-400 font-medium">+3 021 zł miesięcznie</span>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============== UOP TAB ============== -->
+                <div id="tab-uop" class="tab-panel hidden">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white tracking-tight mb-1">UoP — rozbicie kosztów</h2>
+                        <p class="text-zinc-500 text-xs">Budżet firmy (CPK) → co zjadają składki i podatki → ile zostaje Ci na rękę.</p>
+                    </div>
+
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden mb-4">
+                        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs font-medium text-white">Kalkulacja UoP — od budżetu do netto</span>
+                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Wyższe obciążenia</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="sim-table w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left px-5 py-3">Scenariusz</th>
+                                        <th class="text-right px-5 py-3">Budżet (CPK)</th>
+                                        <th class="text-right px-5 py-3">Brutto</th>
+                                        <th class="text-right px-5 py-3 hidden sm:table-cell">ZUS prac.</th>
+                                        <th class="text-right px-5 py-3 hidden sm:table-cell">Zdrowotne</th>
+                                        <th class="text-right px-5 py-3 hidden md:table-cell">PIT</th>
+                                        <th class="text-right px-5 py-3 hidden md:table-cell">ZUS pracodawcy</th>
+                                        <th class="text-right px-5 py-3">Na rękę</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sama podstawa</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">9 000 zł</td>
+                                        <td class="px-5 py-3.5 text-right">7 470 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">1 024 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">580 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">~443 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">1 530 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-white">5 423 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 50k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">10 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right">8 632 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">1 183 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">670 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">~564 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">1 768 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-white">6 214 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5 row-highlight">
+                                        <td class="px-5 py-3.5 text-left text-blue-400 font-medium">Prognoza 70k</td>
+                                        <td class="px-5 py-3.5 text-right text-blue-400 font-semibold">11 800 zł</td>
+                                        <td class="px-5 py-3.5 text-right">9 794 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">1 343 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">760 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">~684 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">2 006 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-bold text-white">7 007 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 100k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">13 900 zł</td>
+                                        <td class="px-5 py-3.5 text-right">11 537 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">1 582 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">896 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">~864 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">2 363 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-white">8 195 zł</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 150k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">17 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right">14 440 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">1 980 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden sm:table-cell">1 121 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">~1 607 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600 hidden md:table-cell">2 960 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-white">9 731 zł</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- UoP waterfall for projected -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5 mb-4">
+                        <div class="text-xs font-medium text-white mb-3">Gdzie znikają pieniądze? (prognoza 70k sprzedaży)</div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">Budżet firmy</span>
+                                <div class="flex-1 h-7 rounded-md bg-blue-500/20 flex items-center px-3" style="width:100%">
+                                    <span class="text-[11px] font-medium text-blue-400">11 800 zł</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">ZUS pracodawcy</span>
+                                <div class="h-7 rounded-md bg-red-500/20 flex items-center px-3" style="width:17%">
+                                    <span class="text-[11px] font-medium text-red-400">−2 006</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">ZUS pracownika</span>
+                                <div class="h-7 rounded-md bg-red-500/20 flex items-center px-3" style="width:11.4%">
+                                    <span class="text-[11px] font-medium text-red-400">−1 343</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">Zdrowotne</span>
+                                <div class="h-7 rounded-md bg-red-500/20 flex items-center px-3" style="width:6.4%">
+                                    <span class="text-[11px] font-medium text-red-400">−760</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">PIT 12%</span>
+                                <div class="h-7 rounded-md bg-red-500/20 flex items-center px-3" style="width:5.8%">
+                                    <span class="text-[11px] font-medium text-red-400">−684</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 pt-1 border-t border-white/5">
+                                <span class="text-xs text-white w-28 text-right shrink-0 font-medium">Na rękę</span>
+                                <div class="flex-1 h-8 rounded-md bg-white/10 flex items-center px-3" style="width:59.4%">
+                                    <span class="text-[12px] font-bold text-white">7 007 zł</span>
+                                    <span class="text-[10px] text-zinc-500 ml-2">59% budżetu</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                        <div class="text-xs font-medium text-white mb-3">Uwagi do UoP</div>
+                        <ul class="space-y-2 text-xs text-zinc-500">
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>Przy sprzedaży 150k+ wchodzisz w <span class="text-amber-400 font-medium">32% PIT</span> przez część roku (próg 120 000 zł rocznie)</li>
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>UoP daje: <span class="text-white">płatny urlop, L4, ochronę KP, odprawę</span></li>
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>Na rękę dostajesz tylko <span class="text-red-400 font-medium">~59%</span> tego co firma na Ciebie wydaje</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- ============== B2B TAB ============== -->
+                <div id="tab-b2b" class="tab-panel hidden">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white tracking-tight mb-1">B2B Ryczałt 8,5% — rozbicie kosztów</h2>
+                        <p class="text-zinc-500 text-xs">Faktura netto (= budżet firmy) → podatek + ZUS → Twoje netto. Trzy fazy ZUS.</p>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="grid grid-cols-3 gap-0 rounded-lg border border-white/5 overflow-hidden mb-8">
+                        <div class="p-4 text-center bg-emerald-500/5 border-r border-white/5">
+                            <div class="flex items-center justify-center gap-1.5 mb-1">
+                                <div class="phase-dot bg-emerald-400"></div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600">Faza 1</span>
+                            </div>
+                            <div class="text-sm font-semibold text-emerald-400">Ulga na start</div>
+                            <div class="text-[11px] text-zinc-600">Miesiące 1–6</div>
+                        </div>
+                        <div class="p-4 text-center bg-amber-500/5 border-r border-white/5">
+                            <div class="flex items-center justify-center gap-1.5 mb-1">
+                                <div class="phase-dot bg-amber-400"></div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600">Faza 2</span>
+                            </div>
+                            <div class="text-sm font-semibold text-amber-400">Preferencyjny ZUS</div>
+                            <div class="text-[11px] text-zinc-600">Miesiące 7–30</div>
+                        </div>
+                        <div class="p-4 text-center bg-red-500/5">
+                            <div class="flex items-center justify-center gap-1.5 mb-1">
+                                <div class="phase-dot bg-red-400"></div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-600">Faza 3</span>
+                            </div>
+                            <div class="text-sm font-semibold text-red-400">Pełny ZUS</div>
+                            <div class="text-[11px] text-zinc-600">Od miesiąca 31</div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 1 -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden mb-4">
+                        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs font-medium text-white">Faza 1 — Ulga na start (6 mies.)</span>
+                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Najniższy koszt</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="sim-table w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left px-5 py-3">Scenariusz</th>
+                                        <th class="text-right px-5 py-3">Faktura (budżet)</th>
+                                        <th class="text-right px-5 py-3">ZUS społ.</th>
+                                        <th class="text-right px-5 py-3">Zdrowotna</th>
+                                        <th class="text-right px-5 py-3">Podatek 8,5%</th>
+                                        <th class="text-right px-5 py-3">Na rękę</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sama podstawa</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">9 000 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">0 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">765 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-emerald-400">7 466 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 50k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">10 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">0 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">884 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-emerald-400">8 747 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5 row-highlight">
+                                        <td class="px-5 py-3.5 text-left text-blue-400 font-medium">Prognoza 70k</td>
+                                        <td class="px-5 py-3.5 text-right text-blue-400 font-semibold">11 800 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">0 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 003 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-bold text-emerald-400">10 028 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 100k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">13 900 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">0 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 182 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-emerald-400">11 950 zł</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 150k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">17 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">0 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 479 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-emerald-400">15 152 zł</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2 -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden mb-4">
+                        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs font-medium text-white">Faza 2 — Preferencyjny ZUS (24 mies.)</span>
+                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">Umiarkowany</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="sim-table w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left px-5 py-3">Scenariusz</th>
+                                        <th class="text-right px-5 py-3">Faktura (budżet)</th>
+                                        <th class="text-right px-5 py-3">ZUS społ.</th>
+                                        <th class="text-right px-5 py-3">Zdrowotna</th>
+                                        <th class="text-right px-5 py-3">Podatek 8,5%</th>
+                                        <th class="text-right px-5 py-3">Na rękę</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sama podstawa</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">9 000 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">765 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-amber-400">7 066 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5 row-highlight">
+                                        <td class="px-5 py-3.5 text-left text-blue-400 font-medium">Prognoza 70k</td>
+                                        <td class="px-5 py-3.5 text-right text-blue-400 font-semibold">11 800 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 003 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-bold text-amber-400">9 628 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 100k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">13 900 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 182 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-amber-400">11 550 zł</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 150k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">17 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 479 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-amber-400">14 752 zł</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Phase 3 -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden mb-4">
+                        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs font-medium text-white">Faza 3 — Pełny ZUS</span>
+                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Najwyższy koszt B2B</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="sim-table w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left px-5 py-3">Scenariusz</th>
+                                        <th class="text-right px-5 py-3">Faktura (budżet)</th>
+                                        <th class="text-right px-5 py-3">ZUS społ.</th>
+                                        <th class="text-right px-5 py-3">Zdrowotna</th>
+                                        <th class="text-right px-5 py-3">Podatek 8,5%</th>
+                                        <th class="text-right px-5 py-3">Na rękę</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sama podstawa</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">9 000 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 600 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">765 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-red-400">5 866 zł</td>
+                                    </tr>
+                                    <tr class="border-b border-white/5 row-highlight">
+                                        <td class="px-5 py-3.5 text-left text-blue-400 font-medium">Prognoza 70k</td>
+                                        <td class="px-5 py-3.5 text-right text-blue-400 font-semibold">11 800 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 600 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 003 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-bold text-red-400">8 428 zł</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 150k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">17 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 600 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">769 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-600">1 479 zł</td>
+                                        <td class="px-5 py-3.5 text-right font-semibold text-red-400">13 552 zł</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- B2B waterfall for projected -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5 mb-4">
+                        <div class="text-xs font-medium text-white mb-3">Gdzie znikają pieniądze? B2B ulga na start (prognoza 70k)</div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">Faktura netto</span>
+                                <div class="flex-1 h-7 rounded-md bg-blue-500/20 flex items-center px-3" style="width:100%">
+                                    <span class="text-[11px] font-medium text-blue-400">11 800 zł</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">Podatek 8,5%</span>
+                                <div class="h-7 rounded-md bg-red-500/20 flex items-center px-3" style="width:8.5%">
+                                    <span class="text-[11px] font-medium text-red-400">−1 003</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 w-28 text-right shrink-0">Zdrowotna</span>
+                                <div class="h-7 rounded-md bg-red-500/20 flex items-center px-3" style="width:6.5%">
+                                    <span class="text-[11px] font-medium text-red-400">−769</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 pt-1 border-t border-white/5">
+                                <span class="text-xs text-white w-28 text-right shrink-0 font-medium">Na rękę</span>
+                                <div class="flex-1 h-8 rounded-md bg-emerald-500/20 flex items-center px-3" style="width:85%">
+                                    <span class="text-[12px] font-bold text-emerald-400">10 028 zł</span>
+                                    <span class="text-[10px] text-zinc-500 ml-2">85% budżetu</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                        <div class="text-xs font-medium text-white mb-3">Uwagi do B2B</div>
+                        <ul class="space-y-2 text-xs text-zinc-500">
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>Na rękę dostajesz <span class="text-emerald-400 font-medium">~85%</span> budżetu (vs ~59% na UoP)</li>
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>Zdrowotna zależy od rocznego przychodu: <span class="text-white">do 60k → 461 zł</span>, <span class="text-white">60–300k → 769 zł</span>, <span class="text-white">powyżej 300k → 1 384 zł</span></li>
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>Brak płatnego urlopu, L4, ochrony KP</li>
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>Księgowość: ~200–400 zł/mies.</li>
+                            <li class="flex items-start gap-2"><span class="text-zinc-700">→</span>VAT na fakturze jest odliczany — firma płaci fakturę netto</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- ============== COMPARE TAB ============== -->
+                <div id="tab-compare" class="tab-panel hidden">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white tracking-tight mb-1">UoP vs B2B — pełne porównanie</h2>
+                        <p class="text-zinc-500 text-xs">Ten sam budżet firmy — ile zostajesz z niego na każdej formie, w każdej fazie ZUS.</p>
+                    </div>
+
+                    <!-- Projected scenario deep dive -->
+                    <div class="bg-blue-500/5 border border-blue-500/10 rounded-lg p-5 mb-6">
+                        <div class="text-xs font-medium text-blue-400 mb-3">Scenariusz prognozowany: sprzedaż 70k · budżet 11 800 zł</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="text-center">
+                                <div class="text-[10px] text-zinc-600 mb-1">UoP</div>
+                                <div class="text-xl font-bold text-red-400">7 007 zł</div>
+                                <div class="text-[10px] text-zinc-600">59% budżetu</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-zinc-600 mb-1">B2B ulga na start</div>
+                                <div class="text-xl font-bold text-emerald-400">10 028 zł</div>
+                                <div class="text-[10px] text-zinc-600">85% budżetu</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-zinc-600 mb-1">B2B pref. ZUS</div>
+                                <div class="text-xl font-bold text-amber-400">9 628 zł</div>
+                                <div class="text-[10px] text-zinc-600">82% budżetu</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-zinc-600 mb-1">B2B pełny ZUS</div>
+                                <div class="text-xl font-bold text-zinc-400">8 428 zł</div>
+                                <div class="text-[10px] text-zinc-600">71% budżetu</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full comparison table -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg overflow-hidden mb-6">
+                        <div class="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs font-medium text-white">Na rękę — wszystkie warianty</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="sim-table w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left px-5 py-3">Scenariusz</th>
+                                        <th class="text-right px-5 py-3">Budżet</th>
+                                        <th class="text-right px-5 py-3">UoP</th>
+                                        <th class="text-right px-5 py-3">B2B ulga</th>
+                                        <th class="text-right px-5 py-3 hidden sm:table-cell">B2B pref.</th>
+                                        <th class="text-right px-5 py-3 hidden sm:table-cell">B2B pełny</th>
+                                        <th class="text-right px-5 py-3">B2B vs UoP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sama podstawa</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">9 000 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">5 423 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">7 466 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">7 066 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">5 866 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+2 043 zł</span></td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 50k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">10 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">6 214 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">8 747 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">8 347 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">7 147 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+2 533 zł</span></td>
+                                    </tr>
+                                    <tr class="border-b border-white/5 row-highlight">
+                                        <td class="px-5 py-3.5 text-left text-blue-400 font-medium">Prognoza 70k</td>
+                                        <td class="px-5 py-3.5 text-right text-blue-400 font-semibold">11 800 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">7 007 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-bold">10 028 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">9 628 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">8 428 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-bold">+3 021 zł</span></td>
+                                    </tr>
+                                    <tr class="border-b border-white/5">
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 100k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">13 900 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">8 195 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">11 950 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">11 550 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">10 350 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+3 755 zł</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3.5 text-left text-zinc-500">Sprzedaż 150k</td>
+                                        <td class="px-5 py-3.5 text-right text-white font-medium">17 400 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-red-400">9 731 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-emerald-400 font-semibold">15 152 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">14 752 zł</td>
+                                        <td class="px-5 py-3.5 text-right text-zinc-500 hidden sm:table-cell">13 552 zł</td>
+                                        <td class="px-5 py-3.5 text-right"><span class="text-emerald-400 text-xs font-semibold">+5 421 zł</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Efficiency % -->
+                    <div class="mb-6">
+                        <div class="text-xs font-medium text-white mb-3">Ile % budżetu firmy trafia na Twoje konto?</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-3 h-3 rounded-sm bg-red-400/50"></div>
+                                    <span class="text-xs font-medium text-white">UoP</span>
+                                </div>
+                                <div class="text-3xl font-bold text-red-400 mb-1">~59%</div>
+                                <div class="text-xs text-zinc-600">Z każdego 1 000 zł budżetu dostajesz ~590 zł</div>
+                                <div class="mt-3 h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                    <div class="h-full rounded-full bg-gradient-to-r from-red-500 to-red-400" style="width:59%"></div>
+                                </div>
+                            </div>
+                            <div class="bg-zinc-900/50 border border-emerald-500/10 rounded-lg p-5">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-3 h-3 rounded-sm bg-emerald-400/50"></div>
+                                    <span class="text-xs font-medium text-white">B2B (ulga na start)</span>
+                                </div>
+                                <div class="text-3xl font-bold text-emerald-400 mb-1">~85%</div>
+                                <div class="text-xs text-zinc-600">Z każdego 1 000 zł budżetu dostajesz ~850 zł</div>
+                                <div class="mt-3 h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                    <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style="width:85%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendation -->
+                    <div class="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-5">
+                        <div class="flex items-start gap-3">
+                            <i class="ph ph-check-circle text-emerald-400 text-lg mt-0.5"></i>
+                            <div>
+                                <div class="text-sm font-medium text-white mb-2">Rekomendacja</div>
+                                <ul class="space-y-2 text-xs text-zinc-400">
+                                    <li class="flex items-start gap-2"><span class="text-emerald-500">→</span><strong class="text-white">B2B na ryczałcie 8,5%</strong> — przy prognozowanej sprzedaży dostajesz <strong class="text-emerald-400">10 028 zł</strong> vs 7 007 zł na UoP</li>
+                                    <li class="flex items-start gap-2"><span class="text-emerald-500">→</span>Nawet na <strong class="text-white">pełnym ZUS</strong> (po 2,5 roku) B2B daje więcej: <strong class="text-white">8 428 zł</strong> vs 7 007 zł</li>
+                                    <li class="flex items-start gap-2"><span class="text-emerald-500">→</span>Założ <strong class="text-white">JDG z ryczałtem 8,5%</strong> → ulga na start (6 mies.) → preferencyjny ZUS (24 mies.)</li>
+                                    <li class="flex items-start gap-2"><span class="text-emerald-500">→</span>Pamiętaj o <strong class="text-white">odkładaniu na urlop i L4</strong> — te koszty musisz pokryć sam</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // SUPABASE & AUTH
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const ALLOWED_NAME = 'Maciej Kanczewski';
+        let currentMember = null;
+        let isAdmin = false;
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            return session;
+        }
+
+        async function init() {
+            Sidebar.render({ appId: 'crm', activePage: 'salary-sim' });
+            const session = await checkAuth();
+            if (!session) return;
+
+            const { data: teamMembers } = await supabaseClient
+                .from('team_members')
+                .select('*')
+                .order('name');
+
+            currentMember = (teamMembers || []).find(m => m.user_id === session.user.id);
+            isAdmin = currentMember?.role === 'admin';
+
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+            }
+            Sidebar.showAdminNav(isAdmin);
+
+            const hasAccess = isAdmin || (currentMember?.name === ALLOWED_NAME);
+            if (!hasAccess) {
+                document.getElementById('access-denied').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('main-content').classList.remove('hidden');
+            renderBars();
+        }
+
+        // ============================================
+        // TABS
+        // ============================================
+        function switchTab(tabId) {
+            document.querySelectorAll('.sim-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            document.querySelector(`[data-stab="${tabId}"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        }
+
+        // ============================================
+        // BAR CHART
+        // ============================================
+        function renderBars() {
+            const data = [
+                { label: 'Podstawa', budget: 9000, uop: 5423, b2b: 7466 },
+                { label: 'Sprzedaż 50k', budget: 10400, uop: 6214, b2b: 8747 },
+                { label: 'Prognoza 70k', budget: 11800, uop: 7007, b2b: 10028, highlight: true },
+                { label: 'Sprzedaż 100k', budget: 13900, uop: 8195, b2b: 11950 },
+                { label: 'Sprzedaż 150k', budget: 17400, uop: 9731, b2b: 15152 },
+            ];
+            const max = 17400;
+            const container = document.getElementById('bars-overview');
+
+            data.forEach((d, i) => {
+                const diff = d.b2b - d.uop;
+                const row = document.createElement('div');
+                row.className = 'animate-enter';
+                row.style.animationDelay = `${i * 0.08}s`;
+                const hlClass = d.highlight ? 'bg-blue-500/5 border border-blue-500/10 rounded-lg p-3 -mx-3' : '';
+                row.innerHTML = `
+                    <div class="${hlClass}">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-xs ${d.highlight ? 'text-blue-400 font-medium' : 'text-zinc-500'} w-28 text-right shrink-0">${d.label}</span>
+                            <span class="text-[10px] font-mono text-zinc-600">budżet ${d.budget.toLocaleString('pl')} zł</span>
+                            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 ml-auto">+${diff.toLocaleString('pl')} zł</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-28 shrink-0"></div>
+                            <div class="flex-1 space-y-1.5">
+                                <div class="flex items-center gap-2">
+                                    <div class="bar-fill h-7 rounded-md bg-gradient-to-r from-red-500/80 to-red-400/60 flex items-center px-3" style="width:${(d.uop/max*100).toFixed(0)}%">
+                                        <span class="text-[11px] font-medium text-white whitespace-nowrap">${d.uop.toLocaleString('pl')} zł</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 shrink-0">UoP</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="bar-fill h-7 rounded-md bg-gradient-to-r from-emerald-500/80 to-emerald-400/60 flex items-center px-3" style="width:${(d.b2b/max*100).toFixed(0)}%">
+                                        <span class="text-[11px] font-medium text-white whitespace-nowrap">${d.b2b.toLocaleString('pl')} zł</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 shrink-0">B2B</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        init();
+    </script>
+
+</body>
+</html>
