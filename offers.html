@@ -125,9 +125,9 @@
         </header>
 
         <!-- Content with submenu -->
-        <div class="flex-1 flex overflow-hidden">
-            <!-- Submenu sidebar -->
-            <nav class="w-56 flex-shrink-0 border-r border-white/5 p-4 overflow-y-auto">
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <!-- Submenu sidebar (desktop) / horizontal tabs (mobile) -->
+            <nav class="hidden md:block w-56 flex-shrink-0 border-r border-white/5 p-4 overflow-y-auto">
                 <div class="space-y-1">
                     <button onclick="switchTab('offers')" data-tab="offers" class="submenu-tab active">
                         <i class="ph ph-package tab-icon"></i>
@@ -141,6 +141,20 @@
                     </button>
                 </div>
             </nav>
+
+            <!-- Mobile tabs -->
+            <div class="md:hidden flex border-b border-white/5 px-4 gap-1 pt-2">
+                <button onclick="switchTab('offers')" data-tab="offers" class="submenu-tab active flex-1 justify-center !rounded-b-none !border-b-0">
+                    <i class="ph ph-package tab-icon"></i>
+                    <span class="tab-label">Oferty</span>
+                    <span id="offers-count-mobile" class="tab-count">-</span>
+                </button>
+                <button onclick="switchTab('codes')" data-tab="codes" class="submenu-tab flex-1 justify-center !rounded-b-none !border-b-0">
+                    <i class="ph ph-ticket tab-icon"></i>
+                    <span class="tab-label">Kody rabatowe</span>
+                    <span id="codes-count-mobile" class="tab-count">-</span>
+                </button>
+            </div>
 
             <!-- Tab content area -->
             <div class="flex-1 overflow-y-auto">
@@ -383,6 +397,8 @@
             // Offers count
             const activeCount = offers.filter(o => o.is_active).length;
             document.getElementById('offers-count').textContent = activeCount;
+            const offersMobile = document.getElementById('offers-count-mobile');
+            if (offersMobile) offersMobile.textContent = activeCount;
 
             // Discount codes count
             const { count: codesCount } = await supabaseClient
@@ -390,6 +406,8 @@
                 .select('*', { count: 'exact', head: true })
                 .eq('is_active', true);
             document.getElementById('codes-count').textContent = codesCount || 0;
+            const codesMobile = document.getElementById('codes-count-mobile');
+            if (codesMobile) codesMobile.textContent = codesCount || 0;
         }
 
         function getOfferPath(id) {
