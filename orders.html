@@ -330,9 +330,18 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-[#888] text-xs font-normal mb-2">Powiazany lead</label>
-                                <select id="order-lead" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors appearance-none cursor-pointer">
-                                    <option value="">-- brak --</option>
-                                </select>
+                                <div class="relative" id="lead-search-container">
+                                    <input type="hidden" id="order-lead" value="">
+                                    <div class="relative">
+                                        <input type="text" id="lead-search-input" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors pr-8" placeholder="Szukaj po email, nazwie lub firmie..." autocomplete="off">
+                                        <button type="button" id="lead-search-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-[#666] hover:text-white transition-colors hidden">
+                                            <i class="ph ph-x text-sm"></i>
+                                        </button>
+                                    </div>
+                                    <div id="lead-search-dropdown" class="absolute z-50 w-full mt-1 bg-[#111] border border-[#333] rounded-lg shadow-xl max-h-60 overflow-y-auto hidden">
+                                        <!-- Dropdown items will be populated here -->
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
@@ -526,9 +535,109 @@
         }
 
         function populateLeadsDropdown() {
-            const select = document.getElementById('order-lead');
-            select.innerHTML = '<option value="">-- brak powiązania --</option>' +
-                leads.map(l => `<option value="${l.id}">${l.email}${l.name ? ' - ' + l.name : ''}${l.company ? ' (' + l.company + ')' : ''}</option>`).join('');
+            // Initial population - dropdown content is handled by search
+        }
+
+        // Lead search functionality
+        function setupLeadSearch() {
+            const input = document.getElementById('lead-search-input');
+            const dropdown = document.getElementById('lead-search-dropdown');
+            const clearBtn = document.getElementById('lead-search-clear');
+            const hiddenInput = document.getElementById('order-lead');
+
+            // Filter and show dropdown
+            function filterLeads(query) {
+                const q = query.toLowerCase().trim();
+                if (!q) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                const filtered = leads.filter(l => {
+                    const email = (l.email || '').toLowerCase();
+                    const name = (l.name || '').toLowerCase();
+                    const company = (l.company || '').toLowerCase();
+                    return email.includes(q) || name.includes(q) || company.includes(q);
+                }).slice(0, 20); // Limit to 20 results
+
+                if (filtered.length === 0) {
+                    dropdown.innerHTML = '<div class="px-3 py-2 text-sm text-[#666]">Brak wyników</div>';
+                } else {
+                    dropdown.innerHTML = filtered.map(l => `
+                        <div class="lead-search-item px-3 py-2 text-sm text-white hover:bg-[#222] cursor-pointer transition-colors" data-id="${l.id}" data-display="${escapeHtml(l.email)}${l.name ? ' - ' + escapeHtml(l.name) : ''}${l.company ? ' (' + escapeHtml(l.company) + ')' : ''}">
+                            <div class="font-medium">${escapeHtml(l.email)}</div>
+                            ${l.name || l.company ? `<div class="text-xs text-[#888]">${l.name ? escapeHtml(l.name) : ''}${l.name && l.company ? ' · ' : ''}${l.company ? escapeHtml(l.company) : ''}</div>` : ''}
+                        </div>
+                    `).join('');
+                }
+                dropdown.classList.remove('hidden');
+            }
+
+            // Escape HTML
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            // Select lead
+            function selectLead(id, display) {
+                hiddenInput.value = id;
+                input.value = display;
+                dropdown.classList.add('hidden');
+                clearBtn.classList.remove('hidden');
+            }
+
+            // Clear selection
+            function clearSelection() {
+                hiddenInput.value = '';
+                input.value = '';
+                clearBtn.classList.add('hidden');
+                dropdown.classList.add('hidden');
+            }
+
+            // Event listeners
+            input.addEventListener('input', (e) => {
+                filterLeads(e.target.value);
+                if (!e.target.value) {
+                    clearBtn.classList.add('hidden');
+                    hiddenInput.value = '';
+                }
+            });
+
+            input.addEventListener('focus', () => {
+                if (input.value && !hiddenInput.value) {
+                    filterLeads(input.value);
+                }
+            });
+
+            dropdown.addEventListener('click', (e) => {
+                const item = e.target.closest('.lead-search-item');
+                if (item) {
+                    selectLead(item.dataset.id, item.dataset.display);
+                }
+            });
+
+            clearBtn.addEventListener('click', clearSelection);
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#lead-search-container')) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            // Expose functions for external use
+            window.setLeadSearchValue = function(leadId) {
+                const lead = leads.find(l => l.id === leadId);
+                if (lead) {
+                    const display = `${lead.email}${lead.name ? ' - ' + lead.name : ''}${lead.company ? ' (' + lead.company + ')' : ''}`;
+                    selectLead(leadId, display);
+                } else {
+                    clearSelection();
+                }
+            };
+
+            window.clearLeadSearch = clearSelection;
         }
 
         // Render orders
@@ -760,6 +869,11 @@
             document.getElementById('order-id').value = orderId || '';
             document.getElementById('nip-status').classList.add('hidden');
 
+            // Clear lead search
+            if (typeof clearLeadSearch === 'function') {
+                clearLeadSearch();
+            }
+
             // Hide invoice section by default
             document.getElementById('invoice-section').classList.add('hidden');
 
@@ -786,7 +900,9 @@
                     document.getElementById('order-status').value = order.status || 'pending';
                     document.getElementById('order-source').value = order.payment_source || '';
                     document.getElementById('order-reference').value = order.payment_reference || '';
-                    document.getElementById('order-lead').value = order.lead_id || '';
+                    if (order.lead_id) {
+                        setLeadSearchValue(order.lead_id);
+                    }
                     document.getElementById('order-notes').value = order.notes || '';
 
                     // Load existing order date
@@ -1280,6 +1396,7 @@
             if (!session) return;
 
             await loadLeads();
+            setupLeadSearch();
             await loadOrders();
         }
 
