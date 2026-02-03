@@ -1263,6 +1263,7 @@
                         <option value="report_pdf">Raport</option>
                         <option value="report_infographic">Infografika</option>
                         <option value="report_presentation">Prezentacja</option>
+                        <option value="report_video">Video analiza</option>
                     </select>
                 </div>
                 <div>
@@ -1658,7 +1659,7 @@
                 const [matsRes, brandRes, repsRes] = await Promise.all([
                     supabaseClient.from('workflow_materials').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
-                    supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation'])
+                    supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video'])
                 ]);
 
 
@@ -4161,7 +4162,7 @@
             const container = document.getElementById('reports-overview-content');
             if (!container) return;
 
-            const fileReports = reports.filter(r => ['report_pdf', 'report_infographic', 'report_presentation'].includes(r.type));
+            const fileReports = reports.filter(r => ['report_pdf', 'report_infographic', 'report_presentation', 'report_video'].includes(r.type));
             const publishedCount = fileReports.filter(r => r.visible_to_client).length;
             const totalCount = fileReports.length;
 
@@ -4209,6 +4210,7 @@
             report_pdf: { icon: 'ph-file-pdf', label: 'Raport PDF', color: 'bg-red-500/10 text-red-400' },
             report_infographic: { icon: 'ph-image', label: 'Infografika', color: 'bg-violet-500/10 text-violet-400' },
             report_presentation: { icon: 'ph-presentation-chart', label: 'Prezentacja', color: 'bg-blue-500/10 text-blue-400' },
+            report_video: { icon: 'ph-video', label: 'Video analiza', color: 'bg-pink-500/10 text-pink-400' },
             product_analysis: { icon: 'ph-chart-line-up', label: 'Analiza produktu', color: 'bg-green-500/10 text-green-400' }
         };
 
@@ -4405,7 +4407,8 @@
         const REPORT_TITLES = {
             report_pdf: 'Raport',
             report_infographic: 'Infografika',
-            report_presentation: 'Prezentacja'
+            report_presentation: 'Prezentacja',
+            report_video: 'Video analiza'
         };
 
         function updateReportFileAccept() {
@@ -4421,6 +4424,9 @@
                     break;
                 case 'report_presentation':
                     fileInput.accept = '.pdf';
+                    break;
+                case 'report_video':
+                    fileInput.accept = '.mp4,.mov,.webm';
                     break;
             }
             fileInput.value = '';
