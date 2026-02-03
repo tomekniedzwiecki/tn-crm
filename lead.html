@@ -2314,20 +2314,22 @@
                 let cleaned = phone.replace(/[\s\-\(\)]/g, '').replace(/^\+?48/, '');
 
                 // First contact - add pre-filled message
+                const isFirstContact = !lead.whatsapp_contacted_at;
                 let url = `https://wa.me/48${cleaned}`;
-                if (!lead.whatsapp_contacted_at) {
+                if (isFirstContact) {
                     url += `?text=${encodeURIComponent('Cześć, piszę w sprawie inwestycji.')}`;
                 }
+
+                // Mark as contacted immediately to prevent duplicate messages on rapid clicks
+                lead.whatsapp_contacted_at = new Date().toISOString();
+
                 window.open(url, '_blank');
 
-                // Save WhatsApp contact timestamp to database
+                // Always save WhatsApp contact timestamp to database (tracks last contact)
                 await supabaseClient
                     .from('leads')
-                    .update({ whatsapp_contacted_at: new Date().toISOString() })
+                    .update({ whatsapp_contacted_at: lead.whatsapp_contacted_at })
                     .eq('id', lead.id);
-
-                // Update local lead object so subsequent clicks don't add message
-                lead.whatsapp_contacted_at = new Date().toISOString();
             }
         });
 
