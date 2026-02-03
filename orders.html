@@ -1081,11 +1081,12 @@
                 created_at: orderDate
             };
 
-            // Set paid_at if status is paid
+            // Set paid_at if status is paid - use order date for new orders, current time when changing status
             if (orderData.status === 'paid') {
                 const existingOrder = orders.find(o => o.id === orderId);
                 if (!existingOrder?.paid_at) {
-                    orderData.paid_at = new Date().toISOString();
+                    // For new orders or first time marking as paid, use order date
+                    orderData.paid_at = orderDate;
                 }
             }
 
