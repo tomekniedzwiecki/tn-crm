@@ -49,6 +49,8 @@ Deno.serve(async (req) => {
 
     // Prepare invoice data
     const today = new Date().toISOString().split('T')[0]
+    // Użyj daty zamówienia (created_at) dla daty sprzedaży i wystawienia
+    const orderDate = order.created_at ? order.created_at.split('T')[0] : today
 
     // Calculate netto from brutto (23% VAT)
     const brutto = parseFloat(order.amount)
@@ -85,9 +87,9 @@ Deno.serve(async (req) => {
       invoice: {
         kind: 'vat', // Faktura VAT
         number: null, // Auto-generated
-        sell_date: order.paid_at ? order.paid_at.split('T')[0] : today,
-        issue_date: today,
-        payment_to: today, // Already paid
+        sell_date: orderDate, // Data zamówienia
+        issue_date: orderDate, // Data zamówienia
+        payment_to: orderDate, // Already paid
         payment_type: 'transfer', // Przelew
         status: 'paid', // Oplacona
         paid: brutto.toFixed(2),
