@@ -2312,13 +2312,22 @@
             if (phone) {
                 // Remove spaces, dashes and Polish prefix, ensure proper format
                 let cleaned = phone.replace(/[\s\-\(\)]/g, '').replace(/^\+?48/, '');
-                window.open(`https://wa.me/48${cleaned}`, '_blank');
+
+                // First contact - add pre-filled message
+                let url = `https://wa.me/48${cleaned}`;
+                if (!lead.whatsapp_contacted_at) {
+                    url += `?text=${encodeURIComponent('Cześć, piszę w sprawie inwestycji.')}`;
+                }
+                window.open(url, '_blank');
 
                 // Save WhatsApp contact timestamp to database
                 await supabaseClient
                     .from('leads')
                     .update({ whatsapp_contacted_at: new Date().toISOString() })
                     .eq('id', lead.id);
+
+                // Update local lead object so subsequent clicks don't add message
+                lead.whatsapp_contacted_at = new Date().toISOString();
             }
         });
 
