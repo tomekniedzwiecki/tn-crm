@@ -412,20 +412,39 @@ node process-logo.js
 
 ```html
 <a href="#" class="logo">
-  <img src="logo.png" alt="[NAZWA MARKI]">
+  <img src="/landing-pages/[slug]/logo.png" alt="[NAZWA MARKI]">
 </a>
 ```
+
+### WAŻNE: Ścieżki do assetów
+
+**Zawsze używaj ścieżek bezwzględnych** do obrazków i innych assetów:
+
+```html
+<!-- ŹLE (nie działa z rewrite) -->
+<img src="logo.png">
+
+<!-- DOBRZE -->
+<img src="/landing-pages/h2vital/logo.png">
+```
+
+Dlaczego? Gdy landing jest serwowany pod `/h2vital` (rewrite), przeglądarka szuka `logo.png` pod `/h2vital/logo.png`, ale plik jest fizycznie w `/landing-pages/h2vital/logo.png`.
+
+Wzór ścieżki: `/landing-pages/[nazwa-folderu]/[plik]`
 
 ## Checklist przed oddaniem
 
 - [ ] Wszystkie sekcje obecne (header -> footer)
 - [ ] Kolory i fonty z brandingu
 - [ ] Logo z projektu (przycięte, przezroczyste tło)
+- [ ] **Ścieżki bezwzględne** do wszystkich assetów (`/landing-pages/[slug]/...`)
 - [ ] Responsive (768px, 480px, 380px)
-- [ ] Fade-in animacje dzialaja
-- [ ] Hamburger menu dziala
+- [ ] Fade-in animacje działają
+- [ ] Hamburger menu działa
 - [ ] Sticky CTA na mobile
 - [ ] Cookie banner
 - [ ] Placeholdery na wszystkie obrazy
-- [ ] CTA buttony linkuja do #offer
+- [ ] CTA buttony linkują do #offer
 - [ ] Meta tags (title, description, OG)
+- [ ] Route w `vercel.json` (jeśli dedykowany URL)
+- [ ] Git commit & push
