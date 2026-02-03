@@ -307,9 +307,15 @@
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-[#888] text-xs font-normal mb-2">Referencja platnosci</label>
-                                <input type="text" id="order-reference" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm font-mono focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors" placeholder="ID transakcji / nr przelewu">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[#888] text-xs font-normal mb-2">Referencja platnosci</label>
+                                    <input type="text" id="order-reference" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm font-mono focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors" placeholder="ID transakcji / nr przelewu">
+                                </div>
+                                <div>
+                                    <label class="block text-[#888] text-xs font-normal mb-2">Data zamówienia</label>
+                                    <input type="datetime-local" id="order-date" class="w-full bg-black border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:border-[#888] focus:outline-none hover:border-[#444] transition-colors">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -757,6 +763,11 @@
             // Hide invoice section by default
             document.getElementById('invoice-section').classList.add('hidden');
 
+            // Set default date to now (format: YYYY-MM-DDTHH:MM)
+            const now = new Date();
+            const defaultDate = now.toISOString().slice(0, 16);
+            document.getElementById('order-date').value = defaultDate;
+
             if (orderId) {
                 const order = orders.find(o => o.id === orderId);
                 if (order) {
@@ -777,6 +788,12 @@
                     document.getElementById('order-reference').value = order.payment_reference || '';
                     document.getElementById('order-lead').value = order.lead_id || '';
                     document.getElementById('order-notes').value = order.notes || '';
+
+                    // Load existing order date
+                    if (order.created_at) {
+                        const orderDate = new Date(order.created_at).toISOString().slice(0, 16);
+                        document.getElementById('order-date').value = orderDate;
+                    }
 
                     // Show invoice section if invoice exists
                     if (order.invoice_number && order.invoice_id) {
@@ -814,6 +831,10 @@
                 city: city || null
             } : null;
 
+            // Get order date - use selected date or current time
+            const orderDateInput = document.getElementById('order-date').value;
+            const orderDate = orderDateInput ? new Date(orderDateInput).toISOString() : new Date().toISOString();
+
             const orderData = {
                 customer_email: document.getElementById('order-email').value.trim(),
                 customer_name: document.getElementById('order-name').value.trim() || null,
@@ -827,7 +848,8 @@
                 payment_source: document.getElementById('order-source').value || null,
                 payment_reference: document.getElementById('order-reference').value.trim() || null,
                 lead_id: document.getElementById('order-lead').value || null,
-                notes: document.getElementById('order-notes').value.trim() || null
+                notes: document.getElementById('order-notes').value.trim() || null,
+                created_at: orderDate
             };
 
             // Set paid_at if status is paid
