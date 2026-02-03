@@ -725,6 +725,10 @@
         let isInlinePayment = true;
         const MIN_INSTALLMENT_AMOUNT = 300;
 
+        // Custom payment state (jednorazowe linki bez workflow)
+        let isCustomPayment = false;
+        let customPaymentLeadId = null;
+
         // Discount code state
         let appliedDiscount = null; // { id, code, target_price, discount_amount, discount_percent }
 
@@ -1170,6 +1174,51 @@
             const offerId = params.get('offer') || params.get('id');
             const retryOrderId = params.get('retry');
 
+            // Custom payment mode - jednorazowy link bez oferty
+            const customAmount = params.get('amount');
+            const customDescription = params.get('description');
+            const leadId = params.get('lead_id');
+
+            if (customAmount && customDescription && !offerId) {
+                // Custom payment mode
+                isCustomPayment = true;
+                customPaymentLeadId = leadId;
+
+                const amount = parseFloat(customAmount);
+                if (isNaN(amount) || amount <= 0) {
+                    showErrorState('Nieprawidłowa kwota płatności.');
+                    return;
+                }
+
+                // Create a virtual offer object for custom payment
+                currentOffer = {
+                    id: null,
+                    name: decodeURIComponent(customDescription),
+                    description: 'Płatność jednorazowa',
+                    price: amount
+                };
+
+                setupOfferDisplay(currentOffer);
+
+                // Hide discount code section for custom payments
+                document.getElementById('discount-code-section').style.display = 'none';
+
+                showCheckout();
+
+                // Track ViewContent to Meta
+                if (typeof fbq !== 'undefined') {
+                    fbq('track', 'ViewContent', {
+                        content_name: currentOffer.name,
+                        content_type: 'custom_payment',
+                        currency: 'PLN',
+                        value: amount
+                    });
+                    console.log('[meta] ViewContent event sent (custom payment)');
+                }
+
+                return;
+            }
+
             // Handle retry from error page
             if (retryOrderId) {
                 try {
@@ -1285,7 +1334,7 @@
 
         // Submit handler
         async function handleSubmit() {
-            if (!currentOffer) return;
+            if (!currentOffer && !isCustomPayment) return;
             hideFormError();
 
             // Track InitiateCheckout to Meta
@@ -1340,21 +1389,28 @@
                     console.log('[checkout] Using existing order:', order.order_number);
 
                     const effectivePrice = getEffectivePrice();
+                    const updateData = {
+                        customer_phone: phone,
+                        customer_name: name || null,
+                        customer_company: company || null,
+                        customer_nip: nip || null,
+                        amount: effectivePrice,
+                        original_amount: appliedDiscount ? currentOffer.price : null,
+                        discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
+                        discount_code_id: appliedDiscount ? appliedDiscount.id : null,
+                        payment_source: paymentSource,
+                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment (no workflow)' : ''}`,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    // Custom payment - ensure skip_workflow is set
+                    if (isCustomPayment) {
+                        updateData.skip_workflow = true;
+                    }
+
                     await supabaseClient
                         .from('orders')
-                        .update({
-                            customer_phone: phone,
-                            customer_name: name || null,
-                            customer_company: company || null,
-                            customer_nip: nip || null,
-                            amount: effectivePrice,
-                            original_amount: appliedDiscount ? currentOffer.price : null,
-                            discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
-                            discount_code_id: appliedDiscount ? appliedDiscount.id : null,
-                            payment_source: paymentSource,
-                            notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}`,
-                            updated_at: new Date().toISOString()
-                        })
+                        .update(updateData)
                         .eq('id', order.id);
 
                     // Update local order object with new amount
@@ -1374,8 +1430,16 @@
                         discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                         status: 'pending',
                         payment_source: paymentSource,
-                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}`
+                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment (no workflow)' : ''}`
                     };
+
+                    // Custom payment - skip workflow creation
+                    if (isCustomPayment) {
+                        orderData.skip_workflow = true;
+                        if (customPaymentLeadId) {
+                            orderData.lead_id = customPaymentLeadId;
+                        }
+                    }
 
                     const { data: newOrder, error: orderError } = await supabaseClient
                         .from('orders')
@@ -1385,7 +1449,7 @@
 
                     if (orderError) throw new Error('Błąd tworzenia zamówienia');
                     order = newOrder;
-                    console.log('[checkout] Created order:', order.order_number);
+                    console.log('[checkout] Created order:', order.order_number, isCustomPayment ? '(custom payment)' : '');
                     // Note: Discount code usage is incremented in tpay-webhook when payment succeeds
                 }
 
