@@ -301,9 +301,28 @@ const SIDEBAR_CSS = `
 `;
 
 // ============================================
+// APP ACCESS RESTRICTIONS
+// ============================================
+const APP_RESTRICTIONS = {
+    // Apps that are only visible to specific users
+    biznes: ['tomekniedzwiecki@gmail.com']
+};
+
+function canAccessApp(appId, userEmail) {
+    const allowedEmails = APP_RESTRICTIONS[appId];
+    if (!allowedEmails) return true; // No restriction = everyone can access
+    return userEmail && allowedEmails.includes(userEmail);
+}
+
+function getAvailableApps(userEmail) {
+    return APPS.filter(app => canAccessApp(app.id, userEmail));
+}
+
+// ============================================
 // INTERNAL STATE
 // ============================================
 let _currentAppId = 'crm';
+let _userEmail = null;
 
 // ============================================
 // PATH HELPERS
@@ -406,10 +425,14 @@ function renderSidebar(config = {}) {
     } else {
         containerId = config.containerId || 'sidebar';
         appId = config.appId || null;
+        _userEmail = config.userEmail || null;
     }
 
     // Set current app
     _currentAppId = appId || detectCurrentApp();
+
+    // Note: Access check is performed in setUserEmail() after user is loaded
+    // This allows sidebar to render first, then check access when email is known
 
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -427,8 +450,9 @@ function renderSidebar(config = {}) {
     const navItems = getNavItemsForApp(_currentAppId);
     const avatarColor = APP_AVATAR_COLORS[_currentAppId] || APP_AVATAR_COLORS.crm;
 
-    // Build app switcher dropdown HTML
-    const appSwitcherDropdown = APPS.filter(a => a.id !== _currentAppId).map(app => `
+    // Build app switcher dropdown HTML (filtered by user access)
+    const availableApps = getAvailableApps(_userEmail);
+    const appSwitcherDropdown = availableApps.filter(a => a.id !== _currentAppId).map(app => `
         <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
             <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
                 <i class="ph-bold ${app.icon} text-xs"></i>
@@ -564,6 +588,39 @@ function showAdminNav(isAdmin) {
 function setUserEmail(email) {
     const el = document.getElementById('user-email');
     if (el) el.textContent = email;
+
+    // Store for access checks
+    _userEmail = email;
+
+    // Check if user can access current app
+    if (!canAccessApp(_currentAppId, _userEmail)) {
+        // Redirect to CRM if user doesn't have access
+        window.location.href = getAppPath('crm');
+        return;
+    }
+
+    // Re-render app switcher with proper permissions
+    updateAppSwitcherVisibility();
+}
+
+function updateAppSwitcherVisibility() {
+    const dropdown = document.getElementById('app-switcher-dropdown');
+    if (!dropdown) return;
+
+    const availableApps = getAvailableApps(_userEmail);
+    const appSwitcherDropdown = availableApps.filter(a => a.id !== _currentAppId).map(app => `
+        <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+            <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
+                <i class="ph-bold ${app.icon} text-xs"></i>
+            </div>
+            <span class="text-sm font-medium">${app.name}</span>
+        </a>
+    `).join('');
+
+    dropdown.innerHTML = `
+        <div class="text-[10px] uppercase tracking-wider text-zinc-500 px-3 py-1.5 font-semibold">Przełącz na</div>
+        ${appSwitcherDropdown}
+    `;
 }
 
 function setUserName(name) {
@@ -662,5 +719,6 @@ window.Sidebar = {
     getCurrentPage,
     updateLinks: updateNavLinks,
     toggle: toggleMobileSidebar,
-    close: closeMobileSidebar
+    close: closeMobileSidebar,
+    canAccessApp
 };
