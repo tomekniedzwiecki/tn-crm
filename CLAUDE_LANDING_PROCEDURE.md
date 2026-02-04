@@ -225,6 +225,57 @@ CSS:
 }
 ```
 
+## Wymagane zdjęcia na landing page
+
+**WAŻNE**: Każdy landing page wymaga przygotowania następujących zdjęć/grafik. Użyj placeholderów podczas generowania, ale poinformuj użytkownika o potrzebie dostarczenia tych materiałów.
+
+### Lista wymaganych zdjęć
+
+| # | Sekcja | Nazwa | Rozmiar | Opis |
+|---|--------|-------|---------|------|
+| 1 | **Hero** | Hero Product | 1200×900 | Główne zdjęcie produktu na białym/przezroczystym tle |
+| 2 | **Problem** | Problem Visual | 800×600 | Ilustracja problemu (np. zmęczony człowiek, stary produkt) |
+| 3 | **Solution/Bento** | Feature 1-4 | 640×360 | 4 zdjęcia ilustrujące funkcje/cechy produktu |
+| 4 | **How It Works** | Krok 1-3 | 600×450 | 3 zdjęcia pokazujące kolejne kroki użycia |
+| 5 | **Testimonials** | Avatar 1-3 | 56×56 | 3 zdjęcia profilowe klientów (okrągłe) |
+| 6 | **Offer** | Zestaw produktu | 800×450 | Zdjęcie kompletnego zestawu/pakietu |
+
+### Suma: 12-14 zdjęć na landing
+
+### Wskazówki dotyczące zdjęć
+
+1. **Hero Product**:
+   - Produkt na białym lub przezroczystym tle
+   - Wysokiej jakości (min. 1200px szerokości)
+   - Pokazuje produkt z najlepszej strony
+
+2. **Feature images (Bento)**:
+   - Mogą być zbliżenia detali produktu
+   - Mogą pokazywać produkt w użyciu
+   - Spójny styl wizualny
+
+3. **How It Works**:
+   - Jasne, instruktażowe zdjęcia
+   - Pokazują kolejne etapy użycia
+   - Mogą zawierać ręce użytkownika
+
+4. **Testimonials avatars**:
+   - Prawdziwe zdjęcia lub stockowe
+   - Spójne oświetlenie i styl
+   - Twarze zwrócone do kamery
+
+5. **Offer zestaw**:
+   - Wszystkie elementy zestawu widoczne
+   - Flat lay lub lekko pod kątem
+   - Profesjonalne oświetlenie
+
+### Alternatywy gdy brak zdjęć
+
+- Użyj zdjęć stockowych (Unsplash, Pexels)
+- Wygeneruj AI (Midjourney, DALL-E)
+- Użyj mockupów produktowych
+- W ostateczności: zostaw placeholdery i poproś klienta o dostarczenie
+
 ## JavaScript (minimal)
 
 ```javascript
