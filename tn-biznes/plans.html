@@ -130,19 +130,6 @@
         <div class="flex-1 overflow-y-auto">
             <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
 
-                <!-- Tabs -->
-                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
-                    <button onclick="switchTab('all')" data-tab="all" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
-                        <i class="ph ph-list mr-1.5"></i>Wszystkie
-                    </button>
-                    <button onclick="switchTab('current')" data-tab="current" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
-                        <i class="ph ph-clock mr-1.5"></i>Aktualne
-                    </button>
-                    <button onclick="switchTab('history')" data-tab="history" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
-                        <i class="ph ph-archive mr-1.5"></i>Historyczne
-                    </button>
-                </div>
-
                 <!-- Plans Grid -->
                 <div id="plans-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div class="col-span-full text-center text-zinc-600 py-12">Ładowanie...</div>
@@ -254,7 +241,6 @@
         // ============================================
         let plans = [];
         let allPlans = [];
-        let currentTab = 'all';
 
         // ============================================
         // AUTH
@@ -369,18 +355,8 @@
         }
 
         function filterPlans() {
-            const today = new Date().toISOString().split('T')[0];
-
-            if (currentTab === 'all') {
-                plans = [...allPlans];
-            } else if (currentTab === 'current') {
-                // Aktualne = okres zawiera dzisiejszą datę
-                plans = allPlans.filter(p => p.period_start <= today && p.period_end >= today);
-            } else if (currentTab === 'history') {
-                // Historyczne = okres zakończony przed dzisiaj
-                plans = allPlans.filter(p => p.period_end < today);
-            }
-
+            // Pokazuj wszystkie plany
+            plans = [...allPlans];
             renderPlans();
         }
 
@@ -485,19 +461,13 @@
         function renderPlans() {
             const container = document.getElementById('plans-grid');
 
-            const emptyMessages = {
-                'all': 'Brak planów',
-                'current': 'Brak aktualnych planów',
-                'history': 'Brak historycznych planów'
-            };
-
             if (plans.length === 0) {
                 container.innerHTML = `
                     <div class="col-span-full text-center py-12">
                         <div class="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center mx-auto mb-4">
                             <i class="ph ph-target text-3xl text-zinc-600"></i>
                         </div>
-                        <div class="text-zinc-500 mb-4">${emptyMessages[currentTab] || 'Brak planów'}</div>
+                        <div class="text-zinc-500 mb-4">Brak planów</div>
                         <button onclick="openPlanModal()" class="text-teal-400 hover:text-teal-300 text-sm font-medium">
                             <i class="ph ph-plus mr-1"></i>Dodaj pierwszy plan
                         </button>
@@ -581,17 +551,6 @@
         }
 
         // ============================================
-        // TABS
-        // ============================================
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('[data-tab]').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.tab === tab);
-            });
-            filterPlans(); // Tylko przefiltruj, dane już są załadowane
-        }
-
-        // ============================================
         // MODALS
         // ============================================
         async function openPlanModal(planId = null) {
@@ -601,7 +560,7 @@
 
             document.getElementById('plan-id').value = '';
             document.getElementById('modal-title').textContent = 'Nowy plan';
-            document.getElementById('plan-type').value = currentTab;
+            document.getElementById('plan-type').value = 'monthly';
             updatePeriodOptions();
 
             // Załaduj koszty stałe i zaktualizuj widok
