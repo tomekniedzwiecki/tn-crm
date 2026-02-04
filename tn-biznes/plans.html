@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Plany</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(20, 184, 166, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+            border-color: rgba(20, 184, 166, 0.3);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .plan-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .plan-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            transition: width 0.5s ease;
+        }
+        .progress-green { background: linear-gradient(90deg, #10b981, #059669); }
+        .progress-yellow { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .progress-red { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-green { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .status-yellow { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+        .status-red { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">plany</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openPlanModal()" class="bg-teal-500 text-black hover:bg-teal-400 px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors shadow-[0_0_15px_rgba(20,184,166,0.2)]">
+                    <i class="ph ph-plus md:mr-1"></i>
+                    <span class="hidden md:inline">Nowy plan</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- Tabs -->
+                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
+                    <button onclick="switchTab('all')" data-tab="all" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-list mr-1.5"></i>Wszystkie
+                    </button>
+                    <button onclick="switchTab('current')" data-tab="current" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-clock mr-1.5"></i>Aktualne
+                    </button>
+                    <button onclick="switchTab('history')" data-tab="history" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-archive mr-1.5"></i>Historyczne
+                    </button>
+                </div>
+
+                <!-- Plans Grid -->
+                <div id="plans-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="col-span-full text-center text-zinc-600 py-12">Ładowanie...</div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Plan Modal -->
+    <div id="plan-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 id="modal-title" class="text-lg font-semibold text-white">Nowy plan</h3>
+                    <button onclick="closePlanModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="plan-form" onsubmit="savePlan(event)">
+                    <input type="hidden" id="plan-id">
+
+                    <!-- Plan Type -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Typ planu</label>
+                        <select id="plan-type" required class="input-field w-full rounded-lg px-3 py-2.5 text-white" onchange="updatePeriodOptions(); updateRequiredRevenue();">
+                            <option value="monthly">Miesięczny</option>
+                            <option value="quarterly">Kwartalny</option>
+                        </select>
+                    </div>
+
+                    <!-- Period -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Okres</label>
+                        <select id="plan-period" required class="input-field w-full rounded-lg px-3 py-2.5 text-white">
+                        </select>
+                    </div>
+
+                    <!-- Target Profit (główny cel) -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Planowany dochód (zł)</label>
+                        <input type="number" id="plan-profit" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="0.00" oninput="updateRequiredRevenue()">
+                        <p class="text-xs text-zinc-600 mt-1">Twój docelowy zysk na ten okres</p>
+                    </div>
+
+                    <!-- Auto-calculated costs from recurring costs template -->
+                    <div class="mb-4 p-3 bg-zinc-900/50 rounded-lg border border-white/5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-zinc-400">Koszty stałe (z szablonu):</span>
+                            <span id="planned-costs" class="text-sm font-mono text-red-400">0 zł</span>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-white/10 pt-2">
+                            <span class="text-sm text-zinc-400">Wymagany przychód:</span>
+                            <span id="required-revenue" class="text-lg font-mono text-teal-400">0 zł</span>
+                        </div>
+                        <p class="text-xs text-zinc-600">Dochód + koszty stałe = przychód potrzebny do realizacji celu</p>
+                    </div>
+
+                    <input type="hidden" id="plan-revenue">
+                    <input type="hidden" id="plan-costs">
+
+                    <!-- Notes -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Notatki (opcjonalnie)</label>
+                        <textarea id="plan-notes" rows="2" class="input-field w-full rounded-lg px-3 py-2.5 text-white resize-none" placeholder="Dodatkowe założenia..."></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closePlanModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-teal-500 text-black font-medium hover:bg-teal-400 transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 id="details-title" class="text-lg font-semibold text-white">Szczegóły realizacji</h3>
+                    <button onclick="closeDetailsModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+                <div id="details-content">
+                    <div class="text-center text-zinc-600 py-8">Ładowanie...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIG
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let plans = [];
+        let allPlans = [];
+        let currentTab = 'all';
+
+        // ============================================
+        // AUTH
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount) + ' zł';
+        }
+
+        // Konwersja brutto -> netto (VAT 23%)
+        function toNetto(brutto) {
+            return brutto / 1.23;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function formatPeriod(start, end, type) {
+            const d = new Date(start);
+            const months = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                           'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+
+            if (type === 'monthly') {
+                return `${months[d.getMonth()]} ${d.getFullYear()}`;
+            } else {
+                const quarter = Math.floor(d.getMonth() / 3) + 1;
+                return `Q${quarter} ${d.getFullYear()}`;
+            }
+        }
+
+        function getStatusColor(percent) {
+            if (percent >= 80) return 'green';
+            if (percent >= 50) return 'yellow';
+            return 'red';
+        }
+
+        function getExpectedPercent(plan) {
+            const today = new Date();
+            const periodStart = new Date(plan.period_start);
+            const periodEnd = new Date(plan.period_end);
+
+            // Jeśli plan jeszcze się nie zaczął
+            if (today < periodStart) return 0;
+            // Jeśli plan się już skończył
+            if (today > periodEnd) return 100;
+
+            const daysPassed = Math.max(0, Math.floor((today - periodStart) / (1000 * 60 * 60 * 24))) + 1;
+            const totalDays = Math.floor((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1;
+
+            return Math.min(Math.round((daysPassed / totalDays) * 100), 100);
+        }
+
+        // Suma miesięcznych kosztów stałych (cache)
+        let monthlyRecurringCosts = 0;
+
+        async function loadRecurringCostsTotal() {
+            const { data, error } = await supabaseClient
+                .from('biznes_recurring_costs')
+                .select('amount')
+                .eq('is_active', true);
+
+            if (!error && data) {
+                monthlyRecurringCosts = data.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+            }
+        }
+
+        function updateRequiredRevenue() {
+            const profit = parseFloat(document.getElementById('plan-profit').value) || 0;
+            const type = document.getElementById('plan-type').value;
+
+            // Koszty stałe: miesiąc * 1, kwartał * 3
+            const multiplier = type === 'quarterly' ? 3 : 1;
+            const plannedCosts = monthlyRecurringCosts * multiplier;
+
+            document.getElementById('planned-costs').textContent = formatMoney(plannedCosts);
+            document.getElementById('plan-costs').value = plannedCosts;
+
+            const required = profit + plannedCosts;
+            document.getElementById('required-revenue').textContent = formatMoney(required);
+            document.getElementById('plan-revenue').value = required;
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadPlans() {
+            // Pobierz wszystkie plany
+            const { data, error } = await supabaseClient
+                .from('biznes_plans')
+                .select('*')
+                .order('period_start', { ascending: false });
+
+            if (!error) {
+                allPlans = data || [];
+                await loadRealizationData();
+                filterPlans();
+            }
+        }
+
+        function filterPlans() {
+            const today = new Date().toISOString().split('T')[0];
+
+            if (currentTab === 'all') {
+                plans = [...allPlans];
+            } else if (currentTab === 'current') {
+                // Aktualne = okres zawiera dzisiejszą datę
+                plans = allPlans.filter(p => p.period_start <= today && p.period_end >= today);
+            } else if (currentTab === 'history') {
+                // Historyczne = okres zakończony przed dzisiaj
+                plans = allPlans.filter(p => p.period_end < today);
+            }
+
+            renderPlans();
+        }
+
+        async function loadRealizationData() {
+            // Pobierz koszty stałe (aktywne) - będą używane jako rzeczywiste koszty
+            const { data: recurringCosts } = await supabaseClient
+                .from('biznes_recurring_costs')
+                .select('amount')
+                .eq('is_active', true);
+
+            const monthlyRecurringTotal = (recurringCosts || []).reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+
+            // Calculate realization for each plan
+            for (const plan of allPlans) {
+                const startStr = plan.period_start;
+                const endStr = plan.period_end;
+
+                // Oblicz ile miesięcy obejmuje plan
+                const startDate = new Date(plan.period_start);
+                const endDate = new Date(plan.period_end);
+                const monthsInPlan = plan.plan_type === 'quarterly' ? 3 : 1;
+
+                // Get CRM orders
+                const { data: orders } = await supabaseClient
+                    .from('orders')
+                    .select('amount')
+                    .eq('status', 'paid')
+                    .gte('paid_at', startStr)
+                    .lte('paid_at', endStr + 'T23:59:59');
+
+                // Get manual revenues
+                const { data: manualRevenues } = await supabaseClient
+                    .from('biznes_revenues')
+                    .select('amount')
+                    .eq('is_received', true)
+                    .gte('date', startStr)
+                    .lte('date', endStr);
+
+                // Get one-time costs only (koszty jednorazowe)
+                const { data: oneTimeCosts } = await supabaseClient
+                    .from('biznes_costs')
+                    .select('amount, month, date, cost_type')
+                    .eq('cost_type', 'one_time');
+
+                const filteredOneTimeCosts = (oneTimeCosts || []).filter(c => {
+                    const cd = c.month || c.date;
+                    return cd >= startStr && cd <= endStr;
+                });
+
+                // Get pipeline
+                const { data: pipeline } = await supabaseClient
+                    .from('leads')
+                    .select('deal_value')
+                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation']);
+
+                // Przychody przeliczane na netto (VAT 23%)
+                const crmRevenue = (orders || []).reduce((s, o) => s + toNetto(parseFloat(o.amount || 0)), 0);
+                const manualRevenue = (manualRevenues || []).reduce((s, r) => s + toNetto(parseFloat(r.amount || 0)), 0);
+                const totalRevenue = crmRevenue + manualRevenue;
+
+                // Koszty rzeczywiste = koszty stałe (z szablonu) + koszty jednorazowe
+                // Koszty stałe są ZAWSZE traktowane jako poniesione (bo to są zobowiązania)
+                const recurringCostsForPeriod = monthlyRecurringTotal * monthsInPlan;
+                const oneTimeCostsTotal = filteredOneTimeCosts.reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+                const totalCosts = recurringCostsForPeriod + oneTimeCostsTotal;
+
+                const pipelineValue = (pipeline || []).reduce((s, l) => s + parseFloat(l.deal_value || 0), 0);
+
+                const targetProfit = plan.target_profit || 0;
+                const targetCosts = plan.target_costs_limit || 0;
+                // Cel przychodu = koszty + planowany dochód
+                const targetRevenue = plan.target_revenue || (targetCosts + targetProfit);
+
+                // Dochód = przychód - koszty stałe
+                const actualProfit = totalRevenue - totalCosts;
+
+                plan._realization = {
+                    revenue: totalRevenue,
+                    crmRevenue,
+                    manualRevenue,
+                    ordersCount: (orders || []).length,
+                    manualCount: (manualRevenues || []).length,
+                    costs: totalCosts,
+                    targetCosts: targetCosts,
+                    targetRevenue: targetRevenue,
+                    profit: actualProfit,
+                    targetProfit: targetProfit,
+                    pipeline: pipelineValue,
+                    pipelineCount: (pipeline || []).length,
+                    // REALIZACJA = aktualny przychód / cel przychodu
+                    // Bo to przychód generujemy i kontrolujemy
+                    percent: targetRevenue > 0 ? Math.round(totalRevenue / targetRevenue * 100) : 0
+                };
+            }
+
+            renderPlans();
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderPlans() {
+            const container = document.getElementById('plans-grid');
+
+            const emptyMessages = {
+                'all': 'Brak planów',
+                'current': 'Brak aktualnych planów',
+                'history': 'Brak historycznych planów'
+            };
+
+            if (plans.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <div class="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center mx-auto mb-4">
+                            <i class="ph ph-target text-3xl text-zinc-600"></i>
+                        </div>
+                        <div class="text-zinc-500 mb-4">${emptyMessages[currentTab] || 'Brak planów'}</div>
+                        <button onclick="openPlanModal()" class="text-teal-400 hover:text-teal-300 text-sm font-medium">
+                            <i class="ph ph-plus mr-1"></i>Dodaj pierwszy plan
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = plans.map(plan => {
+                const r = plan._realization;
+                const statusColor = getStatusColor(r.percent);
+                const progressClass = `progress-${statusColor}`;
+                const statusClass = `status-${statusColor}`;
+
+                return `
+                    <div class="plan-card rounded-xl p-5 hover:border-white/10 transition-all">
+                        <!-- Header with big percent -->
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <div class="${statusClass} status-dot"></div>
+                                    <span class="text-lg font-semibold text-white">${formatPeriod(plan.period_start, plan.period_end, plan.plan_type)}</span>
+                                </div>
+                                <div class="text-xs text-zinc-600">${formatDate(plan.period_start)} - ${formatDate(plan.period_end)}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-mono font-bold text-white">${r.percent}%</div>
+                                <div class="text-[10px] text-zinc-500 uppercase tracking-wide">realizacja</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress bar -->
+                        <div class="mb-4">
+                            <div class="progress-bar h-2 rounded-full relative">
+                                <div class="progress-bar-fill ${progressClass} h-full rounded-full" style="width: ${Math.min(r.percent, 100)}%"></div>
+                                <div class="absolute top-0 h-full w-0.5 bg-white/30" style="left: ${getExpectedPercent(plan)}%" title="Oczekiwany postęp"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-zinc-500">Cel przychodu</span>
+                                <span class="text-sm font-mono text-zinc-300">${formatMoney(r.targetRevenue)}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-zinc-500">Aktualny przychód</span>
+                                <span class="text-sm font-mono text-emerald-400">${formatMoney(r.revenue)}</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-white/5">
+                                <span class="text-xs text-zinc-500">Koszty stałe</span>
+                                <span class="text-sm font-mono text-red-400">${formatMoney(r.costs)}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-zinc-500">Dochód</span>
+                                <span class="text-sm font-mono font-medium ${r.profit >= 0 ? 'text-teal-400' : 'text-red-400'}">${formatMoney(r.profit)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Pipeline -->
+                        <div class="flex items-center gap-2 text-xs text-zinc-500 mb-4">
+                            <i class="ph ph-funnel"></i>
+                            <span>Pipeline: ${formatMoney(r.pipeline)} (${r.pipelineCount} leadów)</span>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex gap-2">
+                            <button onclick="showDetails('${plan.id}')" class="flex-1 px-3 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 text-xs font-medium transition-colors">
+                                <i class="ph ph-chart-line mr-1"></i>Szczegóły
+                            </button>
+                            <button onclick="editPlan('${plan.id}')" class="px-3 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 text-xs transition-colors" title="Edytuj">
+                                <i class="ph ph-pencil"></i>
+                            </button>
+                            <button onclick="deletePlan('${plan.id}')" class="px-3 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-red-400 hover:border-red-400/30 text-xs transition-colors" title="Usuń">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // TABS
+        // ============================================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            filterPlans(); // Tylko przefiltruj, dane już są załadowane
+        }
+
+        // ============================================
+        // MODALS
+        // ============================================
+        async function openPlanModal(planId = null) {
+            const modal = document.getElementById('plan-modal');
+            const form = document.getElementById('plan-form');
+            form.reset();
+
+            document.getElementById('plan-id').value = '';
+            document.getElementById('modal-title').textContent = 'Nowy plan';
+            document.getElementById('plan-type').value = currentTab;
+            updatePeriodOptions();
+
+            // Załaduj koszty stałe i zaktualizuj widok
+            await loadRecurringCostsTotal();
+            updateRequiredRevenue();
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePlanModal() {
+            const modal = document.getElementById('plan-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function updatePeriodOptions() {
+            const type = document.getElementById('plan-type').value;
+            const select = document.getElementById('plan-period');
+            const now = new Date();
+
+            select.innerHTML = '';
+
+            if (type === 'monthly') {
+                for (let i = -2; i <= 6; i++) {
+                    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+                    const label = d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+                    const selected = i === 0 ? 'selected' : '';
+                    select.innerHTML += `<option value="${value}" ${selected}>${label}</option>`;
+                }
+            } else {
+                for (let i = -1; i <= 3; i++) {
+                    const year = now.getFullYear() + Math.floor((now.getMonth() + i * 3) / 12);
+                    const quarter = ((Math.floor(now.getMonth() / 3) + i) % 4 + 4) % 4;
+                    const startMonth = quarter * 3;
+                    const d = new Date(year, startMonth, 1);
+                    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+                    const label = `Q${quarter + 1} ${d.getFullYear()}`;
+                    const selected = i === 0 ? 'selected' : '';
+                    select.innerHTML += `<option value="${value}" ${selected}>${label}</option>`;
+                }
+            }
+        }
+
+        async function showDetails(planId) {
+            const plan = plans.find(p => p.id === planId);
+            if (!plan) return;
+
+            const modal = document.getElementById('details-modal');
+            const content = document.getElementById('details-content');
+            document.getElementById('details-title').textContent = `Szczegóły: ${formatPeriod(plan.period_start, plan.period_end, plan.plan_type)}`;
+
+            // Load detailed data
+            const startStr = plan.period_start;
+            const endStr = plan.period_end;
+
+            const [ordersRes, manualRes, costsRes, pipelineRes] = await Promise.all([
+                supabaseClient.from('orders').select('amount, paid_at, description, customer_name, order_number')
+                    .eq('status', 'paid').gte('paid_at', startStr).lte('paid_at', endStr + 'T23:59:59')
+                    .order('paid_at', { ascending: false }).limit(10),
+                supabaseClient.from('biznes_revenues').select('*').eq('is_received', true)
+                    .gte('date', startStr).lte('date', endStr).order('date', { ascending: false }).limit(10),
+                supabaseClient.from('biznes_costs').select('*'),
+                supabaseClient.from('leads').select('name, deal_value, status')
+                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation'])
+            ]);
+
+            const orders = ordersRes.data || [];
+            const manual = manualRes.data || [];
+            const costs = (costsRes.data || []).filter(c => {
+                const cd = c.month || c.date;
+                return cd >= startStr && cd <= endStr;
+            });
+            const pipeline = pipelineRes.data || [];
+            const r = plan._realization;
+
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Summary -->
+                    <div class="grid grid-cols-2 gap-4 mb-2">
+                        <div class="bg-zinc-900/50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-mono text-emerald-400">${formatMoney(r.revenue)}</div>
+                            <div class="text-xs text-zinc-500">Aktualny przychód</div>
+                        </div>
+                        <div class="bg-zinc-900/50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-mono text-zinc-300">${formatMoney(r.targetRevenue)}</div>
+                            <div class="text-xs text-zinc-500">Cel przychodu (${r.percent}%)</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-zinc-900/50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-mono text-red-400">${formatMoney(r.costs)}</div>
+                            <div class="text-xs text-zinc-500">Koszty stałe</div>
+                        </div>
+                        <div class="bg-zinc-900/50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-mono ${r.profit >= 0 ? 'text-teal-400' : 'text-red-400'}">${formatMoney(r.profit)}</div>
+                            <div class="text-xs text-zinc-500">Aktualny dochód</div>
+                        </div>
+                        <div class="bg-zinc-900/50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-mono text-zinc-400">${formatMoney(r.targetProfit)}</div>
+                            <div class="text-xs text-zinc-500">Cel dochodu</div>
+                        </div>
+                    </div>
+
+                    <!-- CRM Orders -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                            <i class="ph ph-shopping-cart text-emerald-400"></i>
+                            Z CRM (${orders.length} zamówień = ${formatMoney(r.crmRevenue)})
+                        </h4>
+                        ${orders.length > 0 ? `
+                            <div class="space-y-2">
+                                ${orders.map(o => `
+                                    <div class="flex items-center justify-between p-2 bg-zinc-900/30 rounded-lg">
+                                        <div>
+                                            <div class="text-sm text-white">${o.description || 'Zamówienie'}</div>
+                                            <div class="text-xs text-zinc-500">${o.customer_name || ''} • ${o.order_number || ''}</div>
+                                        </div>
+                                        <div class="text-sm font-mono text-emerald-400">+${formatMoney(toNetto(o.amount))}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="text-sm text-zinc-600">Brak zamówień</div>'}
+                    </div>
+
+                    <!-- Manual Revenues -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                            <i class="ph ph-pencil text-violet-400"></i>
+                            Ręczne (${manual.length} wpisów = ${formatMoney(r.manualRevenue)})
+                        </h4>
+                        ${manual.length > 0 ? `
+                            <div class="space-y-2">
+                                ${manual.map(m => `
+                                    <div class="flex items-center justify-between p-2 bg-zinc-900/30 rounded-lg">
+                                        <div>
+                                            <div class="text-sm text-white">${m.name}</div>
+                                            <div class="text-xs text-zinc-500">${m.client_name || ''}</div>
+                                        </div>
+                                        <div class="text-sm font-mono text-violet-400">+${formatMoney(toNetto(m.amount))}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="text-sm text-zinc-600">Brak wpisów</div>'}
+                    </div>
+
+                    <!-- Pipeline -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                            <i class="ph ph-funnel text-amber-400"></i>
+                            Pipeline (${pipeline.length} leadów = ${formatMoney(r.pipeline)})
+                        </h4>
+                        ${pipeline.length > 0 ? `
+                            <div class="space-y-2">
+                                ${pipeline.slice(0, 5).map(l => `
+                                    <div class="flex items-center justify-between p-2 bg-zinc-900/30 rounded-lg">
+                                        <div>
+                                            <div class="text-sm text-white">${l.name}</div>
+                                            <div class="text-xs text-zinc-500">${l.status}</div>
+                                        </div>
+                                        <div class="text-sm font-mono text-amber-400">${formatMoney(l.deal_value || 0)}</div>
+                                    </div>
+                                `).join('')}
+                                ${pipeline.length > 5 ? `<div class="text-xs text-zinc-500 text-center">+ ${pipeline.length - 5} więcej</div>` : ''}
+                            </div>
+                        ` : '<div class="text-sm text-zinc-600">Brak aktywnych leadów</div>'}
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDetailsModal() {
+            const modal = document.getElementById('details-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // ============================================
+        // CRUD OPERATIONS
+        // ============================================
+        async function savePlan(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('plan-id').value;
+            const type = document.getElementById('plan-type').value;
+            const periodStart = document.getElementById('plan-period').value;
+
+            // Calculate period end
+            let periodEnd;
+            if (type === 'monthly') {
+                const d = new Date(periodStart);
+                periodEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+            } else {
+                const d = new Date(periodStart);
+                periodEnd = new Date(d.getFullYear(), d.getMonth() + 3, 0).toISOString().split('T')[0];
+            }
+
+            const targetProfit = parseFloat(document.getElementById('plan-profit').value) || 0;
+            // Koszty pobierane automatycznie z szablonu (mnożnik dla kwartału)
+            const multiplier = type === 'quarterly' ? 3 : 1;
+            const targetCosts = monthlyRecurringCosts * multiplier;
+            const targetRevenue = targetProfit + targetCosts;
+
+            const planData = {
+                plan_type: type,
+                period_start: periodStart,
+                period_end: periodEnd,
+                target_profit: targetProfit,
+                target_costs_limit: targetCosts,
+                target_revenue: targetRevenue, // Obliczane: dochód + koszty
+                notes: document.getElementById('plan-notes').value || null
+            };
+
+            let result;
+            if (id) {
+                result = await supabaseClient.from('biznes_plans').update(planData).eq('id', id);
+            } else {
+                result = await supabaseClient.from('biznes_plans').insert(planData);
+            }
+
+            if (!result.error) {
+                closePlanModal();
+                await loadPlans();
+            } else {
+                alert('Błąd: ' + result.error.message);
+            }
+        }
+
+        async function editPlan(id) {
+            const plan = plans.find(p => p.id === id);
+            if (!plan) return;
+
+            // Załaduj koszty stałe
+            await loadRecurringCostsTotal();
+
+            document.getElementById('plan-id').value = plan.id;
+            document.getElementById('plan-type').value = plan.plan_type;
+            updatePeriodOptions();
+            document.getElementById('plan-period').value = plan.period_start;
+            document.getElementById('plan-profit').value = plan.target_profit || '';
+            document.getElementById('plan-notes').value = plan.notes || '';
+            document.getElementById('modal-title').textContent = 'Edytuj plan';
+
+            // Zaktualizuj obliczone wartości
+            updateRequiredRevenue();
+
+            const modal = document.getElementById('plan-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        async function deletePlan(id) {
+            if (!confirm('Czy na pewno chcesz usunąć ten plan?')) return;
+
+            const { error } = await supabaseClient.from('biznes_plans').delete().eq('id', id);
+            if (!error) {
+                await loadPlans();
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+
+            await loadPlans();
+        }
+
+        init();
+    </script>
+</body>
+</html>

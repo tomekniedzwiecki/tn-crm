@@ -12,21 +12,24 @@ const APPS = [
     { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard' },
     { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white', defaultPage: 'workflows' },
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
-    { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' }
+    { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
+    { id: 'biznes', name: 'TN Biznes', icon: 'ph-chart-line-up', color: 'bg-teal-500 text-white', defaultPage: 'dashboard' }
 ];
 
 const APP_BASES = {
     crm: '',
     workflow: '',
     todo: '/tn-todo',
-    stack: '/tn-stack'
+    stack: '/tn-stack',
+    biznes: '/tn-biznes'
 };
 
 const APP_AVATAR_COLORS = {
     crm: 'from-emerald-600 to-emerald-700',
     workflow: 'from-emerald-600 to-emerald-700',
     todo: 'from-violet-600 to-violet-700',
-    stack: 'from-amber-600 to-amber-700'
+    stack: 'from-amber-600 to-amber-700',
+    biznes: 'from-teal-600 to-teal-700'
 };
 
 // ============================================
@@ -60,11 +63,19 @@ const NAV_ITEMS_STACK = [
     { id: 'categories', icon: 'ph-folders', label: 'Kategorie' },
 ];
 
+const NAV_ITEMS_BIZNES = [
+    { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
+    { id: 'costs', icon: 'ph-wallet', label: 'Koszty' },
+    { id: 'revenues', icon: 'ph-money', label: 'Przychody' },
+    { id: 'plans', icon: 'ph-target', label: 'Plany' },
+];
+
 function getNavItemsForApp(appId) {
     switch (appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
         case 'todo': return NAV_ITEMS_TODO;
         case 'stack': return NAV_ITEMS_STACK;
+        case 'biznes': return NAV_ITEMS_BIZNES;
         default: return NAV_ITEMS_CRM;
     }
 }
@@ -245,6 +256,36 @@ const SIDEBAR_CSS = `
     }
     nav a:hover .ph-folders { animation: folderBounce 0.5s ease-out; }
 
+    /* Biznes animations */
+    @keyframes walletBounce {
+        0% { transform: scale(1); }
+        30% { transform: scale(1.15); }
+        60% { transform: scale(0.95); }
+        100% { transform: scale(1); }
+    }
+    nav a:hover .ph-wallet { animation: walletBounce 0.4s ease-out; }
+
+    @keyframes moneyFloat {
+        0% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-4px) rotate(5deg); }
+        100% { transform: translateY(0) rotate(0deg); }
+    }
+    nav a:hover .ph-money { animation: moneyFloat 0.5s ease-out; }
+
+    @keyframes targetPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    nav a:hover .ph-target { animation: targetPulse 0.4s ease-out; }
+
+    @keyframes chartLineUp {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0); }
+    }
+    nav a:hover .ph-chart-line-up { animation: chartLineUp 0.5s ease-out; }
+
     /* App switcher dropdown */
     .app-switcher-dropdown {
         opacity: 0;
@@ -282,7 +323,18 @@ function getBasePath() {
 
 function getPagePath(page) {
     if (isLocalhost()) {
-        return `${getBasePath()}/${page}.html`;
+        // Detect if we're running from parent folder (c:\repos_tn) or from tn-crm folder
+        const path = location.pathname;
+        const hasParentPrefix = path.includes('/tn-crm/');
+
+        const base = APP_BASES[_currentAppId] || '';
+
+        // If URL contains /tn-crm/, we're running from parent folder - add /tn-crm prefix
+        if (hasParentPrefix) {
+            return `/tn-crm${base}/${page}.html`;
+        }
+        // Running from tn-crm folder - use base directly
+        return `${base}/${page}.html`;
     }
     const base = APP_BASES[_currentAppId] || '';
     return `${base}/${page}`;
@@ -293,15 +345,24 @@ function getAppPath(appId) {
     if (!app) return '/';
     const base = APP_BASES[appId] || '';
     if (isLocalhost()) {
-        const localBase = base || '/tn-crm';
-        return `${localBase}/${app.defaultPage}.html`;
+        // Detect if we're running from parent folder
+        const path = location.pathname;
+        const hasParentPrefix = path.includes('/tn-crm/');
+
+        if (hasParentPrefix) {
+            return `/tn-crm${base}/${app.defaultPage}.html`;
+        }
+        return `${base}/${app.defaultPage}.html`;
     }
     return `${base}/${app.defaultPage}`;
 }
 
 function getLoginPath() {
     if (isLocalhost()) {
-        return '/tn-crm/index.html';
+        // Login is always in main tn-crm folder (APP_BASES['crm'] = '')
+        const path = location.pathname;
+        const hasParentPrefix = path.includes('/tn-crm/');
+        return hasParentPrefix ? '/tn-crm/index.html' : '/index.html';
     }
     return '/';
 }
@@ -327,6 +388,7 @@ function detectCurrentApp() {
     const path = location.pathname;
     if (path.includes('/tn-todo')) return 'todo';
     if (path.includes('/tn-stack')) return 'stack';
+    if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/workflows') || path.includes('/workflow') || path.includes('/products')) return 'workflow';
     return 'crm';
 }
@@ -556,9 +618,11 @@ function setupProfileClick() {
     if (btn) {
         btn.addEventListener('click', (e) => {
             if (e.target.closest('#logout-btn')) return;
-            // Always navigate to CRM settings
+            // Always navigate to CRM settings (APP_BASES['crm'] = '')
             if (isLocalhost()) {
-                window.location.href = '/tn-crm/settings.html?tab=account';
+                const path = location.pathname;
+                const hasParentPrefix = path.includes('/tn-crm/');
+                window.location.href = hasParentPrefix ? '/tn-crm/settings.html?tab=account' : '/settings.html?tab=account';
             } else {
                 window.location.href = '/settings?tab=account';
             }

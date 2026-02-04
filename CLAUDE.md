@@ -43,3 +43,16 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 5. Daj SQL do wklejenia w Supabase SQL Editor
 
 Prompty logo/mockupow generuja sie automatycznie w UI (`generateBrandingPrompts()` w workflow.html).
+
+### Generowanie landing page
+**Plik:** `CLAUDE_LANDING_PROCEDURE.md`
+
+Kiedy uzytkownik mowi "zrob landing dla workflow X":
+1. Przeczytaj `CLAUDE_LANDING_PROCEDURE.md`
+2. Pobierz branding, produkty, raporty z Supabase
+3. Wybierz motyw (ciemny/jasny) na podstawie kategorii
+4. Napisz copy dla kazdej sekcji (PAS framework)
+5. Wygeneruj kompletny `index.html` z inline CSS/JS
+6. Zapisz do `landing-pages/[nazwa-marki]/index.html`
+
+Wzorce: `landing-pages/vibestrike/` (ciemny), `landing-pages/dentaflow/` (jasny).

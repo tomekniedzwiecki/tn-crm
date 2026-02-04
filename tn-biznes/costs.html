@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Koszty</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(20, 184, 166, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+
+        .cost-row { transition: all 0.15s ease; }
+        .cost-row:hover { background: rgba(255,255,255,0.03); }
+
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+            border-color: rgba(20, 184, 166, 0.3);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .badge-recurring { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+        .badge-one-time { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .badge-paid { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-unpaid { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        .recurring-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .recurring-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">koszty</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="add-btn" onclick="openAddModal()" class="bg-teal-500 text-black hover:bg-teal-400 px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors shadow-[0_0_15px_rgba(20,184,166,0.2)]">
+                    <i class="ph ph-plus md:mr-1"></i>
+                    <span class="hidden md:inline" id="add-btn-text">Dodaj koszt staly</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- Tabs -->
+                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
+                    <button onclick="switchTab('recurring')" data-tab="recurring" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-repeat mr-1.5"></i>Koszty stale
+                    </button>
+                    <button onclick="switchTab('monthly')" data-tab="monthly" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-calendar mr-1.5"></i>Koszty miesieczne
+                    </button>
+                </div>
+
+                <!-- ==================== RECURRING COSTS TAB ==================== -->
+                <div id="recurring-tab" class="">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Szablon kosztow stalych</h2>
+                            <p class="text-sm text-zinc-500">Te koszty sa generowane dla kazdego miesiaca</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-mono text-teal-400" id="recurring-total">0 zl</div>
+                            <div class="text-xs text-zinc-500">suma miesieczna</div>
+                        </div>
+                    </div>
+
+                    <div id="recurring-list" class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        <div class="text-center text-zinc-600 py-12 col-span-full">Ladowanie...</div>
+                    </div>
+                </div>
+
+                <!-- ==================== MONTHLY COSTS TAB ==================== -->
+                <div id="monthly-tab" class="hidden">
+                    <!-- Month selector and generate button -->
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <select id="filter-month" class="input-field rounded-lg px-4 py-2.5 text-white text-base font-medium" onchange="loadMonthlyCosts()">
+                            </select>
+                            <button onclick="generateMonthlyCosts()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 border border-violet-500/20 transition-colors">
+                                <i class="ph ph-magic-wand"></i>
+                                <span class="hidden md:inline">Generuj z szablonu</span>
+                            </button>
+                        </div>
+                        <button onclick="openOneTimeModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            <i class="ph ph-plus"></i>
+                            <span>Dodaj jednorazowy</span>
+                        </button>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-total">0 zl</div>
+                            <div class="text-xs text-zinc-500">Razem</div>
+                        </div>
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="text-2xl font-semibold text-violet-400 font-mono" id="stat-recurring">0 zl</div>
+                            <div class="text-xs text-zinc-500">Stale</div>
+                        </div>
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="text-2xl font-semibold text-amber-400 font-mono" id="stat-onetime">0 zl</div>
+                            <div class="text-xs text-zinc-500">Jednorazowe</div>
+                        </div>
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="text-2xl font-semibold text-red-400 font-mono" id="stat-unpaid">0 zl</div>
+                            <div class="text-xs text-zinc-500">Do zaplaty</div>
+                        </div>
+                    </div>
+
+                    <!-- Costs table -->
+                    <div class="bg-zinc-950/50 rounded-xl border border-white/5 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5 text-left">
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Nazwa</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden md:table-cell">Kategoria</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Typ</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Kwota</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthly-costs-list">
+                                    <tr><td colspan="6" class="px-4 py-12 text-center text-zinc-600">Wybierz miesiac</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Recurring Cost Modal -->
+    <div id="recurring-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-xl w-full max-w-lg">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 id="recurring-modal-title" class="text-lg font-semibold text-white">Dodaj koszt staly</h3>
+                    <button onclick="closeRecurringModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="recurring-form" onsubmit="saveRecurringCost(event)">
+                    <input type="hidden" id="recurring-id">
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Nazwa</label>
+                        <input type="text" id="recurring-name" required class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="np. ChatGPT Plus, Hosting VPS">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kategoria</label>
+                        <select id="recurring-category" required class="input-field w-full rounded-lg px-3 py-2.5 text-white">
+                            <option value="tools">Narzedzia</option>
+                            <option value="infrastructure">Infrastruktura</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="office">Biuro</option>
+                            <option value="services">Uslugi zewnetrzne</option>
+                            <option value="pracownik">Pracownik</option>
+                            <option value="other">Inne</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota miesieczna (zl)</label>
+                        <input type="number" id="recurring-amount" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="0.00">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Obowiazuje od</label>
+                        <input type="month" id="recurring-effective-from" required class="input-field w-full rounded-lg px-3 py-2.5 text-white">
+                        <p class="text-xs text-zinc-600 mt-1">Miesiac od ktorego koszt zaczyna obowiazywac</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Opis (opcjonalnie)</label>
+                        <textarea id="recurring-description" rows="2" class="input-field w-full rounded-lg px-3 py-2.5 text-white resize-none" placeholder="Dodatkowe informacje..."></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeRecurringModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-teal-500 text-black font-medium hover:bg-teal-400 transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- One-time / Edit Cost Modal -->
+    <div id="cost-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-xl w-full max-w-lg">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 id="cost-modal-title" class="text-lg font-semibold text-white">Dodaj koszt jednorazowy</h3>
+                    <button onclick="closeCostModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="cost-form" onsubmit="saveCost(event)">
+                    <input type="hidden" id="cost-id">
+                    <input type="hidden" id="cost-type" value="one_time">
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Nazwa</label>
+                        <input type="text" id="cost-name" required class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="np. Nowy laptop, Konferencja">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kategoria</label>
+                        <select id="cost-category" required class="input-field w-full rounded-lg px-3 py-2.5 text-white">
+                            <option value="tools">Narzedzia</option>
+                            <option value="infrastructure">Infrastruktura</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="office">Biuro</option>
+                            <option value="services">Uslugi zewnetrzne</option>
+                            <option value="pracownik">Pracownik</option>
+                            <option value="other">Inne</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota (zl)</label>
+                        <input type="number" id="cost-amount" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="0.00">
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Opis (opcjonalnie)</label>
+                        <textarea id="cost-description" rows="2" class="input-field w-full rounded-lg px-3 py-2.5 text-white resize-none" placeholder="Dodatkowe informacje..."></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeCostModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-teal-500 text-black font-medium hover:bg-teal-400 transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIG
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let recurringCosts = [];
+        let monthlyCosts = [];
+        let currentTab = 'recurring';
+
+        const CATEGORIES = {
+            'infrastructure': { label: 'Infrastruktura', icon: 'ph-hard-drives' },
+            'tools': { label: 'Narzedzia', icon: 'ph-wrench' },
+            'marketing': { label: 'Marketing', icon: 'ph-megaphone' },
+            'office': { label: 'Biuro', icon: 'ph-buildings' },
+            'services': { label: 'Uslugi', icon: 'ph-users' },
+            'pracownik': { label: 'Pracownik', icon: 'ph-user' },
+            'other': { label: 'Inne', icon: 'ph-dots-three' }
+        };
+
+        // ============================================
+        // AUTH
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ' zl';
+        }
+
+        function formatMonth(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+        }
+
+        function getCurrentMonth() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function populateMonthFilter() {
+            const select = document.getElementById('filter-month');
+            const months = [];
+            const now = new Date();
+
+            for (let i = -6; i <= 6; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+                months.push({ value, label });
+            }
+
+            select.innerHTML = months.map(m => {
+                const selected = m.value === getCurrentMonth() ? 'selected' : '';
+                return `<option value="${m.value}" ${selected}>${m.label}</option>`;
+            }).join('');
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadRecurringCosts() {
+            const { data, error } = await supabaseClient
+                .from('biznes_recurring_costs')
+                .select('*')
+                .eq('is_active', true)
+                .order('name');
+
+            if (!error) {
+                recurringCosts = data || [];
+                renderRecurringCosts();
+            }
+        }
+
+        async function loadMonthlyCosts() {
+            const month = document.getElementById('filter-month').value;
+            if (!month) return;
+
+            const monthStart = month + '-01';
+
+            const { data, error } = await supabaseClient
+                .from('biznes_costs')
+                .select('*')
+                .eq('month', monthStart)
+                .order('cost_type')
+                .order('name');
+
+            if (!error) {
+                monthlyCosts = data || [];
+                renderMonthlyCosts();
+                updateStats();
+            }
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderRecurringCosts() {
+            const container = document.getElementById('recurring-list');
+            const total = recurringCosts.reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+            document.getElementById('recurring-total').textContent = formatMoney(total);
+
+            if (recurringCosts.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="ph ph-repeat text-4xl text-zinc-700 mb-3"></i>
+                        <p class="text-zinc-500">Brak kosztow stalych</p>
+                        <p class="text-zinc-600 text-xs mt-1">Dodaj koszty ktore powtarzaja sie co miesiac</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = recurringCosts.map(cost => {
+                const cat = CATEGORIES[cost.category] || CATEGORIES.other;
+                return `
+                    <div class="recurring-card rounded-xl p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                                    <i class="ph ${cat.icon} text-zinc-400 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="text-white font-medium">${cost.name}</div>
+                                    <div class="text-xs text-zinc-500">${cat.label}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="editRecurringCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-white transition-colors">
+                                    <i class="ph ph-pencil"></i>
+                                </button>
+                                <button onclick="deleteRecurringCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors">
+                                    <i class="ph ph-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-mono text-teal-400">${formatMoney(cost.amount)}</div>
+                        <div class="text-xs text-zinc-500">/ miesiac</div>
+                        ${cost.description ? `<div class="text-xs text-zinc-600 mt-2 truncate">${cost.description}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderMonthlyCosts() {
+            const container = document.getElementById('monthly-costs-list');
+
+            if (monthlyCosts.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-4 py-12 text-center">
+                            <i class="ph ph-calendar-x text-4xl text-zinc-700 mb-3"></i>
+                            <p class="text-zinc-500">Brak kosztow w tym miesiacu</p>
+                            <p class="text-zinc-600 text-xs mt-1">Kliknij "Generuj z szablonu" aby dodac koszty stale</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            container.innerHTML = monthlyCosts.map(cost => {
+                const cat = CATEGORIES[cost.category] || CATEGORIES.other;
+                const typeLabel = cost.cost_type === 'recurring' ? 'Staly' : 'Jednorazowy';
+                const typeBadge = cost.cost_type === 'recurring' ? 'badge-recurring' : 'badge-one-time';
+                const statusBadge = cost.is_paid ? 'badge-paid' : 'badge-unpaid';
+                const statusLabel = cost.is_paid ? 'Oplacone' : 'Do zaplaty';
+
+                return `
+                    <tr class="cost-row border-b border-white/5">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                                    <i class="ph ${cat.icon} text-zinc-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-white font-medium">${cost.name}</div>
+                                    ${cost.description ? `<div class="text-xs text-zinc-500 truncate max-w-[200px]">${cost.description}</div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 hidden md:table-cell">
+                            <span class="text-zinc-400 text-sm">${cat.label}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="badge ${typeBadge}">${typeLabel}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-white font-mono">${formatMoney(cost.amount)}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick="togglePaid('${cost.id}', ${!cost.is_paid})" class="badge ${statusBadge} cursor-pointer hover:opacity-80 transition-opacity">
+                                ${statusLabel}
+                            </button>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-1">
+                                <button onclick="editCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-white transition-colors">
+                                    <i class="ph ph-pencil"></i>
+                                </button>
+                                <button onclick="deleteCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors">
+                                    <i class="ph ph-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const total = monthlyCosts.reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+            const recurring = monthlyCosts.filter(c => c.cost_type === 'recurring').reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+            const oneTime = monthlyCosts.filter(c => c.cost_type === 'one_time').reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+            const unpaid = monthlyCosts.filter(c => !c.is_paid).reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+
+            document.getElementById('stat-total').textContent = formatMoney(total);
+            document.getElementById('stat-recurring').textContent = formatMoney(recurring);
+            document.getElementById('stat-onetime').textContent = formatMoney(oneTime);
+            document.getElementById('stat-unpaid').textContent = formatMoney(unpaid);
+        }
+
+        // ============================================
+        // TABS
+        // ============================================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+
+            document.getElementById('recurring-tab').classList.toggle('hidden', tab !== 'recurring');
+            document.getElementById('monthly-tab').classList.toggle('hidden', tab !== 'monthly');
+
+            // Update add button
+            const addBtn = document.getElementById('add-btn');
+            const addBtnText = document.getElementById('add-btn-text');
+            if (tab === 'recurring') {
+                addBtn.onclick = () => openRecurringModal();
+                addBtnText.textContent = 'Dodaj koszt staly';
+            } else {
+                addBtn.onclick = () => openOneTimeModal();
+                addBtnText.textContent = 'Dodaj jednorazowy';
+            }
+
+            if (tab === 'monthly') {
+                loadMonthlyCosts();
+            }
+        }
+
+        // ============================================
+        // MODALS
+        // ============================================
+        function openAddModal() {
+            if (currentTab === 'recurring') {
+                openRecurringModal();
+            } else {
+                openOneTimeModal();
+            }
+        }
+
+        function openRecurringModal(id = null) {
+            const modal = document.getElementById('recurring-modal');
+            document.getElementById('recurring-form').reset();
+            document.getElementById('recurring-id').value = '';
+            document.getElementById('recurring-modal-title').textContent = 'Dodaj koszt staly';
+            // Ustaw domyślną wartość effective_from na bieżący miesiąc
+            document.getElementById('recurring-effective-from').value = getCurrentMonth();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRecurringModal() {
+            document.getElementById('recurring-modal').classList.add('hidden');
+            document.getElementById('recurring-modal').classList.remove('flex');
+        }
+
+        function openOneTimeModal() {
+            const modal = document.getElementById('cost-modal');
+            document.getElementById('cost-form').reset();
+            document.getElementById('cost-id').value = '';
+            document.getElementById('cost-type').value = 'one_time';
+            document.getElementById('cost-modal-title').textContent = 'Dodaj koszt jednorazowy';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCostModal() {
+            document.getElementById('cost-modal').classList.add('hidden');
+            document.getElementById('cost-modal').classList.remove('flex');
+        }
+
+        // ============================================
+        // CRUD - RECURRING COSTS
+        // ============================================
+        async function saveRecurringCost(e) {
+            e.preventDefault();
+            const id = document.getElementById('recurring-id').value;
+            const effectiveFromMonth = document.getElementById('recurring-effective-from').value;
+            const data = {
+                name: document.getElementById('recurring-name').value,
+                category: document.getElementById('recurring-category').value,
+                amount: parseFloat(document.getElementById('recurring-amount').value),
+                description: document.getElementById('recurring-description').value || null,
+                effective_from: effectiveFromMonth ? effectiveFromMonth + '-01' : null
+            };
+
+            let result;
+            if (id) {
+                result = await supabaseClient.from('biznes_recurring_costs').update(data).eq('id', id);
+            } else {
+                result = await supabaseClient.from('biznes_recurring_costs').insert(data);
+            }
+
+            if (!result.error) {
+                closeRecurringModal();
+                await loadRecurringCosts();
+            } else {
+                alert('Blad: ' + result.error.message);
+            }
+        }
+
+        async function editRecurringCost(id) {
+            const cost = recurringCosts.find(c => c.id === id);
+            if (!cost) return;
+
+            document.getElementById('recurring-id').value = cost.id;
+            document.getElementById('recurring-name').value = cost.name;
+            document.getElementById('recurring-category').value = cost.category;
+            document.getElementById('recurring-amount').value = cost.amount;
+            document.getElementById('recurring-description').value = cost.description || '';
+            // Ustaw effective_from (format YYYY-MM)
+            const effectiveFrom = cost.effective_from || cost.created_at?.split('T')[0];
+            document.getElementById('recurring-effective-from').value = effectiveFrom ? effectiveFrom.substring(0, 7) : getCurrentMonth();
+            document.getElementById('recurring-modal-title').textContent = 'Edytuj koszt staly';
+
+            document.getElementById('recurring-modal').classList.remove('hidden');
+            document.getElementById('recurring-modal').classList.add('flex');
+        }
+
+        async function deleteRecurringCost(id) {
+            if (!confirm('Czy na pewno chcesz usunac ten koszt staly?')) return;
+
+            const { error } = await supabaseClient
+                .from('biznes_recurring_costs')
+                .update({ is_active: false })
+                .eq('id', id);
+
+            if (!error) {
+                await loadRecurringCosts();
+            }
+        }
+
+        // ============================================
+        // CRUD - MONTHLY COSTS
+        // ============================================
+        async function generateMonthlyCosts() {
+            const month = document.getElementById('filter-month').value;
+            if (!month) return;
+
+            const monthStart = month + '-01';
+
+            // Check if already generated
+            const existingRecurring = monthlyCosts.filter(c => c.cost_type === 'recurring');
+            if (existingRecurring.length > 0) {
+                if (!confirm(`Ten miesiac ma juz ${existingRecurring.length} kosztow stalych. Czy chcesz dodac nowe z szablonu?`)) {
+                    return;
+                }
+            }
+
+            // Generate from template
+            const newCosts = recurringCosts.map(rc => ({
+                recurring_cost_id: rc.id,
+                name: rc.name,
+                description: rc.description,
+                category: rc.category,
+                amount: rc.amount,
+                cost_type: 'recurring',
+                month: monthStart,
+                is_paid: false
+            }));
+
+            if (newCosts.length === 0) {
+                alert('Brak kosztow stalych do wygenerowania. Dodaj najpierw koszty stale.');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('biznes_costs').insert(newCosts);
+
+            if (!error) {
+                await loadMonthlyCosts();
+            } else {
+                alert('Blad: ' + error.message);
+            }
+        }
+
+        async function saveCost(e) {
+            e.preventDefault();
+            const id = document.getElementById('cost-id').value;
+            const month = document.getElementById('filter-month').value + '-01';
+
+            const data = {
+                name: document.getElementById('cost-name').value,
+                category: document.getElementById('cost-category').value,
+                amount: parseFloat(document.getElementById('cost-amount').value),
+                description: document.getElementById('cost-description').value || null,
+                cost_type: document.getElementById('cost-type').value,
+                month: month
+            };
+
+            let result;
+            if (id) {
+                result = await supabaseClient.from('biznes_costs').update(data).eq('id', id);
+            } else {
+                result = await supabaseClient.from('biznes_costs').insert(data);
+            }
+
+            if (!result.error) {
+                closeCostModal();
+                await loadMonthlyCosts();
+            } else {
+                alert('Blad: ' + result.error.message);
+            }
+        }
+
+        async function editCost(id) {
+            const cost = monthlyCosts.find(c => c.id === id);
+            if (!cost) return;
+
+            document.getElementById('cost-id').value = cost.id;
+            document.getElementById('cost-name').value = cost.name;
+            document.getElementById('cost-category').value = cost.category;
+            document.getElementById('cost-amount').value = cost.amount;
+            document.getElementById('cost-description').value = cost.description || '';
+            document.getElementById('cost-type').value = cost.cost_type;
+            document.getElementById('cost-modal-title').textContent = 'Edytuj koszt';
+
+            document.getElementById('cost-modal').classList.remove('hidden');
+            document.getElementById('cost-modal').classList.add('flex');
+        }
+
+        async function deleteCost(id) {
+            if (!confirm('Czy na pewno chcesz usunac ten koszt?')) return;
+
+            const { error } = await supabaseClient.from('biznes_costs').delete().eq('id', id);
+            if (!error) {
+                await loadMonthlyCosts();
+            }
+        }
+
+        async function togglePaid(id, isPaid) {
+            const { error } = await supabaseClient
+                .from('biznes_costs')
+                .update({ is_paid: isPaid, paid_at: isPaid ? new Date().toISOString() : null })
+                .eq('id', id);
+
+            if (!error) {
+                await loadMonthlyCosts();
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+
+            populateMonthFilter();
+            await loadRecurringCosts();
+        }
+
+        init();
+    </script>
+</body>
+</html>

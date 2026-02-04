@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Przychody</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(20, 184, 166, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+
+        .revenue-row { transition: all 0.15s ease; }
+        .revenue-row:hover { background: rgba(255,255,255,0.03); }
+
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+            border-color: rgba(20, 184, 166, 0.3);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .badge-crm { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-manual { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+        .badge-received { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">przychody</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openRevenueModal()" class="bg-teal-500 text-black hover:bg-teal-400 px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors shadow-[0_0_15px_rgba(20,184,166,0.2)]">
+                    <i class="ph ph-plus md:mr-1"></i>
+                    <span class="hidden md:inline">Dodaj ręcznie</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- Tabs -->
+                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
+                    <button onclick="switchTab('all')" data-tab="all" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-list mr-1.5"></i>Wszystkie
+                    </button>
+                    <button onclick="switchTab('crm')" data-tab="crm" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-shopping-cart mr-1.5"></i>Z CRM
+                    </button>
+                    <button onclick="switchTab('manual')" data-tab="manual" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-pencil mr-1.5"></i>Ręczne
+                    </button>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-emerald-400 font-mono" id="stat-total">0 zł</div>
+                        <div class="text-xs text-zinc-500">Łącznie</div>
+                    </div>
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-crm">0 zł</div>
+                        <div class="text-xs text-zinc-500">Z CRM (zamówienia)</div>
+                    </div>
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-manual">0 zł</div>
+                        <div class="text-xs text-zinc-500">Ręczne</div>
+                    </div>
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-count">0</div>
+                        <div class="text-xs text-zinc-500">Transakcji</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-col md:flex-row gap-3 mb-4">
+                    <div class="relative flex-1">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
+                        <input type="text" id="filter-search" placeholder="Szukaj przychodu..." class="input-field w-full rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-zinc-600" oninput="filterRevenues()">
+                    </div>
+                    <select id="filter-month" class="input-field rounded-lg px-3 py-2 text-sm text-white min-w-[150px]" onchange="loadRevenues()">
+                    </select>
+                </div>
+
+                <!-- Revenues List -->
+                <div class="bg-zinc-950/50 rounded-xl border border-white/5 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-white/5 text-left">
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Źródło</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Nazwa</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden md:table-cell">Klient</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Kwota</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden sm:table-cell">Data</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Ref.</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="revenues-list">
+                                <tr><td colspan="7" class="px-4 py-12 text-center text-zinc-600">Ładowanie...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Revenue Modal -->
+    <div id="revenue-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 id="modal-title" class="text-lg font-semibold text-white">Dodaj przychód ręcznie</h3>
+                    <button onclick="closeRevenueModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="bg-violet-500/10 border border-violet-500/20 rounded-lg p-3 mb-6">
+                    <div class="flex items-start gap-2">
+                        <i class="ph ph-info text-violet-400 mt-0.5"></i>
+                        <div class="text-xs text-violet-300">
+                            Ten formularz służy do dodawania przychodów spoza systemu CRM (np. konsultacje zewnętrzne, premie). Przychody z zamówień są automatycznie pobierane z CRM.
+                        </div>
+                    </div>
+                </div>
+
+                <form id="revenue-form" onsubmit="saveRevenue(event)">
+                    <input type="hidden" id="revenue-id">
+
+                    <!-- Name -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Nazwa</label>
+                        <input type="text" id="revenue-name" required class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="np. Konsultacja zewnętrzna">
+                    </div>
+
+                    <!-- Client -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Klient (opcjonalnie)</label>
+                        <input type="text" id="revenue-client" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="Nazwa klienta">
+                    </div>
+
+                    <!-- Category -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kategoria</label>
+                        <select id="revenue-category" required class="input-field w-full rounded-lg px-3 py-2.5 text-white">
+                            <option value="external">Zewnętrzne</option>
+                            <option value="bonus">Premia</option>
+                            <option value="refund">Zwrot</option>
+                            <option value="other">Inne</option>
+                        </select>
+                    </div>
+
+                    <!-- Amount -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota (zł)</label>
+                        <input type="number" id="revenue-amount" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="0.00">
+                    </div>
+
+                    <!-- Date -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Data</label>
+                        <input type="date" id="revenue-date" required class="input-field w-full rounded-lg px-3 py-2.5 text-white">
+                    </div>
+
+                    <!-- Invoice -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Numer faktury (opcjonalnie)</label>
+                        <input type="text" id="revenue-invoice" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="FV/01/2026">
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-6">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="revenue-received" class="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-teal-500 focus:ring-teal-500">
+                            <span class="text-sm text-zinc-300">Płatność otrzymana</span>
+                        </label>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Opis (opcjonalnie)</label>
+                        <textarea id="revenue-description" rows="2" class="input-field w-full rounded-lg px-3 py-2.5 text-white resize-none" placeholder="Dodatkowe informacje..."></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeRevenueModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-teal-500 text-black font-medium hover:bg-teal-400 transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIG
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let allRevenues = [];
+        let currentTab = 'all';
+
+        // ============================================
+        // AUTH
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ' zł';
+        }
+
+        // Konwersja brutto -> netto (VAT 23%)
+        function toNetto(brutto) {
+            return brutto / 1.23;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function getCurrentMonth() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function populateMonthFilter() {
+            const select = document.getElementById('filter-month');
+            const months = [];
+            const now = new Date();
+
+            for (let i = -6; i <= 3; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+                months.push({ value, label });
+            }
+
+            select.innerHTML = '<option value="">Wszystkie miesiące</option>';
+            months.forEach(m => {
+                const selected = m.value === getCurrentMonth() ? 'selected' : '';
+                select.innerHTML += `<option value="${m.value}" ${selected}>${m.label}</option>`;
+            });
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadRevenues() {
+            const month = document.getElementById('filter-month').value;
+            let startDate = null, endDate = null;
+
+            if (month) {
+                const [year, m] = month.split('-');
+                startDate = `${year}-${m}-01`;
+                // Calculate last day of month without timezone conversion
+                const lastDay = new Date(year, parseInt(m), 0);
+                const endYear = lastDay.getFullYear();
+                const endMonth = String(lastDay.getMonth() + 1).padStart(2, '0');
+                const endDay = String(lastDay.getDate()).padStart(2, '0');
+                endDate = `${endYear}-${endMonth}-${endDay}`;
+            }
+
+            // Load CRM orders
+            let ordersQuery = supabaseClient
+                .from('orders')
+                .select('id, amount, paid_at, created_at, description, customer_name, customer_company, order_number')
+                .eq('status', 'paid')
+                .order('paid_at', { ascending: false });
+
+            if (startDate && endDate) {
+                ordersQuery = ordersQuery.gte('paid_at', startDate).lte('paid_at', endDate + 'T23:59:59');
+            }
+
+            // Load manual revenues
+            let manualQuery = supabaseClient
+                .from('biznes_revenues')
+                .select('*')
+                .order('date', { ascending: false });
+
+            if (startDate && endDate) {
+                manualQuery = manualQuery.gte('date', startDate).lte('date', endDate);
+            }
+
+            const [ordersRes, manualRes] = await Promise.all([ordersQuery, manualQuery]);
+
+            // Filter out orders without paid_at and use paid_at as the date
+            const crmRevenues = (ordersRes.data || [])
+                .filter(o => o.paid_at) // Only include orders with paid_at set
+                .map(o => ({
+                    id: o.id,
+                    name: o.description || 'Zamówienie',
+                    client_name: o.customer_name,
+                    customer_company: o.customer_company,
+                    amount: toNetto(parseFloat(o.amount || 0)),
+                    date: o.paid_at.split('T')[0],
+                    reference: o.order_number,
+                    source: 'crm',
+                    is_received: true
+                }));
+
+            const manualRevenues = (manualRes.data || []).map(r => ({
+                ...r,
+                amount: toNetto(parseFloat(r.amount || 0)),
+                source: 'manual'
+            }));
+
+            allRevenues = [...crmRevenues, ...manualRevenues].sort((a, b) =>
+                new Date(b.date) - new Date(a.date)
+            );
+
+            renderRevenues();
+            updateStats();
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderRevenues() {
+            const container = document.getElementById('revenues-list');
+            const filtered = getFilteredRevenues();
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center text-zinc-600">Brak przychodów</td></tr>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(rev => {
+                const sourceIcon = rev.source === 'crm' ? 'ph-shopping-cart' : 'ph-pencil';
+                const sourceBadge = rev.source === 'crm' ? 'badge-crm' : 'badge-manual';
+                const sourceLabel = rev.source === 'crm' ? 'CRM' : 'Ręczne';
+                const statusBadge = rev.is_received ? 'badge-received' : 'badge-pending';
+                const statusLabel = rev.is_received ? 'Otrzymane' : 'Oczekuje';
+                const clientDisplay = rev.customer_company || rev.client_name || '-';
+
+                return `
+                    <tr class="revenue-row border-b border-white/5">
+                        <td class="px-4 py-3">
+                            <span class="badge ${sourceBadge}">
+                                <i class="ph ${sourceIcon} mr-1"></i>${sourceLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm text-white font-medium">${rev.name}</div>
+                            ${rev.description ? `<div class="text-xs text-zinc-500 truncate max-w-[200px]">${rev.description}</div>` : ''}
+                        </td>
+                        <td class="px-4 py-3 hidden md:table-cell">
+                            <span class="text-zinc-400 text-sm">${clientDisplay}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-emerald-400 font-mono font-medium">+${formatMoney(rev.amount)}</span>
+                        </td>
+                        <td class="px-4 py-3 hidden sm:table-cell">
+                            <span class="text-zinc-400 text-sm">${formatDate(rev.date)}</span>
+                        </td>
+                        <td class="px-4 py-3 hidden lg:table-cell">
+                            <span class="text-zinc-500 text-xs font-mono">${rev.reference || rev.invoice_number || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            ${rev.source === 'manual' ? `
+                                <div class="flex items-center gap-1">
+                                    <button onclick="editRevenue('${rev.id}')" class="p-1.5 text-zinc-500 hover:text-white transition-colors">
+                                        <i class="ph ph-pencil"></i>
+                                    </button>
+                                    <button onclick="deleteRevenue('${rev.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors">
+                                        <i class="ph ph-trash"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <a href="/orders.html" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Zobacz w CRM">
+                                    <i class="ph ph-arrow-square-out"></i>
+                                </a>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getFilteredRevenues() {
+            const search = document.getElementById('filter-search').value.toLowerCase();
+
+            return allRevenues.filter(rev => {
+                if (currentTab === 'crm' && rev.source !== 'crm') return false;
+                if (currentTab === 'manual' && rev.source !== 'manual') return false;
+                if (search && !rev.name.toLowerCase().includes(search) && !(rev.client_name || '').toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        function filterRevenues() {
+            renderRevenues();
+        }
+
+        function updateStats() {
+            const crmTotal = allRevenues.filter(r => r.source === 'crm').reduce((s, r) => s + r.amount, 0);
+            const manualTotal = allRevenues.filter(r => r.source === 'manual' && r.is_received).reduce((s, r) => s + r.amount, 0);
+            const total = crmTotal + manualTotal;
+
+            document.getElementById('stat-total').textContent = formatMoney(total);
+            document.getElementById('stat-crm').textContent = formatMoney(crmTotal);
+            document.getElementById('stat-manual').textContent = formatMoney(manualTotal);
+            document.getElementById('stat-count').textContent = allRevenues.length;
+        }
+
+        // ============================================
+        // TABS
+        // ============================================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            renderRevenues();
+        }
+
+        // ============================================
+        // MODALS
+        // ============================================
+        function openRevenueModal(revenueId = null) {
+            const modal = document.getElementById('revenue-modal');
+            const form = document.getElementById('revenue-form');
+            form.reset();
+
+            document.getElementById('revenue-id').value = '';
+            document.getElementById('modal-title').textContent = 'Dodaj przychód ręcznie';
+            document.getElementById('revenue-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('revenue-received').checked = true;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRevenueModal() {
+            const modal = document.getElementById('revenue-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // ============================================
+        // CRUD OPERATIONS
+        // ============================================
+        async function saveRevenue(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('revenue-id').value;
+            const revenueData = {
+                name: document.getElementById('revenue-name').value,
+                client_name: document.getElementById('revenue-client').value || null,
+                category: document.getElementById('revenue-category').value,
+                amount: parseFloat(document.getElementById('revenue-amount').value),
+                date: document.getElementById('revenue-date').value,
+                invoice_number: document.getElementById('revenue-invoice').value || null,
+                is_received: document.getElementById('revenue-received').checked,
+                received_at: document.getElementById('revenue-received').checked ? new Date().toISOString() : null,
+                description: document.getElementById('revenue-description').value || null
+            };
+
+            let result;
+            if (id) {
+                result = await supabaseClient.from('biznes_revenues').update(revenueData).eq('id', id);
+            } else {
+                result = await supabaseClient.from('biznes_revenues').insert(revenueData);
+            }
+
+            if (!result.error) {
+                closeRevenueModal();
+                await loadRevenues();
+            } else {
+                alert('Błąd: ' + result.error.message);
+            }
+        }
+
+        async function editRevenue(id) {
+            const revenue = allRevenues.find(r => r.id === id && r.source === 'manual');
+            if (!revenue) return;
+
+            document.getElementById('revenue-id').value = revenue.id;
+            document.getElementById('revenue-name').value = revenue.name;
+            document.getElementById('revenue-client').value = revenue.client_name || '';
+            document.getElementById('revenue-category').value = revenue.category;
+            document.getElementById('revenue-amount').value = revenue.amount;
+            document.getElementById('revenue-date').value = revenue.date;
+            document.getElementById('revenue-invoice').value = revenue.invoice_number || '';
+            document.getElementById('revenue-received').checked = revenue.is_received;
+            document.getElementById('revenue-description').value = revenue.description || '';
+            document.getElementById('modal-title').textContent = 'Edytuj przychód';
+
+            const modal = document.getElementById('revenue-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        async function deleteRevenue(id) {
+            if (!confirm('Czy na pewno chcesz usunąć ten przychód?')) return;
+
+            const { error } = await supabaseClient.from('biznes_revenues').delete().eq('id', id);
+            if (!error) {
+                await loadRevenues();
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+
+            populateMonthFilter();
+            await loadRevenues();
+        }
+
+        init();
+    </script>
+</body>
+</html>

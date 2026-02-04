@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Przegląd</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            border-color: rgba(255,255,255,0.12);
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+
+        .period-btn {
+            transition: all 0.2s;
+        }
+        .period-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+            border-color: rgba(20, 184, 166, 0.3);
+        }
+
+        .chart-container {
+            background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .revenue-item {
+            transition: all 0.15s ease;
+        }
+        .revenue-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            background: linear-gradient(90deg, #14b8a6, #0d9488);
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">przegląd</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Period selector -->
+                <div class="flex items-center gap-1 bg-zinc-900/50 rounded-lg p-1 border border-white/5">
+                    <button onclick="setPeriod('month')" data-period="month" class="period-btn active px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400">
+                        Miesiąc
+                    </button>
+                    <button onclick="setPeriod('quarter')" data-period="quarter" class="period-btn px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400">
+                        Kwartał
+                    </button>
+                    <button onclick="setPeriod('year')" data-period="year" class="period-btn px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400">
+                        Rok
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- Period indicator -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <button onclick="navigatePeriod(-1)" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            <i class="ph ph-caret-left"></i>
+                        </button>
+                        <h2 id="period-label" class="text-lg font-semibold text-white">Luty 2026</h2>
+                        <button onclick="navigatePeriod(1)" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+                    <div id="days-remaining" class="text-xs text-zinc-500">
+                        Pozostało 24 dni
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
+                    <!-- Przychody -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <i class="ph ph-trend-up text-emerald-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-revenue">0 zł</div>
+                        <div class="text-xs text-zinc-500 mb-1">Przychody</div>
+                        <div id="stat-revenue-trend" class="text-xs trend-up flex items-center gap-1">
+                            <i class="ph ph-arrow-up"></i>
+                            <span>0% vs poprz.</span>
+                        </div>
+                    </div>
+
+                    <!-- Koszty -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                                <i class="ph ph-trend-down text-red-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-costs">0 zł</div>
+                        <div class="text-xs text-zinc-500 mb-1">Koszty</div>
+                        <div id="stat-costs-trend" class="text-xs trend-down flex items-center gap-1">
+                            <i class="ph ph-arrow-down"></i>
+                            <span>0% vs poprz.</span>
+                        </div>
+                    </div>
+
+                    <!-- Zysk -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                                <i class="ph ph-wallet text-teal-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-profit">0 zł</div>
+                        <div class="text-xs text-zinc-500 mb-1">Zysk</div>
+                        <div id="stat-profit-trend" class="text-xs trend-up flex items-center gap-1">
+                            <i class="ph ph-arrow-up"></i>
+                            <span>0% vs poprz.</span>
+                        </div>
+                    </div>
+
+                    <!-- Realizacja -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                <i class="ph ph-target text-violet-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-realization">0%</div>
+                        <div class="text-xs text-zinc-500 mb-1">Realizacja planu</div>
+                        <div id="stat-plan-target" class="text-xs text-zinc-500">
+                            Plan: 0 zł
+                        </div>
+                    </div>
+
+                    <!-- Pipeline -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                <i class="ph ph-funnel text-amber-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-pipeline">0 zł</div>
+                        <div class="text-xs text-zinc-500 mb-1">Pipeline</div>
+                        <div id="stat-pipeline-leads" class="text-xs text-zinc-500">
+                            0 aktywnych leadów
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Plan Card -->
+                <div id="current-plan-card" class="mb-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <!-- Main plan info -->
+                        <div class="lg:col-span-2 stat-card rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div id="plan-status-dot" class="w-2.5 h-2.5 rounded-full bg-zinc-600"></div>
+                                    <span class="font-semibold text-white"><span id="plan-period-name">-</span></span>
+                                    <span class="text-xs text-zinc-600" id="plan-dates"></span>
+                                </div>
+                                <a href="plans.html" class="text-xs text-zinc-500 hover:text-teal-400 transition-colors">
+                                    Wszystkie <i class="ph ph-arrow-right ml-1"></i>
+                                </a>
+                            </div>
+
+                            <!-- Progress -->
+                            <div class="mb-3">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-xs text-zinc-500">Realizacja przychodu</span>
+                                    <span class="text-sm font-mono font-medium text-white"><span id="plan-realization-percent">0</span>%</span>
+                                </div>
+                                <div class="progress-bar h-2 rounded-full relative">
+                                    <div id="progress-fill" class="progress-bar-fill h-full rounded-full" style="width: 0%"></div>
+                                    <div id="expected-marker" class="absolute top-0 h-full w-0.5 bg-white/50" style="left: 0%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-[10px] text-zinc-600">
+                                    <span>Oczekiwane: <span id="expected-progress" class="text-zinc-500">0%</span></span>
+                                    <span>Aktualne: <span id="actual-progress" class="text-zinc-500">0%</span></span>
+                                </div>
+                            </div>
+
+                            <!-- Stats row -->
+                            <div class="grid grid-cols-4 gap-3 text-center">
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-0.5">Cel</div>
+                                    <div id="plan-target-profit" class="text-sm font-mono text-zinc-300">0 zł</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-0.5">Przychód</div>
+                                    <div id="plan-actual-profit" class="text-sm font-mono text-emerald-400">0 zł</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-0.5">Koszty</div>
+                                    <div id="plan-costs" class="text-sm font-mono text-red-400">0 zł</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-0.5">Dochód</div>
+                                    <div id="plan-revenue" class="text-sm font-mono text-teal-400">0 zł</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tempo card -->
+                        <div id="tempo-indicator" class="stat-card rounded-xl p-4 flex flex-col justify-center">
+                            <div class="text-center">
+                                <div class="text-xs text-zinc-500 mb-1">Tempo realizacji</div>
+                                <div id="tempo-status" class="text-lg font-semibold mb-2">-</div>
+                                <div class="text-xs text-zinc-600">
+                                    Prognoza dochodu na koniec okresu:
+                                </div>
+                                <div id="forecast-profit" class="text-base font-mono text-zinc-300 mt-1">0 zł</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No plan info -->
+                <div id="no-plan-card" class="mb-6 stat-card rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-zinc-800/50 flex items-center justify-center">
+                                <i class="ph ph-target text-zinc-500 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm text-zinc-400">Brak planu na ten okres</div>
+                                <div class="text-xs text-zinc-600">Utwórz plan żeby śledzić realizację celów</div>
+                            </div>
+                        </div>
+                        <a href="plans.html" class="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-400 text-xs font-medium hover:bg-teal-500/20 transition-colors">
+                            <i class="ph ph-plus mr-1"></i>Utwórz plan
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Charts row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+                    <!-- Main chart -->
+                    <div class="chart-container rounded-xl p-4 md:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-white">Przychody vs Koszty</h3>
+                            <div class="flex items-center gap-4 text-xs">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    Przychody
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                    Koszty
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                                    Zysk
+                                </span>
+                            </div>
+                        </div>
+                        <div class="h-[250px]">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Costs by category -->
+                    <div class="chart-container rounded-xl p-4 md:p-6">
+                        <h3 class="text-sm font-semibold text-white mb-4">Koszty wg kategorii</h3>
+                        <div class="h-[250px] flex items-center justify-center">
+                            <canvas id="costsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom sections -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                    <!-- Recent revenues -->
+                    <div class="chart-container rounded-xl p-4 md:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-white">Ostatnie przychody</h3>
+                            <a href="revenues.html" class="text-xs text-teal-400 hover:text-teal-300 transition-colors">
+                                Zobacz wszystkie <i class="ph ph-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                        <div id="recent-revenues" class="space-y-2">
+                            <div class="text-center text-zinc-600 py-8">Ładowanie...</div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming costs -->
+                    <div class="chart-container rounded-xl p-4 md:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-white">Nadchodzące koszty</h3>
+                            <a href="costs.html" class="text-xs text-teal-400 hover:text-teal-300 transition-colors">
+                                Zobacz wszystkie <i class="ph ph-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                        <div id="upcoming-costs" class="space-y-2">
+                            <div class="text-center text-zinc-600 py-8">Ładowanie...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIG
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentPeriod = 'month';
+        let currentDate = new Date();
+        let mainChart = null;
+        let costsChart = null;
+
+        // ============================================
+        // AUTH CHECK
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // PERIOD HELPERS
+        // ============================================
+        function getPeriodDates() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            if (currentPeriod === 'month') {
+                const start = new Date(year, month, 1);
+                const end = new Date(year, month + 1, 0);
+                return { start, end };
+            } else if (currentPeriod === 'quarter') {
+                const quarter = Math.floor(month / 3);
+                const start = new Date(year, quarter * 3, 1);
+                const end = new Date(year, quarter * 3 + 3, 0);
+                return { start, end };
+            } else {
+                const start = new Date(year, 0, 1);
+                const end = new Date(year, 11, 31);
+                return { start, end };
+            }
+        }
+
+        function getPreviousPeriodDates() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            if (currentPeriod === 'month') {
+                const start = new Date(year, month - 1, 1);
+                const end = new Date(year, month, 0);
+                return { start, end };
+            } else if (currentPeriod === 'quarter') {
+                const quarter = Math.floor(month / 3);
+                const start = new Date(year, quarter * 3 - 3, 1);
+                const end = new Date(year, quarter * 3, 0);
+                return { start, end };
+            } else {
+                const start = new Date(year - 1, 0, 1);
+                const end = new Date(year - 1, 11, 31);
+                return { start, end };
+            }
+        }
+
+        function formatPeriodLabel() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const months = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                           'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+
+            if (currentPeriod === 'month') {
+                return `${months[month]} ${year}`;
+            } else if (currentPeriod === 'quarter') {
+                const quarter = Math.floor(month / 3) + 1;
+                return `Q${quarter} ${year}`;
+            } else {
+                return `${year}`;
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            // Extract YYYY-MM-DD part to avoid timezone conversion issues
+            const datePart = dateStr.split('T')[0];
+            const [year, month, day] = datePart.split('-');
+            return `${day}.${month}.${year}`;
+        }
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount) + ' zł';
+        }
+
+        // Konwersja brutto -> netto (VAT 23%)
+        function toNetto(brutto) {
+            return brutto / 1.23;
+        }
+
+        function toDateString(date) {
+            // Use local date components to avoid timezone conversion issues
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // ============================================
+        // DATA FETCHING
+        // ============================================
+        async function fetchDashboardData() {
+            const { start, end } = getPeriodDates();
+            const { start: prevStart, end: prevEnd } = getPreviousPeriodDates();
+
+            const startStr = toDateString(start);
+            const endStr = toDateString(end);
+            const prevStartStr = toDateString(prevStart);
+            const prevEndStr = toDateString(prevEnd);
+
+            // Calculate next day for upper bound (exclusive)
+            const nextDay = new Date(end);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayStr = toDateString(nextDay);
+
+            const prevNextDay = new Date(prevEnd);
+            prevNextDay.setDate(prevNextDay.getDate() + 1);
+            const prevNextDayStr = toDateString(prevNextDay);
+
+            console.log('Date filters:', { startStr, endStr, nextDayStr, prevStartStr, prevEndStr, prevNextDayStr });
+
+            // Oblicz ile miesięcy obejmuje okres
+            const monthsInPeriod = currentPeriod === 'quarter' ? 3 : (currentPeriod === 'year' ? 12 : 1);
+
+            // Fetch all data in parallel - filter orders by paid_at in database query
+            const [ordersRes, prevOrdersRes, manualRevenuesRes, prevManualRevenuesRes, oneTimeCostsRes, prevOneTimeCostsRes, recurringCostsRes, planRes, pipelineRes] = await Promise.all([
+                // Current period orders - filter by paid_at in DB (>= start AND < nextDay)
+                supabaseClient
+                    .from('orders')
+                    .select('amount, paid_at, description, customer_name, order_number')
+                    .eq('status', 'paid')
+                    .gte('paid_at', startStr)
+                    .lt('paid_at', nextDayStr),
+
+                // Previous period orders - filter by paid_at in DB
+                supabaseClient
+                    .from('orders')
+                    .select('amount, paid_at')
+                    .eq('status', 'paid')
+                    .gte('paid_at', prevStartStr)
+                    .lt('paid_at', prevNextDayStr),
+
+                // Current manual revenues
+                supabaseClient
+                    .from('biznes_revenues')
+                    .select('*')
+                    .eq('is_received', true)
+                    .gte('date', startStr)
+                    .lte('date', endStr),
+
+                // Previous manual revenues
+                supabaseClient
+                    .from('biznes_revenues')
+                    .select('amount')
+                    .eq('is_received', true)
+                    .gte('date', prevStartStr)
+                    .lte('date', prevEndStr),
+
+                // Current one-time costs
+                supabaseClient
+                    .from('biznes_costs')
+                    .select('*')
+                    .eq('cost_type', 'one_time')
+                    .gte('month', startStr)
+                    .lte('month', endStr),
+
+                // Previous one-time costs
+                supabaseClient
+                    .from('biznes_costs')
+                    .select('amount, month')
+                    .eq('cost_type', 'one_time')
+                    .gte('month', prevStartStr)
+                    .lte('month', prevEndStr),
+
+                // Recurring costs template (aktywne)
+                supabaseClient
+                    .from('biznes_recurring_costs')
+                    .select('*')
+                    .eq('is_active', true),
+
+                // Plan
+                supabaseClient
+                    .from('biznes_plans')
+                    .select('*')
+                    .eq('plan_type', currentPeriod === 'quarter' ? 'quarterly' : 'monthly')
+                    .eq('period_start', startStr)
+                    .maybeSingle(),
+
+                // Pipeline
+                supabaseClient
+                    .from('leads')
+                    .select('deal_value, status, name')
+                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation'])
+            ]);
+
+            // Orders are already filtered by paid_at in the database query
+            const orders = ordersRes.data || [];
+            const prevOrders = prevOrdersRes.data || [];
+            const manualRevenues = manualRevenuesRes.data || [];
+
+            // Debug: log orders with their paid_at dates
+            console.log('Orders for current period:', orders.map(o => ({ order_number: o.order_number, paid_at: o.paid_at, amount: o.amount })));
+            const prevManualRevenues = prevManualRevenuesRes.data || [];
+            const oneTimeCosts = oneTimeCostsRes.data || [];
+            const prevOneTimeCosts = prevOneTimeCostsRes.data || [];
+            const recurringCosts = recurringCostsRes.data || [];
+            const plan = planRes.data;
+            const pipeline = pipelineRes.data || [];
+
+            // Suma miesięcznych kosztów stałych
+            const monthlyRecurringTotal = recurringCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+
+            // Calculate totals (wszystkie kwoty przeliczane na netto - VAT 23%)
+            const crmRevenue = orders.reduce((sum, o) => sum + toNetto(parseFloat(o.amount || 0)), 0);
+            const manualRevenue = manualRevenues.reduce((sum, r) => sum + toNetto(parseFloat(r.amount || 0)), 0);
+            const totalRevenue = crmRevenue + manualRevenue;
+
+            const prevCrmRevenue = prevOrders.reduce((sum, o) => sum + toNetto(parseFloat(o.amount || 0)), 0);
+            const prevManualRev = prevManualRevenues.reduce((sum, r) => sum + toNetto(parseFloat(r.amount || 0)), 0);
+            const prevTotalRevenue = prevCrmRevenue + prevManualRev;
+
+            // Koszty = koszty stałe (z szablonu) + koszty jednorazowe
+            // Koszty stałe są ZAWSZE traktowane jako poniesione (bo to są zobowiązania)
+            const recurringCostsForPeriod = monthlyRecurringTotal * monthsInPeriod;
+            const oneTimeCostsTotal = oneTimeCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+            const totalCosts = recurringCostsForPeriod + oneTimeCostsTotal;
+
+            const prevOneTimeCostsTotal = prevOneTimeCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+            const prevTotalCosts = recurringCostsForPeriod + prevOneTimeCostsTotal; // zakładamy te same koszty stałe
+
+            const profit = totalRevenue - totalCosts;
+            const prevProfit = prevTotalRevenue - prevTotalCosts;
+
+            const pipelineValue = pipeline.reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
+
+            // Przygotuj listę wszystkich kosztów do wyświetlenia (stałe + jednorazowe)
+            const allCostsItems = [
+                ...recurringCosts.map(c => ({
+                    ...c,
+                    cost_type: 'recurring',
+                    month: startStr // Przypisz do bieżącego miesiąca
+                })),
+                ...oneTimeCosts
+            ];
+
+            return {
+                revenue: { total: totalRevenue, previous: prevTotalRevenue, orders, manual: manualRevenues },
+                costs: { total: totalCosts, previous: prevTotalCosts, items: allCostsItems },
+                profit: { total: profit, previous: prevProfit },
+                plan,
+                pipeline: { value: pipelineValue, leads: pipeline },
+                period: { start, end }
+            };
+        }
+
+        async function fetchChartData() {
+            // Get last 6 months of data for chart
+            const months = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                months.push({
+                    start: toDateString(d),
+                    end: toDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
+                    label: d.toLocaleDateString('pl-PL', { month: 'short' })
+                });
+            }
+
+            const chartData = { labels: [], revenues: [], costs: [], profits: [] };
+
+            // Fetch all data once for efficiency
+            // WAŻNE: Koszty bierzemy z tabeli biznes_costs (faktyczne koszty miesięczne),
+            // a NIE z szablonu biznes_recurring_costs
+            const [allOrdersRes, allManualRes, allCostsRes] = await Promise.all([
+                supabaseClient.from('orders').select('amount, paid_at, created_at').eq('status', 'paid'),
+                supabaseClient.from('biznes_revenues').select('amount, date').eq('is_received', true),
+                supabaseClient.from('biznes_costs').select('amount, month')
+            ]);
+
+            const allOrders = allOrdersRes.data || [];
+            const allManual = allManualRes.data || [];
+            const allCosts = allCostsRes.data || [];
+
+            console.log('Chart debug:', {
+                ordersCount: allOrders.length,
+                manualCount: allManual.length,
+                costsCount: allCosts.length,
+                costs: allCosts.map(c => ({ month: c.month, amount: c.amount }))
+            });
+
+            for (const m of months) {
+                // Filter orders by paid_at date only
+                const monthOrders = allOrders.filter(o => {
+                    if (!o.paid_at) return false;
+                    const d = o.paid_at.split('T')[0];
+                    return d >= m.start && d <= m.end;
+                });
+
+                const monthManual = allManual.filter(r => r.date >= m.start && r.date <= m.end);
+
+                const revenue = monthOrders.reduce((s, o) => s + toNetto(parseFloat(o.amount || 0)), 0)
+                             + monthManual.reduce((s, r) => s + toNetto(parseFloat(r.amount || 0)), 0);
+
+                // Koszty - bierzemy z tabeli biznes_costs dla danego miesiąca
+                // (tam są faktyczne koszty wygenerowane z szablonu lub dodane ręcznie)
+                const monthCosts = allCosts.filter(c => c.month === m.start);
+                const costs = monthCosts.reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+
+                chartData.labels.push(m.label);
+                chartData.revenues.push(revenue);
+                chartData.costs.push(costs);
+                chartData.profits.push(revenue - costs);
+            }
+
+            return chartData;
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        function updateKPIs(data) {
+            // Revenue
+            document.getElementById('stat-revenue').textContent = formatMoney(data.revenue.total);
+            updateTrend('stat-revenue-trend', data.revenue.total, data.revenue.previous);
+
+            // Costs
+            document.getElementById('stat-costs').textContent = formatMoney(data.costs.total);
+            updateTrend('stat-costs-trend', data.costs.total, data.costs.previous, true);
+
+            // Profit
+            document.getElementById('stat-profit').textContent = formatMoney(data.profit.total);
+            updateTrend('stat-profit-trend', data.profit.total, data.profit.previous);
+
+            // Realization - oparta na PRZYCHODZIE (bo to generujemy/kontrolujemy)
+            // Cel przychodu = koszty + cel dochodu
+            const targetProfit = data.plan?.target_profit || 0;
+            const targetCosts = data.plan?.target_costs_limit || 0;
+            const targetRevenue = data.plan?.target_revenue || (targetCosts + targetProfit);
+            const realization = targetRevenue > 0 ? Math.round(data.revenue.total / targetRevenue * 100) : 0;
+            document.getElementById('stat-realization').textContent = realization + '%';
+            document.getElementById('stat-plan-target').textContent = `Cel: ${formatMoney(targetRevenue)}`;
+
+            // Pipeline
+            document.getElementById('stat-pipeline').textContent = formatMoney(data.pipeline.value);
+            document.getElementById('stat-pipeline-leads').textContent = `${data.pipeline.leads.length} aktywnych leadów`;
+
+            // Update plan card (progress bar jest w karcie planu)
+            updatePlanCard(data);
+
+            // Days remaining
+            const today = new Date();
+            const daysLeft = Math.max(0, Math.ceil((data.period.end - today) / (1000 * 60 * 60 * 24)));
+            document.getElementById('days-remaining').textContent = `Pozostało ${daysLeft} dni`;
+        }
+
+        function updateTrend(elementId, current, previous, invertColors = false) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            const change = previous > 0 ? Math.round((current - previous) / previous * 100) : 0;
+            const isUp = change >= 0;
+
+            let colorClass = isUp ? 'trend-up' : 'trend-down';
+            if (invertColors) colorClass = isUp ? 'trend-down' : 'trend-up';
+
+            const icon = isUp ? 'ph-arrow-up' : 'ph-arrow-down';
+
+            el.className = `text-xs ${colorClass} flex items-center gap-1`;
+            el.innerHTML = `<i class="ph ${icon}"></i><span>${Math.abs(change)}% vs poprz.</span>`;
+        }
+
+        function updatePlanCard(data) {
+            const planCard = document.getElementById('current-plan-card');
+            const noPlanCard = document.getElementById('no-plan-card');
+
+            if (data.plan) {
+                planCard.classList.remove('hidden');
+                noPlanCard.classList.add('hidden');
+
+                const targetProfit = data.plan.target_profit || 0;
+                const targetCosts = data.plan.target_costs_limit || 0;
+                // Cel przychodu = koszty + cel dochodu
+                const targetRevenue = data.plan.target_revenue || (targetCosts + targetProfit);
+                const actualRevenue = data.revenue.total;
+                const actualProfit = data.profit.total; // przychód - koszty
+                // REALIZACJA = aktualny przychód / cel przychodu
+                const realization = targetRevenue > 0 ? Math.round(actualRevenue / targetRevenue * 100) : 0;
+
+                // Period name and dates
+                const months = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                               'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+                const startDate = new Date(data.plan.period_start);
+                const endDate = new Date(data.plan.period_end);
+                const periodName = data.plan.plan_type === 'monthly'
+                    ? `${months[startDate.getMonth()]} ${startDate.getFullYear()}`
+                    : `Q${Math.floor(startDate.getMonth() / 3) + 1} ${startDate.getFullYear()}`;
+
+                document.getElementById('plan-period-name').textContent = periodName;
+                document.getElementById('plan-dates').textContent = `${formatDate(data.plan.period_start)} - ${formatDate(data.plan.period_end)}`;
+                document.getElementById('plan-target-profit').textContent = formatMoney(targetRevenue);
+                document.getElementById('plan-actual-profit').textContent = formatMoney(actualRevenue);
+                document.getElementById('plan-revenue').textContent = formatMoney(actualProfit);
+                document.getElementById('plan-costs').textContent = formatMoney(data.costs.total);
+                document.getElementById('plan-realization-percent').textContent = realization;
+
+                // Oblicz tempo realizacji
+                const today = new Date();
+                const periodStart = new Date(data.plan.period_start);
+                const periodEnd = new Date(data.plan.period_end);
+
+                // Ile dni minęło od początku okresu
+                const daysPassed = Math.max(0, Math.floor((today - periodStart) / (1000 * 60 * 60 * 24))) + 1;
+                const totalDays = Math.floor((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                // Oczekiwany procent realizacji (liniowy)
+                const expectedPercent = Math.round((daysPassed / totalDays) * 100);
+
+                // Prognoza przychodu na koniec okresu (na podstawie obecnego tempa)
+                const dailyRevenueRate = daysPassed > 0 ? actualRevenue / daysPassed : 0;
+                const forecastRevenue = dailyRevenueRate * totalDays;
+                // Prognozowany dochód = prognozowany przychód - koszty
+                const forecastProfit = forecastRevenue - targetCosts;
+
+                document.getElementById('expected-progress').textContent = `${expectedPercent}%`;
+                document.getElementById('actual-progress').textContent = `${realization}%`;
+                document.getElementById('forecast-profit').textContent = formatMoney(forecastProfit);
+                document.getElementById('expected-marker').style.left = `${Math.min(expectedPercent, 100)}%`;
+                document.getElementById('progress-fill').style.width = `${Math.min(Math.max(realization, 0), 100)}%`;
+
+                // Tempo status
+                const tempoIndicator = document.getElementById('tempo-indicator');
+                const tempoStatus = document.getElementById('tempo-status');
+                const difference = realization - expectedPercent;
+
+                if (difference >= 10) {
+                    tempoStatus.textContent = 'Ponad planem';
+                    tempoStatus.className = 'text-lg font-semibold mb-2 text-emerald-400';
+                    tempoIndicator.className = 'stat-card rounded-xl p-4 flex flex-col justify-center border border-emerald-500/20 bg-emerald-500/5';
+                } else if (difference >= -10) {
+                    tempoStatus.textContent = 'Zgodnie z planem';
+                    tempoStatus.className = 'text-lg font-semibold mb-2 text-amber-400';
+                    tempoIndicator.className = 'stat-card rounded-xl p-4 flex flex-col justify-center border border-amber-500/20 bg-amber-500/5';
+                } else {
+                    tempoStatus.textContent = 'Poniżej planu';
+                    tempoStatus.className = 'text-lg font-semibold mb-2 text-red-400';
+                    tempoIndicator.className = 'stat-card rounded-xl p-4 flex flex-col justify-center border border-red-500/20 bg-red-500/5';
+                }
+
+                // Status dot color (na podstawie tempa, nie tylko realizacji)
+                const statusDot = document.getElementById('plan-status-dot');
+                statusDot.className = 'w-2.5 h-2.5 rounded-full';
+                if (difference >= 10) {
+                    statusDot.classList.add('bg-emerald-500');
+                    statusDot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.5)';
+                } else if (difference >= -10) {
+                    statusDot.classList.add('bg-amber-500');
+                    statusDot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.5)';
+                } else {
+                    statusDot.classList.add('bg-red-500');
+                    statusDot.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.5)';
+                }
+            } else {
+                planCard.classList.add('hidden');
+                noPlanCard.classList.remove('hidden');
+            }
+        }
+
+        function updateRecentRevenues(data) {
+            const container = document.getElementById('recent-revenues');
+            const items = [...data.revenue.orders.slice(0, 5)];
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-center text-zinc-600 py-8">Brak przychodów w tym okresie</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="revenue-item flex items-center justify-between p-3 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <i class="ph ph-shopping-cart text-emerald-400"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm text-white font-medium">${item.description || 'Zamówienie'}</div>
+                            <div class="text-xs text-zinc-500">${item.customer_name || 'Klient'} • ${item.order_number || ''}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-mono text-emerald-400">+${formatMoney(toNetto(item.amount))}</div>
+                        <div class="text-xs text-zinc-500">${formatDate(item.paid_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateUpcomingCosts(data) {
+            const container = document.getElementById('upcoming-costs');
+            const unpaidCosts = data.costs.items.filter(c => !c.is_paid).slice(0, 5);
+
+            if (unpaidCosts.length === 0) {
+                container.innerHTML = '<div class="text-center text-zinc-600 py-8">Brak nieopłaconych kosztów</div>';
+                return;
+            }
+
+            const categoryIcons = {
+                'infrastructure': 'ph-hard-drives',
+                'tools': 'ph-wrench',
+                'marketing': 'ph-megaphone',
+                'office': 'ph-buildings',
+                'services': 'ph-users',
+                'pracownik': 'ph-user',
+                'other': 'ph-dots-three'
+            };
+
+            container.innerHTML = unpaidCosts.map(cost => `
+                <div class="revenue-item flex items-center justify-between p-3 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                            <i class="ph ${categoryIcons[cost.category] || 'ph-wallet'} text-red-400"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm text-white font-medium">${cost.name}</div>
+                            <div class="text-xs text-zinc-500">${cost.cost_type === 'recurring' ? 'Stały' : 'Jednorazowy'}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-mono text-red-400">-${formatMoney(cost.amount)}</div>
+                        <div class="text-xs text-zinc-500">${formatDate(cost.month)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // CHARTS
+        // ============================================
+        function initCharts(chartData) {
+            const ctx1 = document.getElementById('mainChart').getContext('2d');
+            const ctx2 = document.getElementById('costsChart').getContext('2d');
+
+            if (mainChart) mainChart.destroy();
+            if (costsChart) costsChart.destroy();
+
+            // Main chart
+            mainChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Przychody',
+                            data: chartData.revenues,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Koszty',
+                            data: chartData.costs,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Zysk',
+                            data: chartData.profits,
+                            borderColor: '#14b8a6',
+                            backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#71717a' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: {
+                                color: '#71717a',
+                                callback: v => formatMoney(v)
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCostsChart(data) {
+            const ctx = document.getElementById('costsChart').getContext('2d');
+
+            // Group costs by category
+            const categoryTotals = {};
+            data.costs.items.forEach(c => {
+                categoryTotals[c.category] = (categoryTotals[c.category] || 0) + parseFloat(c.amount || 0);
+            });
+
+            const labels = Object.keys(categoryTotals);
+            const values = Object.values(categoryTotals);
+
+            if (costsChart) costsChart.destroy();
+
+            if (labels.length === 0) {
+                document.getElementById('costsChart').parentElement.innerHTML = '<div class="h-[250px] flex items-center justify-center text-zinc-600">Brak danych o kosztach</div>';
+                return;
+            }
+
+            const categoryLabels = {
+                'infrastructure': 'Infrastruktura',
+                'tools': 'Narzędzia',
+                'marketing': 'Marketing',
+                'office': 'Biuro',
+                'services': 'Usługi',
+                'pracownik': 'Pracownik',
+                'other': 'Inne'
+            };
+
+            costsChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.map(l => categoryLabels[l] || l),
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#14b8a6', '#8b5cf6', '#f59e0b', '#ef4444', '#3b82f6', '#71717a'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: '#a1a1aa', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // PERIOD NAVIGATION
+        // ============================================
+        function setPeriod(period) {
+            currentPeriod = period;
+            document.querySelectorAll('[data-period]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.period === period);
+            });
+            loadDashboard();
+        }
+
+        function navigatePeriod(direction) {
+            if (currentPeriod === 'month') {
+                currentDate.setMonth(currentDate.getMonth() + direction);
+            } else if (currentPeriod === 'quarter') {
+                currentDate.setMonth(currentDate.getMonth() + direction * 3);
+            } else {
+                currentDate.setFullYear(currentDate.getFullYear() + direction);
+            }
+            loadDashboard();
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function loadDashboard() {
+            document.getElementById('period-label').textContent = formatPeriodLabel();
+
+            try {
+                const [data, chartData] = await Promise.all([
+                    fetchDashboardData(),
+                    fetchChartData()
+                ]);
+
+                updateKPIs(data);
+                updateRecentRevenues(data);
+                updateUpcomingCosts(data);
+                initCharts(chartData);
+                updateCostsChart(data);
+            } catch (err) {
+                console.error('Error loading dashboard:', err);
+            }
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            // Load user profile
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+
+            await loadDashboard();
+        }
+
+        init();
+    </script>
+</body>
+</html>
