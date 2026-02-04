@@ -305,7 +305,8 @@ const SIDEBAR_CSS = `
 // ============================================
 const APP_RESTRICTIONS = {
     // Apps that are only visible to specific users
-    biznes: ['tomekniedzwiecki@gmail.com']
+    // Note: Some pages pass username only, some pass full email
+    biznes: ['tomekniedzwiecki@gmail.com', 'tomekniedzwiecki']
 };
 
 function canAccessApp(appId, userEmail) {
