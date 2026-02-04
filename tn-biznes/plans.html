@@ -832,6 +832,12 @@
             const session = await checkAuth();
             if (!session) return;
 
+            // Check if user has access to TN Biznes
+            if (!Sidebar.canAccessApp('biznes', session.user.email)) {
+                window.location.href = '/dashboard';
+                return;
+            }
+
             Sidebar.render({ appId: 'biznes' });
             Sidebar.setUserEmail(session.user.email);
             Sidebar.setupLogout(supabaseClient);
