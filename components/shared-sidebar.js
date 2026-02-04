@@ -305,15 +305,23 @@ const SIDEBAR_CSS = `
 // ============================================
 const APP_RESTRICTIONS = {
     // Apps that are only visible to specific users
-    // Note: Some pages pass username only, some pass full email
-    biznes: ['tomekniedzwiecki@gmail.com', 'tomekniedzwiecki']
+    // Use full email format - the function will handle username-only input
+    biznes: ['tomekniedzwiecki@gmail.com']
 };
 
 function canAccessApp(appId, userEmail) {
     const allowedEmails = APP_RESTRICTIONS[appId];
     if (!allowedEmails) return true; // No restriction = everyone can access
-    // Case-insensitive email comparison
-    return userEmail && allowedEmails.some(e => e.toLowerCase() === userEmail.toLowerCase());
+    if (!userEmail) return false;
+
+    // Normalize: extract username if full email, or use as-is if already username
+    const inputUsername = userEmail.includes('@') ? userEmail.split('@')[0] : userEmail;
+
+    // Check against allowed list (compare usernames)
+    return allowedEmails.some(allowed => {
+        const allowedUsername = allowed.includes('@') ? allowed.split('@')[0] : allowed;
+        return allowedUsername.toLowerCase() === inputUsername.toLowerCase();
+    });
 }
 
 function getAvailableApps(userEmail) {
@@ -593,10 +601,6 @@ function setUserEmail(email) {
 
     // Store for access checks
     _userEmail = email;
-
-    console.log('[Sidebar] setUserEmail:', email, 'currentApp:', _currentAppId);
-    console.log('[Sidebar] canAccessApp biznes:', canAccessApp('biznes', email));
-    console.log('[Sidebar] availableApps:', getAvailableApps(email).map(a => a.id));
 
     // Check if user can access current app
     if (!canAccessApp(_currentAppId, _userEmail)) {
