@@ -311,7 +311,8 @@ const APP_RESTRICTIONS = {
 function canAccessApp(appId, userEmail) {
     const allowedEmails = APP_RESTRICTIONS[appId];
     if (!allowedEmails) return true; // No restriction = everyone can access
-    return userEmail && allowedEmails.includes(userEmail);
+    // Case-insensitive email comparison
+    return userEmail && allowedEmails.some(e => e.toLowerCase() === userEmail.toLowerCase());
 }
 
 function getAvailableApps(userEmail) {
