@@ -593,6 +593,10 @@ function setUserEmail(email) {
     // Store for access checks
     _userEmail = email;
 
+    console.log('[Sidebar] setUserEmail:', email, 'currentApp:', _currentAppId);
+    console.log('[Sidebar] canAccessApp biznes:', canAccessApp('biznes', email));
+    console.log('[Sidebar] availableApps:', getAvailableApps(email).map(a => a.id));
+
     // Check if user can access current app
     if (!canAccessApp(_currentAppId, _userEmail)) {
         // Redirect to CRM if user doesn't have access
