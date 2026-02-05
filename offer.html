@@ -12,6 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -32,9 +33,7 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         ::selection { background: white; color: black; }
 
-        /* Mobile sidebar hide */
         @media (max-width: 768px) {
-            aside { display: none !important; }
             .mobile-back-btn { display: flex !important; }
         }
         @media (min-width: 769px) {
@@ -53,86 +52,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
-
-        /* Nav icon animations */
-        nav a i {
-            display: inline-block;
-        }
-
-        @keyframes houseBounce {
-            0% { transform: translateY(0); }
-            30% { transform: translateY(-4px); }
-            50% { transform: translateY(0); }
-            70% { transform: translateY(-2px); }
-            100% { transform: translateY(0); }
-        }
-        nav a:hover .ph-house {
-            animation: houseBounce 0.5s ease-out;
-        }
-
-        /* Users - friendly wave/huddle effect */
-        @keyframes usersHuddle {
-            0% { transform: scale(1) rotate(0deg); }
-            20% { transform: scale(1.1) rotate(-5deg); }
-            40% { transform: scale(1.15) rotate(3deg); }
-            60% { transform: scale(1.1) rotate(-2deg); }
-            80% { transform: scale(1.05) rotate(1deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-        nav a:hover .ph-users {
-            animation: usersHuddle 0.6s ease-out;
-        }
-
-        /* Kanban - cards sliding on board */
-        @keyframes kanbanSlide {
-            0% { transform: translateX(0); }
-            20% { transform: translateX(-3px); }
-            40% { transform: translateX(4px); }
-            60% { transform: translateX(-2px); }
-            80% { transform: translateX(2px); }
-            100% { transform: translateX(0); }
-        }
-        nav a:hover .ph-kanban {
-            animation: kanbanSlide 0.6s ease-in-out;
-        }
-
-        @keyframes calendarFlip {
-            0% { transform: rotateY(0deg); }
-            50% { transform: rotateY(-20deg); }
-            100% { transform: rotateY(0deg); }
-        }
-        nav a:hover .ph-calendar {
-            animation: calendarFlip 0.5s ease-in-out;
-        }
-
-        @keyframes packageBounce {
-            0% { transform: translateY(0) scale(1); }
-            30% { transform: translateY(-5px) scale(1.1); }
-            50% { transform: translateY(-2px) scale(1.05); }
-            70% { transform: translateY(-3px) scale(1.08); }
-            100% { transform: translateY(0) scale(1); }
-        }
-        nav a:hover .ph-package {
-            animation: packageBounce 0.5s ease-out;
-        }
-
-        @keyframes gearSpin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(180deg); }
-        }
-        nav a:hover .ph-gear {
-            animation: gearSpin 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        @keyframes shieldPulse {
-            0% { transform: scale(1); }
-            30% { transform: scale(1.15); }
-            60% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        nav a:hover .ph-shield-check {
-            animation: shieldPulse 0.5s ease-out;
-        }
 
         .input-field {
             background: #0a0a0a;
@@ -234,67 +153,7 @@
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
 
     <!-- Sidebar -->
-    <aside class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0">
-        <div class="h-16 flex items-center px-5 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5">
-            <div class="w-7 h-7 bg-white text-black rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                <i class="ph-bold ph-lightning text-sm"></i>
-            </div>
-            <span class="font-medium text-base text-zinc-200">TN CRM</span>
-            <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
-        </div>
-
-        <nav class="flex-1 px-4 py-6">
-            <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-2 mb-3">Workspace</div>
-
-            <a href="/dashboard" data-page="dashboard" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-house text-xl"></i>
-                <span class="font-medium">Overview</span>
-            </a>
-
-            <a href="/leads" data-page="leads" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-users text-xl"></i>
-                <span class="font-medium">Leady</span>
-            </a>
-
-            <a href="/pipeline" data-page="pipeline" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-kanban text-xl"></i>
-                <span class="font-medium">Pipeline</span>
-            </a>
-
-            <a href="/calendar" data-page="calendar" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all mb-1">
-                <i class="ph ph-calendar text-xl"></i>
-                <span class="font-medium">Kalendarz</span>
-            </a>
-
-            <a href="/offers" data-page="offers" class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg border border-white/5 shadow-sm mb-1">
-                <i class="ph ph-package text-xl"></i>
-                <span class="font-medium">Oferty</span>
-            </a>
-
-            <a href="/settings" data-page="settings" id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
-                <i class="ph ph-gear text-xl"></i>
-                <span class="font-medium">Ustawienia</span>
-            </a>
-
-            <a href="/audit" data-page="audit" id="nav-audit" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-lg transition-all hidden">
-                <i class="ph ph-shield-check text-xl"></i>
-                <span class="font-medium">Aktywność</span>
-            </a>
-        </nav>
-
-        <div class="p-4 border-t border-white/5">
-            <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" id="user-profile-btn">
-                <div id="user-avatar" class="w-9 h-9 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 border border-white/10 flex items-center justify-center text-sm font-medium text-white">--</div>
-                <div class="flex-1 min-w-0">
-                    <div id="user-name" class="text-sm font-medium text-zinc-200 truncate"></div>
-                    <div id="user-email" class="text-xs text-zinc-500 truncate"></div>
-                </div>
-                <button id="logout-btn" class="p-1.5 text-zinc-500 hover:text-white transition-colors" title="Wyloguj">
-                    <i class="ph ph-sign-out text-lg"></i>
-                </button>
-            </div>
-        </div>
-    </aside>
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
 
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
@@ -719,11 +578,6 @@
             return '';
         }
 
-        function getLoginPath() {
-            const base = getBasePath();
-            return (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/index.html` : '/';
-        }
-
         function generateId() {
             return 'xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
         }
@@ -731,10 +585,10 @@
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
-                window.location.href = getLoginPath();
+                window.location.href = Sidebar.getLoginPath();
                 return null;
             }
-            document.getElementById('user-email').textContent = session.user.email.split('@')[0];
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
             await loadTeamMembers(session.user.id);
             return session;
         }
@@ -751,36 +605,13 @@
 
             // Update sidebar user info
             if (currentMember) {
-                const nameEl = document.getElementById('user-name');
-                const avatarEl = document.getElementById('user-avatar');
-                if (nameEl) nameEl.textContent = currentMember.name || '';
-                if (avatarEl && currentMember.name) {
-                    const parts = currentMember.name.trim().split(' ');
-                    const initials = parts.length >= 2
-                        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                        : currentMember.name.substring(0, 2).toUpperCase();
-                    avatarEl.textContent = initials;
-                }
-
-                // Setup profile click
-                const profileBtn = document.getElementById('user-profile-btn');
-                if (profileBtn) {
-                    profileBtn.addEventListener('click', (e) => {
-                        if (e.target.closest('#logout-btn')) return;
-                        const base = getBasePath();
-                        const settingsPath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-                            ? `${base}/settings.html`
-                            : '/settings';
-                        window.location.href = settingsPath + '?tab=account';
-                    });
-                }
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
             }
 
             // Show admin navigation items for admins
-            if (isAdmin) {
-                document.getElementById('nav-settings')?.classList.remove('hidden');
-                document.getElementById('nav-audit')?.classList.remove('hidden');
-            }
+            Sidebar.showAdminNav(isAdmin);
         }
 
         async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
@@ -802,10 +633,8 @@
             }
         }
 
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            await supabaseClient.auth.signOut();
-            window.location.href = getLoginPath();
-        });
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
 
         // Contract template help toggle
         function toggleContractHelp() {
@@ -1659,7 +1488,7 @@
 
             if (offerDiscountCodes.length > 0) {
                 container.classList.remove('hidden');
-                list.innerHTML = offerDiscountCodes.map(code => `
+                list.innerHTML = offerDiscountCodes.slice(0, 2).map(code => `
                     <div class="flex items-center justify-between p-2 bg-zinc-900/60 rounded-lg border border-white/5">
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-sm text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">${code.code}</span>
