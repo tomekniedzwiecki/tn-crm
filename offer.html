@@ -91,6 +91,70 @@
             50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
         }
 
+        /* Offer toolbar */
+        .offer-toolbar {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+        .toolbar-section {
+            flex: 1;
+            min-width: 0;
+            padding: 0 16px;
+        }
+        .toolbar-section:first-child {
+            padding-left: 0;
+        }
+        .toolbar-section:last-child {
+            padding-right: 0;
+        }
+        .toolbar-divider {
+            width: 1px;
+            height: 36px;
+            background: rgba(255,255,255,0.06);
+            flex-shrink: 0;
+            align-self: center;
+        }
+        .toolbar-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            color: #71717a;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .toolbar-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.08);
+        }
+        .code-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .code-chip:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+        .code-chip .chip-discount {
+            color: #6b7280;
+            font-size: 10px;
+        }
+
         /* Modal - Vercel style */
         .modal-overlay {
             background: rgba(0, 0, 0, 0.7);
@@ -210,106 +274,77 @@
                         <!-- Offer Content -->
                         <div id="offer-content" class="hidden">
 
-                    <!-- Offer Header -->
-                    <div class="flex items-start gap-6 mb-8">
-                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
-                            <i class="ph ph-package text-3xl text-amber-400"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <input type="text" id="offer-name" class="text-3xl font-semibold text-white tracking-tight bg-transparent border-none outline-none w-full placeholder-zinc-600" placeholder="Nazwa oferty...">
-                            <div class="flex items-center gap-3 mt-2">
-                                <span id="created-date" class="text-xs text-zinc-500 font-mono"></span>
-                                <span class="text-zinc-700">|</span>
-                                <button id="toggle-active" class="text-xs flex items-center gap-1 transition-colors">
-                                    <span id="status-indicator"></span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="text-right flex-shrink-0">
-                            <div class="flex items-baseline gap-1">
-                                <input type="number" id="offer-price" class="text-3xl font-semibold text-white font-mono bg-transparent text-right w-32 border-none outline-none placeholder-zinc-600" placeholder="0" min="0" step="0.01">
-                                <span class="text-zinc-500 text-lg">PLN</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Offer Link -->
-                    <div id="offer-link-section" class="hidden mb-6 bg-zinc-900/40 rounded-lg border border-white/5 p-4">
+                    <!-- Offer Header — Zone 1: Title Bar -->
+                    <div class="mb-6">
                         <div class="flex items-center justify-between gap-4">
-                            <div class="flex items-center gap-3 flex-1 min-w-0">
-                                <div class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ph-link text-emerald-400"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="text-xs text-zinc-500 mb-1">Link do płatności</div>
-                                    <div id="offer-checkout-url" class="text-sm text-zinc-300 font-mono truncate"></div>
+                            <div class="flex-1 min-w-0">
+                                <input type="text" id="offer-name" class="text-2xl font-semibold text-white tracking-tight bg-transparent border-none outline-none w-full placeholder-zinc-600" placeholder="Nazwa oferty...">
+                                <div class="flex items-center gap-2 mt-1.5">
+                                    <span id="created-date" class="text-[11px] text-zinc-600 font-mono"></span>
+                                    <span class="text-zinc-800">·</span>
+                                    <button id="toggle-active" class="transition-colors">
+                                        <span id="status-indicator"></span>
+                                    </button>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
-                                <button onclick="copyOfferLink()" class="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors">
-                                    <i class="ph ph-copy"></i>
-                                    Kopiuj
-                                </button>
-                                <button onclick="openOfferLink()" class="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm transition-colors">
-                                    <i class="ph ph-arrow-square-out"></i>
-                                    Otwórz
-                                </button>
+                                <input type="number" id="offer-price" class="text-2xl font-semibold text-white font-mono bg-transparent text-right w-28 border-none outline-none placeholder-zinc-600" placeholder="0" min="0" step="0.01">
+                                <span class="text-zinc-600 text-sm font-mono">PLN</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Discount Codes Section -->
-                    <div class="mb-6 bg-zinc-900/40 rounded-lg border border-white/5 p-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                                    <i class="ph ph-ticket text-lg text-emerald-400"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                        Kody rabatowe
-                                        <span id="discount-codes-count" class="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-mono">0</span>
-                                    </h3>
-                                    <p class="text-xs text-zinc-500">Szybko stwórz kod rabatowy dla tej oferty</p>
-                                </div>
+                    <!-- Zone 2: Actions Toolbar -->
+                    <div id="offer-toolbar" class="offer-toolbar mb-8 hidden">
+                        <!-- Link section -->
+                        <div id="toolbar-link-section" class="toolbar-section hidden">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-1">Link</div>
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-link text-zinc-600 text-sm"></i>
+                                <span id="offer-checkout-url" class="text-xs text-zinc-400 font-mono truncate max-w-[260px]"></span>
+                                <button onclick="copyOfferLink()" class="toolbar-btn" title="Kopiuj link">
+                                    <i class="ph ph-copy"></i>
+                                </button>
+                                <button onclick="openOfferLink()" class="toolbar-btn" title="Otwórz link">
+                                    <i class="ph ph-arrow-square-out"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Divider -->
+                        <div id="toolbar-divider-codes" class="toolbar-divider hidden"></div>
+
+                        <!-- Discount codes section -->
+                        <div class="toolbar-section">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-1">
+                                Kody
+                                <span id="discount-codes-count" class="text-[10px] text-zinc-700 font-mono ml-1">0</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="quickAddDiscountCode()" class="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
+                                <i class="ph ph-ticket text-zinc-600 text-sm"></i>
+                                <div id="offer-codes-list" class="flex items-center gap-1.5 flex-wrap"></div>
+                                <button onclick="quickAddDiscountCode()" class="toolbar-btn text-emerald-500 hover:text-emerald-400" title="Nowy kod">
                                     <i class="ph ph-plus"></i>
-                                    Nowy kod
                                 </button>
-                                <a id="all-codes-link" href="/offers?tab=codes" class="text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5">
+                                <a id="all-codes-link" href="/offers?tab=codes" class="toolbar-btn" title="Wszystkie kody">
                                     <i class="ph ph-list"></i>
-                                    Wszystkie
                                 </a>
                             </div>
                         </div>
-                        <!-- Quick codes list for this offer -->
-                        <div id="offer-discount-codes" class="mt-3 hidden">
-                            <div class="border-t border-white/5 pt-3">
-                                <div id="offer-codes-list" class="space-y-2"></div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Contract Template Section (only for specific offers) -->
-                    <div id="contract-section" class="mb-6 bg-zinc-900/40 rounded-lg border border-white/5 p-4 hidden">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                                    <i class="ph ph-file-text text-lg text-blue-400"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                        Wzór umowy
-                                    </h3>
-                                    <p class="text-xs text-zinc-500">Umowa o współpracy dla tej oferty</p>
-                                </div>
-                            </div>
+                        <!-- Divider -->
+                        <div id="toolbar-divider-contract" class="toolbar-divider hidden"></div>
+
+                        <!-- Contract section -->
+                        <div id="contract-section" class="toolbar-section hidden">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-1">Umowa</div>
                             <div class="flex items-center gap-2">
-                                <a id="contract-link" href="#" target="_blank" class="text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
-                                    <i class="ph ph-arrow-square-out"></i>
+                                <i class="ph ph-file-text text-zinc-600 text-sm"></i>
+                                <a id="contract-link" href="#" target="_blank" class="text-xs text-zinc-400 hover:text-white transition-colors">
                                     Otwórz umowę
+                                </a>
+                                <a id="contract-link-icon" href="#" target="_blank" class="toolbar-btn" title="Otwórz umowę">
+                                    <i class="ph ph-arrow-square-out"></i>
                                 </a>
                             </div>
                         </div>
@@ -758,9 +793,13 @@
             if (contractTemplates[offer.id]) {
                 const contractSection = document.getElementById('contract-section');
                 const contractLink = document.getElementById('contract-link');
+                const contractLinkIcon = document.getElementById('contract-link-icon');
+                const dividerContract = document.getElementById('toolbar-divider-contract');
                 if (contractSection && contractLink) {
                     contractLink.href = contractTemplates[offer.id];
+                    if (contractLinkIcon) contractLinkIcon.href = contractTemplates[offer.id];
                     contractSection.classList.remove('hidden');
+                    if (dividerContract) dividerContract.classList.remove('hidden');
                 }
             }
 
@@ -789,9 +828,9 @@
         function updateStatusIndicator() {
             const indicator = document.getElementById('status-indicator');
             if (offer.is_active) {
-                indicator.innerHTML = '<span class="text-emerald-400">● Aktywna</span>';
+                indicator.innerHTML = '<span class="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Aktywna</span>';
             } else {
-                indicator.innerHTML = '<span class="text-zinc-500">○ Nieaktywna</span>';
+                indicator.innerHTML = '<span class="inline-flex items-center gap-1 text-[11px] text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full font-medium"><span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>Nieaktywna</span>';
             }
         }
 
@@ -806,13 +845,19 @@
         }
 
         function updateOfferLink() {
+            const toolbar = document.getElementById('offer-toolbar');
+            const linkSection = document.getElementById('toolbar-link-section');
+            const dividerCodes = document.getElementById('toolbar-divider-codes');
             if (!offer || !offer.price || offer.price <= 0) {
-                document.getElementById('offer-link-section').classList.add('hidden');
+                linkSection.classList.add('hidden');
+                dividerCodes.classList.add('hidden');
                 return;
             }
             const url = getCheckoutUrl();
             document.getElementById('offer-checkout-url').textContent = url;
-            document.getElementById('offer-link-section').classList.remove('hidden');
+            linkSection.classList.remove('hidden');
+            dividerCodes.classList.remove('hidden');
+            toolbar.classList.remove('hidden');
         }
 
         async function copyOfferLink() {
@@ -1482,32 +1527,21 @@
             document.getElementById('discount-codes-count').textContent = offerDiscountCodes.length;
             updateCodesCount();
 
-            // Render codes if any
-            const container = document.getElementById('offer-discount-codes');
+            // Render codes as inline chips in toolbar
             const list = document.getElementById('offer-codes-list');
+            const toolbar = document.getElementById('offer-toolbar');
 
             if (offerDiscountCodes.length > 0) {
-                container.classList.remove('hidden');
                 list.innerHTML = offerDiscountCodes.slice(0, 2).map(code => `
-                    <div class="flex items-center justify-between p-2 bg-zinc-900/60 rounded-lg border border-white/5">
-                        <div class="flex items-center gap-2">
-                            <span class="font-mono text-sm text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">${code.code}</span>
-                            <span class="text-xs text-zinc-500">-${formatPrice(code.discount_amount)} PLN</span>
-                            ${code.uses_limit ? `<span class="text-[10px] text-zinc-600">(${code.uses_count || 0}/${code.uses_limit})</span>` : ''}
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <button onclick="copyCheckoutWithCode('${code.code}')" class="text-zinc-500 hover:text-emerald-400 p-1 rounded hover:bg-emerald-500/10 transition-colors" title="Kopiuj link do checkout z kodem">
-                                <i class="ph ph-link text-sm"></i>
-                            </button>
-                            <button onclick="copyDiscountCode('${code.code}')" class="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 transition-colors" title="Kopiuj kod">
-                                <i class="ph ph-copy text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <span class="code-chip" onclick="copyCheckoutWithCode('${code.code}')" title="Kliknij aby skopiować link z kodem">
+                        ${code.code}
+                        <span class="chip-discount">-${formatPrice(code.discount_amount)}</span>
+                    </span>
                 `).join('');
             } else {
-                container.classList.add('hidden');
+                list.innerHTML = '<span class="text-[11px] text-zinc-700">brak</span>';
             }
+            toolbar.classList.remove('hidden');
         }
 
         function copyDiscountCode(code) {
