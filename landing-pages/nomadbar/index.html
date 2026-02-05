@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NomadBar — Kawowa Niezależność. Przenośny Ekspres 20 Bar.</title>
+  <meta name="description" content="NomadBar — przenośny ekspres ciśnieniowy 20 Bar z pompą tłokową, stalowym zbiornikiem i systemem 3-w-1. Idealne espresso gdziekolwiek jesteś.">
+  <meta property="og:title" content="NomadBar — Kawowa Niezależność">
+  <meta property="og:description" content="Przenośny ekspres ciśnieniowy 20 Bar. System 3-w-1: Nespresso, Dolce Gusto, kawa mielona. USB-C, ~700g.">
+  <meta property="og:type" content="product">
+  <meta property="og:locale" content="pl_PL">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-dark: #0d0d0d;
+      --bg-section: #141414;
+      --bg-card: #1c1c1c;
+      --bg-card-hover: #252525;
+      --orange: #e8732a;
+      --orange-light: #ff8c42;
+      --gold: #c5a55a;
+      --gold-light: #d4b96a;
+      --gold-dark: #a08940;
+      --cream: #d4a84b;
+      --red: #e63946;
+      --green: #4ecdc4;
+      --white: #ffffff;
+      --gray-100: #f0f0f0;
+      --gray-200: #cccccc;
+      --gray-300: #999999;
+      --gray-400: #666666;
+      --gray-500: #444444;
+      --gray-600: #333333;
+      --gray-700: #222222;
+      --font-heading: 'Oswald', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-snap-type: y mandatory;
+      overflow-x: hidden;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--white);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-dark); }
+    ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 3px; }
+
+    /* ═══ SLIDE SYSTEM ═══ */
+    .slide {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 60px 80px;
+    }
+    .slide::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(232,115,42,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,115,42,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .slide > * { position: relative; z-index: 1; }
+    .slide-divider {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--orange), var(--gold), var(--orange));
+    }
+
+    /* ═══ TYPOGRAPHY ═══ */
+    .section-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--white);
+      margin-bottom: 40px;
+    }
+    .section-title span { color: var(--gold); }
+    .section-title .orange { color: var(--orange); }
+    .subtitle {
+      font-family: var(--font-body);
+      font-weight: 300;
+      font-size: clamp(1rem, 1.5vw, 1.2rem);
+      color: var(--gray-200);
+      margin-bottom: 50px;
+      font-style: italic;
+    }
+    .label {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--orange);
+      margin-bottom: 12px;
+    }
+
+    /* ═══ CARDS ═══ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--gray-600);
+      border-radius: 4px;
+      padding: 32px;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      border-color: var(--gold-dark);
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+    }
+    .card-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.3rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .card p {
+      color: var(--gray-200);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    .card-gold { border-color: var(--gold-dark); }
+    .card-gold .card-title { color: var(--gold); }
+    .card-orange .card-title { color: var(--orange); }
+
+    /* ═══ PLACEHOLDER IMAGES ═══ */
+    .img-placeholder {
+      background: linear-gradient(135deg, var(--gray-700), var(--bg-card));
+      border: 1px dashed var(--gray-500);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      color: var(--gray-400);
+      font-size: 0.85rem;
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .img-placeholder svg { opacity: 0.4; }
+    .img-placeholder::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(232,115,42,0.05));
+      pointer-events: none;
+    }
+
+    /* ═══ GRID HELPERS ═══ */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+
+    /* ═══ ANIMATIONS ═══ */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(50px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+    .fade-up.d1 { transition-delay: 0.1s; }
+    .fade-up.d2 { transition-delay: 0.2s; }
+    .fade-up.d3 { transition-delay: 0.3s; }
+    .fade-up.d4 { transition-delay: 0.4s; }
+    .fade-up.d5 { transition-delay: 0.5s; }
+
+    /* ═══ NAV DOTS ═══ */
+    .nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gray-500);
+      border: 1px solid var(--gray-400);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .nav-dot:hover, .nav-dot.active {
+      background: var(--orange);
+      border-color: var(--orange);
+      transform: scale(1.4);
+    }
+    .nav-dot .tooltip {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--gray-500);
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-family: var(--font-heading);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .nav-dot:hover .tooltip { opacity: 1; }
+
+    /* ═══ SLIDE COUNTER ═══ */
+    .slide-counter {
+      position: absolute;
+      bottom: 24px;
+      right: 40px;
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      color: var(--gray-400);
+      letter-spacing: 2px;
+    }
+    .slide-counter .current { color: var(--orange); font-size: 1.2rem; }
+
+    /* ═══ ICON CIRCLE ═══ */
+    .icon-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 2px solid var(--orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+    .icon-circle svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--orange);
+      fill: none;
+      stroke-width: 1.5;
+    }
+    .icon-circle-gold { border-color: var(--gold); }
+    .icon-circle-gold svg { stroke: var(--gold); }
+
+    /* ═══ CHART BARS ═══ */
+    .bar-chart { display: flex; flex-direction: column; gap: 20px; }
+    .bar-row { display: flex; align-items: center; gap: 16px; }
+    .bar-label {
+      width: 160px;
+      font-size: 0.9rem;
+      color: var(--gray-200);
+      flex-shrink: 0;
+    }
+    .bar-track {
+      flex: 1;
+      height: 36px;
+      background: var(--gray-700);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0;
+    }
+    .bar-fill.animated { width: var(--w); }
+    .bar-fill.orange { background: linear-gradient(90deg, var(--orange), var(--orange-light)); }
+    .bar-fill.gold { background: linear-gradient(90deg, var(--gold-dark), var(--gold)); }
+    .bar-value {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--orange);
+      flex-shrink: 0;
+      min-width: 80px;
+    }
+
+    /* ═══ TABLE ═══ */
+    .styled-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 20px;
+    }
+    .styled-table th {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 0.9rem;
+      padding: 16px 24px;
+      border-bottom: 2px solid var(--gold);
+      text-align: left;
+    }
+    .styled-table th:last-child { color: var(--gold); }
+    .styled-table td {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-600);
+      font-size: 0.95rem;
+      color: var(--gray-200);
+      vertical-align: top;
+    }
+    .styled-table td strong { color: var(--gold); font-weight: 600; }
+    .styled-table tr:last-child td { border-bottom: none; }
+    .arrow-cell {
+      color: var(--orange);
+      font-size: 1.6rem;
+      text-align: center;
+      width: 60px;
+    }
+
+    /* ═══ TIMELINE ═══ */
+    .timeline {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      position: relative;
+      margin-top: 50px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 40px;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--orange), var(--gold));
+      border-radius: 2px;
+    }
+    .timeline-item {
+      flex: 1;
+      text-align: center;
+      position: relative;
+      padding-top: 70px;
+    }
+    .timeline-dot {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--orange);
+      border: 4px solid var(--bg-dark);
+      box-shadow: 0 0 20px rgba(232,115,42,0.4);
+    }
+    .timeline-item:last-child .timeline-dot { background: var(--gold); box-shadow: 0 0 20px rgba(197,165,90,0.5); }
+    .timeline-quarter {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+    .timeline-text {
+      font-size: 0.9rem;
+      color: var(--gray-200);
+      line-height: 1.6;
+      padding: 0 12px;
+    }
+    .timeline-text strong { color: var(--orange); }
+
+    /* ═══ FLOW STEPS ═══ */
+    .flow-steps {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+    }
+    .flow-step {
+      text-align: center;
+      flex: 1;
+      max-width: 220px;
+    }
+    .flow-step .icon-circle { margin: 0 auto 16px; }
+    .flow-step h4 {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .flow-step p { font-size: 0.85rem; color: var(--gray-300); }
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      padding-top: 20px;
+      color: var(--gray-400);
+      font-size: 1.5rem;
+    }
+
+    /* ═══ FEATURE BADGES ═══ */
+    .badges {
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 1px solid var(--gray-600);
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .badge svg {
+      width: 32px;
+      height: 32px;
+      stroke: var(--orange);
+      fill: none;
+      stroke-width: 1.5;
+    }
+
+    /* ═══ CTA BUTTON ═══ */
+    .cta-btn {
+      display: inline-block;
+      background: var(--orange);
+      color: var(--white);
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      padding: 18px 48px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(232,115,42,0.3);
+    }
+    .cta-btn:hover {
+      background: var(--orange-light);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(232,115,42,0.5);
+    }
+
+    /* ═══ SPEC GRID (for technology slide) ═══ */
+    .spec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    .spec-item {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .spec-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .spec-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--orange);
+      fill: none;
+      stroke-width: 1.5;
+    }
+    .spec-item h4 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.05rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--orange);
+      margin-bottom: 6px;
+    }
+    .spec-item p { font-size: 0.9rem; color: var(--gray-200); line-height: 1.6; }
+
+    .spec-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--gold-dark);
+      border-radius: 4px;
+      padding: 12px 24px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--gold);
+      margin-top: 30px;
+    }
+    .spec-badge svg {
+      width: 20px; height: 20px; stroke: var(--gold); fill: none; stroke-width: 1.5;
+    }
+
+    /* ═══ ARCHETYPE CARDS ═══ */
+    .archetype-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .archetype-card {
+      display: flex;
+      border: 1px solid var(--gray-600);
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--bg-card);
+      transition: all 0.3s ease;
+    }
+    .archetype-card:hover { border-color: var(--gold-dark); transform: translateY(-2px); }
+    .archetype-img {
+      width: 200px;
+      min-height: 200px;
+      flex-shrink: 0;
+    }
+    .archetype-content {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .archetype-content h3 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.3rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .archetype-content .segment {
+      font-size: 0.85rem;
+      color: var(--orange);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .archetype-content p { font-size: 0.88rem; color: var(--gray-200); line-height: 1.6; }
+
+    /* ═══ COLOR SWATCH ═══ */
+    .swatches { display: flex; flex-direction: column; gap: 24px; }
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .swatch-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--gray-500);
+      flex-shrink: 0;
+    }
+    .swatch-info h4 {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 2px;
+    }
+    .swatch-info p { font-size: 0.85rem; color: var(--gray-300); }
+
+    /* ═══ NAMING LIST ═══ */
+    .naming-list { display: flex; flex-direction: column; gap: 24px; }
+    .naming-item {
+      padding-left: 24px;
+      border-left: 3px solid var(--gray-500);
+      transition: border-color 0.3s;
+    }
+    .naming-item:hover { border-color: var(--gold); }
+    .naming-item h3 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 2px;
+    }
+    .naming-item p { font-size: 0.85rem; color: var(--gray-400); }
+
+    /* ═══ CHECK LIST ═══ */
+    .check-list { display: flex; flex-direction: column; gap: 20px; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .check-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .check-icon svg { width: 14px; height: 14px; stroke: var(--green); fill: none; stroke-width: 2.5; }
+    .check-item p { font-size: 0.95rem; color: var(--gray-200); line-height: 1.6; }
+    .check-item strong { color: var(--gold); }
+
+    /* ═══ GAUGE ═══ */
+    .gauge-wrap {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      margin: 0 auto 16px;
+    }
+    .gauge-wrap svg { width: 100%; height: 100%; }
+    .gauge-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.8rem;
+      color: var(--orange);
+      text-align: center;
+      line-height: 1;
+    }
+    .gauge-text small { display: block; font-size: 0.7rem; color: var(--gray-300); letter-spacing: 2px; margin-top: 4px; }
+
+    /* ═══ LINE CHART (CSS) ═══ */
+    .line-chart {
+      position: relative;
+      height: 200px;
+      border-left: 2px solid var(--gray-600);
+      border-bottom: 2px solid var(--gray-600);
+      margin-top: 20px;
+    }
+    .line-chart-path {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ═══ QUOTE ═══ */
+    .quote {
+      font-family: var(--font-heading);
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+      font-style: italic;
+      color: var(--gold);
+      text-align: center;
+      margin-top: 40px;
+      padding: 30px 0;
+      border-top: 1px solid var(--gray-600);
+    }
+
+    /* ═══ TAG ═══ */
+    .tag {
+      display: inline-block;
+      background: rgba(232,115,42,0.15);
+      color: var(--orange);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 4px 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(232,115,42,0.3);
+    }
+    .tag-gold {
+      background: rgba(197,165,90,0.15);
+      color: var(--gold);
+      border-color: rgba(197,165,90,0.3);
+    }
+
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 1024px) {
+      .slide { padding: 40px 40px; }
+      .grid-2 { grid-template-columns: 1fr; gap: 30px; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .archetype-grid { grid-template-columns: 1fr; }
+      .spec-grid { grid-template-columns: 1fr; }
+      .timeline { flex-direction: column; gap: 30px; }
+      .timeline::before { display: none; }
+      .timeline-item { padding-top: 0; padding-left: 40px; text-align: left; }
+      .timeline-dot { left: 0; top: 0; transform: none; }
+      .flow-steps { flex-direction: column; align-items: center; }
+      .flow-arrow { transform: rotate(90deg); padding: 0; }
+      .badges { flex-direction: column; gap: 20px; align-items: center; }
+      .nav-dots { display: none; }
+    }
+    @media (max-width: 640px) {
+      .slide { padding: 30px 20px; }
+      .grid-4 { grid-template-columns: 1fr; }
+      .archetype-card { flex-direction: column; }
+      .archetype-img { width: 100%; min-height: 160px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════ NAV DOTS ═══════ -->
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- ═══════ SLIDE 1: HERO ═══════ -->
+<section class="slide" id="s1" style="justify-content: flex-end; padding-bottom: 80px;">
+  <div class="slide-divider"></div>
+  <!-- Background image placeholder -->
+  <div class="img-placeholder" style="position: absolute; inset: 0; border-radius: 0; border: none; z-index: 0;">
+    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M17 8V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3M21 12v6a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1z"/></svg>
+    <span style="font-size: 1rem;">Zdjęcie: Ekspres przenośny na skale górskiej ze szklaneczką espresso, zachód słońca w tle</span>
+  </div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(13,13,13,0.92) 0%, rgba(13,13,13,0.6) 50%, rgba(13,13,13,0.1) 100%); z-index: 0;"></div>
+
+  <div style="max-width: 700px;" class="fade-up">
+    <h1 style="font-family: var(--font-heading); font-weight: 700; font-size: clamp(2.8rem, 6vw, 4.5rem); text-transform: uppercase; letter-spacing: 3px; line-height: 1.05; margin-bottom: 20px;">
+      Strategia: Od Niszy<br>Do Dominacji
+    </h1>
+    <div style="width: 80px; height: 3px; background: var(--orange); margin-bottom: 24px;"></div>
+    <h2 style="font-family: var(--font-heading); font-weight: 600; font-size: clamp(1.3rem, 2.5vw, 1.8rem); color: var(--gold); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">
+      „Kawowa Niezależność"<br>w Polsce 2025
+    </h2>
+    <p style="font-size: 1.05rem; color: var(--gray-200); max-width: 550px; line-height: 1.8; margin-bottom: 40px;">
+      Plan operacyjny wprowadzenia na rynek i budowy marki przenośnego ekspresu ciśnieniowego Denokin 20 Bar Plus.
+    </p>
+    <p class="label" style="margin-bottom: 0;">Dokument Strategiczny / Wer. 1.0</p>
+  </div>
+  <div class="slide-counter"><span class="current">01</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 2: EXECUTIVE SUMMARY ═══════ -->
+<section class="slide" id="s2">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Executive Summary: <span>Konwergencja Trendów i Luka Technologiczna</span></h2>
+  <div class="grid-3">
+    <!-- 1. Momentum Rynku -->
+    <div class="card card-orange fade-up d1">
+      <div class="icon-circle" style="margin-bottom: 24px;">
+        <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M6 18h4m4 0h4"/><circle cx="8" cy="12" r="1"/><path d="M14 9l4 3-4 3"/></svg>
+      </div>
+      <h3 class="card-title">1. Momentum Rynku</h3>
+      <p><strong style="color: var(--orange);">Boom Caravaningowy w Polsce.</strong> Wzrost rejestracji nowych kamperów o 25,8% i używanych o 42% w 2024 roku tworzy idealną bazę klientów szukających niezależności.</p>
+      <div style="margin-top: 20px;">
+        <svg width="100%" height="60" viewBox="0 0 300 60">
+          <polyline points="10,50 60,45 120,38 180,28 240,15 290,5" fill="none" stroke="var(--orange)" stroke-width="2"/>
+          <line x1="10" y1="55" x2="290" y2="55" stroke="var(--gray-600)" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 2. Skok Technologiczny -->
+    <div class="card card-orange fade-up d2">
+      <div style="margin-bottom: 24px;">
+        <div class="gauge-wrap" style="width: 110px; height: 110px;">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--gray-600)" stroke-width="4"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--orange)" stroke-width="4" stroke-dasharray="235 80" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="gauge-text" style="font-size: 1.4rem;">20<small>BAR</small></div>
+        </div>
+      </div>
+      <h3 class="card-title">2. Skok Technologiczny</h3>
+      <p><strong style="color: var(--orange);">Koniec Ery Pompki Ręcznej.</strong> Przejście z systemów manualnych — na elektryczną pompę tłokową 20 Bar z funkcją podgrzewania wody (system 3-w-1).</p>
+      <div style="margin-top: 20px; text-align: center;">
+        <svg width="100" height="50" viewBox="0 0 100 50">
+          <rect x="10" y="15" width="30" height="20" rx="3" fill="none" stroke="var(--orange)" stroke-width="1.5"/>
+          <line x1="40" y1="25" x2="60" y2="25" stroke="var(--orange)" stroke-width="1.5"/>
+          <polygon points="55,20 65,25 55,30" fill="var(--orange)"/>
+          <circle cx="80" cy="25" r="12" fill="none" stroke="var(--orange)" stroke-width="1.5"/>
+          <path d="M76 30 L80 18 L84 30" fill="none" stroke="var(--orange)" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 3. Model Biznesowy -->
+    <div class="card card-orange fade-up d3">
+      <div class="icon-circle" style="margin-bottom: 24px;">
+        <svg viewBox="0 0 24 24"><polyline points="22,7 13.5,15.5 8.5,10.5 2,17"/><polyline points="16,7 22,7 22,13"/></svg>
+      </div>
+      <h3 class="card-title">3. Model Biznesowy</h3>
+      <p><strong style="color: var(--orange);">Private Label & Branding.</strong> Ewolucja od modelu dropshippingu (niskie ryzyko) do własnego importu i brandingu (wysoka marża), wykorzystując słabość oferty na stacjach paliw.</p>
+      <div style="margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 20px;">
+        <div style="text-align: center;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="1.5">
+            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
+          </svg>
+          <div style="font-size: 0.7rem; color: var(--gray-400); margin-top: 4px;">Dropshipping</div>
+        </div>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+        <div style="text-align: center;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5">
+            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
+            <path d="M12 12l10-5M12 12v10M12 12L2 7"/>
+          </svg>
+          <div style="font-size: 0.7rem; color: var(--gold); margin-top: 4px;">Private Label</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">02</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 3: RYNEK ═══════ -->
+<section class="slide" id="s3">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Polska 2025: <span>Dojrzały Rynek Kawy i Eksplozja Mobilności</span></h2>
+  <div class="grid-2">
+    <div class="fade-up d1">
+      <h3 style="font-family: var(--font-heading); font-weight: 600; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-200); margin-bottom: 24px;">Wzrost Rejestracji Kamperów (2024)</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="bar-label">Nowe Kampery</span>
+          <div class="bar-track"><div class="bar-fill gold" style="--w: 45%;"></div></div>
+          <span class="bar-value" style="color: var(--gold);">+25,8%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Używane Kampery</span>
+          <div class="bar-track"><div class="bar-fill orange" style="--w: 72%;"></div></div>
+          <span class="bar-value">+42%</span>
+        </div>
+      </div>
+
+      <h3 style="font-family: var(--font-heading); font-weight: 600; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-200); margin: 40px 0 20px;">Wzrost Rynku Kawy w Polsce</h3>
+      <div style="position: relative; height: 140px; border-left: 2px solid var(--gray-600); border-bottom: 2px solid var(--gray-600); padding: 10px 10px 0;">
+        <svg width="100%" height="100%" viewBox="0 0 400 120" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--orange)" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="var(--orange)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,110 Q80,100 160,80 T320,30 L400,10 L400,120 L0,120 Z" fill="url(#lineGrad)"/>
+          <path d="M0,110 Q80,100 160,80 T320,30 L400,10" fill="none" stroke="var(--orange)" stroke-width="3"/>
+          <circle cx="0" cy="110" r="5" fill="var(--orange)"/>
+          <circle cx="100" cy="98" r="5" fill="var(--orange)"/>
+          <circle cx="200" cy="75" r="5" fill="var(--orange)"/>
+          <circle cx="300" cy="42" r="5" fill="var(--orange)"/>
+          <circle cx="400" cy="10" r="5" fill="var(--orange)"/>
+        </svg>
+        <div style="position: absolute; bottom: 30%; right: 20%; font-family: var(--font-heading); font-weight: 700; font-size: 1.8rem; color: var(--orange);">+9% r/r</div>
+      </div>
+    </div>
+
+    <div class="fade-up d2">
+      <div class="card card-gold" style="border-color: var(--gold-dark);">
+        <h3 style="font-family: var(--font-heading); font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); margin-bottom: 28px;">Kluczowe Wnioski</h3>
+        <div class="check-list">
+          <div class="check-item">
+            <div class="check-icon"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div>
+            <p><strong>Rekordowe spożycie:</strong> Polacy spożywają ponad 3,2 kg kawy rocznie na mieszkańca.</p>
+          </div>
+          <div class="check-item">
+            <div class="check-icon"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div>
+            <p><strong>Premiumizacja:</strong> Odejście od kofeiny na rzecz „profilu smakowego" (demokratyzacja speciality).</p>
+          </div>
+          <div class="check-item">
+            <div class="check-icon"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div>
+            <p><strong>Vanlife & Off-grid:</strong> Nowa grupa konsumentów, dla których ładowanie USB-C jest kryterium krytycznym.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">03</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 4: PROBLEM ═══════ -->
+<section class="slide" id="s4">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up" style="text-align: center;">Problem: <span>„Dyktatura Stacji Benzynowej"</span></h2>
+
+  <div class="grid-2 fade-up d1" style="margin-bottom: 40px;">
+    <div class="img-placeholder" style="height: 280px; border-radius: 4px;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+      <span>Zdjęcie: Kolejka na stacji benzynowej po kawę — zmęczeni ludzie</span>
+      <div style="position: absolute; bottom: 16px; left: 16px; background: rgba(230,57,70,0.9); color: white; padding: 6px 16px; font-family: var(--font-heading); font-weight: 700; font-size: 1.1rem; text-transform: uppercase; border-radius: 3px;">Rzeczywistość</div>
+    </div>
+    <div class="img-placeholder" style="height: 280px; border-radius: 4px;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 8l4 4-4 4"/><path d="M3 12h18"/><circle cx="7" cy="12" r="4"/></svg>
+      <span>Zdjęcie: Ręka trzymająca szklankę espresso w samochodzie, góry za oknem</span>
+      <div style="position: absolute; bottom: 16px; left: 16px; background: rgba(78,205,196,0.9); color: white; padding: 6px 16px; font-family: var(--font-heading); font-weight: 700; font-size: 1.1rem; text-transform: uppercase; border-radius: 3px;">Wolność</div>
+    </div>
+  </div>
+
+  <div class="grid-3 fade-up d2">
+    <div class="card" style="border-top: 3px solid var(--orange);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 class="card-title" style="margin-bottom: 0;">Koszt vs. Wartość</h3>
+        <span style="color: var(--gray-500); font-family: var(--font-heading); font-weight: 700;">1</span>
+      </div>
+      <p>Cena kawy na stacji (10–18 PLN) to kilkaset złotych miesięcznie. Własna kapsułka obniża ten koszt o 80–90%.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--orange);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 class="card-title" style="margin-bottom: 0;">Loteryjna Jakość</h3>
+        <span style="color: var(--gray-500); font-family: var(--font-heading); font-weight: 700;">2</span>
+      </div>
+      <p>Nawet w sieciach (Orlen, BP) smak jest często „przepalony" przez złą kalibrację młynków.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--orange);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 class="card-title" style="margin-bottom: 0;">Strata Czasu</h3>
+        <span style="color: var(--gray-500); font-family: var(--font-heading); font-weight: 700;">3</span>
+      </div>
+      <p>Planowanie postojów pod dyktando „gdzie jest kawa", a nie „gdzie chcę się zatrzymać".</p>
+    </div>
+  </div>
+
+  <div class="quote fade-up d3">„Przestań pić kawowe paliwo."</div>
+  <div class="slide-counter"><span class="current">04</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 5: TECHNOLOGIA ═══════ -->
+<section class="slide" id="s5">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Rozwiązanie: <span>Technologia Denokin 20 Bar Plus</span></h2>
+
+  <div class="grid-2">
+    <div class="fade-up d1">
+      <div class="img-placeholder" style="height: 420px; border-radius: 4px;">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <rect x="8" y="2" width="8" height="20" rx="4"/>
+          <circle cx="12" cy="7" r="1.5"/>
+          <path d="M9 12h6M9 15h6"/>
+          <ellipse cx="12" cy="20" rx="3" ry="1"/>
+        </svg>
+        <span>Grafika: Eksplodowany widok wireframe ekspresu — rozsunięte komponenty</span>
+      </div>
+    </div>
+
+    <div class="fade-up d2">
+      <div class="spec-grid">
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <div>
+            <h4>Pompa Tłokowa 20 Bar</h4>
+            <p>Stabilność ekstrakcji dla gęsto upakowanej kawy (lepsza niż standardowe 15 Bar).</p>
+          </div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94L6.73 20.2a2 2 0 01-2.83 0l-.1-.1a2 2 0 010-2.83l6.73-6.73A6 6 0 016.3 2.53l3.77 3.77z"/></svg>
+          </div>
+          <div>
+            <h4>Stal Nierdzewna</h4>
+            <p>Zbiornik wody free-from-plastic (eliminacja posmaku plastiku i BPA).</p>
+          </div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+          </div>
+          <div>
+            <h4>Zasilanie</h4>
+            <p>Bateria 2500 mAh (3 ogniwa 18650). Czas podgrzewania: 140–180 sekund.</p>
+          </div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+          </div>
+          <div>
+            <h4>System 3-w-1</h4>
+            <p>Adaptery: Nespresso, Dolce Gusto, Mielona (zwiększona pojemność 8g).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="spec-badge" style="margin-top: 40px;">
+        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2M12 11v2"/></svg>
+        Kompatybilność USB-C &nbsp;|&nbsp; Waga: ~700g
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">05</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 6: PSYCHOLOGIA ═══════ -->
+<section class="slide" id="s6">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up" style="text-align: center;">Psychologia Konsumenta: <span>Co Naprawdę Sprzedajemy?</span></h2>
+  <p class="subtitle fade-up" style="text-align: center;">Nie sprzedajemy urządzenia. Sprzedajemy stan umysłu.</p>
+
+  <table class="styled-table fade-up d1" style="max-width: 900px; margin: 0 auto;">
+    <thead>
+      <tr>
+        <th>Problem (Pain Point)</th>
+        <th style="width: 60px;"></th>
+        <th>Nagroda Emocjonalna (Payoff)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Zależność od punktów gastro</td>
+        <td class="arrow-cell">»</td>
+        <td><strong>Poczucie Wolności</strong> („Ty decydujesz, kiedy jest czas na kawę").</td>
+      </tr>
+      <tr>
+        <td>Słaba jakość „w trasie"</td>
+        <td class="arrow-cell">»</td>
+        <td><strong>Status i Godność</strong> („Twój osobisty rytuał baristy").</td>
+      </tr>
+      <tr>
+        <td>Zmęczenie za kierownicą</td>
+        <td class="arrow-cell">»</td>
+        <td><strong>Bezpieczeństwo</strong> („Energia, która smakuje").</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card card-gold fade-up d2" style="max-width: 900px; margin: 40px auto 0; border-left: 4px solid var(--orange);">
+    <h3 style="font-family: var(--font-heading); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Mechanizm: Psychologia Prezentu</h3>
+    <p style="color: var(--gray-200);">Produkt pozycjonowany jako „<strong>Gadżet Premium</strong>" — idealny prezent dla mężczyzn (kategorie: motoryzacja, outdoor).</p>
+  </div>
+  <div class="slide-counter"><span class="current">06</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 7: ARCHETYPY ═══════ -->
+<section class="slide" id="s7">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up" style="text-align: center;">Cztery Archetypy <span>Klienta Docelowego</span></h2>
+
+  <div class="archetype-grid fade-up d1">
+    <div class="archetype-card">
+      <div class="archetype-img img-placeholder" style="border: none; border-radius: 0;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21h10M12 17v4"/></svg>
+        <span style="font-size: 0.7rem;">Laptop w kamperze</span>
+      </div>
+      <div class="archetype-content">
+        <h3>Cyfrowy Nomada</h3>
+        <p class="segment">Segment Premium</p>
+        <p>Motywacja: Estetyka, praca zdalna. Szuka jakości kawiarnianej bez inwertera 230V.</p>
+      </div>
+    </div>
+
+    <div class="archetype-card">
+      <div class="archetype-img img-placeholder" style="border: none; border-radius: 0;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span style="font-size: 0.7rem;">Kierowca TIR nocą</span>
+      </div>
+      <div class="archetype-content">
+        <h3>Kierowca Zawodowy</h3>
+        <p class="segment">Segment Użytkowy</p>
+        <p>Motywacja: Oszczędność (ROI) i energia na 12-godzinnej trasie. Szybkość działania.</p>
+      </div>
+    </div>
+
+    <div class="archetype-card">
+      <div class="archetype-img img-placeholder" style="border: none; border-radius: 0;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L8 8h8L12 2z"/><path d="M12 8v14"/><path d="M8 22h8"/></svg>
+        <span style="font-size: 0.7rem;">Turysta z kawą w górach</span>
+      </div>
+      <div class="archetype-content">
+        <h3>Pasjonat Outdooru</h3>
+        <p class="segment">Segment Techniczny</p>
+        <p>Motywacja: Waga (650–750g) i wytrzymałość. Kawa na szczycie góry.</p>
+      </div>
+    </div>
+
+    <div class="archetype-card">
+      <div class="archetype-img img-placeholder" style="border: none; border-radius: 0;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
+        <span style="font-size: 0.7rem;">Uścisk dłoni biznesowy</span>
+      </div>
+      <div class="archetype-content">
+        <h3>Klient B2B</h3>
+        <p class="segment">Prestiż</p>
+        <p>Motywacja: Budowanie wizerunku przez użyteczny gadżet wysokiej klasy (prezent biznesowy).</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">07</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 8: MARKA ═══════ -->
+<section class="slide" id="s8">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Tożsamość Marki: <span>Od „No-Name" do „Love Brand"</span></h2>
+
+  <div class="grid-2 fade-up d1">
+    <div>
+      <h3 class="label">Naming Strategy</h3>
+      <p style="font-size: 0.85rem; color: var(--gray-400); margin-bottom: 30px;">Oswald SemiBold</p>
+      <div class="naming-list">
+        <div class="naming-item">
+          <h3>1. Vento Brew</h3>
+          <p>Oswald Bold</p>
+        </div>
+        <div class="naming-item" style="border-color: var(--gold);">
+          <h3 style="color: var(--gold);">2. NomadBar</h3>
+          <p>Oswald Bold</p>
+        </div>
+        <div class="naming-item">
+          <h3>3. PeakPress</h3>
+          <p>Oswald Bold</p>
+        </div>
+      </div>
+      <p style="margin-top: 24px; font-size: 0.9rem; color: var(--gray-300);">Wartości: <strong style="color: var(--gold);">Precyzja, Wolność, Rytuał.</strong></p>
+    </div>
+
+    <div>
+      <h3 class="label">Visual Language</h3>
+      <p style="font-size: 0.85rem; color: var(--gray-400); margin-bottom: 30px;">Oswald SemiBold</p>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #1a1a1a;"></div>
+          <div class="swatch-info">
+            <h4>Matte Black (Czerń)</h4>
+            <p>Inter Medium</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #5a5a5a;"></div>
+          <div class="swatch-info">
+            <h4>Graphite Steel (Grafit)</h4>
+            <p>Inter Medium</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #c5a55a;"></div>
+          <div class="swatch-info">
+            <h4>Crema Brown (Brąz)</h4>
+            <p>Inter Medium</p>
+          </div>
+        </div>
+      </div>
+      <div class="card fade-up d2" style="margin-top: 30px; border-color: var(--orange);">
+        <p style="font-size: 0.9rem; color: var(--gray-200);">Unikanie estetyki „AliExpress". Stylistyka surowa, nawiązująca do nowoczesnych wnętrz samochodów.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">08</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 9: KONWERSJA ═══════ -->
+<section class="slide" id="s9">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up" style="text-align: center;">Architektura Konwersji: <span>One-Product Store</span></h2>
+
+  <div class="grid-2 fade-up d1">
+    <div>
+      <div style="max-width: 300px; margin: 0 auto;">
+        <!-- Phone mockup -->
+        <div style="background: var(--gray-700); border-radius: 30px; padding: 12px; border: 2px solid var(--gray-500);">
+          <div style="background: var(--bg-dark); border-radius: 20px; overflow: hidden;">
+            <div class="img-placeholder" style="height: 200px; border-radius: 0; border: none;">
+              <span style="font-size: 0.75rem;">Zdjęcie: Ekspres nalewający espresso — hero shot</span>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+              <h3 style="font-family: var(--font-heading); font-weight: 700; font-size: 1.3rem; text-transform: uppercase; margin-bottom: 12px;">Idealne Espresso<br>20 Bar.</h3>
+              <button class="cta-btn" style="font-size: 0.9rem; padding: 14px 32px; width: 100%;">Zamów Teraz</button>
+            </div>
+            <div style="display: flex; justify-content: space-around; padding: 16px; border-top: 1px solid var(--gray-600);">
+              <div style="text-align: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                <div style="font-size: 0.6rem; color: var(--gray-400); margin-top: 4px;">BLIK</div>
+              </div>
+              <div style="text-align: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <div style="font-size: 0.6rem; color: var(--gray-400); margin-top: 4px;">InPost</div>
+              </div>
+              <div style="text-align: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                <div style="font-size: 0.6rem; color: var(--gray-400); margin-top: 4px;">24h Gwarancja</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card card-orange">
+          <h3 class="card-title" style="font-size: 1rem;">Sekcja Hero</h3>
+          <p>Wideo scroll-based. Automatyczne odtwarzanie z efektem parallax.</p>
+        </div>
+        <div class="card card-orange">
+          <h3 class="card-title" style="font-size: 1rem;">Unique Mechanism</h3>
+          <p>Animacja adapterów 3-w-1. Interaktywny pokaz kompatybilności.</p>
+        </div>
+        <div class="card card-orange">
+          <h3 class="card-title" style="font-size: 1rem;">Social Proof</h3>
+          <p>Opinie wideo od realnych użytkowników. Karuzela z ocenami.</p>
+        </div>
+        <div class="card card-orange">
+          <h3 class="card-title" style="font-size: 1rem;">Mobile-First Design</h3>
+          <p>80% ruchu pochodzi z urządzeń mobilnych. Optymalizacja pod dotyk.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="badges fade-up d2">
+    <div class="badge">
+      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      Płatności BLIK
+    </div>
+    <div class="badge">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      InPost Paczkomaty
+    </div>
+    <div class="badge">
+      <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+      Gwarancja 24H
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">09</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 10: FAZA 1 ═══════ -->
+<section class="slide" id="s10">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up" style="text-align: center;"><span class="orange">Faza 1:</span> <span>Walidacja Rynku (Model Dropshipping)</span></h2>
+  <p class="subtitle fade-up" style="text-align: center;">Cel: Minimalizacja ryzyka kapitałowego i testowanie grup docelowych.</p>
+
+  <div class="flow-steps fade-up d1">
+    <div class="flow-step">
+      <div class="icon-circle icon-circle-gold">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M10 17l2-7 2 7"/><circle cx="7" cy="10" r="2"/></svg>
+      </div>
+      <h4>Testy Kreacji</h4>
+      <p>(TikTok/Meta)</p>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon-circle icon-circle-gold">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46L23 6H6"/></svg>
+      </div>
+      <h4>Sprzedaż bez magazynu</h4>
+      <p>(Wysyłka bezpośrednia)</p>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon-circle icon-circle-gold">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M12 8v2M12 14h.01"/></svg>
+      </div>
+      <h4>Zbieranie Feedbacku</h4>
+      <p>(Wady/Kolory)</p>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon-circle icon-circle-gold">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <h4>KPI: 500–1000</h4>
+      <p>zamówień/miesięcznie</p>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 60px; padding-top: 30px; border-top: 1px solid var(--gray-600);" class="fade-up d2">
+    <p style="font-size: 1.1rem; color: var(--gray-200);">Płatności BLIK wdrożone od startu. Brak kosztów magazynowych.</p>
+  </div>
+  <div class="slide-counter"><span class="current">10</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 11: FAZA 2 ═══════ -->
+<section class="slide" id="s11">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up"><span class="orange">Faza 2:</span> <span>Skalowanie i Budowa Aktywów (Private Label)</span></h2>
+  <p class="subtitle fade-up">Cel: Maksymalizacja marży i kontrola jakości.</p>
+
+  <div class="grid-2">
+    <div class="fade-up d1">
+      <h3 style="font-family: var(--font-heading); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px;">Kontrola i Produkcja</h3>
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="spec-icon" style="border-color: var(--gold);">
+            <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <h4 style="font-family: var(--font-heading); color: var(--gold); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Agent w Chinach</h4>
+            <p style="font-size: 0.9rem; color: var(--gray-200);">QC baterii i zaworów ciśnieniowych.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="spec-icon" style="border-color: var(--gold);">
+            <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94L6.73 20.2a2 2 0 01-2.83 0l-.1-.1a2 2 0 010-2.83l6.73-6.73A6 6 0 016.3 2.53l3.77 3.77z"/></svg>
+          </div>
+          <div>
+            <h4 style="font-family: var(--font-heading); color: var(--gold); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Customizacja</h4>
+            <p style="font-size: 0.9rem; color: var(--gray-200);">Laserowe logo na obudowie.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="spec-icon" style="border-color: var(--gold);">
+            <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+          </div>
+          <div>
+            <h4 style="font-family: var(--font-heading); color: var(--gold); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Polskie Opakowanie</h4>
+            <p style="font-size: 0.9rem; color: var(--gray-200);">Sztywny „Magnetic Box".</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fade-up d2">
+      <div class="img-placeholder" style="height: 320px; border-radius: 4px; margin-bottom: 24px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <span>Zdjęcie: Ekspres z laserowym logo „Terrain Espresso" + premium magnetic box z flagą PL</span>
+      </div>
+      <div class="card" style="border-color: var(--orange); border-left: 4px solid var(--orange);">
+        <p style="color: var(--gray-200);"><strong style="color: var(--orange);">Upselling:</strong> Etui podróżne i zestawy kapsułek wielorazowych.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">11</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 12: UNBOXING ═══════ -->
+<section class="slide" id="s12">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Doświadczenie Klienta: <span>„Unboxing Experience"</span></h2>
+
+  <div class="grid-2">
+    <div class="fade-up d1">
+      <div class="img-placeholder" style="height: 400px; border-radius: 4px; position: relative;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+        <span>Zdjęcie: Premium unboxing — ekspres, próbka kawy, ściereczka mikrofibra, karta QR w pudełku magnetycznym</span>
+        <!-- Annotated labels -->
+        <div style="position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-left: 2px solid var(--orange); font-size: 0.7rem; font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 1px;">Ekspres 20 Bar</div>
+        <div style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-left: 2px solid var(--orange); font-size: 0.7rem; font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 1px;">Ściereczka z Mikrofibry</div>
+        <div style="position: absolute; bottom: 60px; left: 12px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-left: 2px solid var(--orange); font-size: 0.7rem; font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 1px;">Próbka Kawy</div>
+        <div style="position: absolute; bottom: 60px; right: 12px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-left: 2px solid var(--orange); font-size: 0.7rem; font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 1px;">Karta z Kodem QR</div>
+      </div>
+    </div>
+    <div class="fade-up d2">
+      <div class="card card-gold" style="border-color: var(--gold-dark);">
+        <p style="font-size: 1.05rem; color: var(--gray-200); line-height: 1.8; margin-bottom: 20px;">
+          Budowanie lojalności i wirusowości (Viral). Pudełko jako pierwszy punkt styku z marką premium.
+        </p>
+        <p style="font-size: 1.05rem; color: var(--gray-200); line-height: 1.8;">
+          Brak styropianu — tylko pianka ochronna.
+        </p>
+      </div>
+      <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="tag-gold tag">Instrukcja Wideo & Rabat via QR</div>
+        <div class="tag-gold tag">Eco-friendly packaging</div>
+        <div class="tag-gold tag">Viral-ready unboxing</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">12</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 13: LOGISTYKA ═══════ -->
+<section class="slide" id="s13">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Logistyka: <span>Standard „Dostawa na Jutro"</span></h2>
+
+  <div class="grid-2">
+    <div class="fade-up d1">
+      <!-- Poland map placeholder with cities -->
+      <div style="position: relative; background: var(--bg-card); border: 1px solid var(--gray-600); border-radius: 4px; height: 400px; display: flex; align-items: center; justify-content: center;">
+        <svg width="300" height="360" viewBox="0 0 300 360">
+          <!-- Simplified Poland outline -->
+          <path d="M150,20 L200,25 L240,40 L260,70 L270,120 L265,160 L280,200 L260,230 L250,270 L220,290 L200,310 L170,330 L140,340 L100,320 L70,290 L50,260 L30,220 L25,180 L30,140 L40,100 L60,60 L90,35 L120,25 Z" fill="none" stroke="var(--gold-dark)" stroke-width="1.5" opacity="0.6"/>
+          <!-- Central hub -->
+          <circle cx="150" cy="200" r="8" fill="var(--orange)" opacity="0.8"/>
+          <circle cx="150" cy="200" r="16" fill="none" stroke="var(--orange)" stroke-width="1" opacity="0.4"/>
+          <!-- Connection lines -->
+          <line x1="150" y1="200" x2="80" y2="80" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="170" y2="60" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="250" y2="100" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="100" y2="140" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="200" y2="180" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="60" y2="240" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="120" y2="280" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="200" y2="280" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <line x1="150" y1="200" x2="250" y2="180" stroke="var(--gold-dark)" stroke-width="0.8" opacity="0.4"/>
+          <!-- City dots -->
+          <circle cx="80" cy="80" r="4" fill="var(--gold)"/><text x="58" y="75" fill="var(--gray-200)" font-size="10" font-family="Inter">Szczecin</text>
+          <circle cx="170" cy="60" r="4" fill="var(--gold)"/><text x="178" y="55" fill="var(--gray-200)" font-size="10" font-family="Inter">Gdańsk</text>
+          <circle cx="250" cy="100" r="4" fill="var(--gold)"/><text x="248" y="118" fill="var(--gray-200)" font-size="10" font-family="Inter">Białystok</text>
+          <circle cx="100" cy="140" r="4" fill="var(--gold)"/><text x="64" y="150" fill="var(--gray-200)" font-size="10" font-family="Inter">Poznań</text>
+          <circle cx="200" cy="180" r="4" fill="var(--gold)"/><text x="208" y="178" fill="var(--gray-200)" font-size="10" font-family="Inter">Warszawa</text>
+          <circle cx="150" cy="220" r="4" fill="var(--gold)"/><text x="158" y="225" fill="var(--gray-200)" font-size="10" font-family="Inter">Łódź</text>
+          <circle cx="250" cy="180" r="4" fill="var(--gold)"/><text x="254" y="196" fill="var(--gray-200)" font-size="10" font-family="Inter">Lublin</text>
+          <circle cx="60" cy="240" r="4" fill="var(--gold)"/><text x="22" y="252" fill="var(--gray-200)" font-size="10" font-family="Inter">Wrocław</text>
+          <circle cx="120" cy="280" r="4" fill="var(--gold)"/><text x="90" y="296" fill="var(--gray-200)" font-size="10" font-family="Inter">Katowice</text>
+          <circle cx="200" cy="280" r="4" fill="var(--gold)"/><text x="178" y="296" fill="var(--gray-200)" font-size="10" font-family="Inter">Kraków</text>
+          <!-- Label -->
+          <text x="160" y="190" fill="var(--orange)" font-size="9" font-family="Oswald" font-weight="600" letter-spacing="1">Magazyn 3PL</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="fade-up d2" style="display: flex; flex-direction: column; gap: 24px;">
+      <div class="card card-orange" style="border-left: 4px solid var(--orange);">
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="spec-icon" style="flex-shrink: 0;">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div>
+          <div>
+            <h4 style="font-family: var(--font-heading); color: var(--orange); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Integracja InPost</h4>
+            <p style="font-size: 0.95rem; color: var(--gray-200);">Pełna automatyzacja z Paczkomatami (preferowana metoda w PL).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-orange" style="border-left: 4px solid var(--orange);">
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="spec-icon" style="flex-shrink: 0;">
+            <svg viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 105.64-11.36L1 10"/></svg>
+          </div>
+          <div>
+            <h4 style="font-family: var(--font-heading); color: var(--orange); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Obsługa Zwrotów</h4>
+            <p style="font-size: 0.95rem; color: var(--gray-200);">Szybkie procedury reklamacyjne w kraju (budowanie zaufania).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-orange" style="border-left: 4px solid var(--orange);">
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="spec-icon" style="flex-shrink: 0;">
+            <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div>
+            <h4 style="font-family: var(--font-heading); color: var(--orange); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pozycjonowanie Cenowe</h4>
+            <p style="font-size: 0.95rem; color: var(--gray-200);">Cena 599–799 PLN (wiarygodność techniczna) vs tanie gadżety.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">13</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 14: MARKETING ═══════ -->
+<section class="slide" id="s14">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up">Marketing Mix: <span>Gdzie Jest Nasz Klient?</span></h2>
+
+  <div class="grid-4 fade-up d1">
+    <div class="card card-gold" style="text-align: center;">
+      <div class="icon-circle icon-circle-gold" style="margin: 0 auto 20px;">
+        <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><rect x="3" y="3" width="18" height="14" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21l3-3h4l3 3"/></svg>
+      </div>
+      <h3 class="card-title" style="font-size: 1rem;">Influencer Marketing</h3>
+      <p style="margin-top: 12px;">Partnerstwa z kanałami YouTube: testy kamperów, survival (np. <span style="color: var(--red);">Terenwizja</span>, <span style="color: var(--red);">Polskie Caravaning</span>).</p>
+    </div>
+
+    <div class="card card-gold" style="text-align: center;">
+      <div class="icon-circle icon-circle-gold" style="margin: 0 auto 20px;">
+        <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </div>
+      <h3 class="card-title" style="font-size: 1rem;">UGC (User Generated Content)</h3>
+      <p style="margin-top: 12px;">Kampanie TikTok/Reels: Pokaż swoje „miejsce parzenia kawy" (<span style="color: var(--red);">Viral</span>).</p>
+    </div>
+
+    <div class="card card-gold" style="text-align: center;">
+      <div class="icon-circle icon-circle-gold" style="margin: 0 auto 20px;">
+        <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </div>
+      <h3 class="card-title" style="font-size: 1rem;">B2B & Loyalty</h3>
+      <p style="margin-top: 12px;">Programy dla firm transportowych (nagrody dla kierowców).</p>
+    </div>
+
+    <div class="card card-gold" style="text-align: center;">
+      <div class="icon-circle icon-circle-gold" style="margin: 0 auto 20px;">
+        <svg viewBox="0 0 24 24" style="stroke: var(--gold);"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </div>
+      <h3 class="card-title" style="font-size: 1rem;">Grywalizacja</h3>
+      <p style="margin-top: 12px;">Quiz na stronie: „Jaka kawa pasuje do Twojego stylu podróży?" (<span style="color: var(--red);">CR +30%</span>).</p>
+    </div>
+  </div>
+  <div class="slide-counter"><span class="current">14</span> / 15</div>
+</section>
+
+<!-- ═══════ SLIDE 15: ROADMAPA ═══════ -->
+<section class="slide" id="s15">
+  <div class="slide-divider"></div>
+  <h2 class="section-title fade-up" style="text-align: center;">Roadmapa: <span>Droga do Lidera Rynku 2026</span></h2>
+
+  <div class="timeline fade-up d1">
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-quarter">Q2 2025</div>
+      <div style="margin: 12px auto 16px; display: flex; justify-content: center; gap: 12px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <p class="timeline-text">Start testów dropshippingowych. <strong>Walidacja Landing Page.</strong></p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-quarter">Q3 2025</div>
+      <div style="margin: 12px auto 16px; display: flex; justify-content: center; gap: 12px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      </div>
+      <p class="timeline-text">Pierwszy import (Private Label). Lokalny magazyn 3PL.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-quarter">Q4 2025</div>
+      <div style="margin: 12px auto 16px; display: flex; justify-content: center; gap: 12px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+      </div>
+      <p class="timeline-text">Kampania Świąteczna. Fokus: <strong>„Prezent dla Niego".</strong></p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background: var(--gold);"></div>
+      <div class="timeline-quarter" style="font-size: 1.8rem;">2026</div>
+      <div style="margin: 12px auto 16px; display: flex; justify-content: center; gap: 12px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <p class="timeline-text">Ekspansja asortymentu (akcesoria, własna kawa). <strong>Dominacja w niszy.</strong></p>
+    </div>
+  </div>
+
+  <div class="quote fade-up d2" style="margin-top: 60px;">Przyszłość to wolność w filiżance. <strong>NomadBar.</strong></div>
+
+  <div style="text-align: center; margin-top: 30px;" class="fade-up d3">
+    <a href="#s1" class="cta-btn">Wróć na początek</a>
+  </div>
+  <div class="slide-counter"><span class="current">15</span> / 15</div>
+</section>
+
+<!-- ═══════ JAVASCRIPT ═══════ -->
+<script>
+(function() {
+  // Nav dots
+  const slides = document.querySelectorAll('.slide');
+  const navDots = document.getElementById('navDots');
+  const labels = ['Hero','Executive Summary','Rynek','Problem','Technologia','Psychologia','Archetypy','Marka','Konwersja','Faza 1','Faza 2','Unboxing','Logistyka','Marketing','Roadmapa'];
+
+  slides.forEach((s, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'nav-dot';
+    dot.innerHTML = '<span class="tooltip">' + labels[i] + '</span>';
+    dot.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+    navDots.appendChild(dot);
+  });
+
+  // Intersection Observer for animations & active dot
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Animate fade-up elements
+        entry.target.querySelectorAll('.fade-up').forEach(el => el.classList.add('visible'));
+        // Animate bars
+        entry.target.querySelectorAll('.bar-fill').forEach(bar => bar.classList.add('animated'));
+        // Update active dot
+        const idx = Array.from(slides).indexOf(entry.target);
+        document.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.3 });
+
+  slides.forEach(s => observer.observe(s));
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const dots = document.querySelectorAll('.nav-dot');
+    const activeIdx = Array.from(dots).findIndex(d => d.classList.contains('active'));
+    if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+      e.preventDefault();
+      if (activeIdx < slides.length - 1) slides[activeIdx + 1].scrollIntoView({ behavior: 'smooth' });
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      if (activeIdx > 0) slides[activeIdx - 1].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+})();
+</script>
+</body>
+</html>

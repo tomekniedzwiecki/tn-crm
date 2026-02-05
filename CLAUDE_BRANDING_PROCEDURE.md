@@ -1,14 +1,18 @@
 # Procedura: Generowanie Brandingu dla Workflow
 
-## Kiedy wywolac
+> **WAŻNE**: Zawsze pisz z polskimi znakami diakrytycznymi (ą, ę, ć, ś, ź, ż, ó, ł, ń) — dotyczy to nazw marek, tagline'ów, opisów i całego copy.
+
+## Kiedy wywołać
 
 Uzytkownik mowi np.: "Zrob branding dla workflow X", "Wygeneruj branding", "Wypelnij branding".
 
 ## Wymagane dane wejsciowe
 
 1. **workflow_id** — UUID workflow
-2. **Produkt** — nazwa i opis z `workflow_products` (powiazany przez `selected_product_id`)
-3. **Raporty** — opcjonalnie przeczytac raporty z `workflow_reports` (jesli sa PDF/prezentacje z analiza)
+2. **Raport PDF** — OBOWIAZKOWY raport typu `report_pdf` z tabeli `workflow_reports`. To jest glowny dokument z pelna analiza produktu, strategia, grupa docelowa, USP. Na jego podstawie budujesz caly branding.
+3. **Infografika PNG** — opcjonalnie `report_infographic` (obraz do podgladu wizualnego kontekstu)
+
+**WAZNE**: Raport PDF zawiera tekst z analiza — pobierz go i przeanalizuj. Jesli nie mozesz odczytac PDF bezposrednio, pobierz infografike PNG i uzyj jej jako zrodla informacji.
 
 ## Co generuje
 
@@ -39,14 +43,23 @@ Przeczytaj nazwe, opis produktu i raporty. Ustal:
 - **Emocje marki**: energia, spokoj, luksus, zabawa, profesjonalizm
 - **Unikalna cecha produktu**: co go wyroznia
 
-### Krok 2: Nazwa marki
+### Krok 2: Nazwa marki i domena
 
-Stworz 3 propozycje nazw i wybierz najlepsza (lub zapytaj uzytkownika). Zasady:
+**ZAWSZE ZAPYTAJ UZYTKOWNIKA** o finalna nazwe marki i domene przed generowaniem SQL!
+
+Zaproponuj 3 propozycje nazw z dostepnymi domenami .pl, np:
+- NazwaA — nazwaA.pl
+- NazwaB — nazwaB.pl
+- NazwaC — nazwaC.pl
+
+Zasady dla nazw:
 - Krotka (1-2 slowa, max 12 znakow)
 - Latwa do wymowienia po angielsku
 - Sugeruje emocje/kategorie produktu
 - Unikalna, nie koliduje z istniejacymi markami
 - Styl: nowoczesne DTC brandy (np. VibeStrike, NeoFlux, GlowAura)
+
+**CZEKAJ NA ODPOWIEDZ** uzytkownika z wybrana nazwa/domena zanim wygenerujesz SQL!
 
 ### Krok 3: Tagline
 
@@ -168,10 +181,7 @@ Kazdy prompt powinien opisywac UNIKALNY element identyfikacyjny marki (np. liter
 2. Czapka z logo
 3. Kubek/termos z logo
 4. Opakowanie produktu
-5. Rekawice bokserskie z logo (specyficzne dla tego produktu)
-6. Social media avatar
-7. Social media banner
-8. Naklejki / stickery
+5. wymyśl inne zastosowania dopasowane do produktu
 
 Kazdy prompt powinien byc napisany jak brief dla profesjonalnego grafika — z opisem sceny, oswietlenia, nastroju, materialow.
 
@@ -182,9 +192,54 @@ Kazdy prompt powinien byc napisany jak brief dla profesjonalnego grafika — z o
 Uzytkownik: "Zrob branding dla workflow 01523ee9..."
 Claude:
 1. Czyta ten plik jako referencje
-2. Pobiera dane workflow i produktu (REST API lub pyta uzytkownika)
-3. Analizuje produkt, czyta raporty jesli sa
-4. Generuje nazwe marki (moze zaproponowac kilka do wyboru)
-5. Generuje pelny SQL z brand info, kolorami, fontami
-6. Generuje recznie prompty logo + mockupy (specyficzne dla marki, nie szablonowe!)
-7. Daje uzytkownikowi SQL do wklejenia w Supabase SQL Editor
+2. Pobiera dane z Supabase (workflow, raporty) — patrz sekcja ponizej
+3. Szuka raportu typu `report_pdf` (glowna analiza) oraz `report_infographic` (PNG do podgladu)
+4. Pobiera infografike PNG przez curl i odczytuje ja narzedziem Read (obraz zawiera kluczowe info)
+5. Analizuje produkt na podstawie infografiki i nazw plikow raportow
+6. Proponuje 3 nazwy marki z domenami i **CZEKA NA WYBOR UZYTKOWNIKA**
+7. Po wyborze generuje pelny SQL z brand info, kolorami, fontami
+8. Generuje recznie prompty logo + mockupy (specyficzne dla marki, nie szablonowe!)
+9. Daje uzytkownikowi SQL do wklejenia w Supabase SQL Editor
+
+---
+
+## Jak pobierac dane z Supabase (dla Claude)
+
+### Konfiguracja
+- **URL**: `https://yxmavwkwnfuphjqbelws.supabase.co`
+- **Service Key**: w pliku `c:\repos_tn\tn-crm\.env` (zmienna `SUPABASE_SERVICE_KEY`)
+
+### Komendy curl
+
+```bash
+# 1. Pobierz workflow
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflows?id=eq.[WORKFLOW_ID]&select=*" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]"
+
+# 2. Pobierz raporty (SZUKAJ type='report_pdf' i 'report_infographic')
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reports?workflow_id=eq.[WORKFLOW_ID]&select=*" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]"
+
+# 3. Pobierz istniejacy branding (do sprawdzenia)
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.[WORKFLOW_ID]&select=*" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]"
+```
+
+### Pobieranie obrazow z raportow
+Jesli raport to PNG/JPG — pobierz przez curl i odczytaj narzedziem Read:
+```bash
+curl -s -o "c:/repos_tn/temp_image.png" "[FILE_URL]"
+```
+Nastepnie uzyj `Read` na pliku tymczasowym zeby zobaczyc obraz.
+
+### Szablon promptu dla uzytkownika
+
+```
+Zrob branding dla workflow [UUID]
+
+Instrukcje: c:\repos_tn\tn-crm\CLAUDE_BRANDING_PROCEDURE.md
+Env: c:\repos_tn\tn-crm\.env
+```
