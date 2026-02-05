@@ -269,17 +269,24 @@
                 return;
             }
 
-            // Check if this is first view
-            const isFirstView = !clientOffer.view_count || clientOffer.view_count === 0;
+            // Fetch fresh view_count from database to check if first view
+            const { data: freshData } = await supabaseClient
+                .from('client_offers')
+                .select('view_count, view_history')
+                .eq('id', clientOffer.id)
+                .single();
+
+            const currentViewCount = freshData?.view_count || 0;
+            const isFirstView = currentViewCount === 0;
 
             // Update view count and history
-            const viewHistory = clientOffer.view_history || [];
+            const viewHistory = freshData?.view_history || [];
             viewHistory.push(new Date().toISOString());
 
             const { error: updateError } = await supabaseClient
                 .from('client_offers')
                 .update({
-                    view_count: (clientOffer.view_count || 0) + 1,
+                    view_count: currentViewCount + 1,
                     viewed_at: new Date().toISOString(),
                     view_history: viewHistory
                 })
@@ -290,7 +297,7 @@
                 await supabaseClient
                     .from('client_offers')
                     .update({
-                        view_count: (clientOffer.view_count || 0) + 1,
+                        view_count: currentViewCount + 1,
                         viewed_at: new Date().toISOString()
                     })
                     .eq('id', clientOffer.id);
