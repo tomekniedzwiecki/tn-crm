@@ -468,8 +468,49 @@
             // Show validity date on login screen
             document.getElementById('valid-until-preview').textContent = formatDate(clientOffer.valid_until);
 
+            // Check for cached email (localhost only, 30 min TTL)
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isLocal) {
+                const cached = getCachedEmail(clientOffer.unique_token);
+                if (cached && cached === lead.email.toLowerCase()) {
+                    renderOffer();
+                    showScreen('offer-screen');
+                    return;
+                }
+            }
+
             // Show login screen
             showScreen('login-screen');
+        }
+
+        function getCachedEmail(token) {
+            try {
+                const key = `offer_email_${token}`;
+                const data = JSON.parse(localStorage.getItem(key) || 'null');
+                if (!data) return null;
+
+                // 30 minute TTL
+                const ttl = 30 * 60 * 1000;
+                if (Date.now() - data.timestamp > ttl) {
+                    localStorage.removeItem(key);
+                    return null;
+                }
+                return data.email;
+            } catch {
+                return null;
+            }
+        }
+
+        function cacheEmail(token, email) {
+            try {
+                const key = `offer_email_${token}`;
+                localStorage.setItem(key, JSON.stringify({
+                    email: email.toLowerCase(),
+                    timestamp: Date.now()
+                }));
+            } catch {
+                // Ignore storage errors
+            }
         }
 
         async function verifyEmail() {
@@ -488,6 +529,12 @@
                 errorDiv.classList.remove('hidden');
                 emailInput.classList.add('border-red-500');
                 return;
+            }
+
+            // Cache email for localhost (30 min)
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isLocal) {
+                cacheEmail(clientOffer.unique_token, email);
             }
 
             // Fetch fresh view_count from database to check if first view
