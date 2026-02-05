@@ -482,8 +482,11 @@
             // Check for cached email (localhost only, 30 min TTL)
             const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
             if (isLocal) {
-                const cached = getCachedEmail(clientOffer.unique_token);
+                const token = getToken();
+                const cached = getCachedEmail(token);
+                console.log('[offer-starter] Cache check:', { token, cached, leadEmail: lead.email.toLowerCase() });
                 if (cached && cached === lead.email.toLowerCase()) {
+                    console.log('[offer-starter] Using cached email, skipping login');
                     renderOffer();
                     showScreen('offer-screen');
                     return;
@@ -545,7 +548,9 @@
             // Cache email for localhost (30 min)
             const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
             if (isLocal) {
-                cacheEmail(clientOffer.unique_token, email);
+                const token = getToken();
+                console.log('[offer-starter] Caching email:', { token, email });
+                cacheEmail(token, email);
             }
 
             // Fetch fresh view_count from database to check if first view
