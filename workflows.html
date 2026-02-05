@@ -114,7 +114,7 @@
                     </div>
                     <select id="status-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
                         <option value="">Wszystkie statusy</option>
-                        <option value="active">Aktywne</option>
+                        <option value="active" selected>Aktywne</option>
                         <option value="completed">Ukonczone</option>
                         <option value="paused">Wstrzymane</option>
                         <option value="cancelled">Anulowane</option>
@@ -126,6 +126,12 @@
                         <option value="progress_desc">Postep (malejaco)</option>
                         <option value="progress_asc">Postep (rosnaco)</option>
                     </select>
+                </div>
+
+                <!-- Stage Filter -->
+                <div id="stage-filter-wrapper" class="flex items-center gap-3 mb-6 hidden">
+                    <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Etap</span>
+                    <div id="stage-filter" class="flex flex-wrap items-center gap-1.5"></div>
                 </div>
 
                 <!-- Workflows Grid -->
@@ -237,6 +243,9 @@
 
         let workflows = [];
         let filteredWorkflows = [];
+        let selectedStages = new Set();
+        let stagesInitialized = false;
+        let workflowLogos = {};
 
         let teamMembers = [];
         let currentMember = null;
@@ -348,7 +357,8 @@
                 workflows = data || [];
             }
 
-            await Promise.all([loadUnreadComments(), loadReportCounts()]);
+            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos()]);
+            renderStageFilter();
             applyFilters();
             renderWorkflows();
         }
@@ -391,6 +401,28 @@
             }
         }
 
+        async function loadWorkflowLogos() {
+            const { data, error } = await supabaseClient
+                .from('workflow_branding')
+                .select('workflow_id, file_url, notes')
+                .eq('type', 'logo');
+
+            if (error || !data) return;
+
+            workflowLogos = {};
+            for (const item of data) {
+                if (!workflowLogos[item.workflow_id]) {
+                    workflowLogos[item.workflow_id] = item.file_url;
+                }
+                try {
+                    const meta = item.notes ? JSON.parse(item.notes) : {};
+                    if (meta.variant === 'main') {
+                        workflowLogos[item.workflow_id] = item.file_url;
+                    }
+                } catch (e) {}
+            }
+        }
+
         function applyFilters() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const statusFilter = document.getElementById('status-filter').value;
@@ -407,7 +439,11 @@
                 // Status filter
                 const statusMatch = !statusFilter || w.status === statusFilter;
 
-                return searchMatch && statusMatch;
+                // Stage filter
+                const currentStage = getCurrentStage(w);
+                const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
+
+                return searchMatch && statusMatch && stageMatch;
             });
 
             // Sort
@@ -433,6 +469,51 @@
             // Update active count
             const activeCount = workflows.filter(w => w.status === 'active').length;
             document.getElementById('total-active').textContent = activeCount;
+        }
+
+        function getCurrentStage(w) {
+            if (!w.total_milestones || w.total_milestones === 0) return 0;
+            if (w.status === 'completed') return w.total_milestones;
+            return Math.min((w.completed_milestones || 0) + 1, w.total_milestones);
+        }
+
+        function renderStageFilter() {
+            let maxStage = 0;
+            for (const w of workflows) {
+                maxStage = Math.max(maxStage, w.total_milestones || 0);
+            }
+            if (maxStage === 0) {
+                document.getElementById('stage-filter-wrapper').classList.add('hidden');
+                return;
+            }
+            if (!stagesInitialized) {
+                for (let i = 1; i <= maxStage; i++) selectedStages.add(i);
+                stagesInitialized = true;
+            }
+            document.getElementById('stage-filter-wrapper').classList.remove('hidden');
+            const container = document.getElementById('stage-filter');
+            let html = '';
+            for (let stage = 1; stage <= maxStage; stage++) {
+                const isActive = selectedStages.has(stage);
+                html += `<button onclick="toggleStage(${stage})" data-stage="${stage}"
+                    class="text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer ${
+                        isActive
+                            ? 'bg-white/10 text-white border-white/20'
+                            : 'text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600'
+                    }">${stage}</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function toggleStage(stage) {
+            if (selectedStages.has(stage)) {
+                selectedStages.delete(stage);
+            } else {
+                selectedStages.add(stage);
+            }
+            renderStageFilter();
+            applyFilters();
+            renderWorkflows();
         }
 
         function getWorkflowPath(id) {
@@ -568,10 +649,18 @@
                     ? `[${w.completed_milestones + 1}/${w.total_milestones}] ${w.current_milestone_title}`
                     : 'Brak etapow';
 
+                const logoUrl = workflowLogos[w.workflow_id];
+                const logoHtml = logoUrl
+                    ? `<div class="w-7 h-7 rounded-md bg-zinc-800 border border-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden"><img src="${logoUrl}" alt="" class="w-full h-full object-contain p-0.5"></div>`
+                    : '';
+
                 return `
                 <div class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-4 transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${w.workflow_id}')">
                     <div class="flex items-center justify-between mb-2">
-                        <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            ${logoHtml}
+                            <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
+                        </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                             ${getStatusBadge(w.status)}
                             ${w.status === 'cancelled' ? `
@@ -973,6 +1062,7 @@
         // Make functions available globally
         window.getWorkflowPath = getWorkflowPath;
         window.copyClientLink = copyClientLink;
+        window.toggleStage = toggleStage;
         window.openAddModal = openAddModal;
         window.closeAddModal = closeAddModal;
         window.searchOrder = searchOrder;
