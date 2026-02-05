@@ -650,33 +650,33 @@
                     : 'Brak etapow';
 
                 const logoUrl = workflowLogos[w.workflow_id];
-                const logoHtml = logoUrl
-                    ? `<div class="w-10 h-10 rounded-lg bg-zinc-800 border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden"><img src="${logoUrl}" alt="" class="w-full h-full object-contain p-1"></div>`
-                    : '';
 
                 return `
                 <div class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-4 transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${w.workflow_id}')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            ${logoHtml}
-                            <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
+                    <div class="flex items-start gap-3 mb-2">
+                        ${logoUrl ? `<div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            <img src="${logoUrl}" alt="" class="w-full h-full object-contain p-1.5">
+                        </div>` : ''}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
+                                <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                    ${getStatusBadge(w.status)}
+                                    ${w.status === 'cancelled' ? `
+                                        <button onclick="event.stopPropagation(); openDeleteModal('${w.workflow_id}', '${customerDisplay.replace(/'/g, "\\'")}')"
+                                                class="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                                                title="Usun projekt">
+                                            <i class="ph ph-trash text-xs"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                                <span class="truncate">${w.offer_name}</span>
+                                <span class="text-zinc-700">·</span>
+                                <span class="font-mono flex-shrink-0">${formatPrice(w.amount)}</span>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                            ${getStatusBadge(w.status)}
-                            ${w.status === 'cancelled' ? `
-                                <button onclick="event.stopPropagation(); openDeleteModal('${w.workflow_id}', '${customerDisplay.replace(/'/g, "\\'")}')"
-                                        class="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
-                                        title="Usun projekt">
-                                    <i class="ph ph-trash text-xs"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-1.5 mb-1.5 text-xs text-zinc-400 truncate">
-                        <span class="truncate">${w.offer_name}</span>
-                        <span class="text-zinc-700">·</span>
-                        <span class="font-mono flex-shrink-0">${formatPrice(w.amount)}</span>
                     </div>
                     ${getStatusIcons(w)}
 
