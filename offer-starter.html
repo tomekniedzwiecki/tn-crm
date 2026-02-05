@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oferta startowa</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
+        .glass-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-14 h-14 bg-emerald-500 text-white rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                    <i class="ph-bold ph-rocket text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-2">Oferta startowa</h1>
+                <p class="text-zinc-400">Wprowadź swój adres e-mail, aby zobaczyć szczegóły</p>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-white/10 p-6">
+                <div class="mb-4">
+                    <label class="block text-zinc-400 text-xs font-medium mb-2">Adres e-mail</label>
+                    <input type="email" id="email-input"
+                           class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                           placeholder="jan@firma.pl"
+                           autofocus>
+                </div>
+                <div id="login-error" class="text-red-400 text-sm mb-4 hidden"></div>
+                <button id="login-btn"
+                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span>Zobacz ofertę</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+
+            <p class="text-center text-zinc-600 text-xs mt-6">
+                Link jest ważny do: <span id="valid-until-preview" class="text-zinc-400">-</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Expired Screen -->
+    <div id="expired-screen" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="text-center animate-enter">
+            <div class="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-clock-countdown text-3xl text-zinc-500"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Oferta wygasła</h1>
+            <p class="text-zinc-400 mb-6">Ta oferta nie jest już dostępna.</p>
+            <p class="text-zinc-500 text-sm">Skontaktuj się z nami, aby otrzymać nową ofertę.</p>
+        </div>
+    </div>
+
+    <!-- Not Found Screen -->
+    <div id="not-found-screen" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="text-center animate-enter">
+            <div class="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-question text-3xl text-zinc-500"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono oferty</h1>
+            <p class="text-zinc-400">Sprawdź poprawność linku lub skontaktuj się z nami.</p>
+        </div>
+    </div>
+
+    <!-- Offer Screen (placeholder - to be designed) -->
+    <div id="offer-screen" class="hidden min-h-screen">
+        <div class="max-w-4xl mx-auto px-6 py-12 animate-enter">
+
+            <!-- Header -->
+            <header class="mb-12 text-center">
+                <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                    <i class="ph ph-rocket"></i>
+                    Oferta startowa
+                </div>
+                <h1 id="offer-title" class="text-4xl font-bold text-white mb-4">-</h1>
+                <p class="text-zinc-400">
+                    Przygotowana dla: <span id="client-name" class="text-white font-medium">-</span>
+                </p>
+            </header>
+
+            <!-- Offer Content Placeholder -->
+            <div id="offer-content" class="glass-card rounded-2xl border border-white/10 p-8 mb-8">
+                <p class="text-zinc-400 text-center py-12">
+                    <i class="ph ph-code text-4xl text-zinc-600 block mb-4"></i>
+                    Treść oferty do zaprojektowania
+                </p>
+            </div>
+
+            <!-- Price & CTA -->
+            <div class="glass-card rounded-2xl border border-white/10 p-6 text-center">
+                <div class="mb-4">
+                    <span class="text-zinc-500 text-sm">Cena:</span>
+                    <div class="text-4xl font-bold text-white font-mono" id="offer-price">-</div>
+                    <span class="text-zinc-500 text-sm">PLN netto</span>
+                </div>
+                <p class="text-zinc-500 text-sm mb-6">
+                    Oferta ważna do: <span id="valid-until" class="text-white">-</span>
+                </p>
+                <button id="buy-btn" onclick="goToCheckout()"
+                        class="w-full max-w-md mx-auto bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-lg">
+                    <i class="ph ph-credit-card"></i>
+                    Zamawiam
+                </button>
+            </div>
+
+            <!-- Footer -->
+            <footer class="border-t border-white/5 mt-12 pt-8 text-center">
+                <p class="text-zinc-600 text-sm">
+                    Powered by <span class="text-zinc-400">TN Digital</span>
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let clientOffer = null;
+        let offer = null;
+        let lead = null;
+
+        function getToken() {
+            // Try URL path first (Vercel rewrite: /offer-starter/token or /offer-starter?token=xxx)
+            const path = window.location.pathname;
+            const pathMatch = path.match(/\/offer-starter\/([a-zA-Z0-9]+)/);
+            if (pathMatch) return pathMatch[1];
+
+            // Fallback to query parameter
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('pl-PL').format(price);
+        }
+
+        // Slack notification helper - fire and forget
+        async function sendSlackNotification(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/slack-notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Slack notification error:', err);
+            }
+        }
+
+        function showScreen(screenId) {
+            ['login-screen', 'expired-screen', 'not-found-screen', 'offer-screen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        async function loadOffer() {
+            const token = getToken();
+            if (!token) {
+                showScreen('not-found-screen');
+                return;
+            }
+
+            // Fetch client offer
+            const { data, error } = await supabaseClient
+                .from('client_offers')
+                .select('*, leads(*), offers(*)')
+                .eq('unique_token', token)
+                .single();
+
+            if (error || !data) {
+                showScreen('not-found-screen');
+                return;
+            }
+
+            clientOffer = data;
+            offer = data.offers;
+            lead = data.leads;
+
+            // Check if expired
+            const validUntil = new Date(clientOffer.valid_until);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (validUntil < today) {
+                showScreen('expired-screen');
+                return;
+            }
+
+            // Show validity date on login screen
+            document.getElementById('valid-until-preview').textContent = formatDate(clientOffer.valid_until);
+
+            // Show login screen
+            showScreen('login-screen');
+        }
+
+        async function verifyEmail() {
+            const emailInput = document.getElementById('email-input');
+            const email = emailInput.value.trim().toLowerCase();
+            const errorDiv = document.getElementById('login-error');
+
+            if (!email) {
+                errorDiv.textContent = 'Wprowadź adres e-mail';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (email !== lead.email.toLowerCase()) {
+                errorDiv.textContent = 'Nieprawidłowy adres e-mail';
+                errorDiv.classList.remove('hidden');
+                emailInput.classList.add('border-red-500');
+                return;
+            }
+
+            // Check if this is first view
+            const isFirstView = !clientOffer.view_count || clientOffer.view_count === 0;
+
+            // Update view count and history
+            const viewHistory = clientOffer.view_history || [];
+            viewHistory.push(new Date().toISOString());
+
+            const { error: updateError } = await supabaseClient
+                .from('client_offers')
+                .update({
+                    view_count: (clientOffer.view_count || 0) + 1,
+                    viewed_at: new Date().toISOString(),
+                    view_history: viewHistory
+                })
+                .eq('id', clientOffer.id);
+
+            if (updateError) {
+                console.warn('view_history update failed, trying without it:', updateError);
+                await supabaseClient
+                    .from('client_offers')
+                    .update({
+                        view_count: (clientOffer.view_count || 0) + 1,
+                        viewed_at: new Date().toISOString()
+                    })
+                    .eq('id', clientOffer.id);
+            }
+
+            // Send Slack notification about offer view
+            sendSlackNotification('offer_viewed', {
+                lead_name: lead.name,
+                lead_email: lead.email,
+                lead_company: lead.company,
+                lead_id: lead.id,
+                offer_name: offer.name,
+                offer_price: offer.price,
+                offer_type: 'starter',
+                first_view: isFirstView
+            });
+
+            renderOffer();
+            showScreen('offer-screen');
+        }
+
+        function renderOffer() {
+            // Header
+            let displayName = lead.company || lead.name || lead.email;
+            document.getElementById('client-name').textContent = displayName;
+            document.getElementById('offer-title').textContent = offer.name;
+
+            // Price
+            document.getElementById('offer-price').textContent = formatPrice(offer.price);
+            document.getElementById('valid-until').textContent = formatDate(clientOffer.valid_until);
+        }
+
+        function goToCheckout() {
+            // Redirect to checkout with offer ID
+            const baseUrl = window.location.origin;
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+            let checkoutUrl;
+            if (isLocal) {
+                checkoutUrl = `${baseUrl}/checkout/index.html?offer=${offer.id}`;
+            } else {
+                checkoutUrl = `${baseUrl}/checkout?offer=${offer.id}`;
+            }
+
+            // Pre-fill email if possible
+            checkoutUrl += `&email=${encodeURIComponent(lead.email)}`;
+            if (lead.name) checkoutUrl += `&name=${encodeURIComponent(lead.name)}`;
+            if (lead.company) checkoutUrl += `&company=${encodeURIComponent(lead.company)}`;
+
+            window.location.href = checkoutUrl;
+        }
+
+        // Event listeners
+        document.getElementById('login-btn').addEventListener('click', verifyEmail);
+        document.getElementById('email-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyEmail();
+        });
+
+        // Load offer on page load
+        loadOffer();
+    </script>
+</body>
+</html>

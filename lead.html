@@ -359,6 +359,25 @@
             40%, 80% { transform: translateX(3px); }
         }
         .shake { animation: shake 0.4s ease-in-out; }
+
+        /* Offer type selection */
+        .offer-type-option {
+            display: block;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .offer-type-option:hover {
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.03);
+        }
+        .offer-type-option.selected {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.1);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -739,6 +758,34 @@
                             <!-- No offer - generate form -->
                             <div id="client-offer-empty" class="hidden">
                                 <p class="text-zinc-500 text-xs mb-4">Wygeneruj link do oferty dla klienta. Dostęp będzie chroniony adresem e-mail.</p>
+
+                                <!-- Offer type selection -->
+                                <div class="mb-4">
+                                    <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-2">Typ oferty</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <label class="offer-type-option selected" data-type="starter">
+                                            <input type="radio" name="offer-type" value="starter" checked class="sr-only">
+                                            <div class="flex items-center gap-2">
+                                                <i class="ph ph-rocket text-lg text-emerald-400"></i>
+                                                <div>
+                                                    <div class="text-sm font-medium text-white">Startowy</div>
+                                                    <div class="text-[10px] text-zinc-500">Bez umowy</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label class="offer-type-option" data-type="full">
+                                            <input type="radio" name="offer-type" value="full" class="sr-only">
+                                            <div class="flex items-center gap-2">
+                                                <i class="ph ph-package text-lg text-amber-400"></i>
+                                                <div>
+                                                    <div class="text-sm font-medium text-white">Pełen pakiet</div>
+                                                    <div class="text-[10px] text-zinc-500">Z umową</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div class="flex items-center gap-3 mb-4">
                                     <div class="flex-1">
                                         <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">Ważność oferty</label>
@@ -2927,6 +2974,9 @@
                 return;
             }
 
+            // Get selected offer type
+            const offerType = document.querySelector('input[name="offer-type"]:checked')?.value || 'starter';
+
             const token = generateToken();
 
             const btn = document.getElementById('generate-client-offer-btn');
@@ -2940,7 +2990,8 @@
                     offer_id: offerId,
                     unique_token: token,
                     valid_until: validUntil,
-                    created_by: currentMember.id
+                    created_by: currentMember.id,
+                    offer_type: offerType
                 }])
                 .select()
                 .single();
@@ -2964,11 +3015,11 @@
                 token: token
             });
 
-            // Send first email immediately + schedule 3 follow-up emails
+            // Send first email immediately + schedule follow-up emails
             const selectedOffer = offers.find(o => o.id === offerId);
-            console.log('Offer flow check:', { email: lead.email, selectedOffer: selectedOffer?.name, offerId });
+            console.log('Offer flow check:', { email: lead.email, selectedOffer: selectedOffer?.name, offerId, offerType });
             if (lead.email && selectedOffer) {
-                const offerUrl = getClientOfferUrl(token);
+                const offerUrl = getClientOfferUrl(token, offerType);
                 await scheduleOfferEmails(lead, data, validUntil, selectedOffer, offerUrl);
             } else {
                 console.warn('Skipped email flow - missing email or offer:', { email: lead.email, offerId });
@@ -2989,9 +3040,21 @@
             }, 1500);
         }
 
-        function getClientOfferUrl(token) {
+        function getClientOfferUrl(token, offerType = null) {
             const baseUrl = window.location.origin;
             const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const type = offerType || clientOffer?.offer_type || 'full';
+
+            // Starter offers use different page
+            if (type === 'starter') {
+                if (isLocal) {
+                    const base = getBasePath();
+                    return `${baseUrl}${base}/offer-starter.html?token=${token}`;
+                }
+                return `${baseUrl}/offer-starter?token=${token}`;
+            }
+
+            // Full offers use existing page
             if (isLocal) {
                 const base = getBasePath();
                 return `${baseUrl}${base}/client-offer.html?token=${token}`;
@@ -3324,6 +3387,15 @@
                 `;
             }).join('');
         }
+
+        // Offer type selection toggle
+        document.querySelectorAll('.offer-type-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.offer-type-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                option.querySelector('input').checked = true;
+            });
+        });
 
         // Generate button click handler
         document.getElementById('generate-client-offer-btn').addEventListener('click', generateClientOffer);
