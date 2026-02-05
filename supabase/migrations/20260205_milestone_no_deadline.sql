@@ -1,15 +1,15 @@
 -- =============================================
--- CUSTOM PAYMENTS - Jednorazowe linki do płatności bez workflow
+-- MILESTONE: Obsługa etapów bez terminu (duration_days = 0)
 -- =============================================
--- Pozwala tworzyć linki płatności które nie tworzą projektów w TN Workflow
+-- Etap z duration_days = 0 oznacza "bez terminu" - trwa tak długo, jak trzeba.
+-- Takie etapy mają NULL w start_date i deadline.
 
--- 1. Dodaj kolumnę skip_workflow do orders
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS skip_workflow BOOLEAN DEFAULT false;
+-- 1. Wyczyść daty dla istniejących etapów z duration_days = 0
+UPDATE workflow_milestones
+SET start_date = NULL, deadline = NULL
+WHERE duration_days = 0;
 
--- Komentarz dla dokumentacji
-COMMENT ON COLUMN orders.skip_workflow IS 'Gdy true, płatność nie tworzy workflow (custom payment links)';
-
--- 2. Zaktualizuj trigger create_workflow_on_payment()
+-- 2. Zaktualizuj trigger create_workflow_on_payment() - obsługa duration_days = 0
 CREATE OR REPLACE FUNCTION create_workflow_on_payment()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -28,30 +28,21 @@ BEGIN
     -- Tylko gdy status zmienia się na 'paid'
     IF NEW.status = 'paid' AND (OLD.status IS NULL OR OLD.status != 'paid') THEN
 
-        -- NOWE: Pomiń tworzenie workflow jeśli skip_workflow = true
+        -- Sprawdź czy to custom payment (bez workflow)
         IF NEW.skip_workflow = true THEN
-            RAISE NOTICE 'Skipping workflow creation for order % (skip_workflow=true)', NEW.id;
             RETURN NEW;
         END IF;
 
-        -- Sprawdź czy workflow już istnieje
-        IF EXISTS (SELECT 1 FROM workflows WHERE order_id = NEW.id) THEN
-            RETURN NEW;
-        END IF;
-
-        -- Znajdź ofertę po nazwie (order.description = offer.name)
-        SELECT id, name, milestones
-        INTO v_offer
+        -- Pobierz ofertę z milestones
+        SELECT * INTO v_offer
         FROM offers
-        WHERE name = NEW.description
-        LIMIT 1;
+        WHERE id = NEW.offer_id;
 
-        -- Jeśli nie znaleziono oferty, stwórz pusty workflow
-        IF v_offer.id IS NULL THEN
-            v_milestones := '[]'::JSONB;
-        ELSE
-            v_milestones := COALESCE(v_offer.milestones, '[]'::JSONB);
+        IF NOT FOUND OR v_offer.milestones IS NULL THEN
+            RETURN NEW;
         END IF;
+
+        v_milestones := v_offer.milestones;
 
         -- Utwórz workflow
         INSERT INTO workflows (
@@ -60,9 +51,9 @@ BEGIN
             customer_name,
             customer_company,
             customer_phone,
-            offer_name,
+            title,
             offer_id,
-            amount,
+            offer_price,
             started_at,
             milestones_snapshot
         ) VALUES (
@@ -156,4 +147,4 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

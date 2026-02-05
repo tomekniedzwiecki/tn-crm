@@ -553,9 +553,10 @@
 
             let currentDay = 1;
             const timelineHtml = milestones.map((milestone, index) => {
+                const hasDuration = milestone.duration_days && milestone.duration_days > 0;
                 const startDay = currentDay;
-                const endDay = currentDay + (milestone.duration_days || 1) - 1;
-                currentDay = endDay + 1;
+                const endDay = hasDuration ? currentDay + milestone.duration_days - 1 : currentDay - 1;
+                if (hasDuration) currentDay = endDay + 1;
 
                 const deliverables = (milestone.deliverables || []).filter(d => d.trim());
                 const tasks = milestone.tasks || [];
@@ -581,10 +582,12 @@
                                         </div>
 
                                         <!-- Right side: Duration -->
+                                        ${hasDuration ? `
                                         <div class="text-right flex-shrink-0">
-                                            <div class="text-amber-400 font-bold">${milestone.duration_days || 1} dni</div>
+                                            <div class="text-amber-400 font-bold">${milestone.duration_days} dni</div>
                                             <div class="text-zinc-600 text-[10px] font-mono">Dzień ${startDay}${startDay !== endDay ? '-' + endDay : ''}</div>
                                         </div>
+                                        ` : ''}
                                     </div>
 
                                     <!-- Badges row -->

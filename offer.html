@@ -1185,7 +1185,8 @@
             if (!milestone) return;
 
             if (field === 'duration_days') {
-                milestone[field] = parseInt(value) || 1;
+                const parsed = parseInt(value);
+                milestone[field] = isNaN(parsed) ? 1 : Math.max(0, parsed);
                 renderTimelinePreview();
             } else {
                 milestone[field] = value;
@@ -1230,7 +1231,7 @@
                             <input type="number"
                                    class="milestone-duration w-16 bg-zinc-900 text-white text-sm px-2 py-1 rounded border border-zinc-800 text-center focus:border-zinc-600 outline-none"
                                    value="${milestone.duration_days}"
-                                   min="1"
+                                   min="0"
                                    onchange="updateMilestoneField('${milestone.id}', 'duration_days', this.value)">
                             <span class="text-zinc-500 text-xs">dni</span>
                         </div>

@@ -960,9 +960,17 @@
 
                 for (let i = 0; i < milestones.length; i++) {
                     const m = milestones[i];
-                    const durationDays = m.duration_days || 1;
-                    const deadline = new Date(startDate);
-                    deadline.setDate(deadline.getDate() + durationDays - 1);
+                    const durationDays = m.duration_days || 0;
+                    const hasDuration = durationDays > 0;
+
+                    let milestoneStart = null;
+                    let milestoneDeadline = null;
+                    if (hasDuration) {
+                        milestoneStart = startDate.toISOString().split('T')[0];
+                        const deadline = new Date(startDate);
+                        deadline.setDate(deadline.getDate() + durationDays - 1);
+                        milestoneDeadline = deadline.toISOString().split('T')[0];
+                    }
 
                     const { data: milestone, error: milestoneError } = await supabaseClient
                         .from('workflow_milestones')
@@ -972,8 +980,8 @@
                             title: m.title || `Etap ${i + 1}`,
                             description: m.description || null,
                             duration_days: durationDays,
-                            start_date: startDate.toISOString().split('T')[0],
-                            deadline: deadline.toISOString().split('T')[0],
+                            start_date: milestoneStart,
+                            deadline: milestoneDeadline,
                             deliverables: m.deliverables || [],
                             status: i === 0 ? 'in_progress' : 'pending',
                             started_at: i === 0 ? new Date().toISOString() : null
@@ -998,9 +1006,11 @@
                             });
                     }
 
-                    // Next milestone starts day after deadline
-                    startDate = new Date(deadline);
-                    startDate.setDate(startDate.getDate() + 1);
+                    // Next milestone starts day after deadline (skip stages without deadline)
+                    if (milestoneDeadline) {
+                        startDate = new Date(milestoneDeadline);
+                        startDate.setDate(startDate.getDate() + 1);
+                    }
                 }
 
                 // Send email to client
