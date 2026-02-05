@@ -2880,19 +2880,6 @@
             // Calculate halfway point between now and expiration
             const halfwayTime = new Date(now.getTime() + (validUntilDate.getTime() - now.getTime()) / 2);
 
-            // Calculate next working day at 9:00 AM for offer_personal
-            function getNextWorkingDayMorning() {
-                const date = new Date();
-                date.setDate(date.getDate() + 1); // Start from tomorrow
-                date.setHours(10, 35, 0, 0); // 10:35 AM
-
-                // Skip weekends (0 = Sunday, 6 = Saturday)
-                while (date.getDay() === 0 || date.getDay() === 6) {
-                    date.setDate(date.getDate() + 1);
-                }
-                return date;
-            }
-
             // 1. Send first email (offer_created) immediately
             try {
                 await sendEmail('offer_created', {
@@ -2908,35 +2895,20 @@
                 console.error('Error sending offer_created email:', emailErr);
             }
 
-            // 2. Schedule remaining 3 emails
-            const emails = [
-                {
-                    email_type: 'offer_personal',
-                    scheduled_for: getNextWorkingDayMorning().toISOString() // Next working day 9:00 AM
-                },
-                {
-                    email_type: 'offer_reminder_halfway',
-                    scheduled_for: halfwayTime.toISOString() // halfway point
-                },
-                {
-                    email_type: 'offer_expired',
-                    scheduled_for: new Date(validUntilDate.getTime() + 60 * 1000).toISOString() // 1 min after midnight
-                }
-            ];
-
-            const emailRecords = emails.map(e => ({
+            // 2. Schedule reminder email at halfway point
+            const emailRecords = [{
                 lead_id: lead.id,
                 client_offer_id: clientOffer.id,
-                email_type: e.email_type,
-                scheduled_for: e.scheduled_for,
+                email_type: 'offer_reminder_halfway',
+                scheduled_for: halfwayTime.toISOString(),
                 metadata: { offer_id: lead.offer_id }
-            }));
+            }];
 
             const { error } = await supabaseClient.from('scheduled_emails').insert(emailRecords);
             if (error) {
                 console.error('Error scheduling emails:', error);
             } else {
-                console.log('Scheduled 3 follow-up emails for lead:', lead.email);
+                console.log('Scheduled reminder email for lead:', lead.email);
             }
         }
 

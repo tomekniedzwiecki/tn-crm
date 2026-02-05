@@ -23,7 +23,7 @@ interface ScheduledEmail {
   id: string
   lead_id: string
   client_offer_id: string
-  email_type: 'offer_created' | 'offer_personal' | 'offer_reminder_halfway' | 'offer_expired'
+  email_type: 'offer_created' | 'offer_reminder_halfway'
   scheduled_for: string
   metadata: Record<string, any>
 }
@@ -167,12 +167,8 @@ Deno.serve(async (req) => {
         // Templates
         'email_template_offer_created_subject',
         'email_template_offer_created_body',
-        'email_template_offer_personal_subject',
-        'email_template_offer_personal_body',
         'email_template_offer_reminder_halfway_subject',
-        'email_template_offer_reminder_halfway_body',
-        'email_template_offer_expired_subject',
-        'email_template_offer_expired_body'
+        'email_template_offer_reminder_halfway_body'
       ])
 
     const settings: Record<string, string> = {}
@@ -278,16 +274,6 @@ Deno.serve(async (req) => {
           await markAsCancelled(supabase, scheduledEmail.id, 'client_offer_not_found')
           totalCancelled++
           continue
-        }
-
-        // For offer_expired, check if offer actually expired
-        if (scheduledEmail.email_type === 'offer_expired') {
-          const validUntilDate = new Date(clientOffer.valid_until + 'T23:59:59')
-          if (validUntilDate > new Date()) {
-            // Offer hasn't expired yet - skip (will be picked up later)
-            console.log(`[offer-emails-cron] Offer ${clientOffer.id} hasn't expired yet - skipping`)
-            continue
-          }
         }
 
         // Get template
