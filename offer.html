@@ -365,39 +365,6 @@
                                 <textarea id="offer-description" rows="4" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-none" placeholder="Ogólny opis oferty..."></textarea>
                             </div>
 
-                            <!-- Contract Template -->
-                            <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                        <i class="ph ph-file-text text-emerald-400"></i>
-                                        Wzor umowy
-                                    </h3>
-                                    <button type="button" onclick="toggleContractHelp()" class="text-zinc-500 hover:text-zinc-300 text-xs flex items-center gap-1">
-                                        <i class="ph ph-question"></i>
-                                        Zmienne
-                                    </button>
-                                </div>
-                                <div id="contract-help" class="hidden mb-4 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400">
-                                    <p class="mb-2">Dostepne zmienne (beda automatycznie zastapione):</p>
-                                    <div class="grid grid-cols-2 gap-1 font-mono text-[10px]">
-                                        <span>{{imie_nazwisko}}</span>
-                                        <span>{{firma}}</span>
-                                        <span>{{ulica}}</span>
-                                        <span>{{miasto}}</span>
-                                        <span>{{kod_pocztowy}}</span>
-                                        <span>{{kraj}}</span>
-                                        <span>{{pesel}}</span>
-                                        <span>{{nr_dowodu}}</span>
-                                        <span>{{email}}</span>
-                                        <span>{{telefon}}</span>
-                                        <span>{{nazwa_oferty}}</span>
-                                        <span>{{cena}}</span>
-                                        <span>{{data_dzis}}</span>
-                                    </div>
-                                </div>
-                                <textarea id="offer-contract-template" rows="12" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white resize-y font-mono text-xs leading-relaxed" placeholder="Wklej wzor umowy...&#10;&#10;Uzyj zmiennych np. {{imie_nazwisko}}, {{firma}}, {{pesel}} itd."></textarea>
-                            </div>
-
                             <!-- Milestones Editor -->
                             <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-5">
                                 <div class="flex items-center justify-between mb-4">
@@ -671,13 +638,6 @@
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
 
-        // Contract template help toggle
-        function toggleContractHelp() {
-            const help = document.getElementById('contract-help');
-            help.classList.toggle('hidden');
-        }
-        window.toggleContractHelp = toggleContractHelp;
-
         // Save status
         function showSaveStatus(status) {
             const statusEl = document.getElementById('save-status');
@@ -709,7 +669,7 @@
                 price: parseFloat(document.getElementById('offer-price').value) || 0,
                 is_active: offer.is_active,
                 milestones: milestones,
-                contract_template: document.getElementById('offer-contract-template').value.trim() || null
+                contract_template: offer.contract_template || null
             };
 
             const { error } = await supabaseClient
@@ -771,7 +731,6 @@
             document.getElementById('offer-name').value = offer.name || '';
             document.getElementById('offer-description').value = offer.description || '';
             document.getElementById('offer-price').value = offer.price || '';
-            document.getElementById('offer-contract-template').value = offer.contract_template || '';
             document.getElementById('header-name').textContent = offer.name || 'Bez nazwy';
             document.getElementById('created-date').textContent = `Utworzono: ${new Date(offer.created_at).toLocaleDateString('pl-PL')}`;
 
@@ -816,7 +775,6 @@
             // Attach event listeners
             document.getElementById('offer-name').addEventListener('input', triggerAutoSave);
             document.getElementById('offer-description').addEventListener('input', triggerAutoSave);
-            document.getElementById('offer-contract-template').addEventListener('input', triggerAutoSave);
             document.getElementById('offer-price').addEventListener('input', () => {
                 triggerAutoSave();
                 // Update link visibility when price changes
