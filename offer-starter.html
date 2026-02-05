@@ -205,9 +205,15 @@
                     </p>
 
                     <!-- Price highlight -->
-                    <div class="inline-flex items-baseline gap-3 mb-8">
-                        <span class="text-5xl sm:text-6xl font-bold text-white font-mono" id="offer-price">-</span>
-                        <span class="text-xl text-zinc-500">PLN netto</span>
+                    <div class="flex flex-col items-center gap-2 mb-8">
+                        <div class="flex items-baseline gap-3">
+                            <span class="text-5xl sm:text-6xl font-bold text-white font-mono" id="offer-price">-</span>
+                            <span class="text-xl text-zinc-500">PLN brutto</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-emerald-400">
+                            <i class="ph ph-credit-card text-lg"></i>
+                            <span class="text-base">lub <span class="font-semibold" id="offer-price-monthly">-</span> PLN × 10 rat 0%</span>
+                        </div>
                     </div>
 
                     <!-- CTA -->
@@ -372,11 +378,16 @@
 
         <!-- Sticky CTA (mobile) -->
         <div class="fixed bottom-0 left-0 right-0 sticky-cta p-4 sm:hidden z-50">
-            <button onclick="goToCheckout()"
-                    class="w-full bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
-                <i class="ph ph-credit-card"></i>
-                Zamawiam — <span id="offer-price-mobile">-</span> PLN
-            </button>
+            <div class="flex flex-col gap-2">
+                <button onclick="goToCheckout()"
+                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                    <i class="ph ph-credit-card"></i>
+                    Zamawiam — <span id="offer-price-mobile">-</span> PLN
+                </button>
+                <p class="text-center text-emerald-400 text-sm">
+                    lub <span id="offer-price-mobile-monthly">-</span> PLN × 10 rat 0%
+                </p>
+            </div>
         </div>
     </div>
 
@@ -594,8 +605,13 @@
 
             // Price and validity
             const priceFormatted = formatPrice(offer.price);
+            const monthlyPrice = Math.ceil(offer.price / 10);
+            const monthlyFormatted = formatPrice(monthlyPrice);
+
             document.getElementById('offer-price').textContent = priceFormatted;
+            document.getElementById('offer-price-monthly').textContent = monthlyFormatted;
             document.getElementById('offer-price-mobile').textContent = priceFormatted;
+            document.getElementById('offer-price-mobile-monthly').textContent = monthlyFormatted;
             document.getElementById('valid-until').textContent = formatDate(clientOffer.valid_until);
 
             // Initialize fade-in animations
