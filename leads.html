@@ -429,10 +429,6 @@
             <div class="p-5 space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Kierunek e-biznesu</div>
-                        <div id="survey-modal-direction" class="text-white text-sm font-medium">-</div>
-                    </div>
-                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
                         <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czas tygodniowo</div>
                         <div id="survey-modal-hours" class="text-white text-sm font-medium">-</div>
                     </div>
@@ -781,9 +777,9 @@
                 offers.map(offer => `<option value="${offer.id}">${offer.name}</option>`).join('');
         }
 
-        // Auto-assign status='new' to leads with survey (direction) but no status
+        // Auto-assign status='new' to leads with survey but no status
         async function autoAssignStatusForSurveyLeads(leadsData) {
-            const leadsToUpdate = leadsData.filter(lead => lead.direction && !lead.status);
+            const leadsToUpdate = leadsData.filter(lead => lead.weekly_hours && !lead.status);
 
             for (const lead of leadsToUpdate) {
                 const { error } = await supabaseClient
@@ -882,7 +878,7 @@
 
                 // Survey
                 if (surveyFilter) {
-                    const hasSurvey = !!lead.direction;
+                    const hasSurvey = !!lead.weekly_hours;
                     if (surveyFilter === 'yes' && !hasSurvey) return false;
                     if (surveyFilter === 'no' && hasSurvey) return false;
                 }
@@ -947,7 +943,7 @@
                 const initial = lead.email.charAt(0).toUpperCase();
                 const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
                 const colorIndex = lead.email.charCodeAt(0) % colors.length;
-                const hasSurvey = !!lead.direction;
+                const hasSurvey = !!lead.weekly_hours;
 
                 return `
                 <tr class="hover:bg-white/[0.02] transition-colors cursor-pointer group" onclick="openLead('${lead.id}')">
@@ -1048,16 +1044,6 @@
         window.openClientOffer = openClientOffer;
 
         // Survey modal helpers
-        function formatSurveyDirection(value) {
-            const map = {
-                'sklep': 'Sklep internetowy',
-                'aplikacja': 'Aplikacja / SaaS',
-                'produkt_cyfrowy': 'Kurs / Produkt cyfrowy',
-                'nie_wiem': 'Potrzebuje doradzenia'
-            };
-            return map[value] || value || '-';
-        }
-
         function formatSurveyHours(value) {
             const map = {
                 '1-2h': '1-2 godziny',
@@ -1081,12 +1067,11 @@
 
         function openSurveyModal(id) {
             const lead = leads.find(l => l.id === id);
-            if (!lead || !lead.direction) return;
+            if (!lead || !lead.weekly_hours) return;
 
             surveyLeadId = id;
 
             document.getElementById('survey-modal-email').textContent = lead.email;
-            document.getElementById('survey-modal-direction').textContent = formatSurveyDirection(lead.direction);
             document.getElementById('survey-modal-hours').textContent = formatSurveyHours(lead.weekly_hours);
             document.getElementById('survey-modal-income').textContent = formatSurveyMoney(lead.target_income);
             document.getElementById('survey-modal-budget').textContent = formatSurveyMoney(lead.budget);
