@@ -587,10 +587,51 @@
         }
 
         async function deleteOffer(id, name) {
-            if (!confirm(`Czy na pewno chcesz usunąć ofertę "${name}"?\n\nTa operacja jest nieodwracalna.`)) {
+            // Check if any leads have this offer assigned
+            const { data: leadsWithOffer, error: checkError } = await supabaseClient
+                .from('leads')
+                .select('id')
+                .eq('offer_id', id);
+
+            if (checkError) {
+                alert('Błąd podczas sprawdzania: ' + checkError.message);
                 return;
             }
 
+            let shouldProceed = false;
+
+            if (leadsWithOffer && leadsWithOffer.length > 0) {
+                // Ask user what to do with leads
+                shouldProceed = confirm(
+                    `Oferta "${name}" jest przypisana do ${leadsWithOffer.length} lead${leadsWithOffer.length === 1 ? 'a' : 'ów'}.\n\n` +
+                    `Czy chcesz usunąć ofertę i odłączyć ją od tych leadów?\n\n` +
+                    `Kliknij OK aby kontynuować lub Anuluj aby przerwać.`
+                );
+
+                if (!shouldProceed) {
+                    return;
+                }
+
+                // First, remove offer_id from all leads
+                const { error: updateError } = await supabaseClient
+                    .from('leads')
+                    .update({ offer_id: null })
+                    .eq('offer_id', id);
+
+                if (updateError) {
+                    alert('Błąd podczas aktualizacji leadów: ' + updateError.message);
+                    return;
+                }
+            } else {
+                // No leads with this offer, just confirm deletion
+                shouldProceed = confirm(`Czy na pewno chcesz usunąć ofertę "${name}"?\n\nTa operacja jest nieodwracalna.`);
+
+                if (!shouldProceed) {
+                    return;
+                }
+            }
+
+            // Now delete the offer
             const { error } = await supabaseClient
                 .from('offers')
                 .delete()
