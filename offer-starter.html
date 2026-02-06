@@ -277,12 +277,19 @@
                     </div>
 
                     <!-- CTA -->
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button onclick="goToCheckout()"
-                                class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-lg glow">
-                            <i class="ph ph-credit-card"></i>
-                            Zamawiam teraz
-                        </button>
+                    <div class="flex flex-col items-center justify-center gap-3">
+                        <div class="flex flex-col sm:flex-row items-center gap-3">
+                            <button onclick="downloadProforma()"
+                                    class="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white px-6 py-3.5 rounded-xl font-medium transition-all flex items-center justify-center gap-2">
+                                <i class="ph ph-file-pdf"></i>
+                                Pobierz proformę
+                            </button>
+                            <button onclick="goToCheckout()"
+                                    class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-lg glow">
+                                <i class="ph ph-credit-card"></i>
+                                Zamawiam teraz
+                            </button>
+                        </div>
                         <p class="text-zinc-500 text-sm">
                             Oferta ważna do: <span id="valid-until" class="text-white">-</span>
                         </p>
@@ -425,20 +432,27 @@
                         </div>
                         <h3 class="text-lg font-semibold text-white">Docelowy plan</h3>
                     </div>
-                    <p class="text-zinc-300 leading-relaxed text-lg mb-4">
+                    <p class="text-zinc-300 leading-relaxed mb-6">
                         <span class="text-white font-semibold">Tomek buduje</span> dla Ciebie biznes,
-                        <span class="text-white font-semibold">wdraża Cię</span> w jego prowadzenie i następnie
-                        <span class="text-white font-semibold">przekazuje Ci</span> pełną kontrolę.
+                        <span class="text-white font-semibold">wdraża Cię</span> w jego prowadzenie, a następnie
+                        <span class="text-white font-semibold">możesz zostać wspólnikiem</span> — Tomek otrzymuje % udział w zyskach,
+                        pozostając aktywnie zaangażowany w rozwój firmy.
                     </p>
-                    <div class="space-y-2">
+                    <div class="space-y-2 mb-4">
                         <div class="flex items-center gap-2 text-emerald-400 text-sm">
                             <i class="ph ph-check-circle"></i>
-                            <span>Pełne wsparcie na każdym etapie</span>
+                            <span>Długoterminowe partnerstwo</span>
                         </div>
                         <div class="flex items-center gap-2 text-emerald-400 text-sm">
                             <i class="ph ph-check-circle"></i>
-                            <span>Bez ukrytych kosztów</span>
+                            <span>Wspólny rozwój biznesu</span>
                         </div>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs">
+                            <i class="ph ph-handshake text-emerald-400 text-sm mr-1"></i>
+                            Szczegóły współpracy i modelu partnerskiego ustalane indywidualnie
+                        </p>
                     </div>
                 </div>
             </section>
@@ -724,6 +738,100 @@
             });
 
             fadeElements.forEach(el => observer.observe(el));
+        }
+
+        function parseAddress(address) {
+            if (!address) return { street: '', postCode: '', city: '' };
+            const match = address.match(/^(.+?),?\s*(\d{2}-\d{3})\s+(.+)$/);
+            if (match) return { street: match[1].trim(), postCode: match[2], city: match[3].trim() };
+            return { street: address, postCode: '', city: '' };
+        }
+
+        async function downloadProforma() {
+            const btn = event.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Generowanie...';
+
+            try {
+                // Przygotuj dane dla Edge Function
+                const addressParts = parseAddress(lead.address);
+
+                const requestData = {
+                    buyer: {
+                        name: lead.name,
+                        company: lead.company,
+                        email: lead.email,
+                        nip: lead.nip || '',
+                        street: addressParts.street,
+                        postCode: addressParts.postCode,
+                        city: addressParts.city
+                    },
+                    offer: {
+                        name: offer.name,
+                        description: offer.description,
+                        price: offer.price
+                    },
+                    validUntil: clientOffer.valid_until
+                };
+
+                // Wywołaj Edge Function
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/fakturownia-proforma`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Błąd generowania proformy');
+                }
+
+                // Otwórz PDF
+                window.open(result.pdfUrl, '_blank');
+
+                // Loguj aktywność
+                try {
+                    await supabaseClient.from('lead_activities').insert([{
+                        lead_id: lead.id,
+                        type: 'proforma',
+                        description: `Wygenerowano proformę przez klienta`,
+                        metadata: {
+                            offer_name: offer.name,
+                            offer_price: offer.price,
+                            invoice_id: result.invoiceId,
+                            generated_by: 'client',
+                            client_email: lead.email,
+                            offer_type: 'starter'
+                        }
+                    }]);
+                } catch (logError) {
+                    console.error('Activity log error:', logError);
+                }
+
+                // Send Slack notification
+                sendSlackNotification('proforma_generated', {
+                    lead_name: lead.name,
+                    lead_email: lead.email,
+                    lead_company: lead.company,
+                    lead_id: lead.id,
+                    offer_name: offer.name,
+                    offer_price: offer.price,
+                    offer_type: 'starter',
+                    generated_by: 'client'
+                });
+
+            } catch (error) {
+                console.error('Proforma error:', error);
+                alert('Błąd: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
 
         function goToCheckout() {
