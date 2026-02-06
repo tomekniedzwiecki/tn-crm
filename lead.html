@@ -488,10 +488,6 @@
                             <div class="bg-cyan-950/20 rounded-b-lg border border-t-0 border-cyan-500/20 p-4 -mt-1">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Kierunek e-biznesu</div>
-                                        <div id="survey-direction" class="text-white text-sm font-medium">-</div>
-                                    </div>
-                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
                                         <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czas tygodniowo</div>
                                         <div id="survey-hours" class="text-white text-sm font-medium">-</div>
                                     </div>
@@ -1508,28 +1504,6 @@
             });
         }
 
-        // Auto-map survey direction to offer based on name patterns
-        function getOfferForSurveyDirection(direction) {
-            if (!direction || !offers.length) return null;
-
-            const directionKeywords = {
-                'sklep': ['sklep', 'ecommerce', 'e-commerce', 'shop', 'dropshipping'],
-                'aplikacja': ['aplikacja', 'app', 'saas', 'software'],
-                'produkt_cyfrowy': ['kurs', 'produkt cyfrowy', 'digital', 'ebook', 'szkolenie', 'mentor']
-            };
-
-            const keywords = directionKeywords[direction];
-            if (!keywords) return null;
-
-            // Find offer that matches any of the keywords
-            const matchedOffer = offers.find(offer => {
-                const nameLower = offer.name.toLowerCase();
-                return keywords.some(keyword => nameLower.includes(keyword));
-            });
-
-            return matchedOffer?.id || null;
-        }
-
         async function loadLead() {
             const id = getLeadId();
             if (!id) {
@@ -1595,18 +1569,9 @@
             document.getElementById('field-nip').value = lead.nip || '';
             document.getElementById('field-address').value = lead.address || '';
 
-            // Auto-map survey direction to offer if no offer is set
+            // Set offer if available
             if (lead.offer_id) {
                 document.getElementById('field-offer').value = lead.offer_id;
-            } else if (lead.direction) {
-                const autoOfferId = getOfferForSurveyDirection(lead.direction);
-                if (autoOfferId) {
-                    document.getElementById('field-offer').value = autoOfferId;
-                    // Show indicator that this was auto-selected
-                    const offerSelect = document.getElementById('field-offer');
-                    offerSelect.style.borderColor = 'rgba(34, 211, 238, 0.5)';
-                    offerSelect.title = 'Auto-wybrano na podstawie kierunku z ankiety';
-                }
             }
 
             // Set deal_value - use offer price as default if deal_value is empty
@@ -1648,16 +1613,6 @@
             renderSurvey();
         }
 
-        function formatSurveyDirection(value) {
-            const map = {
-                'sklep': 'Sklep internetowy',
-                'aplikacja': 'Aplikacja / SaaS',
-                'produkt_cyfrowy': 'Kurs / Produkt cyfrowy',
-                'nie_wiem': 'Potrzebuje doradzenia'
-            };
-            return map[value] || value || '-';
-        }
-
         function formatSurveyHours(value) {
             const map = {
                 '1-2h': '1-2 godziny',
@@ -1681,14 +1636,13 @@
             const section = document.getElementById('survey-section');
 
             // Show section only if lead has survey data
-            if (!lead.direction) {
+            if (!lead.weekly_hours && !lead.target_income && !lead.experience) {
                 section.classList.add('hidden');
                 return;
             }
 
             section.classList.remove('hidden');
 
-            document.getElementById('survey-direction').textContent = formatSurveyDirection(lead.direction);
             document.getElementById('survey-hours').textContent = formatSurveyHours(lead.weekly_hours);
             document.getElementById('survey-income').textContent = formatSurveyMoney(lead.target_income);
             document.getElementById('survey-budget').textContent = formatSurveyMoney(lead.budget);
