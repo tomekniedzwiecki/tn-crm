@@ -119,6 +119,9 @@
                         <option value="paused">Wstrzymane</option>
                         <option value="cancelled">Anulowane</option>
                     </select>
+                    <select id="offer-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
+                        <option value="">Wszystkie oferty</option>
+                    </select>
                     <select id="sort-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
                         <option value="deadline_asc">Deadline (blisko)</option>
                         <option value="created_desc">Najnowsze</option>
@@ -358,9 +361,25 @@
             }
 
             await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos()]);
+            populateOfferFilter();
             renderStageFilter();
             applyFilters();
             renderWorkflows();
+        }
+
+        function populateOfferFilter() {
+            // Get unique offer names from workflows
+            const offerNames = [...new Set(workflows.map(w => w.offer_name))].sort();
+
+            const select = document.getElementById('offer-filter');
+            select.innerHTML = '<option value="">Wszystkie oferty</option>';
+
+            offerNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
         }
 
         let unreadCounts = {};
@@ -426,6 +445,7 @@
         function applyFilters() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const statusFilter = document.getElementById('status-filter').value;
+            const offerFilter = document.getElementById('offer-filter').value;
             const sortFilter = document.getElementById('sort-filter').value;
 
             filteredWorkflows = workflows.filter(w => {
@@ -439,11 +459,14 @@
                 // Status filter
                 const statusMatch = !statusFilter || w.status === statusFilter;
 
+                // Offer filter
+                const offerMatch = !offerFilter || w.offer_name === offerFilter;
+
                 // Stage filter
                 const currentStage = getCurrentStage(w);
                 const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
 
-                return searchMatch && statusMatch && stageMatch;
+                return searchMatch && statusMatch && offerMatch && stageMatch;
             });
 
             // Sort
@@ -821,6 +844,11 @@
         });
 
         document.getElementById('status-filter').addEventListener('change', () => {
+            applyFilters();
+            renderWorkflows();
+        });
+
+        document.getElementById('offer-filter').addEventListener('change', () => {
             applyFilters();
             renderWorkflows();
         });
