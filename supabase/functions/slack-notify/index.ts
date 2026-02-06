@@ -118,8 +118,8 @@ function formatNewLeadMessage(data: {
   open_question?: string
   budget?: string
 }) {
-  // Check if this is from zapisy form (has direction field)
-  if (data.direction) {
+  // Check if this is from zapisy form (has survey fields)
+  if (data.weekly_hours || data.target_income || data.experience) {
     return formatZapisyLeadMessage(data)
   }
 
@@ -226,28 +226,48 @@ function formatZapisyLeadMessage(data: {
         type: 'mrkdwn',
         text: `*${leadLink(data.email, data.email, data.lead_id)}*${data.phone ? ` · ${data.phone}` : ''}`
       }
-    },
-    {
-      type: 'section',
-      fields: [
-        { type: 'mrkdwn', text: `*Kierunek:*\n${directionLabels[data.direction || ''] || data.direction}` },
-        { type: 'mrkdwn', text: `*Źródło:*\n${data.traffic_source || 'Direct'}` }
-      ]
-    },
-    {
-      type: 'section',
-      fields: [
-        { type: 'mrkdwn', text: `*Czas/tydzień:*\n${hoursLabels[data.weekly_hours || ''] || data.weekly_hours}` },
-        { type: 'mrkdwn', text: `*Cel dochodu:*\n${incomeLabels[data.target_income || ''] || data.target_income}` }
-      ]
-    },
-    {
-      type: 'section',
-      fields: [
-        { type: 'mrkdwn', text: `*Budżet:*\n${budgetLabels[data.budget || ''] || data.budget}` }
-      ]
     }
   ]
+
+  // Only show fields that exist
+  const optionalFields = []
+  if (data.direction) {
+    optionalFields.push({ type: 'mrkdwn', text: `*Kierunek:*\n${directionLabels[data.direction] || data.direction}` })
+  }
+  if (data.traffic_source) {
+    optionalFields.push({ type: 'mrkdwn', text: `*Źródło:*\n${data.traffic_source}` })
+  }
+  if (optionalFields.length > 0) {
+    blocks.push({
+      type: 'section',
+      fields: optionalFields
+    })
+  }
+
+  // Survey fields (weekly hours and target income)
+  const surveyFields = []
+  if (data.weekly_hours) {
+    surveyFields.push({ type: 'mrkdwn', text: `*Czas/tydzień:*\n${hoursLabels[data.weekly_hours] || data.weekly_hours}` })
+  }
+  if (data.target_income) {
+    surveyFields.push({ type: 'mrkdwn', text: `*Cel dochodu:*\n${incomeLabels[data.target_income] || data.target_income}` })
+  }
+  if (surveyFields.length > 0) {
+    blocks.push({
+      type: 'section',
+      fields: surveyFields
+    })
+  }
+
+  // Budget (optional, was removed from form)
+  if (data.budget) {
+    blocks.push({
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: `*Budżet:*\n${budgetLabels[data.budget] || data.budget}` }
+      ]
+    })
+  }
 
   // Experience (always present)
   if (data.experience) {
