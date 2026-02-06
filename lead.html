@@ -1569,9 +1569,15 @@
             document.getElementById('field-nip').value = lead.nip || '';
             document.getElementById('field-address').value = lead.address || '';
 
-            // Set offer if available
+            // Set offer if available, otherwise set default offer
             if (lead.offer_id) {
                 document.getElementById('field-offer').value = lead.offer_id;
+            } else {
+                // Set default offer if one exists
+                const defaultOffer = offers.find(o => o.is_default);
+                if (defaultOffer) {
+                    document.getElementById('field-offer').value = defaultOffer.id;
+                }
             }
 
             // Set deal_value - use offer price as default if deal_value is empty

@@ -448,7 +448,10 @@
                                 <i class="ph ph-package text-lg ${offer.is_active ? 'text-amber-400' : 'text-zinc-500'}"></i>
                             </div>
                             <div>
-                                <h3 class="font-medium text-white">${offer.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-medium text-white">${offer.name}</h3>
+                                    ${offer.is_default ? '<span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30">Domyślna</span>' : ''}
+                                </div>
                                 <span class="text-xs ${offer.is_active ? 'text-emerald-400' : 'text-zinc-500'}">
                                     ${offer.is_active ? '● Aktywna' : '○ Nieaktywna'}
                                 </span>
@@ -493,11 +496,17 @@
                                 <i class="ph ph-link text-sm"></i>
                             </button>
                             ` : ''}
+                            <button onclick="event.stopPropagation(); toggleDefault('${offer.id}', ${!offer.is_default})" class="p-1.5 ${offer.is_default ? 'text-amber-400 hover:text-amber-300' : 'text-zinc-400 hover:text-amber-400'} hover:bg-white/5 rounded transition-colors" title="${offer.is_default ? 'Usuń z domyślnej' : 'Ustaw jako domyślną'}">
+                                <i class="ph ph-${offer.is_default ? 'star-fill' : 'star'} text-sm"></i>
+                            </button>
                             <button onclick="event.stopPropagation(); toggleActive('${offer.id}', ${!offer.is_active})" class="p-1.5 ${offer.is_active ? 'text-zinc-400 hover:text-zinc-200' : 'text-emerald-400 hover:text-emerald-300'} hover:bg-white/5 rounded transition-colors" title="${offer.is_active ? 'Dezaktywuj' : 'Aktywuj'}">
                                 <i class="ph ph-${offer.is_active ? 'eye-slash' : 'eye'} text-sm"></i>
                             </button>
                             <button onclick="event.stopPropagation(); window.location.href=getOfferPath('${offer.id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded transition-colors" title="Edytuj">
                                 <i class="ph ph-pencil-simple text-sm"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); deleteOffer('${offer.id}', '${offer.name.replace(/'/g, "\\'")}')" class="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors" title="Usuń">
+                                <i class="ph ph-trash text-sm"></i>
                             </button>
                         </div>
                     </div>
@@ -532,6 +541,78 @@
                 );
                 offer.is_active = isActive;
             }
+            renderOffers();
+            updateCounts();
+        }
+
+        async function toggleDefault(id, isDefault) {
+            const offer = offers.find(o => o.id === id);
+
+            // If setting as default, first unset all other defaults
+            if (isDefault) {
+                const currentDefault = offers.find(o => o.is_default);
+                if (currentDefault && currentDefault.id !== id) {
+                    await supabaseClient
+                        .from('offers')
+                        .update({ is_default: false })
+                        .eq('id', currentDefault.id);
+                    currentDefault.is_default = false;
+                }
+            }
+
+            const { error } = await supabaseClient
+                .from('offers')
+                .update({ is_default: isDefault })
+                .eq('id', id);
+
+            if (error) {
+                alert('Błąd: ' + error.message);
+                return;
+            }
+
+            // Log audit
+            if (offer) {
+                await logAuditActivity(
+                    'update',
+                    'offer',
+                    id,
+                    offer.name,
+                    { is_default: offer.is_default },
+                    { is_default: isDefault },
+                    { field: 'is_default' }
+                );
+                offer.is_default = isDefault;
+            }
+            renderOffers();
+        }
+
+        async function deleteOffer(id, name) {
+            if (!confirm(`Czy na pewno chcesz usunąć ofertę "${name}"?\n\nTa operacja jest nieodwracalna.`)) {
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('offers')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert('Błąd podczas usuwania: ' + error.message);
+                return;
+            }
+
+            // Log audit
+            await logAuditActivity(
+                'delete',
+                'offer',
+                id,
+                name,
+                { deleted: false },
+                { deleted: true }
+            );
+
+            // Remove from local array
+            offers = offers.filter(o => o.id !== id);
             renderOffers();
             updateCounts();
         }
