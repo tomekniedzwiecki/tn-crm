@@ -122,6 +122,24 @@
             box-shadow: 0 0 60px rgba(16, 185, 129, 0.15);
         }
 
+        /* Sticky Header */
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        .sticky-header.visible {
+            transform: translateY(0);
+        }
+
         /* WhatsApp Widget */
         .whatsapp-widget {
             position: fixed;
@@ -303,6 +321,53 @@
             </div>
         </div>
 
+        <!-- Sticky Header (shows on scroll) -->
+        <div class="sticky-header" id="sticky-header">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+                <!-- Desktop version -->
+                <div class="hidden md:flex items-center justify-between gap-6">
+                    <div class="flex items-center gap-4">
+                        <div class="text-sm text-zinc-400">Pakiet Start</div>
+                        <div class="w-px h-5 bg-white/10"></div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-bold text-white font-mono" id="sticky-price">-</span>
+                            <span class="text-zinc-500 text-sm">PLN</span>
+                        </div>
+                        <span class="text-xs text-zinc-500">
+                            lub <span class="text-emerald-400 font-semibold" id="sticky-price-monthly">-</span> PLN/msc × 10 rat 0%
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="downloadProforma()"
+                                class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 text-sm">
+                            <i class="ph ph-file-pdf"></i>
+                            Pobierz proformę
+                        </button>
+                        <button onclick="goToCheckout()"
+                                class="bg-emerald-500 hover:bg-emerald-400 text-white px-5 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm">
+                            <i class="ph ph-credit-card"></i>
+                            Zamawiam teraz
+                        </button>
+                    </div>
+                </div>
+                <!-- Mobile version -->
+                <div class="md:hidden flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="text-xl font-bold text-white font-mono" id="sticky-price-mobile">-</span>
+                            <span class="text-zinc-500 text-xs">PLN</span>
+                        </div>
+                        <span class="text-xs text-emerald-400" id="sticky-installments-mobile">-</span>
+                    </div>
+                    <button onclick="goToCheckout()"
+                            class="bg-emerald-500 hover:bg-emerald-400 text-white px-5 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm whitespace-nowrap">
+                        <i class="ph ph-credit-card"></i>
+                        Zamawiam
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Content -->
         <div class="max-w-4xl mx-auto px-4 sm:px-6">
 
@@ -458,6 +523,35 @@
                             <i class="ph ph-handshake text-emerald-400 text-sm mr-1"></i>
                             Szczegóły współpracy i modelu partnerskiego ustalane indywidualnie
                         </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Satisfaction Guarantee -->
+            <section class="py-12 fade-in">
+                <div class="card p-8 bg-gradient-to-br from-blue-500/5 to-transparent border-blue-500/20">
+                    <div class="flex items-start gap-6">
+                        <div class="hidden sm:flex w-14 h-14 rounded-xl bg-blue-500/10 items-center justify-center flex-shrink-0">
+                            <i class="ph ph-shield-check text-3xl text-blue-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="ph ph-shield-check text-2xl text-blue-400 sm:hidden"></i>
+                                <h3 class="text-xl font-semibold text-white">Gwarancja satysfakcji</h3>
+                            </div>
+                            <p class="text-zinc-300 leading-relaxed mb-4">
+                                Jeśli po przygotowaniu wszystkich materiałów uznasz, że <span class="text-white font-medium">nie jesteś w pełni zadowolony</span>
+                                z jakości pracy lub z dowolnego innego powodu zdecydujesz się zrezygnować,
+                                <span class="text-white font-medium">Tomek zwróci Ci całą wpłaconą kwotę</span>.
+                            </p>
+                            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                                <p class="text-zinc-400 text-sm leading-relaxed">
+                                    <i class="ph ph-handshake text-blue-400 mr-1"></i>
+                                    Pełne zadowolenie klienta to fundament długofalowej współpracy.
+                                    Tomek pracuje wyłącznie z osobami, które są w 100% przekonane do wspólnego projektu.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -723,8 +817,16 @@
             document.getElementById('offer-price-mobile-monthly').textContent = monthlyFormatted;
             document.getElementById('valid-until').textContent = formatDate(clientOffer.valid_until);
 
+            // Sticky header prices
+            document.getElementById('sticky-price').textContent = priceFormatted;
+            document.getElementById('sticky-price-monthly').textContent = monthlyFormatted;
+            document.getElementById('sticky-price-mobile').textContent = priceFormatted;
+            document.getElementById('sticky-installments-mobile').textContent = `${monthlyFormatted} PLN × 10 rat 0%`;
+
             // Initialize fade-in animations
             initFadeInAnimations();
+            // Initialize sticky header scroll detection
+            initStickyHeader();
         }
 
         function initFadeInAnimations() {
@@ -743,6 +845,29 @@
             });
 
             fadeElements.forEach(el => observer.observe(el));
+        }
+
+        function initStickyHeader() {
+            const stickyHeader = document.getElementById('sticky-header');
+            const heroSection = document.querySelector('.hero-gradient');
+
+            if (!stickyHeader || !heroSection) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    // Show sticky header when hero is out of view
+                    if (entry.isIntersecting) {
+                        stickyHeader.classList.remove('visible');
+                    } else {
+                        stickyHeader.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0,
+                rootMargin: '0px'
+            });
+
+            observer.observe(heroSection);
         }
 
         function parseAddress(address) {
