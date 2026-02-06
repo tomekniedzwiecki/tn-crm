@@ -100,39 +100,161 @@ npx supabase secrets set TPAY_CLIENT_SECRET=your_secret
 npx supabase secrets list
 ```
 
-## 🔄 Workflow Deployment
+## 🔄 Pełna Procedura Deploymentu
 
-### Przed deploymentem
+### Krok 1: Przygotowanie zmian
 
-1. **Sprawdź zmiany**:
-   ```bash
-   git status
-   git diff
-   ```
+```bash
+# Przejdź do katalogu projektu
+cd c:\repos_tn\tn-crm
 
-2. **Testuj lokalnie** (opcjonalnie):
-   ```bash
-   npx supabase functions serve nazwa-funkcji
-   ```
+# Sprawdź status repozytorium
+git status
 
-3. **Deploy**:
-   ```bash
-   npx supabase functions deploy nazwa-funkcji
-   ```
+# Zobacz szczegóły zmian w plikach
+git diff
 
-4. **Weryfikuj**:
-   ```bash
-   npx supabase functions logs nazwa-funkcji --tail
-   ```
+# Sprawdź które edge functions zostały zmodyfikowane
+ls -la supabase/functions/
+```
 
-### Najczęstsze funkcje do deploymentu
+### Krok 2: Testowanie lokalne (opcjonalne)
 
-- `slack-notify` - Powiadomienia Slack
-- `send-email` - Wysyłka emaili
-- `offer-emails-cron` - Automatyczne emaile dla ofert
-- `tpay-webhook` - Obsługa płatności TPay
+```bash
+# Uruchom funkcję lokalnie do testów
+npx supabase functions serve nazwa-funkcji
+
+# W innym terminalu możesz testować funkcję:
+curl -i --location --request POST 'http://localhost:54321/functions/v1/nazwa-funkcji' \
+  --header 'Content-Type: application/json' \
+  --data '{"test": "data"}'
+```
+
+### Krok 3: Commit zmian do Git
+
+```bash
+# Dodaj zmienione pliki
+git add supabase/functions/nazwa-funkcji/
+
+# Lub dodaj wszystkie zmiany
+git add .
+
+# Stwórz commit z opisem zmian
+git commit -m "Opis zmian w funkcji"
+
+# Push do remote repository
+git push
+```
+
+### Krok 4: Deploy do Supabase
+
+```bash
+# Sprawdź czy jesteś zalogowany
+npx supabase projects list
+
+# Deploy pojedynczej funkcji
+npx supabase functions deploy nazwa-funkcji
+
+# LUB deploy wszystkich funkcji na raz
+npx supabase functions deploy
+
+# Przykład output:
+# Deploying funkcji slack-notify (project ref: yxmavwkwnfuphjqbelws)
+# Bundled slack-notify size: 5.337kB
+# ✓ Deployed Function slack-notify on project yxmavwkwnfuphjqbelws
+```
+
+### Krok 5: Weryfikacja deploymentu
+
+```bash
+# Zobacz listę wszystkich funkcji
+npx supabase functions list
+
+# Sprawdź w dashboardzie Supabase
+# https://supabase.com/dashboard/project/yxmavwkwnfuphjqbelws/functions
+
+# Możesz też przetestować funkcję bezpośrednio
+curl -i --location --request POST 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/nazwa-funkcji' \
+  --header 'Authorization: Bearer TWOJ_ANON_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{"test": "data"}'
+```
+
+### Krok 6: Monitoring i debugowanie
+
+Jeśli coś nie działa:
+
+```bash
+# Dashboard Supabase pokazuje logi w czasie rzeczywistym
+# https://supabase.com/dashboard/project/yxmavwkwnfuphjqbelws/functions/nazwa-funkcji/logs
+
+# Sprawdź czy funkcja jest aktywna
+npx supabase functions list
+
+# W razie problemów, ponowny deploy
+npx supabase functions deploy nazwa-funkcji --no-verify-jwt
+```
+
+---
+
+## 📋 Checklist Deploymentu
+
+Przed każdym deploymentem sprawdź:
+
+- [ ] Zmiany są przetestowane lokalnie
+- [ ] Kod jest commitowany do git
+- [ ] Sprawdziłeś git status - nie ma niechcianych plików
+- [ ] Jesteś zalogowany do Supabase (`npx supabase projects list`)
+- [ ] Znasz nazwę funkcji do deploymentu
+- [ ] Po deploymencie sprawdziłeś logi w dashboardzie
+
+---
+
+## 🎯 Najczęstsze funkcje do deploymentu
+
+- `slack-notify` - Powiadomienia Slack (używane przy zgłoszeniach)
+- `send-email` - Wysyłka emaili (ogólna funkcja mailingowa)
+- `offer-emails-cron` - Automatyczne emaile dla ofert (cron job)
+- `tpay-webhook` - Obsługa płatności TPay (webhook po płatności)
 - `fakturownia-proforma` - Generowanie faktur proforma
 - `fakturownia-invoice` - Generowanie faktur końcowych
+- `email-inbound` - Obsługa przychodzących emaili
+- `workflow-stage-completed` - Akcje po zakończeniu stage'u workflow
+
+---
+
+## ⚠️ Typowe Problemy
+
+### Problem: "Error: Failed to deploy function"
+**Rozwiązanie**:
+```bash
+# Sprawdź czy jesteś zalogowany
+npx supabase login
+
+# Sprawdź czy plik index.ts istnieje w funkcji
+ls supabase/functions/nazwa-funkcji/index.ts
+```
+
+### Problem: "Project not linked"
+**Rozwiązanie**:
+```bash
+# Sprawdź czy istnieje plik .temp/project-ref
+cat supabase/.temp/project-ref
+
+# Jeśli nie istnieje, utwórz go:
+mkdir -p supabase/.temp
+echo "yxmavwkwnfuphjqbelws" > supabase/.temp/project-ref
+```
+
+### Problem: Funkcja zwraca błąd 500
+**Rozwiązanie**:
+```bash
+# Sprawdź logi w dashboardzie
+# https://supabase.com/dashboard/project/yxmavwkwnfuphjqbelws/functions/nazwa-funkcji/logs
+
+# Sprawdź czy wszystkie secrets są ustawione
+npx supabase secrets list
+```
 
 ## 📊 Database Migrations
 
