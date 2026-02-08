@@ -5,21 +5,27 @@
 -- Paste this entire file and click RUN
 -- =====================================================
 
--- 1. ENABLE RLS ON TABLES
+-- 1. ENABLE RLS ON TABLES (not views!)
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE workflow_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workflows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workflow_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workflow_milestones ENABLE ROW LEVEL SECURITY;
 
 -- 2. DROP AND RECREATE POLICIES
 DROP POLICY IF EXISTS "leads_authenticated_all" ON leads;
 DROP POLICY IF EXISTS "orders_authenticated_all" ON orders;
-DROP POLICY IF EXISTS "workflow_progress_authenticated_all" ON workflow_progress;
+DROP POLICY IF EXISTS "workflows_authenticated_all" ON workflows;
+DROP POLICY IF EXISTS "workflow_tasks_authenticated_all" ON workflow_tasks;
+DROP POLICY IF EXISTS "workflow_milestones_authenticated_all" ON workflow_milestones;
 
 CREATE POLICY "leads_authenticated_all" ON leads FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "orders_authenticated_all" ON orders FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "workflow_progress_authenticated_all" ON workflow_progress FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "workflows_authenticated_all" ON workflows FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "workflow_tasks_authenticated_all" ON workflow_tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "workflow_milestones_authenticated_all" ON workflow_milestones FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- 3. RECREATE VIEWS WITH SECURITY_INVOKER
+-- 3. RECREATE BUSINESS VIEWS WITH SECURITY_INVOKER
 DROP VIEW IF EXISTS biznes_pipeline_summary CASCADE;
 DROP VIEW IF EXISTS biznes_plan_realization CASCADE;
 DROP VIEW IF EXISTS biznes_monthly_summary CASCADE;
@@ -89,11 +95,68 @@ SELECT
     COUNT(*) FILTER (WHERE status = 'lost' AND created_at >= DATE_TRUNC('month', CURRENT_DATE)) AS lost_this_month
 FROM leads;
 
--- 4. GRANT PERMISSIONS
+-- 4. RECREATE WORKFLOW_PROGRESS VIEW WITH SECURITY_INVOKER
+DROP VIEW IF EXISTS workflow_progress CASCADE;
+
+CREATE OR REPLACE VIEW workflow_progress
+WITH (security_invoker = true) AS
+SELECT
+    w.id AS workflow_id,
+    w.customer_email,
+    w.customer_name,
+    w.customer_company,
+    w.offer_name,
+    w.amount,
+    w.status,
+    w.started_at,
+    w.unique_token,
+    w.contract_status,
+    w.products_shared_at,
+    w.selected_product_id,
+    w.branding_shared_at,
+    w.sales_page_shared_at,
+    w.sales_page_url,
+    COUNT(wt.id) AS total_tasks,
+    COUNT(wt.id) FILTER (WHERE wt.completed = true) AS completed_tasks,
+    CASE
+        WHEN COUNT(wt.id) > 0
+        THEN ROUND((COUNT(wt.id) FILTER (WHERE wt.completed = true)::DECIMAL / COUNT(wt.id)) * 100)
+        ELSE 0
+    END AS progress_percent,
+    (
+        SELECT wm.title
+        FROM workflow_milestones wm
+        WHERE wm.workflow_id = w.id AND wm.status = 'in_progress'
+        ORDER BY wm.milestone_index
+        LIMIT 1
+    ) AS current_milestone_title,
+    (
+        SELECT wm.deadline
+        FROM workflow_milestones wm
+        WHERE wm.workflow_id = w.id AND wm.status = 'in_progress'
+        ORDER BY wm.milestone_index
+        LIMIT 1
+    ) AS current_milestone_deadline,
+    (
+        SELECT COUNT(*)
+        FROM workflow_milestones wm
+        WHERE wm.workflow_id = w.id
+    ) AS total_milestones,
+    (
+        SELECT COUNT(*)
+        FROM workflow_milestones wm
+        WHERE wm.workflow_id = w.id AND wm.status = 'completed'
+    ) AS completed_milestones
+FROM workflows w
+LEFT JOIN workflow_tasks wt ON wt.workflow_id = w.id
+GROUP BY w.id;
+
+-- 5. GRANT PERMISSIONS
 GRANT SELECT ON biznes_all_revenues TO authenticated;
 GRANT SELECT ON biznes_monthly_summary TO authenticated;
 GRANT SELECT ON biznes_plan_realization TO authenticated;
 GRANT SELECT ON biznes_pipeline_summary TO authenticated;
+GRANT SELECT ON workflow_progress TO authenticated;
 
 -- =====================================================
 -- SECURITY FIX COMPLETE
