@@ -790,7 +790,7 @@
         }
 
         async function loadLeads() {
-            const { data, error } = await supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
+            const { data, error } = await supabaseClient.from('leads').select('*').order('updated_at', { ascending: false });
             if (error) { console.error('Error:', error); return; }
             leads = data || [];
 
@@ -969,7 +969,7 @@
                     <td class="px-4 py-3">
                         <span class="inline-flex items-center px-2 py-0.5 rounded border ${marketingSrc.border} ${marketingSrc.bg} ${marketingSrc.color} text-[10px] font-medium">${marketingSrc.name}</span>
                     </td>
-                    <td class="px-4 py-3 text-zinc-500 font-mono text-[11px]">${formatDateShort(lead.created_at)}</td>
+                    <td class="px-4 py-3 text-zinc-500 font-mono text-[11px]">${formatDateShort(lead.updated_at || lead.created_at)}</td>
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                             ${lead.client_offer_token ? `<button onclick="event.stopPropagation(); openClientOffer('${lead.client_offer_token}')" class="p-1.5 text-amber-400 hover:bg-amber-500/20 rounded transition-colors" title="Otwórz ofertę klienta">
@@ -1104,7 +1104,7 @@
                     <div class="w-12 h-12 rounded-lg bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white text-lg font-bold">${lead.email.charAt(0).toUpperCase()}</div>
                     <div class="flex-1 min-w-0">
                         <div class="text-white font-medium truncate">${lead.email}</div>
-                        <div class="text-zinc-500 text-xs font-mono">${formatDate(lead.created_at)}</div>
+                        <div class="text-zinc-500 text-xs font-mono">${formatDate(lead.updated_at || lead.created_at)}</div>
                     </div>
                     <span class="inline-flex items-center px-2 py-1 rounded border ${src.border} ${src.bg} ${src.color} text-[10px] font-medium">${src.name}</span>
                 </div>
@@ -1478,9 +1478,9 @@
             const [leadsResult, campaignsResult] = await Promise.all([
                 supabaseClient
                     .from('leads')
-                    .select('id, email, phone, status, created_at, name, company')
+                    .select('id, email, phone, status, created_at, updated_at, name, company')
                     .or(`email.ilike.%${query}%,phone.ilike.%${query}%`)
-                    .order('created_at', { ascending: false })
+                    .order('updated_at', { ascending: false })
                     .limit(10),
                 supabaseClient
                     .from('outreach_contacts')
