@@ -146,37 +146,8 @@ Deno.serve(async (req) => {
       console.log(`Created new lead: ${email} (id: ${leadId})`)
     }
 
-    // Notify Slack about new lead or survey completion
-    const slackWebhookUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.supabase.co/functions/v1/slack-notify')
-
-    if (slackWebhookUrl) {
-      try {
-        await fetch(slackWebhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
-          },
-          body: JSON.stringify({
-            type: 'new_lead',
-            data: {
-              email,
-              phone: data.phone,
-              lead_id: leadId,
-              traffic_source: data.traffic_source,
-              direction: data.direction,
-              weekly_hours: data.weekly_hours,
-              target_income: data.target_income,
-              experience: data.experience,
-              open_question: data.open_question
-            }
-          })
-        })
-      } catch (slackError) {
-        console.error('Failed to notify Slack:', slackError)
-        // Don't throw - Slack notification is not critical
-      }
-    }
+    // Slack notification is sent by the form at completion (zapisy/index.html)
+    // Don't send here to avoid duplicate notifications
 
     return new Response(
       JSON.stringify({
