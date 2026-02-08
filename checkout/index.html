@@ -1315,16 +1315,36 @@
                 }
 
                 currentOffer = offer;
-                setupOfferDisplay(offer);
+
+                // Check for custom price from client_offer
+                const clientOfferId = params.get('client_offer');
+                if (clientOfferId) {
+                    try {
+                        const { data: clientOffer } = await supabaseClient
+                            .from('client_offers')
+                            .select('custom_price')
+                            .eq('id', clientOfferId)
+                            .single();
+
+                        if (clientOffer?.custom_price) {
+                            currentOffer.price = parseFloat(clientOffer.custom_price);
+                            console.log('[checkout] Using custom price:', currentOffer.price);
+                        }
+                    } catch (e) {
+                        console.log('[checkout] Could not load client_offer custom_price');
+                    }
+                }
+
+                setupOfferDisplay(currentOffer);
                 showCheckout();
 
                 // Track ViewContent to Meta
                 if (typeof fbq !== 'undefined') {
                     fbq('track', 'ViewContent', {
-                        content_name: offer.name,
+                        content_name: currentOffer.name,
                         content_type: 'product',
                         currency: 'PLN',
-                        value: offer.price
+                        value: currentOffer.price
                     });
                     console.log('[meta] ViewContent event sent');
                 }

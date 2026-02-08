@@ -788,6 +788,13 @@
                                         <input type="date" id="client-offer-valid-until" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
                                     </div>
                                 </div>
+                                <div class="mb-4">
+                                    <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena indywidualna (opcjonalne)</label>
+                                    <div class="relative">
+                                        <input type="number" id="client-offer-custom-price" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white pr-12" placeholder="Domyślna cena z oferty" min="0" step="1">
+                                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">PLN</span>
+                                    </div>
+                                </div>
                                 <button id="generate-client-offer-btn" class="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-amber-500/30">
                                     <i class="ph ph-magic-wand"></i>
                                     Wygeneruj link
@@ -2947,22 +2954,33 @@
             // Get selected offer type
             const offerType = document.querySelector('input[name="offer-type"]:checked')?.value || 'starter';
 
+            // Get custom price (optional)
+            const customPriceInput = document.getElementById('client-offer-custom-price').value;
+            const customPrice = customPriceInput ? parseFloat(customPriceInput) : null;
+
             const token = generateToken();
 
             const btn = document.getElementById('generate-client-offer-btn');
             btn.disabled = true;
             btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
 
+            const insertData = {
+                lead_id: lead.id,
+                offer_id: offerId,
+                unique_token: token,
+                valid_until: validUntil,
+                created_by: currentMember.id,
+                offer_type: offerType
+            };
+
+            // Add custom_price only if provided
+            if (customPrice !== null && customPrice > 0) {
+                insertData.custom_price = customPrice;
+            }
+
             const { data, error } = await supabaseClient
                 .from('client_offers')
-                .insert([{
-                    lead_id: lead.id,
-                    offer_id: offerId,
-                    unique_token: token,
-                    valid_until: validUntil,
-                    created_by: currentMember.id,
-                    offer_type: offerType
-                }])
+                .insert([insertData])
                 .select()
                 .single();
 

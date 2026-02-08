@@ -987,6 +987,11 @@
         let offer = null;
         let lead = null;
 
+        // Helper to get effective price (custom_price or offer.price)
+        function getEffectivePrice() {
+            return clientOffer?.custom_price || offer?.price || 0;
+        }
+
         function getToken() {
             // Try URL path first (Vercel rewrite: /offer-starter/token or /offer-starter?token=xxx)
             const path = window.location.pathname;
@@ -1182,7 +1187,7 @@
                 lead_company: lead.company,
                 lead_id: lead.id,
                 offer_name: offer.name,
-                offer_price: offer.price,
+                offer_price: getEffectivePrice(),
                 offer_type: 'starter',
                 first_view: isFirstView
             });
@@ -1196,9 +1201,10 @@
             let displayName = lead.company || lead.name || lead.email;
             document.getElementById('client-name').textContent = displayName;
 
-            // Price and validity
-            const priceFormatted = formatPrice(offer.price);
-            const monthlyPrice = Math.ceil(offer.price / 10);
+            // Price and validity - use custom_price if available, otherwise offer.price
+            const effectivePrice = getEffectivePrice();
+            const priceFormatted = formatPrice(effectivePrice);
+            const monthlyPrice = Math.ceil(effectivePrice / 10);
             const monthlyFormatted = formatPrice(monthlyPrice);
 
             document.getElementById('offer-price').textContent = priceFormatted;
@@ -1305,7 +1311,7 @@
                     offer: {
                         name: offer.name,
                         description: offer.description,
-                        price: offer.price
+                        price: getEffectivePrice()
                     },
                     validUntil: clientOffer.valid_until
                 };
@@ -1337,7 +1343,7 @@
                         description: `Wygenerowano proformę przez klienta`,
                         metadata: {
                             offer_name: offer.name,
-                            offer_price: offer.price,
+                            offer_price: getEffectivePrice(),
                             invoice_id: result.invoiceId,
                             generated_by: 'client',
                             client_email: lead.email,
@@ -1355,7 +1361,7 @@
                     lead_company: lead.company,
                     lead_id: lead.id,
                     offer_name: offer.name,
-                    offer_price: offer.price,
+                    offer_price: getEffectivePrice(),
                     offer_type: 'starter',
                     generated_by: 'client'
                 });
@@ -1385,6 +1391,11 @@
             checkoutUrl += `&email=${encodeURIComponent(lead.email)}`;
             if (lead.name) checkoutUrl += `&name=${encodeURIComponent(lead.name)}`;
             if (lead.company) checkoutUrl += `&company=${encodeURIComponent(lead.company)}`;
+
+            // Pass custom price if set (client_offer_id for checkout to lookup)
+            if (clientOffer?.id) {
+                checkoutUrl += `&client_offer=${clientOffer.id}`;
+            }
 
             window.location.href = checkoutUrl;
         }
