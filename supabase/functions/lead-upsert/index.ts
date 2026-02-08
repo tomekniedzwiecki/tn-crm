@@ -83,6 +83,12 @@ Deno.serve(async (req) => {
       if (data.experience) updates.experience = data.experience
       if (data.open_question) updates.open_question = data.open_question
 
+      // Set survey_completed_at when survey fields are submitted
+      const hasSurveyData = data.weekly_hours || data.target_income || data.experience
+      if (hasSurveyData) {
+        updates.survey_completed_at = new Date().toISOString()
+      }
+
       if (Object.keys(updates).length > 0) {
         const { error: updateError } = await supabase
           .from('leads')
@@ -118,6 +124,12 @@ Deno.serve(async (req) => {
       if (data.target_income) insertData.target_income = data.target_income
       if (data.experience) insertData.experience = data.experience
       if (data.open_question) insertData.open_question = data.open_question
+
+      // Set survey_completed_at when survey fields are submitted
+      const hasSurveyData = data.weekly_hours || data.target_income || data.experience
+      if (hasSurveyData) {
+        insertData.survey_completed_at = new Date().toISOString()
+      }
 
       const { data: newLead, error: insertError } = await supabase
         .from('leads')

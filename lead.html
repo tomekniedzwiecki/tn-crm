@@ -439,9 +439,9 @@
                             <span id="lead-source-badge" class="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium">-</span>
                             <span class="text-zinc-700">•</span>
                             <span class="font-mono text-xs">Dodany: <span id="lead-created">-</span></span>
-                            <span id="lead-updated-wrapper" class="hidden">
+                            <span id="lead-survey-wrapper" class="hidden">
                                 <span class="text-zinc-700">•</span>
-                                <span class="font-mono text-xs">Zaktualizowany: <span id="lead-updated">-</span></span>
+                                <span class="font-mono text-xs">Ankieta: <span id="lead-survey-date">-</span></span>
                             </span>
                         </div>
                     </div>
@@ -1548,14 +1548,14 @@
             document.getElementById('lead-email-display').textContent = lead.email;
             document.getElementById('lead-created').textContent = formatDate(lead.created_at);
 
-            // Show updated_at if different from created_at
-            if (lead.updated_at && lead.updated_at !== lead.created_at) {
+            // Show survey_completed_at if available and different from created_at
+            if (lead.survey_completed_at) {
                 const createdDate = new Date(lead.created_at).toDateString();
-                const updatedDate = new Date(lead.updated_at).toDateString();
-                // Only show if updated on a different day or significantly later
-                if (createdDate !== updatedDate || (new Date(lead.updated_at) - new Date(lead.created_at)) > 60000) {
-                    document.getElementById('lead-updated').textContent = formatDate(lead.updated_at);
-                    document.getElementById('lead-updated-wrapper').classList.remove('hidden');
+                const surveyDate = new Date(lead.survey_completed_at).toDateString();
+                // Only show if survey was completed on a different day or significantly later
+                if (createdDate !== surveyDate || (new Date(lead.survey_completed_at) - new Date(lead.created_at)) > 60000) {
+                    document.getElementById('lead-survey-date').textContent = formatDate(lead.survey_completed_at);
+                    document.getElementById('lead-survey-wrapper').classList.remove('hidden');
                 }
             }
 
