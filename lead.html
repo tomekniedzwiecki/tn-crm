@@ -435,10 +435,14 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <h1 id="lead-email-display" class="text-3xl font-semibold text-white tracking-tight mb-1 truncate">Ładowanie...</h1>
-                        <div class="flex items-center gap-3 text-zinc-500 text-sm">
+                        <div class="flex items-center gap-3 text-zinc-500 text-sm flex-wrap">
                             <span id="lead-source-badge" class="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium">-</span>
                             <span class="text-zinc-700">•</span>
-                            <span id="lead-created" class="font-mono text-xs">-</span>
+                            <span class="font-mono text-xs">Dodany: <span id="lead-created">-</span></span>
+                            <span id="lead-updated-wrapper" class="hidden">
+                                <span class="text-zinc-700">•</span>
+                                <span class="font-mono text-xs">Zaktualizowany: <span id="lead-updated">-</span></span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1543,6 +1547,17 @@
             document.getElementById('lead-avatar').textContent = lead.email.charAt(0).toUpperCase();
             document.getElementById('lead-email-display').textContent = lead.email;
             document.getElementById('lead-created').textContent = formatDate(lead.created_at);
+
+            // Show updated_at if different from created_at
+            if (lead.updated_at && lead.updated_at !== lead.created_at) {
+                const createdDate = new Date(lead.created_at).toDateString();
+                const updatedDate = new Date(lead.updated_at).toDateString();
+                // Only show if updated on a different day or significantly later
+                if (createdDate !== updatedDate || (new Date(lead.updated_at) - new Date(lead.created_at)) > 60000) {
+                    document.getElementById('lead-updated').textContent = formatDate(lead.updated_at);
+                    document.getElementById('lead-updated-wrapper').classList.remove('hidden');
+                }
+            }
 
             // Source badge
             const badge = document.getElementById('lead-source-badge');
