@@ -2881,7 +2881,9 @@
         }
 
         // Schedule offer flow emails (3 emails - first one is sent immediately)
-        async function scheduleOfferEmails(lead, clientOffer, validUntil, selectedOffer, offerUrl) {
+        async function scheduleOfferEmails(lead, clientOffer, validUntil, selectedOffer, offerUrl, customPrice = null) {
+            // Use custom price if provided, otherwise use offer price
+            const effectivePrice = customPrice || selectedOffer.price;
             // Check if lead has already purchased (skip entire email flow)
             const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
             const { data: paidOrder } = await supabaseClient
@@ -2910,7 +2912,7 @@
                     email: lead.email,
                     clientName: lead.name || lead.company || 'Cześć',
                     offerName: selectedOffer.name,
-                    offerPrice: selectedOffer.price,
+                    offerPrice: effectivePrice,
                     validUntil: validUntil,
                     offerUrl: offerUrl
                 });
@@ -3005,10 +3007,10 @@
 
             // Send first email immediately + schedule follow-up emails
             const selectedOffer = offers.find(o => o.id === offerId);
-            console.log('Offer flow check:', { email: lead.email, selectedOffer: selectedOffer?.name, offerId, offerType });
+            console.log('Offer flow check:', { email: lead.email, selectedOffer: selectedOffer?.name, offerId, offerType, customPrice });
             if (lead.email && selectedOffer) {
                 const offerUrl = getClientOfferUrl(token, offerType);
-                await scheduleOfferEmails(lead, data, validUntil, selectedOffer, offerUrl);
+                await scheduleOfferEmails(lead, data, validUntil, selectedOffer, offerUrl, customPrice);
             } else {
                 console.warn('Skipped email flow - missing email or offer:', { email: lead.email, offerId });
             }
@@ -3069,6 +3071,9 @@
                     throw new Error('Nie wybrano oferty.');
                 }
 
+                // Use custom_price from clientOffer if available
+                const effectivePrice = clientOffer?.custom_price || selectedOffer.price;
+
                 // Przygotuj dane dla Edge Function
                 const addressParts = parseAddress(lead.address);
                 const today = new Date().toISOString().split('T')[0];
@@ -3086,7 +3091,7 @@
                     offer: {
                         name: selectedOffer.name,
                         description: selectedOffer.description,
-                        price: selectedOffer.price
+                        price: effectivePrice
                     },
                     validUntil: clientOffer ? clientOffer.valid_until : today
                 };
@@ -3113,7 +3118,7 @@
                 // Loguj aktywność - proforma wygenerowana przez handlowca
                 logAuditActivity('create', 'proforma', lead.id, lead.email, null, {
                     offer_name: selectedOffer.name,
-                    offer_price: selectedOffer.price,
+                    offer_price: effectivePrice,
                     invoice_id: result.invoiceId,
                     generated_by: 'salesperson'
                 });
@@ -3125,7 +3130,7 @@
                     description: `Wygenerowano proformę przez handlowca (${currentMember?.name || 'Nieznany'})`,
                     metadata: {
                         offer_name: selectedOffer.name,
-                        offer_price: selectedOffer.price,
+                        offer_price: effectivePrice,
                         invoice_id: result.invoiceId,
                         generated_by: 'salesperson',
                         generated_by_name: currentMember?.name
@@ -3142,7 +3147,7 @@
                     lead_company: lead.company,
                     lead_id: lead.id,
                     offer_name: selectedOffer.name,
-                    offer_price: selectedOffer.price,
+                    offer_price: effectivePrice,
                     generated_by: 'salesperson',
                     salesperson_name: currentMember?.name
                 });
@@ -3152,9 +3157,9 @@
                     email: lead.email,
                     clientName: lead.name,
                     offerName: selectedOffer.name,
-                    offerPrice: selectedOffer.price,
+                    offerPrice: effectivePrice,
                     pdfUrl: result.pdfUrl,
-                    checkoutUrl: `https://crm.tomekniedzwiecki.pl/checkout?offer=${selectedOffer.id}`
+                    checkoutUrl: `https://crm.tomekniedzwiecki.pl/checkout?offer=${selectedOffer.id}${clientOffer?.id ? '&client_offer=' + clientOffer.id : ''}`
                 });
 
             } catch (error) {
