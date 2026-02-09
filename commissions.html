@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM | Prowizje</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #0a0a0a; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.3s ease-out forwards; }
+
+        .card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+        }
+        .card:hover {
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        .order-row {
+            transition: background 0.15s;
+        }
+        .order-row:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .month-btn {
+            transition: all 0.15s;
+        }
+        .month-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.08);
+        }
+        .month-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-[#0a0a0a] relative min-w-0">
+        <!-- Header -->
+        <header class="h-14 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-lg"></i>
+                </button>
+                <span class="text-white font-medium">Prowizje</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Month Navigation -->
+                <div class="flex items-center bg-white/5 rounded-lg p-0.5">
+                    <button onclick="prevMonth()" class="month-btn w-7 h-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white">
+                        <i class="ph ph-caret-left text-sm"></i>
+                    </button>
+                    <button onclick="showMonthPicker()" class="px-3 h-7 text-xs font-medium text-white hover:bg-white/5 rounded-md transition-colors">
+                        <span id="month-display">Luty 2026</span>
+                    </button>
+                    <button onclick="nextMonth()" id="next-month-btn" class="month-btn w-7 h-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white">
+                        <i class="ph ph-caret-right text-sm"></i>
+                    </button>
+                </div>
+                <button onclick="toggleTiersModal()" class="text-zinc-500 hover:text-white text-xs flex items-center gap-1.5 transition-colors">
+                    <i class="ph ph-info"></i>
+                    <span class="hidden sm:inline">Progi</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="max-w-5xl mx-auto px-6 py-8">
+
+                <!-- Stats Row -->
+                <div class="grid grid-cols-3 gap-4 mb-8 animate-enter">
+                    <div class="card p-5">
+                        <div class="text-[11px] text-zinc-500 uppercase tracking-wider mb-1">Sprzedaż netto</div>
+                        <div id="stat-sales" class="text-2xl font-semibold text-white font-mono">0 zł</div>
+                    </div>
+                    <div class="card p-5">
+                        <div class="text-[11px] text-zinc-500 uppercase tracking-wider mb-1">Prowizje</div>
+                        <div id="stat-commission" class="text-2xl font-semibold text-emerald-400 font-mono">0 zł</div>
+                    </div>
+                    <div class="card p-5">
+                        <div class="text-[11px] text-zinc-500 uppercase tracking-wider mb-1">Zamówienia</div>
+                        <div id="stat-orders" class="text-2xl font-semibold text-white font-mono">0</div>
+                    </div>
+                </div>
+
+                <!-- Salespeople Cards -->
+                <div id="salespeople-container" class="space-y-4">
+                    <div class="text-center py-16 text-zinc-600">
+                        <i class="ph ph-circle-notch animate-spin text-2xl"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Month Picker Modal -->
+    <div id="month-picker-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60" onclick="hideMonthPicker()"></div>
+        <div class="relative bg-zinc-900 border border-white/10 rounded-xl p-4 w-[280px] animate-enter">
+            <div class="text-xs text-zinc-500 uppercase tracking-wider mb-3">Wybierz miesiąc</div>
+            <div id="month-picker-grid" class="grid grid-cols-3 gap-2">
+                <!-- Generated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Tiers Info Modal -->
+    <div id="tiers-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60" onclick="toggleTiersModal()"></div>
+        <div class="relative bg-zinc-900 border border-white/10 rounded-xl p-6 w-[400px] animate-enter">
+            <div class="flex items-center justify-between mb-4">
+                <div class="text-white font-medium">Progi prowizji</div>
+                <button onclick="toggleTiersModal()" class="text-zinc-500 hover:text-white">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between py-2 border-b border-white/5">
+                    <span class="text-zinc-500">0 – 30 000 zł</span>
+                    <span class="text-zinc-400">0% <span class="text-zinc-600">(target)</span></span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/5">
+                    <span class="text-zinc-400">30 001 – 50 000 zł</span>
+                    <span class="text-emerald-400 font-medium">9%</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/5">
+                    <span class="text-zinc-400">50 001 – 70 000 zł</span>
+                    <span class="text-emerald-400 font-medium">10%</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/5">
+                    <span class="text-zinc-400">70 001 – 100 000 zł</span>
+                    <span class="text-emerald-400 font-medium">12%</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/5">
+                    <span class="text-zinc-400">100 001 – 150 000 zł</span>
+                    <span class="text-emerald-400 font-medium">14%</span>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-white/5 text-xs text-zinc-500 space-y-1">
+                <div>Bonus: +2 000 zł za ≥100k sprzedaży w miesiącu</div>
+                <div>Bonus: +3 000 zł za ≥300k sprzedaży w kwartale</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentMember = null;
+        let isAdmin = false;
+        let teamMembers = [];
+        let currentYear, currentMonth;
+
+        // Commission tiers
+        const TIERS = [
+            { min: 0, max: 30000, rate: 0 },
+            { min: 30000, max: 50000, rate: 0.09 },
+            { min: 50000, max: 70000, rate: 0.10 },
+            { min: 70000, max: 100000, rate: 0.12 },
+            { min: 100000, max: 150000, rate: 0.14 },
+        ];
+
+        function calcCommission(sales) {
+            let commission = 0;
+            for (const tier of TIERS) {
+                if (sales > tier.min) {
+                    const amt = Math.min(sales, tier.max) - tier.min;
+                    commission += amt * tier.rate;
+                }
+            }
+            if (sales > 150000) commission += (sales - 150000) * 0.14;
+            return commission;
+        }
+
+        function calcBonus(sales) {
+            return sales >= 100000 ? 2000 : 0;
+        }
+
+        function fmt(n) {
+            return new Intl.NumberFormat('pl-PL').format(Math.round(n)) + ' zł';
+        }
+
+        function fmtDate(d) {
+            return new Date(d).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+        }
+
+        const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                        'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+
+        function updateMonthDisplay() {
+            const now = new Date();
+            const isCurrent = currentYear === now.getFullYear() && currentMonth === now.getMonth() + 1;
+            document.getElementById('month-display').textContent =
+                `${MONTHS[currentMonth - 1]} ${currentYear}${isCurrent ? '' : ''}`;
+            document.getElementById('next-month-btn').disabled = isCurrent;
+        }
+
+        function prevMonth() {
+            currentMonth--;
+            if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+            updateMonthDisplay();
+            loadData();
+        }
+
+        function nextMonth() {
+            const now = new Date();
+            if (currentYear === now.getFullYear() && currentMonth === now.getMonth() + 1) return;
+            currentMonth++;
+            if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+            updateMonthDisplay();
+            loadData();
+        }
+
+        function showMonthPicker() {
+            const grid = document.getElementById('month-picker-grid');
+            const now = new Date();
+            let html = '';
+
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const isActive = y === currentYear && m === currentMonth;
+                const label = i === 0 ? 'Teraz' : `${MONTHS[m-1].substring(0,3)} ${y}`;
+
+                html += `<button onclick="selectMonth(${y}, ${m})"
+                    class="px-3 py-2 text-xs rounded-lg transition-colors ${isActive
+                        ? 'bg-white text-black font-medium'
+                        : 'text-zinc-400 hover:bg-white/5 hover:text-white'}">${label}</button>`;
+            }
+
+            grid.innerHTML = html;
+            document.getElementById('month-picker-modal').classList.remove('hidden');
+        }
+
+        function hideMonthPicker() {
+            document.getElementById('month-picker-modal').classList.add('hidden');
+        }
+
+        function selectMonth(y, m) {
+            currentYear = y;
+            currentMonth = m;
+            updateMonthDisplay();
+            hideMonthPicker();
+            loadData();
+        }
+
+        function toggleTiersModal() {
+            document.getElementById('tiers-modal').classList.toggle('hidden');
+        }
+
+        function getMember(id) {
+            return teamMembers.find(m => m.id === id);
+        }
+
+        async function loadData() {
+            const container = document.getElementById('salespeople-container');
+            container.innerHTML = '<div class="text-center py-16 text-zinc-600"><i class="ph ph-circle-notch animate-spin text-2xl"></i></div>';
+
+            const start = new Date(currentYear, currentMonth - 1, 1);
+            const end = new Date(currentYear, currentMonth, 0, 23, 59, 59);
+
+            const { data: orders } = await supabaseClient
+                .from('orders')
+                .select('id, amount, lead_id, paid_at, customer_email, customer_name, description, order_number')
+                .eq('status', 'paid')
+                .gte('paid_at', start.toISOString())
+                .lte('paid_at', end.toISOString())
+                .order('paid_at', { ascending: false });
+
+            if (!orders || orders.length === 0) {
+                container.innerHTML = `
+                    <div class="card p-12 text-center">
+                        <i class="ph ph-receipt text-3xl text-zinc-700 mb-3"></i>
+                        <div class="text-zinc-500">Brak opłaconych zamówień w tym miesiącu</div>
+                    </div>`;
+                document.getElementById('stat-sales').textContent = '0 zł';
+                document.getElementById('stat-commission').textContent = '0 zł';
+                document.getElementById('stat-orders').textContent = '0';
+                return;
+            }
+
+            // Get leads
+            const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
+            let leadsMap = {};
+
+            if (leadIds.length > 0) {
+                const { data: leads } = await supabaseClient
+                    .from('leads')
+                    .select('id, assigned_to, email, name, company')
+                    .in('id', leadIds);
+                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l]));
+            }
+
+            // Group by salesperson
+            const byPerson = {};
+
+            for (const order of orders) {
+                let assignedTo = null;
+                let leadData = null;
+
+                if (order.lead_id && leadsMap[order.lead_id]) {
+                    assignedTo = leadsMap[order.lead_id].assigned_to;
+                    leadData = leadsMap[order.lead_id];
+                }
+
+                if (!assignedTo && order.customer_email) {
+                    const { data: lead } = await supabaseClient
+                        .from('leads')
+                        .select('id, assigned_to, name, company')
+                        .eq('email', order.customer_email)
+                        .maybeSingle();
+                    if (lead) {
+                        assignedTo = lead.assigned_to;
+                        leadData = lead;
+                    }
+                }
+
+                const key = assignedTo || 'unassigned';
+                if (!byPerson[key]) {
+                    byPerson[key] = { memberId: assignedTo, orders: [], total: 0 };
+                }
+
+                order._lead = leadData;
+                byPerson[key].orders.push(order);
+                byPerson[key].total += parseFloat(order.amount) || 0;
+            }
+
+            // Render
+            const sorted = Object.values(byPerson).sort((a, b) => b.total - a.total);
+
+            let totalSales = 0;
+            let totalComm = 0;
+            let totalOrders = 0;
+
+            let html = '';
+
+            for (const data of sorted) {
+                const member = data.memberId ? getMember(data.memberId) : null;
+                const name = member?.name || 'Nieprzypisane';
+                const color = member?.color || '#52525b';
+                const initials = member?.name ? member.name.split(' ').map(n => n[0]).join('').substring(0,2) : '?';
+
+                const commission = calcCommission(data.total);
+                const bonus = calcBonus(data.total);
+                const totalComission = commission + bonus;
+
+                totalSales += data.total;
+                totalComm += totalComission;
+                totalOrders += data.orders.length;
+
+                const progressPct = Math.min((data.total / 100000) * 100, 100);
+
+                html += `
+                    <div class="card overflow-hidden animate-enter">
+                        <!-- Header -->
+                        <div class="p-5 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white" style="background:${color}">
+                                    ${initials}
+                                </div>
+                                <div>
+                                    <div class="text-white font-medium">${name}</div>
+                                    <div class="text-xs text-zinc-500">${data.orders.length} ${data.orders.length === 1 ? 'zamówienie' : 'zamówień'}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-white font-mono font-medium">${fmt(data.total)}</div>
+                                <div class="text-emerald-400 text-xs font-mono">${fmt(totalComission)} prowizji</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress -->
+                        <div class="px-5 pb-4">
+                            <div class="flex items-center justify-between text-[10px] text-zinc-600 mb-1">
+                                <span>0</span>
+                                <span>Target 30k</span>
+                                <span>100k</span>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                                <div class="progress-bar h-full rounded-full" style="width:${progressPct}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Orders -->
+                        <div class="border-t border-white/5">
+                            <table class="w-full">
+                                <tbody>
+                                    ${data.orders.map(o => {
+                                        const leadId = o._lead?.id || o.lead_id;
+                                        const clientName = o.customer_name || o._lead?.company || o._lead?.name || o.customer_email;
+
+                                        return `
+                                            <tr class="order-row border-b border-white/5 last:border-0">
+                                                <td class="px-5 py-3 w-10">
+                                                    ${leadId ? `
+                                                        <a href="/lead?id=${leadId}" class="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors">
+                                                            <i class="ph ph-arrow-square-out text-xs"></i>
+                                                        </a>
+                                                    ` : '<div class="w-7"></div>'}
+                                                </td>
+                                                <td class="py-3">
+                                                    <div class="text-white text-sm">${clientName}</div>
+                                                    <div class="text-zinc-600 text-xs truncate max-w-[250px]">${o.description || o.order_number || ''}</div>
+                                                </td>
+                                                <td class="px-5 py-3 text-right">
+                                                    <div class="text-white font-mono text-sm">${fmt(parseFloat(o.amount))}</div>
+                                                    <div class="text-zinc-600 text-[10px]">${fmtDate(o.paid_at)}</div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            document.getElementById('stat-sales').textContent = fmt(totalSales);
+            document.getElementById('stat-commission').textContent = fmt(totalComm);
+            document.getElementById('stat-orders').textContent = totalOrders;
+        }
+
+        async function init() {
+            Sidebar.render({ appId: 'crm', activePage: 'commissions' });
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+
+            const { data: members } = await supabaseClient
+                .from('team_members')
+                .select('*')
+                .order('name');
+            teamMembers = members || [];
+
+            currentMember = teamMembers.find(m => m.user_id === session.user.id);
+            isAdmin = currentMember?.role === 'admin';
+
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+            }
+            Sidebar.showAdminNav(isAdmin);
+
+            if (!isAdmin) {
+                document.querySelector('.flex-1.overflow-y-auto').innerHTML = `
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <i class="ph ph-lock text-4xl text-zinc-700 mb-3"></i>
+                            <p class="text-zinc-500">Brak dostępu</p>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth() + 1;
+            updateMonthDisplay();
+            loadData();
+        }
+
+        init();
+    </script>
+</body>
+</html>

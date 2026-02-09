@@ -42,6 +42,7 @@ const NAV_ITEMS_CRM = [
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz' },
     { id: 'offers', icon: 'ph-package', label: 'Oferty' },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia' },
+    { id: 'commissions', icon: 'ph-percent', label: 'Prowizje', adminOnly: true },
     { id: 'outreach', icon: 'ph-megaphone', label: 'Kampanie' },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia', adminOnly: true },
     { id: 'logi', icon: 'ph-list-bullets', label: 'Logi' },
