@@ -649,3 +649,10 @@ git add . && git commit -m "Add [nazwa-marki] landing page" && git push
 ```
 
 Vercel automatycznie zdeployuje zmiany po pushu do `main`.
+
+**ZAWSZE podaj użytkownikowi link do live wersji:**
+```
+https://tn-crm.vercel.app/[slug]
+```
+
+Przykład: `https://tn-crm.vercel.app/nomabar`
