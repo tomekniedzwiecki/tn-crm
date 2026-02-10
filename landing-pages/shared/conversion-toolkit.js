@@ -1212,6 +1212,10 @@
       });
 
       const showToast = () => {
+        // Don't show toast if cookie banner is visible
+        const cookieBanner = document.querySelector('.cookie-banner.show');
+        if (cookieBanner) return;
+
         const name = cfg.names[Math.floor(Math.random() * cfg.names.length)];
         const city = cfg.cities[Math.floor(Math.random() * cfg.cities.length)];
 
@@ -1230,7 +1234,7 @@
       setTimeout(() => {
         showToast();
         setInterval(showToast, cfg.interval);
-      }, 8000);
+      }, 10000);
     },
 
     // ═══════════════════════════════════════════════════════════════════════
