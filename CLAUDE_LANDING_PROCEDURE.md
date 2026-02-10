@@ -547,6 +547,8 @@ Dodaj przed `</body>`:
 
 Pełna dokumentacja: `/landing-pages/shared/README.md`
 
+**WAŻNE:** Toolkit automatycznie dodaje klasę `ct-has-urgency-bar` do body i przesuwa header o 44px (38px na mobile). Header landing page MUSI mieć `position: fixed` i `top: 0` aby to działało poprawnie.
+
 ## Checklist przed oddaniem
 
 - [ ] Wszystkie sekcje obecne (header -> footer)
