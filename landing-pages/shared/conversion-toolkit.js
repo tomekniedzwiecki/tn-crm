@@ -297,11 +297,15 @@
           top: 0;
           left: 0;
           right: 0;
+          height: 52px;
           z-index: 9999;
           background: linear-gradient(135deg, var(--ct-primary) 0%, #E85A2A 100%);
           color: var(--ct-white);
-          padding: 12px 24px;
-          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          padding: 0 24px;
           font-size: 14px;
           font-weight: 500;
           overflow: hidden;
@@ -320,11 +324,11 @@
         }
         /* Adjust header when urgency bar is present */
         body.ct-has-urgency-bar .header {
-          top: 48px !important;
+          top: 52px !important;
           border-top: none;
         }
         body.ct-has-urgency-bar {
-          padding-top: 48px;
+          padding-top: 52px;
         }
         /* Remove header top border/shadow when urgency bar present */
         body.ct-has-urgency-bar .header.scrolled {
@@ -333,7 +337,6 @@
         .ct-countdown {
           display: inline-flex;
           gap: 6px;
-          margin-left: 12px;
         }
         .ct-countdown-unit {
           display: inline-flex;
@@ -481,7 +484,7 @@
           box-shadow: 0 0 10px ${this.config.brand.primary}40;
         }
         body.ct-has-urgency-bar .ct-progress-bar {
-          top: 48px;
+          top: 52px;
         }
 
         /* ═══ FLOATING CTA ═══ */
@@ -668,7 +671,7 @@
           transition: transform 0.3s ease;
         }
         body.ct-has-urgency-bar .ct-sticky-bar {
-          top: 48px;
+          top: 52px;
         }
         .ct-sticky-bar.show {
           transform: translateY(0);
@@ -795,17 +798,19 @@
           .ct-countdown-value { font-size: 14px; }
           .ct-countdown-label { font-size: 8px; }
           .ct-urgency-bar {
-            font-size: 12px;
-            padding: 10px 16px;
+            height: 44px;
+            font-size: 11px;
+            padding: 0 12px;
+            gap: 8px;
           }
           body.ct-has-urgency-bar .header {
-            top: 42px !important;
+            top: 44px !important;
           }
           body.ct-has-urgency-bar {
-            padding-top: 42px;
+            padding-top: 44px;
           }
           body.ct-has-urgency-bar .ct-progress-bar {
-            top: 42px;
+            top: 44px;
           }
           /* Floating CTA & Sticky bar - hidden on mobile */
           .ct-floating-cta,
