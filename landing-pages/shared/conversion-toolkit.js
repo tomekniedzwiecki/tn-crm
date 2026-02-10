@@ -716,46 +716,55 @@
           left: 0;
           right: 0;
           z-index: 9998;
-          background: var(--ct-white);
-          box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-          padding: 12px 16px;
-          padding-bottom: max(12px, env(safe-area-inset-bottom));
+          background: linear-gradient(to top, var(--ct-white) 0%, rgba(255,255,255,0.98) 100%);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+          padding: 16px 20px;
+          padding-bottom: max(16px, env(safe-area-inset-bottom));
+          border-top: 1px solid rgba(0,0,0,0.06);
         }
         .ct-mobile-bar-inner {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
+          max-width: 480px;
+          margin: 0 auto;
         }
         .ct-mobile-bar-price {
           display: flex;
           flex-direction: column;
+          gap: 2px;
         }
         .ct-mobile-bar-price-current {
-          font-size: 18px;
+          font-size: 20px;
           font-weight: 700;
           color: var(--ct-dark);
+          letter-spacing: -0.02em;
         }
         .ct-mobile-bar-price-old {
-          font-size: 12px;
+          font-size: 13px;
           color: var(--ct-gray);
           text-decoration: line-through;
         }
         .ct-mobile-bar-cta {
           flex: 1;
-          max-width: 200px;
-          padding: 14px 24px;
-          background: var(--ct-primary);
+          padding: 16px 32px;
+          background: linear-gradient(135deg, var(--ct-primary) 0%, #E85A2A 100%);
           color: var(--ct-white);
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 600;
           text-decoration: none;
           text-align: center;
           border-radius: 100px;
+          box-shadow: 0 4px 16px rgba(255,107,53,0.35);
           transition: all 0.3s;
+          letter-spacing: -0.01em;
         }
         .ct-mobile-bar-cta:active {
-          transform: scale(0.98);
+          transform: scale(0.97);
+          box-shadow: 0 2px 8px rgba(255,107,53,0.25);
         }
 
         /* ═══ MOBILE ADJUSTMENTS ═══ */
@@ -795,10 +804,13 @@
           }
           /* Toast above mobile bar */
           .ct-toast {
-            left: 16px;
-            right: 16px;
-            bottom: 90px;
+            left: 12px;
+            right: 12px;
+            bottom: 100px;
             max-width: none;
+            border-radius: 16px;
+            padding: 14px 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
           }
           /* Trust badges mobile */
           .ct-trust-row {
