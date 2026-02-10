@@ -481,6 +481,12 @@
             return new Intl.NumberFormat('pl-PL').format(value) + ' PLN';
         }
 
+        function formatExpectedClose(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+        }
+
         // Get lead value - from deal_value or offer price
         function getLeadValue(lead) {
             if (lead.deal_value) return parseFloat(lead.deal_value);
@@ -845,6 +851,12 @@
                         <div class="flex items-center gap-2 mt-2">
                             <div class="w-2 h-2 rounded-full bg-zinc-600"></div>
                             <span class="text-sm font-mono text-zinc-400">${formatCurrency(getLeadValue(lead))}</span>
+                        </div>
+                    ` : ''}
+                    ${lead.expected_close ? `
+                        <div class="flex items-center gap-2 mt-2">
+                            <i class="ph ph-calendar text-cyan-400 text-sm"></i>
+                            <span class="text-xs text-cyan-400/80">${formatExpectedClose(lead.expected_close)}</span>
                         </div>
                     ` : ''}
                     <div class="flex items-center justify-between mt-3 gap-2">
