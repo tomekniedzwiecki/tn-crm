@@ -417,6 +417,17 @@
                         <div id="reports-overview-content"></div>
                     </div>
 
+                    <!-- Activity Log Card -->
+                    <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mt-4">
+                        <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="ph ph-clock-counter-clockwise"></i>
+                            Ostatnie działania
+                        </h3>
+                        <div id="activity-log" class="space-y-2">
+                            <div class="text-zinc-600 text-xs">Brak aktywności</div>
+                        </div>
+                    </div>
+
                     </div><!-- /tab-przeglad -->
 
                     <!-- TAB: Etapy (Milestones) -->
@@ -1582,10 +1593,120 @@
         let milestones = [];
         let tasks = [];
         let currentTaskLinks = [];
+        let activities = [];
 
         let teamMembers = [];
         let currentMember = null;
         let isAdmin = false;
+
+        // Activity logging helper
+        async function logActivity(action, description, metadata = {}) {
+            if (!workflow || !currentMember) return;
+
+            try {
+                await supabaseClient
+                    .from('workflow_activities')
+                    .insert({
+                        workflow_id: workflow.id,
+                        action,
+                        description,
+                        performed_by: currentMember.id,
+                        performed_by_name: currentMember.name,
+                        metadata
+                    });
+
+                // Reload activities
+                await loadActivities();
+            } catch (err) {
+                console.error('Error logging activity:', err);
+            }
+        }
+
+        async function loadActivities() {
+            if (!workflow) return;
+
+            const { data } = await supabaseClient
+                .from('workflow_activities')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            activities = data || [];
+            renderActivities();
+        }
+
+        function renderActivities() {
+            const container = document.getElementById('activity-log');
+            if (!container) return;
+
+            if (activities.length === 0) {
+                container.innerHTML = '<div class="text-zinc-600 text-xs">Brak aktywności</div>';
+                return;
+            }
+
+            container.innerHTML = activities.map(a => {
+                const timeAgo = formatTimeAgo(new Date(a.created_at));
+                const actionIcon = getActivityIcon(a.action);
+
+                return `
+                    <div class="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
+                        <div class="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ${actionIcon} text-xs text-zinc-400"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-zinc-300 text-xs leading-relaxed">${escapeHtml(a.description)}</div>
+                            <div class="flex items-center gap-2 mt-1 text-zinc-600 text-[10px]">
+                                <span>${a.performed_by_name || 'System'}</span>
+                                <span>·</span>
+                                <span>${timeAgo}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getActivityIcon(action) {
+            const icons = {
+                'task_completed': 'ph-check',
+                'task_uncompleted': 'ph-x',
+                'milestone_completed': 'ph-flag',
+                'status_changed': 'ph-arrows-clockwise',
+                'client_info_updated': 'ph-user',
+                'products_shared': 'ph-package',
+                'branding_shared': 'ph-paint-brush',
+                'branding_updated': 'ph-paint-brush',
+                'sales_page_shared': 'ph-globe',
+                'report_published': 'ph-chart-bar',
+                'report_created': 'ph-chart-bar',
+                'contract_signed': 'ph-file-text',
+                'product_selected': 'ph-check-circle',
+                'comment_added': 'ph-chat-circle'
+            };
+            return icons[action] || 'ph-lightning';
+        }
+
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'przed chwilą';
+            if (diffMins < 60) return `${diffMins} min temu`;
+            if (diffHours < 24) return `${diffHours} godz. temu`;
+            if (diffDays < 7) return `${diffDays} dni temu`;
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1677,6 +1798,7 @@
             renderWorkflow();
             renderProductSharingCard();
             updateNavChecks();
+            loadActivities();
         }
 
         async function updateNavChecks() {
@@ -1811,6 +1933,11 @@
                 alert('Nie udalo sie zapisac zmian');
                 return;
             }
+
+            // Log activity
+            logActivity('client_info_updated', 'Zaktualizowano dane klienta', {
+                changes: updates
+            });
 
             // Update local state
             workflow.customer_name = updates.customer_name;
@@ -2038,6 +2165,8 @@
         }
 
         async function toggleTask(taskId, completed) {
+            const task = tasks.find(t => t.id === taskId);
+
             const { error } = await supabaseClient
                 .from('workflow_tasks')
                 .update({
@@ -2053,8 +2182,16 @@
                 return;
             }
 
+            // Log activity
+            if (task) {
+                const action = completed ? 'task_completed' : 'task_uncompleted';
+                const desc = completed
+                    ? `Ukończono zadanie: ${task.title}`
+                    : `Cofnięto ukończenie: ${task.title}`;
+                logActivity(action, desc, { task_id: taskId, task_title: task.title });
+            }
+
             // Update local state
-            const task = tasks.find(t => t.id === taskId);
             if (task) {
                 task.completed = completed;
                 task.completed_at = completed ? new Date().toISOString() : null;
@@ -2134,11 +2271,27 @@
                 console.log('Could not send notification email:', emailErr);
             }
 
+            // Log activity
+            const milestoneIndex = milestones.findIndex(m => m.id === milestoneId);
+            logActivity('milestone_completed', `Ukończono etap ${milestoneIndex + 1}: ${milestone.title}`, {
+                milestone_id: milestoneId,
+                milestone_title: milestone.title,
+                milestone_index: milestoneIndex
+            });
+
             showToast('Etap ukonczony!', 'success');
             await loadWorkflow();
         }
 
         async function changeStatus(newStatus) {
+            const oldStatus = workflow.status;
+            const statusLabels = {
+                active: 'Aktywny',
+                completed: 'Ukończony',
+                paused: 'Wstrzymany',
+                cancelled: 'Anulowany'
+            };
+
             const { error } = await supabaseClient
                 .from('workflows')
                 .update({
@@ -2152,6 +2305,12 @@
                 showToast('Blad zmiany statusu', 'error');
                 return;
             }
+
+            // Log activity
+            logActivity('status_changed', `Zmieniono status: ${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}`, {
+                old_status: oldStatus,
+                new_status: newStatus
+            });
 
             closeActionsMenu();
             showToast('Status zmieniony', 'success');
@@ -3888,6 +4047,9 @@
                 const emailNow = Date.now();
                 const shouldSend = (emailNow - lastBrandingEmailSentAt) > BRANDING_EMAIL_COOLDOWN;
 
+                // Log activity
+                logActivity('branding_shared', 'Przekazano branding klientowi', { items_count: brandingItems.length });
+
                 if (shouldSend && workflow.customer_email) {
                     const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#branding`;
@@ -4225,6 +4387,9 @@
                 if (error) throw error;
 
                 workflow.products_shared_at = new Date().toISOString();
+
+                // Log activity
+                logActivity('products_shared', 'Udostępniono katalog produktów klientowi', {});
 
                 // Send email via template
                 const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
