@@ -413,9 +413,11 @@ function formatOfferViewedMessage(data: {
   offer_name: string
   offer_price?: number
   first_view?: boolean
+  view_history?: string[]
 }) {
   const displayName = data.lead_company || data.lead_name || data.lead_email
-  const viewText = data.first_view ? '👀 Pierwsze otwarcie oferty!' : '👁️ Oferta przeglądana'
+  const viewCount = data.view_history?.length || 1
+  const viewText = data.first_view ? '👀 Pierwsze otwarcie oferty!' : `👁️ Oferta przeglądana (${viewCount}x)`
 
   const fields = [
     { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
@@ -430,31 +432,62 @@ function formatOfferViewedMessage(data: {
     fields.push({ type: 'mrkdwn', text: `*Email:*\n${leadLink(data.lead_email, data.lead_email, data.lead_id)}` })
   }
 
-  return {
-    blocks: [
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: viewText,
+        emoji: true
+      }
+    },
+    {
+      type: 'section',
+      fields: fields
+    }
+  ]
+
+  // Add view history section if there are previous views (not first view)
+  if (data.view_history && data.view_history.length > 1) {
+    const historyDates = data.view_history
+      .slice(0, -1) // Exclude current view (last one)
+      .map(dateStr => new Date(dateStr).toLocaleString('pl-PL', {
+        timeZone: 'Europe/Warsaw',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      }))
+      .reverse() // Most recent first
+      .slice(0, 5) // Show max 5 previous views
+
+    const moreCount = data.view_history.length - 1 - historyDates.length
+    let historyText = `📜 *Poprzednie otworzenia:*\n${historyDates.join(' · ')}`
+    if (moreCount > 0) {
+      historyText += ` _(+${moreCount} więcej)_`
+    }
+
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: historyText
+      }
+    })
+  }
+
+  // Timestamp
+  blocks.push({
+    type: 'context',
+    elements: [
       {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: viewText,
-          emoji: true
-        }
-      },
-      {
-        type: 'section',
-        fields: fields
-      },
-      {
-        type: 'context',
-        elements: [
-          {
-            type: 'mrkdwn',
-            text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
-          }
-        ]
+        type: 'mrkdwn',
+        text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
       }
     ]
-  }
+  })
+
+  return { blocks }
 }
 
 function formatProformaMessage(data: {
