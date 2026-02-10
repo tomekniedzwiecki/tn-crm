@@ -1,4 +1,4 @@
-# Conversion Toolkit v1.0
+# Conversion Toolkit v1.1
 
 Modułowa biblioteka JavaScript do zwiększania konwersji na landing pages.
 
@@ -14,6 +14,9 @@ Modułowa biblioteka JavaScript do zwiększania konwersji na landing pages.
 | **Progress Bar** | Pasek postępu czytania | engagement |
 | **Floating CTA** | Pływający przycisk CTA | +5-10% |
 | **Extra Section CTAs** | Dodatkowe przyciski w sekcjach | +3-5% |
+| **Trust Badges** | Ikony płatności i bezpieczeństwa | +8-12% |
+| **Sticky Product Bar** | Pasek z produktem przy scrollowaniu (desktop) | +5-10% |
+| **Mobile Bottom Bar** | Stały CTA na dole ekranu (mobile) | +10-15% |
 
 ## Użycie
 
@@ -112,6 +115,33 @@ ConversionToolkit.init({
   extraCTAs: {
     enabled: true,
     sections: ['problem', 'solution', 'how-it-works', 'comparison']
+  },
+
+  // Trust Badges (ikony płatności i bezpieczeństwa)
+  trustBadges: {
+    enabled: true,
+    position: 'offer',           // 'offer', 'cta', 'both'
+    payments: ['visa', 'mastercard', 'blik', 'przelewy24'],
+    security: ['ssl', 'guarantee', 'returns'],
+    guaranteeText: '30 dni na zwrot',
+    secureText: 'Bezpieczne płatności'
+  },
+
+  // Sticky Product Bar (desktop)
+  stickyBar: {
+    enabled: true,
+    showAfter: 400,              // px scrolled past hero
+    productName: null,           // null = auto z h1
+    price: null,                 // null = auto z .offer-price
+    ctaText: 'Zamów teraz'
+  },
+
+  // Mobile Bottom Bar
+  mobileBar: {
+    enabled: true,
+    text: 'Zamów teraz',
+    showPrice: true,
+    price: null                  // null = auto z .offer-price
   }
 });
 ```
@@ -151,6 +181,31 @@ urgency: {
 - Nowoczesne przeglądarki (ES6+)
 - LocalStorage do przechowywania stanu
 
+## Trust Badges
+
+Obsługiwane ikony płatności:
+- `visa`, `mastercard`, `blik`, `przelewy24`, `paypal`, `applepay`
+
+Obsługiwane odznaki bezpieczeństwa:
+- `ssl` - SSL 256-bit
+- `guarantee` - gwarancja zwrotu (customowy tekst)
+- `returns` - darmowy zwrot
+
+## Sticky Product Bar
+
+Automatycznie pobiera:
+- Nazwę produktu z `<h1>` lub `brand.name`
+- Cenę z `.offer-price-current` i `.offer-price-old`
+
+Pokazuje się gdy użytkownik przewinie poniżej sekcji hero.
+
+## Mobile Bottom Bar
+
+Stały pasek na dole ekranu (tylko mobile, thumb zone UX):
+- Pokazuje aktualną cenę i przycisk CTA
+- Automatycznie wykrywa ceny z `.offer-price-current`
+- Respektuje `safe-area-inset-bottom` dla iPhone X+
+
 ## Integracja z landing page
 
 1. Dodaj skrypt przed `</body>`
@@ -159,7 +214,9 @@ urgency: {
    - `.header` - nagłówek strony
    - `.hero-stats` - miejsce na live visitors
    - `.offer-box` - sekcja oferty
-   - `.offer-price` - miejsce na stock counter
+   - `.offer-price-current` - aktualna cena (dla sticky/mobile bar)
+   - `.offer-price-old` - stara cena (opcjonalne)
+   - `.offer-cta` - przycisk CTA w ofercie (dla trust badges)
    - `.problem`, `.solution`, `.how-it-works`, `.comparison` - sekcje na extra CTAs
 
 ## Źródła i badania

@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * CONVERSION TOOLKIT v1.0
+ * CONVERSION TOOLKIT v1.1
  * Modułowa biblioteka do zwiększania konwersji na landing pages
  * ═══════════════════════════════════════════════════════════════════════════
  *
@@ -13,6 +13,9 @@
  * 6. Scroll Progress Bar - pasek postępu czytania
  * 7. Floating CTA - pływający przycisk CTA
  * 8. Scroll-triggered Elements - elementy pojawiające się przy scrollu
+ * 9. Trust Badges - ikony płatności i bezpieczeństwa
+ * 10. Sticky Product Bar - pasek produktu przy scrollowaniu
+ * 11. Mobile Bottom Bar - stały CTA na mobile
  *
  * Użycie:
  * ConversionToolkit.init({
@@ -31,7 +34,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   const ConversionToolkit = {
-    version: '1.0.1',
+    version: '1.1.1',
     config: {},
     state: {
       exitPopupShown: false,
@@ -116,6 +119,27 @@
         extraCTAs: {
           enabled: true,
           sections: ['problem', 'solution', 'how-it-works', 'comparison']
+        },
+        trustBadges: {
+          enabled: true,
+          position: 'offer',           // 'offer', 'cta', 'both'
+          payments: ['visa', 'mastercard', 'blik', 'przelewy24'],
+          security: ['ssl', 'guarantee', 'returns'],
+          guaranteeText: '30 dni na zwrot',
+          secureText: 'Bezpieczne płatności'
+        },
+        stickyBar: {
+          enabled: true,
+          showAfter: 400,              // px scrolled past hero
+          productName: null,           // null = auto from h1
+          price: null,                 // null = auto from .offer-price
+          ctaText: 'Zamów teraz'
+        },
+        mobileBar: {
+          enabled: true,
+          text: 'Zamów teraz',
+          showPrice: true,
+          price: null                  // null = auto from .offer-price
         }
       };
     },
@@ -550,6 +574,198 @@
           font-size: 11px;
         }
 
+        /* ═══ TRUST BADGES ═══ */
+        .ct-trust-badges {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        .ct-trust-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .ct-trust-label {
+          font-size: 12px;
+          color: var(--ct-gray);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: 500;
+        }
+        .ct-payment-icons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+        .ct-payment-icon {
+          width: 40px;
+          height: 26px;
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: 600;
+          color: #374151;
+        }
+        .ct-payment-icon.visa { background: linear-gradient(135deg, #1a1f71 0%, #2557d6 100%); color: #fff; }
+        .ct-payment-icon.mastercard { background: linear-gradient(135deg, #eb001b 0%, #f79e1b 100%); color: #fff; }
+        .ct-payment-icon.blik { background: #e6007e; color: #fff; }
+        .ct-payment-icon.przelewy24 { background: #d13239; color: #fff; font-size: 8px; }
+        .ct-payment-icon.paypal { background: #003087; color: #fff; }
+        .ct-payment-icon.applepay { background: #000; color: #fff; font-size: 9px; }
+        .ct-security-badges {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+        }
+        .ct-security-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #059669;
+          font-weight: 500;
+        }
+        .ct-security-badge svg {
+          width: 16px;
+          height: 16px;
+        }
+
+        /* ═══ STICKY PRODUCT BAR ═══ */
+        .ct-sticky-bar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 1000;
+          background: var(--ct-white);
+          box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+          padding: 12px 24px;
+          transform: translateY(-100%);
+          transition: transform 0.3s ease;
+        }
+        body.ct-has-urgency-bar .ct-sticky-bar {
+          top: 44px;
+        }
+        .ct-sticky-bar.show {
+          transform: translateY(0);
+        }
+        /* Hide header when sticky bar is visible */
+        .header {
+          transition: opacity 0.3s ease;
+        }
+        body.ct-sticky-bar-visible .header {
+          opacity: 0;
+          pointer-events: none;
+        }
+        .ct-sticky-bar-inner {
+          max-width: 1200px;
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+        }
+        .ct-sticky-product {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .ct-sticky-product-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--ct-dark);
+        }
+        .ct-sticky-price {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+        }
+        .ct-sticky-price-current {
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--ct-primary);
+        }
+        .ct-sticky-price-old {
+          font-size: 14px;
+          color: var(--ct-gray);
+          text-decoration: line-through;
+        }
+        .ct-sticky-cta {
+          padding: 12px 28px;
+          background: var(--ct-primary);
+          color: var(--ct-white);
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+          border-radius: 100px;
+          transition: all 0.3s;
+          white-space: nowrap;
+        }
+        .ct-sticky-cta:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+
+        /* ═══ MOBILE BOTTOM BAR ═══ */
+        .ct-mobile-bar {
+          display: none;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 9998;
+          background: var(--ct-white);
+          box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+          padding: 12px 16px;
+          padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+        .ct-mobile-bar-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        .ct-mobile-bar-price {
+          display: flex;
+          flex-direction: column;
+        }
+        .ct-mobile-bar-price-current {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--ct-dark);
+        }
+        .ct-mobile-bar-price-old {
+          font-size: 12px;
+          color: var(--ct-gray);
+          text-decoration: line-through;
+        }
+        .ct-mobile-bar-cta {
+          flex: 1;
+          max-width: 200px;
+          padding: 14px 24px;
+          background: var(--ct-primary);
+          color: var(--ct-white);
+          font-size: 15px;
+          font-weight: 600;
+          text-decoration: none;
+          text-align: center;
+          border-radius: 100px;
+          transition: all 0.3s;
+        }
+        .ct-mobile-bar-cta:active {
+          transform: scale(0.98);
+        }
+
         /* ═══ MOBILE ADJUSTMENTS ═══ */
         @media (max-width: 768px) {
           .ct-popup {
@@ -590,6 +806,41 @@
           body.ct-has-urgency-bar .ct-progress-bar {
             top: 38px;
           }
+          /* Sticky bar on mobile - hidden */
+          .ct-sticky-bar {
+            display: none !important;
+          }
+          /* Don't hide header on mobile (no sticky bar) */
+          body.ct-sticky-bar-visible .header {
+            opacity: 1;
+            pointer-events: auto;
+          }
+          /* Mobile bottom bar */
+          .ct-mobile-bar {
+            display: block;
+          }
+          .ct-floating-cta {
+            bottom: 80px;
+          }
+          .ct-toast {
+            bottom: 90px;
+          }
+          /* Trust badges mobile */
+          .ct-trust-row {
+            gap: 8px;
+          }
+          .ct-payment-icon {
+            width: 36px;
+            height: 24px;
+          }
+          .ct-security-badges {
+            gap: 12px;
+          }
+        }
+        @media (min-width: 769px) {
+          .ct-mobile-bar {
+            display: none !important;
+          }
         }
       `;
 
@@ -610,6 +861,9 @@
       if (this.config.socialProof.enabled) this.initSocialProof();
       if (this.config.scrollCTA.enabled) this.initScrollCTA();
       if (this.config.extraCTAs.enabled) this.initExtraCTAs();
+      if (this.config.trustBadges.enabled) this.initTrustBadges();
+      if (this.config.stickyBar.enabled) this.initStickyBar();
+      if (this.config.mobileBar.enabled) this.initMobileBar();
     },
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1002,6 +1256,154 @@
         `;
         content.appendChild(cta);
       });
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TRUST BADGES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    initTrustBadges() {
+      const cfg = this.config.trustBadges;
+
+      const paymentIcons = {
+        visa: 'VISA',
+        mastercard: 'MC',
+        blik: 'BLIK',
+        przelewy24: 'P24',
+        paypal: 'PayPal',
+        applepay: 'Apple'
+      };
+
+      const securityIcons = {
+        ssl: { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>', text: 'SSL 256-bit' },
+        guarantee: { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>', text: cfg.guaranteeText },
+        returns: { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>', text: 'Darmowy zwrot' }
+      };
+
+      // Build HTML
+      const badgesHTML = `
+        <div class="ct-trust-badges">
+          <div class="ct-trust-row">
+            <span class="ct-trust-label">${cfg.secureText}</span>
+            <div class="ct-payment-icons">
+              ${cfg.payments.map(p => `<span class="ct-payment-icon ${p}">${paymentIcons[p] || p.toUpperCase()}</span>`).join('')}
+            </div>
+          </div>
+          <div class="ct-trust-row">
+            <div class="ct-security-badges">
+              ${cfg.security.map(s => {
+                const badge = securityIcons[s];
+                return badge ? `<span class="ct-security-badge">${badge.icon}${badge.text}</span>` : '';
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Insert based on position
+      if (cfg.position === 'offer' || cfg.position === 'both') {
+        const offerBox = document.querySelector('.offer-box');
+        if (offerBox) {
+          const cta = offerBox.querySelector('.offer-cta, a[href*="offer"]');
+          if (cta) {
+            cta.insertAdjacentHTML('afterend', badgesHTML);
+          } else {
+            offerBox.insertAdjacentHTML('beforeend', badgesHTML);
+          }
+        }
+      }
+
+      if (cfg.position === 'cta' || cfg.position === 'both') {
+        const heroCta = document.querySelector('.hero-cta, .hero a.btn');
+        if (heroCta && cfg.position !== 'both') {
+          heroCta.insertAdjacentHTML('afterend', badgesHTML);
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STICKY PRODUCT BAR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    initStickyBar() {
+      const cfg = this.config.stickyBar;
+
+      // Auto-detect product name and price
+      const productName = cfg.productName || document.querySelector('h1')?.textContent?.trim() || this.config.brand.name;
+      const priceEl = document.querySelector('.offer-price-current, .price-current');
+      const oldPriceEl = document.querySelector('.offer-price-old, .price-old');
+
+      const currentPrice = cfg.price || priceEl?.textContent?.trim() || '';
+      const oldPrice = oldPriceEl?.textContent?.trim() || '';
+
+      const bar = document.createElement('div');
+      bar.className = 'ct-sticky-bar';
+      bar.innerHTML = `
+        <div class="ct-sticky-bar-inner">
+          <div class="ct-sticky-product">
+            <span class="ct-sticky-product-name">${productName}</span>
+            <div class="ct-sticky-price">
+              ${currentPrice ? `<span class="ct-sticky-price-current">${currentPrice}</span>` : ''}
+              ${oldPrice ? `<span class="ct-sticky-price-old">${oldPrice}</span>` : ''}
+            </div>
+          </div>
+          <a href="${this.config.brand.ctaUrl}" class="ct-sticky-cta">${cfg.ctaText}</a>
+        </div>
+      `;
+      document.body.appendChild(bar);
+
+      // Show/hide on scroll
+      const heroSection = document.querySelector('.hero, #hero, [class*="hero"]');
+      const heroBottom = heroSection ? heroSection.offsetTop + heroSection.offsetHeight : cfg.showAfter;
+
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > heroBottom) {
+          bar.classList.add('show');
+          document.body.classList.add('ct-sticky-bar-visible');
+        } else {
+          bar.classList.remove('show');
+          document.body.classList.remove('ct-sticky-bar-visible');
+        }
+      });
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MOBILE BOTTOM BAR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    initMobileBar() {
+      const cfg = this.config.mobileBar;
+
+      // Auto-detect price
+      const priceEl = document.querySelector('.offer-price-current, .price-current');
+      const oldPriceEl = document.querySelector('.offer-price-old, .price-old');
+
+      const currentPrice = cfg.price || priceEl?.textContent?.trim() || '';
+      const oldPrice = oldPriceEl?.textContent?.trim() || '';
+
+      const bar = document.createElement('div');
+      bar.className = 'ct-mobile-bar';
+      bar.innerHTML = `
+        <div class="ct-mobile-bar-inner">
+          ${cfg.showPrice && currentPrice ? `
+            <div class="ct-mobile-bar-price">
+              <span class="ct-mobile-bar-price-current">${currentPrice}</span>
+              ${oldPrice ? `<span class="ct-mobile-bar-price-old">${oldPrice}</span>` : ''}
+            </div>
+          ` : ''}
+          <a href="${this.config.brand.ctaUrl}" class="ct-mobile-bar-cta">${cfg.text}</a>
+        </div>
+      `;
+      document.body.appendChild(bar);
+
+      // Add padding to body for mobile bar
+      const style = document.createElement('style');
+      style.textContent = `
+        @media (max-width: 768px) {
+          body { padding-bottom: 70px; }
+        }
+      `;
+      document.head.appendChild(style);
     },
 
     // ═══════════════════════════════════════════════════════════════════════
