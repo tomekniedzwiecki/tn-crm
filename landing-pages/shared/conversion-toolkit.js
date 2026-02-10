@@ -765,20 +765,6 @@
             max-width: 340px;
           }
           .ct-popup h3 { font-size: 20px; }
-          .ct-toast {
-            left: 16px;
-            right: 16px;
-            bottom: 100px;
-            max-width: none;
-          }
-          .ct-floating-cta {
-            right: 16px;
-            bottom: 80px;
-          }
-          .ct-floating-cta a {
-            padding: 14px 24px;
-            font-size: 14px;
-          }
           .ct-countdown-unit {
             min-width: 36px;
             padding: 3px 6px;
@@ -798,20 +784,21 @@
           body.ct-has-urgency-bar .ct-progress-bar {
             top: 38px;
           }
-          /* Sticky bar on mobile - hidden */
+          /* Floating CTA & Sticky bar - hidden on mobile */
+          .ct-floating-cta,
           .ct-sticky-bar {
             display: none !important;
           }
-          /* Floating CTA on mobile - hidden (use mobile bar instead) */
-          .ct-floating-cta {
-            display: none !important;
-          }
-          /* Mobile bottom bar */
+          /* Mobile bottom bar - shown */
           .ct-mobile-bar {
             display: block;
           }
+          /* Toast above mobile bar */
           .ct-toast {
-            bottom: 80px;
+            left: 16px;
+            right: 16px;
+            bottom: 90px;
+            max-width: none;
           }
           /* Trust badges mobile */
           .ct-trust-row {

@@ -1,4 +1,4 @@
-# Conversion Toolkit v1.1
+# Conversion Toolkit v1.2
 
 Modułowa biblioteka JavaScript do zwiększania konwersji na landing pages.
 
@@ -12,11 +12,24 @@ Modułowa biblioteka JavaScript do zwiększania konwersji na landing pages.
 | **Social Proof Toast** | Powiadomienia o zakupach innych | +5-8% |
 | **Live Visitors** | Licznik osób oglądających | +3-5% |
 | **Progress Bar** | Pasek postępu czytania | engagement |
-| **Floating CTA** | Pływający przycisk CTA | +5-10% |
-| **Extra Section CTAs** | Dodatkowe przyciski w sekcjach | +3-5% |
+| **Floating CTA** | Pływający przycisk CTA (tylko desktop) | +5-10% |
 | **Trust Badges** | Ikony płatności i bezpieczeństwa | +8-12% |
-| **Sticky Product Bar** | Pasek z produktem przy scrollowaniu (desktop) | +5-10% |
-| **Mobile Bottom Bar** | Stały CTA na dole ekranu (mobile) | +10-15% |
+| **Sticky Product Bar** | Pasek z produktem (tylko desktop, bez urgency) | +5-10% |
+| **Mobile Bottom Bar** | Stały CTA na dole ekranu (tylko mobile) | +10-15% |
+
+## Mobile vs Desktop
+
+| Komponent | Desktop (>768px) | Mobile (≤768px) |
+|-----------|-----------------|-----------------|
+| Urgency Bar | ✅ Góra strony | ✅ Góra strony (mniejszy) |
+| Header | ✅ Pod urgency bar | ✅ Pod urgency bar |
+| Progress Bar | ✅ | ✅ |
+| Floating CTA | ✅ Prawy dolny róg | ❌ Ukryty |
+| Sticky Product Bar | ✅ (jeśli brak urgency) | ❌ Ukryty |
+| Mobile Bottom Bar | ❌ Ukryty | ✅ Dolny pasek |
+| Social Proof Toast | ✅ Lewy dolny róg | ✅ Nad mobile bar |
+| Exit Popup | ✅ | ✅ |
+| Trust Badges | ✅ | ✅ (mniejsze) |
 
 ## Użycie
 
@@ -193,11 +206,13 @@ Obsługiwane odznaki bezpieczeństwa:
 
 ## Sticky Product Bar
 
+**UWAGA:** Sticky bar jest automatycznie wyłączony gdy urgency countdown jest ustawiony na `hero` lub `both` (żeby nie było dwóch pasków na górze).
+
 Automatycznie pobiera:
 - Nazwę produktu z `<h1>` lub `brand.name`
 - Cenę z `.offer-price-current` i `.offer-price-old`
 
-Pokazuje się gdy użytkownik przewinie poniżej sekcji hero.
+Pokazuje się gdy użytkownik przewinie poniżej sekcji hero (tylko desktop).
 
 ## Mobile Bottom Bar
 
