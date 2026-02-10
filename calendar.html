@@ -761,7 +761,7 @@
         async function loadLeads() {
             const { data, error } = await supabaseClient
                 .from('leads')
-                .select('id, email, name, company, phone, expected_close, assigned_to, status, value')
+                .select('id, email, name, company, phone, expected_close, assigned_to, status, deal_value')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -1145,7 +1145,7 @@
             container.innerHTML = allUpcoming.map(e => {
                 if (e.type === 'deadline') {
                     const date = new Date(e.date);
-                    const value = e.lead?.value;
+                    const value = e.lead?.deal_value;
                     return `
                         <div class="flex items-center gap-4 p-4 border border-cyan-500/20 bg-cyan-500/5 rounded-lg cursor-pointer hover:bg-cyan-500/10 transition-colors" onclick="window.location.href='/lead?id=${e.lead_id}'">
                             <div class="w-12 h-12 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex flex-col items-center justify-center">
