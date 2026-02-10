@@ -31,7 +31,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   const ConversionToolkit = {
-    version: '1.0.0',
+    version: '1.0.1',
     config: {},
     state: {
       exitPopupShown: false,
@@ -269,13 +269,17 @@
 
         /* ═══ URGENCY TIMER ═══ */
         .ct-urgency-bar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 101;
           background: linear-gradient(135deg, var(--ct-primary) 0%, #E85A2A 100%);
           color: var(--ct-white);
-          padding: 12px 24px;
+          padding: 10px 24px;
           text-align: center;
           font-size: 14px;
           font-weight: 500;
-          position: relative;
           overflow: hidden;
         }
         .ct-urgency-bar::before {
@@ -289,9 +293,16 @@
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
+        /* Adjust header when urgency bar is present */
+        body.ct-has-urgency-bar .header {
+          top: 44px !important;
+        }
+        body.ct-has-urgency-bar {
+          padding-top: 44px;
+        }
         .ct-countdown {
           display: inline-flex;
-          gap: 8px;
+          gap: 6px;
           margin-left: 12px;
         }
         .ct-countdown-unit {
@@ -299,17 +310,17 @@
           flex-direction: column;
           align-items: center;
           background: rgba(255,255,255,0.2);
-          padding: 6px 10px;
-          border-radius: 8px;
-          min-width: 48px;
+          padding: 4px 8px;
+          border-radius: 6px;
+          min-width: 44px;
         }
         .ct-countdown-value {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 700;
           line-height: 1;
         }
         .ct-countdown-label {
-          font-size: 10px;
+          font-size: 9px;
           text-transform: uppercase;
           opacity: 0.8;
           margin-top: 2px;
@@ -435,9 +446,12 @@
           left: 0;
           height: ${this.config.progressBar.height}px;
           background: ${this.config.progressBar.color || this.config.brand.primary};
-          z-index: 9998;
+          z-index: 102;
           transition: width 0.1s ease-out;
           box-shadow: 0 0 10px ${this.config.brand.primary}40;
+        }
+        body.ct-has-urgency-bar .ct-progress-bar {
+          top: 44px;
         }
 
         /* ═══ FLOATING CTA ═══ */
@@ -558,13 +572,23 @@
             font-size: 14px;
           }
           .ct-countdown-unit {
-            min-width: 40px;
-            padding: 4px 8px;
+            min-width: 36px;
+            padding: 3px 6px;
           }
-          .ct-countdown-value { font-size: 16px; }
+          .ct-countdown-value { font-size: 14px; }
+          .ct-countdown-label { font-size: 8px; }
           .ct-urgency-bar {
-            font-size: 12px;
-            padding: 10px 16px;
+            font-size: 11px;
+            padding: 8px 12px;
+          }
+          body.ct-has-urgency-bar .header {
+            top: 38px !important;
+          }
+          body.ct-has-urgency-bar {
+            padding-top: 38px;
+          }
+          body.ct-has-urgency-bar .ct-progress-bar {
+            top: 38px;
           }
         }
       `;
@@ -738,11 +762,8 @@
         const bar = document.createElement('div');
         bar.className = 'ct-urgency-bar';
         bar.innerHTML = countdownHTML;
-        const header = document.querySelector('.header');
-        if (header) {
-          header.style.top = '48px';
-        }
         document.body.insertBefore(bar, document.body.firstChild);
+        document.body.classList.add('ct-has-urgency-bar');
       }
 
       // Insert inline countdown in offer section
