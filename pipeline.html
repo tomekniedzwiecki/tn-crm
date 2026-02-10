@@ -320,14 +320,15 @@
         const STAGE_COLORS = ['emerald', 'blue', 'violet', 'amber', 'orange', 'cyan', 'pink'];
         const STAGE_ICONS = ['ph-user-plus', 'ph-chat-circle', 'ph-check-circle', 'ph-file-text', 'ph-handshake', 'ph-star', 'ph-flag'];
 
-        // Custom icons for specific stage IDs
+        // Custom icons for specific stage IDs or names
         const STAGE_ICON_OVERRIDES = {
             'new': 'ph-user-plus',
             'contacted': 'ph-chat-circle',
             'qualified': 'ph-check-circle',
             'proposal': 'ph-file-text',
             'negotiation': 'ph-handshake',
-            'waiting': 'ph-hourglass'
+            'waiting': 'ph-hourglass',
+            'oczekiwanie': 'ph-hourglass' // Polish name fallback
         };
 
         let pipelineStages = [...DEFAULT_STAGES];
@@ -353,7 +354,7 @@
             STAGES = pipelineStages.map((stage, index) => ({
                 ...stage,
                 color: STAGE_COLORS[index % STAGE_COLORS.length],
-                icon: STAGE_ICON_OVERRIDES[stage.id] || STAGE_ICONS[index % STAGE_ICONS.length]
+                icon: STAGE_ICON_OVERRIDES[stage.id] || STAGE_ICON_OVERRIDES[stage.name?.toLowerCase()] || STAGE_ICONS[index % STAGE_ICONS.length]
             }));
 
             // Add terminal stages
@@ -711,7 +712,7 @@
             // Render columns
             board.innerHTML = STAGES.map(stage => {
                 const isTerminalStage = terminalStages.includes(stage.id);
-                const isWaitingStage = stage.id === 'waiting';
+                const isWaitingStage = stage.id === 'waiting' || stage.name?.toLowerCase() === 'oczekiwanie';
                 const stageLeads = filteredLeads
                     .filter(l => (l.status || 'new') === stage.id)
                     .sort((a, b) => {
