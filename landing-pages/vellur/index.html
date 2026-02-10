@@ -226,8 +226,9 @@
       right: 0;
       z-index: 100;
       padding: 16px 0;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border-light);
       transition: all 0.3s ease;
     }
@@ -235,6 +236,15 @@
     .header.scrolled {
       padding: 12px 0;
       box-shadow: var(--shadow-md);
+    }
+
+    /* Header when urgency bar is present - remove top border for clean look */
+    body.ct-has-urgency-bar .header {
+      border-top: none;
+      box-shadow: none;
+    }
+    body.ct-has-urgency-bar .header.scrolled {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
 
     .header-inner {
@@ -400,6 +410,11 @@
       background: var(--bg-white);
       position: relative;
       overflow: hidden;
+    }
+
+    /* Adjust hero padding when urgency bar is present */
+    body.ct-has-urgency-bar .hero {
+      padding-top: 200px;
     }
 
     .hero::before {
@@ -1397,37 +1412,6 @@
 
     .footer-legal a:hover { color: var(--accent); }
 
-    /* ═══ STICKY CTA ═══ */
-    .sticky-cta {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 98;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border-light);
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-    }
-
-    .sticky-cta a {
-      display: block;
-      width: 100%;
-      text-align: center;
-      padding: 14px 24px;
-      font-family: var(--font-heading);
-      font-size: 14px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-radius: 10px;
-      background: var(--accent);
-      color: var(--text-on-primary);
-      text-decoration: none;
-      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-    }
 
     /* ═══ COOKIE BANNER ═══ */
     .cookie-banner {
@@ -1471,6 +1455,7 @@
     /* ═══ RESPONSIVE - PREMIUM ═══ */
     @media (max-width: 1024px) {
       .hero { padding: 140px 0 100px; }
+      body.ct-has-urgency-bar .hero { padding-top: 160px; }
       .problem, .solution, .how-it-works, .comparison, .testimonials, .faq, .offer { padding: 100px 0; }
 
       .hero-inner,
@@ -1500,62 +1485,132 @@
     }
 
     @media (max-width: 768px) {
-      .container { padding: 0 24px; }
+      .container { padding: 0 20px; }
 
       .header-nav a:not(.header-cta) { display: none; }
       .header-cta { display: none; }
       .hamburger { display: flex; }
       .mobile-menu { display: block; }
 
-      .sticky-cta { display: block; }
+      /* Footer padding for mobile bar from ConversionToolkit */
       .footer { padding-bottom: 100px; }
 
-      .hero { padding: 120px 0 80px; }
-      .problem, .solution, .how-it-works, .comparison, .testimonials, .faq, .offer { padding: 80px 0; }
-      .cta-banner { padding: 80px 0; }
+      .hero { padding: 100px 0 60px; }
+      body.ct-has-urgency-bar .hero { padding-top: 120px; }
+      .problem, .solution, .how-it-works, .comparison, .testimonials, .faq, .offer { padding: 60px 0; }
+      .cta-banner { padding: 60px 0; }
+
+      /* Hero mobile improvements */
+      .hero-title { font-size: 32px; margin-bottom: 20px; }
+      .hero-description { font-size: 16px; margin-bottom: 28px; }
+      .hero-badge { font-size: 11px; padding: 8px 16px; margin-bottom: 24px; }
 
       .how-steps {
         grid-template-columns: 1fr;
-        gap: 56px;
+        gap: 40px;
       }
 
       .how-steps::before { display: none; }
+      .how-step-num { width: 56px; height: 56px; font-size: 22px; margin-bottom: 20px; }
+      .how-step-title { font-size: 18px; }
+      .how-step-text { font-size: 14px; }
 
-      .comparison-table { overflow-x: auto; }
-      .comparison-row { min-width: 500px; }
+      .comparison-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .comparison-row { min-width: 480px; }
+      .comparison-cell { padding: 16px 12px; font-size: 13px; }
 
+      /* Trust bar mobile - compact cards */
+      .trust-bar { padding: 32px 0; }
       .trust-items {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
       }
+      .trust-item {
+        padding: 12px;
+        background: var(--bg-white);
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+      }
+      .trust-icon { width: 36px; height: 36px; border-radius: 10px; }
+      .trust-icon svg { width: 18px; height: 18px; }
+      .trust-text strong { font-size: 12px; }
+      .trust-text span { font-size: 11px; }
+
+      /* Bento cards mobile */
+      .bento-card { padding: 24px; border-radius: 20px; }
+      .bento-icon { width: 44px; height: 44px; border-radius: 12px; margin-bottom: 16px; }
+      .bento-title { font-size: 18px; margin-bottom: 8px; }
+      .bento-text { font-size: 14px; }
+
+      /* Testimonials mobile */
+      .testimonial-card { padding: 24px; border-radius: 16px; }
+      .testimonial-text { font-size: 14px; margin-bottom: 20px; }
+      .testimonial-avatar { width: 40px; height: 40px; font-size: 12px; }
+
+      /* FAQ mobile */
+      .faq-question { font-size: 16px; padding: 20px 0; }
+      .faq-answer { font-size: 14px; padding-bottom: 20px; }
+
+      /* Offer box mobile */
+      .offer-box { border-radius: 24px; }
+      .offer-product-img { margin: 20px 20px 0; border-radius: 16px; }
+      .offer-badge { margin: 24px 0 20px; padding: 8px 16px; font-size: 10px; }
+      .offer-content { padding: 0 20px 32px; }
+      .offer-title { font-size: 22px; }
+      .offer-subtitle { font-size: 13px; margin-bottom: 24px; }
+      .offer-price { margin-bottom: 16px; }
+      .offer-price-old { font-size: 15px; }
+      .offer-price-new { font-size: 44px; }
+      .offer-price-currency { font-size: 20px; }
+      .offer-savings { padding: 8px 16px; font-size: 11px; margin-bottom: 24px; }
+      .offer-feature { padding: 12px 0; font-size: 14px; gap: 10px; }
+      .offer-feature svg { width: 18px; height: 18px; }
+      .offer-cta { padding: 16px; font-size: 15px; }
+      .offer-guarantee { font-size: 12px; margin-top: 16px; }
 
       .footer-grid {
         grid-template-columns: 1fr;
-        gap: 36px;
+        gap: 28px;
       }
 
       .footer-bottom {
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
         text-align: center;
       }
 
-      .footer-legal a { margin: 0 12px; }
+      .footer-legal a { margin: 0 10px; }
 
       .cookie-banner {
-        left: 16px;
-        right: 16px;
+        left: 12px;
+        right: 12px;
         bottom: 100px;
+        padding: 16px 20px;
       }
+
+      /* Section headers mobile */
+      .section-title { font-size: 26px; margin-bottom: 12px; }
+      .section-subtitle { font-size: 15px; }
+      .section-label { font-size: 10px; margin-bottom: 12px; }
+
+      /* Problem section mobile */
+      .problem-title { font-size: 24px; }
+      .problem-text { font-size: 15px; margin-bottom: 28px; }
+      .problem-stat { padding: 20px 16px; border-radius: 16px; }
+      .problem-stat-value { font-size: 26px; }
+      .problem-stat-label { font-size: 12px; }
     }
 
     @media (max-width: 480px) {
+      .container { padding: 0 16px; }
       .hero-cta { flex-direction: column; }
-      .hero-cta .btn { width: 100%; }
-      .hero-stats { flex-direction: column; gap: 24px; }
-      .problem-stats { grid-template-columns: 1fr; }
-      .offer-content { padding: 0 28px 36px; }
-      .offer-price-new { font-size: 48px; }
+      .hero-cta .btn { width: 100%; padding: 16px 24px; }
+      .hero-stats { flex-direction: column; gap: 20px; text-align: center; }
+      .hero-stat-value { font-size: 28px; }
+      .hero-stat-label { font-size: 13px; }
+      .problem-stats { grid-template-columns: 1fr; gap: 12px; }
+      .trust-items { grid-template-columns: 1fr; }
+      .offer-price-new { font-size: 40px; }
     }
   </style>
 </head>
@@ -2176,10 +2231,7 @@
     </div>
   </footer>
 
-  <!-- ═══ STICKY CTA (Mobile) ═══ -->
-  <div class="sticky-cta">
-    <a href="#offer">Zamów teraz — 449 zł</a>
-  </div>
+  <!-- Sticky CTA removed - handled by ConversionToolkit.mobileBar -->
 
   <!-- ═══ COOKIE BANNER ═══ -->
   <div class="cookie-banner" id="cookieBanner">

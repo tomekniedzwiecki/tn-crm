@@ -300,11 +300,12 @@
           z-index: 9999;
           background: linear-gradient(135deg, var(--ct-primary) 0%, #E85A2A 100%);
           color: var(--ct-white);
-          padding: 10px 24px;
+          padding: 12px 24px;
           text-align: center;
           font-size: 14px;
           font-weight: 500;
           overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         .ct-urgency-bar::before {
           content: '';
@@ -319,10 +320,15 @@
         }
         /* Adjust header when urgency bar is present */
         body.ct-has-urgency-bar .header {
-          top: 44px !important;
+          top: 48px !important;
+          border-top: none;
         }
         body.ct-has-urgency-bar {
-          padding-top: 44px;
+          padding-top: 48px;
+        }
+        /* Remove header top border/shadow when urgency bar present */
+        body.ct-has-urgency-bar .header.scrolled {
+          box-shadow: 0 4px 20px rgba(0,0,0,0.06);
         }
         .ct-countdown {
           display: inline-flex;
@@ -475,7 +481,7 @@
           box-shadow: 0 0 10px ${this.config.brand.primary}40;
         }
         body.ct-has-urgency-bar .ct-progress-bar {
-          top: 44px;
+          top: 48px;
         }
 
         /* ═══ FLOATING CTA ═══ */
@@ -579,65 +585,73 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 16px;
+          gap: 14px;
           margin-top: 24px;
           padding-top: 24px;
-          border-top: 1px solid rgba(0,0,0,0.08);
+          border-top: 1px solid rgba(0,0,0,0.06);
         }
         .ct-trust-row {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: wrap;
           justify-content: center;
         }
         .ct-trust-label {
-          font-size: 12px;
+          font-size: 11px;
           color: var(--ct-gray);
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          font-weight: 500;
+          font-weight: 600;
         }
         .ct-payment-icons {
           display: flex;
-          gap: 8px;
+          gap: 6px;
           align-items: center;
         }
         .ct-payment-icon {
-          width: 40px;
-          height: 26px;
+          width: 38px;
+          height: 24px;
           background: #fff;
           border: 1px solid #e5e7eb;
           border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 10px;
-          font-weight: 600;
+          font-size: 9px;
+          font-weight: 700;
           color: #374151;
+          transition: transform 0.2s ease;
+        }
+        .ct-payment-icon:hover {
+          transform: scale(1.05);
         }
         .ct-payment-icon.visa { background: linear-gradient(135deg, #1a1f71 0%, #2557d6 100%); color: #fff; }
         .ct-payment-icon.mastercard { background: linear-gradient(135deg, #eb001b 0%, #f79e1b 100%); color: #fff; }
         .ct-payment-icon.blik { background: #e6007e; color: #fff; }
-        .ct-payment-icon.przelewy24 { background: #d13239; color: #fff; font-size: 8px; }
+        .ct-payment-icon.przelewy24 { background: #d13239; color: #fff; font-size: 7px; }
         .ct-payment-icon.paypal { background: #003087; color: #fff; }
-        .ct-payment-icon.applepay { background: #000; color: #fff; font-size: 9px; }
+        .ct-payment-icon.applepay { background: #000; color: #fff; font-size: 8px; }
         .ct-security-badges {
           display: flex;
-          gap: 16px;
+          gap: 12px;
           align-items: center;
+          flex-wrap: wrap;
+          justify-content: center;
         }
         .ct-security-badge {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
           font-size: 12px;
           color: #059669;
           font-weight: 500;
+          white-space: nowrap;
         }
         .ct-security-badge svg {
-          width: 16px;
-          height: 16px;
+          width: 14px;
+          height: 14px;
+          flex-shrink: 0;
         }
 
         /* ═══ STICKY PRODUCT BAR ═══ */
@@ -654,7 +668,7 @@
           transition: transform 0.3s ease;
         }
         body.ct-has-urgency-bar .ct-sticky-bar {
-          top: 44px;
+          top: 48px;
         }
         .ct-sticky-bar.show {
           transform: translateY(0);
@@ -781,17 +795,17 @@
           .ct-countdown-value { font-size: 14px; }
           .ct-countdown-label { font-size: 8px; }
           .ct-urgency-bar {
-            font-size: 11px;
-            padding: 8px 12px;
+            font-size: 12px;
+            padding: 10px 16px;
           }
           body.ct-has-urgency-bar .header {
-            top: 38px !important;
+            top: 42px !important;
           }
           body.ct-has-urgency-bar {
-            padding-top: 38px;
+            padding-top: 42px;
           }
           body.ct-has-urgency-bar .ct-progress-bar {
-            top: 38px;
+            top: 42px;
           }
           /* Floating CTA & Sticky bar - hidden on mobile */
           .ct-floating-cta,
@@ -812,16 +826,46 @@
             padding: 14px 16px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
           }
-          /* Trust badges mobile */
+          /* Trust badges mobile - clean compact layout */
+          .ct-trust-badges {
+            margin-top: 20px;
+            padding-top: 20px;
+            gap: 12px;
+          }
           .ct-trust-row {
-            gap: 8px;
+            gap: 6px;
+            flex-direction: column;
+            align-items: center;
+          }
+          .ct-trust-label {
+            font-size: 10px;
+            margin-bottom: 4px;
+          }
+          .ct-payment-icons {
+            gap: 6px;
           }
           .ct-payment-icon {
-            width: 36px;
-            height: 24px;
+            width: 32px;
+            height: 20px;
+            font-size: 8px;
+            border-radius: 3px;
           }
           .ct-security-badges {
-            gap: 12px;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+          }
+          .ct-security-badge {
+            font-size: 10px;
+            gap: 4px;
+            background: rgba(5, 150, 105, 0.08);
+            padding: 6px 10px;
+            border-radius: 100px;
+          }
+          .ct-security-badge svg {
+            width: 12px;
+            height: 12px;
           }
         }
         @media (min-width: 769px) {
