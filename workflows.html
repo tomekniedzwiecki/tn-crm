@@ -110,7 +110,7 @@
                 <div class="flex flex-wrap items-center gap-3 mb-6">
                     <div class="relative flex-1 min-w-[200px] max-w-xs">
                         <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
-                        <input type="text" id="search-input" placeholder="Szukaj klienta..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 transition-colors">
+                        <input type="text" id="search-input" placeholder="Szukaj klienta lub ID projektu..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 transition-colors">
                     </div>
                     <select id="status-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
                         <option value="">Wszystkie statusy</option>
@@ -131,10 +131,37 @@
                     </select>
                 </div>
 
-                <!-- Stage Filter -->
+                <!-- Stage Filter (milestone numbers) -->
                 <div id="stage-filter-wrapper" class="flex items-center gap-3 mb-6 hidden">
                     <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Etap</span>
                     <div id="stage-filter" class="flex flex-wrap items-center gap-1.5"></div>
+                </div>
+
+                <!-- Status Stage Filter (brak etapu) -->
+                <div class="flex flex-wrap items-center gap-3 mb-6">
+                    <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Brak</span>
+                    <div id="status-stage-filter" class="flex flex-wrap items-center gap-1.5">
+                        <button onclick="toggleStatusStage('contract')" data-stage="contract"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-file-text"></i> Umowa
+                        </button>
+                        <button onclick="toggleStatusStage('product')" data-stage="product"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-package"></i> Produkt
+                        </button>
+                        <button onclick="toggleStatusStage('report')" data-stage="report"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-chart-bar"></i> Raport
+                        </button>
+                        <button onclick="toggleStatusStage('branding')" data-stage="branding"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-paint-brush"></i> Branding
+                        </button>
+                        <button onclick="toggleStatusStage('salespage')" data-stage="salespage"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-browser"></i> Strona
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Workflows Grid -->
@@ -249,6 +276,7 @@
         let selectedStages = new Set();
         let stagesInitialized = false;
         let workflowLogos = {};
+        let selectedStatusStages = new Set(); // For filtering by missing status stages
 
         let teamMembers = [];
         let currentMember = null;
@@ -449,12 +477,13 @@
             const sortFilter = document.getElementById('sort-filter').value;
 
             filteredWorkflows = workflows.filter(w => {
-                // Search filter
+                // Search filter (name, company, email, offer, or workflow ID)
                 const searchMatch = !searchTerm ||
                     (w.customer_name || '').toLowerCase().includes(searchTerm) ||
                     (w.customer_company || '').toLowerCase().includes(searchTerm) ||
                     w.customer_email.toLowerCase().includes(searchTerm) ||
-                    w.offer_name.toLowerCase().includes(searchTerm);
+                    w.offer_name.toLowerCase().includes(searchTerm) ||
+                    w.workflow_id.toLowerCase().includes(searchTerm);
 
                 // Status filter
                 const statusMatch = !statusFilter || w.status === statusFilter;
@@ -466,7 +495,18 @@
                 const currentStage = getCurrentStage(w);
                 const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
 
-                return searchMatch && statusMatch && offerMatch && stageMatch;
+                // Status stage filter (show only those MISSING selected stages)
+                let statusStageMatch = true;
+                if (selectedStatusStages.size > 0) {
+                    for (const stage of selectedStatusStages) {
+                        if (hasStatusStage(w, stage)) {
+                            statusStageMatch = false;
+                            break;
+                        }
+                    }
+                }
+
+                return searchMatch && statusMatch && offerMatch && stageMatch && statusStageMatch;
             });
 
             // Sort
@@ -537,6 +577,50 @@
             renderStageFilter();
             applyFilters();
             renderWorkflows();
+        }
+
+        function toggleStatusStage(stage) {
+            if (selectedStatusStages.has(stage)) {
+                selectedStatusStages.delete(stage);
+            } else {
+                selectedStatusStages.add(stage);
+            }
+            renderStatusStageFilter();
+            applyFilters();
+            renderWorkflows();
+        }
+
+        function renderStatusStageFilter() {
+            const buttons = document.querySelectorAll('.status-stage-btn');
+            buttons.forEach(btn => {
+                const stage = btn.dataset.stage;
+                const isActive = selectedStatusStages.has(stage);
+                if (isActive) {
+                    btn.classList.remove('text-zinc-600', 'border-zinc-800');
+                    btn.classList.add('bg-amber-500/20', 'text-amber-400', 'border-amber-500/30');
+                } else {
+                    btn.classList.remove('bg-amber-500/20', 'text-amber-400', 'border-amber-500/30');
+                    btn.classList.add('text-zinc-600', 'border-zinc-800');
+                }
+            });
+        }
+
+        function hasStatusStage(w, stage) {
+            switch (stage) {
+                case 'contract':
+                    return w.contract_status === 'signed';
+                case 'product':
+                    return !!w.selected_product_id;
+                case 'report':
+                    const rc = reportCounts[w.workflow_id];
+                    return rc && rc.published > 0;
+                case 'branding':
+                    return !!w.branding_shared_at;
+                case 'salespage':
+                    return !!w.sales_page_shared_at;
+                default:
+                    return false;
+            }
         }
 
         function getWorkflowPath(id) {
@@ -1099,6 +1183,7 @@
         window.getWorkflowPath = getWorkflowPath;
         window.copyClientLink = copyClientLink;
         window.toggleStage = toggleStage;
+        window.toggleStatusStage = toggleStatusStage;
         window.openAddModal = openAddModal;
         window.closeAddModal = closeAddModal;
         window.searchOrder = searchOrder;
