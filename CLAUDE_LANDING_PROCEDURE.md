@@ -411,16 +411,23 @@ Logo znajduje się w tabeli `workflow_branding` z `type='logo'`. URL w polu `fil
 
 ### Przetwarzanie logo
 
-Logo z projektu często ma białe tło i nadmiarowe marginesy. Przed użyciem na landingu należy:
+**WAŻNE:** Przed przetwarzaniem logo, najpierw sprawdź oryginał używając narzędzia Read!
 
 1. **Pobrać logo** z Supabase storage
-2. **Przyciąć** (trim whitespace)
-3. **Usunąć białe tło** (zrobić przezroczyste)
+2. **Sprawdzić** czy logo już ma przezroczyste tło (Read tool)
+3. **Jeśli ma przezroczyste tło** → tylko przyciąć (trim)
+4. **Jeśli ma białe tło** → przyciąć + usunąć białe tło
 
 ### Skrypt do przetwarzania (Node.js + sharp)
 
+**Wariant A: Logo JUŻ MA przezroczyste tło (najczęstszy przypadek)**
 ```javascript
-// process-logo.js
+const sharp = require('sharp');
+sharp('logo_original.png').trim().png().toFile('logo.png');
+```
+
+**Wariant B: Logo MA białe tło (rzadziej)**
+```javascript
 const sharp = require('sharp');
 
 async function processLogo() {
@@ -448,7 +455,6 @@ processLogo();
 
 Uruchomienie:
 ```bash
-npm install sharp --save-dev
 node process-logo.js
 ```
 
