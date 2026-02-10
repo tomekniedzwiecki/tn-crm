@@ -489,6 +489,64 @@ Dlaczego? Gdy landing jest serwowany pod `/h2vital` (rewrite), przeglądarka szu
 
 Wzór ścieżki: `/landing-pages/[nazwa-folderu]/[plik]`
 
+## Conversion Toolkit (CRO)
+
+**ZAWSZE dodawaj Conversion Toolkit** do każdego landing page, aby zwiększyć konwersję.
+
+### Komponenty dostępne w toolkit:
+
+| Komponent | Wpływ na konwersję |
+|-----------|-------------------|
+| Exit Intent Popup | +15-20% |
+| Urgency Timer (evergreen 24h) | +9-15% |
+| Stock Counter | +10-12% |
+| Social Proof Toast | +5-8% |
+| Live Visitors | +3-5% |
+| Floating CTA | +5-10% |
+| Progress Bar | engagement |
+
+### Integracja
+
+Dodaj przed `</body>`:
+
+```html
+<script src="/landing-pages/shared/conversion-toolkit.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    ConversionToolkit.init({
+      brand: {
+        primary: '[KOLOR-ACCENT]',
+        secondary: '[KOLOR-PRIMARY]',
+        name: '[NAZWA-MARKI]',
+        ctaUrl: '#offer'
+      },
+      exitPopup: {
+        enabled: true,
+        headline: 'Czekaj! Nie przegap tej okazji',
+        subheadline: '[OFERTA SPECJALNA]',
+        ctaText: 'Odbierz ofertę',
+        dismissText: 'Nie, dziękuję'
+      },
+      urgency: {
+        enabled: true,
+        countdown: { enabled: true, position: 'both' },
+        stock: { enabled: true, initial: 20, min: 3 }
+      },
+      socialProof: {
+        enabled: true,
+        liveVisitors: { enabled: true },
+        recentPurchases: { enabled: true }
+      },
+      scrollCTA: { enabled: true, text: 'Zamów teraz', pulse: true },
+      progressBar: { enabled: true },
+      extraCTAs: { enabled: true }
+    });
+  });
+</script>
+```
+
+Pełna dokumentacja: `/landing-pages/shared/README.md`
+
 ## Checklist przed oddaniem
 
 - [ ] Wszystkie sekcje obecne (header -> footer)
@@ -503,6 +561,7 @@ Wzór ścieżki: `/landing-pages/[nazwa-folderu]/[plik]`
 - [ ] Placeholdery na wszystkie obrazy
 - [ ] CTA buttony linkują do #offer
 - [ ] Meta tags (title, description, OG)
+- [ ] **Conversion Toolkit zintegrowany** (exit popup, urgency, social proof)
 - [ ] Route w `vercel.json` (jeśli dedykowany URL)
 - [ ] Git commit & push
 
