@@ -521,7 +521,7 @@
                                 <div>
                                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Email</label>
                                     <div class="flex gap-2">
-                                        <input type="email" id="field-email" readonly class="input-field flex-1 rounded-lg px-3 py-2.5 text-sm text-zinc-400 cursor-not-allowed">
+                                        <input type="email" id="field-email" class="input-field flex-1 rounded-lg px-3 py-2.5 text-sm text-white">
                                         <button id="btn-mailto" class="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-400 transition-colors" title="Wyślij email">
                                             <i class="ph ph-envelope-simple text-lg"></i>
                                         </button>
@@ -2296,6 +2296,7 @@
 
             const updates = {
                 status: lead.status,
+                email: document.getElementById('field-email').value || null,
                 phone: document.getElementById('field-phone').value || null,
                 name: document.getElementById('field-name').value || null,
                 company: document.getElementById('field-company').value || null,
@@ -2311,7 +2312,7 @@
             // Track what changed for audit log
             const changedFields = {};
             const oldValues = {};
-            const fieldsToTrack = ['phone', 'name', 'company', 'nip', 'address', 'offer_id', 'deal_value', 'expected_close', 'assigned_to'];
+            const fieldsToTrack = ['email', 'phone', 'name', 'company', 'nip', 'address', 'offer_id', 'deal_value', 'expected_close', 'assigned_to'];
             fieldsToTrack.forEach(field => {
                 if (lead[field] !== updates[field]) {
                     oldValues[field] = lead[field];
@@ -2332,6 +2333,12 @@
                     logAuditActivity('update', 'lead', lead.id, lead.email, oldValues, changedFields);
                     // Update local lead object
                     Object.assign(lead, changedFields);
+                    // Update UI if email changed
+                    if (changedFields.email) {
+                        document.getElementById('breadcrumb-email').textContent = lead.email;
+                        document.getElementById('lead-email-display').textContent = lead.email;
+                        document.getElementById('lead-avatar').textContent = lead.email.charAt(0).toUpperCase();
+                    }
                 }
                 hasChanges = false;
                 showSaveStatus('saved');
@@ -2345,7 +2352,7 @@
         }
 
         // Track changes on all editable fields
-        const editableFields = ['field-phone', 'field-name', 'field-company', 'field-nip', 'field-address', 'field-value', 'field-expected-close'];
+        const editableFields = ['field-email', 'field-phone', 'field-name', 'field-company', 'field-nip', 'field-address', 'field-value', 'field-expected-close'];
         const selectFields = ['field-assigned-to'];
 
         editableFields.forEach(id => {
