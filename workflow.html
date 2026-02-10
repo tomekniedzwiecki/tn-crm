@@ -2579,6 +2579,9 @@
                 }
             }
 
+            // Log activity
+            logActivity('milestone_updated', `Zaktualizowano etap: ${title}`, { milestone_id: milestoneId, title, duration_days: durationDays });
+
             closeEditMilestoneModal();
             showToast('Etap zaktualizowany', 'success');
             renderWorkflow();
@@ -2635,6 +2638,10 @@
             // Add to local state
             tasks.push(newTask);
 
+            // Log activity
+            const milestone = milestones.find(m => m.id === milestoneId);
+            logActivity('task_added', `Dodano zadanie: ${title}`, { task_id: newTask.id, milestone_title: milestone?.title, responsible });
+
             closeAddTaskModal();
             showToast('Zadanie dodane', 'success');
             renderWorkflow();
@@ -2661,7 +2668,11 @@
             }
 
             // Remove from local state
+            const deletedTaskTitle = task.title;
             tasks = tasks.filter(t => t.id !== taskId);
+
+            // Log activity
+            logActivity('task_deleted', `Usunięto zadanie: ${deletedTaskTitle}`, { task_id: taskId });
 
             showToast('Zadanie usuniete', 'success');
             renderWorkflow();
@@ -2955,6 +2966,10 @@
 
             Object.assign(workflow, updates);
             isEditingContract = false;
+
+            // Log activity
+            logActivity('contract_data_saved', `Zapisano dane do umowy: ${data.customer_name}`, { customer_name: data.customer_name, customer_company: data.customer_company });
+
             showToast('Dane zapisane', 'success');
             loadContractData(); // Reload to update readonly view
         }
@@ -3195,6 +3210,10 @@
             if (sellerSignedUrl) {
                 workflow.contract_seller_signed_url = sellerSignedUrl;
             }
+
+            // Log activity
+            logActivity('contract_sent', `Wysłano umowę do klienta: ${clientName}`, { client_email: clientEmail, has_signed_file: !!sellerSignedUrl });
+
             showToast('Umowa wyslana do klienta!', 'success');
             updateContractUI();
         }
@@ -3314,6 +3333,7 @@
         }
 
         async function deleteMaterial(id) {
+            const material = materials.find(m => m.id === id);
             if (!confirm('Usunac ten material?')) return;
 
             const { error } = await supabaseClient
@@ -3322,6 +3342,9 @@
                 .eq('id', id);
 
             if (!error) {
+                // Log activity
+                logActivity('material_deleted', `Usunięto materiał: ${material?.title || 'materiał'}`, { material_id: id });
+
                 materials = materials.filter(m => m.id !== id);
                 renderMaterials();
                 showToast('Material usuniety', 'success');
@@ -3590,6 +3613,9 @@
                 .eq('id', id);
 
             if (!error) {
+                // Log activity
+                logActivity('branding_item_deleted', `Usunięto element brandingu: ${item?.title || item?.type || 'element'}`, { item_id: id, item_type: item?.type });
+
                 brandingItems = brandingItems.filter(b => b.id !== id);
                 renderBranding();
                 showToast('Element usunięty', 'success');
@@ -3630,6 +3656,9 @@
                 if (error) { showToast('Błąd zapisu', 'error'); return; }
             }
 
+            // Log activity
+            logActivity('brand_info_saved', `Zapisano informacje o marce: ${name}`, { brand_name: name, tagline });
+
             closeBrandInfoModal();
             showToast('Zapisano informacje o marce', 'success');
             await loadBranding();
@@ -3666,6 +3695,10 @@
 
             document.getElementById('logo-upload-progress').classList.add('hidden');
             if (error) { showToast('Błąd zapisu', 'error'); return; }
+
+            // Log activity
+            logActivity('logo_added', `Dodano logo: ${title}`, { variant, file_name: file.name });
+
             closeLogoModal();
             showToast('Logo dodane', 'success');
             await loadBranding();
@@ -3693,6 +3726,10 @@
             });
 
             if (error) { showToast('Błąd zapisu', 'error'); return; }
+
+            // Log activity
+            logActivity('color_added', `Dodano kolor: ${title} (${hex})`, { color_name: title, hex, role });
+
             closeColorModal();
             showToast('Kolor dodany', 'success');
             await loadBranding();
@@ -3721,6 +3758,10 @@
             });
 
             if (error) { showToast('Błąd zapisu', 'error'); return; }
+
+            // Log activity
+            logActivity('font_added', `Dodano czcionkę: ${title}`, { font_name: title, role, weights });
+
             closeFontModal();
             showToast('Czcionka dodana', 'success');
             await loadBranding();
@@ -3755,6 +3796,10 @@
 
             document.getElementById('mockup-upload-progress').classList.add('hidden');
             if (error) { showToast('Błąd zapisu', 'error'); return; }
+
+            // Log activity
+            logActivity('mockup_added', `Dodano mockup: ${title}`, { file_name: file.name });
+
             closeMockupModal();
             showToast('Mockup dodany', 'success');
             await loadBranding();
@@ -3792,6 +3837,10 @@
 
             document.getElementById('guideline-upload-progress').classList.add('hidden');
             if (error) { showToast('Błąd zapisu', 'error'); return; }
+
+            // Log activity
+            logActivity('guideline_added', `Dodano wytyczne: ${title}`, { file_name: file.name });
+
             closeGuidelineModal();
             showToast('Plik dodany', 'success');
             await loadBranding();
@@ -4129,6 +4178,9 @@
                 workflow.sales_page_status = status;
                 loadSalesPage();
                 showToast('Zapisano', 'success');
+                if (url) {
+                    logActivity('sales_page_updated', `Zaktualizowano stronę sprzedażową`, { url, status });
+                }
             }
         }
         window.saveSalesPageUrl = saveSalesPageUrl;
@@ -4173,6 +4225,9 @@
                 workflow.sales_page_shared_at = now;
                 updateSalesPageDeliverUI();
                 updateNavChecks();
+
+                // Log activity
+                logActivity('sales_page_shared', 'Udostępniono stronę sprzedażową klientowi', { url: workflow.sales_page_url });
 
                 const emailNow = Date.now();
                 const shouldSend = (emailNow - lastSalesPageEmailSentAt) > SALES_PAGE_EMAIL_COOLDOWN;
@@ -4576,14 +4631,18 @@
             const report = reports.find(r => r.id === id);
             if (!report) return;
 
+            const newVisibility = !report.visible_to_client;
             const { error } = await supabaseClient
                 .from('workflow_reports')
-                .update({ visible_to_client: !report.visible_to_client })
+                .update({ visible_to_client: newVisibility })
                 .eq('id', id);
 
             if (!error) {
-                report.visible_to_client = !report.visible_to_client;
+                report.visible_to_client = newVisibility;
                 renderReports();
+                const action = newVisibility ? 'report_published' : 'report_hidden';
+                const desc = newVisibility ? `Opublikowano raport: ${report.title || report.type}` : `Ukryto raport: ${report.title || report.type}`;
+                logActivity(action, desc, { report_id: id, report_type: report.type });
             }
         }
 
@@ -4609,6 +4668,9 @@
                 if (error) throw error;
 
                 report.visible_to_client = true;
+
+                // Log activity
+                logActivity('report_approved', `Zatwierdzono i opublikowano raport: ${report.title || report.type}`, { report_id: id, report_type: report.type });
 
                 // Send email only if cooldown passed
                 const now = Date.now();
@@ -4667,6 +4729,9 @@
                 .eq('id', id);
 
             if (!error) {
+                // Log activity
+                logActivity('report_deleted', `Usunięto raport: ${report?.title || report?.type || 'Raport'}`, { report_id: id, report_type: report?.type });
+
                 reports = reports.filter(r => r.id !== id);
                 renderReports();
                 showToast('Raport usunięty', 'success');
@@ -4757,6 +4822,9 @@
                     });
 
                 if (error) throw error;
+
+                // Log activity
+                logActivity('report_uploaded', `Przesłano raport: ${title}`, { report_type: type, file_name: file.name });
 
                 closeReportModal();
                 await loadReports();
@@ -4897,6 +4965,9 @@
                 .single();
 
             if (!error && data) {
+                // Log activity
+                logActivity('comment_posted', `Dodano komentarz`, { comment_id: data.id, content_preview: content.substring(0, 50) });
+
                 comments.push(data);
                 renderComments();
                 document.getElementById('new-comment').value = '';
