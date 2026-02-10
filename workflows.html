@@ -759,7 +759,7 @@
                 const logoUrl = workflowLogos[w.workflow_id];
 
                 return `
-                <div class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-4 transition-all cursor-pointer" onclick="window.location.href=getWorkflowPath('${w.workflow_id}')">
+                <a href="${getWorkflowPath(w.workflow_id)}" class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-4 transition-all cursor-pointer block">
                     <div class="flex items-start gap-3 mb-2">
                         ${logoUrl ? `<img src="${logoUrl}" alt="" class="w-12 h-12 object-contain flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-[2.5] hover:z-50 hover:relative">` : ''}
                         <div class="min-w-0 flex-1">
@@ -768,7 +768,7 @@
                                 <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                     ${getStatusBadge(w.status)}
                                     ${w.status === 'cancelled' ? `
-                                        <button onclick="event.stopPropagation(); openDeleteModal('${w.workflow_id}', '${customerDisplay.replace(/'/g, "\\'")}')"
+                                        <button onclick="event.preventDefault(); event.stopPropagation(); openDeleteModal('${w.workflow_id}', '${customerDisplay.replace(/'/g, "\\'")}')"
                                                 class="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
                                                 title="Usun projekt">
                                             <i class="ph ph-trash text-xs"></i>
@@ -811,15 +811,15 @@
                             ` : ''}
                         </div>
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onclick="event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
+                            <button onclick="event.preventDefault(); event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
                                 <i class="ph ph-link text-xs"></i>
                             </button>
-                            <button onclick="event.stopPropagation(); window.location.href=getWorkflowPath('${w.workflow_id}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Szczegoly">
+                            <button onclick="event.preventDefault(); event.stopPropagation(); window.open(getWorkflowPath('${w.workflow_id}'), '_blank')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Otworz w nowej karcie">
                                 <i class="ph ph-arrow-right text-xs"></i>
                             </button>
                         </div>
                     </div>
-                </div>
+                </a>
             `}).join('');
         }
 
