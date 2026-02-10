@@ -80,6 +80,11 @@
         .event-item:hover {
             filter: brightness(1.1);
         }
+        .event-item.deadline {
+            background: rgba(34, 211, 238, 0.15);
+            border-left: 2px solid #22d3ee;
+            color: #67e8f9;
+        }
 
         .view-btn {
             transition: all 0.15s;
@@ -240,11 +245,21 @@
 
                 <!-- Upcoming events -->
                 <div class="mt-8">
-                    <h2 class="text-lg font-semibold text-white mb-4">Nadchodzące spotkania</h2>
+                    <h2 class="text-lg font-semibold text-white mb-4">Nadchodzące wydarzenia</h2>
+                    <div class="flex items-center gap-4 mb-4 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-3 rounded bg-pink-500/30 border border-pink-500/50"></div>
+                            <span class="text-zinc-500">Spotkania</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-3 rounded bg-cyan-500/30 border border-cyan-500/50"></div>
+                            <span class="text-zinc-500">Terminy zamknięcia</span>
+                        </div>
+                    </div>
                     <div id="upcoming-events" class="space-y-2"></div>
                     <div id="no-events" class="hidden text-center py-8 text-zinc-500">
                         <i class="ph ph-calendar-blank text-3xl mb-2"></i>
-                        <p class="text-sm">Brak nadchodzących spotkań</p>
+                        <p class="text-sm">Brak nadchodzących wydarzeń</p>
                     </div>
                 </div>
             </div>
@@ -711,7 +726,7 @@
         async function loadLeads() {
             const { data, error } = await supabaseClient
                 .from('leads')
-                .select('id, email, name, company, phone')
+                .select('id, email, name, company, phone, expected_close, assigned_to, status, value')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -720,6 +735,28 @@
             }
 
             leads = data || [];
+        }
+
+        // Get leads with expected_close dates for calendar display
+        function getDeadlineEvents() {
+            // Filter leads that have expected_close and are assigned to current user (if not admin)
+            const filteredLeads = leads.filter(lead => {
+                if (!lead.expected_close) return false;
+                // Exclude closed statuses
+                if (['won', 'lost', 'abandoned'].includes(lead.status)) return false;
+                // If not admin, only show own leads
+                if (!isAdmin && lead.assigned_to !== currentMember?.id) return false;
+                return true;
+            });
+
+            return filteredLeads.map(lead => ({
+                id: 'deadline_' + lead.id,
+                lead_id: lead.id,
+                title: lead.name || lead.company || lead.email?.split('@')[0] || 'Lead',
+                date: lead.expected_close,
+                isDeadline: true,
+                lead: lead
+            }));
         }
 
         // ===========================================
@@ -825,16 +862,30 @@
                         return eventDate.toDateString() === cellDate.toDateString();
                     });
 
+                    // Get deadline events for this day
+                    const deadlineEvents = getDeadlineEvents().filter(d => {
+                        const deadlineDate = new Date(d.date);
+                        return deadlineDate.toDateString() === cellDate.toDateString();
+                    });
+
+                    // Combine all items for this day
+                    const allItems = [...dayEvents, ...deadlineEvents];
+
                     html += `
                         <div class="calendar-day p-2 border-b border-r border-white/5 ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isWeekend ? 'bg-zinc-900/30' : ''}" data-date="${dateStr}">
                             <div class="text-xs ${isToday ? 'bg-white text-black w-6 h-6 rounded-full flex items-center justify-center font-semibold' : 'text-zinc-400 mb-1'}">${dayNum}</div>
                             <div class="space-y-0.5 mt-1">
-                                ${dayEvents.slice(0, 3).map(e => `
-                                    <div class="event-item" onclick="showEventDetails('${e.id}')" title="${escapeHtml(e.title)}">
+                                ${allItems.slice(0, 3).map(e => {
+                                    if (e.isDeadline) {
+                                        return `<div class="event-item deadline" onclick="window.location.href='/lead?id=${e.lead_id}'" title="Termin zamknięcia: ${escapeHtml(e.title)}">
+                                            <i class="ph ph-target text-[9px]"></i> ${escapeHtml(e.title)}
+                                        </div>`;
+                                    }
+                                    return `<div class="event-item" onclick="showEventDetails('${e.id}')" title="${escapeHtml(e.title)}">
                                         ${formatEventTime(e.start)} ${escapeHtml(e.title)}
-                                    </div>
-                                `).join('')}
-                                ${dayEvents.length > 3 ? `<div class="text-[10px] text-zinc-500 pl-1">+${dayEvents.length - 3} więcej</div>` : ''}
+                                    </div>`;
+                                }).join('')}
+                                ${allItems.length > 3 ? `<div class="text-[10px] text-zinc-500 pl-1">+${allItems.length - 3} więcej</div>` : ''}
                             </div>
                         </div>
                     `;
@@ -900,6 +951,12 @@
                         return eventStart.getHours() < hour && eventEnd.getHours() > hour;
                     });
 
+                    // Deadline events for this day (show at 9:00)
+                    const deadlineEvents = hour === 9 ? getDeadlineEvents().filter(d => {
+                        const deadlineDate = new Date(d.date);
+                        return deadlineDate.toDateString() === dayDate.toDateString();
+                    }) : [];
+
                     gridHtml += `
                         <div class="border-r border-white/5 last:border-r-0 p-0.5 ${isWeekend ? 'bg-zinc-900/30' : ''} relative min-h-[32px]">
                             ${startingEvents.map(e => {
@@ -917,6 +974,13 @@
                                     </div>
                                 `;
                             }).join('')}
+                            ${deadlineEvents.map(d => `
+                                <div class="event-item deadline text-[10px] cursor-pointer"
+                                     onclick="window.location.href='/lead?id=${d.lead_id}'"
+                                     title="Termin zamknięcia: ${escapeHtml(d.title)}">
+                                    <i class="ph ph-target text-[9px]"></i> ${escapeHtml(d.title)}
+                                </div>
+                            `).join('')}
                             ${spanningEvents.length > 0 ? `<div class="absolute inset-0 bg-pink-500/5 border-l-2 border-pink-500/30"></div>` : ''}
                         </div>
                     `;
@@ -998,22 +1062,56 @@
             const container = document.getElementById('upcoming-events');
             const noEvents = document.getElementById('no-events');
             const now = new Date();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-            const upcomingEvents = events
+            // Get meetings
+            const upcomingMeetings = events
                 .filter(e => new Date(e.start) >= now)
-                .sort((a, b) => new Date(a.start) - new Date(b.start))
-                .slice(0, 5);
+                .map(e => ({ ...e, type: 'meeting', sortDate: new Date(e.start) }));
 
-            if (upcomingEvents.length === 0) {
+            // Get deadline events
+            const upcomingDeadlines = getDeadlineEvents()
+                .filter(d => new Date(d.date) >= today)
+                .map(d => ({ ...d, type: 'deadline', sortDate: new Date(d.date) }));
+
+            // Combine and sort
+            const allUpcoming = [...upcomingMeetings, ...upcomingDeadlines]
+                .sort((a, b) => a.sortDate - b.sortDate)
+                .slice(0, 8);
+
+            if (allUpcoming.length === 0) {
                 container.innerHTML = '';
                 noEvents.classList.remove('hidden');
                 return;
             }
 
             noEvents.classList.add('hidden');
-            container.innerHTML = upcomingEvents.map(e => {
-                const date = new Date(e.start);
+            container.innerHTML = allUpcoming.map(e => {
+                if (e.type === 'deadline') {
+                    const date = new Date(e.date);
+                    const value = e.lead?.value;
+                    return `
+                        <div class="flex items-center gap-4 p-4 border border-cyan-500/20 bg-cyan-500/5 rounded-lg cursor-pointer hover:bg-cyan-500/10 transition-colors" onclick="window.location.href='/lead?id=${e.lead_id}'">
+                            <div class="w-12 h-12 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex flex-col items-center justify-center">
+                                <span class="text-cyan-400 text-xs font-medium">${date.toLocaleDateString('pl-PL', { day: 'numeric' })}</span>
+                                <span class="text-cyan-400/60 text-[10px] uppercase">${date.toLocaleDateString('pl-PL', { month: 'short' })}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-white font-medium truncate flex items-center gap-2">
+                                    <i class="ph ph-target text-cyan-400"></i>
+                                    ${escapeHtml(e.title)}
+                                </div>
+                                <div class="text-zinc-500 text-xs">
+                                    Termin zamknięcia${value ? ` • ${value.toLocaleString('pl-PL')} PLN` : ''}
+                                </div>
+                            </div>
+                            <i class="ph ph-caret-right text-zinc-600"></i>
+                        </div>
+                    `;
+                }
 
+                const date = new Date(e.start);
                 return `
                     <div class="flex items-center gap-4 p-4 border border-pink-500/20 bg-pink-500/5 rounded-lg cursor-pointer hover:bg-pink-500/10 transition-colors" onclick="showEventDetails('${e.id}')">
                         <div class="w-12 h-12 rounded-lg bg-pink-500/20 border border-pink-500/30 flex flex-col items-center justify-center">
