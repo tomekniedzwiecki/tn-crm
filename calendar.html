@@ -145,6 +145,12 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 md:gap-3">
+                <!-- Team member selector (admin only) -->
+                <div id="member-selector-container" class="hidden">
+                    <select id="member-selector" class="bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-pink-500/50 cursor-pointer">
+                        <option value="">Wszyscy handlowcy</option>
+                    </select>
+                </div>
                 <button id="add-event-btn" class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
                     <i class="ph ph-plus"></i>
                     <span class="hidden md:inline">Dodaj spotkanie</span>
@@ -479,6 +485,7 @@
         let teamMembersMap = {};
         let currentMember = null;
         let isAdmin = false;
+        let selectedMemberId = null; // For admin to view other members' calendars
 
         // HTML escape helper (XSS prevention)
         function escapeHtml(text) {
@@ -550,6 +557,24 @@
             }
 
             Sidebar.showAdminNav(isAdmin);
+
+            // Show member selector for admins
+            if (isAdmin) {
+                const selectorContainer = document.getElementById('member-selector-container');
+                const selector = document.getElementById('member-selector');
+
+                // Populate selector with team members
+                selector.innerHTML = '<option value="">Wszyscy handlowcy</option>' +
+                    teamMembers.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
+
+                selectorContainer.classList.remove('hidden');
+
+                // Handle selector change
+                selector.addEventListener('change', function() {
+                    selectedMemberId = this.value || null;
+                    loadEvents();
+                });
+            }
         }
 
         // ===========================================
@@ -697,12 +722,21 @@
             }
 
             // Query events that overlap with the period (start before end, end after start)
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('calendar_events')
                 .select('*, leads(id, name, email, company)')
                 .lte('start_time', endDate.toISOString())
-                .gte('end_time', startDate.toISOString())
-                .order('start_time');
+                .gte('end_time', startDate.toISOString());
+
+            // Filter by assigned member if selected (admin viewing specific person)
+            if (selectedMemberId) {
+                query = query.eq('assigned_to', selectedMemberId);
+            } else if (!isAdmin && currentMember) {
+                // Non-admin only sees own events
+                query = query.eq('assigned_to', currentMember.id);
+            }
+
+            const { data, error } = await query.order('start_time');
 
             if (error) {
                 console.error('Error loading events:', error);
@@ -716,7 +750,8 @@
                 start: e.start_time,
                 end: e.end_time,
                 lead_id: e.lead_id,
-                lead: e.leads
+                lead: e.leads,
+                assigned_to: e.assigned_to
             }));
 
             renderCurrentView();
@@ -739,13 +774,20 @@
 
         // Get leads with expected_close dates for calendar display
         function getDeadlineEvents() {
-            // Filter leads that have expected_close and are assigned to current user (if not admin)
+            // Filter leads that have expected_close
             const filteredLeads = leads.filter(lead => {
                 if (!lead.expected_close) return false;
                 // Exclude closed statuses
                 if (['won', 'lost', 'abandoned'].includes(lead.status)) return false;
+
+                // Filter by selected member (admin view)
+                if (isAdmin && selectedMemberId) {
+                    return lead.assigned_to === selectedMemberId;
+                }
+
                 // If not admin, only show own leads
                 if (!isAdmin && lead.assigned_to !== currentMember?.id) return false;
+
                 return true;
             });
 
@@ -855,17 +897,17 @@
 
                     const isToday = cellDate.toDateString() === today.toDateString();
                     const isWeekend = col >= 5;
-                    const dateStr = cellDate.toISOString().split('T')[0];
+                    // Format as YYYY-MM-DD in local timezone for comparison
+                    const dateStr = `${cellDate.getFullYear()}-${String(cellDate.getMonth() + 1).padStart(2, '0')}-${String(cellDate.getDate()).padStart(2, '0')}`;
 
                     const dayEvents = events.filter(e => {
                         const eventDate = new Date(e.start);
                         return eventDate.toDateString() === cellDate.toDateString();
                     });
 
-                    // Get deadline events for this day
+                    // Get deadline events for this day (compare date strings directly to avoid timezone issues)
                     const deadlineEvents = getDeadlineEvents().filter(d => {
-                        const deadlineDate = new Date(d.date);
-                        return deadlineDate.toDateString() === cellDate.toDateString();
+                        return d.date === dateStr;
                     });
 
                     // Combine all items for this day
@@ -952,10 +994,8 @@
                     });
 
                     // Deadline events for this day (show at 9:00)
-                    const deadlineEvents = hour === 9 ? getDeadlineEvents().filter(d => {
-                        const deadlineDate = new Date(d.date);
-                        return deadlineDate.toDateString() === dayDate.toDateString();
-                    }) : [];
+                    const dayDateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+                    const deadlineEvents = hour === 9 ? getDeadlineEvents().filter(d => d.date === dayDateStr) : [];
 
                     gridHtml += `
                         <div class="border-r border-white/5 last:border-r-0 p-0.5 ${isWeekend ? 'bg-zinc-900/30' : ''} relative min-h-[32px]">
