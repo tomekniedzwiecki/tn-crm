@@ -46,6 +46,22 @@
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
+        @keyframes urgentPulse {
+            0%, 100% {
+                background-color: rgba(239, 68, 68, 0.4);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+                transform: scale(1);
+            }
+            50% {
+                background-color: rgba(239, 68, 68, 0.7);
+                box-shadow: 0 0 12px 4px rgba(239, 68, 68, 0.5);
+                transform: scale(1.05);
+            }
+        }
+        .animate-urgent {
+            animation: urgentPulse 1s ease-in-out infinite;
+        }
+
         .pipeline-column {
             min-width: 320px;
             max-width: 320px;
@@ -795,13 +811,25 @@
             const terminalStages = ['won', 'lost', 'abandoned'];
             const isTerminal = terminalStages.includes(status);
 
+            // Check if it's a waiting stage (by ID or by stage name)
+            const stage = STAGES.find(s => s.id === status);
+            const isWaiting = status === 'waiting' || stage?.name?.toLowerCase() === 'oczekiwanie';
+
+            // For terminal stages and waiting - plain badge without colors
+            if (isTerminal || isWaiting) {
+                return `<div class="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500" title="Dni w tym statusie">
+                    <i class="ph ph-clock text-[10px]"></i>
+                    <span>${days}d</span>
+                </div>`;
+            }
+
             let colorClasses, icon, pulseClass = '';
 
-            // Pulsing alert for 7+ days (only for non-terminal stages)
-            if (days >= 7 && !isTerminal) {
-                colorClasses = 'bg-red-500/30 text-red-300 border-red-500/50';
-                icon = 'ph-warning';
-                pulseClass = 'animate-pulse';
+            // Strong pulsing alert for 7+ days
+            if (days >= 7) {
+                colorClasses = 'bg-red-500/40 text-white border-red-500';
+                icon = 'ph-warning-circle';
+                pulseClass = 'animate-urgent';
             } else if (days >= 5) {
                 colorClasses = 'bg-red-500/20 text-red-400 border-red-500/30';
                 icon = 'ph-warning';
