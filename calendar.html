@@ -774,16 +774,6 @@
 
         // Get leads with expected_close dates for calendar display
         function getDeadlineEvents() {
-            // Debug: log leads with expected_close
-            const leadsWithClose = leads.filter(l => l.expected_close);
-            console.log('Leads with expected_close:', leadsWithClose.length, leadsWithClose.map(l => ({
-                name: l.name || l.email,
-                expected_close: l.expected_close,
-                assigned_to: l.assigned_to,
-                status: l.status
-            })));
-            console.log('isAdmin:', isAdmin, 'selectedMemberId:', selectedMemberId, 'currentMember:', currentMember?.id);
-
             // Filter leads that have expected_close
             const filteredLeads = leads.filter(lead => {
                 if (!lead.expected_close) return false;
@@ -803,8 +793,6 @@
 
                 return true;
             });
-
-            console.log('Filtered deadline leads:', filteredLeads.length);
 
             return filteredLeads.map(lead => ({
                 id: 'deadline_' + lead.id,
@@ -934,8 +922,9 @@
                             <div class="space-y-0.5 mt-1">
                                 ${allItems.slice(0, 3).map(e => {
                                     if (e.isDeadline) {
-                                        return `<div class="event-item deadline" onclick="window.location.href='/lead?id=${e.lead_id}'" title="Termin zamknięcia: ${escapeHtml(e.title)}">
-                                            <i class="ph ph-target text-[9px]"></i> ${escapeHtml(e.title)}
+                                        const dealVal = e.lead?.deal_value ? ` • ${(e.lead.deal_value/1000).toFixed(0)}k` : '';
+                                        return `<div class="event-item deadline" onclick="window.location.href='/lead?id=${e.lead_id}'" title="Termin zamknięcia: ${escapeHtml(e.title)}${e.lead?.deal_value ? ' (' + e.lead.deal_value.toLocaleString('pl-PL') + ' PLN)' : ''}">
+                                            <i class="ph ph-target text-[9px]"></i> ${escapeHtml(e.title)}${dealVal}
                                         </div>`;
                                     }
                                     return `<div class="event-item" onclick="showEventDetails('${e.id}')" title="${escapeHtml(e.title)}">
@@ -1029,13 +1018,15 @@
                                     </div>
                                 `;
                             }).join('')}
-                            ${deadlineEvents.map(d => `
+                            ${deadlineEvents.map(d => {
+                                const dealVal = d.lead?.deal_value ? ` • ${(d.lead.deal_value/1000).toFixed(0)}k` : '';
+                                return `
                                 <div class="event-item deadline text-[10px] cursor-pointer"
                                      onclick="window.location.href='/lead?id=${d.lead_id}'"
-                                     title="Termin zamknięcia: ${escapeHtml(d.title)}">
-                                    <i class="ph ph-target text-[9px]"></i> ${escapeHtml(d.title)}
+                                     title="Termin zamknięcia: ${escapeHtml(d.title)}${d.lead?.deal_value ? ' (' + d.lead.deal_value.toLocaleString('pl-PL') + ' PLN)' : ''}">
+                                    <i class="ph ph-target text-[9px]"></i> ${escapeHtml(d.title)}${dealVal}
                                 </div>
-                            `).join('')}
+                            `}).join('')}
                             ${spanningEvents.length > 0 ? `<div class="absolute inset-0 bg-pink-500/5 border-l-2 border-pink-500/30"></div>` : ''}
                         </div>
                     `;
