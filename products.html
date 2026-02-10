@@ -91,6 +91,16 @@
                     </div>
                 </div>
 
+                <!-- Active/Inactive Tabs -->
+                <div class="flex items-center gap-1 mb-6 border-b border-white/5">
+                    <button onclick="setActiveTab('active')" id="tab-active" class="active-tab px-4 py-2.5 text-sm font-medium transition-colors border-b-2 border-emerald-500 text-white">
+                        <i class="ph ph-check-circle mr-1.5"></i>Aktywne <span id="count-active" class="text-zinc-500 ml-1">0</span>
+                    </button>
+                    <button onclick="setActiveTab('inactive')" id="tab-inactive" class="inactive-tab px-4 py-2.5 text-sm font-medium transition-colors border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">
+                        <i class="ph ph-eye-slash mr-1.5"></i>Wyłączone <span id="count-inactive" class="text-zinc-600 ml-1">0</span>
+                    </button>
+                </div>
+
                 <!-- Filters -->
                 <div class="flex items-center gap-3 mb-6">
                     <div class="relative flex-1 max-w-md">
@@ -177,6 +187,7 @@
         let filteredProducts = [];
         let currentMember = null;
         let isAdmin = false;
+        let activeTab = 'active'; // 'active' or 'inactive'
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -220,7 +231,18 @@
             const search = document.getElementById('search-input').value.toLowerCase();
             const statusFilter = document.getElementById('status-filter').value;
 
+            // Count active/inactive for tabs
+            const activeCount = products.filter(p => p.is_active !== false).length;
+            const inactiveCount = products.filter(p => p.is_active === false).length;
+            document.getElementById('count-active').textContent = activeCount;
+            document.getElementById('count-inactive').textContent = inactiveCount;
+
             filteredProducts = products.filter(p => {
+                // Filter by active tab
+                const isActive = p.is_active !== false;
+                if (activeTab === 'active' && !isActive) return false;
+                if (activeTab === 'inactive' && isActive) return false;
+
                 if (search) {
                     const searchText = [p.name, p.description].filter(Boolean).join(' ').toLowerCase();
                     if (!searchText.includes(search)) return false;
@@ -230,6 +252,52 @@
             });
 
             document.getElementById('total-products').textContent = filteredProducts.length;
+        }
+
+        function setActiveTab(tab) {
+            activeTab = tab;
+
+            // Update tab styles
+            const tabActive = document.getElementById('tab-active');
+            const tabInactive = document.getElementById('tab-inactive');
+
+            if (tab === 'active') {
+                tabActive.classList.add('border-emerald-500', 'text-white');
+                tabActive.classList.remove('border-transparent', 'text-zinc-500');
+                tabInactive.classList.remove('border-amber-500', 'text-white');
+                tabInactive.classList.add('border-transparent', 'text-zinc-500');
+            } else {
+                tabInactive.classList.add('border-amber-500', 'text-white');
+                tabInactive.classList.remove('border-transparent', 'text-zinc-500');
+                tabActive.classList.remove('border-emerald-500', 'text-white');
+                tabActive.classList.add('border-transparent', 'text-zinc-500');
+            }
+
+            applyFilters();
+            renderProducts();
+        }
+
+        async function toggleProductActive(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+
+            const newActiveState = product.is_active === false ? true : false;
+
+            const { error } = await supabaseClient
+                .from('workflow_products')
+                .update({ is_active: newActiveState })
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error toggling product:', error);
+                showToast('Błąd: ' + error.message, 'error');
+                return;
+            }
+
+            product.is_active = newActiveState;
+            applyFilters();
+            renderProducts();
+            showToast(newActiveState ? 'Produkt włączony' : 'Produkt wyłączony', 'success');
         }
 
         const statusLabels = {
@@ -255,22 +323,29 @@
 
             grid.innerHTML = filteredProducts.map(p => {
                 const status = statusLabels[p.status] || statusLabels.proposal;
+                const isActive = p.is_active !== false;
 
                 return `
-                    <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all">
+                    <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all ${!isActive ? 'opacity-60' : ''}">
                         <div class="relative aspect-square bg-zinc-800 overflow-hidden">
                             ${p.image_url
-                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">`
+                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${!isActive ? 'grayscale' : ''}" loading="lazy">`
                                 : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-zinc-700"></i></div>`
                             }
                             <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
+                            ${!isActive ? `<span class="absolute top-3 left-3 px-2 py-1 rounded-md text-[10px] font-medium bg-zinc-800/90 text-zinc-400 backdrop-blur-sm"><i class="ph ph-eye-slash mr-1"></i>Wyłączony</span>` : ''}
                         </div>
                         <div class="p-4">
                             <h4 class="text-white font-medium text-sm leading-tight mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
-                            <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
-                                ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
-                                <button onclick="openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" class="text-zinc-500 hover:text-red-400 text-xs transition-colors"><i class="ph ph-trash"></i></button>
+                            <div class="flex items-center justify-between pt-2 border-t border-white/5">
+                                <button onclick="toggleProductActive('${p.id}')" class="${isActive ? 'text-emerald-500 hover:text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'} text-xs transition-colors" title="${isActive ? 'Wyłącz produkt' : 'Włącz produkt'}">
+                                    <i class="ph ${isActive ? 'ph-toggle-right' : 'ph-toggle-left'} text-lg"></i>
+                                </button>
+                                <div class="flex items-center gap-2">
+                                    ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
+                                    <button onclick="openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
+                                    <button onclick="deleteProduct('${p.id}')" class="text-zinc-500 hover:text-red-400 text-xs transition-colors"><i class="ph ph-trash"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
