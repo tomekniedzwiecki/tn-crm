@@ -34,7 +34,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   const ConversionToolkit = {
-    version: '1.1.1',
+    version: '1.1.2',
     config: {},
     state: {
       exitPopupShown: false,
@@ -659,14 +659,6 @@
         .ct-sticky-bar.show {
           transform: translateY(0);
         }
-        /* Hide header when sticky bar is visible */
-        .header {
-          transition: opacity 0.3s ease;
-        }
-        body.ct-sticky-bar-visible .header {
-          opacity: 0;
-          pointer-events: none;
-        }
         .ct-sticky-bar-inner {
           max-width: 1200px;
           margin: 0 auto;
@@ -809,11 +801,6 @@
           /* Sticky bar on mobile - hidden */
           .ct-sticky-bar {
             display: none !important;
-          }
-          /* Don't hide header on mobile (no sticky bar) */
-          body.ct-sticky-bar-visible .header {
-            opacity: 1;
-            pointer-events: auto;
           }
           /* Mobile bottom bar */
           .ct-mobile-bar {
@@ -1327,6 +1314,16 @@
 
     initStickyBar() {
       const cfg = this.config.stickyBar;
+
+      // Don't show sticky bar when urgency bar is at top (too cluttered)
+      const urgencyCfg = this.config.urgency;
+      if (urgencyCfg.enabled && urgencyCfg.countdown.enabled) {
+        const pos = urgencyCfg.countdown.position;
+        if (pos === 'hero' || pos === 'both') {
+          // Urgency bar is already at top, skip sticky bar
+          return;
+        }
+      }
 
       // Auto-detect product name and price
       const productName = cfg.productName || document.querySelector('h1')?.textContent?.trim() || this.config.brand.name;
