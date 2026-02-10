@@ -143,31 +143,80 @@ function formatNewLeadMessage(data: {
     fields.push({ type: 'mrkdwn', text: `*Wartość:*\n${data.deal_value.toLocaleString('pl-PL')} PLN` })
   }
 
-  return {
-    blocks: [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: '🎉 Nowy lead!',
-          emoji: true
-        }
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: '🎉 Nowy lead!',
+        emoji: true
+      }
+    },
+    {
+      type: 'section',
+      fields: fields
+    }
+  ]
+
+  // Action buttons
+  const actionElements: any[] = []
+
+  // "Zobacz szczegóły" button - only if we have lead_id
+  if (data.lead_id) {
+    actionElements.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: '📋 Zobacz szczegóły',
+        emoji: true
       },
-      {
-        type: 'section',
-        fields: fields
+      url: `https://crm.tomekniedzwiecki.pl/lead?id=${data.lead_id}`,
+      action_id: 'view_lead'
+    })
+  }
+
+  // "WhatsApp" button - only if we have phone
+  if (data.phone) {
+    let waPhone = data.phone.replace(/[\s\-\(\)]/g, '')
+    if (waPhone.startsWith('0')) {
+      waPhone = '48' + waPhone.substring(1)
+    }
+    if (!waPhone.startsWith('+') && !waPhone.startsWith('48')) {
+      waPhone = '48' + waPhone
+    }
+    waPhone = waPhone.replace('+', '')
+
+    actionElements.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: '💬 WhatsApp',
+        emoji: true
       },
+      url: `https://wa.me/${waPhone}`,
+      action_id: 'whatsapp'
+    })
+  }
+
+  if (actionElements.length > 0) {
+    blocks.push({
+      type: 'actions',
+      elements: actionElements
+    })
+  }
+
+  // Timestamp
+  blocks.push({
+    type: 'context',
+    elements: [
       {
-        type: 'context',
-        elements: [
-          {
-            type: 'mrkdwn',
-            text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
-          }
-        ]
+        type: 'mrkdwn',
+        text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
       }
     ]
-  }
+  })
+
+  return { blocks }
 }
 
 function formatZapisyLeadMessage(data: {
