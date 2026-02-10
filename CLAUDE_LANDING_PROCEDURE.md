@@ -499,3 +499,12 @@ Wzór ścieżki: `/landing-pages/[nazwa-folderu]/[plik]`
 - [ ] Meta tags (title, description, OG)
 - [ ] Route w `vercel.json` (jeśli dedykowany URL)
 - [ ] Git commit & push
+
+## WAŻNE: Deploy na koniec
+
+**Zawsze po wygenerowaniu landing page wykonaj deploy:**
+```bash
+git add . && git commit -m "Add [nazwa-marki] landing page" && git push
+```
+
+Vercel automatycznie zdeployuje zmiany po pushu do `main`.
