@@ -764,9 +764,18 @@
             return days;
         }
 
-        function getDaysInStatusBadge(days) {
-            let colorClasses, icon;
-            if (days >= 5) {
+        function getDaysInStatusBadge(days, status) {
+            const terminalStages = ['won', 'lost', 'abandoned'];
+            const isTerminal = terminalStages.includes(status);
+
+            let colorClasses, icon, pulseClass = '';
+
+            // Pulsing alert for 7+ days (only for non-terminal stages)
+            if (days >= 7 && !isTerminal) {
+                colorClasses = 'bg-red-500/30 text-red-300 border-red-500/50';
+                icon = 'ph-warning';
+                pulseClass = 'animate-pulse';
+            } else if (days >= 5) {
                 colorClasses = 'bg-red-500/20 text-red-400 border-red-500/30';
                 icon = 'ph-warning';
             } else if (days >= 3) {
@@ -776,7 +785,7 @@
                 colorClasses = 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
                 icon = 'ph-clock';
             }
-            return `<div class="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono ${colorClasses}" title="Dni w tym statusie">
+            return `<div class="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono ${colorClasses} ${pulseClass}" title="Dni w tym statusie">
                 <i class="ph ${icon} text-[10px]"></i>
                 <span>${days}d</span>
             </div>`;
@@ -840,7 +849,7 @@
                     ` : ''}
                     <div class="flex items-center justify-between mt-3 gap-2">
                         <a href="/lead?id=${lead.id}" onclick="event.stopPropagation()" class="text-xs text-zinc-600 hover:text-blue-400 font-mono truncate block transition-colors">${lead.email}</a>
-                        ${getDaysInStatusBadge(daysInStatus)}
+                        ${getDaysInStatusBadge(daysInStatus, lead.status)}
                     </div>
                 </div>
             `;
