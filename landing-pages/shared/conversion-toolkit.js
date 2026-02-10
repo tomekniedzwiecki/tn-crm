@@ -34,7 +34,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   const ConversionToolkit = {
-    version: '1.1.2',
+    version: '1.2.0',
     config: {},
     state: {
       exitPopupShown: false,
@@ -297,7 +297,7 @@
           top: 0;
           left: 0;
           right: 0;
-          z-index: 101;
+          z-index: 9999;
           background: linear-gradient(135deg, var(--ct-primary) 0%, #E85A2A 100%);
           color: var(--ct-white);
           padding: 10px 24px;
@@ -802,15 +802,16 @@
           .ct-sticky-bar {
             display: none !important;
           }
+          /* Floating CTA on mobile - hidden (use mobile bar instead) */
+          .ct-floating-cta {
+            display: none !important;
+          }
           /* Mobile bottom bar */
           .ct-mobile-bar {
             display: block;
           }
-          .ct-floating-cta {
-            bottom: 80px;
-          }
           .ct-toast {
-            bottom: 90px;
+            bottom: 80px;
           }
           /* Trust badges mobile */
           .ct-trust-row {
