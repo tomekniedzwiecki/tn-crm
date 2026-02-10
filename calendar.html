@@ -774,6 +774,16 @@
 
         // Get leads with expected_close dates for calendar display
         function getDeadlineEvents() {
+            // Debug: log leads with expected_close
+            const leadsWithClose = leads.filter(l => l.expected_close);
+            console.log('Leads with expected_close:', leadsWithClose.length, leadsWithClose.map(l => ({
+                name: l.name || l.email,
+                expected_close: l.expected_close,
+                assigned_to: l.assigned_to,
+                status: l.status
+            })));
+            console.log('isAdmin:', isAdmin, 'selectedMemberId:', selectedMemberId, 'currentMember:', currentMember?.id);
+
             // Filter leads that have expected_close
             const filteredLeads = leads.filter(lead => {
                 if (!lead.expected_close) return false;
@@ -785,11 +795,16 @@
                     return lead.assigned_to === selectedMemberId;
                 }
 
+                // If admin with no selection, show all
+                if (isAdmin && !selectedMemberId) return true;
+
                 // If not admin, only show own leads
                 if (!isAdmin && lead.assigned_to !== currentMember?.id) return false;
 
                 return true;
             });
+
+            console.log('Filtered deadline leads:', filteredLeads.length);
 
             return filteredLeads.map(lead => ({
                 id: 'deadline_' + lead.id,
