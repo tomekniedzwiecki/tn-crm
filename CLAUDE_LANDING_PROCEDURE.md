@@ -549,6 +549,113 @@ Pełna dokumentacja: `/landing-pages/shared/README.md`
 
 **WAŻNE:** Toolkit automatycznie dodaje klasę `ct-has-urgency-bar` do body i przesuwa header o 52px (44px na mobile). Header landing page MUSI mieć `position: fixed` i `top: 0` aby to działało poprawnie. Urgency bar ma explicite ustawioną wysokość (nie padding) z flexbox centrowaniem zawartości.
 
+## Mobile-First Best Practices
+
+### Kluczowe zasady CSS dla mobile
+
+#### 1. Urgency Bar + Header Stack
+```css
+/* Toolkit automatycznie dodaje te style, ale landing page musi je respektować */
+
+/* Desktop: urgency bar 52px */
+body.ct-has-urgency-bar .header {
+  top: 52px !important;
+}
+body.ct-has-urgency-bar {
+  padding-top: 52px;
+}
+
+/* Mobile ≤768px: urgency bar 44px */
+@media (max-width: 768px) {
+  body.ct-has-urgency-bar .header {
+    top: 44px !important;
+  }
+  body.ct-has-urgency-bar {
+    padding-top: 44px;
+  }
+}
+```
+
+#### 2. Hero Padding z Urgency Bar
+```css
+/* Hero musi uwzględniać nagłówek + urgency bar */
+.hero {
+  padding-top: 160px; /* bazowy padding dla headera */
+}
+
+body.ct-has-urgency-bar .hero {
+  padding-top: 210px; /* +52px dla urgency */
+}
+
+@media (max-width: 1024px) {
+  body.ct-has-urgency-bar .hero { padding-top: 165px; }
+}
+
+@media (max-width: 768px) {
+  body.ct-has-urgency-bar .hero { padding-top: 125px; }
+}
+```
+
+#### 3. Mobile Bottom Bar vs Floating CTA
+- **Floating CTA** (`.ct-floating-cta`) - tylko desktop (>768px)
+- **Mobile Bottom Bar** (`.ct-mobile-bar`) - tylko mobile (≤768px)
+- NIE używaj własnego sticky-cta gdy toolkit jest włączony!
+
+```css
+/* Toolkit automatycznie ukrywa floating CTA na mobile */
+@media (max-width: 768px) {
+  .ct-floating-cta { display: none !important; }
+  .ct-mobile-bar { display: block; }
+}
+```
+
+#### 4. Body Padding dla Mobile Bar
+```css
+/* Toolkit dodaje to automatycznie, ale upewnij się że footer nie jest przycięty */
+@media (max-width: 768px) {
+  body { padding-bottom: 70px; }
+}
+```
+
+#### 5. Toast Positioning
+```css
+/* Toast musi być NAD mobile bar na mobile */
+@media (max-width: 768px) {
+  .ct-toast {
+    bottom: 100px; /* nad mobile bar */
+  }
+}
+```
+
+### Breakpoints Reference
+
+| Breakpoint | Urgency Bar | Header Offset | Użycie |
+|------------|-------------|---------------|--------|
+| >768px (desktop) | 52px | top: 52px | Floating CTA, Sticky Bar |
+| ≤768px (mobile) | 44px | top: 44px | Mobile Bottom Bar |
+| ≤480px (small) | 44px | top: 44px | Mniejsze fonty, spacing |
+| ≤380px (xs) | 44px | top: 44px | Minimal spacing |
+
+### Mobile Checklist
+
+- [ ] Header respektuje `top: 52px` (desktop) / `top: 44px` (mobile) gdy urgency bar aktywny
+- [ ] Hero ma dodatkowy padding dla urgency bar
+- [ ] NIE ma duplikatu sticky CTA (toolkit ma własny mobileBar)
+- [ ] Trust badges mają kompaktowy layout na mobile
+- [ ] Toast pojawia się nad mobile bar (bottom: 100px)
+- [ ] Body ma padding-bottom: 70px na mobile
+- [ ] Bento cards są w jednej kolumnie na mobile
+- [ ] FAQ accordion działa na touch
+- [ ] Hamburger menu działa i zamyka się po kliknięciu linku
+
+### Częste błędy do unikania
+
+1. **Padding zamiast height na urgency bar** - używaj explicite `height: 52px` z flexbox centering
+2. **Duplikat CTA** - nie dodawaj własnego sticky-cta gdy używasz Conversion Toolkit
+3. **Brak body padding-top** - gdy urgency bar jest aktywny, body potrzebuje padding-top
+4. **Floating CTA na mobile** - ukrywaj go, używaj mobileBar z toolkit
+5. **Toast pod mobile bar** - ustawiaj bottom: 100px na mobile
+
 ## Checklist przed oddaniem
 
 - [ ] Wszystkie sekcje obecne (header -> footer)
