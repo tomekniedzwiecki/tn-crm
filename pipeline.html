@@ -365,10 +365,31 @@
             `;
         }
 
+        function getCurrentFilters() {
+            return {
+                search: document.getElementById('filter-search')?.value?.trim() || '',
+                team: document.getElementById('filter-team')?.value || '',
+                source: document.getElementById('filter-source')?.value || '',
+                minValue: document.getElementById('filter-value-min')?.value || '',
+                maxValue: document.getElementById('filter-value-max')?.value || ''
+            };
+        }
+
         function getLeadPath(id) {
             const base = Sidebar.getBasePath();
             const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? `${base}/lead.html` : '/lead';
-            return `${basePath}?id=${id}`;
+
+            // Build URL with current filters
+            const filters = getCurrentFilters();
+            const params = new URLSearchParams({ id });
+
+            if (filters.search) params.set('f_search', filters.search);
+            if (filters.team) params.set('f_team', filters.team);
+            if (filters.source) params.set('f_source', filters.source);
+            if (filters.minValue) params.set('f_min', filters.minValue);
+            if (filters.maxValue) params.set('f_max', filters.maxValue);
+
+            return `${basePath}?${params.toString()}`;
         }
 
         async function checkAuth() {

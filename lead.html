@@ -1397,6 +1397,48 @@
             return params.get('id');
         }
 
+        function getFiltersFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                search: params.get('f_search') || '',
+                team: params.get('f_team') || '',
+                source: params.get('f_source') || '',
+                minValue: params.get('f_min') || '',
+                maxValue: params.get('f_max') || ''
+            };
+        }
+
+        function hasActiveFilters() {
+            const f = getFiltersFromUrl();
+            return !!(f.search || f.team || f.source || f.minValue || f.maxValue);
+        }
+
+        function buildLeadUrlWithFilters(leadId) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('id', leadId);
+            const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                ? `${getBasePath()}/lead.html`
+                : '/lead';
+            return `${basePath}?${params.toString()}`;
+        }
+
+        function getSourceKey(lead) {
+            if (!lead) return null;
+            const tracking = lead.tracking_data || {};
+            if (tracking.gclid || tracking.gbraid || tracking.wbraid) return 'google_ads';
+            if (tracking.fbclid) return 'meta_ads';
+            if (tracking.ttclid) return 'tiktok_ads';
+            if (lead.utm_source === 'manual') return 'manual';
+            if (lead.utm_source) {
+                const src = lead.utm_source.toLowerCase();
+                if (src.includes('google')) return 'google_ads';
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return 'meta_ads';
+                if (src.includes('tiktok')) return 'tiktok_ads';
+                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
+            }
+            return 'organic';
+        }
+
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('pl-PL', {
@@ -3780,27 +3822,58 @@
             }
         }
 
-        // Lead navigation (prev/next) - within same status
+        // Lead navigation (prev/next) - within same status, respecting pipeline filters
         async function setupLeadNavigation() {
             const currentId = getLeadId();
             if (!currentId || !lead) return;
 
             const currentStatus = lead.status || 'new';
-            const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-                ? `${getBasePath()}/lead.html`
-                : '/lead';
+            const filters = getFiltersFromUrl();
 
-            // Get all leads with same status, sorted by date in status (oldest first)
+            // Get all leads with same status (fetch more fields for filtering)
             const { data: statusLeads } = await supabaseClient
                 .from('leads')
-                .select('id, created_at, activities')
+                .select('id, created_at, activities, name, email, phone, value, assigned_to, utm_source, tracking_data')
                 .eq('status', currentStatus)
                 .order('created_at', { ascending: true });
 
             if (!statusLeads || statusLeads.length === 0) return;
 
+            // Apply filters from pipeline (same logic as pipeline.html)
+            let filteredLeads = statusLeads.filter(l => {
+                // Search filter (name, email, phone)
+                if (filters.search) {
+                    const searchLower = filters.search.toLowerCase();
+                    const nameMatch = (l.name || '').toLowerCase().includes(searchLower);
+                    const emailMatch = (l.email || '').toLowerCase().includes(searchLower);
+                    const phoneMatch = (l.phone || '').includes(filters.search);
+                    if (!nameMatch && !emailMatch && !phoneMatch) return false;
+                }
+
+                // Team member filter
+                if (filters.team && l.assigned_to !== filters.team) return false;
+
+                // Source filter
+                if (filters.source) {
+                    const leadSource = getSourceKey(l);
+                    if (leadSource !== filters.source) return false;
+                }
+
+                // Value range filter
+                if (filters.minValue) {
+                    const minVal = parseFloat(filters.minValue);
+                    if (!l.value || parseFloat(l.value) < minVal) return false;
+                }
+                if (filters.maxValue) {
+                    const maxVal = parseFloat(filters.maxValue);
+                    if (!l.value || parseFloat(l.value) > maxVal) return false;
+                }
+
+                return true;
+            });
+
             // Sort by date when entered current status (using activities)
-            const leadsWithStatusDate = statusLeads.map(l => {
+            const leadsWithStatusDate = filteredLeads.map(l => {
                 const activities = l.activities || [];
                 const statusChanges = activities
                     .filter(a => a.type === 'status_change')
@@ -3859,23 +3932,28 @@
             statusPosition.textContent = currentIndex + 1;
             statusTotal.textContent = leadsWithStatusDate.length;
 
+            // Show filter indicator if filters are active
+            if (hasActiveFilters()) {
+                statusLabel.textContent += ' (filtr)';
+            }
+
             if (prevLead) {
                 prevBtn.disabled = false;
-                prevBtn.onclick = () => { window.location.href = `${basePath}?id=${prevLead.id}`; };
+                prevBtn.onclick = () => { window.location.href = buildLeadUrlWithFilters(prevLead.id); };
             }
 
             if (nextLead) {
                 nextBtn.disabled = false;
-                nextBtn.onclick = () => { window.location.href = `${basePath}?id=${nextLead.id}`; };
+                nextBtn.onclick = () => { window.location.href = buildLeadUrlWithFilters(nextLead.id); };
             }
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
                 if (e.key === 'ArrowLeft' && prevLead) {
-                    window.location.href = `${basePath}?id=${prevLead.id}`;
+                    window.location.href = buildLeadUrlWithFilters(prevLead.id);
                 } else if (e.key === 'ArrowRight' && nextLead) {
-                    window.location.href = `${basePath}?id=${nextLead.id}`;
+                    window.location.href = buildLeadUrlWithFilters(nextLead.id);
                 }
             });
         }
