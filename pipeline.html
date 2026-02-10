@@ -158,6 +158,14 @@
 
             <span class="text-zinc-700">|</span>
 
+            <!-- Show closed leads toggle -->
+            <button id="show-closed-toggle" onclick="toggleClosedLeads()" class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 transition-colors">
+                <i id="closed-icon" class="ph ph-eye-slash"></i>
+                <span id="closed-label">Pokaż zamknięte</span>
+            </button>
+
+            <span class="text-zinc-700">|</span>
+
             <div class="text-xs text-zinc-500 font-mono">
                 <span id="filtered-count">0</span> / <span id="all-count">0</span> leadów
             </div>
@@ -525,6 +533,7 @@
 
         let filteredLeads = [];
         let sortDirection = 'asc'; // 'asc' = najstarsze na górze, 'desc' = najnowsze na górze
+        let showClosedLeads = false; // Hide lost/abandoned by default
 
         function toggleSort() {
             sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -536,6 +545,25 @@
             } else {
                 icon.className = 'ph ph-sort-descending';
                 label.textContent = 'Najnowsze';
+            }
+            renderPipeline();
+        }
+
+        function toggleClosedLeads() {
+            showClosedLeads = !showClosedLeads;
+            const btn = document.getElementById('show-closed-toggle');
+            const icon = document.getElementById('closed-icon');
+            const label = document.getElementById('closed-label');
+            if (showClosedLeads) {
+                btn.classList.remove('text-zinc-500');
+                btn.classList.add('text-zinc-300', 'border-zinc-600');
+                icon.className = 'ph ph-eye';
+                label.textContent = 'Ukryj zamknięte';
+            } else {
+                btn.classList.add('text-zinc-500');
+                btn.classList.remove('text-zinc-300', 'border-zinc-600');
+                icon.className = 'ph ph-eye-slash';
+                label.textContent = 'Pokaż zamknięte';
             }
             renderPipeline();
         }
@@ -681,22 +709,34 @@
         function renderPipeline() {
             const board = document.getElementById('pipeline-board');
 
-            // Calculate totals for filtered leads
+            // Filter stages based on showClosedLeads setting
+            const closedStages = ['lost', 'abandoned'];
+            const visibleStages = showClosedLeads
+                ? STAGES
+                : STAGES.filter(s => !closedStages.includes(s.id));
+
+            // Calculate totals for filtered leads (exclude closed if hidden)
             let totalValue = 0;
-            filteredLeads.forEach(lead => {
+            const visibleLeads = showClosedLeads
+                ? filteredLeads
+                : filteredLeads.filter(l => !closedStages.includes(l.status));
+            visibleLeads.forEach(lead => {
                 totalValue += getLeadValue(lead);
             });
             document.getElementById('total-value').textContent = formatCurrency(totalValue);
-            document.getElementById('total-deals').textContent = `${filteredLeads.length} leadów`;
+            document.getElementById('total-deals').textContent = `${visibleLeads.length} leadów`;
 
             // Render columns
-            board.innerHTML = STAGES.map(stage => {
+            board.innerHTML = visibleStages.map(stage => {
+                const isClosedStage = closedStages.includes(stage.id);
                 const stageLeads = filteredLeads
                     .filter(l => (l.status || 'new') === stage.id)
                     .sort((a, b) => {
                         const dateA = getLeadStatusDate(a);
                         const dateB = getLeadStatusDate(b);
-                        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                        // Closed stages always sort newest first, regardless of main sort setting
+                        const effectiveSort = isClosedStage ? 'desc' : sortDirection;
+                        return effectiveSort === 'asc' ? dateA - dateB : dateB - dateA;
                     });
                 const stageValue = stageLeads.reduce((sum, l) => sum + getLeadValue(l), 0);
 
