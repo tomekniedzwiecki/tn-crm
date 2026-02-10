@@ -1422,20 +1422,21 @@
             return `${basePath}?${params.toString()}`;
         }
 
+        // Same logic as getSource() in pipeline.html
         function getSourceKey(lead) {
             if (!lead) return null;
-            const tracking = lead.tracking_data || {};
-            if (tracking.gclid || tracking.gbraid || tracking.wbraid) return 'google_ads';
-            if (tracking.fbclid) return 'meta_ads';
-            if (tracking.ttclid) return 'tiktok_ads';
+            if (lead.gclid || lead.gbraid || lead.wbraid) return 'google';
+            if (lead.fbclid) return 'meta';
+            if (lead.ttclid) return 'tiktok';
             if (lead.utm_source === 'manual') return 'manual';
             if (lead.utm_source) {
                 const src = lead.utm_source.toLowerCase();
-                if (src.includes('google')) return 'google_ads';
-                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return 'meta_ads';
-                if (src.includes('tiktok')) return 'tiktok_ads';
+                if (src.includes('google')) return 'google';
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return 'meta';
+                if (src.includes('tiktok')) return 'tiktok';
                 if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
             }
+            if (lead.utm_medium === 'email') return 'email';
             return 'organic';
         }
 
@@ -3830,10 +3831,10 @@
             const currentStatus = lead.status || 'new';
             const filters = getFiltersFromUrl();
 
-            // Get all leads with same status (fetch more fields for filtering)
+            // Get all leads with same status (fetch all fields for filtering)
             const { data: statusLeads } = await supabaseClient
                 .from('leads')
-                .select('id, created_at, activities, name, email, phone, value, assigned_to, utm_source, tracking_data')
+                .select('*')
                 .eq('status', currentStatus)
                 .order('created_at', { ascending: true });
 
