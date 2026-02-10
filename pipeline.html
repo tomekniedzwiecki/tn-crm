@@ -320,6 +320,16 @@
         const STAGE_COLORS = ['emerald', 'blue', 'violet', 'amber', 'orange', 'cyan', 'pink'];
         const STAGE_ICONS = ['ph-user-plus', 'ph-chat-circle', 'ph-check-circle', 'ph-file-text', 'ph-handshake', 'ph-star', 'ph-flag'];
 
+        // Custom icons for specific stage IDs
+        const STAGE_ICON_OVERRIDES = {
+            'new': 'ph-user-plus',
+            'contacted': 'ph-chat-circle',
+            'qualified': 'ph-check-circle',
+            'proposal': 'ph-file-text',
+            'negotiation': 'ph-handshake',
+            'waiting': 'ph-hourglass'
+        };
+
         let pipelineStages = [...DEFAULT_STAGES];
         let STAGES = []; // Combined stages (pipeline + terminal)
 
@@ -343,7 +353,7 @@
             STAGES = pipelineStages.map((stage, index) => ({
                 ...stage,
                 color: STAGE_COLORS[index % STAGE_COLORS.length],
-                icon: STAGE_ICONS[index % STAGE_ICONS.length]
+                icon: STAGE_ICON_OVERRIDES[stage.id] || STAGE_ICONS[index % STAGE_ICONS.length]
             }));
 
             // Add terminal stages
