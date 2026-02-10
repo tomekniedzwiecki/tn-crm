@@ -291,6 +291,57 @@ function formatZapisyLeadMessage(data: {
     })
   }
 
+  // Action buttons
+  const actionElements: any[] = []
+
+  // "Zobacz szczegóły" button - only if we have lead_id
+  if (data.lead_id) {
+    actionElements.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: '📋 Zobacz szczegóły',
+        emoji: true
+      },
+      url: `https://crm.tomekniedzwiecki.pl/lead?id=${data.lead_id}`,
+      action_id: 'view_lead'
+    })
+  }
+
+  // "Napisz na WhatsApp" button - only if we have phone
+  if (data.phone) {
+    // Format phone for WhatsApp: remove spaces, dashes, and ensure country code
+    let waPhone = data.phone.replace(/[\s\-\(\)]/g, '')
+    // If starts with 0, replace with Poland code
+    if (waPhone.startsWith('0')) {
+      waPhone = '48' + waPhone.substring(1)
+    }
+    // If doesn't start with +, assume Poland
+    if (!waPhone.startsWith('+') && !waPhone.startsWith('48')) {
+      waPhone = '48' + waPhone
+    }
+    // Remove + for wa.me link
+    waPhone = waPhone.replace('+', '')
+
+    actionElements.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: '💬 WhatsApp',
+        emoji: true
+      },
+      url: `https://wa.me/${waPhone}`,
+      action_id: 'whatsapp'
+    })
+  }
+
+  if (actionElements.length > 0) {
+    blocks.push({
+      type: 'actions',
+      elements: actionElements
+    })
+  }
+
   // Timestamp
   blocks.push({
     type: 'context',
