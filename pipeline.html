@@ -711,9 +711,19 @@
             // Render columns
             board.innerHTML = STAGES.map(stage => {
                 const isTerminalStage = terminalStages.includes(stage.id);
+                const isWaitingStage = stage.id === 'waiting';
                 const stageLeads = filteredLeads
                     .filter(l => (l.status || 'new') === stage.id)
                     .sort((a, b) => {
+                        // Waiting stage: sort by expected_close (soonest first, nulls at end)
+                        if (isWaitingStage) {
+                            const closeA = a.expected_close ? new Date(a.expected_close) : null;
+                            const closeB = b.expected_close ? new Date(b.expected_close) : null;
+                            if (!closeA && !closeB) return 0;
+                            if (!closeA) return 1; // nulls at end
+                            if (!closeB) return -1;
+                            return closeA - closeB; // soonest first
+                        }
                         const dateA = getLeadStatusDate(a);
                         const dateB = getLeadStatusDate(b);
                         // Terminal stages (won/lost/abandoned) always sort newest first
