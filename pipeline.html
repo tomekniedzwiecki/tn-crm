@@ -681,8 +681,8 @@
         function renderPipeline() {
             const board = document.getElementById('pipeline-board');
 
-            // Closed stages always sort newest first
-            const closedStages = ['lost', 'abandoned'];
+            // Terminal stages always sort newest first
+            const terminalStages = ['won', 'lost', 'abandoned'];
 
             // Calculate totals for filtered leads
             let totalValue = 0;
@@ -694,14 +694,14 @@
 
             // Render columns
             board.innerHTML = STAGES.map(stage => {
-                const isClosedStage = closedStages.includes(stage.id);
+                const isTerminalStage = terminalStages.includes(stage.id);
                 const stageLeads = filteredLeads
                     .filter(l => (l.status || 'new') === stage.id)
                     .sort((a, b) => {
                         const dateA = getLeadStatusDate(a);
                         const dateB = getLeadStatusDate(b);
-                        // Closed stages always sort newest first, regardless of main sort setting
-                        const effectiveSort = isClosedStage ? 'desc' : sortDirection;
+                        // Terminal stages (won/lost/abandoned) always sort newest first
+                        const effectiveSort = isTerminalStage ? 'desc' : sortDirection;
                         return effectiveSort === 'asc' ? dateA - dateB : dateB - dateA;
                     });
                 const stageValue = stageLeads.reduce((sum, l) => sum + getLeadValue(l), 0);
