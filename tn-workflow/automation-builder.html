@@ -671,9 +671,19 @@
 
         function getFilterLabel(filters) {
             if (!filters || Object.keys(filters).length === 0) return null;
-            if (filters.offer_type === 'full') return 'Full';
-            if (filters.offer_type === 'starter') return 'Starter';
-            return null;
+
+            const labels = [];
+
+            if (filters.offer_type === 'full') labels.push('pełen pakiet');
+            if (filters.offer_type === 'starter') labels.push('starter');
+
+            if (filters.stage_index !== undefined) {
+                const stageNames = ['Brief', 'Branding', 'Produkt', 'Sales Page', 'Finalizacja'];
+                const idx = parseInt(filters.stage_index);
+                if (stageNames[idx]) labels.push(`Etap: ${stageNames[idx]}`);
+            }
+
+            return labels.length > 0 ? labels.join(' | ') : null;
         }
 
         // ============================================
@@ -791,20 +801,53 @@
         }
 
         function renderTriggerFilters() {
-            if (!flow.trigger_type.startsWith('offer_')) {
+            // Triggers that should have offer type filter
+            const offerRelatedTriggers = [
+                'offer_created', 'offer_viewed', 'offer_expired',
+                'payment_received', 'workflow_created', 'contract_signed'
+            ];
+
+            // Triggers that should have stage filter
+            const stageRelatedTriggers = ['stage_completed'];
+
+            let html = '';
+
+            // Offer type filter
+            if (offerRelatedTriggers.includes(flow.trigger_type)) {
+                html += `
+                    <div>
+                        <label class="block text-sm text-[#888] mb-2">Typ oferty</label>
+                        <select id="filter-offer-type" class="input-field" onchange="updateTriggerFilter()">
+                            <option value="" ${!flow.trigger_filters?.offer_type ? 'selected' : ''}>Wszystkie typy</option>
+                            <option value="starter" ${flow.trigger_filters?.offer_type === 'starter' ? 'selected' : ''}>starter</option>
+                            <option value="full" ${flow.trigger_filters?.offer_type === 'full' ? 'selected' : ''}>pełen pakiet</option>
+                        </select>
+                    </div>
+                `;
+            }
+
+            // Stage filter for stage_completed
+            if (stageRelatedTriggers.includes(flow.trigger_type)) {
+                html += `
+                    <div>
+                        <label class="block text-sm text-[#888] mb-2">Etap</label>
+                        <select id="filter-stage" class="input-field" onchange="updateTriggerFilter()">
+                            <option value="" ${!flow.trigger_filters?.stage_index ? 'selected' : ''}>Dowolny etap</option>
+                            <option value="0" ${flow.trigger_filters?.stage_index === '0' ? 'selected' : ''}>Etap 1 - Brief</option>
+                            <option value="1" ${flow.trigger_filters?.stage_index === '1' ? 'selected' : ''}>Etap 2 - Branding</option>
+                            <option value="2" ${flow.trigger_filters?.stage_index === '2' ? 'selected' : ''}>Etap 3 - Produkt</option>
+                            <option value="3" ${flow.trigger_filters?.stage_index === '3' ? 'selected' : ''}>Etap 4 - Sales Page</option>
+                            <option value="4" ${flow.trigger_filters?.stage_index === '4' ? 'selected' : ''}>Etap 5 - Finalizacja</option>
+                        </select>
+                    </div>
+                `;
+            }
+
+            if (!html) {
                 return '<p class="text-sm text-[#666]">Brak dodatkowych filtrów dla tego triggera.</p>';
             }
 
-            return `
-                <div>
-                    <label class="block text-sm text-[#888] mb-2">Typ oferty</label>
-                    <select id="filter-offer-type" class="input-field" onchange="updateTriggerFilter()">
-                        <option value="" ${!flow.trigger_filters?.offer_type ? 'selected' : ''}>Wszystkie typy</option>
-                        <option value="full" ${flow.trigger_filters?.offer_type === 'full' ? 'selected' : ''}>Full (pełny pakiet)</option>
-                        <option value="starter" ${flow.trigger_filters?.offer_type === 'starter' ? 'selected' : ''}>Starter</option>
-                    </select>
-                </div>
-            `;
+            return html;
         }
 
         function updateTrigger() {
@@ -815,12 +858,19 @@
         }
 
         function updateTriggerFilter() {
+            const filters = {};
+
             const offerType = document.getElementById('filter-offer-type')?.value;
             if (offerType) {
-                flow.trigger_filters = { offer_type: offerType };
-            } else {
-                flow.trigger_filters = {};
+                filters.offer_type = offerType;
             }
+
+            const stageIndex = document.getElementById('filter-stage')?.value;
+            if (stageIndex) {
+                filters.stage_index = stageIndex;
+            }
+
+            flow.trigger_filters = filters;
             markAsChanged();
             renderFlow();
         }

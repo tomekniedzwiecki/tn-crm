@@ -241,6 +241,19 @@ Deno.serve(async (req) => {
 
     console.log(`[workflow-stage-completed] Email sent to ${workflow.customer_email}`)
 
+    // Try to find lead by customer email
+    let leadId: string | null = null
+    const { data: foundLead } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('email', workflow.customer_email)
+      .limit(1)
+      .single()
+
+    if (foundLead) {
+      leadId = foundLead.id
+    }
+
     // Log to email_messages
     await supabase
       .from('email_messages')
@@ -251,14 +264,11 @@ Deno.serve(async (req) => {
         to_email: workflow.customer_email,
         subject: subject,
         body_html: body_html,
+        lead_id: leadId,
         resend_id: result.id,
         status: 'sent',
         sent_at: new Date().toISOString(),
-        metadata: {
-          type: 'workflow_stage_completed',
-          workflow_id,
-          milestone_id
-        }
+        email_type: 'workflow_stage_completed'
       })
 
     return new Response(

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historia emaili | TN Workflow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #000; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* Table styles */
+        .email-row { transition: background 0.15s; }
+        .email-row:hover { background: rgba(255,255,255,0.02); }
+
+        /* Status badges */
+        .status-sent { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .status-delivered { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .status-opened { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+        .status-clicked { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+        .status-bounced { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+
+        /* Modal */
+        .modal-backdrop {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen">
+    <div id="sidebar"></div>
+
+    <main id="main-content" class="transition-all duration-300 lg:ml-56">
+        <div class="p-6 lg:p-8 max-w-[1600px] mx-auto">
+            <!-- Header -->
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl font-semibold text-white">Historia emaili</h1>
+                    <p class="text-zinc-500 text-sm mt-1">Wszystkie wysłane wiadomości z systemu</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="flex items-center gap-3">
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Wysłane</div>
+                        <div id="stat-sent" class="text-lg font-mono text-blue-400">-</div>
+                    </div>
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Otwarte</div>
+                        <div id="stat-opened" class="text-lg font-mono text-purple-400">-</div>
+                    </div>
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Kliknięte</div>
+                        <div id="stat-clicked" class="text-lg font-mono text-pink-400">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-3 mb-6">
+                <!-- Email Type Filter -->
+                <select id="filter-type" onchange="applyFilters()" class="bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
+                    <option value="">Wszystkie typy</option>
+                    <option value="offer_created">Oferta utworzona</option>
+                    <option value="offer_reminder_halfway">Przypomnienie oferty</option>
+                    <option value="offer_expired">Oferta wygasła</option>
+                    <option value="workflow_created">Workflow utworzony</option>
+                    <option value="workflow_stage_completed">Etap ukończony</option>
+                    <option value="branding_delivered">Branding dostarczony</option>
+                    <option value="sales_page_shared">Strona sprzedażowa</option>
+                    <option value="report_published">Raport opublikowany</option>
+                    <option value="products_shared">Produkty udostępnione</option>
+                    <option value="contract_sent">Umowa wysłana</option>
+                    <option value="invoice_sent">Faktura wysłana</option>
+                    <option value="direct">Bezpośredni</option>
+                </select>
+
+                <!-- Status Filter -->
+                <select id="filter-status" onchange="applyFilters()" class="bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
+                    <option value="">Wszystkie statusy</option>
+                    <option value="sent">Wysłane</option>
+                    <option value="delivered">Dostarczone</option>
+                    <option value="opened">Otwarte</option>
+                    <option value="clicked">Kliknięte</option>
+                    <option value="bounced">Odrzucone</option>
+                </select>
+
+                <!-- Search -->
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" id="search-input" onkeyup="debounceSearch()" placeholder="Szukaj po emailu lub temacie..."
+                           class="w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20">
+                </div>
+
+                <!-- Refresh -->
+                <button onclick="loadEmails()" class="p-2 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-arrows-clockwise text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Email Table -->
+            <div class="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-white/5 text-left">
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Status</th>
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Odbiorca</th>
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Temat</th>
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Typ</th>
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Wysłano</th>
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Tracking</th>
+                                <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="emails-table">
+                            <tr>
+                                <td colspan="7" class="px-4 py-12 text-center text-zinc-600">
+                                    <i class="ph ph-circle-notch animate-spin text-2xl"></i>
+                                    <p class="mt-2 text-sm">Ładowanie...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="flex items-center justify-between px-4 py-3 border-t border-white/5">
+                    <div class="text-xs text-zinc-500">
+                        Pokazuję <span id="showing-count">0</span> z <span id="total-count">0</span> emaili
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="prev-btn" onclick="prevPage()" disabled class="px-3 py-1.5 text-xs text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                            <i class="ph ph-caret-left"></i> Poprzednie
+                        </button>
+                        <span id="page-info" class="text-xs text-zinc-500">Strona 1</span>
+                        <button id="next-btn" onclick="nextPage()" disabled class="px-3 py-1.5 text-xs text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                            Następne <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Email Detail Modal -->
+    <div id="email-modal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop absolute inset-0" onclick="closeEmailModal()"></div>
+        <div class="absolute inset-4 lg:inset-12 bg-zinc-900 border border-white/10 rounded-xl overflow-hidden flex flex-col animate-fadeIn">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                <h3 id="modal-subject" class="text-lg font-medium text-white truncate"></h3>
+                <button onclick="closeEmailModal()" class="p-2 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-auto p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Email Content -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-black/30 rounded-lg p-4 mb-4">
+                            <div class="flex items-center gap-4 text-sm">
+                                <div>
+                                    <span class="text-zinc-500">Od:</span>
+                                    <span id="modal-from" class="text-white ml-1"></span>
+                                </div>
+                                <div>
+                                    <span class="text-zinc-500">Do:</span>
+                                    <span id="modal-to" class="text-white ml-1"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="modal-body" class="prose prose-invert prose-sm max-w-none bg-white text-black rounded-lg p-6"></div>
+                    </div>
+
+                    <!-- Email Info -->
+                    <div class="space-y-4">
+                        <div class="bg-black/30 rounded-lg p-4">
+                            <h4 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Szczegóły</h4>
+                            <dl class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Status</dt>
+                                    <dd id="modal-status"></dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Typ</dt>
+                                    <dd id="modal-type" class="text-white"></dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Wysłano</dt>
+                                    <dd id="modal-sent-at" class="text-white font-mono text-xs"></dd>
+                                </div>
+                                <div id="modal-lead-row" class="flex justify-between hidden">
+                                    <dt class="text-zinc-500">Lead</dt>
+                                    <dd><a id="modal-lead-link" href="#" class="text-emerald-400 hover:underline"></a></dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <div class="bg-black/30 rounded-lg p-4">
+                            <h4 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Tracking</h4>
+                            <dl class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Dostarczono</dt>
+                                    <dd id="modal-delivered" class="text-white font-mono text-xs"></dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Otwarto</dt>
+                                    <dd id="modal-opened" class="text-white font-mono text-xs"></dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Otwarć</dt>
+                                    <dd id="modal-open-count" class="text-white font-mono"></dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Kliknięto</dt>
+                                    <dd id="modal-clicked" class="text-white font-mono text-xs"></dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-zinc-500">Kliknięć</dt>
+                                    <dd id="modal-click-count" class="text-white font-mono"></dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <div id="modal-clicks-section" class="bg-black/30 rounded-lg p-4 hidden">
+                            <h4 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Kliknięte linki</h4>
+                            <ul id="modal-clicked-links" class="space-y-2 text-xs"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../components/shared-sidebar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // State
+        let emails = [];
+        let currentPage = 1;
+        const pageSize = 50;
+        let totalCount = 0;
+        let searchTimeout = null;
+
+        // Email type labels
+        const EMAIL_TYPE_LABELS = {
+            'offer_created': 'Oferta utworzona',
+            'offer_reminder_halfway': 'Przypomnienie',
+            'offer_expired': 'Oferta wygasła',
+            'workflow_created': 'Workflow',
+            'workflow_stage_completed': 'Etap ukończony',
+            'branding_delivered': 'Branding',
+            'sales_page_shared': 'Strona sprzedażowa',
+            'report_published': 'Raport',
+            'products_shared': 'Produkty',
+            'contract_sent': 'Umowa',
+            'invoice_sent': 'Faktura',
+            'direct': 'Bezpośredni'
+        };
+
+        // Status labels
+        const STATUS_LABELS = {
+            'sent': 'Wysłany',
+            'delivered': 'Dostarczony',
+            'opened': 'Otwarty',
+            'clicked': 'Kliknięty',
+            'bounced': 'Odrzucony',
+            'failed': 'Błąd'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderSidebar({ containerId: 'sidebar', appId: 'workflow' });
+
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = '/login';
+                return;
+            }
+
+            await loadEmails();
+            await loadStats();
+        });
+
+        async function loadStats() {
+            try {
+                const { count: sentCount } = await sb
+                    .from('email_messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('direction', 'outbound');
+
+                const { count: openedCount } = await sb
+                    .from('email_messages')
+                    .select('*', { count: 'exact', head: true })
+                    .not('opened_at', 'is', null);
+
+                const { count: clickedCount } = await sb
+                    .from('email_messages')
+                    .select('*', { count: 'exact', head: true })
+                    .not('clicked_at', 'is', null);
+
+                document.getElementById('stat-sent').textContent = sentCount || 0;
+                document.getElementById('stat-opened').textContent = openedCount || 0;
+                document.getElementById('stat-clicked').textContent = clickedCount || 0;
+            } catch (e) {
+                console.error('Error loading stats:', e);
+            }
+        }
+
+        async function loadEmails() {
+            const typeFilter = document.getElementById('filter-type').value;
+            const statusFilter = document.getElementById('filter-status').value;
+            const searchQuery = document.getElementById('search-input').value.trim();
+
+            try {
+                let query = sb
+                    .from('email_messages')
+                    .select(`
+                        id, direction, from_email, from_name, to_email, to_name,
+                        subject, body_html, status, email_type,
+                        sent_at, delivered_at, opened_at, opened_count,
+                        clicked_at, clicked_count, clicked_links, bounced_at,
+                        lead_id, created_at
+                    `, { count: 'exact' })
+                    .eq('direction', 'outbound')
+                    .order('created_at', { ascending: false })
+                    .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+                if (typeFilter) {
+                    query = query.eq('email_type', typeFilter);
+                }
+
+                if (statusFilter) {
+                    query = query.eq('status', statusFilter);
+                }
+
+                if (searchQuery) {
+                    query = query.or(`to_email.ilike.%${searchQuery}%,subject.ilike.%${searchQuery}%`);
+                }
+
+                const { data, error, count } = await query;
+
+                if (error) throw error;
+
+                emails = data || [];
+                totalCount = count || 0;
+                renderEmails();
+                updatePagination();
+            } catch (e) {
+                console.error('Error loading emails:', e);
+                document.getElementById('emails-table').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-red-400">
+                            <i class="ph ph-warning text-2xl"></i>
+                            <p class="mt-2 text-sm">Błąd ładowania emaili</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderEmails() {
+            const tbody = document.getElementById('emails-table');
+
+            if (emails.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-zinc-600">
+                            <i class="ph ph-envelope-simple text-3xl"></i>
+                            <p class="mt-2 text-sm">Brak emaili do wyświetlenia</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = emails.map(email => {
+                const statusClass = `status-${email.status}`;
+                const statusLabel = STATUS_LABELS[email.status] || email.status;
+                const typeLabel = EMAIL_TYPE_LABELS[email.email_type] || email.email_type || '-';
+
+                const trackingIcons = [];
+                if (email.delivered_at) trackingIcons.push('<i class="ph ph-check text-emerald-400" title="Dostarczono"></i>');
+                if (email.opened_at) trackingIcons.push(`<i class="ph ph-eye text-purple-400" title="Otwarto ${email.opened_count}x"></i>`);
+                if (email.clicked_at) trackingIcons.push(`<i class="ph ph-cursor-click text-pink-400" title="Kliknięto ${email.clicked_count}x"></i>`);
+                if (email.bounced_at) trackingIcons.push('<i class="ph ph-x-circle text-red-400" title="Odrzucono"></i>');
+
+                return `
+                    <tr class="email-row border-b border-white/5 cursor-pointer" onclick="openEmailModal('${email.id}')">
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${statusClass}">
+                                ${statusLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm text-white truncate max-w-[200px]">${DOMPurify.sanitize(email.to_email)}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm text-white truncate max-w-[300px]">${DOMPurify.sanitize(email.subject || '(bez tematu)')}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs text-zinc-400">${typeLabel}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs text-zinc-500 font-mono">${formatDate(email.sent_at || email.created_at)}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-1.5">
+                                ${trackingIcons.join('') || '<span class="text-zinc-600">-</span>'}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <i class="ph ph-caret-right text-zinc-600"></i>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const showingStart = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const showingEnd = Math.min(currentPage * pageSize, totalCount);
+
+            document.getElementById('showing-count').textContent = `${showingStart}-${showingEnd}`;
+            document.getElementById('total-count').textContent = totalCount;
+            document.getElementById('page-info').textContent = `Strona ${currentPage} z ${totalPages || 1}`;
+
+            document.getElementById('prev-btn').disabled = currentPage <= 1;
+            document.getElementById('next-btn').disabled = currentPage >= totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadEmails();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadEmails();
+            }
+        }
+
+        function applyFilters() {
+            currentPage = 1;
+            loadEmails();
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadEmails();
+            }, 300);
+        }
+
+        function openEmailModal(emailId) {
+            const email = emails.find(e => e.id === emailId);
+            if (!email) return;
+
+            document.getElementById('modal-subject').textContent = email.subject || '(bez tematu)';
+            document.getElementById('modal-from').textContent = email.from_name ? `${email.from_name} <${email.from_email}>` : email.from_email;
+            document.getElementById('modal-to').textContent = email.to_name ? `${email.to_name} <${email.to_email}>` : email.to_email;
+            document.getElementById('modal-body').innerHTML = email.body_html || '<p class="text-zinc-500">Brak treści</p>';
+
+            // Status
+            const statusClass = `status-${email.status}`;
+            const statusLabel = STATUS_LABELS[email.status] || email.status;
+            document.getElementById('modal-status').innerHTML = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${statusClass}">${statusLabel}</span>`;
+
+            document.getElementById('modal-type').textContent = EMAIL_TYPE_LABELS[email.email_type] || email.email_type || '-';
+            document.getElementById('modal-sent-at').textContent = formatDateTime(email.sent_at || email.created_at);
+
+            // Lead link
+            const leadRow = document.getElementById('modal-lead-row');
+            const leadLink = document.getElementById('modal-lead-link');
+            if (email.lead_id) {
+                leadRow.classList.remove('hidden');
+                leadLink.href = `/lead?id=${email.lead_id}`;
+                leadLink.textContent = 'Zobacz lead';
+            } else {
+                leadRow.classList.add('hidden');
+            }
+
+            // Tracking
+            document.getElementById('modal-delivered').textContent = email.delivered_at ? formatDateTime(email.delivered_at) : '-';
+            document.getElementById('modal-opened').textContent = email.opened_at ? formatDateTime(email.opened_at) : '-';
+            document.getElementById('modal-open-count').textContent = email.opened_count || '0';
+            document.getElementById('modal-clicked').textContent = email.clicked_at ? formatDateTime(email.clicked_at) : '-';
+            document.getElementById('modal-click-count').textContent = email.clicked_count || '0';
+
+            // Clicked links
+            const clicksSection = document.getElementById('modal-clicks-section');
+            const clicksList = document.getElementById('modal-clicked-links');
+            if (email.clicked_links && email.clicked_links.length > 0) {
+                clicksSection.classList.remove('hidden');
+                clicksList.innerHTML = email.clicked_links.map(click => `
+                    <li class="text-zinc-400 truncate">
+                        <i class="ph ph-link text-zinc-600 mr-1"></i>
+                        <a href="${DOMPurify.sanitize(click.link)}" target="_blank" class="hover:text-white">${DOMPurify.sanitize(click.link)}</a>
+                    </li>
+                `).join('');
+            } else {
+                clicksSection.classList.add('hidden');
+            }
+
+            document.getElementById('email-modal').classList.remove('hidden');
+        }
+
+        function closeEmailModal() {
+            document.getElementById('email-modal').classList.add('hidden');
+        }
+
+        // Keyboard shortcut to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEmailModal();
+            }
+        });
+
+        // Helpers
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleString('pl-PL', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    </script>
+</body>
+</html>

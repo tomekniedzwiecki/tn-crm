@@ -57,3 +57,30 @@ Kiedy uzytkownik mowi "zrob landing dla workflow X":
 6. Zapisz do `landing-pages/[nazwa-marki]/index.html`
 
 Wzorce: `landing-pages/vibestrike/` (ciemny), `landing-pages/dentaflow/` (jasny).
+
+## Supabase Edge Functions
+
+### Deploy
+Wymagany `SUPABASE_ACCESS_TOKEN` w zmiennych srodowiskowych lub zalogowanie przez `npx supabase login`.
+
+Token mozna wygenerowac: https://supabase.com/dashboard/account/tokens
+
+```bash
+# Deploy wszystkich funkcji
+npm run deploy:functions
+
+# Deploy pojedynczej funkcji
+npm run deploy:send-email
+npm run deploy:resend-webhook
+npm run deploy:offer-cron
+npm run deploy:workflow-stage
+```
+
+### Lokalizacja funkcji
+`supabase/functions/[nazwa-funkcji]/index.ts`
+
+Glowne funkcje:
+- `send-email` - wysylanie emaili przez Resend
+- `resend-webhook` - odbieranie webhookow z Resend (open/click tracking)
+- `offer-emails-cron` - automatyczne maile ofertowe (cron)
+- `workflow-stage-completed` - powiadomienia o ukonczeniu etapu

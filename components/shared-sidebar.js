@@ -52,6 +52,7 @@ const NAV_ITEMS_WORKFLOW = [
     { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty' },
     { id: 'products', icon: 'ph-package', label: 'Produkty' },
     { id: 'automations', icon: 'ph-lightning', label: 'Automatyzacje' },
+    { id: 'email-log', icon: 'ph-envelope', label: 'Historia emaili' },
 ];
 
 const NAV_ITEMS_TODO = [

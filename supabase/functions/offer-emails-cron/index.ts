@@ -348,7 +348,8 @@ Deno.serve(async (req) => {
             lead_id: lead.id,
             resend_id: result.id,
             status: 'sent',
-            sent_at: sentAt
+            sent_at: sentAt,
+            email_type: scheduledEmail.email_type
           })
 
         totalSent++

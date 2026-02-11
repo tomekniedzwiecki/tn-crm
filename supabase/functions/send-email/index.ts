@@ -203,6 +203,7 @@ Deno.serve(async (req) => {
     let recipientEmail: string
     let leadId: string | null = null
     let senderName: string = fromNameTransactional
+    let emailType: string | null = null
 
     // Track sender's direct email for reply-to
     let senderDirectEmail: string | null = null
@@ -216,6 +217,7 @@ Deno.serve(async (req) => {
       senderName = reqBody.sender_name || 'Tomek Niedzwiecki'
       finalBody = reqBody.no_signature ? reqBody.html : reqBody.html + getEmailSignature(senderName)
       leadId = reqBody.lead_id || null
+      emailType = 'direct'
 
       // Custom reply_to takes priority (for test emails, outreach, etc.)
       if (reqBody.reply_to) {
@@ -238,6 +240,7 @@ Deno.serve(async (req) => {
     } else {
       // Template-based format
       const { type, data } = reqBody
+      emailType = type
       console.log('[send-email] Template mode, type:', type, 'Email:', data?.email)
 
       if (!type || !data) {
@@ -378,6 +381,22 @@ Deno.serve(async (req) => {
 
     // Save to email_messages table for history
     const sentAt = new Date().toISOString()
+
+    // If lead_id not provided, try to find lead by recipient email
+    if (!leadId) {
+      const { data: foundLead } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('email', recipientEmail)
+        .limit(1)
+        .single()
+
+      if (foundLead) {
+        leadId = foundLead.id
+        console.log('[send-email] Found lead by email:', leadId)
+      }
+    }
+
     await supabase
       .from('email_messages')
       .insert({
@@ -390,7 +409,8 @@ Deno.serve(async (req) => {
         lead_id: leadId,
         resend_id: result.id,
         status: 'sent',
-        sent_at: sentAt
+        sent_at: sentAt,
+        email_type: emailType
       })
 
     return new Response(
