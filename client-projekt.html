@@ -417,23 +417,100 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* WhatsApp Voice Message */
-        .whatsapp-voice-message {
-            background: #025144;
-            border-radius: 8px;
-            padding: 8px 12px;
-            max-width: 320px;
+        /* WhatsApp Voice Message Player */
+        .whatsapp-voice-player {
+            background: linear-gradient(135deg, #075e54 0%, #054d44 100%);
+            border-radius: 12px;
+            padding: 12px 16px;
+            max-width: 360px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .voice-waveform-container {
+            position: relative;
+            height: 32px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .voice-waveform-container:hover .voice-scrubber {
+            opacity: 1;
         }
         .voice-bar {
             flex: 1;
             min-width: 2px;
-            max-width: 3px;
-            background: #57967f;
-            border-radius: 1px;
-            transition: background 0.1s ease;
+            max-width: 4px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 2px;
+            transition: background 0.15s ease, transform 0.1s ease;
         }
         .voice-bar.played {
-            background: #b5dbca;
+            background: rgba(255,255,255,0.95);
+        }
+        .voice-scrubber {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .voice-waveform-container:active .voice-scrubber,
+        .voice-waveform-container.seeking .voice-scrubber {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+        .voice-play-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .voice-play-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: scale(1.05);
+        }
+        .voice-play-btn:active {
+            transform: scale(0.95);
+        }
+        .voice-play-btn.playing {
+            background: rgba(255,255,255,0.25);
+        }
+        @keyframes voicePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+            50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+        }
+        .voice-play-btn.playing {
+            animation: voicePulse 2s ease-in-out infinite;
+        }
+        .voice-time {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: 11px;
+            color: rgba(255,255,255,0.7);
+            min-width: 36px;
+            text-align: right;
+        }
+        .voice-time:first-child {
+            text-align: left;
+        }
+        .voice-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -708,14 +785,6 @@
                     <button onclick="switchTab('strona')" data-tab="strona" class="sidebar-btn">
                         <i class="ph ph-globe"></i> Strona
                     </button>
-                    <button onclick="switchTab('materialy')" data-tab="materialy" class="sidebar-btn">
-                        <i class="ph ph-folder-open"></i> Materiały
-                    </button>
-                    <button onclick="switchTab('komentarze')" data-tab="komentarze" class="sidebar-btn relative">
-                        <i class="ph ph-chat-circle-text"></i> Komentarze
-                        <span id="comments-badge" class="hidden ml-auto bg-[#00d084] text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
-                    </button>
-
                     <!-- Etap 2 - Video -->
                     <div id="video-stage-desktop" class="pt-4 mt-4 border-t border-[#1a1a1a] hidden">
                         <span class="text-[10px] text-[#444] uppercase tracking-wider px-3 mb-2 block">Etap 2</span>
@@ -772,12 +841,6 @@
                         </button>
                         <button onclick="switchTab('strona');toggleMobileMenu()" data-tab="strona" class="sidebar-btn">
                             <i class="ph ph-globe"></i> Strona
-                        </button>
-                        <button onclick="switchTab('materialy');toggleMobileMenu()" data-tab="materialy" class="sidebar-btn">
-                            <i class="ph ph-folder-open"></i> Materiały
-                        </button>
-                        <button onclick="switchTab('komentarze');toggleMobileMenu()" data-tab="komentarze" class="sidebar-btn">
-                            <i class="ph ph-chat-circle-text"></i> Komentarze
                         </button>
                         <!-- Etap 2 - Video -->
                         <div id="video-stage-mobile" class="pt-3 mt-3 border-t border-[#1a1a1a] hidden">
@@ -839,8 +902,8 @@
                     </div>
                 </div>
 
-                <!-- Milestones -->
-                <div>
+                <!-- Milestones - hidden from client view -->
+                <div class="hidden">
                     <h2 class="section-title">Etapy realizacji</h2>
                     <div id="milestones-container" class="space-y-3">
                         <!-- Milestones rendered here -->
@@ -1203,36 +1266,35 @@
                         </div>
 
                         <!-- WhatsApp-style Audio Player -->
-                        <div class="whatsapp-voice-message">
-                            <div class="flex items-center gap-2">
+                        <div class="whatsapp-voice-player">
+                            <div class="flex items-center gap-3">
                                 <!-- Avatar -->
-                                <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 shadow-md">
+                                <div class="voice-avatar">
                                     <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" class="w-full h-full object-cover">
                                 </div>
 
                                 <!-- Play Button -->
-                                <button id="voice-play-btn" onclick="toggleVoiceMessage()" class="w-8 h-8 flex items-center justify-center flex-shrink-0 hover:opacity-80 transition-opacity">
-                                    <i id="voice-play-icon" class="ph-fill ph-play text-[#00a884] text-2xl"></i>
+                                <button id="voice-play-btn" onclick="toggleVoiceMessage()" class="voice-play-btn">
+                                    <i id="voice-play-icon" class="ph-fill ph-play text-white text-xl"></i>
                                 </button>
 
-                                <!-- Waveform & Time -->
-                                <div class="flex-1 min-w-0 flex items-center gap-2">
-                                    <!-- Slider dot -->
-                                    <div class="w-3 h-3 rounded-full bg-[#53bdeb] flex-shrink-0"></div>
-
-                                    <!-- Waveform -->
-                                    <div class="flex items-center gap-[2px] h-6 flex-1" id="voice-waveform">
-                                        <!-- Waveform bars generated by JS -->
+                                <!-- Waveform Container (clickable for seek) -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="voice-waveform-container" id="voice-waveform-container">
+                                        <div class="flex items-end gap-[3px] h-full" id="voice-waveform">
+                                            <!-- Waveform bars generated by JS -->
+                                        </div>
+                                        <div class="voice-scrubber" id="voice-scrubber"></div>
                                     </div>
-                                </div>
-
-                                <!-- Time -->
-                                <div class="flex items-center gap-1 flex-shrink-0">
-                                    <span id="voice-current-time" class="text-[11px] text-[#8696a0] font-mono">0:00</span>
+                                    <!-- Time display -->
+                                    <div class="flex justify-between items-center mt-1.5">
+                                        <span id="voice-current-time" class="voice-time">0:00</span>
+                                        <span id="voice-duration" class="voice-time">0:00</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <audio id="voice-audio" class="hidden"></audio>
+                        <audio id="voice-audio" class="hidden" preload="metadata"></audio>
                     </div>
 
                     <!-- Instructions Section -->
@@ -1918,6 +1980,11 @@
                 if (videoData && videoData.is_active) {
                     if (videoDesktop) videoDesktop.classList.remove('hidden');
                     if (videoMobile) videoMobile.classList.remove('hidden');
+
+                    // Handle #video hash from email link - switch to video tab after it's visible
+                    if (window.location.hash === '#video') {
+                        switchTab('video');
+                    }
                 } else {
                     if (videoDesktop) videoDesktop.classList.add('hidden');
                     if (videoMobile) videoMobile.classList.add('hidden');
@@ -2012,10 +2079,15 @@
             }
         }
 
+        // Voice Player State
+        let voiceIsSeeking = false;
+        let voiceWasPlaying = false;
+
         function renderVoiceMessage() {
             const section = document.getElementById('video-voice-section');
             const audio = document.getElementById('voice-audio');
             const waveform = document.getElementById('voice-waveform');
+            const waveformContainer = document.getElementById('voice-waveform-container');
 
             // Use global voice message URL (same for all clients)
             if (!globalVoiceMessageUrl) {
@@ -2026,19 +2098,27 @@
             if (section) section.classList.remove('hidden');
             if (audio) audio.src = globalVoiceMessageUrl;
 
-            // Generate waveform bars (varied heights for realistic look)
+            // Generate waveform bars (realistic varied heights)
             if (waveform) {
                 waveform.innerHTML = '';
-                const heights = [40,70,55,90,65,80,45,95,60,75,50,85,70,55,90,40,65,80,50,70,60,85,45,75,55,90,70,50,80,65,40,95,55,75,60,85,45,70,80,50];
-                for (let i = 0; i < heights.length; i++) {
+                // More bars for smoother look - fills container width
+                const barCount = 50;
+                // Pre-generated realistic waveform pattern (voice-like)
+                const pattern = [35,50,45,70,55,80,40,90,60,75,45,85,65,55,75,40,60,80,50,70,55,85,45,75,60,90,50,65,75,45,80,55,70,40,85,60,75,50,65,80,45,70,55,85,40,75,60,50,70,55];
+                for (let i = 0; i < barCount; i++) {
                     const bar = document.createElement('div');
                     bar.className = 'voice-bar';
-                    bar.style.height = `${heights[i]}%`;
+                    bar.style.height = `${pattern[i % pattern.length]}%`;
                     waveform.appendChild(bar);
                 }
             }
 
-            // Set duration when loaded
+            // Setup seek functionality
+            if (waveformContainer && audio) {
+                setupVoiceSeek(waveformContainer, audio);
+            }
+
+            // Audio event listeners
             if (audio) {
                 audio.addEventListener('loadedmetadata', () => {
                     const duration = document.getElementById('voice-duration');
@@ -2046,34 +2126,142 @@
                 });
 
                 audio.addEventListener('timeupdate', () => {
+                    if (voiceIsSeeking) return; // Don't update during seek
                     const currentTime = document.getElementById('voice-current-time');
-                    const progressBar = document.getElementById('voice-progress-bar');
-                    const progress = audio.currentTime / audio.duration;
+                    const progress = audio.duration ? audio.currentTime / audio.duration : 0;
 
                     if (currentTime) currentTime.textContent = formatTime(audio.currentTime);
-                    if (progressBar) progressBar.style.width = `${progress * 100}%`;
-                    updateWaveformProgress(progress);
+                    updateVoiceWaveform(progress);
+                    updateVoiceScrubber(progress);
                 });
 
                 audio.addEventListener('ended', () => {
                     const icon = document.getElementById('voice-play-icon');
+                    const btn = document.getElementById('voice-play-btn');
                     if (icon) {
                         icon.classList.remove('ph-pause');
                         icon.classList.add('ph-play');
                     }
+                    if (btn) btn.classList.remove('playing');
                     resetVoiceWaveform();
                 });
+
+                audio.addEventListener('play', () => {
+                    const icon = document.getElementById('voice-play-icon');
+                    const btn = document.getElementById('voice-play-btn');
+                    if (icon) {
+                        icon.classList.remove('ph-play');
+                        icon.classList.add('ph-pause');
+                    }
+                    if (btn) btn.classList.add('playing');
+                });
+
+                audio.addEventListener('pause', () => {
+                    const icon = document.getElementById('voice-play-icon');
+                    const btn = document.getElementById('voice-play-btn');
+                    if (icon) {
+                        icon.classList.remove('ph-pause');
+                        icon.classList.add('ph-play');
+                    }
+                    if (btn) btn.classList.remove('playing');
+                });
+            }
+        }
+
+        function setupVoiceSeek(container, audio) {
+            const getProgress = (e) => {
+                const rect = container.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                return Math.max(0, Math.min(1, x / rect.width));
+            };
+
+            const seekTo = (progress) => {
+                if (audio.duration) {
+                    audio.currentTime = progress * audio.duration;
+                    updateVoiceWaveform(progress);
+                    updateVoiceScrubber(progress);
+                    const currentTime = document.getElementById('voice-current-time');
+                    if (currentTime) currentTime.textContent = formatTime(audio.currentTime);
+                }
+            };
+
+            // Mouse events
+            container.addEventListener('mousedown', (e) => {
+                voiceIsSeeking = true;
+                voiceWasPlaying = !audio.paused;
+                container.classList.add('seeking');
+                if (voiceWasPlaying) audio.pause();
+                seekTo(getProgress(e));
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!voiceIsSeeking) return;
+                seekTo(getProgress(e));
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!voiceIsSeeking) return;
+                voiceIsSeeking = false;
+                container.classList.remove('seeking');
+                if (voiceWasPlaying) audio.play();
+            });
+
+            // Touch events
+            container.addEventListener('touchstart', (e) => {
+                voiceIsSeeking = true;
+                voiceWasPlaying = !audio.paused;
+                container.classList.add('seeking');
+                if (voiceWasPlaying) audio.pause();
+                seekTo(getProgress(e));
+            }, { passive: true });
+
+            container.addEventListener('touchmove', (e) => {
+                if (!voiceIsSeeking) return;
+                seekTo(getProgress(e));
+            }, { passive: true });
+
+            container.addEventListener('touchend', () => {
+                if (!voiceIsSeeking) return;
+                voiceIsSeeking = false;
+                container.classList.remove('seeking');
+                if (voiceWasPlaying) audio.play();
+            });
+
+            // Click to seek (for quick jumps)
+            container.addEventListener('click', (e) => {
+                if (!voiceIsSeeking) {
+                    seekTo(getProgress(e));
+                }
+            });
+        }
+
+        function updateVoiceWaveform(progress) {
+            const bars = document.querySelectorAll('.voice-bar');
+            const activeIndex = Math.floor(progress * bars.length);
+            bars.forEach((bar, i) => {
+                bar.classList.toggle('played', i <= activeIndex);
+            });
+        }
+
+        function updateVoiceScrubber(progress) {
+            const scrubber = document.getElementById('voice-scrubber');
+            const container = document.getElementById('voice-waveform-container');
+            if (scrubber && container) {
+                const containerWidth = container.offsetWidth;
+                scrubber.style.left = `${progress * containerWidth}px`;
             }
         }
 
         function resetVoiceWaveform() {
             const bars = document.querySelectorAll('.voice-bar');
-            const progressBar = document.getElementById('voice-progress-bar');
             bars.forEach(bar => bar.classList.remove('played'));
-            if (progressBar) progressBar.style.width = '0%';
+            updateVoiceScrubber(0);
+            const currentTime = document.getElementById('voice-current-time');
+            if (currentTime) currentTime.textContent = '0:00';
         }
 
         function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -2081,39 +2269,15 @@
 
         function toggleVoiceMessage() {
             const audio = document.getElementById('voice-audio');
-            const icon = document.getElementById('voice-play-icon');
-
             if (!audio) return;
 
             if (audio.paused) {
                 audio.play();
-                if (icon) {
-                    icon.classList.remove('ph-play');
-                    icon.classList.add('ph-pause');
-                }
             } else {
                 audio.pause();
-                if (icon) {
-                    icon.classList.remove('ph-pause');
-                    icon.classList.add('ph-play');
-                }
             }
         }
         window.toggleVoiceMessage = toggleVoiceMessage;
-
-        function updateWaveformProgress(progress) {
-            const bars = document.querySelectorAll('.voice-bar');
-            const activeIndex = Math.floor(progress * bars.length);
-            bars.forEach((bar, i) => {
-                if (i <= activeIndex) {
-                    bar.classList.remove('bg-cyan-500/40');
-                    bar.classList.add('bg-cyan-400');
-                } else {
-                    bar.classList.remove('bg-cyan-400');
-                    bar.classList.add('bg-cyan-500/40');
-                }
-            });
-        }
 
         function renderVideoScenarios() {
             const section = document.getElementById('video-scenarios-section');
@@ -2218,6 +2382,23 @@
                             <div class="flex items-start gap-2 bg-amber-500/5 border border-amber-500/10 rounded-lg p-3">
                                 <i class="ph ph-lightbulb text-amber-400 text-sm mt-0.5"></i>
                                 <p class="text-[#888] text-[12px]">${escapeHtml(scenario.tip)}</p>
+                            </div>
+                            ` : ''}
+
+                            ${scenario.soundTip ? `
+                            <div class="flex items-start gap-2 bg-cyan-500/5 border border-cyan-500/10 rounded-lg p-3">
+                                <i class="ph ph-music-notes text-cyan-400 text-sm mt-0.5"></i>
+                                <p class="text-[#888] text-[12px]">${escapeHtml(scenario.soundTip)}</p>
+                            </div>
+                            ` : ''}
+
+                            ${scenario.textOverlay ? `
+                            <div class="flex items-start gap-2 bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
+                                <i class="ph ph-text-aa text-purple-400 text-sm mt-0.5"></i>
+                                <div class="text-[#888] text-[12px]">
+                                    <span class="text-[#555] text-[10px] block mb-1">Tekst na ekranie:</span>
+                                    <span class="text-[#aaa]">${escapeHtml(scenario.textOverlay)}</span>
+                                </div>
                             </div>
                             ` : ''}
 

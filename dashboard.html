@@ -233,6 +233,38 @@
                     </div>
                 </div>
 
+                <!-- Projects Summary Row -->
+                <div class="section-card p-5 mb-6 animate-enter animate-enter-delay-1">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-white">Projekty</h3>
+                        <a href="/workflows" class="text-[10px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                            Wszystkie projekty <i class="ph ph-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="projects-stats">
+                        <div class="text-center p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div id="stat-projects-active" class="text-xl font-semibold text-white">-</div>
+                            <div class="text-[10px] text-zinc-500 mt-1">Aktywne</div>
+                        </div>
+                        <div class="text-center p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div id="stat-projects-stage1" class="text-xl font-semibold text-cyan-400">-</div>
+                            <div class="text-[10px] text-zinc-500 mt-1">Etap 1</div>
+                        </div>
+                        <div class="text-center p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div id="stat-projects-stage2" class="text-xl font-semibold text-purple-400">-</div>
+                            <div class="text-[10px] text-zinc-500 mt-1">Etap 2 (Video)</div>
+                        </div>
+                        <div class="text-center p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div id="stat-projects-stage3" class="text-xl font-semibold text-blue-400">-</div>
+                            <div class="text-[10px] text-zinc-500 mt-1">Etap 3 (TakeDrop)</div>
+                        </div>
+                        <div class="text-center p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div id="stat-projects-completed" class="text-xl font-semibold text-emerald-400">-</div>
+                            <div class="text-[10px] text-zinc-500 mt-1">Ukończone</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Charts Row -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-enter animate-enter-delay-2">
                     <!-- Revenue Chart -->
@@ -348,6 +380,9 @@
         let leads = [];
         let orders = [];
         let auditLogs = [];
+        let workflows = [];
+        let videoStages = [];
+        let takedropStages = [];
         let teamMembers = [];
         let currentMember = null;
         let isAdmin = false;
@@ -391,13 +426,19 @@
             const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
 
             // Load all data in parallel
-            const [leadsRes, ordersRes, auditRes, stagesRes, trackingRes] = await Promise.all([
+            const [leadsRes, ordersRes, auditRes, stagesRes, trackingRes, workflowsRes, videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('leads').select('*').order('created_at', { ascending: false }),
                 supabaseClient.from('orders').select('*').order('created_at', { ascending: false }),
                 supabaseClient.from('audit_log').select('*').gte('created_at', thirtyDaysAgo).order('created_at', { ascending: false }).limit(20),
                 supabaseClient.from('settings').select('*').eq('key', 'pipeline_stages').single(),
-                supabaseClient.from('lead_tracking').select('*')
+                supabaseClient.from('lead_tracking').select('*'),
+                supabaseClient.from('workflows').select('id, status').order('created_at', { ascending: false }),
+                supabaseClient.from('workflow_video').select('workflow_id, is_active'),
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active')
             ]);
+            workflows = workflowsRes.data || [];
+            videoStages = videoRes.data || [];
+            takedropStages = takedropRes.data || [];
 
             leads = leadsRes.data || [];
 
@@ -515,6 +556,39 @@
             const icon = change > 0 ? 'ph-trend-up' : change < 0 ? 'ph-trend-down' : 'ph-minus';
             const colorClass = change > 0 ? 'trend-up' : change < 0 ? 'trend-down' : 'trend-neutral';
             return `<i class="ph ${icon}"></i> <span class="${colorClass}">${change > 0 ? '+' : ''}${change.toFixed(0)}%${suffix}</span>`;
+        }
+
+        function renderProjectsStats() {
+            // Get video and takedrop active workflow IDs
+            const videoActiveIds = new Set(videoStages.filter(v => v.is_active).map(v => v.workflow_id));
+            const takedropActiveIds = new Set(takedropStages.filter(t => t.is_active).map(t => t.workflow_id));
+
+            // Calculate project stages
+            const active = workflows.filter(w => w.status === 'active').length;
+            const completed = workflows.filter(w => w.status === 'completed').length;
+
+            // Stage 1: active but no video or takedrop active
+            let stage1 = 0;
+            // Stage 2: video active but not takedrop
+            let stage2 = 0;
+            // Stage 3: takedrop active
+            let stage3 = 0;
+
+            workflows.filter(w => w.status === 'active').forEach(w => {
+                if (takedropActiveIds.has(w.id)) {
+                    stage3++;
+                } else if (videoActiveIds.has(w.id)) {
+                    stage2++;
+                } else {
+                    stage1++;
+                }
+            });
+
+            document.getElementById('stat-projects-active').textContent = active;
+            document.getElementById('stat-projects-stage1').textContent = stage1;
+            document.getElementById('stat-projects-stage2').textContent = stage2;
+            document.getElementById('stat-projects-stage3').textContent = stage3;
+            document.getElementById('stat-projects-completed').textContent = completed;
         }
 
         function renderKPIs() {
@@ -1026,6 +1100,7 @@
         // ==================== INIT ====================
         async function refreshDashboard() {
             await loadAllData();
+            renderProjectsStats();
             renderKPIs();
             renderRevenueChart();
             renderLeadsChart();

@@ -35,7 +35,9 @@ const VALID_EMAIL_TYPES = [
   'report_published',
   'branding_delivered',
   'sales_page_shared',
-  // Etap 2
+  // Etap 2 - Video
+  'video_activated',
+  // Etap 3 - TakeDrop
   'takedrop_activated',
   'takedrop_welcome',
   'direct'
@@ -57,9 +59,11 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   report_published: 'Raport dotyczący Twojego produktu jest gotowy',
   branding_delivered: 'Branding Twojej marki jest gotowy!',
   sales_page_shared: 'Twoja strona sprzedażowa jest gotowa!',
-  // Etap 2
+  // Etap 2 - Video
+  video_activated: 'Czas na nagranie materiałów video!',
+  // Etap 3 - TakeDrop
   takedrop_activated: 'Załóż konto na platformie sklepowej',
-  takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 2!'
+  takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 3!'
 }
 
 // Offer flow email types (use special reply-to)

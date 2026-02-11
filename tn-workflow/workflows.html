@@ -339,6 +339,8 @@
                         ),
                         workflow_tasks (
                             id,
+                            milestone_id,
+                            title,
                             completed
                         )
                     `)
@@ -358,6 +360,14 @@
                     const currentMilestone = w.workflow_milestones?.find(m => m.status === 'in_progress');
                     const totalMilestones = w.workflow_milestones?.length || 0;
                     const completedMilestones = w.workflow_milestones?.filter(m => m.status === 'completed').length || 0;
+
+                    // Get tasks for current milestone
+                    let currentMilestoneTasks = [];
+                    if (currentMilestone) {
+                        currentMilestoneTasks = (w.workflow_tasks || [])
+                            .filter(t => t.milestone_id === currentMilestone.id)
+                            .map(t => ({ title: t.title, completed: t.completed }));
+                    }
 
                     return {
                         workflow_id: w.id,
@@ -380,6 +390,7 @@
                         progress_percent: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
                         current_milestone_title: currentMilestone?.title,
                         current_milestone_deadline: currentMilestone?.deadline,
+                        current_milestone_tasks: currentMilestoneTasks,
                         total_milestones: totalMilestones,
                         completed_milestones: completedMilestones
                     };
@@ -388,7 +399,7 @@
                 workflows = data || [];
             }
 
-            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos()]);
+            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos(), loadCurrentMilestoneTasks()]);
             populateOfferFilter();
             renderStageFilter();
             applyFilters();
@@ -467,6 +478,55 @@
                         workflowLogos[item.workflow_id] = item.file_url;
                     }
                 } catch (e) {}
+            }
+        }
+
+        async function loadCurrentMilestoneTasks() {
+            // Skip if tasks already loaded (fallback case)
+            if (workflows.length > 0 && workflows[0].current_milestone_tasks) return;
+
+            const workflowIds = workflows.map(w => w.workflow_id);
+            if (workflowIds.length === 0) return;
+
+            // Get current milestones (in_progress status)
+            const { data: milestones, error: mErr } = await supabaseClient
+                .from('workflow_milestones')
+                .select('id, workflow_id')
+                .in('workflow_id', workflowIds)
+                .eq('status', 'in_progress');
+
+            if (mErr || !milestones) return;
+
+            const milestoneMap = {};
+            const milestoneIds = [];
+            for (const m of milestones) {
+                milestoneMap[m.workflow_id] = m.id;
+                milestoneIds.push(m.id);
+            }
+
+            if (milestoneIds.length === 0) return;
+
+            // Get tasks for those milestones
+            const { data: tasks, error: tErr } = await supabaseClient
+                .from('workflow_tasks')
+                .select('milestone_id, title, completed')
+                .in('milestone_id', milestoneIds);
+
+            if (tErr || !tasks) return;
+
+            // Group tasks by milestone
+            const tasksByMilestone = {};
+            for (const t of tasks) {
+                if (!tasksByMilestone[t.milestone_id]) {
+                    tasksByMilestone[t.milestone_id] = [];
+                }
+                tasksByMilestone[t.milestone_id].push({ title: t.title, completed: t.completed });
+            }
+
+            // Attach to workflows
+            for (const w of workflows) {
+                const milestoneId = milestoneMap[w.workflow_id];
+                w.current_milestone_tasks = milestoneId ? (tasksByMilestone[milestoneId] || []) : [];
             }
         }
 
@@ -740,6 +800,18 @@
             return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
         }
 
+        function renderTaskDots(tasks) {
+            if (!tasks || tasks.length === 0) return '';
+
+            const dots = tasks.map(t => {
+                const color = t.completed ? 'bg-emerald-400' : 'bg-zinc-600';
+                const title = t.title ? t.title.substring(0, 40) + (t.title.length > 40 ? '...' : '') : '';
+                return `<span class="w-1.5 h-1.5 rounded-full ${color}" title="${title}"></span>`;
+            }).join('');
+
+            return `<div class="flex items-center gap-1 mt-1.5">${dots}</div>`;
+        }
+
         function formatPrice(price) {
             return new Intl.NumberFormat('pl-PL', {
                 style: 'currency',
@@ -809,6 +881,7 @@
                         <div class="h-1 bg-zinc-800 rounded-full overflow-hidden">
                             <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
                         </div>
+                        ${renderTaskDots(w.current_milestone_tasks)}
                     </div>
 
                     <div class="flex items-center justify-between pt-2 border-t border-white/5">

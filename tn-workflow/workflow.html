@@ -1213,6 +1213,21 @@
                                     <p class="text-[#555] text-[12px]">Klient nie przesłał jeszcze żadnych nagrań</p>
                                 </div>
                             </div>
+
+                            <!-- Video shared checkbox -->
+                            <div class="mt-4 pt-4 border-t border-[#222]">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" id="video-shared-checkbox" onchange="toggleVideoShared()"
+                                           class="w-5 h-5 rounded border-[#333] bg-[#111] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 focus:ring-1 cursor-pointer">
+                                    <div>
+                                        <div class="text-[13px] text-white group-hover:text-emerald-400 transition-colors">Video udostępnione</div>
+                                        <div class="text-[11px] text-[#555]">Zaznacz gdy klient przekazał nagrane materiały</div>
+                                    </div>
+                                </label>
+                                <div id="video-shared-info" class="hidden mt-2 text-[11px] text-emerald-400/60">
+                                    <i class="ph ph-check-circle"></i> Udostępniono: <span id="video-shared-date">-</span>
+                                </div>
+                            </div>
                         </div>
                     </div><!-- /tab-video -->
 
@@ -2988,12 +3003,34 @@
 
                 // Client data
                 renderVideoClientData();
+
+                // Video shared checkbox
+                const videoSharedCheckbox = document.getElementById('video-shared-checkbox');
+                const videoSharedInfo = document.getElementById('video-shared-info');
+                const videoSharedDate = document.getElementById('video-shared-date');
+                if (videoSharedCheckbox) {
+                    videoSharedCheckbox.checked = videoAdminData.video_shared || false;
+                    if (videoAdminData.video_shared && videoAdminData.video_shared_at) {
+                        videoSharedInfo.classList.remove('hidden');
+                        videoSharedDate.textContent = new Date(videoAdminData.video_shared_at).toLocaleDateString('pl-PL');
+                    } else {
+                        videoSharedInfo.classList.add('hidden');
+                    }
+                }
             } else {
                 activeCheckbox.checked = false;
                 activatedInfo.classList.add('hidden');
                 statusDot.className = 'w-2 h-2 rounded-full bg-[#666]';
                 statusText.textContent = 'Brak danych';
                 statusText.className = 'text-[13px] text-[#888]';
+
+                // Reset video shared
+                const videoSharedCheckbox = document.getElementById('video-shared-checkbox');
+                const videoSharedInfo = document.getElementById('video-shared-info');
+                if (videoSharedCheckbox) {
+                    videoSharedCheckbox.checked = false;
+                    videoSharedInfo.classList.add('hidden');
+                }
             }
         }
 
@@ -3067,6 +3104,8 @@
                             ${scenario.ending ? `<div><span class="text-purple-400">Koniec:</span> <span class="text-[#777]">${escapeHtml(scenario.ending)}</span></div>` : ''}
                             ${scenario.example ? `<div class="mt-2 p-2 bg-zinc-800/50 rounded text-[#888] italic">"${escapeHtml(scenario.example)}"</div>` : ''}
                             ${scenario.tip ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-lightbulb text-amber-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.tip)}</span></div>` : ''}
+                            ${scenario.soundTip ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-music-notes text-cyan-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.soundTip)}</span></div>` : ''}
+                            ${scenario.textOverlay ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-text-aa text-purple-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.textOverlay)}</span></div>` : ''}
                             ${scenario.description ? `<div class="mt-2 text-[#666]">${escapeHtml(scenario.description)}</div>` : ''}
                         </div>
                     </div>
@@ -3206,7 +3245,7 @@
 
                 // Trigger automation if activating
                 if (isActive && (!videoAdminData || !videoAdminData.is_active)) {
-                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#video`;
                     try {
                         await supabaseClient.functions.invoke('automation-trigger', {
                             body: {
@@ -3228,6 +3267,44 @@
                 }
             } catch (err) {
                 console.error('Error toggling Video:', err);
+                showToast('Błąd zapisu', 'error');
+            }
+        }
+
+        async function toggleVideoShared() {
+            const isShared = document.getElementById('video-shared-checkbox').checked;
+
+            try {
+                const updateData = { video_shared: isShared };
+                if (isShared && !videoAdminData?.video_shared_at) {
+                    updateData.video_shared_at = new Date().toISOString();
+                } else if (!isShared) {
+                    updateData.video_shared_at = null;
+                }
+
+                if (videoAdminData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .update(updateData)
+                        .eq('workflow_id', workflow.id);
+
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .insert({
+                            workflow_id: workflow.id,
+                            video_shared: isShared,
+                            video_shared_at: isShared ? new Date().toISOString() : null
+                        });
+
+                    if (error) throw error;
+                }
+
+                loadVideoAdmin();
+                showToast(isShared ? 'Oznaczono jako udostępnione' : 'Oznaczenie usunięte', 'success');
+            } catch (err) {
+                console.error('Error toggling video shared:', err);
                 showToast('Błąd zapisu', 'error');
             }
         }
