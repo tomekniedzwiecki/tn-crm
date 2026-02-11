@@ -1219,6 +1219,22 @@
                             <h3 class="text-[15px] font-medium text-white">Zamów produkt do nagrań</h3>
                         </div>
 
+                        <!-- Selected Product Box -->
+                        <div id="video-product-box" class="mb-6 hidden">
+                            <div class="bg-[#0a0a0a] border border-amber-500/20 rounded-xl p-4 flex items-center gap-4">
+                                <div id="video-product-image" class="w-16 h-16 rounded-lg bg-[#080808] flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                    <i class="ph ph-package text-2xl text-[#333]"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[11px] text-amber-400 uppercase tracking-wider mb-1">Twój produkt</p>
+                                    <p id="video-product-name" class="text-white font-medium text-[14px] truncate">—</p>
+                                </div>
+                                <a id="video-product-link" href="#" target="_blank" class="hidden flex-shrink-0 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[13px] font-medium rounded-lg transition-colors">
+                                    <i class="ph ph-arrow-square-out mr-1.5"></i>Zobacz produkt
+                                </a>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
                                 <div class="flex items-start gap-4">
@@ -1251,7 +1267,7 @@
                                     </div>
                                     <div>
                                         <h4 class="text-white text-[14px] font-medium mb-1">Poczekaj na dostawę</h4>
-                                        <p class="text-[#666] text-[13px] leading-relaxed">Dostawa zazwyczaj trwa 7-14 dni roboczych.</p>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Czas dostawy to zazwyczaj 5-7 dni, jak chcesz szybciej to możesz poszukać tego produktu np. na Allegro.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1263,7 +1279,7 @@
                                     </div>
                                     <div>
                                         <h4 class="text-white text-[14px] font-medium mb-1">Nagraj materiały</h4>
-                                        <p class="text-[#666] text-[13px] leading-relaxed">Gdy produkt dotrze, nagraj video według scenariuszy poniżej.</p>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Gdy produkt dotrze, nagraj video według scenariuszy poniżej lub wymyśl własne scenariusze.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1892,6 +1908,9 @@
                 celebration.classList.add('hidden');
                 content.classList.remove('hidden');
 
+                // Render selected product
+                renderVideoProduct();
+
                 // Render voice message
                 renderVoiceMessage();
 
@@ -1907,6 +1926,43 @@
                 // Show celebration screen
                 celebration.classList.remove('hidden');
                 content.classList.add('hidden');
+            }
+        }
+
+        function renderVideoProduct() {
+            const box = document.getElementById('video-product-box');
+            const imageEl = document.getElementById('video-product-image');
+            const nameEl = document.getElementById('video-product-name');
+            const linkEl = document.getElementById('video-product-link');
+
+            if (!box) return;
+
+            // Find selected product
+            const selectedProduct = workflow?.selected_product_id
+                ? products.find(p => p.id === workflow.selected_product_id)
+                : null;
+
+            if (!selectedProduct) {
+                box.classList.add('hidden');
+                return;
+            }
+
+            box.classList.remove('hidden');
+            nameEl.textContent = selectedProduct.name || '—';
+
+            // Show image if available
+            if (selectedProduct.image_url) {
+                imageEl.innerHTML = `<img src="${selectedProduct.image_url}" alt="" class="w-full h-full object-cover">`;
+            } else {
+                imageEl.innerHTML = '<i class="ph ph-package text-2xl text-[#333]"></i>';
+            }
+
+            // Show link if available
+            if (selectedProduct.source_url) {
+                linkEl.href = selectedProduct.source_url;
+                linkEl.classList.remove('hidden');
+            } else {
+                linkEl.classList.add('hidden');
             }
         }
 
