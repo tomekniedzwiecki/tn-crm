@@ -2956,7 +2956,7 @@
                 const { data, error } = await supabaseClient
                     .from('workflow_video')
                     .select('*')
-                    .eq('workflow_id', workflowId)
+                    .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
                 if (error) throw error;
@@ -3147,7 +3147,7 @@
                     const { error } = await supabaseClient
                         .from('workflow_video')
                         .update(updateData)
-                        .eq('workflow_id', workflowId);
+                        .eq('workflow_id', workflow.id);
 
                     if (error) throw error;
                 } else {
@@ -3155,7 +3155,7 @@
                     const { error } = await supabaseClient
                         .from('workflow_video')
                         .insert({
-                            workflow_id: workflowId,
+                            workflow_id: workflow.id,
                             is_active: isActive,
                             activated_at: isActive ? new Date().toISOString() : null
                         });
@@ -3173,8 +3173,8 @@
                             body: {
                                 trigger_type: 'video_activated',
                                 entity_type: 'workflow_video',
-                                entity_id: workflowId,
-                                workflow_id: workflowId
+                                entity_id: workflow.id,
+                                workflow_id: workflow.id
                             }
                         });
                         console.log('Video activation automation triggered');
@@ -3200,14 +3200,14 @@
                             voice_message_url: url || null,
                             voice_message_duration: duration
                         })
-                        .eq('workflow_id', workflowId);
+                        .eq('workflow_id', workflow.id);
 
                     if (error) throw error;
                 } else {
                     const { error } = await supabaseClient
                         .from('workflow_video')
                         .insert({
-                            workflow_id: workflowId,
+                            workflow_id: workflow.id,
                             voice_message_url: url || null,
                             voice_message_duration: duration
                         });
@@ -3237,14 +3237,14 @@
                     const { error } = await supabaseClient
                         .from('workflow_video')
                         .update({ video_scenarios: scenarios })
-                        .eq('workflow_id', workflowId);
+                        .eq('workflow_id', workflow.id);
 
                     if (error) throw error;
                 } else {
                     const { error } = await supabaseClient
                         .from('workflow_video')
                         .insert({
-                            workflow_id: workflowId,
+                            workflow_id: workflow.id,
                             video_scenarios: scenarios
                         });
 
@@ -3270,7 +3270,7 @@
                 const { error } = await supabaseClient
                     .from('workflow_video')
                     .update({ video_scenarios: scenarios })
-                    .eq('workflow_id', workflowId);
+                    .eq('workflow_id', workflow.id);
 
                 if (error) throw error;
 
@@ -3291,7 +3291,7 @@
                 const { error } = await supabaseClient
                     .from('workflow_video')
                     .update({ video_scenarios: scenarios })
-                    .eq('workflow_id', workflowId);
+                    .eq('workflow_id', workflow.id);
 
                 if (error) throw error;
 
