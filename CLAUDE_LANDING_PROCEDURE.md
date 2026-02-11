@@ -52,6 +52,64 @@ Kazdy landing sklada sie z tych sekcji w kolejnosci:
 - Karty: białe z delikatnym cieniem i border `#E5E7EB`
 - Header/Footer: białe lub bardzo jasne
 
+### Wykorzystanie kolorów marki w sekcjach (WAŻNE!)
+
+Kolory z brandingu (primary, secondary, accent) powinny być widoczne w **każdej sekcji** landing page. Nie zostawiaj sekcji czysto białych/szarych — dodawaj subtelne gradienty i akcenty.
+
+| Sekcja | Tło | Akcenty kolorystyczne |
+|--------|-----|----------------------|
+| **Hero** | Gradient: `rgba(primary,0.03)` → white → `rgba(secondary,0.03)` | Glow z primary, badge z primary |
+| **Trust Bar** | Gradient: `rgba(primary,0.04)` → `rgba(secondary,0.04)` | Ikony w primary, hover z primary shadow |
+| **Problem** | Ciepły odcień primary: `#FFF5F0` lub podobny | Statystyki w kolorze ostrzegawczym |
+| **Solution/Bento** | White → `rgba(secondary,0.05)` | Naprzemienne ikony primary/secondary na kartach |
+| **How It Works** | Ciepły odcień accent: `#FFF8E7` | Numery kroków w różnych kolorach (primary → secondary → green) |
+| **Comparison** | `rgba(secondary,0.05)` → white | Podświetlona kolumna produktu z `rgba(primary,0.08)` |
+| **Testimonials** | White → `rgba(primary,0.03)` | Gwiazdki w accent, avatary w primary-soft |
+| **FAQ** | `rgba(secondary,0.05)` → white | Ikony strzałek w primary |
+| **Offer** | Gradient: `rgba(primary,0.05)` → white → `rgba(secondary,0.05)` | Animowany border z primary+secondary+accent, cena w primary |
+| **CTA Banner** | **Gradient: primary → secondary** (pełne kolory!) | Biały tekst, biały przycisk z primary tekstem |
+| **Footer** | Jasny `#FAFAFA` | Border-top gradient primary → secondary |
+
+### Przykłady CSS dla kolorowych tł sekcji
+
+```css
+/* Hero - ciepły gradient */
+.hero { background: linear-gradient(135deg, #FFF7F3 0%, #FFF 50%, #F0FDFA 100%); }
+
+/* Trust Bar - subtelny gradient z border */
+.trust-bar {
+  background: linear-gradient(90deg, rgba(primary,0.04) 0%, rgba(secondary,0.04) 100%);
+  border-top: 1px solid rgba(primary,0.1);
+}
+
+/* Problem - ciepły orange */
+.problem { background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%); }
+
+/* CTA Banner - pełne kolory! */
+.cta-banner { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
+.cta-banner .cta-title { color: #FFFFFF; }
+.cta-banner .btn-primary { background: #FFFFFF; color: var(--primary); }
+```
+
+### Hover effects z kolorami marki
+
+```css
+.trust-item:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(primary, 0.15);
+}
+
+.bento-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 12px 24px rgba(primary, 0.15);
+}
+
+/* Naprzemienne kolory dla kart */
+.bento-card:nth-child(2):hover { border-color: var(--secondary); }
+.bento-card:nth-child(2) .bento-icon { background: rgba(secondary, 0.1); }
+.bento-card:nth-child(2) .bento-icon svg { color: var(--secondary); }
+```
+
 ### Motyw ciemny (TYLKO na życzenie - tech/gaming)
 - Background: `#0A0A0A` lub `#0D1117`
 - Tekst: `#FFFFFF` z opacity 0.5-1.0
