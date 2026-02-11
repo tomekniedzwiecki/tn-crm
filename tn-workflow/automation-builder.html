@@ -848,23 +848,7 @@
                     <div>
                         <label class="block text-sm text-[#888] mb-2">Zdarzenie wyzwalające</label>
                         <select id="trigger-type" class="input-field" onchange="updateTrigger()">
-                            <optgroup label="Oferty">
-                                <option value="offer_created" ${flow.trigger_type === 'offer_created' ? 'selected' : ''}>Oferta utworzona</option>
-                                <option value="offer_viewed" ${flow.trigger_type === 'offer_viewed' ? 'selected' : ''}>Oferta obejrzana</option>
-                                <option value="offer_expired" ${flow.trigger_type === 'offer_expired' ? 'selected' : ''}>Oferta wygasła</option>
-                            </optgroup>
-                            <optgroup label="Płatności">
-                                <option value="payment_received" ${flow.trigger_type === 'payment_received' ? 'selected' : ''}>Płatność otrzymana</option>
-                                <option value="contract_signed" ${flow.trigger_type === 'contract_signed' ? 'selected' : ''}>Umowa podpisana</option>
-                            </optgroup>
-                            <optgroup label="Workflow">
-                                <option value="workflow_created" ${flow.trigger_type === 'workflow_created' ? 'selected' : ''}>Workflow utworzony</option>
-                                <option value="stage_completed" ${flow.trigger_type === 'stage_completed' ? 'selected' : ''}>Etap ukończony</option>
-                                <option value="products_shared" ${flow.trigger_type === 'products_shared' ? 'selected' : ''}>Produkty udostępnione</option>
-                                <option value="report_published" ${flow.trigger_type === 'report_published' ? 'selected' : ''}>Raport opublikowany</option>
-                                <option value="branding_delivered" ${flow.trigger_type === 'branding_delivered' ? 'selected' : ''}>Branding dostarczony</option>
-                                <option value="sales_page_shared" ${flow.trigger_type === 'sales_page_shared' ? 'selected' : ''}>Sales page udostępniony</option>
-                            </optgroup>
+                            ${renderTriggerOptions()}
                         </select>
                     </div>
 
@@ -883,12 +867,49 @@
             document.getElementById('config-panel').classList.add('open');
         }
 
+        function renderTriggerOptions() {
+            const triggersByCategory = {
+                offer: [
+                    { value: 'offer_created', label: 'Oferta utworzona' },
+                    { value: 'offer_viewed', label: 'Oferta obejrzana' },
+                    { value: 'offer_expired', label: 'Oferta wygasła' }
+                ],
+                payment: [
+                    { value: 'payment_received', label: 'Płatność otrzymana' },
+                    { value: 'contract_signed', label: 'Umowa podpisana' }
+                ],
+                workflow: [
+                    { value: 'workflow_created', label: 'Workflow utworzony' },
+                    { value: 'stage_completed', label: 'Etap ukończony' },
+                    { value: 'products_shared', label: 'Produkty udostępnione' },
+                    { value: 'report_published', label: 'Raport opublikowany' },
+                    { value: 'branding_delivered', label: 'Branding dostarczony' },
+                    { value: 'sales_page_shared', label: 'Sales page udostępniony' }
+                ]
+            };
+
+            const triggers = triggersByCategory[flow.category] || triggersByCategory.workflow;
+
+            return triggers.map(t =>
+                `<option value="${t.value}" ${flow.trigger_type === t.value ? 'selected' : ''}>${t.label}</option>`
+            ).join('');
+        }
+
         function setCategory(category) {
             flow.category = category;
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.category === category);
-            });
+
+            // Set default trigger for this category
+            const defaultTriggers = {
+                offer: 'offer_created',
+                payment: 'payment_received',
+                workflow: 'workflow_created'
+            };
+            flow.trigger_type = defaultTriggers[category];
+
+            // Re-render the whole config panel
+            openTriggerConfig();
             markAsChanged();
+            renderFlow();
         }
 
         function inferCategoryFromTrigger(triggerType) {
