@@ -882,9 +882,10 @@
             } else if (stage === 2) {
                 // Stage 2: Video
                 const v = w.video_stage;
+                const isShared = v?.video_shared || false;
                 let status = 'Aktywny';
                 let color = 'text-cyan-400';
-                if (v?.video_shared) {
+                if (isShared) {
                     status = 'Video udostępnione';
                     color = 'text-emerald-400';
                 } else if (v?.stage_accepted) {
@@ -896,9 +897,15 @@
                         <div class="flex items-center gap-2 text-[11px] mb-1.5">
                             <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 1 ukończony</span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">Etap 2: Video</span>
-                            <span class="text-[10px] ${color}">${status}</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">Etap 2: Video</span>
+                                <span class="text-[10px] ${color}">${status}</span>
+                            </div>
+                            <label class="flex items-center gap-1.5 cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); toggleVideoSharedCard('${w.workflow_id}', ${!isShared})">
+                                <input type="checkbox" ${isShared ? 'checked' : ''} class="w-3.5 h-3.5 rounded border-zinc-600 bg-zinc-800 text-emerald-500 focus:ring-0 cursor-pointer pointer-events-none">
+                                <span class="text-[10px] text-zinc-500">Udostępnione</span>
+                            </label>
                         </div>
                     </div>
                 `;
@@ -1046,6 +1053,39 @@
                 toast.style.transition = 'all 0.3s ease';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+
+        async function toggleVideoSharedCard(workflowId, newValue) {
+            try {
+                const updateData = { video_shared: newValue };
+                if (newValue) {
+                    updateData.video_shared_at = new Date().toISOString();
+                } else {
+                    updateData.video_shared_at = null;
+                }
+
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update(updateData)
+                    .eq('workflow_id', workflowId);
+
+                if (error) throw error;
+
+                // Update local state
+                if (videoStages[workflowId]) {
+                    videoStages[workflowId].video_shared = newValue;
+                }
+                const w = workflows.find(w => w.workflow_id === workflowId);
+                if (w && w.video_stage) {
+                    w.video_stage.video_shared = newValue;
+                }
+
+                renderWorkflows();
+                showToast(newValue ? 'Video oznaczone jako udostępnione' : 'Oznaczenie usunięte');
+            } catch (err) {
+                console.error('Error toggling video shared:', err);
+                showToast('Błąd zapisu');
+            }
         }
 
         // =============================================
