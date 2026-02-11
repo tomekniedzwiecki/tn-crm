@@ -247,6 +247,15 @@
         .badge-cyan { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
         .badge-amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
         .badge-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+
+        /* Trigger option */
+        .trigger-option:focus {
+            outline: none;
+            border-color: #fff;
+        }
+        .trigger-option:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased">
@@ -280,6 +289,114 @@
             </div>
         </div>
     </header>
+
+    <!-- Trigger selection modal (for new flows) -->
+    <div id="trigger-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeTriggerModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-6">
+            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-fade-in">
+                <div class="p-6 border-b border-[#1a1a1a]">
+                    <h2 class="text-xl font-semibold text-white">Wybierz typ automatyzacji</h2>
+                    <p class="text-sm text-[#666] mt-1">Co ma uruchomić tę automatyzację?</p>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                    <div class="grid gap-3">
+                        <!-- Oferty -->
+                        <div class="text-xs uppercase tracking-wider text-[#666] font-semibold mb-1">Oferty</div>
+                        <div class="grid sm:grid-cols-3 gap-3 mb-4">
+                            <button onclick="selectTriggerType('offer_created')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-blue-500/50 hover:bg-blue-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-file-text text-blue-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Oferta utworzona</div>
+                                <div class="text-xs text-[#666] mt-1">Nowa oferta wysłana</div>
+                            </button>
+                            <button onclick="selectTriggerType('offer_viewed')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-blue-500/50 hover:bg-blue-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-eye text-blue-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Oferta obejrzana</div>
+                                <div class="text-xs text-[#666] mt-1">Klient otworzył ofertę</div>
+                            </button>
+                            <button onclick="selectTriggerType('offer_expired')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-blue-500/50 hover:bg-blue-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-clock-countdown text-blue-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Oferta wygasła</div>
+                                <div class="text-xs text-[#666] mt-1">Minął termin ważności</div>
+                            </button>
+                        </div>
+
+                        <!-- Płatności -->
+                        <div class="text-xs uppercase tracking-wider text-[#666] font-semibold mb-1">Płatności</div>
+                        <div class="grid sm:grid-cols-3 gap-3 mb-4">
+                            <button onclick="selectTriggerType('payment_received')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-green-500/50 hover:bg-green-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-credit-card text-green-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Płatność otrzymana</div>
+                                <div class="text-xs text-[#666] mt-1">Klient zapłacił</div>
+                            </button>
+                            <button onclick="selectTriggerType('contract_signed')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-green-500/50 hover:bg-green-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-signature text-green-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Umowa podpisana</div>
+                                <div class="text-xs text-[#666] mt-1">Podpisano kontrakt</div>
+                            </button>
+                        </div>
+
+                        <!-- Workflow -->
+                        <div class="text-xs uppercase tracking-wider text-[#666] font-semibold mb-1">Workflow / Projekt</div>
+                        <div class="grid sm:grid-cols-3 gap-3">
+                            <button onclick="selectTriggerType('workflow_created')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-purple-500/50 hover:bg-purple-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-play text-purple-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Workflow utworzony</div>
+                                <div class="text-xs text-[#666] mt-1">Nowy projekt startuje</div>
+                            </button>
+                            <button onclick="selectTriggerType('stage_completed')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-purple-500/50 hover:bg-purple-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-check-circle text-purple-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Etap ukończony</div>
+                                <div class="text-xs text-[#666] mt-1">Milestone zakończony</div>
+                            </button>
+                            <button onclick="selectTriggerType('products_shared')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-purple-500/50 hover:bg-purple-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-package text-purple-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Produkty udostępnione</div>
+                                <div class="text-xs text-[#666] mt-1">Linki do produktów</div>
+                            </button>
+                            <button onclick="selectTriggerType('report_published')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-purple-500/50 hover:bg-purple-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-file-doc text-purple-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Raport opublikowany</div>
+                                <div class="text-xs text-[#666] mt-1">Nowy raport/załącznik</div>
+                            </button>
+                            <button onclick="selectTriggerType('branding_delivered')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-purple-500/50 hover:bg-purple-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-paint-brush text-purple-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Branding dostarczony</div>
+                                <div class="text-xs text-[#666] mt-1">Logo i identyfikacja</div>
+                            </button>
+                            <button onclick="selectTriggerType('sales_page_shared')" class="trigger-option group p-4 rounded-xl border border-[#1a1a1a] hover:border-purple-500/50 hover:bg-purple-500/5 text-left transition-all">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-globe text-purple-400 text-xl"></i>
+                                </div>
+                                <div class="font-medium text-white text-sm">Sales page udostępniony</div>
+                                <div class="text-xs text-[#666] mt-1">Landing page gotowy</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main content -->
     <div class="flex">
@@ -426,8 +543,8 @@
             if (flowId) {
                 await loadFlow();
             } else {
-                // New flow - just render empty
-                renderFlow();
+                // New flow - show trigger selection modal
+                showTriggerModal();
             }
 
             // Track changes
@@ -1048,10 +1165,52 @@
             }, 3000);
         }
 
+        // ============================================
+        // TRIGGER MODAL
+        // ============================================
+        function showTriggerModal() {
+            document.getElementById('trigger-modal').classList.remove('hidden');
+        }
+
+        function closeTriggerModal() {
+            document.getElementById('trigger-modal').classList.add('hidden');
+        }
+
+        function selectTriggerType(triggerType) {
+            flow.trigger_type = triggerType;
+            flow.name = getTriggerDefaultName(triggerType);
+            document.getElementById('flow-name').value = flow.name;
+
+            closeTriggerModal();
+            renderFlow();
+            markAsChanged();
+
+            // Open trigger config panel for filters
+            setTimeout(() => openTriggerConfig(), 200);
+        }
+
+        function getTriggerDefaultName(triggerType) {
+            const names = {
+                offer_created: 'Sekwencja po ofercie',
+                offer_viewed: 'Follow-up po obejrzeniu',
+                offer_expired: 'Wznowienie po wygaśnięciu',
+                payment_received: 'Onboarding po płatności',
+                workflow_created: 'Powiadomienie o starcie',
+                stage_completed: 'Update po etapie',
+                products_shared: 'Email z produktami',
+                report_published: 'Powiadomienie o raporcie',
+                branding_delivered: 'Dostawa brandingu',
+                sales_page_shared: 'Udostępnienie landing page',
+                contract_signed: 'Po podpisaniu umowy'
+            };
+            return names[triggerType] || 'Nowa automatyzacja';
+        }
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closePanel();
+                closeTriggerModal();
                 document.getElementById('add-step-dropdown').classList.add('hidden');
             }
             if ((e.metaKey || e.ctrlKey) && e.key === 's') {
