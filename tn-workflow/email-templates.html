@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szablony emaili | TN Workflow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #000; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* Template card */
+        .template-card {
+            transition: all 0.2s ease;
+        }
+        .template-card:hover {
+            border-color: rgba(255,255,255,0.2);
+        }
+        .template-card.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Variable tag */
+        .var-tag {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .var-tag:hover {
+            background: rgba(59, 130, 246, 0.25);
+        }
+
+        /* Editor */
+        .editor-textarea {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* Preview iframe */
+        .preview-frame {
+            background: white;
+            border-radius: 8px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans antialiased">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-56 lg:w-[224px] bg-[#050505] border-r border-[#1a1a1a] flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main id="main-content" class="flex-1 flex flex-col bg-black relative min-w-0 overflow-hidden">
+        <!-- Top Header -->
+        <header class="h-14 border-b border-[#1a1a1a] bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-[#111] text-[#666] hover:text-white transition-colors mr-3">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <h1 class="text-lg font-semibold text-white">Szablony emaili</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="saveTemplate()" id="save-btn" disabled class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                    <i class="ph ph-floppy-disk"></i>
+                    Zapisz
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Templates List -->
+            <div class="w-72 border-r border-[#1a1a1a] flex flex-col">
+                <div class="p-4 border-b border-[#1a1a1a]">
+                    <div class="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-3">Szablony</div>
+                    <div class="relative">
+                        <input type="text" id="search-templates" placeholder="Szukaj..."
+                               class="w-full bg-zinc-900/50 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                    </div>
+                </div>
+                <div id="templates-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <!-- Templates will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Editor Panel -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- No template selected -->
+                <div id="no-template" class="flex-1 flex items-center justify-center">
+                    <div class="text-center">
+                        <i class="ph ph-envelope-simple text-5xl text-zinc-700 mb-4"></i>
+                        <p class="text-zinc-500">Wybierz szablon z listy</p>
+                    </div>
+                </div>
+
+                <!-- Editor -->
+                <div id="editor-panel" class="flex-1 flex flex-col overflow-hidden hidden">
+                    <!-- Template info -->
+                    <div class="p-4 border-b border-[#1a1a1a]">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 id="template-name" class="text-lg font-medium text-white"></h2>
+                                <p id="template-description" class="text-sm text-zinc-500 mt-1"></p>
+                            </div>
+                            <div id="template-usage" class="text-right">
+                                <!-- Usage info -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Variables bar -->
+                    <div class="px-4 py-3 border-b border-[#1a1a1a] bg-zinc-900/30">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs text-zinc-500 mr-2">Zmienne:</span>
+                            <button onclick="insertVariable('clientName')" class="var-tag">{{clientName}}</button>
+                            <button onclick="insertVariable('offerName')" class="var-tag">{{offerName}}</button>
+                            <button onclick="insertVariable('offerPrice')" class="var-tag">{{offerPrice}}</button>
+                            <button onclick="insertVariable('validUntil')" class="var-tag">{{validUntil}}</button>
+                            <button onclick="insertVariable('offerUrl')" class="var-tag">{{offerUrl}}</button>
+                            <button onclick="insertVariable('email')" class="var-tag">{{email}}</button>
+                        </div>
+                    </div>
+
+                    <!-- Editor and Preview -->
+                    <div class="flex-1 flex overflow-hidden">
+                        <!-- Subject & Body Editor -->
+                        <div class="flex-1 flex flex-col overflow-hidden border-r border-[#1a1a1a]">
+                            <!-- Subject -->
+                            <div class="p-4 border-b border-[#1a1a1a]">
+                                <label class="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Temat</label>
+                                <input type="text" id="subject-input"
+                                       class="w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 editor-textarea"
+                                       oninput="onEditorChange()">
+                            </div>
+
+                            <!-- Body -->
+                            <div class="flex-1 flex flex-col p-4 overflow-hidden">
+                                <label class="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Treść (HTML)</label>
+                                <textarea id="body-input"
+                                          class="flex-1 w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 editor-textarea resize-none"
+                                          oninput="onEditorChange()"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="w-[500px] flex flex-col overflow-hidden bg-zinc-900/20">
+                            <div class="p-4 border-b border-[#1a1a1a] flex items-center justify-between">
+                                <label class="text-xs text-zinc-500 uppercase tracking-wider">Podgląd</label>
+                                <button onclick="refreshPreview()" class="text-zinc-500 hover:text-white transition-colors">
+                                    <i class="ph ph-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <div class="flex-1 p-4 overflow-auto">
+                                <div class="bg-zinc-800 rounded-lg p-3 mb-4">
+                                    <div class="text-xs text-zinc-500 mb-1">Temat:</div>
+                                    <div id="preview-subject" class="text-white text-sm"></div>
+                                </div>
+                                <div class="preview-frame overflow-hidden">
+                                    <iframe id="preview-iframe" class="w-full h-[600px] border-0"></iframe>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../components/shared-sidebar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Template definitions with metadata
+        const TEMPLATE_DEFINITIONS = {
+            'offer_created': {
+                name: 'Oferta utworzona',
+                description: 'Wysyłany gdy tworzona jest nowa oferta dla klienta',
+                icon: 'ph-paper-plane-tilt',
+                color: 'emerald',
+                triggers: ['offer_created']
+            },
+            'offer_reminder_halfway': {
+                name: 'Przypomnienie o ofercie',
+                description: 'Wysyłany w połowie okresu ważności oferty',
+                icon: 'ph-bell',
+                color: 'amber',
+                triggers: ['offer_halfway']
+            },
+            'offer_expired': {
+                name: 'Oferta wygasła',
+                description: 'Wysyłany gdy oferta traci ważność',
+                icon: 'ph-clock-countdown',
+                color: 'red',
+                triggers: ['offer_expired']
+            },
+            'workflow_created': {
+                name: 'Workflow utworzony',
+                description: 'Wysyłany gdy tworzony jest nowy projekt workflow',
+                icon: 'ph-path',
+                color: 'blue',
+                triggers: ['workflow_created']
+            },
+            'workflow_stage_completed': {
+                name: 'Etap ukończony',
+                description: 'Wysyłany gdy ukończony zostaje etap w workflow',
+                icon: 'ph-check-circle',
+                color: 'green',
+                triggers: ['stage_completed']
+            },
+            'branding_delivered': {
+                name: 'Branding dostarczony',
+                description: 'Wysyłany gdy branding jest gotowy',
+                icon: 'ph-palette',
+                color: 'violet',
+                triggers: []
+            },
+            'sales_page_shared': {
+                name: 'Strona sprzedażowa',
+                description: 'Wysyłany gdy udostępniana jest strona sprzedażowa',
+                icon: 'ph-globe',
+                color: 'cyan',
+                triggers: []
+            },
+            'contract_sent': {
+                name: 'Umowa wysłana',
+                description: 'Wysyłany wraz z umową do podpisu',
+                icon: 'ph-file-text',
+                color: 'orange',
+                triggers: ['contract_signed']
+            },
+            'invoice_sent': {
+                name: 'Faktura wysłana',
+                description: 'Wysyłany wraz z fakturą',
+                icon: 'ph-receipt',
+                color: 'pink',
+                triggers: ['payment_received']
+            }
+        };
+
+        // Sample data for preview
+        const PREVIEW_DATA = {
+            clientName: 'Jan Kowalski',
+            offerName: 'Budowa sklepu pełen pakiet',
+            offerPrice: '15 000',
+            validUntil: '15 marca 2026',
+            offerUrl: 'https://crm.tomekniedzwiecki.pl/p/abc123',
+            email: 'jan@example.com'
+        };
+
+        // State
+        let templates = {};
+        let selectedTemplate = null;
+        let hasChanges = false;
+        let originalSubject = '';
+        let originalBody = '';
+
+        // Load templates
+        async function loadTemplates() {
+            const { data, error } = await sb
+                .from('settings')
+                .select('key, value')
+                .like('key', 'email_template_%');
+
+            if (error) {
+                console.error('Error loading templates:', error);
+                return;
+            }
+
+            // Parse templates
+            templates = {};
+            (data || []).forEach(item => {
+                const match = item.key.match(/^email_template_(.+?)_(subject|body)$/);
+                if (match) {
+                    const [, type, field] = match;
+                    if (!templates[type]) templates[type] = {};
+                    templates[type][field] = item.value;
+                }
+            });
+
+            renderTemplatesList();
+        }
+
+        // Render templates list
+        function renderTemplatesList() {
+            const container = document.getElementById('templates-list');
+            const searchQuery = document.getElementById('search-templates').value.toLowerCase();
+
+            const templateTypes = Object.keys(TEMPLATE_DEFINITIONS);
+
+            const html = templateTypes
+                .filter(type => {
+                    const def = TEMPLATE_DEFINITIONS[type];
+                    return def.name.toLowerCase().includes(searchQuery) ||
+                           def.description.toLowerCase().includes(searchQuery);
+                })
+                .map(type => {
+                    const def = TEMPLATE_DEFINITIONS[type];
+                    const hasTemplate = templates[type]?.subject || templates[type]?.body;
+                    const isActive = selectedTemplate === type;
+
+                    const colorMap = {
+                        'emerald': 'bg-emerald-500/20 text-emerald-400',
+                        'amber': 'bg-amber-500/20 text-amber-400',
+                        'red': 'bg-red-500/20 text-red-400',
+                        'blue': 'bg-blue-500/20 text-blue-400',
+                        'green': 'bg-green-500/20 text-green-400',
+                        'violet': 'bg-violet-500/20 text-violet-400',
+                        'cyan': 'bg-cyan-500/20 text-cyan-400',
+                        'orange': 'bg-orange-500/20 text-orange-400',
+                        'pink': 'bg-pink-500/20 text-pink-400'
+                    };
+
+                    return `
+                        <div onclick="selectTemplate('${type}')"
+                             class="template-card p-3 rounded-lg border border-white/5 cursor-pointer ${isActive ? 'active' : ''}">
+                            <div class="flex items-start gap-3">
+                                <div class="w-8 h-8 rounded-lg ${colorMap[def.color] || 'bg-zinc-500/20 text-zinc-400'} flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ${def.icon}"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-white truncate">${def.name}</span>
+                                        ${hasTemplate ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>'}
+                                    </div>
+                                    <p class="text-xs text-zinc-500 mt-0.5 truncate">${def.description}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            container.innerHTML = html || '<div class="p-4 text-center text-zinc-600 text-sm">Brak szablonów</div>';
+        }
+
+        // Select template
+        function selectTemplate(type) {
+            if (hasChanges && !confirm('Masz niezapisane zmiany. Czy na pewno chcesz zmienić szablon?')) {
+                return;
+            }
+
+            selectedTemplate = type;
+            hasChanges = false;
+
+            const def = TEMPLATE_DEFINITIONS[type];
+            const template = templates[type] || {};
+
+            // Update UI
+            document.getElementById('no-template').classList.add('hidden');
+            document.getElementById('editor-panel').classList.remove('hidden');
+
+            document.getElementById('template-name').textContent = def.name;
+            document.getElementById('template-description').textContent = def.description;
+
+            // Set editor values
+            document.getElementById('subject-input').value = template.subject || '';
+            document.getElementById('body-input').value = template.body || '';
+
+            originalSubject = template.subject || '';
+            originalBody = template.body || '';
+
+            // Usage info
+            const usageHtml = def.triggers.length > 0
+                ? `<span class="text-xs text-zinc-500">Używany w: </span><span class="text-xs text-blue-400">${def.triggers.join(', ')}</span>`
+                : '<span class="text-xs text-zinc-600">Nie powiązany z automatyzacją</span>';
+            document.getElementById('template-usage').innerHTML = usageHtml;
+
+            // Update list
+            renderTemplatesList();
+
+            // Update save button
+            updateSaveButton();
+
+            // Refresh preview
+            refreshPreview();
+        }
+
+        // Insert variable
+        function insertVariable(varName) {
+            const bodyInput = document.getElementById('body-input');
+            const subjectInput = document.getElementById('subject-input');
+
+            // Determine which field is focused
+            const activeElement = document.activeElement;
+            let input = bodyInput;
+            if (activeElement === subjectInput) {
+                input = subjectInput;
+            }
+
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            const variable = `{{${varName}}}`;
+
+            input.value = text.substring(0, start) + variable + text.substring(end);
+            input.focus();
+            input.setSelectionRange(start + variable.length, start + variable.length);
+
+            onEditorChange();
+        }
+
+        // Editor change handler
+        function onEditorChange() {
+            const subject = document.getElementById('subject-input').value;
+            const body = document.getElementById('body-input').value;
+
+            hasChanges = subject !== originalSubject || body !== originalBody;
+            updateSaveButton();
+            refreshPreview();
+        }
+
+        // Update save button
+        function updateSaveButton() {
+            const btn = document.getElementById('save-btn');
+            btn.disabled = !hasChanges;
+        }
+
+        // Refresh preview
+        function refreshPreview() {
+            const subject = document.getElementById('subject-input').value;
+            const body = document.getElementById('body-input').value;
+
+            // Replace variables with sample data
+            const replaceVars = (text) => {
+                return text
+                    .replace(/\{\{clientName\}\}/g, PREVIEW_DATA.clientName)
+                    .replace(/\{\{offerName\}\}/g, PREVIEW_DATA.offerName)
+                    .replace(/\{\{offerPrice\}\}/g, PREVIEW_DATA.offerPrice)
+                    .replace(/\{\{validUntil\}\}/g, PREVIEW_DATA.validUntil)
+                    .replace(/\{\{offerUrl\}\}/g, PREVIEW_DATA.offerUrl)
+                    .replace(/\{\{email\}\}/g, PREVIEW_DATA.email);
+            };
+
+            document.getElementById('preview-subject').textContent = replaceVars(subject) || '(brak tematu)';
+
+            const iframe = document.getElementById('preview-iframe');
+            const previewBody = replaceVars(body) || '<p style="padding: 20px; color: #666;">Brak treści</p>';
+            iframe.srcdoc = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            font-size: 14px;
+                            line-height: 1.6;
+                            color: #333;
+                            margin: 0;
+                            padding: 20px;
+                        }
+                        a { color: #2563eb; }
+                        img { max-width: 100%; height: auto; }
+                    </style>
+                </head>
+                <body>${previewBody}</body>
+                </html>
+            `;
+        }
+
+        // Save template
+        async function saveTemplate() {
+            if (!selectedTemplate || !hasChanges) return;
+
+            const subject = document.getElementById('subject-input').value;
+            const body = document.getElementById('body-input').value;
+
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisuję...';
+
+            try {
+                // Upsert subject
+                const { error: subjectError } = await sb
+                    .from('settings')
+                    .upsert({
+                        key: `email_template_${selectedTemplate}_subject`,
+                        value: subject
+                    }, { onConflict: 'key' });
+
+                if (subjectError) throw subjectError;
+
+                // Upsert body
+                const { error: bodyError } = await sb
+                    .from('settings')
+                    .upsert({
+                        key: `email_template_${selectedTemplate}_body`,
+                        value: body
+                    }, { onConflict: 'key' });
+
+                if (bodyError) throw bodyError;
+
+                // Update local state
+                if (!templates[selectedTemplate]) templates[selectedTemplate] = {};
+                templates[selectedTemplate].subject = subject;
+                templates[selectedTemplate].body = body;
+
+                originalSubject = subject;
+                originalBody = body;
+                hasChanges = false;
+
+                // Update UI
+                renderTemplatesList();
+                updateSaveButton();
+
+                // Show success
+                btn.innerHTML = '<i class="ph ph-check"></i> Zapisano';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Zapisz';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error saving template:', error);
+                alert('Błąd zapisywania szablonu');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Zapisz';
+            }
+        }
+
+        // Search handler
+        document.getElementById('search-templates').addEventListener('input', renderTemplatesList);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (hasChanges) saveTemplate();
+            }
+        });
+
+        // Warn before leaving with unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Init
+        async function init() {
+            Sidebar.render({ appId: 'workflow' });
+
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return;
+            }
+
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(sb);
+
+            await loadTemplates();
+        }
+
+        init();
+    </script>
+</body>
+</html>
