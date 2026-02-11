@@ -342,7 +342,11 @@
 
             let filtered = flows;
             if (currentFilter) {
-                filtered = flows.filter(f => f.trigger_type.startsWith(currentFilter));
+                // Filter by category field, fallback to inferring from trigger_type for old records
+                filtered = flows.filter(f => {
+                    const category = f.category || inferCategoryFromTrigger(f.trigger_type);
+                    return category === currentFilter;
+                });
             }
 
             if (filtered.length === 0) {
@@ -361,6 +365,9 @@
             const triggerLabel = getTriggerLabel(flow.trigger_type);
             const triggerIcon = getTriggerIcon(flow.trigger_type);
             const filterLabel = getFilterLabel(flow.trigger_filters);
+            const category = flow.category || inferCategoryFromTrigger(flow.trigger_type);
+            const categoryLabel = getCategoryLabel(category);
+            const categoryColor = getCategoryColor(category);
             const delay = index * 50 + 100;
 
             return `
@@ -373,7 +380,8 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 mb-1">
                                     <h3 class="text-base font-medium text-white truncate">${flow.name}</h3>
-                                    ${filterLabel ? `<span class="badge badge-blue">${filterLabel}</span>` : ''}
+                                    <span class="badge ${categoryColor}">${categoryLabel}</span>
+                                    ${filterLabel ? `<span class="badge badge-amber">${filterLabel}</span>` : ''}
                                     ${flow.is_active ? '<span class="badge badge-green">Aktywna</span>' : ''}
                                 </div>
                                 ${flow.description ? `<p class="text-sm text-[#666] mb-3 line-clamp-1">${flow.description}</p>` : ''}
@@ -404,6 +412,24 @@
                     </div>
                 </div>
             `;
+        }
+
+        function getCategoryLabel(category) {
+            const labels = {
+                offer: 'Oferty',
+                workflow: 'Workflow',
+                payment: 'Płatności'
+            };
+            return labels[category] || 'Workflow';
+        }
+
+        function getCategoryColor(category) {
+            const colors = {
+                offer: 'badge-blue',
+                workflow: 'badge-amber',
+                payment: 'badge-green'
+            };
+            return colors[category] || 'badge-amber';
         }
 
         function renderStepBadge(step) {
@@ -482,6 +508,12 @@
                 contract_signed: 'ph-signature'
             };
             return icons[type] || 'ph-lightning';
+        }
+
+        function inferCategoryFromTrigger(triggerType) {
+            if (triggerType.startsWith('offer')) return 'offer';
+            if (triggerType.startsWith('payment') || triggerType === 'contract_signed') return 'payment';
+            return 'workflow';
         }
 
         function getFilterLabel(filters) {
