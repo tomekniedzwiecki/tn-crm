@@ -399,7 +399,7 @@
                 workflows = data || [];
             }
 
-            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos(), loadCurrentMilestoneTasks()]);
+            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos(), loadCurrentMilestoneTasks(), loadStageData()]);
             populateOfferFilter();
             renderStageFilter();
             applyFilters();
@@ -528,6 +528,48 @@
                 const milestoneId = milestoneMap[w.workflow_id];
                 w.current_milestone_tasks = milestoneId ? (tasksByMilestone[milestoneId] || []) : [];
             }
+        }
+
+        let videoStages = {};
+        let takedropStages = {};
+
+        async function loadStageData() {
+            const workflowIds = workflows.map(w => w.workflow_id);
+            if (workflowIds.length === 0) return;
+
+            const [videoRes, takedropRes] = await Promise.all([
+                supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared').in('workflow_id', workflowIds),
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted').in('workflow_id', workflowIds)
+            ]);
+
+            videoStages = {};
+            takedropStages = {};
+
+            (videoRes.data || []).forEach(v => {
+                videoStages[v.workflow_id] = v;
+            });
+
+            (takedropRes.data || []).forEach(t => {
+                takedropStages[t.workflow_id] = t;
+            });
+
+            // Attach stage info to workflows
+            for (const w of workflows) {
+                w.video_stage = videoStages[w.workflow_id] || null;
+                w.takedrop_stage = takedropStages[w.workflow_id] || null;
+            }
+        }
+
+        function getWorkflowStage(w) {
+            // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop
+            if (w.takedrop_stage?.is_active) return 3;
+            if (w.video_stage?.is_active) return 2;
+            return 1;
+        }
+
+        function isStage1Completed(w) {
+            // Stage 1 is completed if all milestones are done (or video is active)
+            return w.video_stage?.is_active || (w.total_milestones > 0 && w.completed_milestones >= w.total_milestones);
         }
 
         function applyFilters() {
@@ -812,6 +854,71 @@
             return `<div class="flex items-center gap-1 mt-1.5">${dots}</div>`;
         }
 
+        function renderStageProgress(w) {
+            const stage = getWorkflowStage(w);
+            const stage1Complete = isStage1Completed(w);
+
+            if (stage === 3) {
+                // Stage 3: TakeDrop
+                const td = w.takedrop_stage;
+                const status = td?.stage_accepted ? 'Zaakceptowany' : 'Oczekuje na akceptację';
+                const color = td?.stage_accepted ? 'text-emerald-400' : 'text-blue-400';
+                return `
+                    <div class="mb-2.5">
+                        <div class="flex items-center gap-2 text-[11px] mb-1.5">
+                            <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 1</span>
+                            <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 2</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400">Etap 3: TakeDrop</span>
+                            <span class="text-[10px] ${color}">${status}</span>
+                        </div>
+                    </div>
+                `;
+            } else if (stage === 2) {
+                // Stage 2: Video
+                const v = w.video_stage;
+                let status = 'Aktywny';
+                let color = 'text-cyan-400';
+                if (v?.video_shared) {
+                    status = 'Video udostępnione';
+                    color = 'text-emerald-400';
+                } else if (v?.stage_accepted) {
+                    status = 'Oczekuje na video';
+                    color = 'text-amber-400';
+                }
+                return `
+                    <div class="mb-2.5">
+                        <div class="flex items-center gap-2 text-[11px] mb-1.5">
+                            <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 1 ukończony</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">Etap 2: Video</span>
+                            <span class="text-[10px] ${color}">${status}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Stage 1: Milestones
+                const progressPercent = w.progress_percent || 0;
+                const milestoneInfo = w.current_milestone_title
+                    ? `[${w.completed_milestones + 1}/${w.total_milestones}] ${w.current_milestone_title}`
+                    : 'Brak etapów';
+                return `
+                    <div class="mb-2.5">
+                        <div class="flex items-center justify-between text-[11px] mb-1">
+                            <span class="text-zinc-500 truncate">${milestoneInfo}</span>
+                            <span class="text-zinc-500 font-mono flex-shrink-0 ml-2">${progressPercent}%</span>
+                        </div>
+                        <div class="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
+                        </div>
+                        ${renderTaskDots(w.current_milestone_tasks)}
+                    </div>
+                `;
+            }
+        }
+
         function formatPrice(price) {
             return new Intl.NumberFormat('pl-PL', {
                 style: 'currency',
@@ -839,11 +946,6 @@
             grid.innerHTML = filteredWorkflows.map(w => {
                 const unread = unreadCounts[w.workflow_id] || 0;
                 const customerDisplay = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
-                const progressPercent = w.progress_percent || 0;
-                const milestoneInfo = w.current_milestone_title
-                    ? `[${w.completed_milestones + 1}/${w.total_milestones}] ${w.current_milestone_title}`
-                    : 'Brak etapow';
-
                 const logoUrl = workflowLogos[w.workflow_id];
 
                 return `
@@ -872,17 +974,7 @@
                         </div>
                     </div>
                     ${getStatusIcons(w)}
-
-                    <div class="mb-2.5">
-                        <div class="flex items-center justify-between text-[11px] mb-1">
-                            <span class="text-zinc-500 truncate">${milestoneInfo}</span>
-                            <span class="text-zinc-500 font-mono flex-shrink-0 ml-2">${progressPercent}%</span>
-                        </div>
-                        <div class="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                            <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
-                        </div>
-                        ${renderTaskDots(w.current_milestone_tasks)}
-                    </div>
+                    ${renderStageProgress(w)}
 
                     <div class="flex items-center justify-between pt-2 border-t border-white/5">
                         <div class="flex items-center gap-2 text-[11px]">

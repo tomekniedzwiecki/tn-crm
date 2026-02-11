@@ -420,53 +420,27 @@
         /* WhatsApp Voice Message Player */
         .whatsapp-voice-player {
             background: linear-gradient(135deg, #075e54 0%, #054d44 100%);
-            border-radius: 12px;
-            padding: 12px 16px;
-            max-width: 360px;
+            border-radius: 16px;
+            padding: 10px 14px;
+            max-width: 340px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
-        .voice-waveform-container {
-            position: relative;
-            height: 32px;
-            cursor: pointer;
-            user-select: none;
+        .voice-main-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .voice-waveform-container:hover .voice-scrubber {
-            opacity: 1;
-        }
-        .voice-bar {
-            flex: 1;
-            min-width: 2px;
-            max-width: 4px;
-            background: rgba(255,255,255,0.35);
-            border-radius: 2px;
-            transition: background 0.15s ease, transform 0.1s ease;
-        }
-        .voice-bar.played {
-            background: rgba(255,255,255,0.95);
-        }
-        .voice-scrubber {
-            position: absolute;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border-radius: 50%;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-            z-index: 10;
-        }
-        .voice-waveform-container:active .voice-scrubber,
-        .voice-waveform-container.seeking .voice-scrubber {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.2);
-        }
-        .voice-play-btn {
+        .voice-avatar {
             width: 40px;
             height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .voice-play-btn {
+            width: 36px;
+            height: 36px;
             background: rgba(255,255,255,0.15);
             border-radius: 50%;
             display: flex;
@@ -475,42 +449,72 @@
             transition: all 0.2s ease;
             border: none;
             cursor: pointer;
+            flex-shrink: 0;
         }
         .voice-play-btn:hover {
             background: rgba(255,255,255,0.25);
-            transform: scale(1.05);
-        }
-        .voice-play-btn:active {
-            transform: scale(0.95);
         }
         .voice-play-btn.playing {
             background: rgba(255,255,255,0.25);
         }
-        @keyframes voicePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
-            50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+        .voice-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
-        .voice-play-btn.playing {
-            animation: voicePulse 2s ease-in-out infinite;
+        .voice-waveform-container {
+            position: relative;
+            height: 28px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .voice-waveform-container:hover .voice-scrubber {
+            opacity: 1;
+        }
+        .voice-waveform {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 100%;
+        }
+        .voice-bar {
+            width: 3px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 2px;
+            transition: background 0.15s ease;
+        }
+        .voice-bar.played {
+            background: rgba(255,255,255,0.95);
+        }
+        .voice-scrubber {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .voice-waveform-container:active .voice-scrubber,
+        .voice-waveform-container.seeking .voice-scrubber {
+            opacity: 1;
+        }
+        .voice-time-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .voice-time {
             font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
             font-size: 11px;
-            color: rgba(255,255,255,0.7);
-            min-width: 36px;
-            text-align: right;
-        }
-        .voice-time:first-child {
-            text-align: left;
-        }
-        .voice-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            overflow: hidden;
-            flex-shrink: 0;
-            border: 2px solid rgba(255,255,255,0.2);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            color: rgba(255,255,255,0.6);
         }
     </style>
 </head>
@@ -1267,7 +1271,7 @@
 
                         <!-- WhatsApp-style Audio Player -->
                         <div class="whatsapp-voice-player">
-                            <div class="flex items-center gap-3">
+                            <div class="voice-main-row">
                                 <!-- Avatar -->
                                 <div class="voice-avatar">
                                     <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" class="w-full h-full object-cover">
@@ -1275,19 +1279,18 @@
 
                                 <!-- Play Button -->
                                 <button id="voice-play-btn" onclick="toggleVoiceMessage()" class="voice-play-btn">
-                                    <i id="voice-play-icon" class="ph-fill ph-play text-white text-xl"></i>
+                                    <i id="voice-play-icon" class="ph-fill ph-play text-white text-lg"></i>
                                 </button>
 
-                                <!-- Waveform Container (clickable for seek) -->
-                                <div class="flex-1 min-w-0">
+                                <!-- Waveform + Time -->
+                                <div class="voice-content">
                                     <div class="voice-waveform-container" id="voice-waveform-container">
-                                        <div class="flex items-end gap-[3px] h-full" id="voice-waveform">
+                                        <div class="voice-waveform" id="voice-waveform">
                                             <!-- Waveform bars generated by JS -->
                                         </div>
                                         <div class="voice-scrubber" id="voice-scrubber"></div>
                                     </div>
-                                    <!-- Time display -->
-                                    <div class="flex justify-between items-center mt-1.5">
+                                    <div class="voice-time-row">
                                         <span id="voice-current-time" class="voice-time">0:00</span>
                                         <span id="voice-duration" class="voice-time">0:00</span>
                                     </div>
