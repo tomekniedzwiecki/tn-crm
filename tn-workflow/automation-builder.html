@@ -1066,33 +1066,48 @@
             if (!previewContainer) return;
 
             const subject = template.subject || '(brak tematu)';
-
-            // Extract text content from HTML body (strip tags)
-            let bodyPreview = '';
-            if (template.body) {
-                const temp = document.createElement('div');
-                temp.innerHTML = template.body;
-                bodyPreview = temp.textContent || temp.innerText || '';
-                bodyPreview = bodyPreview.replace(/\s+/g, ' ').trim().substring(0, 150);
-                if (bodyPreview.length === 150) bodyPreview += '...';
-            }
+            const hasBody = template.body && template.body.trim().length > 0;
 
             previewContainer.innerHTML = `
                 <div class="space-y-3">
-                    <div>
-                        <div class="text-xs text-[#666] mb-1">Temat:</div>
+                    <!-- Subject -->
+                    <div class="bg-zinc-800/50 rounded-lg px-3 py-2">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Temat</div>
                         <div class="text-sm text-white">${subject}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-[#666] mb-1">Treść:</div>
-                        <div class="text-sm text-[#888] line-clamp-3">${bodyPreview || '(brak treści)'}</div>
-                    </div>
-                    <a href="/tn-workflow/email-templates.html" class="inline-flex items-center gap-1 text-xs text-[#666] hover:text-white transition-colors">
+
+                    <!-- Email preview iframe -->
+                    ${hasBody ? `
+                        <div class="relative rounded-lg overflow-hidden border border-zinc-800" style="height: 180px;">
+                            <iframe id="template-preview-iframe" class="w-full h-full border-0 bg-white" style="transform: scale(0.5); transform-origin: top left; width: 200%; height: 200%;"></iframe>
+                        </div>
+                    ` : `
+                        <div class="bg-zinc-800/30 rounded-lg p-4 text-center">
+                            <i class="ph ph-file-dashed text-2xl text-zinc-600 mb-2"></i>
+                            <p class="text-xs text-zinc-500">Brak treści szablonu</p>
+                        </div>
+                    `}
+
+                    <!-- Edit link -->
+                    <a href="/tn-workflow/email-templates.html" class="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors">
                         <i class="ph ph-pencil-simple"></i>
                         Edytuj szablon
                     </a>
                 </div>
             `;
+
+            // Load HTML into iframe
+            if (hasBody) {
+                setTimeout(() => {
+                    const iframe = document.getElementById('template-preview-iframe');
+                    if (iframe) {
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        doc.open();
+                        doc.write(template.body);
+                        doc.close();
+                    }
+                }, 10);
+            }
         }
 
         function openStepConfig(index) {
