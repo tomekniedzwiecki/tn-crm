@@ -1176,21 +1176,40 @@
                     </div>
 
                     <!-- Confirmation Card -->
-                    <div class="card p-6">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div id="takedrop-confirm-icon" class="w-12 h-12 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
-                                    <i class="ph ph-check-circle text-2xl text-[#444]"></i>
-                                </div>
-                                <div>
-                                    <h4 id="takedrop-confirm-title" class="text-white font-medium">Czy założyłeś już konto?</h4>
-                                    <p id="takedrop-confirm-desc" class="text-[#666] text-sm">Kliknij przycisk gdy będziesz gotowy</p>
-                                </div>
+                    <div class="card p-6" id="takedrop-confirm-card">
+                        <div class="flex items-center gap-4 mb-5">
+                            <div id="takedrop-confirm-icon" class="w-12 h-12 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-check-circle text-2xl text-[#444]"></i>
                             </div>
-                            <button id="takedrop-confirm-btn" onclick="confirmTakeDropAccount()" class="bg-white text-black hover:bg-zinc-200 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                            <div>
+                                <h4 id="takedrop-confirm-title" class="text-white font-medium">Założyłeś już konto?</h4>
+                                <p id="takedrop-confirm-desc" class="text-[#666] text-sm">Podaj dane logowania do TakeDrop</p>
+                            </div>
+                        </div>
+
+                        <!-- Login form (hidden when confirmed) -->
+                        <div id="takedrop-login-form" class="space-y-4">
+                            <div>
+                                <label class="text-[#888] text-xs block mb-1.5">Email / Login</label>
+                                <input type="email" id="takedrop-client-email" class="form-input" placeholder="twoj@email.pl">
+                            </div>
+                            <div>
+                                <label class="text-[#888] text-xs block mb-1.5">Hasło</label>
+                                <input type="password" id="takedrop-client-password" class="form-input" placeholder="••••••••">
+                            </div>
+                            <button id="takedrop-confirm-btn" onclick="confirmTakeDropAccount()" class="w-full bg-white text-black hover:bg-zinc-200 px-5 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                                 <i class="ph ph-check"></i>
-                                Potwierdzam
+                                Potwierdzam założenie konta
                             </button>
+                        </div>
+
+                        <!-- Success state (shown when confirmed) -->
+                        <div id="takedrop-success-state" class="hidden text-center py-4">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                                <i class="ph-fill ph-check-circle text-3xl text-emerald-400"></i>
+                            </div>
+                            <h4 class="text-emerald-400 font-medium mb-1">Konto potwierdzone!</h4>
+                            <p id="takedrop-confirmed-date" class="text-[#666] text-sm"></p>
                         </div>
                     </div>
                 </div>
@@ -1642,37 +1661,49 @@
         }
 
         function renderTakeDrop() {
-            const icon = document.getElementById('takedrop-confirm-icon');
-            const title = document.getElementById('takedrop-confirm-title');
-            const desc = document.getElementById('takedrop-confirm-desc');
-            const btn = document.getElementById('takedrop-confirm-btn');
+            const loginForm = document.getElementById('takedrop-login-form');
+            const successState = document.getElementById('takedrop-success-state');
+            const confirmedDate = document.getElementById('takedrop-confirmed-date');
 
-            if (!icon || !title || !desc || !btn) return;
+            if (!loginForm || !successState) return;
 
             if (takeDropData && takeDropData.account_created) {
-                icon.className = 'w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center';
-                icon.innerHTML = '<i class="ph-fill ph-check-circle text-2xl text-emerald-400"></i>';
-                title.textContent = 'Konto założone!';
-                title.className = 'text-emerald-400 font-medium';
-                desc.textContent = takeDropData.account_created_at
-                    ? 'Utworzono: ' + new Date(takeDropData.account_created_at).toLocaleDateString('pl-PL')
-                    : 'Dziękujemy za potwierdzenie';
-                btn.classList.add('hidden');
+                loginForm.classList.add('hidden');
+                successState.classList.remove('hidden');
+                if (confirmedDate && takeDropData.account_created_at) {
+                    confirmedDate.textContent = 'Potwierdzone: ' + new Date(takeDropData.account_created_at).toLocaleDateString('pl-PL');
+                }
             } else {
-                icon.className = 'w-12 h-12 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center';
-                icon.innerHTML = '<i class="ph ph-check-circle text-2xl text-[#444]"></i>';
-                title.textContent = 'Czy założyłeś już konto?';
-                title.className = 'text-white font-medium';
-                desc.textContent = 'Kliknij przycisk gdy będziesz gotowy';
-                btn.classList.remove('hidden');
+                loginForm.classList.remove('hidden');
+                successState.classList.add('hidden');
             }
         }
 
         async function confirmTakeDropAccount() {
+            const emailInput = document.getElementById('takedrop-client-email');
+            const passwordInput = document.getElementById('takedrop-client-password');
+
+            const email = emailInput?.value?.trim();
+            const password = passwordInput?.value;
+
+            if (!email) {
+                showToast('Podaj email do konta TakeDrop', 'error');
+                emailInput?.focus();
+                return;
+            }
+
+            if (!password) {
+                showToast('Podaj hasło do konta TakeDrop', 'error');
+                passwordInput?.focus();
+                return;
+            }
+
             try {
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
                     .update({
+                        account_email: email,
+                        account_password: password,
                         account_created: true,
                         account_created_at: new Date().toISOString()
                     })
