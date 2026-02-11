@@ -1700,17 +1700,26 @@
                 renderTakeDrop();
                 showToast(isUpdate ? 'Dane zaktualizowane' : 'Dziękujemy za potwierdzenie!', 'success');
 
-                // Trigger automation
-                try {
-                    await supabaseClient.functions.invoke('automation-trigger', {
-                        body: {
-                            event_type: 'takedrop_account_created',
-                            workflow_id: workflow.id,
-                            payload: { customer_email: workflow.customer_email }
-                        }
-                    });
-                } catch (e) {
-                    console.log('Automation trigger:', e);
+                // Trigger automation (only on first confirmation, not updates)
+                if (!isUpdate) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'takedrop_account_created',
+                                entity_type: 'workflow_takedrop',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    customer_name: workflow.customer_name || workflow.customer_company || 'Kliencie',
+                                    workflow_id: workflow.id,
+                                    project_url: window.location.href,
+                                    takedrop_email: email
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.log('Automation trigger:', e);
+                    }
                 }
             } catch (err) {
                 console.error('Error confirming TakeDrop:', err);
