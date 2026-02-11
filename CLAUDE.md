@@ -28,6 +28,7 @@ CRM / system workflow do obslugi klientow. Stack:
 - `workflow_reports` — raporty/zalaczniki
 - `workflow_milestones` — kamienie milowe
 - `workflow_tasks` — zadania w milestones
+- `workflow_video` — etap Video (Etap 2): is_active, stage_accepted, voice_message, video_scenarios, social_profiles, video_links
 - `workflow_takedrop` — konto TakeDrop (Etap 3): email, haslo, is_active, account_created
 
 RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
@@ -104,6 +105,7 @@ Dostepne trigger_type w automation_flows:
 - `payment_received`, `workflow_created`
 - `stage_completed`, `products_shared`, `report_published`
 - `branding_delivered`, `sales_page_shared`, `contract_signed`
+- `video_activated` (Etap 2 - aktywacja Video)
 - `takedrop_activated` (Etap 3 - aktywacja TakeDrop)
 
 ### Flow

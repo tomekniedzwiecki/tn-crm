@@ -697,9 +697,17 @@
                         <span id="comments-badge" class="hidden ml-auto bg-[#00d084] text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
                     </button>
 
-                    <!-- Etap 2 -->
-                    <div class="pt-4 mt-4 border-t border-[#1a1a1a]">
+                    <!-- Etap 2 - Video -->
+                    <div id="video-stage-desktop" class="pt-4 mt-4 border-t border-[#1a1a1a] hidden">
                         <span class="text-[10px] text-[#444] uppercase tracking-wider px-3 mb-2 block">Etap 2</span>
+                        <button onclick="switchTab('video')" data-tab="video" class="sidebar-btn">
+                            <i class="ph ph-video-camera"></i> Video
+                        </button>
+                    </div>
+
+                    <!-- Etap 3 - TakeDrop -->
+                    <div id="takedrop-stage-desktop" class="pt-4 mt-4 border-t border-[#1a1a1a] hidden">
+                        <span class="text-[10px] text-[#444] uppercase tracking-wider px-3 mb-2 block">Etap 3</span>
                         <button onclick="switchTab('takedrop')" data-tab="takedrop" class="sidebar-btn">
                             <i class="ph ph-storefront"></i> Konto TakeDrop
                         </button>
@@ -752,9 +760,17 @@
                         <button onclick="switchTab('komentarze');toggleMobileMenu()" data-tab="komentarze" class="sidebar-btn">
                             <i class="ph ph-chat-circle-text"></i> Komentarze
                         </button>
-                        <!-- Etap 2 -->
-                        <div class="pt-3 mt-3 border-t border-[#1a1a1a]">
+                        <!-- Etap 2 - Video -->
+                        <div id="video-stage-mobile" class="pt-3 mt-3 border-t border-[#1a1a1a] hidden">
                             <span class="text-[10px] text-[#444] uppercase tracking-wider px-3 mb-2 block">Etap 2</span>
+                            <button onclick="switchTab('video');toggleMobileMenu()" data-tab="video" class="sidebar-btn">
+                                <i class="ph ph-video-camera"></i> Video
+                            </button>
+                        </div>
+
+                        <!-- Etap 3 - TakeDrop -->
+                        <div id="takedrop-stage-mobile" class="pt-3 mt-3 border-t border-[#1a1a1a] hidden">
+                            <span class="text-[10px] text-[#444] uppercase tracking-wider px-3 mb-2 block">Etap 3</span>
                             <button onclick="switchTab('takedrop');toggleMobileMenu()" data-tab="takedrop" class="sidebar-btn">
                                 <i class="ph ph-storefront"></i> Konto TakeDrop
                             </button>
@@ -1104,6 +1120,230 @@
                                 <i class="ph ph-paper-plane-tilt"></i>
                                 Wyślij
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Video (Etap 2) -->
+            <div id="tab-video" class="tab-panel hidden animate-enter">
+                <!-- Celebration Screen (shown when stage not accepted) -->
+                <div id="video-celebration" class="hidden">
+                    <div class="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
+                        <!-- Animated Icon -->
+                        <div class="w-24 h-24 mb-8 relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-full animate-pulse"></div>
+                            <div class="absolute inset-2 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                                <i class="ph-fill ph-video-camera text-4xl text-white"></i>
+                            </div>
+                        </div>
+
+                        <!-- Title -->
+                        <h1 id="video-celebration-title" class="text-3xl md:text-4xl font-bold text-white mb-4">
+                            Gratulacje!
+                        </h1>
+
+                        <!-- Description -->
+                        <p class="text-[#888] text-base md:text-lg max-w-md mb-8 leading-relaxed">
+                            Twoja marka jest gotowa. Teraz przechodzimy do najważniejszego etapu — nagrania materiałów video, które będą sercem Twojego sklepu.
+                        </p>
+
+                        <!-- Features -->
+                        <div class="flex flex-wrap justify-center gap-4 mb-10">
+                            <div class="flex items-center gap-2 bg-[#111] border border-[#222] rounded-full px-4 py-2">
+                                <i class="ph ph-microphone text-cyan-400"></i>
+                                <span class="text-[13px] text-[#888]">Wiadomość głosowa</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-[#111] border border-[#222] rounded-full px-4 py-2">
+                                <i class="ph ph-film-script text-cyan-400"></i>
+                                <span class="text-[13px] text-[#888]">Scenariusze video</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-[#111] border border-[#222] rounded-full px-4 py-2">
+                                <i class="ph ph-upload text-cyan-400"></i>
+                                <span class="text-[13px] text-[#888]">Upload nagrań</span>
+                            </div>
+                        </div>
+
+                        <!-- Accept Button -->
+                        <button onclick="acceptVideoStage()" class="group bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-semibold px-8 py-3.5 rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 flex items-center gap-2">
+                            <span>Zaczynamy</span>
+                            <i class="ph ph-arrow-right text-lg group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Content (shown after acceptance) -->
+                <div id="video-content" class="hidden">
+                    <h2 class="page-title">Etap 2 — Video</h2>
+
+                    <!-- Voice Message Section -->
+                    <div id="video-voice-section" class="mb-10 hidden">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-microphone text-cyan-400"></i>
+                            <h3 class="text-[15px] font-medium text-white">Wiadomość od Tomka</h3>
+                        </div>
+
+                        <!-- WhatsApp-style Audio Player -->
+                        <div class="bg-gradient-to-r from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded-2xl p-4 max-w-md">
+                            <div class="flex items-center gap-4">
+                                <!-- Play Button -->
+                                <button id="voice-play-btn" onclick="toggleVoiceMessage()" class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 hover:scale-105 transition-transform flex-shrink-0">
+                                    <i id="voice-play-icon" class="ph-fill ph-play text-white text-xl ml-0.5"></i>
+                                </button>
+
+                                <!-- Waveform & Progress -->
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <!-- Waveform SVG -->
+                                        <div class="flex-1 h-8 flex items-center gap-0.5">
+                                            <div id="voice-waveform" class="flex items-center gap-0.5 w-full">
+                                                <!-- Generated by JS -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Time -->
+                                    <div class="flex items-center justify-between text-[11px]">
+                                        <span id="voice-current-time" class="text-cyan-400 font-mono">0:00</span>
+                                        <span id="voice-duration" class="text-[#555] font-mono">0:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <audio id="voice-audio" class="hidden"></audio>
+                    </div>
+
+                    <!-- Instructions Section -->
+                    <div class="mb-10">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-package text-amber-400"></i>
+                            <h3 class="text-[15px] font-medium text-white">Zamów produkt do nagrań</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-amber-400 font-bold">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white text-[14px] font-medium mb-1">Wybierz wariant</h4>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Zdecyduj, który wariant produktu chcesz pokazać w nagraniach.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-amber-400 font-bold">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white text-[14px] font-medium mb-1">Złóż zamówienie</h4>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Zamów produkt bezpośrednio u dostawcy na swój adres.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-amber-400 font-bold">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white text-[14px] font-medium mb-1">Poczekaj na dostawę</h4>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Dostawa zazwyczaj trwa 7-14 dni roboczych.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-amber-400 font-bold">4</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white text-[14px] font-medium mb-1">Nagraj materiały</h4>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Gdy produkt dotrze, nagraj video według scenariuszy poniżej.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Scenarios Section -->
+                    <div id="video-scenarios-section" class="mb-10 hidden">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-film-script text-purple-400"></i>
+                            <h3 class="text-[15px] font-medium text-white">Scenariusze do nagrania</h3>
+                        </div>
+
+                        <div id="video-scenarios-list" class="space-y-4">
+                            <!-- Scenarios will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Social Profiles Section -->
+                    <div class="mb-10">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-share-network text-pink-400"></i>
+                            <h3 class="text-[15px] font-medium text-white">Twoje profile społecznościowe</h3>
+                        </div>
+                        <p class="text-[#666] text-[13px] mb-4">Podaj linki do profili, na których będziesz publikować nagrania.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl">
+                            <!-- TikTok -->
+                            <div>
+                                <label class="flex items-center gap-2 text-[12px] text-[#666] mb-1.5">
+                                    <i class="ph ph-tiktok-logo"></i> TikTok
+                                </label>
+                                <input type="url" id="social-tiktok" placeholder="https://tiktok.com/@..."
+                                    class="w-full bg-transparent border border-[#333] rounded-lg px-3 py-2.5 text-[13px] text-white placeholder-[#555] focus:border-pink-500/50 focus:outline-none transition-colors"
+                                    onchange="saveSocialProfile('tiktok', this.value)">
+                            </div>
+
+                            <!-- YouTube -->
+                            <div>
+                                <label class="flex items-center gap-2 text-[12px] text-[#666] mb-1.5">
+                                    <i class="ph ph-youtube-logo"></i> YouTube
+                                </label>
+                                <input type="url" id="social-youtube" placeholder="https://youtube.com/@..."
+                                    class="w-full bg-transparent border border-[#333] rounded-lg px-3 py-2.5 text-[13px] text-white placeholder-[#555] focus:border-red-500/50 focus:outline-none transition-colors"
+                                    onchange="saveSocialProfile('youtube', this.value)">
+                            </div>
+
+                            <!-- Instagram -->
+                            <div>
+                                <label class="flex items-center gap-2 text-[12px] text-[#666] mb-1.5">
+                                    <i class="ph ph-instagram-logo"></i> Instagram
+                                </label>
+                                <input type="url" id="social-instagram" placeholder="https://instagram.com/..."
+                                    class="w-full bg-transparent border border-[#333] rounded-lg px-3 py-2.5 text-[13px] text-white placeholder-[#555] focus:border-purple-500/50 focus:outline-none transition-colors"
+                                    onchange="saveSocialProfile('instagram', this.value)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Links Section -->
+                    <div class="mb-10">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-upload text-emerald-400"></i>
+                                <h3 class="text-[15px] font-medium text-white">Twoje nagrania</h3>
+                            </div>
+                            <button onclick="addVideoLink()" class="text-[12px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors">
+                                <i class="ph ph-plus"></i> Dodaj link
+                            </button>
+                        </div>
+                        <p class="text-[#666] text-[13px] mb-4">Wklej linki do nagranych video (YouTube, TikTok, Google Drive, itp.)</p>
+
+                        <div id="video-links-list" class="space-y-3">
+                            <!-- Video links will be loaded here -->
+                        </div>
+
+                        <!-- Empty state -->
+                        <div id="video-links-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-xl p-8 text-center">
+                            <i class="ph ph-video-camera text-3xl text-[#333] mb-3"></i>
+                            <p class="text-[#555] text-[13px]">Brak nagrań. Kliknij "Dodaj link" aby przesłać pierwsze video.</p>
                         </div>
                     </div>
                 </div>
@@ -1595,6 +1835,420 @@
         }
         window.switchTab = switchTab;
 
+        // Video (Etap 2) functions
+        let videoData = null;
+
+        async function loadVideoData() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_video')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+
+                if (error) throw error;
+                videoData = data;
+
+                // Show/hide Video tab based on is_active
+                const videoDesktop = document.getElementById('video-stage-desktop');
+                const videoMobile = document.getElementById('video-stage-mobile');
+
+                if (videoData && videoData.is_active) {
+                    if (videoDesktop) videoDesktop.classList.remove('hidden');
+                    if (videoMobile) videoMobile.classList.remove('hidden');
+                } else {
+                    if (videoDesktop) videoDesktop.classList.add('hidden');
+                    if (videoMobile) videoMobile.classList.add('hidden');
+                }
+
+                renderVideoTab();
+            } catch (err) {
+                console.error('Error loading Video data:', err);
+            }
+        }
+
+        function renderVideoTab() {
+            const celebration = document.getElementById('video-celebration');
+            const content = document.getElementById('video-content');
+            const celebrationTitle = document.getElementById('video-celebration-title');
+
+            if (!celebration || !content) return;
+
+            // Set client name in celebration title
+            if (celebrationTitle && workflow?.client_name) {
+                celebrationTitle.textContent = `Gratulacje, ${workflow.client_name.split(' ')[0]}!`;
+            }
+
+            if (videoData && videoData.stage_accepted) {
+                // Show main content
+                celebration.classList.add('hidden');
+                content.classList.remove('hidden');
+
+                // Render voice message
+                renderVoiceMessage();
+
+                // Render scenarios
+                renderVideoScenarios();
+
+                // Render social profiles
+                renderSocialProfiles();
+
+                // Render video links
+                renderVideoLinks();
+            } else {
+                // Show celebration screen
+                celebration.classList.remove('hidden');
+                content.classList.add('hidden');
+            }
+        }
+
+        function renderVoiceMessage() {
+            const section = document.getElementById('video-voice-section');
+            const audio = document.getElementById('voice-audio');
+            const waveform = document.getElementById('voice-waveform');
+
+            if (!videoData?.voice_message_url) {
+                if (section) section.classList.add('hidden');
+                return;
+            }
+
+            if (section) section.classList.remove('hidden');
+            if (audio) audio.src = videoData.voice_message_url;
+
+            // Generate waveform bars
+            if (waveform) {
+                waveform.innerHTML = '';
+                for (let i = 0; i < 40; i++) {
+                    const bar = document.createElement('div');
+                    const height = Math.random() * 100;
+                    bar.className = 'voice-bar bg-cyan-500/40 rounded-full transition-all duration-150';
+                    bar.style.width = '3px';
+                    bar.style.height = `${Math.max(15, height)}%`;
+                    waveform.appendChild(bar);
+                }
+            }
+
+            // Set duration when loaded
+            if (audio) {
+                audio.addEventListener('loadedmetadata', () => {
+                    const duration = document.getElementById('voice-duration');
+                    if (duration) duration.textContent = formatTime(audio.duration);
+                });
+
+                audio.addEventListener('timeupdate', () => {
+                    const currentTime = document.getElementById('voice-current-time');
+                    if (currentTime) currentTime.textContent = formatTime(audio.currentTime);
+                    updateWaveformProgress(audio.currentTime / audio.duration);
+                });
+
+                audio.addEventListener('ended', () => {
+                    const icon = document.getElementById('voice-play-icon');
+                    if (icon) {
+                        icon.classList.remove('ph-pause');
+                        icon.classList.add('ph-play');
+                    }
+                });
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function toggleVoiceMessage() {
+            const audio = document.getElementById('voice-audio');
+            const icon = document.getElementById('voice-play-icon');
+
+            if (!audio) return;
+
+            if (audio.paused) {
+                audio.play();
+                if (icon) {
+                    icon.classList.remove('ph-play');
+                    icon.classList.add('ph-pause');
+                }
+            } else {
+                audio.pause();
+                if (icon) {
+                    icon.classList.remove('ph-pause');
+                    icon.classList.add('ph-play');
+                }
+            }
+        }
+        window.toggleVoiceMessage = toggleVoiceMessage;
+
+        function updateWaveformProgress(progress) {
+            const bars = document.querySelectorAll('.voice-bar');
+            const activeIndex = Math.floor(progress * bars.length);
+            bars.forEach((bar, i) => {
+                if (i <= activeIndex) {
+                    bar.classList.remove('bg-cyan-500/40');
+                    bar.classList.add('bg-cyan-400');
+                } else {
+                    bar.classList.remove('bg-cyan-400');
+                    bar.classList.add('bg-cyan-500/40');
+                }
+            });
+        }
+
+        function renderVideoScenarios() {
+            const section = document.getElementById('video-scenarios-section');
+            const list = document.getElementById('video-scenarios-list');
+
+            if (!videoData?.video_scenarios || videoData.video_scenarios.length === 0) {
+                if (section) section.classList.add('hidden');
+                return;
+            }
+
+            if (section) section.classList.remove('hidden');
+            if (!list) return;
+
+            list.innerHTML = videoData.video_scenarios.map((scenario, index) => `
+                <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                            <span class="text-purple-400 font-bold">${index + 1}</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-white text-[14px] font-medium mb-2">${escapeHtml(scenario.title)}</h4>
+                            <p class="text-[#666] text-[13px] leading-relaxed mb-3">${escapeHtml(scenario.description || '')}</p>
+                            ${scenario.tips ? `
+                                <div class="bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="ph ph-lightbulb text-purple-400 text-sm"></i>
+                                        <span class="text-purple-400 text-[11px] font-medium uppercase tracking-wider">Wskazówki</span>
+                                    </div>
+                                    <p class="text-[#888] text-[12px] leading-relaxed">${escapeHtml(scenario.tips)}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSocialProfiles() {
+            const profiles = videoData?.social_profiles || {};
+            const tiktokInput = document.getElementById('social-tiktok');
+            const youtubeInput = document.getElementById('social-youtube');
+            const instagramInput = document.getElementById('social-instagram');
+
+            if (tiktokInput) tiktokInput.value = profiles.tiktok || '';
+            if (youtubeInput) youtubeInput.value = profiles.youtube || '';
+            if (instagramInput) instagramInput.value = profiles.instagram || '';
+        }
+
+        async function saveSocialProfile(platform, url) {
+            if (!videoData) return;
+
+            const profiles = { ...(videoData.social_profiles || {}) };
+            profiles[platform] = url;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ social_profiles: profiles })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.social_profiles = profiles;
+                showToast('Zapisano profil', 'success');
+            } catch (err) {
+                console.error('Error saving social profile:', err);
+                showToast('Błąd zapisu', 'error');
+            }
+        }
+        window.saveSocialProfile = saveSocialProfile;
+
+        function renderVideoLinks() {
+            const list = document.getElementById('video-links-list');
+            const empty = document.getElementById('video-links-empty');
+            const links = videoData?.video_links || [];
+
+            if (!list || !empty) return;
+
+            if (links.length === 0) {
+                list.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            list.classList.remove('hidden');
+            empty.classList.add('hidden');
+
+            list.innerHTML = links.map((link, index) => `
+                <div class="flex items-center gap-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <i class="ph ph-video text-emerald-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Nazwa nagrania"
+                            class="w-full bg-transparent text-white text-[13px] focus:outline-none placeholder-[#555] mb-1"
+                            onchange="updateVideoLink(${index}, 'title', this.value)">
+                        <input type="url" value="${escapeHtml(link.url || '')}" placeholder="https://..."
+                            class="w-full bg-transparent text-[#666] text-[12px] focus:outline-none placeholder-[#444]"
+                            onchange="updateVideoLink(${index}, 'url', this.value)">
+                    </div>
+                    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener" class="w-8 h-8 rounded-lg hover:bg-[#1a1a1a] flex items-center justify-center text-[#555] hover:text-white transition-colors">
+                        <i class="ph ph-arrow-square-out"></i>
+                    </a>
+                    <button onclick="removeVideoLink(${index})" class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[#555] hover:text-red-400 transition-colors">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function addVideoLink() {
+            if (!videoData) return;
+
+            const links = [...(videoData.video_links || [])];
+            links.push({
+                url: '',
+                title: '',
+                uploaded_at: new Date().toISOString()
+            });
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ video_links: links })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.video_links = links;
+                renderVideoLinks();
+            } catch (err) {
+                console.error('Error adding video link:', err);
+                showToast('Błąd dodawania', 'error');
+            }
+        }
+        window.addVideoLink = addVideoLink;
+
+        async function updateVideoLink(index, field, value) {
+            if (!videoData) return;
+
+            const links = [...(videoData.video_links || [])];
+            if (!links[index]) return;
+
+            links[index][field] = value;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ video_links: links })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.video_links = links;
+            } catch (err) {
+                console.error('Error updating video link:', err);
+                showToast('Błąd zapisu', 'error');
+            }
+        }
+        window.updateVideoLink = updateVideoLink;
+
+        async function removeVideoLink(index) {
+            if (!videoData) return;
+
+            const links = [...(videoData.video_links || [])];
+            links.splice(index, 1);
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ video_links: links })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.video_links = links;
+                renderVideoLinks();
+                showToast('Usunięto nagranie', 'success');
+            } catch (err) {
+                console.error('Error removing video link:', err);
+                showToast('Błąd usuwania', 'error');
+            }
+        }
+        window.removeVideoLink = removeVideoLink;
+
+        async function acceptVideoStage() {
+            if (!videoData) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({
+                        stage_accepted: true,
+                        stage_accepted_at: new Date().toISOString()
+                    })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.stage_accepted = true;
+                videoData.stage_accepted_at = new Date().toISOString();
+
+                // Create confetti effect
+                createVideoConfetti();
+
+                // After short delay, show content
+                setTimeout(() => {
+                    renderVideoTab();
+                }, 1500);
+
+            } catch (err) {
+                console.error('Error accepting video stage:', err);
+                showToast('Błąd akceptacji etapu', 'error');
+            }
+        }
+        window.acceptVideoStage = acceptVideoStage;
+
+        function createVideoConfetti() {
+            const colors = ['#06b6d4', '#22d3ee', '#67e8f9', '#a855f7', '#c084fc', '#10b981'];
+
+            for (let i = 0; i < 60; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.cssText = `
+                    position: fixed;
+                    width: ${Math.random() * 10 + 5}px;
+                    height: ${Math.random() * 10 + 5}px;
+                    background-color: ${colors[Math.floor(Math.random() * colors.length)]};
+                    border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+                    left: ${Math.random() * 100}vw;
+                    top: -20px;
+                    opacity: 0;
+                    pointer-events: none;
+                    z-index: 9999;
+                `;
+
+                document.body.appendChild(confetti);
+
+                confetti.animate([
+                    { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                    { transform: `translateY(100vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+                ], {
+                    duration: Math.random() * 2000 + 2500,
+                    delay: Math.random() * 500,
+                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                }).onfinish = () => confetti.remove();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
+        }
+
         // TakeDrop functions
         let takeDropData = null;
 
@@ -1610,14 +2264,16 @@
                 takeDropData = data;
 
                 // Show/hide TakeDrop tab based on is_active
-                const takedropBtns = document.querySelectorAll('[data-tab="takedrop"]');
-                const etap2Divs = document.querySelectorAll('[data-tab="takedrop"]');
-                etap2Divs.forEach(btn => {
-                    const parent = btn.closest('div.pt-4, div.pt-3');
-                    if (parent) {
-                        parent.style.display = (takeDropData && takeDropData.is_active) ? '' : 'none';
-                    }
-                });
+                const takedropDesktop = document.getElementById('takedrop-stage-desktop');
+                const takedropMobile = document.getElementById('takedrop-stage-mobile');
+
+                if (takeDropData && takeDropData.is_active) {
+                    if (takedropDesktop) takedropDesktop.classList.remove('hidden');
+                    if (takedropMobile) takedropMobile.classList.remove('hidden');
+                } else {
+                    if (takedropDesktop) takedropDesktop.classList.add('hidden');
+                    if (takedropMobile) takedropMobile.classList.add('hidden');
+                }
 
                 renderTakeDrop();
             } catch (err) {
@@ -1817,6 +2473,9 @@
             dokumentyBtns.forEach(btn => {
                 btn.style.display = workflow.offer_id === STARTER_OFFER_ID ? 'none' : '';
             });
+
+            // Load Video (Etap 2)
+            loadVideoData();
 
             // Load TakeDrop (Etap 3)
             loadTakeDrop();
