@@ -50,7 +50,7 @@ BEGIN
   IF v_flow_id IS NULL THEN
     INSERT INTO automation_flows (name, description, trigger_type, trigger_filters, is_active)
     VALUES (
-      'Etap 2 - Aktywuj TakeDrop',
+      'Etap 3 - Aktywuj TakeDrop',
       'Wysyła email do klienta gdy admin aktywuje zakładkę TakeDrop',
       'takedrop_activated',
       '{}',
