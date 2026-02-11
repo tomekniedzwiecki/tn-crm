@@ -72,3 +72,56 @@ ON CONFLICT (email_type) DO UPDATE SET
   body = EXCLUDED.body,
   variables = EXCLUDED.variables,
   is_active = EXCLUDED.is_active;
+
+-- =============================================
+-- AUTOMATION FLOW: TakeDrop Account Created
+-- =============================================
+-- Automatycznie wysyła email gdy admin włączy widoczność TakeDrop
+
+DO $$
+DECLARE
+  v_flow_id UUID;
+BEGIN
+  -- Sprawdź czy flow już istnieje
+  SELECT id INTO v_flow_id
+  FROM automation_flows
+  WHERE trigger_type = 'takedrop_account_created'
+  LIMIT 1;
+
+  -- Jeśli nie istnieje, utwórz nowy
+  IF v_flow_id IS NULL THEN
+    INSERT INTO automation_flows (
+      name,
+      description,
+      trigger_type,
+      trigger_filters,
+      category,
+      is_active
+    ) VALUES (
+      'Etap 2 - Powiadomienie o TakeDrop',
+      'Wysyła email do klienta gdy admin aktywuje zakładkę TakeDrop',
+      'takedrop_account_created',
+      '{}',
+      'workflow',
+      true
+    )
+    RETURNING id INTO v_flow_id;
+
+    -- Dodaj krok: wyślij email
+    INSERT INTO automation_steps (
+      flow_id,
+      step_type,
+      step_order,
+      config
+    ) VALUES (
+      v_flow_id,
+      'action',
+      0,
+      '{"action_type": "send_email", "email_type": "takedrop_account_created"}'
+    );
+
+    RAISE NOTICE 'Created automation flow: %', v_flow_id;
+  ELSE
+    RAISE NOTICE 'Automation flow already exists: %', v_flow_id;
+  END IF;
+END $$;
