@@ -160,6 +160,103 @@
             border-color: rgba(255,255,255,0.25);
             outline: none;
         }
+
+        /* WhatsApp Voice Message Player */
+        .whatsapp-voice-player {
+            background: linear-gradient(135deg, #075e54 0%, #054d44 100%);
+            border-radius: 16px;
+            padding: 10px 14px;
+            max-width: 340px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .voice-main-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .voice-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .voice-play-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .voice-play-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        .voice-play-btn.playing {
+            background: rgba(255,255,255,0.25);
+        }
+        .voice-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .voice-waveform-container {
+            position: relative;
+            height: 28px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .voice-waveform {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 100%;
+        }
+        .voice-bar {
+            width: 3px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 2px;
+            transition: background 0.15s ease;
+        }
+        .voice-bar.played {
+            background: rgba(255,255,255,0.95);
+        }
+        .voice-scrubber {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .voice-waveform-container:hover .voice-scrubber,
+        .voice-waveform-container.seeking .voice-scrubber {
+            opacity: 1;
+        }
+        .voice-time-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .voice-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased" style="background:#000">
@@ -1158,6 +1255,58 @@
                             </div>
                             <div id="video-accepted-info" class="hidden mt-3 text-[12px] text-[#666]">
                                 Etap zaakceptowany: <span id="video-accepted-date" class="text-[#888]">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Wiadomość głosowa -->
+                        <div class="py-4 border-b border-[#222]">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="ph ph-microphone text-cyan-400"></i>
+                                <span class="text-[13px] text-white">Wiadomość głosowa</span>
+                            </div>
+
+                            <!-- URL Input -->
+                            <div class="mb-4">
+                                <label class="block text-[12px] text-[#666] mb-1.5">URL pliku audio</label>
+                                <div class="flex gap-2">
+                                    <input type="url" id="admin-voice-url"
+                                           class="flex-1 bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors"
+                                           placeholder="https://example.com/audio.mp3">
+                                    <button onclick="saveVoiceMessageUrl()" class="bg-white text-black text-[12px] font-medium px-3 py-2 rounded-md hover:bg-[#e5e5e5] transition-colors">
+                                        Zapisz
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Voice Player Preview -->
+                            <div id="admin-voice-preview" class="hidden">
+                                <div class="text-[12px] text-[#666] mb-2">Podgląd</div>
+                                <div class="whatsapp-voice-player">
+                                    <div class="voice-main-row">
+                                        <div class="voice-avatar">
+                                            <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" class="w-full h-full object-cover">
+                                        </div>
+                                        <button id="admin-voice-play-btn" onclick="toggleAdminVoice()" class="voice-play-btn">
+                                            <i id="admin-voice-play-icon" class="ph-fill ph-play text-white text-lg"></i>
+                                        </button>
+                                        <div class="voice-content">
+                                            <div class="voice-waveform-container" id="admin-voice-waveform-container">
+                                                <div class="voice-waveform" id="admin-voice-waveform"></div>
+                                                <div class="voice-scrubber" id="admin-voice-scrubber"></div>
+                                            </div>
+                                            <div class="voice-time-row">
+                                                <span id="admin-voice-current-time" class="voice-time">0:00</span>
+                                                <span id="admin-voice-duration" class="voice-time">0:00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <audio id="admin-voice-audio" class="hidden" preload="metadata"></audio>
+                            </div>
+
+                            <div id="admin-voice-empty" class="bg-[#0a0a0a] border border-dashed border-[#333] rounded-lg p-4 text-center">
+                                <i class="ph ph-microphone text-xl text-[#333] mb-1"></i>
+                                <p class="text-[#555] text-[11px]">Wklej URL pliku audio powyżej</p>
                             </div>
                         </div>
 
@@ -2998,6 +3147,9 @@
                     acceptedInfo.classList.add('hidden');
                 }
 
+                // Voice message
+                renderAdminVoicePlayer();
+
                 // Scenarios
                 renderVideoScenariosAdmin();
 
@@ -3031,6 +3183,155 @@
                     videoSharedCheckbox.checked = false;
                     videoSharedInfo.classList.add('hidden');
                 }
+            }
+        }
+
+        // Admin Voice Player
+        let adminVoiceAudio = null;
+
+        function renderAdminVoicePlayer() {
+            const urlInput = document.getElementById('admin-voice-url');
+            const preview = document.getElementById('admin-voice-preview');
+            const empty = document.getElementById('admin-voice-empty');
+            const waveform = document.getElementById('admin-voice-waveform');
+
+            const voiceUrl = videoAdminData?.voice_message_url;
+
+            if (urlInput) {
+                urlInput.value = voiceUrl || '';
+            }
+
+            if (voiceUrl) {
+                if (preview) preview.classList.remove('hidden');
+                if (empty) empty.classList.add('hidden');
+
+                // Setup audio
+                const audio = document.getElementById('admin-voice-audio');
+                if (audio && audio.src !== voiceUrl) {
+                    audio.src = voiceUrl;
+                    adminVoiceAudio = audio;
+                    setupAdminVoiceEvents(audio);
+                }
+
+                // Generate waveform
+                if (waveform && waveform.children.length === 0) {
+                    const pattern = [35,50,45,70,55,80,40,90,60,75,45,85,65,55,75,40,60,80,50,70,55,85,45,75,60,90,50,65,75,45,80,55,70,40,85,60,75,50,65,80,45,70,55,85,40,75,60,50,70,55];
+                    for (let i = 0; i < 50; i++) {
+                        const bar = document.createElement('div');
+                        bar.className = 'voice-bar';
+                        bar.style.height = `${pattern[i % pattern.length]}%`;
+                        waveform.appendChild(bar);
+                    }
+                }
+            } else {
+                if (preview) preview.classList.add('hidden');
+                if (empty) empty.classList.remove('hidden');
+            }
+        }
+
+        function setupAdminVoiceEvents(audio) {
+            audio.addEventListener('loadedmetadata', () => {
+                const duration = document.getElementById('admin-voice-duration');
+                if (duration) duration.textContent = formatVoiceTime(audio.duration);
+            });
+
+            audio.addEventListener('timeupdate', () => {
+                const currentTime = document.getElementById('admin-voice-current-time');
+                const progress = audio.duration ? audio.currentTime / audio.duration : 0;
+                if (currentTime) currentTime.textContent = formatVoiceTime(audio.currentTime);
+                updateAdminVoiceWaveform(progress);
+            });
+
+            audio.addEventListener('ended', () => {
+                const icon = document.getElementById('admin-voice-play-icon');
+                const btn = document.getElementById('admin-voice-play-btn');
+                if (icon) {
+                    icon.classList.remove('ph-pause');
+                    icon.classList.add('ph-play');
+                }
+                if (btn) btn.classList.remove('playing');
+                updateAdminVoiceWaveform(0);
+            });
+
+            // Seek on click
+            const container = document.getElementById('admin-voice-waveform-container');
+            if (container) {
+                container.onclick = (e) => {
+                    const rect = container.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const progress = x / rect.width;
+                    audio.currentTime = progress * audio.duration;
+                };
+            }
+        }
+
+        function toggleAdminVoice() {
+            const audio = document.getElementById('admin-voice-audio');
+            const icon = document.getElementById('admin-voice-play-icon');
+            const btn = document.getElementById('admin-voice-play-btn');
+
+            if (!audio) return;
+
+            if (audio.paused) {
+                audio.play();
+                if (icon) {
+                    icon.classList.remove('ph-play');
+                    icon.classList.add('ph-pause');
+                }
+                if (btn) btn.classList.add('playing');
+            } else {
+                audio.pause();
+                if (icon) {
+                    icon.classList.remove('ph-pause');
+                    icon.classList.add('ph-play');
+                }
+                if (btn) btn.classList.remove('playing');
+            }
+        }
+
+        function updateAdminVoiceWaveform(progress) {
+            const bars = document.querySelectorAll('#admin-voice-waveform .voice-bar');
+            const playedCount = Math.floor(progress * bars.length);
+            bars.forEach((bar, i) => {
+                bar.classList.toggle('played', i < playedCount);
+            });
+        }
+
+        function formatVoiceTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        async function saveVoiceMessageUrl() {
+            const urlInput = document.getElementById('admin-voice-url');
+            const url = urlInput?.value?.trim() || null;
+
+            try {
+                if (videoAdminData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .update({ voice_message_url: url })
+                        .eq('workflow_id', workflow.id);
+
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .insert({
+                            workflow_id: workflow.id,
+                            voice_message_url: url
+                        });
+
+                    if (error) throw error;
+                }
+
+                loadVideoAdmin();
+                showToast('Wiadomość głosowa zapisana', 'success');
+            } catch (err) {
+                console.error('Error saving voice message:', err);
+                showToast('Błąd zapisu', 'error');
             }
         }
 
