@@ -413,6 +413,7 @@
         let selectedStepIndex = null;
         let insertAfterIndex = null;
         let hasChanges = false;
+        let emailTemplatesCache = {}; // Cache for email templates
 
         // ============================================
         // CONSTANTS
@@ -1011,6 +1012,89 @@
             renderFlow();
         }
 
+        async function loadEmailTemplatePreview(emailType) {
+            const previewContainer = document.getElementById('email-template-preview');
+            if (!previewContainer) return;
+
+            // Show loading
+            previewContainer.innerHTML = `
+                <div class="flex items-center gap-2 text-[#666]">
+                    <i class="ph ph-spinner animate-spin"></i>
+                    <span class="text-sm">Ładowanie...</span>
+                </div>
+            `;
+
+            // Check cache first
+            if (emailTemplatesCache[emailType]) {
+                renderTemplatePreview(emailTemplatesCache[emailType]);
+                return;
+            }
+
+            // Fetch from settings
+            const { data, error } = await sb
+                .from('settings')
+                .select('key, value')
+                .in('key', [
+                    `email_template_${emailType}_subject`,
+                    `email_template_${emailType}_body`
+                ]);
+
+            if (error || !data || data.length === 0) {
+                previewContainer.innerHTML = `
+                    <p class="text-sm text-[#666]">Szablon "${emailType}" nie istnieje.
+                    <a href="/tn-workflow/email-templates.html" class="text-white hover:underline">Utwórz szablon →</a></p>
+                `;
+                return;
+            }
+
+            const template = {};
+            data.forEach(row => {
+                if (row.key.endsWith('_subject')) {
+                    template.subject = row.value;
+                } else if (row.key.endsWith('_body')) {
+                    template.body = row.value;
+                }
+            });
+
+            // Cache it
+            emailTemplatesCache[emailType] = template;
+            renderTemplatePreview(template);
+        }
+
+        function renderTemplatePreview(template) {
+            const previewContainer = document.getElementById('email-template-preview');
+            if (!previewContainer) return;
+
+            const subject = template.subject || '(brak tematu)';
+
+            // Extract text content from HTML body (strip tags)
+            let bodyPreview = '';
+            if (template.body) {
+                const temp = document.createElement('div');
+                temp.innerHTML = template.body;
+                bodyPreview = temp.textContent || temp.innerText || '';
+                bodyPreview = bodyPreview.replace(/\s+/g, ' ').trim().substring(0, 150);
+                if (bodyPreview.length === 150) bodyPreview += '...';
+            }
+
+            previewContainer.innerHTML = `
+                <div class="space-y-3">
+                    <div>
+                        <div class="text-xs text-[#666] mb-1">Temat:</div>
+                        <div class="text-sm text-white">${subject}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-[#666] mb-1">Treść:</div>
+                        <div class="text-sm text-[#888] line-clamp-3">${bodyPreview || '(brak treści)'}</div>
+                    </div>
+                    <a href="/tn-workflow/email-templates.html" class="inline-flex items-center gap-1 text-xs text-[#666] hover:text-white transition-colors">
+                        <i class="ph ph-pencil-simple"></i>
+                        Edytuj szablon
+                    </a>
+                </div>
+            `;
+        }
+
         function openStepConfig(index) {
             const step = steps[index];
             if (!step) return;
@@ -1031,7 +1115,7 @@
 
                         <div>
                             <label class="block text-sm text-[#888] mb-2">Szablon emaila</label>
-                            <select id="step-email-type" class="input-field" onchange="updateStepConfig(${index}, 'email_type', this.value)">
+                            <select id="step-email-type" class="input-field" onchange="updateStepConfig(${index}, 'email_type', this.value); loadEmailTemplatePreview(this.value)">
                                 ${Object.entries(EMAIL_TYPES_GROUPED).map(([groupName, types]) => `
                                     <optgroup label="${groupName}">
                                         ${Object.entries(types).map(([key, label]) => `
@@ -1043,14 +1127,24 @@
                         </div>
 
                         <div class="bg-[#111] rounded-lg p-4 border border-[#1a1a1a]">
-                            <div class="flex items-center gap-2 text-sm text-[#888] mb-2">
-                                <i class="ph ph-info"></i>
-                                <span>Podgląd</span>
+                            <div class="flex items-center gap-2 text-sm text-[#888] mb-3">
+                                <i class="ph ph-eye"></i>
+                                <span>Podgląd szablonu</span>
                             </div>
-                            <p class="text-sm text-[#666]">Szablon emaila możesz edytować w <a href="/settings" class="text-white hover:underline">Ustawienia → Szablony email</a></p>
+                            <div id="email-template-preview">
+                                <div class="flex items-center gap-2 text-[#666]">
+                                    <i class="ph ph-spinner animate-spin"></i>
+                                    <span class="text-sm">Ładowanie...</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
+                // Load email template preview after rendering
+                setTimeout(() => {
+                    const emailType = step.config?.email_type || Object.keys(EMAIL_TYPES)[0];
+                    loadEmailTemplatePreview(emailType);
+                }, 50);
             } else if (step.step_type === 'delay') {
                 title = 'Konfiguracja opóźnienia';
                 content = `
