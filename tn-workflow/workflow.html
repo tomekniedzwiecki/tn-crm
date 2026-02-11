@@ -1163,21 +1163,17 @@
 
                         <!-- Scenariusze video -->
                         <div class="py-4 border-b border-[#222]">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-2">
-                                    <i class="ph ph-film-script text-purple-400"></i>
-                                    <span class="text-[13px] text-white">Scenariusze video</span>
-                                </div>
-                                <button onclick="addVideoScenario()" class="text-[12px] text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
-                                    <i class="ph ph-plus"></i> Dodaj
-                                </button>
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="ph ph-film-script text-purple-400"></i>
+                                <span class="text-[13px] text-white">Scenariusze video</span>
+                                <span id="video-scenarios-count" class="text-[11px] text-[#555]"></span>
                             </div>
-                            <div id="video-scenarios-admin" class="space-y-3">
+                            <div id="video-scenarios-admin" class="space-y-2">
                                 <!-- Scenarios will be loaded here -->
                             </div>
-                            <div id="video-scenarios-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-lg p-6 text-center">
-                                <i class="ph ph-film-script text-2xl text-[#333] mb-2"></i>
-                                <p class="text-[#555] text-[12px]">Brak scenariuszy. Kliknij "Dodaj" aby utworzyć pierwszy.</p>
+                            <div id="video-scenarios-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-lg p-4 text-center">
+                                <i class="ph ph-film-script text-xl text-[#333] mb-1"></i>
+                                <p class="text-[#555] text-[11px]">Brak scenariuszy. Wygeneruj je przez Claude.</p>
                             </div>
                         </div>
 
@@ -3004,9 +3000,15 @@
         function renderVideoScenariosAdmin() {
             const container = document.getElementById('video-scenarios-admin');
             const empty = document.getElementById('video-scenarios-empty');
+            const countEl = document.getElementById('video-scenarios-count');
             const scenarios = videoAdminData?.video_scenarios || [];
 
             if (!container || !empty) return;
+
+            // Update count
+            if (countEl) {
+                countEl.textContent = scenarios.length > 0 ? `(${scenarios.length})` : '';
+            }
 
             if (scenarios.length === 0) {
                 container.classList.add('hidden');
@@ -3017,28 +3019,97 @@
             container.classList.remove('hidden');
             empty.classList.add('hidden');
 
-            container.innerHTML = scenarios.map((scenario, index) => `
-                <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-4">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded bg-purple-500/10 flex items-center justify-center text-purple-400 text-[11px] font-bold">${index + 1}</span>
-                            <input type="text" value="${escapeHtml(scenario.title || '')}" placeholder="Tytuł scenariusza"
-                                class="bg-transparent text-white text-[13px] font-medium focus:outline-none border-b border-transparent focus:border-purple-500/50 transition-colors"
-                                onchange="updateVideoScenario(${index}, 'title', this.value)">
+            // Type badge colors
+            const typeColors = {
+                'POV': 'bg-blue-500/20 text-blue-400',
+                'Rutyna': 'bg-emerald-500/20 text-emerald-400',
+                'Reakcja': 'bg-amber-500/20 text-amber-400',
+                'Efekt WOW': 'bg-pink-500/20 text-pink-400',
+                'Porównanie': 'bg-purple-500/20 text-purple-400',
+                'ASMR': 'bg-cyan-500/20 text-cyan-400',
+                'Unboxing': 'bg-orange-500/20 text-orange-400',
+                'Tutorial': 'bg-indigo-500/20 text-indigo-400',
+                'Estetyka': 'bg-rose-500/20 text-rose-400',
+                'Storytime': 'bg-violet-500/20 text-violet-400'
+            };
+
+            // Split into face/no-face
+            const withFace = scenarios.filter((s, i) => ({ ...s, _idx: i })).filter(s => s.showFace === true);
+            const noFace = scenarios.filter((s, i) => ({ ...s, _idx: i })).filter(s => s.showFace === false);
+            const hasGroups = withFace.length > 0 || noFace.length > 0;
+
+            const renderCard = (scenario, index) => {
+                const typeClass = typeColors[scenario.type] || 'bg-zinc-500/20 text-zinc-400';
+                const faceIcon = scenario.showFace === false ? 'ph-hand' : 'ph-user';
+                const faceColor = scenario.showFace === false ? 'text-cyan-400' : 'text-pink-400';
+
+                return `
+                <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg overflow-hidden">
+                    <div onclick="toggleAdminScenario(${index})" class="flex items-center gap-3 p-3 cursor-pointer hover:bg-[#111] transition-colors">
+                        <span class="w-6 h-6 rounded bg-purple-500/10 flex items-center justify-center text-purple-400 text-[10px] font-bold flex-shrink-0">${index + 1}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                ${scenario.type ? `<span class="px-1.5 py-0.5 text-[9px] font-medium rounded ${typeClass}">${escapeHtml(scenario.type)}</span>` : ''}
+                                ${scenario.showFace !== undefined ? `<i class="ph ${faceIcon} ${faceColor} text-[10px]"></i>` : ''}
+                                ${scenario.duration ? `<span class="text-[9px] text-[#555]">${escapeHtml(scenario.duration)}</span>` : ''}
+                            </div>
+                            <p class="text-white text-[12px] truncate">${escapeHtml(scenario.title || 'Bez tytułu')}</p>
                         </div>
-                        <button onclick="removeVideoScenario(${index})" class="text-[#555] hover:text-red-400 transition-colors">
-                            <i class="ph ph-trash text-sm"></i>
+                        <button onclick="event.stopPropagation(); removeVideoScenario(${index})" class="text-[#444] hover:text-red-400 transition-colors p-1">
+                            <i class="ph ph-trash text-xs"></i>
                         </button>
+                        <i class="ph ph-caret-down text-[#444] text-sm transition-transform" id="admin-scenario-arrow-${index}"></i>
                     </div>
-                    <textarea placeholder="Opis scenariusza..." rows="2"
-                        class="w-full bg-transparent border border-[#222] rounded-md px-3 py-2 text-[12px] text-[#888] placeholder-[#555] focus:border-purple-500/30 focus:outline-none transition-colors resize-none mb-2"
-                        onchange="updateVideoScenario(${index}, 'description', this.value)">${escapeHtml(scenario.description || '')}</textarea>
-                    <textarea placeholder="Wskazówki (opcjonalne)..." rows="1"
-                        class="w-full bg-purple-500/5 border border-purple-500/10 rounded-md px-3 py-2 text-[11px] text-purple-300/70 placeholder-purple-400/30 focus:border-purple-500/30 focus:outline-none transition-colors resize-none"
-                        onchange="updateVideoScenario(${index}, 'tips', this.value)">${escapeHtml(scenario.tips || '')}</textarea>
+                    <div id="admin-scenario-content-${index}" class="hidden border-t border-[#1a1a1a] p-3 bg-[#050505]">
+                        <div class="space-y-2 text-[11px]">
+                            ${scenario.hook ? `<div><span class="text-blue-400">Start:</span> <span class="text-[#777]">${escapeHtml(scenario.hook)}</span></div>` : ''}
+                            ${scenario.action ? `<div><span class="text-emerald-400">Akcja:</span> <span class="text-[#777]">${escapeHtml(scenario.action)}</span></div>` : ''}
+                            ${scenario.ending ? `<div><span class="text-purple-400">Koniec:</span> <span class="text-[#777]">${escapeHtml(scenario.ending)}</span></div>` : ''}
+                            ${scenario.example ? `<div class="mt-2 p-2 bg-zinc-800/50 rounded text-[#888] italic">"${escapeHtml(scenario.example)}"</div>` : ''}
+                            ${scenario.tip ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-lightbulb text-amber-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.tip)}</span></div>` : ''}
+                            ${scenario.description ? `<div class="mt-2 text-[#666]">${escapeHtml(scenario.description)}</div>` : ''}
+                        </div>
+                    </div>
                 </div>
-            `).join('');
+            `};
+
+            let html = '';
+
+            if (hasGroups) {
+                // Show grouped by face/no-face
+                let globalIdx = 0;
+                if (withFace.length > 0) {
+                    html += `<div class="mb-3"><div class="flex items-center gap-2 mb-2 text-[11px] text-[#666]"><i class="ph ph-user text-pink-400"></i>Z twarzą (${withFace.length})</div>`;
+                    html += `<div class="space-y-2">`;
+                    scenarios.forEach((s, i) => { if (s.showFace === true) html += renderCard(s, i); });
+                    html += `</div></div>`;
+                }
+                if (noFace.length > 0) {
+                    html += `<div><div class="flex items-center gap-2 mb-2 text-[11px] text-[#666]"><i class="ph ph-hand text-cyan-400"></i>Bez twarzy (${noFace.length})</div>`;
+                    html += `<div class="space-y-2">`;
+                    scenarios.forEach((s, i) => { if (s.showFace === false) html += renderCard(s, i); });
+                    html += `</div></div>`;
+                }
+            } else {
+                // Old format - no grouping
+                html = `<div class="space-y-2">${scenarios.map((s, i) => renderCard(s, i)).join('')}</div>`;
+            }
+
+            container.innerHTML = html;
         }
+
+        function toggleAdminScenario(index) {
+            const content = document.getElementById(`admin-scenario-content-${index}`);
+            const arrow = document.getElementById(`admin-scenario-arrow-${index}`);
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+        window.toggleAdminScenario = toggleAdminScenario;
 
         function renderVideoClientData() {
             const profiles = videoAdminData?.social_profiles || {};
@@ -3135,13 +3206,19 @@
 
                 // Trigger automation if activating
                 if (isActive && (!videoAdminData || !videoAdminData.is_active)) {
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
                     try {
                         await supabaseClient.functions.invoke('automation-trigger', {
                             body: {
                                 trigger_type: 'video_activated',
                                 entity_type: 'workflow_video',
                                 entity_id: workflow.id,
-                                workflow_id: workflow.id
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName: workflow.customer_name || workflow.customer_company || 'Kliencie',
+                                    workflow_id: workflow.id,
+                                    projectUrl: projectUrl
+                                }
                             }
                         });
                         console.log('Video activation automation triggered');
