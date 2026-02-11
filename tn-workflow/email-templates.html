@@ -166,7 +166,16 @@
                                 <div class="text-[10px] text-zinc-500 mb-1">Temat:</div>
                                 <div id="preview-subject" class="text-white text-sm"></div>
                             </div>
-                            <div id="preview-container" class="preview-frame preview-desktop">
+                            <!-- Show preview button -->
+                            <div id="preview-placeholder" class="flex flex-col items-center justify-center py-16 text-center">
+                                <i class="ph ph-eye text-4xl text-zinc-600 mb-3"></i>
+                                <p class="text-zinc-500 text-sm mb-4">Kliknij aby zobaczyć podgląd emaila</p>
+                                <button onclick="showPreview()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2">
+                                    <i class="ph ph-eye"></i>
+                                    Pokaż podgląd
+                                </button>
+                            </div>
+                            <div id="preview-container" class="preview-frame preview-desktop hidden">
                                 <iframe id="preview-iframe" class="w-full border-0 block" style="height: calc(100vh - 280px); min-height: 400px;"></iframe>
                             </div>
                         </div>
@@ -284,6 +293,7 @@
         let originalSubject = '';
         let originalBody = '';
         let previewMode = 'desktop';
+        let previewVisible = false;
 
         // Color map
         const colorMap = {
@@ -398,7 +408,8 @@
 
             renderTemplatesList();
             updateSaveButton();
-            refreshPreview();
+            hidePreview();
+            updatePreviewSubject();
         }
 
         function insertVariable(varName) {
@@ -429,12 +440,44 @@
 
             hasChanges = subject !== originalSubject || body !== originalBody;
             updateSaveButton();
-            refreshPreview();
+            updatePreviewSubject();
+
+            // Only refresh full preview if it's already visible
+            if (previewVisible) {
+                refreshPreview();
+            }
+        }
+
+        function updatePreviewSubject() {
+            const subject = document.getElementById('subject-input').value;
+            const replaceVars = (text) => {
+                return text
+                    .replace(/\{\{clientName\}\}/g, PREVIEW_DATA.clientName)
+                    .replace(/\{\{offerName\}\}/g, PREVIEW_DATA.offerName)
+                    .replace(/\{\{offerPrice\}\}/g, PREVIEW_DATA.offerPrice)
+                    .replace(/\{\{validUntil\}\}/g, PREVIEW_DATA.validUntil)
+                    .replace(/\{\{offerUrl\}\}/g, PREVIEW_DATA.offerUrl)
+                    .replace(/\{\{email\}\}/g, PREVIEW_DATA.email);
+            };
+            document.getElementById('preview-subject').textContent = replaceVars(subject) || '(brak tematu)';
         }
 
         function updateSaveButton() {
             const btn = document.getElementById('save-btn');
             btn.disabled = !hasChanges;
+        }
+
+        function showPreview() {
+            previewVisible = true;
+            document.getElementById('preview-placeholder').classList.add('hidden');
+            document.getElementById('preview-container').classList.remove('hidden');
+            refreshPreview();
+        }
+
+        function hidePreview() {
+            previewVisible = false;
+            document.getElementById('preview-placeholder').classList.remove('hidden');
+            document.getElementById('preview-container').classList.add('hidden');
         }
 
         function setPreviewMode(mode) {
@@ -450,6 +493,11 @@
             } else {
                 container.classList.remove('preview-mobile');
                 container.classList.add('preview-desktop');
+            }
+
+            // Show preview when switching modes
+            if (!previewVisible) {
+                showPreview();
             }
         }
 
