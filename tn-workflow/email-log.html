@@ -704,10 +704,12 @@
         // Scheduled emails functions
         async function loadScheduledStats() {
             try {
+                // Pending = sent_at IS NULL AND cancelled_at IS NULL
                 const { count: pendingCount } = await sb
                     .from('scheduled_emails')
                     .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending');
+                    .is('sent_at', null)
+                    .is('cancelled_at', null);
 
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -717,7 +719,8 @@
                 const { count: todayCount } = await sb
                     .from('scheduled_emails')
                     .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending')
+                    .is('sent_at', null)
+                    .is('cancelled_at', null)
                     .gte('scheduled_for', today.toISOString())
                     .lt('scheduled_for', tomorrow.toISOString());
 
@@ -736,21 +739,24 @@
                 let query = sb
                     .from('scheduled_emails')
                     .select(`
-                        id, email_type, status, scheduled_for, created_at,
-                        offer_id, offers(id, name, client_email, client_name)
+                        id, email_type, scheduled_for, sent_at, cancelled_at, created_at,
+                        lead_id, leads(id, email, name),
+                        client_offer_id, client_offers(id, name)
                     `, { count: 'exact' })
-                    .order('scheduled_for', { ascending: true })
+                    .order('scheduled_for', { ascending: false })
                     .range((scheduledCurrentPage - 1) * pageSize, scheduledCurrentPage * pageSize - 1);
 
                 if (typeFilter) {
                     query = query.eq('email_type', typeFilter);
                 }
 
-                if (statusFilter) {
-                    query = query.eq('status', statusFilter);
-                } else {
-                    // Default: show pending first
-                    query = query.order('status', { ascending: true });
+                // Filter by derived status
+                if (statusFilter === 'pending') {
+                    query = query.is('sent_at', null).is('cancelled_at', null);
+                } else if (statusFilter === 'sent') {
+                    query = query.not('sent_at', 'is', null);
+                } else if (statusFilter === 'cancelled') {
+                    query = query.not('cancelled_at', 'is', null);
                 }
 
                 const { data, error, count } = await query;
@@ -790,11 +796,17 @@
             }
 
             tbody.innerHTML = scheduledEmails.map(email => {
-                const statusClass = `status-${email.status}`;
-                const statusLabel = SCHEDULED_STATUS_LABELS[email.status] || email.status;
+                // Derive status from sent_at/cancelled_at
+                let status = 'pending';
+                if (email.cancelled_at) status = 'cancelled';
+                else if (email.sent_at) status = 'sent';
+
+                const statusClass = `status-${status}`;
+                const statusLabel = SCHEDULED_STATUS_LABELS[status] || status;
                 const typeLabel = EMAIL_TYPE_LABELS[email.email_type] || email.email_type || '-';
-                const offer = email.offers;
-                const isPending = email.status === 'pending';
+                const lead = email.leads;
+                const offer = email.client_offers;
+                const isPending = status === 'pending';
                 const isPast = new Date(email.scheduled_for) < new Date();
                 const scheduledClass = isPending && isPast ? 'text-red-400' : 'text-zinc-500';
 
@@ -810,16 +822,16 @@
                         </td>
                         <td class="px-4 py-3">
                             ${offer ? `
-                                <a href="/offer?id=${offer.id}" class="text-sm text-emerald-400 hover:underline truncate max-w-[200px] block">
+                                <span class="text-sm text-white truncate max-w-[200px] block">
                                     ${DOMPurify.sanitize(offer.name || 'Bez nazwy')}
-                                </a>
+                                </span>
                             ` : '<span class="text-zinc-600">-</span>'}
                         </td>
                         <td class="px-4 py-3">
                             <div class="text-sm text-white truncate max-w-[200px]">
-                                ${offer ? DOMPurify.sanitize(offer.client_email || '-') : '-'}
+                                ${lead ? DOMPurify.sanitize(lead.email || '-') : '-'}
                             </div>
-                            ${offer && offer.client_name ? `<div class="text-xs text-zinc-500">${DOMPurify.sanitize(offer.client_name)}</div>` : ''}
+                            ${lead && lead.name ? `<div class="text-xs text-zinc-500">${DOMPurify.sanitize(lead.name)}</div>` : ''}
                         </td>
                         <td class="px-4 py-3">
                             <span class="text-xs ${scheduledClass} font-mono">${formatDateTime(email.scheduled_for)}</span>
@@ -874,7 +886,10 @@
             try {
                 const { error } = await sb
                     .from('scheduled_emails')
-                    .update({ status: 'cancelled' })
+                    .update({
+                        cancelled_at: new Date().toISOString(),
+                        cancel_reason: 'Anulowany przez użytkownika'
+                    })
                     .eq('id', id);
 
                 if (error) throw error;
