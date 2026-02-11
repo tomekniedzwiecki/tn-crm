@@ -1150,9 +1150,17 @@
 
                     <!-- Divider -->
                     <div class="border-t border-[#222] pt-8">
-                        <div class="text-[12px] text-[#666] mb-4">Potwierdzenie konta</div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-[12px] text-[#666]">Dane logowania do TakeDrop</div>
+                            <!-- Success state (shown when confirmed) -->
+                            <div id="takedrop-success-state" class="hidden flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[#50e3c2]"></span>
+                                <span class="text-[12px] text-[#50e3c2]">Potwierdzone</span>
+                                <span id="takedrop-confirmed-date" class="text-[11px] text-[#555]"></span>
+                            </div>
+                        </div>
 
-                        <!-- Login form (hidden when confirmed) -->
+                        <!-- Login form (always visible) -->
                         <div id="takedrop-login-form">
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
@@ -1167,15 +1175,6 @@
                             <button id="takedrop-confirm-btn" onclick="confirmTakeDropAccount()" class="bg-white text-black text-[13px] font-medium px-4 py-2 rounded-md hover:bg-[#e5e5e5] transition-colors">
                                 Potwierdź założenie konta
                             </button>
-                        </div>
-
-                        <!-- Success state (shown when confirmed) -->
-                        <div id="takedrop-success-state" class="hidden">
-                            <div class="flex items-center gap-3">
-                                <span class="w-2 h-2 rounded-full bg-[#50e3c2]"></span>
-                                <span class="text-[13px] text-[#50e3c2]">Konto potwierdzone</span>
-                                <span id="takedrop-confirmed-date" class="text-[12px] text-[#555]"></span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1627,21 +1626,27 @@
         }
 
         function renderTakeDrop() {
-            const loginForm = document.getElementById('takedrop-login-form');
             const successState = document.getElementById('takedrop-success-state');
             const confirmedDate = document.getElementById('takedrop-confirmed-date');
+            const emailInput = document.getElementById('takedrop-client-email');
+            const passwordInput = document.getElementById('takedrop-client-password');
+            const confirmBtn = document.getElementById('takedrop-confirm-btn');
 
-            if (!loginForm || !successState) return;
+            if (!successState) return;
 
             if (takeDropData && takeDropData.account_created) {
-                loginForm.classList.add('hidden');
                 successState.classList.remove('hidden');
                 if (confirmedDate && takeDropData.account_created_at) {
-                    confirmedDate.textContent = 'Potwierdzone: ' + new Date(takeDropData.account_created_at).toLocaleDateString('pl-PL');
+                    confirmedDate.textContent = new Date(takeDropData.account_created_at).toLocaleDateString('pl-PL');
                 }
+                // Pre-fill fields with existing data
+                if (emailInput) emailInput.value = takeDropData.account_email || '';
+                if (passwordInput) passwordInput.value = takeDropData.account_password || '';
+                // Change button text
+                if (confirmBtn) confirmBtn.textContent = 'Zaktualizuj dane';
             } else {
-                loginForm.classList.remove('hidden');
                 successState.classList.add('hidden');
+                if (confirmBtn) confirmBtn.textContent = 'Potwierdź założenie konta';
             }
         }
 
@@ -1664,22 +1669,36 @@
                 return;
             }
 
+            const isUpdate = takeDropData && takeDropData.account_created;
+
             try {
+                const updateData = {
+                    account_email: email,
+                    account_password: password,
+                    account_created: true
+                };
+
+                // Only set account_created_at on first confirmation
+                if (!isUpdate) {
+                    updateData.account_created_at = new Date().toISOString();
+                }
+
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .update({
-                        account_email: email,
-                        account_password: password,
-                        account_created: true,
-                        account_created_at: new Date().toISOString()
-                    })
+                    .update(updateData)
                     .eq('workflow_id', workflow.id);
 
                 if (error) throw error;
 
-                takeDropData = { ...takeDropData, account_created: true, account_created_at: new Date().toISOString() };
+                takeDropData = {
+                    ...takeDropData,
+                    account_email: email,
+                    account_password: password,
+                    account_created: true,
+                    account_created_at: takeDropData?.account_created_at || new Date().toISOString()
+                };
                 renderTakeDrop();
-                showToast('Dziękujemy za potwierdzenie!', 'success');
+                showToast(isUpdate ? 'Dane zaktualizowane' : 'Dziękujemy za potwierdzenie!', 'success');
 
                 // Trigger automation
                 try {
