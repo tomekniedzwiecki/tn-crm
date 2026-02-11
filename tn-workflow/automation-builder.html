@@ -418,30 +418,47 @@
         // CONSTANTS
         // ============================================
         const TRIGGERS = {
+            // Oferty
             offer_created: { label: 'Oferta utworzona', icon: 'ph-file-text', color: 'blue' },
             offer_viewed: { label: 'Oferta obejrzana', icon: 'ph-eye', color: 'blue' },
             offer_expired: { label: 'Oferta wygasła', icon: 'ph-clock-countdown', color: 'blue' },
+            // Płatności
             payment_received: { label: 'Płatność otrzymana', icon: 'ph-credit-card', color: 'green' },
-            workflow_created: { label: 'Workflow utworzony', icon: 'ph-play', color: 'green' },
+            contract_signed: { label: 'Umowa podpisana', icon: 'ph-signature', color: 'green' },
+            // Etap 1
+            workflow_created: { label: 'Workflow utworzony', icon: 'ph-play', color: 'purple' },
             stage_completed: { label: 'Etap ukończony', icon: 'ph-check-circle', color: 'purple' },
             products_shared: { label: 'Produkty udostępnione', icon: 'ph-package', color: 'purple' },
             report_published: { label: 'Raport opublikowany', icon: 'ph-file-doc', color: 'purple' },
             branding_delivered: { label: 'Branding dostarczony', icon: 'ph-paint-brush', color: 'purple' },
             sales_page_shared: { label: 'Sales page udostępniony', icon: 'ph-globe', color: 'purple' },
-            contract_signed: { label: 'Umowa podpisana', icon: 'ph-signature', color: 'green' }
+            // Etap 2
+            takedrop_account_created: { label: 'Konto TakeDrop założone', icon: 'ph-storefront', color: 'cyan' }
         };
 
-        const EMAIL_TYPES = {
-            offer_created: 'Oferta - pierwsza wiadomość',
-            offer_reminder_halfway: 'Oferta - przypomnienie',
-            offer_expired: 'Oferta - wygasła',
-            workflow_created: 'Workflow - powitanie',
-            workflow_stage_completed: 'Workflow - etap ukończony',
-            products_shared: 'Produkty - udostępnienie',
-            report_published: 'Raport - opublikowany',
-            branding_delivered: 'Branding - dostarczony',
-            sales_page_shared: 'Sales page - udostępniony'
+        // Szablony emaili pogrupowane
+        const EMAIL_TYPES_GROUPED = {
+            'Oferty': {
+                offer_created: 'Oferta - pierwsza wiadomość',
+                offer_reminder_halfway: 'Oferta - przypomnienie',
+                offer_expired: 'Oferta - wygasła'
+            },
+            'Etap 1 - Budowa sklepu': {
+                workflow_created: 'Powitanie klienta',
+                workflow_stage_completed: 'Etap ukończony',
+                products_shared: 'Produkty udostępnione',
+                report_published: 'Raport opublikowany',
+                branding_delivered: 'Branding dostarczony',
+                sales_page_shared: 'Sales page udostępniony'
+            },
+            'Etap 2 - TakeDrop': {
+                takedrop_account_created: 'Konto TakeDrop założone',
+                takedrop_welcome: 'TakeDrop - powitanie'
+            }
         };
+
+        // Flat version for backward compatibility
+        const EMAIL_TYPES = Object.values(EMAIL_TYPES_GROUPED).reduce((acc, group) => ({ ...acc, ...group }), {});
 
         const CONDITIONS = {
             has_purchased: { label: 'Klient kupił', field: 'has_purchased' },
@@ -1015,8 +1032,12 @@
                         <div>
                             <label class="block text-sm text-[#888] mb-2">Szablon emaila</label>
                             <select id="step-email-type" class="input-field" onchange="updateStepConfig(${index}, 'email_type', this.value)">
-                                ${Object.entries(EMAIL_TYPES).map(([key, label]) => `
-                                    <option value="${key}" ${step.config?.email_type === key ? 'selected' : ''}>${label}</option>
+                                ${Object.entries(EMAIL_TYPES_GROUPED).map(([groupName, types]) => `
+                                    <optgroup label="${groupName}">
+                                        ${Object.entries(types).map(([key, label]) => `
+                                            <option value="${key}" ${step.config?.email_type === key ? 'selected' : ''}>${label}</option>
+                                        `).join('')}
+                                    </optgroup>
                                 `).join('')}
                             </select>
                         </div>

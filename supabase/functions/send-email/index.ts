@@ -31,9 +31,13 @@ const VALID_EMAIL_TYPES = [
   'offer_expired',
   'products_shared',
   'workflow_created',
+  'workflow_stage_completed',
   'report_published',
   'branding_delivered',
   'sales_page_shared',
+  // Etap 2
+  'takedrop_account_created',
+  'takedrop_welcome',
   'direct'
 ]
 
@@ -49,9 +53,13 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   offer_expired: 'Twoja oferta wygasła',
   products_shared: 'Propozycje produktowe — wybierz swój produkt',
   workflow_created: 'Płatność przyjęta — podpisz umowę',
+  workflow_stage_completed: 'Etap {{stageNumber}} ukończony — {{stageName}}',
   report_published: 'Raport dotyczący Twojego produktu jest gotowy',
   branding_delivered: 'Branding Twojej marki jest gotowy!',
-  sales_page_shared: 'Twoja strona sprzedażowa jest gotowa!'
+  sales_page_shared: 'Twoja strona sprzedażowa jest gotowa!',
+  // Etap 2
+  takedrop_account_created: 'Świetnie! Twoje konto TakeDrop zostało założone',
+  takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 2!'
 }
 
 // Offer flow email types (use special reply-to)
