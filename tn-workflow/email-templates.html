@@ -137,9 +137,25 @@
 
                         <!-- Body -->
                         <div class="flex-1 flex flex-col p-3 overflow-hidden">
-                            <label class="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">Treść (HTML)</label>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-[10px] text-zinc-500 uppercase tracking-wider">Treść (HTML)</label>
+                                <button onclick="toggleHtmlEditor()" id="toggle-html-btn" class="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
+                                    <i class="ph ph-code text-xs"></i>
+                                    <span id="toggle-html-text">Pokaż HTML</span>
+                                </button>
+                            </div>
+                            <!-- Placeholder when HTML hidden -->
+                            <div id="html-placeholder" class="flex-1 flex flex-col items-center justify-center bg-zinc-900/30 border border-white/5 rounded-lg">
+                                <i class="ph ph-code text-3xl text-zinc-600 mb-2"></i>
+                                <p class="text-zinc-500 text-xs mb-3">Kod HTML jest ukryty</p>
+                                <button onclick="toggleHtmlEditor()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-eye"></i>
+                                    Pokaż kod
+                                </button>
+                            </div>
+                            <!-- HTML Editor -->
                             <textarea id="body-input"
-                                      class="flex-1 w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/20 editor-textarea resize-none"
+                                      class="hidden flex-1 w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/20 editor-textarea resize-none"
                                       oninput="onEditorChange()"></textarea>
                         </div>
                     </div>
@@ -166,16 +182,7 @@
                                 <div class="text-[10px] text-zinc-500 mb-1">Temat:</div>
                                 <div id="preview-subject" class="text-white text-sm"></div>
                             </div>
-                            <!-- Show preview button -->
-                            <div id="preview-placeholder" class="flex flex-col items-center justify-center py-16 text-center">
-                                <i class="ph ph-eye text-4xl text-zinc-600 mb-3"></i>
-                                <p class="text-zinc-500 text-sm mb-4">Kliknij aby zobaczyć podgląd emaila</p>
-                                <button onclick="showPreview()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2">
-                                    <i class="ph ph-eye"></i>
-                                    Pokaż podgląd
-                                </button>
-                            </div>
-                            <div id="preview-container" class="preview-frame preview-desktop hidden">
+                            <div id="preview-container" class="preview-frame preview-desktop">
                                 <iframe id="preview-iframe" class="w-full border-0 block" style="height: calc(100vh - 280px); min-height: 400px;"></iframe>
                             </div>
                         </div>
@@ -293,7 +300,7 @@
         let originalSubject = '';
         let originalBody = '';
         let previewMode = 'desktop';
-        let previewVisible = false;
+        let htmlVisible = false;
 
         // Color map
         const colorMap = {
@@ -408,8 +415,8 @@
 
             renderTemplatesList();
             updateSaveButton();
-            hidePreview();
-            updatePreviewSubject();
+            hideHtmlEditor();
+            refreshPreview();
         }
 
         function insertVariable(varName) {
@@ -440,26 +447,7 @@
 
             hasChanges = subject !== originalSubject || body !== originalBody;
             updateSaveButton();
-            updatePreviewSubject();
-
-            // Only refresh full preview if it's already visible
-            if (previewVisible) {
-                refreshPreview();
-            }
-        }
-
-        function updatePreviewSubject() {
-            const subject = document.getElementById('subject-input').value;
-            const replaceVars = (text) => {
-                return text
-                    .replace(/\{\{clientName\}\}/g, PREVIEW_DATA.clientName)
-                    .replace(/\{\{offerName\}\}/g, PREVIEW_DATA.offerName)
-                    .replace(/\{\{offerPrice\}\}/g, PREVIEW_DATA.offerPrice)
-                    .replace(/\{\{validUntil\}\}/g, PREVIEW_DATA.validUntil)
-                    .replace(/\{\{offerUrl\}\}/g, PREVIEW_DATA.offerUrl)
-                    .replace(/\{\{email\}\}/g, PREVIEW_DATA.email);
-            };
-            document.getElementById('preview-subject').textContent = replaceVars(subject) || '(brak tematu)';
+            refreshPreview();
         }
 
         function updateSaveButton() {
@@ -467,17 +455,26 @@
             btn.disabled = !hasChanges;
         }
 
-        function showPreview() {
-            previewVisible = true;
-            document.getElementById('preview-placeholder').classList.add('hidden');
-            document.getElementById('preview-container').classList.remove('hidden');
-            refreshPreview();
+        function toggleHtmlEditor() {
+            if (htmlVisible) {
+                hideHtmlEditor();
+            } else {
+                showHtmlEditor();
+            }
         }
 
-        function hidePreview() {
-            previewVisible = false;
-            document.getElementById('preview-placeholder').classList.remove('hidden');
-            document.getElementById('preview-container').classList.add('hidden');
+        function showHtmlEditor() {
+            htmlVisible = true;
+            document.getElementById('html-placeholder').classList.add('hidden');
+            document.getElementById('body-input').classList.remove('hidden');
+            document.getElementById('toggle-html-text').textContent = 'Ukryj HTML';
+        }
+
+        function hideHtmlEditor() {
+            htmlVisible = false;
+            document.getElementById('html-placeholder').classList.remove('hidden');
+            document.getElementById('body-input').classList.add('hidden');
+            document.getElementById('toggle-html-text').textContent = 'Pokaż HTML';
         }
 
         function setPreviewMode(mode) {
@@ -493,11 +490,6 @@
             } else {
                 container.classList.remove('preview-mobile');
                 container.classList.add('preview-desktop');
-            }
-
-            // Show preview when switching modes
-            if (!previewVisible) {
-                showPreview();
             }
         }
 
