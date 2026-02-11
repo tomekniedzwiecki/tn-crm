@@ -1,11 +1,12 @@
 -- =============================================
--- EMAIL TEMPLATE: TakeDrop Account Created
+-- EMAIL TEMPLATE: TakeDrop Activation (Stage 2 Start)
 -- =============================================
+-- Wysyłany gdy admin aktywuje zakładkę TakeDrop dla klienta
 
 INSERT INTO email_templates (email_type, subject, body, variables, is_active)
 VALUES (
   'takedrop_account_created',
-  'Świetnie! Twoje konto TakeDrop zostało założone',
+  'Etap 2: Czas założyć konto w TakeDrop',
   '<!DOCTYPE html>
 <html>
 <head>
@@ -21,8 +22,8 @@ VALUES (
           <!-- Header -->
           <tr>
             <td style="padding-bottom: 32px;">
-              <div style="font-size: 24px; font-weight: 600; color: #fff;">Etap 2: TakeDrop</div>
-              <div style="font-size: 14px; color: #666; margin-top: 4px;">Konto założone pomyślnie</div>
+              <div style="font-size: 24px; font-weight: 600; color: #fff;">Przechodzimy do Etapu 2</div>
+              <div style="font-size: 14px; color: #666; margin-top: 4px;">Konfiguracja platformy sklepowej</div>
             </td>
           </tr>
 
@@ -32,16 +33,18 @@ VALUES (
               <div style="font-size: 15px; color: #e5e5e5; line-height: 1.6;">
                 <p style="margin: 0 0 16px 0;">Cześć {{customer_name}},</p>
 
-                <p style="margin: 0 0 16px 0;">Dziękuję za założenie konta w TakeDrop! To świetny krok — teraz możemy przejść do kolejnych etapów konfiguracji Twojego sklepu.</p>
+                <p style="margin: 0 0 16px 0;">Świetna wiadomość — zakończyliśmy pierwszy etap i teraz przechodzimy do <strong style="color: #fff;">Etapu 2: konfiguracji platformy sklepowej</strong>.</p>
 
-                <p style="margin: 0 0 24px 0;">Twoje konto zostało zarejestrowane na adres: <strong style="color: #fff;">{{takedrop_email}}</strong></p>
+                <p style="margin: 0 0 16px 0;">Następny krok to założenie konta w TakeDrop — platformie e-commerce, która będzie sercem Twojego sklepu.</p>
+
+                <p style="margin: 0 0 24px 0; color: #888;">W panelu klienta znajdziesz nową zakładkę <strong style="color: #fff;">„Konto TakeDrop"</strong> z linkiem do rejestracji i instrukcjami.</p>
 
                 <!-- CTA -->
                 <div style="text-align: center; padding: 16px 0;">
-                  <a href="{{project_url}}" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">Zobacz swój projekt</a>
+                  <a href="{{project_url}}" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">Przejdź do panelu</a>
                 </div>
 
-                <p style="margin: 24px 0 0 0; color: #888; font-size: 14px;">W razie pytań — jestem do dyspozycji.</p>
+                <p style="margin: 24px 0 0 0; color: #888; font-size: 14px;">Jeśli masz pytania — pisz śmiało.</p>
               </div>
             </td>
           </tr>
@@ -61,7 +64,7 @@ VALUES (
   </table>
 </body>
 </html>',
-  '["customer_name", "takedrop_email", "project_url"]',
+  '["customer_name", "project_url"]',
   true
 )
 ON CONFLICT (email_type) DO UPDATE SET

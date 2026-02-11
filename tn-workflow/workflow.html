@@ -2899,6 +2899,8 @@
 
         async function toggleTakeDropActive() {
             const isActive = document.getElementById('takedrop-active').checked;
+            const wasActive = takeDropData?.is_active || false;
+            const isFirstActivation = isActive && !wasActive;
 
             try {
                 if (takeDropData) {
@@ -2928,6 +2930,29 @@
 
                 showToast(isActive ? 'Zakładka aktywowana dla klienta' : 'Zakładka ukryta dla klienta', 'success');
                 loadTakeDrop();
+
+                // Trigger automation when activating for the first time
+                if (isFirstActivation && workflow) {
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'takedrop_account_created',
+                                entity_type: 'workflow_takedrop',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    customer_name: workflow.customer_name || workflow.customer_company || 'Kliencie',
+                                    workflow_id: workflow.id,
+                                    project_url: projectUrl
+                                }
+                            }
+                        });
+                        console.log('TakeDrop activation automation triggered');
+                    } catch (e) {
+                        console.log('Automation trigger error:', e);
+                    }
+                }
             } catch (err) {
                 console.error('Error toggling TakeDrop:', err);
                 showToast('Błąd aktualizacji', 'error');
