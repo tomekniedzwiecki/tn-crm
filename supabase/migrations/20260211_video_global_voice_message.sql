@@ -7,8 +7,8 @@
 -- Setting dla URL do pliku MP3
 INSERT INTO settings (key, value) VALUES (
   'video_stage_voice_message_url',
-  ''  -- Wklej tutaj URL do pliku MP3 z Supabase Storage
-) ON CONFLICT (key) DO NOTHING;
+  'https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/tn_voice/etap_2_video.mp3'
+) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- Komentarz
 COMMENT ON TABLE settings IS 'Globalne ustawienia aplikacji';
