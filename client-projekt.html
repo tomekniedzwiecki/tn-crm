@@ -1307,12 +1307,15 @@
 
                     <!-- Video Scenarios Section -->
                     <div id="video-scenarios-section" class="mb-10 hidden">
-                        <div class="flex items-center gap-2 mb-4">
-                            <i class="ph ph-film-script text-purple-400"></i>
-                            <h3 class="text-[15px] font-medium text-white">Scenariusze do nagrania</h3>
+                        <div class="mb-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="ph ph-film-script text-purple-400"></i>
+                                <h3 class="text-[15px] font-medium text-white">Scenariusze do nagrania</h3>
+                            </div>
+                            <p class="text-[#666] text-[13px]">Kliknij w scenariusz aby zobaczyć szczegóły. Każdy składa się z 3 prostych kroków.</p>
                         </div>
 
-                        <div id="video-scenarios-list" class="space-y-4">
+                        <div id="video-scenarios-list" class="space-y-3">
                             <!-- Scenarios will be loaded here -->
                         </div>
                     </div>
@@ -2124,29 +2127,114 @@
             if (section) section.classList.remove('hidden');
             if (!list) return;
 
-            list.innerHTML = videoData.video_scenarios.map((scenario, index) => `
-                <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
-                    <div class="flex items-start gap-4">
-                        <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                            <span class="text-purple-400 font-bold">${index + 1}</span>
+            // Type badge colors
+            const typeColors = {
+                'POV': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                'Rutyna': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                'Reakcja': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                'Efekt WOW': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+                'Porównanie': 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+            };
+
+            list.innerHTML = videoData.video_scenarios.map((scenario, index) => {
+                const typeClass = typeColors[scenario.type] || 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+
+                return `
+                <div class="scenario-card bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden transition-all duration-200">
+                    <!-- Header - always visible, clickable -->
+                    <button onclick="toggleScenario(${index})" class="w-full p-4 flex items-center gap-4 hover:bg-[#111] transition-colors text-left">
+                        <div class="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                            <span class="text-purple-400 font-bold text-sm">${index + 1}</span>
                         </div>
-                        <div class="flex-1">
-                            <h4 class="text-white text-[14px] font-medium mb-2">${escapeHtml(scenario.title)}</h4>
-                            <p class="text-[#666] text-[13px] leading-relaxed mb-3">${escapeHtml(scenario.description || '')}</p>
-                            ${scenario.tips ? `
-                                <div class="bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <i class="ph ph-lightbulb text-purple-400 text-sm"></i>
-                                        <span class="text-purple-400 text-[11px] font-medium uppercase tracking-wider">Wskazówki</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 text-[10px] font-medium rounded border ${typeClass}">${escapeHtml(scenario.type || 'Video')}</span>
+                                ${scenario.duration ? `<span class="text-[10px] text-[#555]">${escapeHtml(scenario.duration)}</span>` : ''}
+                            </div>
+                            <h4 class="text-white text-[14px] font-medium truncate">${escapeHtml(scenario.title)}</h4>
+                        </div>
+                        <i class="ph ph-caret-down text-[#555] text-lg transition-transform duration-200 scenario-arrow" id="scenario-arrow-${index}"></i>
+                    </button>
+
+                    <!-- Content - expandable -->
+                    <div id="scenario-content-${index}" class="hidden">
+                        <div class="px-4 pb-4 pt-0">
+                            <!-- Steps -->
+                            <div class="space-y-3 mb-4">
+                                ${scenario.hook ? `
+                                <div class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span class="text-blue-400 text-[10px] font-bold">1</span>
                                     </div>
-                                    <p class="text-[#888] text-[12px] leading-relaxed">${escapeHtml(scenario.tips)}</p>
+                                    <div>
+                                        <span class="text-[11px] text-blue-400 font-medium uppercase tracking-wider">Start</span>
+                                        <p class="text-[#999] text-[13px] mt-0.5">${escapeHtml(scenario.hook)}</p>
+                                    </div>
                                 </div>
+                                ` : ''}
+
+                                ${scenario.action ? `
+                                <div class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span class="text-emerald-400 text-[10px] font-bold">2</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-[11px] text-emerald-400 font-medium uppercase tracking-wider">Akcja</span>
+                                        <p class="text-[#999] text-[13px] mt-0.5">${escapeHtml(scenario.action)}</p>
+                                    </div>
+                                </div>
+                                ` : ''}
+
+                                ${scenario.ending ? `
+                                <div class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span class="text-purple-400 text-[10px] font-bold">3</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-[11px] text-purple-400 font-medium uppercase tracking-wider">Koniec</span>
+                                        <p class="text-[#999] text-[13px] mt-0.5">${escapeHtml(scenario.ending)}</p>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Tip -->
+                            ${scenario.tip ? `
+                            <div class="flex items-start gap-2 bg-amber-500/5 border border-amber-500/10 rounded-lg p-3">
+                                <i class="ph ph-lightbulb text-amber-400 text-sm mt-0.5"></i>
+                                <p class="text-[#888] text-[12px]">${escapeHtml(scenario.tip)}</p>
+                            </div>
+                            ` : ''}
+
+                            <!-- Fallback for old format (description + tips) -->
+                            ${!scenario.hook && scenario.description ? `
+                            <p class="text-[#666] text-[13px] leading-relaxed mb-3">${escapeHtml(scenario.description)}</p>
+                            ${scenario.tips ? `
+                                <div class="flex items-start gap-2 bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
+                                    <i class="ph ph-lightbulb text-purple-400 text-sm mt-0.5"></i>
+                                    <p class="text-[#888] text-[12px]">${escapeHtml(scenario.tips)}</p>
+                                </div>
+                            ` : ''}
                             ` : ''}
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
+
+        function toggleScenario(index) {
+            const content = document.getElementById(`scenario-content-${index}`);
+            const arrow = document.getElementById(`scenario-arrow-${index}`);
+
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+        window.toggleScenario = toggleScenario;
 
         function renderSocialProfiles() {
             const profiles = videoData?.social_profiles || {};
