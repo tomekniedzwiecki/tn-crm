@@ -12,7 +12,6 @@ interface LeadData {
   name?: string
   phone?: string
   company?: string
-  source?: string
   deal_value?: number
   status?: string
   notes?: string
@@ -71,7 +70,6 @@ Deno.serve(async (req) => {
       if (data.name) updates.name = data.name
       if (data.phone) updates.phone = data.phone
       if (data.company) updates.company = data.company
-      if (data.source) updates.source = data.source
       if (data.deal_value !== undefined) updates.deal_value = data.deal_value
       if (data.notes) updates.notes = data.notes
 
@@ -113,7 +111,6 @@ Deno.serve(async (req) => {
       if (data.name) insertData.name = data.name
       if (data.phone) insertData.phone = data.phone
       if (data.company) insertData.company = data.company
-      if (data.source) insertData.source = data.source
       if (data.deal_value !== undefined) insertData.deal_value = data.deal_value
       if (data.notes) insertData.notes = data.notes
 
