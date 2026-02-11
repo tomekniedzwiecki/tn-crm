@@ -42,19 +42,22 @@ Kazdy landing sklada sie z tych sekcji w kolejnosci:
 
 ## Wzorce designu
 
-### Motyw ciemny (tech/gaming/biohacking)
+> **WAŻNE**: Domyślnie ZAWSZE używaj jasnego motywu (białe tło). Ciemny motyw stosuj TYLKO gdy użytkownik wyraźnie o to poprosi lub produkt jest stricte z kategorii gaming/tech.
+
+### Motyw jasny (DOMYŚLNY - używaj zawsze!)
+- Background: `#FFFFFF` (główny) i `#F8FAFC` (sekcje alternatywne)
+- Tekst: `#111827` (dark) z `#6B7280` (secondary)
+- Akcenty: kolory z brandingu (primary, secondary, accent)
+- Efekty: subtle shadows, soft gradients, clean borders
+- Karty: białe z delikatnym cieniem i border `#E5E7EB`
+- Header/Footer: białe lub bardzo jasne
+
+### Motyw ciemny (TYLKO na życzenie - tech/gaming)
 - Background: `#0A0A0A` lub `#0D1117`
 - Tekst: `#FFFFFF` z opacity 0.5-1.0
 - Akcenty: neonowe (cyan, magenta, lime)
 - Efekty: glow, particles, noise texture
 - Przyklad: VibeStrike
-
-### Motyw jasny (health/beauty/wellness)
-- Background: `#F8FAFC` lub `#FFFFFF`
-- Tekst: `#111827` (neutral-dark)
-- Akcenty: pastelowe (teal, mint, coral)
-- Efekty: subtle shadows, gradients
-- Przyklad: OraVibe/DentaFlow
 
 ## Tech Stack (vanilla)
 
