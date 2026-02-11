@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Workflow - Automatyzacje</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .flow-card {
+            transition: all 0.2s;
+        }
+        .flow-card:hover {
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #27272a;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-switch.active {
+            background: #10b981;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        /* Step badges */
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .step-action { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .step-condition { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .step-delay { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-workflow</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">automatyzacje</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3">
+                <!-- Master toggle -->
+                <div class="flex items-center gap-2 mr-2">
+                    <span class="text-xs text-zinc-500 hidden md:inline">Master</span>
+                    <div id="master-toggle" class="toggle-switch" onclick="toggleMaster()"></div>
+                </div>
+                <button onclick="openCreateModal()" class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
+                    <i class="ph ph-plus"></i>
+                    <span class="hidden md:inline">Nowa automatyzacja</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-5xl mx-auto animate-enter">
+                <!-- Title & Stats -->
+                <div class="flex items-start justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Automatyzacje</h1>
+                        <p class="text-zinc-500">Zarządzaj sekwencjami email i powiadomieniami</p>
+                    </div>
+                    <div class="flex items-center gap-4 text-sm">
+                        <div class="text-center">
+                            <div id="stat-active" class="text-2xl font-semibold text-emerald-400">0</div>
+                            <div class="text-zinc-500">Aktywne</div>
+                        </div>
+                        <div class="text-center">
+                            <div id="stat-total" class="text-2xl font-semibold text-white">0</div>
+                            <div class="text-zinc-500">Wszystkie</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex items-center gap-3 mb-6">
+                    <button onclick="filterByTrigger(null)" class="filter-btn active px-3 py-1.5 rounded-lg text-sm transition-colors" data-trigger="">
+                        Wszystkie
+                    </button>
+                    <button onclick="filterByTrigger('offer')" class="filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors" data-trigger="offer">
+                        Oferty
+                    </button>
+                    <button onclick="filterByTrigger('workflow')" class="filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors" data-trigger="workflow">
+                        Workflow
+                    </button>
+                </div>
+
+                <!-- Flows list -->
+                <div id="flows-container" class="space-y-3">
+                    <!-- Loading -->
+                    <div class="text-center py-12 text-zinc-500">
+                        <i class="ph ph-spinner animate-spin text-2xl"></i>
+                        <p class="mt-2">Wczytywanie...</p>
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div id="empty-state" class="hidden text-center py-16">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <i class="ph ph-lightning text-3xl text-zinc-600"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-white mb-2">Brak automatyzacji</h3>
+                    <p class="text-zinc-500 mb-6">Utwórz pierwszą automatyzację, aby rozpocząć</p>
+                    <button onclick="openCreateModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                        <i class="ph ph-plus mr-1"></i>
+                        Nowa automatyzacja
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Modal -->
+    <div id="flow-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-white/5">
+                <h2 id="modal-title" class="text-xl font-semibold text-white">Nowa automatyzacja</h2>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-6">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm text-zinc-400 mb-2">Nazwa</label>
+                    <input type="text" id="flow-name" placeholder="np. Oferta Full - Sekwencja email"
+                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm text-zinc-400 mb-2">Opis (opcjonalny)</label>
+                    <textarea id="flow-description" rows="2" placeholder="Krótki opis co robi ta automatyzacja..."
+                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Trigger -->
+                <div>
+                    <label class="block text-sm text-zinc-400 mb-2">Wyzwalacz (Trigger)</label>
+                    <select id="flow-trigger" onchange="onTriggerChange()"
+                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:border-zinc-500 focus:outline-none">
+                        <optgroup label="Oferty">
+                            <option value="offer_created">Oferta utworzona</option>
+                            <option value="offer_viewed">Oferta obejrzana</option>
+                            <option value="offer_expired">Oferta wygasła</option>
+                        </optgroup>
+                        <optgroup label="Płatności">
+                            <option value="payment_received">Płatność otrzymana</option>
+                        </optgroup>
+                        <optgroup label="Workflow">
+                            <option value="workflow_created">Workflow utworzony</option>
+                            <option value="stage_completed">Etap ukończony</option>
+                            <option value="products_shared">Produkty udostępnione</option>
+                            <option value="report_published">Raport opublikowany</option>
+                            <option value="branding_delivered">Branding dostarczony</option>
+                            <option value="sales_page_shared">Sales page udostępniony</option>
+                            <option value="contract_signed">Umowa podpisana</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Trigger Filters (conditional) -->
+                <div id="filter-offer-type" class="hidden">
+                    <label class="block text-sm text-zinc-400 mb-2">Typ oferty</label>
+                    <select id="flow-offer-type"
+                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:border-zinc-500 focus:outline-none">
+                        <option value="">Wszystkie typy</option>
+                        <option value="full">Full (pełny pakiet)</option>
+                        <option value="starter">Starter</option>
+                    </select>
+                </div>
+
+                <!-- Steps preview -->
+                <div>
+                    <label class="block text-sm text-zinc-400 mb-2">Kroki (uproszczony podgląd)</label>
+                    <div id="steps-preview" class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4 min-h-[100px]">
+                        <p class="text-zinc-500 text-sm">Szczegółowy edytor kroków będzie dostępny po zapisaniu automatyzacji.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/5 flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-4 py-2 text-zinc-400 hover:text-white transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="saveFlow()" class="bg-white text-black hover:bg-zinc-200 px-6 py-2 rounded-lg font-medium transition-colors">
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // ============================================
+        // SUPABASE INIT
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let flows = [];
+        let masterEnabled = true;
+        let currentFilter = null;
+        let editingFlowId = null;
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check auth
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // Render sidebar
+            Sidebar.render({ appId: 'workflow' });
+            Sidebar.setUserEmail(user.email);
+            Sidebar.setupLogout(supabase);
+
+            // Load user profile
+            const { data: member } = await supabase
+                .from('team_members')
+                .select('name, avatar_color, is_admin')
+                .eq('email', user.email)
+                .single();
+
+            if (member) {
+                Sidebar.setUserName(member.name);
+                if (member.avatar_color) Sidebar.setUserColor(member.avatar_color);
+            }
+
+            // Load data
+            await loadMasterSetting();
+            await loadFlows();
+        });
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadMasterSetting() {
+            const { data } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'automations_master_enabled')
+                .single();
+
+            masterEnabled = data?.value === 'true';
+            updateMasterToggle();
+        }
+
+        async function loadFlows() {
+            const { data, error } = await supabase
+                .from('automation_flows')
+                .select(`
+                    *,
+                    steps:automation_steps(id, step_order, step_type, config)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading flows:', error);
+                showToast('Błąd wczytywania automatyzacji', 'error');
+                return;
+            }
+
+            flows = data || [];
+            renderFlows();
+            updateStats();
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderFlows() {
+            const container = document.getElementById('flows-container');
+            const emptyState = document.getElementById('empty-state');
+
+            // Filter flows
+            let filtered = flows;
+            if (currentFilter) {
+                filtered = flows.filter(f => f.trigger_type.startsWith(currentFilter));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = filtered.map(flow => renderFlowCard(flow)).join('');
+        }
+
+        function renderFlowCard(flow) {
+            const steps = flow.steps || [];
+            const stepsCount = steps.length;
+            const triggerLabel = getTriggerLabel(flow.trigger_type);
+            const filterLabel = getFilterLabel(flow.trigger_filters);
+
+            return `
+                <div class="flow-card bg-zinc-900/40 border border-white/5 rounded-lg p-5 group">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-lg font-medium text-white truncate">${flow.name}</h3>
+                                ${filterLabel ? `<span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">${filterLabel}</span>` : ''}
+                            </div>
+                            ${flow.description ? `<p class="text-sm text-zinc-500 mb-3">${flow.description}</p>` : ''}
+                            <div class="flex items-center gap-4 text-sm">
+                                <span class="flex items-center gap-1.5 text-zinc-400">
+                                    <i class="ph ph-lightning text-amber-400"></i>
+                                    ${triggerLabel}
+                                </span>
+                                <span class="flex items-center gap-1.5 text-zinc-400">
+                                    <i class="ph ph-list-numbers"></i>
+                                    ${stepsCount} ${stepsCount === 1 ? 'krok' : 'kroków'}
+                                </span>
+                            </div>
+                            <!-- Steps preview -->
+                            <div class="flex items-center gap-2 mt-3 flex-wrap">
+                                ${steps.sort((a,b) => a.step_order - b.step_order).slice(0, 5).map(s => renderStepBadge(s)).join('')}
+                                ${stepsCount > 5 ? `<span class="text-xs text-zinc-500">+${stepsCount - 5} więcej</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="toggle-switch ${flow.is_active ? 'active' : ''}" onclick="toggleFlow('${flow.id}', ${!flow.is_active})"></div>
+                            <button onclick="editFlow('${flow.id}')" class="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                                <i class="ph ph-pencil-simple"></i>
+                            </button>
+                            <button onclick="deleteFlow('${flow.id}')" class="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStepBadge(step) {
+            const icons = {
+                action: 'ph-paper-plane-tilt',
+                condition: 'ph-git-branch',
+                delay: 'ph-clock'
+            };
+            const classes = {
+                action: 'step-action',
+                condition: 'step-condition',
+                delay: 'step-delay'
+            };
+            const labels = {
+                action: getActionLabel(step.config),
+                condition: getConditionLabel(step.config),
+                delay: getDelayLabel(step.config)
+            };
+
+            return `
+                <span class="step-badge ${classes[step.step_type]}">
+                    <i class="ph ${icons[step.step_type]}"></i>
+                    ${labels[step.step_type]}
+                </span>
+            `;
+        }
+
+        function getActionLabel(config) {
+            if (config.action_type === 'send_email') {
+                const emailLabels = {
+                    offer_created: 'Email: Oferta',
+                    offer_reminder_halfway: 'Email: Reminder',
+                    workflow_created: 'Email: Workflow',
+                    workflow_stage_completed: 'Email: Etap'
+                };
+                return emailLabels[config.email_type] || 'Email';
+            }
+            return 'Akcja';
+        }
+
+        function getConditionLabel(config) {
+            if (config.field === 'has_purchased') return 'Jeśli nie kupił';
+            if (config.field === 'email_opened') return 'Jeśli otworzył';
+            return 'Warunek';
+        }
+
+        function getDelayLabel(config) {
+            const units = { hours: 'godz.', days: 'dni', weeks: 'tyg.' };
+            return `${config.delay_value} ${units[config.delay_unit] || config.delay_unit}`;
+        }
+
+        function getTriggerLabel(type) {
+            const labels = {
+                offer_created: 'Oferta utworzona',
+                offer_viewed: 'Oferta obejrzana',
+                offer_expired: 'Oferta wygasła',
+                payment_received: 'Płatność otrzymana',
+                workflow_created: 'Workflow utworzony',
+                stage_completed: 'Etap ukończony',
+                products_shared: 'Produkty udostępnione',
+                report_published: 'Raport opublikowany',
+                branding_delivered: 'Branding dostarczony',
+                sales_page_shared: 'Sales page udostępniony',
+                contract_signed: 'Umowa podpisana'
+            };
+            return labels[type] || type;
+        }
+
+        function getFilterLabel(filters) {
+            if (!filters || Object.keys(filters).length === 0) return null;
+            if (filters.offer_type === 'full') return 'Full';
+            if (filters.offer_type === 'starter') return 'Starter';
+            return null;
+        }
+
+        function updateStats() {
+            const active = flows.filter(f => f.is_active).length;
+            document.getElementById('stat-active').textContent = active;
+            document.getElementById('stat-total').textContent = flows.length;
+        }
+
+        function updateMasterToggle() {
+            const toggle = document.getElementById('master-toggle');
+            if (masterEnabled) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        // ============================================
+        // FILTERS
+        // ============================================
+        function filterByTrigger(filter) {
+            currentFilter = filter;
+
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const btnTrigger = btn.dataset.trigger;
+                if ((filter === null && btnTrigger === '') || btnTrigger === filter) {
+                    btn.classList.add('active', 'bg-white/10', 'text-white');
+                    btn.classList.remove('text-zinc-400', 'hover:bg-white/5');
+                } else {
+                    btn.classList.remove('active', 'bg-white/10', 'text-white');
+                    btn.classList.add('text-zinc-400', 'hover:bg-white/5');
+                }
+            });
+
+            renderFlows();
+        }
+
+        // ============================================
+        // ACTIONS
+        // ============================================
+        async function toggleMaster() {
+            masterEnabled = !masterEnabled;
+            updateMasterToggle();
+
+            const { error } = await supabase
+                .from('settings')
+                .update({ value: masterEnabled ? 'true' : 'false' })
+                .eq('key', 'automations_master_enabled');
+
+            if (error) {
+                showToast('Błąd zapisywania', 'error');
+                masterEnabled = !masterEnabled;
+                updateMasterToggle();
+                return;
+            }
+
+            showToast(masterEnabled ? 'Automatyzacje włączone' : 'Automatyzacje wyłączone', 'success');
+        }
+
+        async function toggleFlow(flowId, newState) {
+            const { error } = await supabase
+                .from('automation_flows')
+                .update({ is_active: newState })
+                .eq('id', flowId);
+
+            if (error) {
+                showToast('Błąd zapisywania', 'error');
+                return;
+            }
+
+            // Update local state
+            const flow = flows.find(f => f.id === flowId);
+            if (flow) flow.is_active = newState;
+
+            renderFlows();
+            updateStats();
+            showToast(newState ? 'Automatyzacja włączona' : 'Automatyzacja wyłączona', 'success');
+        }
+
+        async function deleteFlow(flowId) {
+            if (!confirm('Czy na pewno chcesz usunąć tę automatyzację?')) return;
+
+            const { error } = await supabase
+                .from('automation_flows')
+                .delete()
+                .eq('id', flowId);
+
+            if (error) {
+                showToast('Błąd usuwania', 'error');
+                return;
+            }
+
+            flows = flows.filter(f => f.id !== flowId);
+            renderFlows();
+            updateStats();
+            showToast('Automatyzacja usunięta', 'success');
+        }
+
+        // ============================================
+        // MODAL
+        // ============================================
+        function openCreateModal() {
+            editingFlowId = null;
+            document.getElementById('modal-title').textContent = 'Nowa automatyzacja';
+            document.getElementById('flow-name').value = '';
+            document.getElementById('flow-description').value = '';
+            document.getElementById('flow-trigger').value = 'offer_created';
+            document.getElementById('flow-offer-type').value = '';
+            onTriggerChange();
+            document.getElementById('flow-modal').classList.remove('hidden');
+            document.getElementById('flow-modal').classList.add('flex');
+        }
+
+        function editFlow(flowId) {
+            const flow = flows.find(f => f.id === flowId);
+            if (!flow) return;
+
+            editingFlowId = flowId;
+            document.getElementById('modal-title').textContent = 'Edytuj automatyzację';
+            document.getElementById('flow-name').value = flow.name;
+            document.getElementById('flow-description').value = flow.description || '';
+            document.getElementById('flow-trigger').value = flow.trigger_type;
+            document.getElementById('flow-offer-type').value = flow.trigger_filters?.offer_type || '';
+            onTriggerChange();
+            document.getElementById('flow-modal').classList.remove('hidden');
+            document.getElementById('flow-modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('flow-modal').classList.add('hidden');
+            document.getElementById('flow-modal').classList.remove('flex');
+            editingFlowId = null;
+        }
+
+        function onTriggerChange() {
+            const trigger = document.getElementById('flow-trigger').value;
+            const offerTypeFilter = document.getElementById('filter-offer-type');
+
+            // Show offer_type filter only for offer triggers
+            if (trigger.startsWith('offer_')) {
+                offerTypeFilter.classList.remove('hidden');
+            } else {
+                offerTypeFilter.classList.add('hidden');
+            }
+        }
+
+        async function saveFlow() {
+            const name = document.getElementById('flow-name').value.trim();
+            const description = document.getElementById('flow-description').value.trim();
+            const trigger = document.getElementById('flow-trigger').value;
+            const offerType = document.getElementById('flow-offer-type').value;
+
+            if (!name) {
+                showToast('Podaj nazwę automatyzacji', 'error');
+                return;
+            }
+
+            const filters = {};
+            if (offerType && trigger.startsWith('offer_')) {
+                filters.offer_type = offerType;
+            }
+
+            const flowData = {
+                name,
+                description: description || null,
+                trigger_type: trigger,
+                trigger_filters: filters
+            };
+
+            let error;
+            if (editingFlowId) {
+                // Update
+                const result = await supabase
+                    .from('automation_flows')
+                    .update(flowData)
+                    .eq('id', editingFlowId);
+                error = result.error;
+            } else {
+                // Insert
+                const result = await supabase
+                    .from('automation_flows')
+                    .insert(flowData);
+                error = result.error;
+            }
+
+            if (error) {
+                showToast('Błąd zapisywania: ' + error.message, 'error');
+                return;
+            }
+
+            closeModal();
+            await loadFlows();
+            showToast(editingFlowId ? 'Automatyzacja zaktualizowana' : 'Automatyzacja utworzona', 'success');
+        }
+
+        // ============================================
+        // TOAST
+        // ============================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400',
+                error: 'bg-red-500/20 border-red-500/30 text-red-400',
+                info: 'bg-blue-500/20 border-blue-500/30 text-blue-400'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-lg border ${colors[type]} backdrop-blur-sm animate-enter`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('flow-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+    </script>
+</body>
+</html>
