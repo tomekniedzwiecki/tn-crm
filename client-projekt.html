@@ -1243,7 +1243,11 @@
                                     </div>
                                     <div>
                                         <h4 class="text-white text-[14px] font-medium mb-1">Wybierz wariant</h4>
-                                        <p class="text-[#666] text-[13px] leading-relaxed">Zdecyduj, który wariant produktu chcesz pokazać w nagraniach.</p>
+                                        <p class="text-[#666] text-[13px] leading-relaxed mb-2">Zdecyduj, który wariant produktu chcesz pokazać w nagraniach.</p>
+                                        <a id="video-step1-product-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-[13px] font-medium transition-colors">
+                                            <i class="ph ph-arrow-square-out"></i>
+                                            <span>Zobacz produkt</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -1934,8 +1938,7 @@
             const imageEl = document.getElementById('video-product-image');
             const nameEl = document.getElementById('video-product-name');
             const linkEl = document.getElementById('video-product-link');
-
-            if (!box) return;
+            const step1Link = document.getElementById('video-step1-product-link');
 
             // Find selected product
             const selectedProduct = workflow?.selected_product_id
@@ -1943,26 +1946,44 @@
                 : null;
 
             if (!selectedProduct) {
-                box.classList.add('hidden');
+                if (box) box.classList.add('hidden');
+                if (step1Link) step1Link.classList.add('hidden');
                 return;
             }
 
-            box.classList.remove('hidden');
-            nameEl.textContent = selectedProduct.name || '—';
+            // Top product box
+            if (box) {
+                box.classList.remove('hidden');
+                if (nameEl) nameEl.textContent = selectedProduct.name || '—';
 
-            // Show image if available
-            if (selectedProduct.image_url) {
-                imageEl.innerHTML = `<img src="${selectedProduct.image_url}" alt="" class="w-full h-full object-cover">`;
-            } else {
-                imageEl.innerHTML = '<i class="ph ph-package text-2xl text-[#333]"></i>';
+                // Show image if available
+                if (imageEl) {
+                    if (selectedProduct.image_url) {
+                        imageEl.innerHTML = `<img src="${selectedProduct.image_url}" alt="" class="w-full h-full object-cover">`;
+                    } else {
+                        imageEl.innerHTML = '<i class="ph ph-package text-2xl text-[#333]"></i>';
+                    }
+                }
+
+                // Show link if available
+                if (linkEl) {
+                    if (selectedProduct.source_url) {
+                        linkEl.href = selectedProduct.source_url;
+                        linkEl.classList.remove('hidden');
+                    } else {
+                        linkEl.classList.add('hidden');
+                    }
+                }
             }
 
-            // Show link if available
-            if (selectedProduct.source_url) {
-                linkEl.href = selectedProduct.source_url;
-                linkEl.classList.remove('hidden');
-            } else {
-                linkEl.classList.add('hidden');
+            // Step 1 product link
+            if (step1Link) {
+                if (selectedProduct.source_url) {
+                    step1Link.href = selectedProduct.source_url;
+                    step1Link.classList.remove('hidden');
+                } else {
+                    step1Link.classList.add('hidden');
+                }
             }
         }
 
