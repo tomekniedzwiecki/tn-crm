@@ -276,7 +276,7 @@
         // ============================================
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ============================================
         // STATE
@@ -291,7 +291,7 @@
         // ============================================
         document.addEventListener('DOMContentLoaded', async () => {
             // Check auth
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await sb.auth.getUser();
             if (!user) {
                 window.location.href = '/login';
                 return;
@@ -300,10 +300,10 @@
             // Render sidebar
             Sidebar.render({ appId: 'workflow' });
             Sidebar.setUserEmail(user.email);
-            Sidebar.setupLogout(supabase);
+            Sidebar.setupLogout(sb);
 
             // Load user profile
-            const { data: member } = await supabase
+            const { data: member } = await sb
                 .from('team_members')
                 .select('name, avatar_color, is_admin')
                 .eq('email', user.email)
@@ -323,7 +323,7 @@
         // DATA LOADING
         // ============================================
         async function loadMasterSetting() {
-            const { data } = await supabase
+            const { data } = await sb
                 .from('settings')
                 .select('value')
                 .eq('key', 'automations_master_enabled')
@@ -334,7 +334,7 @@
         }
 
         async function loadFlows() {
-            const { data, error } = await supabase
+            const { data, error } = await sb
                 .from('automation_flows')
                 .select(`
                     *,
@@ -537,7 +537,7 @@
             masterEnabled = !masterEnabled;
             updateMasterToggle();
 
-            const { error } = await supabase
+            const { error } = await sb
                 .from('settings')
                 .update({ value: masterEnabled ? 'true' : 'false' })
                 .eq('key', 'automations_master_enabled');
@@ -553,7 +553,7 @@
         }
 
         async function toggleFlow(flowId, newState) {
-            const { error } = await supabase
+            const { error } = await sb
                 .from('automation_flows')
                 .update({ is_active: newState })
                 .eq('id', flowId);
@@ -575,7 +575,7 @@
         async function deleteFlow(flowId) {
             if (!confirm('Czy na pewno chcesz usunąć tę automatyzację?')) return;
 
-            const { error } = await supabase
+            const { error } = await sb
                 .from('automation_flows')
                 .delete()
                 .eq('id', flowId);
@@ -665,14 +665,14 @@
             let error;
             if (editingFlowId) {
                 // Update
-                const result = await supabase
+                const result = await sb
                     .from('automation_flows')
                     .update(flowData)
                     .eq('id', editingFlowId);
                 error = result.error;
             } else {
                 // Insert
-                const result = await supabase
+                const result = await sb
                     .from('automation_flows')
                     .insert(flowData);
                 error = result.error;
