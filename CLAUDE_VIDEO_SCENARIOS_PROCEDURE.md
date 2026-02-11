@@ -8,33 +8,39 @@ Użytkownik mówi: "Wygeneruj scenariusze video dla workflow X"
 
 ## Co generuje
 
-**5 prostych scenariuszy video** do nagrania telefonem. Każdy scenariusz to 3 proste kroki które może wykonać każdy.
+**10 prostych scenariuszy video** podzielonych na dwie kategorie:
+- **5 scenariuszy Z TWARZĄ** — nagrywający jest widoczny
+- **5 scenariuszy BEZ TWARZY** — tylko ręce/produkt/otoczenie
 
 ---
 
-## Struktura scenariusza (NOWA - UPROSZCZONA)
+## Struktura scenariusza
 
 ```json
 {
   "id": "scenario_1",
   "type": "POV",
+  "showFace": true,
   "title": "Krótki tytuł (max 30 znaków)",
   "hook": "Co zrobić na początku (1 zdanie)",
   "action": "Co zrobić z produktem (1-2 zdania)",
   "ending": "Jak zakończyć (1 zdanie)",
   "duration": "15-20 sek",
-  "tip": "Jedna praktyczna wskazówka"
+  "tip": "Jedna praktyczna wskazówka",
+  "example": "Opcjonalny przykład tekstu/dialogu"
 }
 ```
 
 ### Pola:
-- **type** — typ scenariusza: `POV`, `Rutyna`, `Reakcja`, `Efekt WOW`, `Porównanie`
+- **type** — typ scenariusza: `POV`, `Rutyna`, `Reakcja`, `Efekt WOW`, `Porównanie`, `ASMR`, `Unboxing`, `Tutorial`
+- **showFace** — `true` = z twarzą, `false` = bez twarzy
 - **title** — krótki, chwytliwy tytuł
-- **hook** — co zrobić w pierwszych 3 sekundach (przyciągnąć uwagę)
-- **action** — główna akcja z produktem (prosta instrukcja)
+- **hook** — co zrobić w pierwszych 3 sekundach
+- **action** — główna akcja z produktem
 - **ending** — jak zakończyć video
-- **duration** — sugerowany czas trwania
-- **tip** — jedna konkretna wskazówka techniczna
+- **duration** — sugerowany czas
+- **tip** — jedna konkretna wskazówka
+- **example** — (opcjonalnie) przykładowy tekst do powiedzenia/napisania
 
 ---
 
@@ -43,41 +49,33 @@ Użytkownik mówi: "Wygeneruj scenariusze video dla workflow X"
 ### MUSI być:
 - ✅ **PROSTE** — 3 kroki, każdy w 1-2 zdaniach
 - ✅ **Bez montażu** — jedno nagranie, bez cięć
-- ✅ **Bez tekstu na ekranie** — klient doda sam lub nie
 - ✅ **Bez innych osób** — nagrywający sam
-- ✅ **Bez specjalnych lokacji** — dom, pokój, kuchnia
+- ✅ **Bez specjalnych lokacji** — dom, pokój
 - ✅ **Krótkie** — 15-30 sekund max
 
-### NIE MOŻE być:
-- ❌ Skomplikowanych instrukcji (HOOK/ŚRODEK/KOŃCÓWKA)
-- ❌ Wymagań co do muzyki/dźwięku
-- ❌ Wymagań co do tekstu na ekranie
-- ❌ Slow motion, efektów, przejść
-- ❌ Aktorstwa, przesadnych emocji
+### Scenariusze BEZ TWARZY:
+- ❌ Nie wymagają pokazywania twarzy
+- ✅ Skupione na produkcie, rękach, otoczeniu
+- ✅ Idealne dla osób nieśmiałych
+- ✅ Łatwiejsze do nagrania
 
 ---
 
-## 5 typów scenariuszy (użyj każdego raz!)
+## Typy scenariuszy
 
-### 1. POV (Point of View)
-**Idea:** "POV: jesteś w sytuacji X" → rozwiązanie z produktem
-**Przykład:** POV: wracasz zmęczony z pracy → włączasz produkt → ulga
+### Z TWARZĄ:
+1. **POV** — "POV: jesteś w sytuacji X" → reakcja
+2. **Reakcja** — pokazanie emocji na produkt
+3. **Storytime** — opowiadanie historii
+4. **GRWM** — przygotowanie się z produktem
+5. **Porównanie** — kontrast emocji (nuda → radość)
 
-### 2. Rutyna
-**Idea:** Pokazanie produktu jako części codziennej rutyny
-**Przykład:** Poranna kawa/trening/wieczorny relaks z produktem
-
-### 3. Reakcja
-**Idea:** Pokazanie reakcji na produkt (własnej lub wyimaginowanej)
-**Przykład:** "Kiedy znajomi widzą mój [produkt]..." → demo produktu
-
-### 4. Efekt WOW
-**Idea:** Pokazanie najbardziej efektownej cechy produktu
-**Przykład:** LED-y w ciemności, dźwięk, efekt przed/po
-
-### 5. Porównanie
-**Idea:** Produkt vs alternatywa (bez produktu)
-**Przykład:** Siłownia o 6 rano vs trening w domu z produktem
+### BEZ TWARZY:
+1. **ASMR** — dźwięki produktu, close-upy
+2. **Unboxing** — rozpakowywanie (tylko ręce)
+3. **Tutorial** — pokazanie jak używać
+4. **Efekt WOW** — najlepsza cecha produktu
+5. **Estetyka** — ładne ujęcia produktu w otoczeniu
 
 ---
 
@@ -85,23 +83,16 @@ Użytkownik mówi: "Wygeneruj scenariusze video dla workflow X"
 
 ### Krok 1: Pobierz dane
 ```bash
-# Workflow
 curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflows?id=eq.[WORKFLOW_ID]&select=*" \
   -H "apikey: [SERVICE_KEY]" -H "Authorization: Bearer [SERVICE_KEY]"
 
-# Branding
 curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.[WORKFLOW_ID]&select=*" \
   -H "apikey: [SERVICE_KEY]" -H "Authorization: Bearer [SERVICE_KEY]"
 ```
 
-### Krok 2: Zidentyfikuj produkt
-Z brandingu wyciągnij:
-- Nazwa produktu
-- Co robi (główna funkcja)
-- Dla kogo jest (grupa docelowa)
-
-### Krok 3: Napisz 5 scenariuszy
-Każdy innego typu (POV, Rutyna, Reakcja, Efekt WOW, Porównanie).
+### Krok 2: Napisz 10 scenariuszy
+- 5 pierwszych: **showFace: true**
+- 5 kolejnych: **showFace: false**
 
 ---
 
@@ -110,92 +101,82 @@ Każdy innego typu (POV, Rutyna, Reakcja, Efekt WOW, Porównanie).
 ```sql
 INSERT INTO workflow_video (workflow_id, video_scenarios)
 VALUES ('[WORKFLOW_ID]', '[
-  {
-    "id": "scenario_1",
-    "type": "POV",
-    "title": "[TYTUŁ]",
-    "hook": "[HOOK]",
-    "action": "[AKCJA]",
-    "ending": "[ZAKOŃCZENIE]",
-    "duration": "15-20 sek",
-    "tip": "[WSKAZÓWKA]"
-  },
-  ...
+  {"id": "scenario_1", "showFace": true, ...},
+  {"id": "scenario_2", "showFace": true, ...},
+  {"id": "scenario_3", "showFace": true, ...},
+  {"id": "scenario_4", "showFace": true, ...},
+  {"id": "scenario_5", "showFace": true, ...},
+  {"id": "scenario_6", "showFace": false, ...},
+  {"id": "scenario_7", "showFace": false, ...},
+  {"id": "scenario_8", "showFace": false, ...},
+  {"id": "scenario_9", "showFace": false, ...},
+  {"id": "scenario_10", "showFace": false, ...}
 ]'::jsonb)
 ON CONFLICT (workflow_id) DO UPDATE SET video_scenarios = EXCLUDED.video_scenarios;
 ```
 
 ---
 
-## Przykładowe scenariusze (VibeStrike - maszyna bokserska z LED)
+## Przykładowe scenariusze (VibeStrike)
 
-### Scenariusz 1: POV
+### Z TWARZĄ:
+
 ```json
 {
   "id": "scenario_1",
   "type": "POV",
+  "showFace": true,
   "title": "Po ciężkim dniu w pracy",
-  "hook": "Pokaż zmęczoną twarz, westchnij",
-  "action": "Podejdź do maszyny, włącz ją, daj kilka ciosów",
+  "hook": "Wejdź do pokoju ze zmęczoną miną",
+  "action": "Podejdź do maszyny, włącz ją i daj serię ciosów",
   "ending": "Uśmiechnij się z ulgą do kamery",
   "duration": "15-20 sek",
-  "tip": "Przyciemnij pokój żeby LED-y były widoczne"
+  "tip": "Przyciemnij pokój żeby LED-y były widoczne",
+  "example": "Można dodać tekst: 'Terapia za 299zł'"
 }
 ```
 
-### Scenariusz 2: Rutyna
 ```json
 {
   "id": "scenario_2",
-  "type": "Rutyna",
-  "title": "Moje poranne 10 minut",
-  "hook": "Pokaż budzik/poranek",
-  "action": "Podejdź do maszyny, poćwicz chwilę",
-  "ending": "Pokaż że jesteś gotowy na dzień",
-  "duration": "15-20 sek",
-  "tip": "Nagraj przy porannym świetle"
-}
-```
-
-### Scenariusz 3: Reakcja
-```json
-{
-  "id": "scenario_3",
   "type": "Reakcja",
+  "showFace": true,
   "title": "Kiedy goście pytają co to",
-  "hook": "Udawaj że ktoś pyta 'co to jest?'",
-  "action": "Włącz maszynę i pokaż jak działa",
-  "ending": "Wzrusz ramionami z uśmiechem",
+  "hook": "Zrób zdziwioną minę jakby ktoś pytał",
+  "action": "Wskaż na maszynę, włącz ją i pokaż jak działa",
+  "ending": "Wzrusz ramionami z dumnym uśmiechem",
   "duration": "15-20 sek",
-  "tip": "Baw się - to ma być luźne"
+  "tip": "Przesadzone miny są OK - to TikTok!"
 }
 ```
 
-### Scenariusz 4: Efekt WOW
+### BEZ TWARZY:
+
 ```json
 {
-  "id": "scenario_4",
-  "type": "Efekt WOW",
-  "title": "LED-y w ciemności",
-  "hook": "Zacznij w ciemnym pokoju",
-  "action": "Włącz maszynę - pokaż jak świecą LED-y",
-  "ending": "Daj kilka ciosów na tle świateł",
-  "duration": "15-20 sek",
-  "tip": "Im ciemniej tym lepiej wygląda"
+  "id": "scenario_6",
+  "type": "ASMR",
+  "showFace": false,
+  "title": "Dźwięk ciosów i LED-ów",
+  "hook": "Zacznij od close-upa na wyłączoną maszynę",
+  "action": "Włącz ją, pokaż LED-y, nagraj dźwięk uderzeń",
+  "ending": "Zatrzymaj kadr na świecących LED-ach",
+  "duration": "20-30 sek",
+  "tip": "Nagraj w ciszy - dźwięki produktu są kluczowe"
 }
 ```
 
-### Scenariusz 5: Porównanie
 ```json
 {
-  "id": "scenario_5",
-  "type": "Porównanie",
-  "title": "Siłownia vs dom",
-  "hook": "Pokaż nudną minę (jakby siłownia)",
-  "action": "Przejdź do maszyny z uśmiechem, zacznij ćwiczyć",
-  "ending": "Pokaż kciuk w górę",
-  "duration": "15-20 sek",
-  "tip": "Kontrast: nuda → radość"
+  "id": "scenario_7",
+  "type": "Tutorial",
+  "showFace": false,
+  "title": "Jak zacząć trening",
+  "hook": "Pokaż produkt z góry (hands only)",
+  "action": "Krok po kroku: włącz, wybierz tryb, zacznij ćwiczyć",
+  "ending": "Pokaż ekran z wynikiem/statystykami",
+  "duration": "20-30 sek",
+  "tip": "Spokojne, metodyczne ruchy"
 }
 ```
 
