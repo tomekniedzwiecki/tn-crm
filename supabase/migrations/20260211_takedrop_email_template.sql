@@ -6,53 +6,12 @@
 
 INSERT INTO settings (key, value) VALUES (
   'email_template_takedrop_activated_subject',
-  'Etap 2: Czas założyć konto w TakeDrop'
+  'Załóż konto na platformie sklepowej'
 ) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 INSERT INTO settings (key, value) VALUES (
   'email_template_takedrop_activated_body',
-  '<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, ''Segoe UI'', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #000;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px;">
-          <tr>
-            <td style="padding-bottom: 32px;">
-              <div style="font-size: 24px; font-weight: 600; color: #fff;">Przechodzimy do Etapu 2</div>
-              <div style="font-size: 14px; color: #666; margin-top: 4px;">Konfiguracja platformy sklepowej</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 32px;">
-              <div style="font-size: 15px; color: #e5e5e5; line-height: 1.6;">
-                <p style="margin: 0 0 16px 0;">Cześć {{clientName}},</p>
-                <p style="margin: 0 0 16px 0;">Świetna wiadomość — zakończyliśmy pierwszy etap i teraz przechodzimy do <strong style="color: #fff;">Etapu 2: konfiguracji platformy sklepowej</strong>.</p>
-                <p style="margin: 0 0 16px 0;">Następny krok to założenie konta w TakeDrop — platformie e-commerce, która będzie sercem Twojego sklepu.</p>
-                <p style="margin: 0 0 24px 0; color: #888;">W panelu klienta znajdziesz nową zakładkę <strong style="color: #fff;">„Konto TakeDrop"</strong> z linkiem do rejestracji i instrukcjami.</p>
-                <div style="text-align: center; padding: 16px 0;">
-                  <a href="{{projectUrl}}" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">Przejdź do panelu</a>
-                </div>
-                <p style="margin: 24px 0 0 0; color: #888; font-size: 14px;">Jeśli masz pytania — pisz śmiało.</p>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding-top: 24px; text-align: center;">
-              <div style="font-size: 12px; color: #555;">tomekniedzwiecki.pl</div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>'
+  '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',Roboto,''Helvetica Neue'',Arial,sans-serif;background-color:#000000;"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#000000;padding:40px 20px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;border-radius:12px;border:1px solid #262626;"><tr><td style="padding:48px 40px 40px 40px;"><p style="margin:0 0 8px 0;color:#0ea5e9;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Platforma sklepowa</p><h1 style="margin:0 0 24px 0;color:#ffffff;font-size:28px;font-weight:600;line-height:1.3;">{{clientName}}, czas założyć konto w TakeDrop</h1><p style="margin:0 0 32px 0;color:#a3a3a3;font-size:15px;line-height:1.6;">TakeDrop to platforma e-commerce, która będzie sercem Twojego sklepu. W panelu klienta znajdziesz zakładkę „Konto TakeDrop" z linkiem do rejestracji i instrukcjami.</p><table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr><td align="center"><a href="{{projectUrl}}" style="display:inline-block;background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%);color:#ffffff;text-decoration:none;padding:16px 32px;border-radius:8px;font-size:14px;font-weight:600;text-align:center;">Przejdź do panelu →</a></td></tr></table><p style="margin:0;color:#737373;font-size:13px;line-height:1.5;">Po założeniu konta poinformuję Cię o kolejnych krokach.</p></td></tr><tr><td style="padding:20px 40px;border-top:1px solid #262626;text-align:center;"><a href="https://tomekniedzwiecki.pl" style="color:#525252;font-size:12px;text-decoration:none;">tomekniedzwiecki.pl</a></td></tr></table></td></tr></table></body></html>'
 ) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- =============================================
@@ -91,7 +50,7 @@ BEGIN
   IF v_flow_id IS NULL THEN
     INSERT INTO automation_flows (name, description, trigger_type, trigger_filters, is_active)
     VALUES (
-      'Etap 2 - TakeDrop aktywowany',
+      'Etap 2 - Aktywuj TakeDrop',
       'Wysyła email do klienta gdy admin aktywuje zakładkę TakeDrop',
       'takedrop_activated',
       '{}',

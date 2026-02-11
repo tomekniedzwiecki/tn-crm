@@ -58,7 +58,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   branding_delivered: 'Branding Twojej marki jest gotowy!',
   sales_page_shared: 'Twoja strona sprzedażowa jest gotowa!',
   // Etap 2
-  takedrop_activated: 'Etap 2: Czas założyć konto w TakeDrop',
+  takedrop_activated: 'Załóż konto na platformie sklepowej',
   takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 2!'
 }
 
