@@ -7,30 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
         body { background: #000; }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
 
-        /* Template card */
-        .template-card {
-            transition: all 0.2s ease;
-        }
-        .template-card:hover {
-            border-color: rgba(255,255,255,0.2);
-        }
-        .template-card.active {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
-        }
+        .template-card { transition: all 0.2s ease; }
+        .template-card:hover { border-color: rgba(255,255,255,0.2); }
+        .template-card.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
 
-        /* Variable tag */
         .var-tag {
             background: rgba(59, 130, 246, 0.15);
             color: #60a5fa;
@@ -41,24 +31,21 @@
             cursor: pointer;
             transition: all 0.15s;
         }
-        .var-tag:hover {
-            background: rgba(59, 130, 246, 0.25);
-        }
+        .var-tag:hover { background: rgba(59, 130, 246, 0.25); }
 
-        /* Editor */
         .editor-textarea {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            line-height: 1.6;
+            font-size: 12px;
+            line-height: 1.5;
         }
 
-        /* Preview iframe */
-        .preview-frame {
-            background: white;
-            border-radius: 8px;
-        }
+        .preview-frame { background: white; border-radius: 8px; transition: width 0.3s ease; }
+        .preview-desktop { width: 100%; }
+        .preview-mobile { width: 375px; margin: 0 auto; }
 
-        /* Animations */
+        .device-btn { transition: all 0.15s; }
+        .device-btn.active { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -67,12 +54,9 @@
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans antialiased">
-    <!-- Sidebar -->
     <aside id="sidebar" class="w-56 lg:w-[224px] bg-[#050505] border-r border-[#1a1a1a] flex flex-col flex-shrink-0"></aside>
 
-    <!-- Main -->
     <main id="main-content" class="flex-1 flex flex-col bg-black relative min-w-0 overflow-hidden">
-        <!-- Top Header -->
         <header class="h-14 border-b border-[#1a1a1a] bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-30">
             <div class="flex items-center">
                 <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-[#111] text-[#666] hover:text-white transition-colors mr-3">
@@ -88,25 +72,23 @@
             </div>
         </header>
 
-        <!-- Content -->
         <div class="flex-1 flex overflow-hidden">
             <!-- Templates List -->
-            <div class="w-72 border-r border-[#1a1a1a] flex flex-col">
-                <div class="p-4 border-b border-[#1a1a1a]">
-                    <div class="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-3">Szablony</div>
+            <div class="w-64 border-r border-[#1a1a1a] flex flex-col flex-shrink-0">
+                <div class="p-3 border-b border-[#1a1a1a]">
                     <div class="relative">
                         <input type="text" id="search-templates" placeholder="Szukaj..."
-                               class="w-full bg-zinc-900/50 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20">
-                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                               class="w-full bg-zinc-900/50 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20">
+                        <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
                     </div>
                 </div>
-                <div id="templates-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <div id="templates-list" class="flex-1 overflow-y-auto p-2">
                     <!-- Templates will be loaded here -->
                 </div>
             </div>
 
-            <!-- Editor Panel -->
-            <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Main Content -->
+            <div class="flex-1 flex overflow-hidden">
                 <!-- No template selected -->
                 <div id="no-template" class="flex-1 flex items-center justify-center">
                     <div class="text-center">
@@ -115,71 +97,70 @@
                     </div>
                 </div>
 
-                <!-- Editor -->
-                <div id="editor-panel" class="flex-1 flex flex-col overflow-hidden hidden">
-                    <!-- Template info -->
-                    <div class="p-4 border-b border-[#1a1a1a]">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h2 id="template-name" class="text-lg font-medium text-white"></h2>
-                                <p id="template-description" class="text-sm text-zinc-500 mt-1"></p>
+                <!-- Editor Panel -->
+                <div id="editor-panel" class="flex-1 flex overflow-hidden hidden">
+                    <!-- Editor (narrower) -->
+                    <div class="w-[380px] flex flex-col border-r border-[#1a1a1a] flex-shrink-0">
+                        <!-- Template info -->
+                        <div class="p-3 border-b border-[#1a1a1a]">
+                            <h2 id="template-name" class="text-base font-medium text-white"></h2>
+                            <p id="template-description" class="text-xs text-zinc-500 mt-1"></p>
+                        </div>
+
+                        <!-- Variables bar -->
+                        <div class="px-3 py-2 border-b border-[#1a1a1a] bg-zinc-900/30">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[10px] text-zinc-500 mr-1">Zmienne:</span>
+                                <button onclick="insertVariable('clientName')" class="var-tag">{{clientName}}</button>
+                                <button onclick="insertVariable('offerName')" class="var-tag">{{offerName}}</button>
+                                <button onclick="insertVariable('offerPrice')" class="var-tag">{{offerPrice}}</button>
+                                <button onclick="insertVariable('validUntil')" class="var-tag">{{validUntil}}</button>
+                                <button onclick="insertVariable('offerUrl')" class="var-tag">{{offerUrl}}</button>
+                                <button onclick="insertVariable('email')" class="var-tag">{{email}}</button>
                             </div>
-                            <div id="template-usage" class="text-right">
-                                <!-- Usage info -->
-                            </div>
+                        </div>
+
+                        <!-- Subject -->
+                        <div class="p-3 border-b border-[#1a1a1a]">
+                            <label class="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">Temat</label>
+                            <input type="text" id="subject-input"
+                                   class="w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 editor-textarea"
+                                   oninput="onEditorChange()">
+                        </div>
+
+                        <!-- Body -->
+                        <div class="flex-1 flex flex-col p-3 overflow-hidden">
+                            <label class="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">Treść (HTML)</label>
+                            <textarea id="body-input"
+                                      class="flex-1 w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/20 editor-textarea resize-none"
+                                      oninput="onEditorChange()"></textarea>
                         </div>
                     </div>
 
-                    <!-- Variables bar -->
-                    <div class="px-4 py-3 border-b border-[#1a1a1a] bg-zinc-900/30">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs text-zinc-500 mr-2">Zmienne:</span>
-                            <button onclick="insertVariable('clientName')" class="var-tag">{{clientName}}</button>
-                            <button onclick="insertVariable('offerName')" class="var-tag">{{offerName}}</button>
-                            <button onclick="insertVariable('offerPrice')" class="var-tag">{{offerPrice}}</button>
-                            <button onclick="insertVariable('validUntil')" class="var-tag">{{validUntil}}</button>
-                            <button onclick="insertVariable('offerUrl')" class="var-tag">{{offerUrl}}</button>
-                            <button onclick="insertVariable('email')" class="var-tag">{{email}}</button>
-                        </div>
-                    </div>
-
-                    <!-- Editor and Preview -->
-                    <div class="flex-1 flex overflow-hidden">
-                        <!-- Subject & Body Editor -->
-                        <div class="flex-1 flex flex-col overflow-hidden border-r border-[#1a1a1a]">
-                            <!-- Subject -->
-                            <div class="p-4 border-b border-[#1a1a1a]">
-                                <label class="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Temat</label>
-                                <input type="text" id="subject-input"
-                                       class="w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 editor-textarea"
-                                       oninput="onEditorChange()">
-                            </div>
-
-                            <!-- Body -->
-                            <div class="flex-1 flex flex-col p-4 overflow-hidden">
-                                <label class="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Treść (HTML)</label>
-                                <textarea id="body-input"
-                                          class="flex-1 w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 editor-textarea resize-none"
-                                          oninput="onEditorChange()"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Preview -->
-                        <div class="w-[500px] flex flex-col overflow-hidden bg-zinc-900/20">
-                            <div class="p-4 border-b border-[#1a1a1a] flex items-center justify-between">
-                                <label class="text-xs text-zinc-500 uppercase tracking-wider">Podgląd</label>
-                                <button onclick="refreshPreview()" class="text-zinc-500 hover:text-white transition-colors">
-                                    <i class="ph ph-arrow-clockwise"></i>
+                    <!-- Preview (wider) -->
+                    <div class="flex-1 flex flex-col overflow-hidden bg-zinc-900/20">
+                        <div class="p-3 border-b border-[#1a1a1a] flex items-center justify-between">
+                            <label class="text-xs text-zinc-500 uppercase tracking-wider">Podgląd</label>
+                            <div class="flex items-center gap-1">
+                                <button onclick="setPreviewMode('desktop')" id="btn-desktop" class="device-btn active p-1.5 rounded text-zinc-400 hover:text-white">
+                                    <i class="ph ph-desktop text-lg"></i>
+                                </button>
+                                <button onclick="setPreviewMode('mobile')" id="btn-mobile" class="device-btn p-1.5 rounded text-zinc-400 hover:text-white">
+                                    <i class="ph ph-device-mobile text-lg"></i>
+                                </button>
+                                <div class="w-px h-4 bg-zinc-700 mx-1"></div>
+                                <button onclick="refreshPreview()" class="p-1.5 text-zinc-400 hover:text-white transition-colors">
+                                    <i class="ph ph-arrow-clockwise text-lg"></i>
                                 </button>
                             </div>
-                            <div class="flex-1 p-4 overflow-auto">
-                                <div class="bg-zinc-800 rounded-lg p-3 mb-4">
-                                    <div class="text-xs text-zinc-500 mb-1">Temat:</div>
-                                    <div id="preview-subject" class="text-white text-sm"></div>
-                                </div>
-                                <div class="preview-frame overflow-hidden">
-                                    <iframe id="preview-iframe" class="w-full h-[600px] border-0"></iframe>
-                                </div>
+                        </div>
+                        <div class="flex-1 p-4 overflow-auto">
+                            <div class="bg-zinc-800 rounded-lg p-3 mb-4">
+                                <div class="text-[10px] text-zinc-500 mb-1">Temat:</div>
+                                <div id="preview-subject" class="text-white text-sm"></div>
+                            </div>
+                            <div id="preview-container" class="preview-frame preview-desktop overflow-hidden">
+                                <iframe id="preview-iframe" class="w-full border-0" style="height: calc(100vh - 280px);"></iframe>
                             </div>
                         </div>
                     </div>
@@ -196,74 +177,78 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Template definitions with metadata
+        // Template categories
+        const TEMPLATE_CATEGORIES = {
+            transakcyjne: {
+                label: 'Transakcyjne',
+                description: 'Maile związane z ofertami i sprzedażą',
+                templates: ['offer_created', 'offer_reminder_halfway', 'offer_expired', 'contract_sent', 'invoice_sent']
+            },
+            projektowe: {
+                label: 'Projektowe',
+                description: 'Maile związane z realizacją projektów',
+                templates: ['workflow_created', 'workflow_stage_completed', 'branding_delivered', 'sales_page_shared']
+            }
+        };
+
+        // Template definitions
         const TEMPLATE_DEFINITIONS = {
             'offer_created': {
                 name: 'Oferta utworzona',
-                description: 'Wysyłany gdy tworzona jest nowa oferta dla klienta',
+                description: 'Wysyłany gdy tworzona jest nowa oferta',
                 icon: 'ph-paper-plane-tilt',
-                color: 'emerald',
-                triggers: ['offer_created']
+                color: 'emerald'
             },
             'offer_reminder_halfway': {
                 name: 'Przypomnienie o ofercie',
-                description: 'Wysyłany w połowie okresu ważności oferty',
+                description: 'Wysyłany w połowie ważności oferty',
                 icon: 'ph-bell',
-                color: 'amber',
-                triggers: ['offer_halfway']
+                color: 'amber'
             },
             'offer_expired': {
                 name: 'Oferta wygasła',
                 description: 'Wysyłany gdy oferta traci ważność',
                 icon: 'ph-clock-countdown',
-                color: 'red',
-                triggers: ['offer_expired']
-            },
-            'workflow_created': {
-                name: 'Workflow utworzony',
-                description: 'Wysyłany gdy tworzony jest nowy projekt workflow',
-                icon: 'ph-path',
-                color: 'blue',
-                triggers: ['workflow_created']
-            },
-            'workflow_stage_completed': {
-                name: 'Etap ukończony',
-                description: 'Wysyłany gdy ukończony zostaje etap w workflow',
-                icon: 'ph-check-circle',
-                color: 'green',
-                triggers: ['stage_completed']
-            },
-            'branding_delivered': {
-                name: 'Branding dostarczony',
-                description: 'Wysyłany gdy branding jest gotowy',
-                icon: 'ph-palette',
-                color: 'violet',
-                triggers: []
-            },
-            'sales_page_shared': {
-                name: 'Strona sprzedażowa',
-                description: 'Wysyłany gdy udostępniana jest strona sprzedażowa',
-                icon: 'ph-globe',
-                color: 'cyan',
-                triggers: []
+                color: 'red'
             },
             'contract_sent': {
                 name: 'Umowa wysłana',
                 description: 'Wysyłany wraz z umową do podpisu',
                 icon: 'ph-file-text',
-                color: 'orange',
-                triggers: ['contract_signed']
+                color: 'orange'
             },
             'invoice_sent': {
                 name: 'Faktura wysłana',
                 description: 'Wysyłany wraz z fakturą',
                 icon: 'ph-receipt',
-                color: 'pink',
-                triggers: ['payment_received']
+                color: 'pink'
+            },
+            'workflow_created': {
+                name: 'Projekt utworzony',
+                description: 'Wysyłany gdy tworzony jest nowy projekt',
+                icon: 'ph-path',
+                color: 'blue'
+            },
+            'workflow_stage_completed': {
+                name: 'Etap ukończony',
+                description: 'Wysyłany gdy ukończony zostaje etap',
+                icon: 'ph-check-circle',
+                color: 'green'
+            },
+            'branding_delivered': {
+                name: 'Branding dostarczony',
+                description: 'Wysyłany gdy branding jest gotowy',
+                icon: 'ph-palette',
+                color: 'violet'
+            },
+            'sales_page_shared': {
+                name: 'Strona sprzedażowa',
+                description: 'Wysyłany gdy udostępniana jest strona',
+                icon: 'ph-globe',
+                color: 'cyan'
             }
         };
 
-        // Sample data for preview
         const PREVIEW_DATA = {
             clientName: 'Jan Kowalski',
             offerName: 'Budowa sklepu pełen pakiet',
@@ -279,8 +264,21 @@
         let hasChanges = false;
         let originalSubject = '';
         let originalBody = '';
+        let previewMode = 'desktop';
 
-        // Load templates
+        // Color map
+        const colorMap = {
+            'emerald': 'bg-emerald-500/20 text-emerald-400',
+            'amber': 'bg-amber-500/20 text-amber-400',
+            'red': 'bg-red-500/20 text-red-400',
+            'blue': 'bg-blue-500/20 text-blue-400',
+            'green': 'bg-green-500/20 text-green-400',
+            'violet': 'bg-violet-500/20 text-violet-400',
+            'cyan': 'bg-cyan-500/20 text-cyan-400',
+            'orange': 'bg-orange-500/20 text-orange-400',
+            'pink': 'bg-pink-500/20 text-pink-400'
+        };
+
         async function loadTemplates() {
             const { data, error } = await sb
                 .from('settings')
@@ -292,7 +290,6 @@
                 return;
             }
 
-            // Parse templates
             templates = {};
             (data || []).forEach(item => {
                 const match = item.key.match(/^email_template_(.+?)_(subject|body)$/);
@@ -306,59 +303,57 @@
             renderTemplatesList();
         }
 
-        // Render templates list
         function renderTemplatesList() {
             const container = document.getElementById('templates-list');
             const searchQuery = document.getElementById('search-templates').value.toLowerCase();
 
-            const templateTypes = Object.keys(TEMPLATE_DEFINITIONS);
+            let html = '';
 
-            const html = templateTypes
-                .filter(type => {
+            Object.entries(TEMPLATE_CATEGORIES).forEach(([categoryKey, category]) => {
+                const filteredTemplates = category.templates.filter(type => {
                     const def = TEMPLATE_DEFINITIONS[type];
+                    if (!def) return false;
                     return def.name.toLowerCase().includes(searchQuery) ||
                            def.description.toLowerCase().includes(searchQuery);
-                })
-                .map(type => {
+                });
+
+                if (filteredTemplates.length === 0) return;
+
+                html += `
+                    <div class="mb-4">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider font-medium px-2 py-1.5">${category.label}</div>
+                        <div class="space-y-1">
+                `;
+
+                filteredTemplates.forEach(type => {
                     const def = TEMPLATE_DEFINITIONS[type];
                     const hasTemplate = templates[type]?.subject || templates[type]?.body;
                     const isActive = selectedTemplate === type;
 
-                    const colorMap = {
-                        'emerald': 'bg-emerald-500/20 text-emerald-400',
-                        'amber': 'bg-amber-500/20 text-amber-400',
-                        'red': 'bg-red-500/20 text-red-400',
-                        'blue': 'bg-blue-500/20 text-blue-400',
-                        'green': 'bg-green-500/20 text-green-400',
-                        'violet': 'bg-violet-500/20 text-violet-400',
-                        'cyan': 'bg-cyan-500/20 text-cyan-400',
-                        'orange': 'bg-orange-500/20 text-orange-400',
-                        'pink': 'bg-pink-500/20 text-pink-400'
-                    };
-
-                    return `
+                    html += `
                         <div onclick="selectTemplate('${type}')"
-                             class="template-card p-3 rounded-lg border border-white/5 cursor-pointer ${isActive ? 'active' : ''}">
-                            <div class="flex items-start gap-3">
-                                <div class="w-8 h-8 rounded-lg ${colorMap[def.color] || 'bg-zinc-500/20 text-zinc-400'} flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ${def.icon}"></i>
+                             class="template-card p-2.5 rounded-lg border border-white/5 cursor-pointer ${isActive ? 'active' : ''}">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg ${colorMap[def.color] || 'bg-zinc-500/20 text-zinc-400'} flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ${def.icon} text-sm"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-medium text-white truncate">${def.name}</span>
-                                        ${hasTemplate ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>'}
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-medium text-white truncate">${def.name}</span>
+                                        ${hasTemplate ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600 flex-shrink-0"></span>'}
                                     </div>
-                                    <p class="text-xs text-zinc-500 mt-0.5 truncate">${def.description}</p>
                                 </div>
                             </div>
                         </div>
                     `;
-                }).join('');
+                });
+
+                html += '</div></div>';
+            });
 
             container.innerHTML = html || '<div class="p-4 text-center text-zinc-600 text-sm">Brak szablonów</div>';
         }
 
-        // Select template
         function selectTemplate(type) {
             if (hasChanges && !confirm('Masz niezapisane zmiany. Czy na pewno chcesz zmienić szablon?')) {
                 return;
@@ -370,42 +365,27 @@
             const def = TEMPLATE_DEFINITIONS[type];
             const template = templates[type] || {};
 
-            // Update UI
             document.getElementById('no-template').classList.add('hidden');
             document.getElementById('editor-panel').classList.remove('hidden');
 
             document.getElementById('template-name').textContent = def.name;
             document.getElementById('template-description').textContent = def.description;
 
-            // Set editor values
             document.getElementById('subject-input').value = template.subject || '';
             document.getElementById('body-input').value = template.body || '';
 
             originalSubject = template.subject || '';
             originalBody = template.body || '';
 
-            // Usage info
-            const usageHtml = def.triggers.length > 0
-                ? `<span class="text-xs text-zinc-500">Używany w: </span><span class="text-xs text-blue-400">${def.triggers.join(', ')}</span>`
-                : '<span class="text-xs text-zinc-600">Nie powiązany z automatyzacją</span>';
-            document.getElementById('template-usage').innerHTML = usageHtml;
-
-            // Update list
             renderTemplatesList();
-
-            // Update save button
             updateSaveButton();
-
-            // Refresh preview
             refreshPreview();
         }
 
-        // Insert variable
         function insertVariable(varName) {
             const bodyInput = document.getElementById('body-input');
             const subjectInput = document.getElementById('subject-input');
 
-            // Determine which field is focused
             const activeElement = document.activeElement;
             let input = bodyInput;
             if (activeElement === subjectInput) {
@@ -424,7 +404,6 @@
             onEditorChange();
         }
 
-        // Editor change handler
         function onEditorChange() {
             const subject = document.getElementById('subject-input').value;
             const body = document.getElementById('body-input').value;
@@ -434,18 +413,31 @@
             refreshPreview();
         }
 
-        // Update save button
         function updateSaveButton() {
             const btn = document.getElementById('save-btn');
             btn.disabled = !hasChanges;
         }
 
-        // Refresh preview
+        function setPreviewMode(mode) {
+            previewMode = mode;
+            const container = document.getElementById('preview-container');
+
+            document.getElementById('btn-desktop').classList.toggle('active', mode === 'desktop');
+            document.getElementById('btn-mobile').classList.toggle('active', mode === 'mobile');
+
+            if (mode === 'mobile') {
+                container.classList.remove('preview-desktop');
+                container.classList.add('preview-mobile');
+            } else {
+                container.classList.remove('preview-mobile');
+                container.classList.add('preview-desktop');
+            }
+        }
+
         function refreshPreview() {
             const subject = document.getElementById('subject-input').value;
             const body = document.getElementById('body-input').value;
 
-            // Replace variables with sample data
             const replaceVars = (text) => {
                 return text
                     .replace(/\{\{clientName\}\}/g, PREVIEW_DATA.clientName)
@@ -459,11 +451,12 @@
             document.getElementById('preview-subject').textContent = replaceVars(subject) || '(brak tematu)';
 
             const iframe = document.getElementById('preview-iframe');
-            const previewBody = replaceVars(body) || '<p style="padding: 20px; color: #666;">Brak treści</p>';
+            const previewBody = replaceVars(body) || '<p style="padding: 20px; color: #666;">Brak treści - wpisz HTML w edytorze</p>';
             iframe.srcdoc = `
                 <!DOCTYPE html>
                 <html>
                 <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <style>
                         body {
                             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -482,7 +475,6 @@
             `;
         }
 
-        // Save template
         async function saveTemplate() {
             if (!selectedTemplate || !hasChanges) return;
 
@@ -494,7 +486,6 @@
             btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Zapisuję...';
 
             try {
-                // Upsert subject
                 const { error: subjectError } = await sb
                     .from('settings')
                     .upsert({
@@ -504,7 +495,6 @@
 
                 if (subjectError) throw subjectError;
 
-                // Upsert body
                 const { error: bodyError } = await sb
                     .from('settings')
                     .upsert({
@@ -514,7 +504,6 @@
 
                 if (bodyError) throw bodyError;
 
-                // Update local state
                 if (!templates[selectedTemplate]) templates[selectedTemplate] = {};
                 templates[selectedTemplate].subject = subject;
                 templates[selectedTemplate].body = body;
@@ -523,11 +512,9 @@
                 originalBody = body;
                 hasChanges = false;
 
-                // Update UI
                 renderTemplatesList();
                 updateSaveButton();
 
-                // Show success
                 btn.innerHTML = '<i class="ph ph-check"></i> Zapisano';
                 setTimeout(() => {
                     btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Zapisz';
@@ -541,10 +528,8 @@
             }
         }
 
-        // Search handler
         document.getElementById('search-templates').addEventListener('input', renderTemplatesList);
 
-        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
@@ -552,7 +537,6 @@
             }
         });
 
-        // Warn before leaving with unsaved changes
         window.addEventListener('beforeunload', (e) => {
             if (hasChanges) {
                 e.preventDefault();
@@ -560,7 +544,6 @@
             }
         });
 
-        // Init
         async function init() {
             Sidebar.render({ appId: 'workflow' });
 

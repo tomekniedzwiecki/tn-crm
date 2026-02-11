@@ -41,6 +41,13 @@
             background: rgba(0,0,0,0.8);
             backdrop-filter: blur(4px);
         }
+
+        /* Scheduled status badges */
+        .status-pending { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+        .status-cancelled { background: rgba(113, 113, 122, 0.15); color: #a1a1aa; }
+
+        /* Tab content */
+        .tab-content.hidden { display: none; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans antialiased">
@@ -58,28 +65,40 @@
         </header>
 
         <div class="p-6 lg:p-8 max-w-[1600px] mx-auto flex-1">
-            <!-- Header with Stats -->
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-                <div>
-                    <p class="text-zinc-500 text-sm">Wszystkie wysłane wiadomości z systemu</p>
-                </div>
-
-                <!-- Stats -->
-                <div class="flex items-center gap-3">
-                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
-                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Wysłane</div>
-                        <div id="stat-sent" class="text-lg font-mono text-blue-400">-</div>
-                    </div>
-                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
-                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Otwarte</div>
-                        <div id="stat-opened" class="text-lg font-mono text-purple-400">-</div>
-                    </div>
-                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
-                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Kliknięte</div>
-                        <div id="stat-clicked" class="text-lg font-mono text-pink-400">-</div>
-                    </div>
-                </div>
+            <!-- Tabs -->
+            <div class="flex items-center gap-1 mb-6 border-b border-white/5">
+                <button id="tab-sent-btn" onclick="switchTab('sent')" class="px-4 py-2.5 text-sm font-medium text-white border-b-2 border-white -mb-px transition-colors">
+                    Wysłane
+                </button>
+                <button id="tab-scheduled-btn" onclick="switchTab('scheduled')" class="px-4 py-2.5 text-sm font-medium text-zinc-500 hover:text-white border-b-2 border-transparent -mb-px transition-colors">
+                    Zaplanowane
+                </button>
             </div>
+
+            <!-- SENT EMAILS TAB -->
+            <div id="tab-sent" class="tab-content">
+                <!-- Header with Stats -->
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+                    <div>
+                        <p class="text-zinc-500 text-sm">Wszystkie wysłane wiadomości z systemu</p>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="flex items-center gap-3">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Wysłane</div>
+                            <div id="stat-sent" class="text-lg font-mono text-blue-400">-</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Otwarte</div>
+                            <div id="stat-opened" class="text-lg font-mono text-purple-400">-</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Kliknięte</div>
+                            <div id="stat-clicked" class="text-lg font-mono text-pink-400">-</div>
+                        </div>
+                    </div>
+                </div>
 
             <!-- Filters -->
             <div class="flex flex-wrap items-center gap-3 mb-6">
@@ -164,6 +183,97 @@
                     </div>
                 </div>
             </div>
+            </div><!-- end tab-sent -->
+
+            <!-- SCHEDULED EMAILS TAB -->
+            <div id="tab-scheduled" class="tab-content hidden">
+                <!-- Header with Stats -->
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+                    <div>
+                        <p class="text-zinc-500 text-sm">Zaplanowane wiadomości oczekujące na wysłanie</p>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="flex items-center gap-3">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Oczekujące</div>
+                            <div id="stat-pending" class="text-lg font-mono text-amber-400">-</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg px-4 py-2">
+                            <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Na dziś</div>
+                            <div id="stat-today" class="text-lg font-mono text-emerald-400">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap items-center gap-3 mb-6">
+                    <!-- Email Type Filter -->
+                    <select id="scheduled-filter-type" onchange="loadScheduledEmails()" class="bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
+                        <option value="">Wszystkie typy</option>
+                        <option value="offer_reminder_halfway">Przypomnienie oferty</option>
+                        <option value="offer_expired">Oferta wygasła</option>
+                    </select>
+
+                    <!-- Status Filter -->
+                    <select id="scheduled-filter-status" onchange="loadScheduledEmails()" class="bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
+                        <option value="">Wszystkie statusy</option>
+                        <option value="pending">Oczekujące</option>
+                        <option value="sent">Wysłane</option>
+                        <option value="cancelled">Anulowane</option>
+                    </select>
+
+                    <div class="flex-1"></div>
+
+                    <!-- Refresh -->
+                    <button onclick="loadScheduledEmails()" class="p-2 text-zinc-400 hover:text-white transition-colors">
+                        <i class="ph ph-arrows-clockwise text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Scheduled Emails Table -->
+                <div class="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-white/5 text-left">
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Typ</th>
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Oferta</th>
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Odbiorca</th>
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Zaplanowano na</th>
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Utworzono</th>
+                                    <th class="px-4 py-3 text-[10px] font-medium text-zinc-500 uppercase tracking-wider"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduled-table">
+                                <tr>
+                                    <td colspan="7" class="px-4 py-12 text-center text-zinc-600">
+                                        <i class="ph ph-circle-notch animate-spin text-2xl"></i>
+                                        <p class="mt-2 text-sm">Ładowanie...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="scheduled-pagination" class="flex items-center justify-between px-4 py-3 border-t border-white/5">
+                        <div class="text-xs text-zinc-500">
+                            Pokazuję <span id="scheduled-showing-count">0</span> z <span id="scheduled-total-count">0</span> zaplanowanych
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="scheduled-prev-btn" onclick="scheduledPrevPage()" disabled class="px-3 py-1.5 text-xs text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                <i class="ph ph-caret-left"></i> Poprzednie
+                            </button>
+                            <span id="scheduled-page-info" class="text-xs text-zinc-500">Strona 1</span>
+                            <button id="scheduled-next-btn" onclick="scheduledNextPage()" disabled class="px-3 py-1.5 text-xs text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                Następne <i class="ph ph-caret-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end tab-scheduled -->
         </div>
     </main>
 
@@ -272,6 +382,12 @@
         let totalCount = 0;
         let searchTimeout = null;
 
+        // Scheduled emails state
+        let scheduledEmails = [];
+        let scheduledCurrentPage = 1;
+        let scheduledTotalCount = 0;
+        let currentTab = 'sent';
+
         // Email type labels
         const EMAIL_TYPE_LABELS = {
             'offer_created': 'Oferta utworzona',
@@ -296,6 +412,13 @@
             'clicked': 'Kliknięty',
             'bounced': 'Odrzucony',
             'failed': 'Błąd'
+        };
+
+        // Scheduled status labels
+        const SCHEDULED_STATUS_LABELS = {
+            'pending': 'Oczekuje',
+            'sent': 'Wysłany',
+            'cancelled': 'Anulowany'
         };
 
         // Initialize
@@ -551,6 +674,219 @@
                 closeEmailModal();
             }
         });
+
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+
+            // Update tab buttons
+            document.getElementById('tab-sent-btn').classList.toggle('text-white', tab === 'sent');
+            document.getElementById('tab-sent-btn').classList.toggle('border-white', tab === 'sent');
+            document.getElementById('tab-sent-btn').classList.toggle('text-zinc-500', tab !== 'sent');
+            document.getElementById('tab-sent-btn').classList.toggle('border-transparent', tab !== 'sent');
+
+            document.getElementById('tab-scheduled-btn').classList.toggle('text-white', tab === 'scheduled');
+            document.getElementById('tab-scheduled-btn').classList.toggle('border-white', tab === 'scheduled');
+            document.getElementById('tab-scheduled-btn').classList.toggle('text-zinc-500', tab !== 'scheduled');
+            document.getElementById('tab-scheduled-btn').classList.toggle('border-transparent', tab !== 'scheduled');
+
+            // Show/hide tab content
+            document.getElementById('tab-sent').classList.toggle('hidden', tab !== 'sent');
+            document.getElementById('tab-scheduled').classList.toggle('hidden', tab !== 'scheduled');
+
+            // Load data if needed
+            if (tab === 'scheduled' && scheduledEmails.length === 0) {
+                loadScheduledEmails();
+                loadScheduledStats();
+            }
+        }
+
+        // Scheduled emails functions
+        async function loadScheduledStats() {
+            try {
+                const { count: pendingCount } = await sb
+                    .from('scheduled_emails')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'pending');
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+
+                const { count: todayCount } = await sb
+                    .from('scheduled_emails')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'pending')
+                    .gte('scheduled_for', today.toISOString())
+                    .lt('scheduled_for', tomorrow.toISOString());
+
+                document.getElementById('stat-pending').textContent = pendingCount || 0;
+                document.getElementById('stat-today').textContent = todayCount || 0;
+            } catch (e) {
+                console.error('Error loading scheduled stats:', e);
+            }
+        }
+
+        async function loadScheduledEmails() {
+            const typeFilter = document.getElementById('scheduled-filter-type').value;
+            const statusFilter = document.getElementById('scheduled-filter-status').value;
+
+            try {
+                let query = sb
+                    .from('scheduled_emails')
+                    .select(`
+                        id, email_type, status, scheduled_for, created_at,
+                        offer_id, offers(id, name, client_email, client_name)
+                    `, { count: 'exact' })
+                    .order('scheduled_for', { ascending: true })
+                    .range((scheduledCurrentPage - 1) * pageSize, scheduledCurrentPage * pageSize - 1);
+
+                if (typeFilter) {
+                    query = query.eq('email_type', typeFilter);
+                }
+
+                if (statusFilter) {
+                    query = query.eq('status', statusFilter);
+                } else {
+                    // Default: show pending first
+                    query = query.order('status', { ascending: true });
+                }
+
+                const { data, error, count } = await query;
+
+                if (error) throw error;
+
+                scheduledEmails = data || [];
+                scheduledTotalCount = count || 0;
+                renderScheduledEmails();
+                updateScheduledPagination();
+            } catch (e) {
+                console.error('Error loading scheduled emails:', e);
+                document.getElementById('scheduled-table').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-red-400">
+                            <i class="ph ph-warning text-2xl"></i>
+                            <p class="mt-2 text-sm">Błąd ładowania zaplanowanych emaili</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderScheduledEmails() {
+            const tbody = document.getElementById('scheduled-table');
+
+            if (scheduledEmails.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-zinc-600">
+                            <i class="ph ph-calendar-blank text-3xl"></i>
+                            <p class="mt-2 text-sm">Brak zaplanowanych emaili</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = scheduledEmails.map(email => {
+                const statusClass = `status-${email.status}`;
+                const statusLabel = SCHEDULED_STATUS_LABELS[email.status] || email.status;
+                const typeLabel = EMAIL_TYPE_LABELS[email.email_type] || email.email_type || '-';
+                const offer = email.offers;
+                const isPending = email.status === 'pending';
+                const isPast = new Date(email.scheduled_for) < new Date();
+                const scheduledClass = isPending && isPast ? 'text-red-400' : 'text-zinc-500';
+
+                return `
+                    <tr class="email-row border-b border-white/5">
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${statusClass}">
+                                ${statusLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs text-zinc-400">${typeLabel}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            ${offer ? `
+                                <a href="/offer?id=${offer.id}" class="text-sm text-emerald-400 hover:underline truncate max-w-[200px] block">
+                                    ${DOMPurify.sanitize(offer.name || 'Bez nazwy')}
+                                </a>
+                            ` : '<span class="text-zinc-600">-</span>'}
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm text-white truncate max-w-[200px]">
+                                ${offer ? DOMPurify.sanitize(offer.client_email || '-') : '-'}
+                            </div>
+                            ${offer && offer.client_name ? `<div class="text-xs text-zinc-500">${DOMPurify.sanitize(offer.client_name)}</div>` : ''}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs ${scheduledClass} font-mono">${formatDateTime(email.scheduled_for)}</span>
+                            ${isPending && isPast ? '<div class="text-[10px] text-red-400">Opóźniony</div>' : ''}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs text-zinc-500 font-mono">${formatDate(email.created_at)}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            ${isPending ? `
+                                <button onclick="cancelScheduledEmail('${email.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors" title="Anuluj">
+                                    <i class="ph ph-x text-sm"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateScheduledPagination() {
+            const totalPages = Math.ceil(scheduledTotalCount / pageSize);
+            const showingStart = scheduledTotalCount === 0 ? 0 : (scheduledCurrentPage - 1) * pageSize + 1;
+            const showingEnd = Math.min(scheduledCurrentPage * pageSize, scheduledTotalCount);
+
+            document.getElementById('scheduled-showing-count').textContent = `${showingStart}-${showingEnd}`;
+            document.getElementById('scheduled-total-count').textContent = scheduledTotalCount;
+            document.getElementById('scheduled-page-info').textContent = `Strona ${scheduledCurrentPage} z ${totalPages || 1}`;
+
+            document.getElementById('scheduled-prev-btn').disabled = scheduledCurrentPage <= 1;
+            document.getElementById('scheduled-next-btn').disabled = scheduledCurrentPage >= totalPages;
+        }
+
+        function scheduledPrevPage() {
+            if (scheduledCurrentPage > 1) {
+                scheduledCurrentPage--;
+                loadScheduledEmails();
+            }
+        }
+
+        function scheduledNextPage() {
+            const totalPages = Math.ceil(scheduledTotalCount / pageSize);
+            if (scheduledCurrentPage < totalPages) {
+                scheduledCurrentPage++;
+                loadScheduledEmails();
+            }
+        }
+
+        async function cancelScheduledEmail(id) {
+            if (!confirm('Czy na pewno chcesz anulować ten zaplanowany email?')) return;
+
+            try {
+                const { error } = await sb
+                    .from('scheduled_emails')
+                    .update({ status: 'cancelled' })
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                // Reload data
+                await loadScheduledEmails();
+                await loadScheduledStats();
+            } catch (e) {
+                console.error('Error cancelling scheduled email:', e);
+                alert('Nie udało się anulować emaila');
+            }
+        }
 
         // Helpers
         function formatDate(dateStr) {
