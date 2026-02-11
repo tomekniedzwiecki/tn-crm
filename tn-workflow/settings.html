@@ -133,12 +133,25 @@
             border-color: #555;
         }
 
-        /* Audio player */
-        .audio-player {
-            background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
-            border: 1px solid #262626;
+        /* WhatsApp Voice Message */
+        .whatsapp-voice-msg {
+            background: linear-gradient(135deg, #1f2c34 0%, #111b21 100%);
             border-radius: 12px;
-            padding: 16px;
+            padding: 12px 14px;
+            max-width: 340px;
+        }
+
+        .waveform-bar {
+            flex: 1;
+            min-width: 3px;
+            max-width: 4px;
+            background: #8696a0;
+            border-radius: 2px;
+            transition: background 0.15s;
+        }
+
+        .waveform-bar.played {
+            background: #00a884;
         }
 
         /* Toast */
@@ -213,22 +226,60 @@
                                 <input type="url" id="video-voice-url" placeholder="https://supabase.co/.../file.mp3" class="input-field">
                             </div>
 
-                            <!-- Preview -->
+                            <!-- Preview - WhatsApp style -->
                             <div id="video-voice-preview" class="hidden">
                                 <label class="block text-[12px] text-[#888] mb-2">Podglad</label>
-                                <div class="audio-player">
+                                <div class="whatsapp-voice-msg">
                                     <div class="flex items-center gap-3">
-                                        <button id="video-voice-play-btn" onclick="toggleVoicePreview()" class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center hover:bg-cyan-400 transition-colors flex-shrink-0">
-                                            <i class="ph ph-play text-white text-lg" id="video-voice-play-icon"></i>
+                                        <!-- Play button -->
+                                        <button id="video-voice-play-btn" onclick="toggleVoicePreview()" class="w-11 h-11 rounded-full bg-[#00a884] flex items-center justify-center hover:bg-[#00c897] transition-colors flex-shrink-0 shadow-lg">
+                                            <i class="ph-fill ph-play text-white text-lg" id="video-voice-play-icon"></i>
                                         </button>
-                                        <div class="flex-1">
-                                            <div class="h-1 bg-[#333] rounded-full overflow-hidden">
-                                                <div id="video-voice-progress" class="h-full bg-cyan-500 rounded-full transition-all" style="width: 0%"></div>
+
+                                        <!-- Waveform & progress -->
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <!-- Waveform bars -->
+                                                <div class="flex-1 flex items-center gap-[2px] h-8" id="voice-waveform">
+                                                    <div class="waveform-bar" style="height: 40%"></div>
+                                                    <div class="waveform-bar" style="height: 70%"></div>
+                                                    <div class="waveform-bar" style="height: 55%"></div>
+                                                    <div class="waveform-bar" style="height: 90%"></div>
+                                                    <div class="waveform-bar" style="height: 65%"></div>
+                                                    <div class="waveform-bar" style="height: 80%"></div>
+                                                    <div class="waveform-bar" style="height: 45%"></div>
+                                                    <div class="waveform-bar" style="height: 95%"></div>
+                                                    <div class="waveform-bar" style="height: 60%"></div>
+                                                    <div class="waveform-bar" style="height: 75%"></div>
+                                                    <div class="waveform-bar" style="height: 50%"></div>
+                                                    <div class="waveform-bar" style="height: 85%"></div>
+                                                    <div class="waveform-bar" style="height: 70%"></div>
+                                                    <div class="waveform-bar" style="height: 55%"></div>
+                                                    <div class="waveform-bar" style="height: 90%"></div>
+                                                    <div class="waveform-bar" style="height: 40%"></div>
+                                                    <div class="waveform-bar" style="height: 65%"></div>
+                                                    <div class="waveform-bar" style="height: 80%"></div>
+                                                    <div class="waveform-bar" style="height: 50%"></div>
+                                                    <div class="waveform-bar" style="height: 70%"></div>
+                                                    <div class="waveform-bar" style="height: 60%"></div>
+                                                    <div class="waveform-bar" style="height: 85%"></div>
+                                                    <div class="waveform-bar" style="height: 45%"></div>
+                                                    <div class="waveform-bar" style="height: 75%"></div>
+                                                </div>
                                             </div>
-                                            <div class="flex justify-between mt-1.5">
-                                                <span id="video-voice-current" class="text-[11px] text-[#666]">0:00</span>
-                                                <span id="video-voice-duration" class="text-[11px] text-[#666]">0:00</span>
+                                            <!-- Progress bar underneath -->
+                                            <div class="h-[3px] bg-[#333] rounded-full overflow-hidden mt-1">
+                                                <div id="video-voice-progress" class="h-full bg-[#00a884] rounded-full transition-all" style="width: 0%"></div>
                                             </div>
+                                            <div class="flex justify-between mt-1">
+                                                <span id="video-voice-current" class="text-[10px] text-[#8696a0]">0:00</span>
+                                                <span id="video-voice-duration" class="text-[10px] text-[#8696a0]">0:00</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Avatar -->
+                                        <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-[#00a884] shadow-lg">
+                                            <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" class="w-full h-full object-cover">
                                         </div>
                                     </div>
                                 </div>
@@ -406,11 +457,33 @@
                 const progress = (audioElement.currentTime / audioElement.duration) * 100;
                 document.getElementById('video-voice-current').textContent = current;
                 document.getElementById('video-voice-progress').style.width = `${progress}%`;
+
+                // Animate waveform bars
+                updateWaveformProgress(progress);
             });
 
             audioElement.addEventListener('ended', () => {
                 isPlaying = false;
-                document.getElementById('video-voice-play-icon').className = 'ph ph-play text-white text-lg';
+                document.getElementById('video-voice-play-icon').className = 'ph-fill ph-play text-white text-lg';
+                resetWaveform();
+            });
+        }
+
+        function updateWaveformProgress(progress) {
+            const bars = document.querySelectorAll('.waveform-bar');
+            const playedCount = Math.floor((progress / 100) * bars.length);
+            bars.forEach((bar, index) => {
+                if (index < playedCount) {
+                    bar.classList.add('played');
+                } else {
+                    bar.classList.remove('played');
+                }
+            });
+        }
+
+        function resetWaveform() {
+            document.querySelectorAll('.waveform-bar').forEach(bar => {
+                bar.classList.remove('played');
             });
         }
 
@@ -424,6 +497,7 @@
             document.getElementById('video-voice-preview').classList.remove('hidden');
             audioElement.src = url;
             audioElement.load();
+            resetWaveform();
         }
 
         function toggleVoicePreview() {
@@ -432,11 +506,11 @@
             if (isPlaying) {
                 audioElement.pause();
                 isPlaying = false;
-                document.getElementById('video-voice-play-icon').className = 'ph ph-play text-white text-lg';
+                document.getElementById('video-voice-play-icon').className = 'ph-fill ph-play text-white text-lg';
             } else {
                 audioElement.play();
                 isPlaying = true;
-                document.getElementById('video-voice-play-icon').className = 'ph ph-pause text-white text-lg';
+                document.getElementById('video-voice-play-icon').className = 'ph-fill ph-pause text-white text-lg';
             }
         }
 
