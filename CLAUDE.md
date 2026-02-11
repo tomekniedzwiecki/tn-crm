@@ -104,7 +104,7 @@ Dostepne trigger_type w automation_flows:
 - `payment_received`, `workflow_created`
 - `stage_completed`, `products_shared`, `report_published`
 - `branding_delivered`, `sales_page_shared`, `contract_signed`
-- `takedrop_account_created` (Etap 2)
+- `takedrop_activated` (Etap 2 - aktywacja TakeDrop)
 
 ### Flow
 1. Event (np. stage_completed) -> wywoluje automation-trigger

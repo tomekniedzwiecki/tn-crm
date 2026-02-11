@@ -57,8 +57,8 @@ CREATE TRIGGER workflow_takedrop_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_workflow_takedrop_updated_at();
 
--- Dodaj trigger 'takedrop_account_created' do dozwolonych triggerów automatyzacji
--- (jeśli używasz constraintu - dodaj do listy)
+-- Dodaj trigger 'takedrop_activated' do dozwolonych triggerów automatyzacji
+-- (constraint zaktualizowany w migracji 20260211_takedrop_email_template.sql)
 
 COMMENT ON TABLE workflow_takedrop IS 'Dane konta TakeDrop dla workflow - etap 2';
 COMMENT ON COLUMN workflow_takedrop.is_active IS 'Admin musi ręcznie aktywować aby klient widział tę zakładkę';
