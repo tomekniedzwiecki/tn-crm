@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Workflow - Ustawienia</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: #000;
+            color: #ededed;
+            font-feature-settings: 'ss01' on, 'ss02' on, 'cv01' on, 'cv03' on;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        ::selection { background: #fff; color: #000; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+        .settings-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #888;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+        }
+        .settings-nav-btn:hover {
+            color: #fafafa;
+            background: #111;
+        }
+        .settings-nav-btn.active {
+            color: #fafafa;
+            background: #171717;
+        }
+        .settings-nav-btn i {
+            font-size: 16px;
+            opacity: 0.6;
+        }
+        .settings-nav-btn.active i { opacity: 1; }
+
+        .card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: transparent;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #ededed;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #666;
+        }
+        .input-field::placeholder {
+            color: #555;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-primary:hover {
+            background: #e5e5e5;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #888;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-secondary:hover {
+            color: #fff;
+            border-color: #555;
+        }
+
+        /* Audio player */
+        .audio-player {
+            background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
+            border: 1px solid #262626;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-success { background: #059669; color: white; }
+        .toast-error { background: #dc2626; color: white; }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <div class="flex min-h-screen">
+        <!-- Main Sidebar -->
+        <aside id="sidebar" class="w-[220px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0 h-screen sticky top-0"></aside>
+
+        <!-- Settings Sidebar -->
+        <aside class="w-[200px] bg-[#050505] border-r border-[#1a1a1a] flex-shrink-0 h-screen sticky top-0 py-6 px-3">
+            <div class="text-[11px] uppercase tracking-wider text-[#555] font-semibold px-3 mb-3">Ustawienia</div>
+            <nav class="space-y-1">
+                <button onclick="switchSettingsTab('voice')" data-settings-tab="voice" class="settings-nav-btn active">
+                    <i class="ph ph-microphone"></i>
+                    <span>Nagrania glosowe</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 min-h-screen">
+            <!-- Header -->
+            <header class="h-14 border-b border-[#1a1a1a] bg-black/80 backdrop-blur-xl sticky top-0 z-10">
+                <div class="h-full px-6 flex items-center justify-between">
+                    <h1 class="text-[15px] font-semibold text-white">Ustawienia</h1>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="p-6 max-w-3xl">
+                <!-- Voice Recordings Tab -->
+                <div id="tab-voice" class="settings-tab animate-fade-in">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white mb-1">Nagrania glosowe</h2>
+                        <p class="text-[13px] text-[#888]">Zarzadzaj globalnymi nagraniami glosowymi dla etapow workflow.</p>
+                    </div>
+
+                    <!-- Video Stage Voice Message -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                                <i class="ph ph-video-camera text-cyan-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-[14px] font-medium text-white">Etap 2 - Video</h3>
+                                <p class="text-[12px] text-[#666]">Wiadomosc glosowa wyswietlana wszystkim klientom</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[12px] text-[#888] mb-2">URL do pliku MP3</label>
+                                <input type="url" id="video-voice-url" placeholder="https://supabase.co/.../file.mp3" class="input-field">
+                            </div>
+
+                            <!-- Preview -->
+                            <div id="video-voice-preview" class="hidden">
+                                <label class="block text-[12px] text-[#888] mb-2">Podglad</label>
+                                <div class="audio-player">
+                                    <div class="flex items-center gap-3">
+                                        <button id="video-voice-play-btn" onclick="toggleVoicePreview()" class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center hover:bg-cyan-400 transition-colors flex-shrink-0">
+                                            <i class="ph ph-play text-white text-lg" id="video-voice-play-icon"></i>
+                                        </button>
+                                        <div class="flex-1">
+                                            <div class="h-1 bg-[#333] rounded-full overflow-hidden">
+                                                <div id="video-voice-progress" class="h-full bg-cyan-500 rounded-full transition-all" style="width: 0%"></div>
+                                            </div>
+                                            <div class="flex justify-between mt-1.5">
+                                                <span id="video-voice-current" class="text-[11px] text-[#666]">0:00</span>
+                                                <span id="video-voice-duration" class="text-[11px] text-[#666]">0:00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <audio id="video-voice-audio" class="hidden"></audio>
+                            </div>
+
+                            <div class="flex items-center gap-3 pt-2">
+                                <button onclick="saveVideoVoiceSetting()" class="btn-primary flex items-center gap-2">
+                                    <i class="ph ph-floppy-disk"></i>
+                                    Zapisz
+                                </button>
+                                <button onclick="previewVoiceUrl()" class="btn-secondary flex items-center gap-2">
+                                    <i class="ph ph-play"></i>
+                                    Podglad
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Future: More voice recordings can be added here -->
+                    <div class="card p-5 border-dashed border-[#333] bg-transparent">
+                        <div class="text-center py-4">
+                            <i class="ph ph-plus-circle text-2xl text-[#333] mb-2"></i>
+                            <p class="text-[13px] text-[#555]">Wiecej nagran zostanie dodanych w przyszlosci</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE INIT
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzMjk0NTksImV4cCI6MjA0ODkwNTQ1OX0.ypT-dI3R6O0I0C-A65v7MDTC3ggAwWTIWGMbmNY0qwI';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentTab = 'voice';
+        let videoVoiceUrl = '';
+        let audioElement = null;
+        let isPlaying = false;
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Render sidebar
+            Sidebar.render({ appId: 'workflow' });
+
+            // Check auth
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = Sidebar.getLoginPath();
+                return;
+            }
+
+            // Load user profile
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('full_name, avatar_color, is_admin')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+            Sidebar.setUserEmail(user.email);
+            Sidebar.setupLogout(supabaseClient);
+
+            // Load settings
+            await loadSettings();
+
+            // Setup audio preview
+            setupAudioPreview();
+        });
+
+        // ============================================
+        // SETTINGS TABS
+        // ============================================
+        function switchSettingsTab(tabId) {
+            currentTab = tabId;
+
+            // Update nav buttons
+            document.querySelectorAll('[data-settings-tab]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.settingsTab === tabId);
+            });
+
+            // Show/hide tabs
+            document.querySelectorAll('.settings-tab').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) activeTab.classList.remove('hidden');
+        }
+
+        // ============================================
+        // LOAD SETTINGS
+        // ============================================
+        async function loadSettings() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('settings')
+                    .select('key, value')
+                    .in('key', ['video_stage_voice_message_url']);
+
+                if (error) throw error;
+
+                data?.forEach(setting => {
+                    if (setting.key === 'video_stage_voice_message_url') {
+                        videoVoiceUrl = setting.value || '';
+                        document.getElementById('video-voice-url').value = videoVoiceUrl;
+                        if (videoVoiceUrl) {
+                            document.getElementById('video-voice-preview').classList.remove('hidden');
+                            document.getElementById('video-voice-audio').src = videoVoiceUrl;
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Error loading settings:', err);
+                showToast('Blad ladowania ustawien', 'error');
+            }
+        }
+
+        // ============================================
+        // SAVE VIDEO VOICE SETTING
+        // ============================================
+        async function saveVideoVoiceSetting() {
+            const url = document.getElementById('video-voice-url').value.trim();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('settings')
+                    .upsert({
+                        key: 'video_stage_voice_message_url',
+                        value: url
+                    }, { onConflict: 'key' });
+
+                if (error) throw error;
+
+                videoVoiceUrl = url;
+                showToast('Ustawienia zapisane', 'success');
+
+                // Update preview
+                if (url) {
+                    document.getElementById('video-voice-preview').classList.remove('hidden');
+                    document.getElementById('video-voice-audio').src = url;
+                } else {
+                    document.getElementById('video-voice-preview').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Error saving setting:', err);
+                showToast('Blad zapisu', 'error');
+            }
+        }
+
+        // ============================================
+        // AUDIO PREVIEW
+        // ============================================
+        function setupAudioPreview() {
+            audioElement = document.getElementById('video-voice-audio');
+
+            audioElement.addEventListener('loadedmetadata', () => {
+                const duration = formatTime(audioElement.duration);
+                document.getElementById('video-voice-duration').textContent = duration;
+            });
+
+            audioElement.addEventListener('timeupdate', () => {
+                const current = formatTime(audioElement.currentTime);
+                const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                document.getElementById('video-voice-current').textContent = current;
+                document.getElementById('video-voice-progress').style.width = `${progress}%`;
+            });
+
+            audioElement.addEventListener('ended', () => {
+                isPlaying = false;
+                document.getElementById('video-voice-play-icon').className = 'ph ph-play text-white text-lg';
+            });
+        }
+
+        function previewVoiceUrl() {
+            const url = document.getElementById('video-voice-url').value.trim();
+            if (!url) {
+                showToast('Wprowadz URL', 'error');
+                return;
+            }
+
+            document.getElementById('video-voice-preview').classList.remove('hidden');
+            audioElement.src = url;
+            audioElement.load();
+        }
+
+        function toggleVoicePreview() {
+            if (!audioElement.src) return;
+
+            if (isPlaying) {
+                audioElement.pause();
+                isPlaying = false;
+                document.getElementById('video-voice-play-icon').className = 'ph ph-play text-white text-lg';
+            } else {
+                audioElement.play();
+                isPlaying = true;
+                document.getElementById('video-voice-play-icon').className = 'ph ph-pause text-white text-lg';
+            }
+        }
+
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ============================================
+        // TOAST
+        // ============================================
+        function showToast(message, type = 'success') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

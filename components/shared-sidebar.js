@@ -54,6 +54,7 @@ const NAV_ITEMS_WORKFLOW = [
     { id: 'automations', icon: 'ph-lightning', label: 'Automatyzacje' },
     { id: 'email-templates', icon: 'ph-file-code', label: 'Szablony emaili' },
     { id: 'email-log', icon: 'ph-envelope', label: 'Historia emaili' },
+    { id: 'settings', icon: 'ph-gear', label: 'Ustawienia' },
 ];
 
 const NAV_ITEMS_TODO = [
