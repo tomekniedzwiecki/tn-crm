@@ -265,8 +265,8 @@
         // SUPABASE INIT
         // ============================================
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzMjk0NTksImV4cCI6MjA0ODkwNTQ1OX0.ypT-dI3R6O0I0C-A65v7MDTC3ggAwWTIWGMbmNY0qwI';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ============================================
         // STATE
@@ -280,29 +280,29 @@
         // INIT
         // ============================================
         document.addEventListener('DOMContentLoaded', async () => {
-            // Render sidebar
-            Sidebar.render({ appId: 'workflow' });
-
-            // Check auth
-            const { data: { user } } = await supabaseClient.auth.getUser();
+            // Check auth first
+            const { data: { user } } = await sb.auth.getUser();
             if (!user) {
-                window.location.href = Sidebar.getLoginPath();
+                window.location.href = '/login';
                 return;
             }
 
+            // Render sidebar after auth check
+            Sidebar.render({ appId: 'workflow' });
+            Sidebar.setUserEmail(user.email);
+            Sidebar.setupLogout(sb);
+
             // Load user profile
-            const { data: profile } = await supabaseClient
-                .from('profiles')
-                .select('full_name, avatar_color, is_admin')
-                .eq('id', user.id)
+            const { data: member } = await sb
+                .from('team_members')
+                .select('name, avatar_color, is_admin')
+                .eq('email', user.email)
                 .single();
 
-            if (profile) {
-                Sidebar.setUserName(profile.full_name);
-                Sidebar.setUserColor(profile.avatar_color);
+            if (member) {
+                Sidebar.setUserName(member.name);
+                if (member.avatar_color) Sidebar.setUserColor(member.avatar_color);
             }
-            Sidebar.setUserEmail(user.email);
-            Sidebar.setupLogout(supabaseClient);
 
             // Load settings
             await loadSettings();
@@ -335,7 +335,7 @@
         // ============================================
         async function loadSettings() {
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await sb
                     .from('settings')
                     .select('key, value')
                     .in('key', ['video_stage_voice_message_url']);
@@ -365,7 +365,7 @@
             const url = document.getElementById('video-voice-url').value.trim();
 
             try {
-                const { error } = await supabaseClient
+                const { error } = await sb
                     .from('settings')
                     .upsert({
                         key: 'video_stage_voice_message_url',
