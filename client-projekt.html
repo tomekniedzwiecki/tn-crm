@@ -1145,7 +1145,7 @@
 
                         <!-- Description -->
                         <p class="text-[#888] text-base md:text-lg max-w-md mb-8 leading-relaxed">
-                            Twoja marka jest gotowa. Teraz przechodzimy do najważniejszego etapu — nagrania materiałów video, które będą sercem Twojego sklepu.
+                            Twoja marka jest gotowa. Teraz przechodzimy do następnego etapu.
                         </p>
 
                         <!-- Features -->
@@ -1831,6 +1831,13 @@
                 case 'takedrop':
                     renderTakeDrop();
                     break;
+                case 'video':
+                    // Trigger confetti on first entry if celebration screen is visible
+                    if (!videoCelebrationShown && videoData && videoData.is_active && !videoData.stage_accepted) {
+                        videoCelebrationShown = true;
+                        setTimeout(() => createVideoConfetti(), 300);
+                    }
+                    break;
             }
         }
         window.switchTab = switchTab;
@@ -1900,12 +1907,6 @@
                 // Show celebration screen
                 celebration.classList.remove('hidden');
                 content.classList.add('hidden');
-
-                // Trigger confetti on first view only
-                if (!videoCelebrationShown) {
-                    videoCelebrationShown = true;
-                    setTimeout(() => createVideoConfetti(), 300);
-                }
             }
         }
 
