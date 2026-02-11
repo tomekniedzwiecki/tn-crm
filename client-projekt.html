@@ -1857,16 +1857,32 @@
         // Video (Etap 2) functions
         let videoData = null;
         let videoCelebrationShown = false;
+        let globalVoiceMessageUrl = null;
 
         async function loadVideoData() {
             try {
-                const { data, error } = await supabaseClient
-                    .from('workflow_video')
-                    .select('*')
-                    .eq('workflow_id', workflow.id)
-                    .maybeSingle();
+                // Load workflow video data and global voice message URL in parallel
+                const [videoRes, settingsRes] = await Promise.all([
+                    supabaseClient
+                        .from('workflow_video')
+                        .select('*')
+                        .eq('workflow_id', workflow.id)
+                        .maybeSingle(),
+                    supabaseClient
+                        .from('settings')
+                        .select('value')
+                        .eq('key', 'video_stage_voice_message_url')
+                        .maybeSingle()
+                ]);
 
-                if (error) throw error;
+                if (videoRes.error) throw videoRes.error;
+                const data = videoRes.data;
+                const error = videoRes.error;
+
+                // Store global voice message URL
+                if (settingsRes.data?.value) {
+                    globalVoiceMessageUrl = settingsRes.data.value;
+                }
                 videoData = data;
 
                 // Show/hide Video tab based on is_active
@@ -1975,13 +1991,14 @@
             const audio = document.getElementById('voice-audio');
             const waveform = document.getElementById('voice-waveform');
 
-            if (!videoData?.voice_message_url) {
+            // Use global voice message URL (same for all clients)
+            if (!globalVoiceMessageUrl) {
                 if (section) section.classList.add('hidden');
                 return;
             }
 
             if (section) section.classList.remove('hidden');
-            if (audio) audio.src = videoData.voice_message_url;
+            if (audio) audio.src = globalVoiceMessageUrl;
 
             // Generate waveform bars
             if (waveform) {

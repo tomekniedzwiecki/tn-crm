@@ -16,7 +16,6 @@ interface LeadData {
   status?: string
   notes?: string
   // Survey fields
-  traffic_source?: string
   direction?: string
   weekly_hours?: string
   target_income?: string
@@ -74,7 +73,6 @@ Deno.serve(async (req) => {
       if (data.notes) updates.notes = data.notes
 
       // Survey fields
-      if (data.traffic_source) updates.traffic_source = data.traffic_source
       if (data.direction) updates.direction = data.direction
       if (data.weekly_hours) updates.weekly_hours = data.weekly_hours
       if (data.target_income) updates.target_income = data.target_income
@@ -115,7 +113,6 @@ Deno.serve(async (req) => {
       if (data.notes) insertData.notes = data.notes
 
       // Survey fields
-      if (data.traffic_source) insertData.traffic_source = data.traffic_source
       if (data.direction) insertData.direction = data.direction
       if (data.weekly_hours) insertData.weekly_hours = data.weekly_hours
       if (data.target_income) insertData.target_income = data.target_income
