@@ -13,9 +13,10 @@ CRM / system workflow do obslugi klientow. Stack:
 
 | Plik | Opis |
 |------|------|
-| `workflow.html` | Panel admina — edycja pojedynczego workflow (milestones, branding, produkty, raporty, umowy, sales page) |
+| `tn-workflow/workflow.html` | Panel admina — edycja pojedynczego workflow (milestones, branding, produkty, raporty, umowy, sales page) |
+| `tn-workflow/workflows.html` | Lista wszystkich workflow |
+| `tn-workflow/products.html` | Zarządzanie produktami |
 | `client-projekt.html` | Portal klienta — widok read-only workflow |
-| `workflows.html` | Lista wszystkich workflow |
 | `dashboard.html` | Dashboard admina |
 | `supabase/migrations/` | Migracje SQL |
 
@@ -42,7 +43,7 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 4. Wygeneruj: nazwe marki, tagline, opis, 6 kolorow, 3 fonty
 5. Daj SQL do wklejenia w Supabase SQL Editor
 
-Prompty logo/mockupow generuja sie automatycznie w UI (`generateBrandingPrompts()` w workflow.html).
+Prompty logo/mockupow generuja sie automatycznie w UI (`generateBrandingPrompts()` w tn-workflow/workflow.html).
 
 ### Generowanie landing page
 **Plik:** `CLAUDE_LANDING_PROCEDURE.md`

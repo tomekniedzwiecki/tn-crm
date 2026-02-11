@@ -18,7 +18,7 @@ const APPS = [
 
 const APP_BASES = {
     crm: '',
-    workflow: '',
+    workflow: '/tn-workflow',
     todo: '/tn-todo',
     stack: '/tn-stack',
     biznes: '/tn-biznes'
@@ -419,7 +419,7 @@ function detectCurrentApp() {
     if (path.includes('/tn-todo')) return 'todo';
     if (path.includes('/tn-stack')) return 'stack';
     if (path.includes('/tn-biznes')) return 'biznes';
-    if (path.includes('/workflows') || path.includes('/workflow') || path.includes('/products')) return 'workflow';
+    if (path.includes('/tn-workflow')) return 'workflow';
     return 'crm';
 }
 
