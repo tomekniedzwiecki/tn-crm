@@ -1243,11 +1243,14 @@
                                     </div>
                                     <div>
                                         <h4 class="text-white text-[14px] font-medium mb-1">Wybierz wariant</h4>
-                                        <p class="text-[#666] text-[13px] leading-relaxed mb-2">Zdecyduj, który wariant produktu chcesz pokazać w nagraniach.</p>
-                                        <a id="video-step1-product-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-[13px] font-medium transition-colors">
-                                            <i class="ph ph-arrow-square-out"></i>
-                                            <span>Zobacz produkt</span>
-                                        </a>
+                                        <p class="text-[#666] text-[13px] leading-relaxed">Zdecyduj, który wariant produktu chcesz pokazać w nagraniach.</p>
+                                        <div id="video-step1-product" class="hidden mt-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                                            <p class="text-[11px] text-amber-400/70 uppercase tracking-wider mb-1">Twój produkt</p>
+                                            <a id="video-step1-product-link" href="#" target="_blank" class="text-white text-[13px] font-medium hover:text-amber-400 transition-colors flex items-center gap-1.5">
+                                                <span id="video-step1-product-name">—</span>
+                                                <i class="ph ph-arrow-square-out text-amber-400"></i>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1938,7 +1941,9 @@
             const imageEl = document.getElementById('video-product-image');
             const nameEl = document.getElementById('video-product-name');
             const linkEl = document.getElementById('video-product-link');
+            const step1Container = document.getElementById('video-step1-product');
             const step1Link = document.getElementById('video-step1-product-link');
+            const step1Name = document.getElementById('video-step1-product-name');
 
             // Find selected product
             const selectedProduct = workflow?.selected_product_id
@@ -1947,7 +1952,7 @@
 
             if (!selectedProduct) {
                 if (box) box.classList.add('hidden');
-                if (step1Link) step1Link.classList.add('hidden');
+                if (step1Container) step1Container.classList.add('hidden');
                 return;
             }
 
@@ -1976,13 +1981,17 @@
                 }
             }
 
-            // Step 1 product link
-            if (step1Link) {
-                if (selectedProduct.source_url) {
-                    step1Link.href = selectedProduct.source_url;
-                    step1Link.classList.remove('hidden');
-                } else {
-                    step1Link.classList.add('hidden');
+            // Step 1 product info
+            if (step1Container) {
+                step1Container.classList.remove('hidden');
+                if (step1Name) step1Name.textContent = selectedProduct.name || '—';
+                if (step1Link) {
+                    if (selectedProduct.source_url) {
+                        step1Link.href = selectedProduct.source_url;
+                    } else {
+                        step1Link.removeAttribute('href');
+                        step1Link.style.pointerEvents = 'none';
+                    }
                 }
             }
         }
