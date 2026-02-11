@@ -24,6 +24,8 @@ interface WorkflowStageRequest {
   milestone_title: string
   milestone_index: number
   total_milestones: number
+  // Optional: skip automation and send email directly (for backward compatibility)
+  skip_automation?: boolean
 }
 
 // Email signature
@@ -146,7 +148,7 @@ Deno.serve(async (req) => {
     }
 
     const body: WorkflowStageRequest = await req.json()
-    const { workflow_id, milestone_id, milestone_title, milestone_index, total_milestones } = body
+    const { workflow_id, milestone_id, milestone_title, milestone_index, total_milestones, skip_automation } = body
 
     if (!workflow_id || !milestone_id) {
       throw new Error('Missing workflow_id or milestone_id')
@@ -164,6 +166,89 @@ Deno.serve(async (req) => {
     if (workflowError || !workflow) {
       throw new Error('Workflow not found')
     }
+
+    // Calculate progress
+    const { data: allTasks } = await supabase
+      .from('workflow_tasks')
+      .select('id, completed')
+      .eq('workflow_id', workflow_id)
+
+    const totalTasks = allTasks?.length || 0
+    const completedTasks = allTasks?.filter(t => t.completed).length || 0
+    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+    // Prepare context data for automation
+    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
+    const clientName = workflow.customer_name || workflow.customer_company || 'Kliencie'
+
+    const automationContext = {
+      email: workflow.customer_email,
+      clientName,
+      customer_name: clientName,
+      stageName: milestone_title,
+      milestone_title,
+      stageNumber: milestone_index + 1,
+      totalStages: total_milestones,
+      progressPercent,
+      progress_percent: progressPercent,
+      projectUrl,
+      project_url: projectUrl,
+      offerName: workflow.offer_name,
+      offer_name: workflow.offer_name,
+      workflow_id,
+      milestone_id
+    }
+
+    // Try to trigger automation system first (unless skip_automation is set)
+    if (!skip_automation) {
+      console.log('[workflow-stage-completed] Triggering automation system')
+
+      try {
+        const triggerResponse = await fetch(
+          `${supabaseUrl}/functions/v1/automation-trigger`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`
+            },
+            body: JSON.stringify({
+              trigger_type: 'stage_completed',
+              entity_type: 'workflow_milestone',
+              entity_id: milestone_id,
+              context: automationContext,
+              filters: {
+                milestone_title // Allow filtering by stage name
+              }
+            })
+          }
+        )
+
+        const triggerResult = await triggerResponse.json()
+        console.log('[workflow-stage-completed] Automation trigger result:', triggerResult)
+
+        if (triggerResult.success && triggerResult.created > 0) {
+          // Automation will handle the email
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: 'Automation triggered',
+              executions_created: triggerResult.created
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // No automation was triggered (no active flows)
+        console.log('[workflow-stage-completed] No active automation, falling back to direct email')
+      } catch (triggerError) {
+        console.error('[workflow-stage-completed] Automation trigger failed:', triggerError)
+        // Fall back to direct email sending
+      }
+    }
+
+    // Direct email sending (fallback or when skip_automation=true)
+    console.log('[workflow-stage-completed] Sending email directly')
 
     // Fetch email settings
     const { data: emailSettings } = await supabase
@@ -184,20 +269,6 @@ Deno.serve(async (req) => {
     const fromEmail = settings.email_from_transactional || 'biuro@tomekniedzwiecki.pl'
     const fromAddress = `${fromName} <${fromEmail}>`
     const replyTo = settings.offer_flow_reply_to || 'ceo@tomekniedzwiecki.pl'
-
-    // Calculate progress
-    const { data: allTasks } = await supabase
-      .from('workflow_tasks')
-      .select('id, completed')
-      .eq('workflow_id', workflow_id)
-
-    const totalTasks = allTasks?.length || 0
-    const completedTasks = allTasks?.filter(t => t.completed).length || 0
-    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-    // Prepare template data
-    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
-    const clientName = workflow.customer_name || workflow.customer_company || 'Kliencie'
 
     const templateData = {
       clientName,
@@ -272,7 +343,7 @@ Deno.serve(async (req) => {
       })
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Email sent' }),
+      JSON.stringify({ success: true, message: 'Email sent directly' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

@@ -74,6 +74,9 @@ npm run deploy:send-email
 npm run deploy:resend-webhook
 npm run deploy:offer-cron
 npm run deploy:workflow-stage
+npm run deploy:automation-executor
+npm run deploy:automation-trigger
+npm run deploy:automations  # executor + trigger razem
 ```
 
 ### Lokalizacja funkcji
@@ -84,3 +87,29 @@ Glowne funkcje:
 - `resend-webhook` - odbieranie webhookow z Resend (open/click tracking)
 - `offer-emails-cron` - automatyczne maile ofertowe (cron)
 - `workflow-stage-completed` - powiadomienia o ukonczeniu etapu
+- `automation-executor` - wykonuje kroki automatyzacji (cron co 2 min)
+- `automation-trigger` - tworzy automation_execution gdy wystapi event
+
+## System automatyzacji
+
+### Tabele
+- `automation_flows` - definicje automatyzacji (trigger, steps)
+- `automation_steps` - kroki: action (send_email), delay, condition
+- `automation_executions` - wykonania (status, logs, context)
+
+### Triggery
+Dostepne trigger_type w automation_flows:
+- `offer_created`, `offer_viewed`, `offer_expired`
+- `payment_received`, `workflow_created`
+- `stage_completed`, `products_shared`, `report_published`
+- `branding_delivered`, `sales_page_shared`, `contract_signed`
+
+### Flow
+1. Event (np. stage_completed) -> wywoluje automation-trigger
+2. automation-trigger tworzy automation_execution dla aktywnych flow
+3. automation-executor (cron) przetwarza execution step by step
+4. Kroki: action (wyslij email), delay (poczekaj X dni), condition (if/else)
+
+### Ustawienia
+- `settings.automations_master_enabled` - glowny wlacznik (true/false)
+- `automation_flows.is_active` - aktywacja pojedynczej automatyzacji
