@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Workflow - Flow Builder</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: #000;
+            color: #ededed;
+            font-feature-settings: 'ss01' on, 'ss02' on, 'cv01' on, 'cv03' on;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* Selection */
+        ::selection { background: #fff; color: #000; }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(16px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+        .animate-pulse-subtle { animation: pulse 2s ease-in-out infinite; }
+
+        /* Flow connector line */
+        .flow-line {
+            width: 2px;
+            background: linear-gradient(to bottom, #333 0%, #333 50%, transparent 50%, transparent 100%);
+            background-size: 2px 8px;
+        }
+
+        /* Step card */
+        .step-card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+        .step-card:hover {
+            border-color: #333;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .step-card.selected {
+            border-color: #fff;
+            box-shadow: 0 0 0 1px #fff;
+        }
+        .step-card.trigger {
+            border-color: #2563eb;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(0,0,0,0) 50%);
+        }
+        .step-card.action {
+            border-color: #8b5cf6;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0,0,0,0) 50%);
+        }
+        .step-card.delay {
+            border-color: #0ea5e9;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(0,0,0,0) 50%);
+        }
+        .step-card.condition {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(0,0,0,0) 50%);
+        }
+
+        /* Add step button */
+        .add-step-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #0a0a0a;
+            border: 1px dashed #333;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .add-step-btn:hover {
+            border-color: #fff;
+            border-style: solid;
+            color: #fff;
+            background: #111;
+        }
+
+        /* Input fields */
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ededed;
+            font-size: 14px;
+            transition: all 0.15s ease;
+            width: 100%;
+        }
+        .input-field:hover {
+            border-color: #333;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #fff;
+            box-shadow: 0 0 0 1px #fff;
+        }
+        .input-field::placeholder {
+            color: #666;
+        }
+
+        /* Select dropdown */
+        select.input-field {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+
+        /* Button styles */
+        .btn-primary {
+            background: #fff;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-primary:hover {
+            background: #e5e5e5;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #888;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-secondary:hover {
+            color: #fff;
+            border-color: #666;
+        }
+
+        /* Branch lines for conditions */
+        .branch-line {
+            position: relative;
+        }
+        .branch-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 60px;
+            height: 2px;
+            background: #333;
+        }
+        .branch-line.left::before {
+            transform: translateX(-100%);
+        }
+        .branch-line.right::before {
+            transform: translateX(0);
+        }
+
+        /* Panel slide */
+        .config-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .config-panel.open {
+            transform: translateX(0);
+        }
+
+        /* Dropdown menu */
+        .dropdown-menu {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .dropdown-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.1s ease;
+        }
+        .dropdown-item:hover {
+            background: #111;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-blue { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+        .badge-purple { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .badge-cyan { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+        .badge-amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .badge-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+
+    <!-- Header -->
+    <header class="h-14 border-b border-[#1a1a1a] bg-black/80 backdrop-blur-xl sticky top-0 z-50">
+        <div class="h-full max-w-[1400px] mx-auto px-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="/tn-workflow/automations" class="flex items-center gap-2 text-[#888] hover:text-white transition-colors">
+                    <i class="ph ph-arrow-left text-lg"></i>
+                    <span class="text-sm">Powrót</span>
+                </a>
+                <div class="w-px h-5 bg-[#333]"></div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                        <i class="ph-bold ph-lightning text-white text-sm"></i>
+                    </div>
+                    <input type="text" id="flow-name" value="Nowa automatyzacja"
+                        class="bg-transparent border-none text-white font-semibold text-base focus:outline-none focus:ring-0 w-64"
+                        placeholder="Nazwa automatyzacji">
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="save-status" class="text-sm text-[#666] flex items-center gap-2">
+                    <span>Niezapisane</span>
+                </div>
+                <button onclick="saveFlow()" class="btn-primary flex items-center gap-2">
+                    <i class="ph ph-floppy-disk"></i>
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <div class="flex">
+        <!-- Flow canvas -->
+        <div id="flow-canvas" class="flex-1 min-h-[calc(100vh-56px)] p-8 overflow-auto">
+            <div class="max-w-lg mx-auto">
+                <!-- Flow will be rendered here -->
+                <div id="flow-container" class="space-y-0">
+                    <!-- Loading -->
+                    <div class="text-center py-20 text-[#666]">
+                        <i class="ph ph-spinner animate-spin text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Config panel (slides in from right) -->
+        <div id="config-panel" class="config-panel w-[400px] border-l border-[#1a1a1a] bg-[#050505] min-h-[calc(100vh-56px)] fixed right-0 top-14">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 id="panel-title" class="text-lg font-semibold">Konfiguracja</h3>
+                    <button onclick="closePanel()" class="w-8 h-8 rounded-lg hover:bg-[#111] flex items-center justify-center text-[#666] hover:text-white transition-colors">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+                <div id="panel-content">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add step dropdown (hidden by default) -->
+    <div id="add-step-dropdown" class="dropdown-menu fixed hidden z-50 w-56 animate-fade-in">
+        <div class="p-2">
+            <div class="text-[10px] uppercase tracking-wider text-[#666] px-3 py-2 font-semibold">Dodaj krok</div>
+            <div class="dropdown-item" onclick="addStep('action')">
+                <div class="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                    <i class="ph ph-paper-plane-tilt text-violet-400"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-white">Wyślij email</div>
+                    <div class="text-xs text-[#666]">Akcja</div>
+                </div>
+            </div>
+            <div class="dropdown-item" onclick="addStep('delay')">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                    <i class="ph ph-clock text-cyan-400"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-white">Poczekaj</div>
+                    <div class="text-xs text-[#666]">Opóźnienie</div>
+                </div>
+            </div>
+            <div class="dropdown-item" onclick="addStep('condition')">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <i class="ph ph-git-branch text-amber-400"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-white">Warunek</div>
+                    <div class="text-xs text-[#666]">If/Else</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+    <script>
+        // ============================================
+        // SUPABASE INIT
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let flowId = null;
+        let flow = {
+            name: 'Nowa automatyzacja',
+            description: '',
+            trigger_type: 'offer_created',
+            trigger_filters: {},
+            is_active: false
+        };
+        let steps = [];
+        let selectedStepIndex = null;
+        let insertAfterIndex = null;
+        let hasChanges = false;
+
+        // ============================================
+        // CONSTANTS
+        // ============================================
+        const TRIGGERS = {
+            offer_created: { label: 'Oferta utworzona', icon: 'ph-file-text', color: 'blue' },
+            offer_viewed: { label: 'Oferta obejrzana', icon: 'ph-eye', color: 'blue' },
+            offer_expired: { label: 'Oferta wygasła', icon: 'ph-clock-countdown', color: 'blue' },
+            payment_received: { label: 'Płatność otrzymana', icon: 'ph-credit-card', color: 'green' },
+            workflow_created: { label: 'Workflow utworzony', icon: 'ph-play', color: 'green' },
+            stage_completed: { label: 'Etap ukończony', icon: 'ph-check-circle', color: 'purple' },
+            products_shared: { label: 'Produkty udostępnione', icon: 'ph-package', color: 'purple' },
+            report_published: { label: 'Raport opublikowany', icon: 'ph-file-doc', color: 'purple' },
+            branding_delivered: { label: 'Branding dostarczony', icon: 'ph-paint-brush', color: 'purple' },
+            sales_page_shared: { label: 'Sales page udostępniony', icon: 'ph-globe', color: 'purple' },
+            contract_signed: { label: 'Umowa podpisana', icon: 'ph-signature', color: 'green' }
+        };
+
+        const EMAIL_TYPES = {
+            offer_created: 'Oferta - pierwsza wiadomość',
+            offer_reminder_halfway: 'Oferta - przypomnienie',
+            offer_expired: 'Oferta - wygasła',
+            workflow_created: 'Workflow - powitanie',
+            workflow_stage_completed: 'Workflow - etap ukończony',
+            products_shared: 'Produkty - udostępnienie',
+            report_published: 'Raport - opublikowany',
+            branding_delivered: 'Branding - dostarczony',
+            sales_page_shared: 'Sales page - udostępniony'
+        };
+
+        const CONDITIONS = {
+            has_purchased: { label: 'Klient kupił', field: 'has_purchased' },
+            email_opened: { label: 'Email otwarty', field: 'email_opened' },
+            offer_viewed: { label: 'Oferta obejrzana', field: 'offer_viewed' },
+            days_since_trigger: { label: 'Dni od triggera', field: 'days_since_trigger' }
+        };
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // Get flow ID from URL
+            const params = new URLSearchParams(window.location.search);
+            flowId = params.get('id');
+
+            if (flowId) {
+                await loadFlow();
+            } else {
+                // New flow - just render empty
+                renderFlow();
+            }
+
+            // Track changes
+            document.getElementById('flow-name').addEventListener('input', () => {
+                flow.name = document.getElementById('flow-name').value;
+                markAsChanged();
+            });
+
+            // Close dropdown on outside click
+            document.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('add-step-dropdown');
+                if (!dropdown.contains(e.target) && !e.target.closest('.add-step-btn')) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
+
+        // ============================================
+        // DATA
+        // ============================================
+        async function loadFlow() {
+            const { data, error } = await sb
+                .from('automation_flows')
+                .select(`
+                    *,
+                    steps:automation_steps(*)
+                `)
+                .eq('id', flowId)
+                .single();
+
+            if (error || !data) {
+                showToast('Nie znaleziono automatyzacji', 'error');
+                return;
+            }
+
+            flow = {
+                name: data.name,
+                description: data.description,
+                trigger_type: data.trigger_type,
+                trigger_filters: data.trigger_filters || {},
+                is_active: data.is_active
+            };
+
+            steps = (data.steps || []).sort((a, b) => a.step_order - b.step_order);
+
+            document.getElementById('flow-name').value = flow.name;
+            renderFlow();
+            updateSaveStatus(false);
+        }
+
+        async function saveFlow() {
+            const flowData = {
+                name: flow.name,
+                description: flow.description,
+                trigger_type: flow.trigger_type,
+                trigger_filters: flow.trigger_filters
+            };
+
+            let savedFlowId = flowId;
+
+            if (flowId) {
+                // Update existing
+                const { error } = await sb
+                    .from('automation_flows')
+                    .update(flowData)
+                    .eq('id', flowId);
+
+                if (error) {
+                    showToast('Błąd zapisywania: ' + error.message, 'error');
+                    return;
+                }
+            } else {
+                // Create new
+                const { data, error } = await sb
+                    .from('automation_flows')
+                    .insert(flowData)
+                    .select()
+                    .single();
+
+                if (error) {
+                    showToast('Błąd tworzenia: ' + error.message, 'error');
+                    return;
+                }
+
+                savedFlowId = data.id;
+                flowId = data.id;
+
+                // Update URL without reload
+                window.history.replaceState({}, '', `/tn-workflow/automation-builder?id=${flowId}`);
+            }
+
+            // Save steps
+            // Delete old steps and insert new ones
+            await sb.from('automation_steps').delete().eq('flow_id', savedFlowId);
+
+            if (steps.length > 0) {
+                const stepsToInsert = steps.map((step, index) => ({
+                    flow_id: savedFlowId,
+                    step_order: index,
+                    step_type: step.step_type,
+                    config: step.config
+                }));
+
+                const { error: stepsError } = await sb
+                    .from('automation_steps')
+                    .insert(stepsToInsert);
+
+                if (stepsError) {
+                    showToast('Błąd zapisywania kroków: ' + stepsError.message, 'error');
+                    return;
+                }
+            }
+
+            showToast('Zapisano', 'success');
+            updateSaveStatus(false);
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderFlow() {
+            const container = document.getElementById('flow-container');
+
+            let html = '';
+
+            // Trigger card
+            html += renderTriggerCard();
+            html += renderAddStepButton(-1);
+
+            // Steps
+            steps.forEach((step, index) => {
+                html += renderStepCard(step, index);
+                html += renderAddStepButton(index);
+            });
+
+            // End marker
+            html += `
+                <div class="flex flex-col items-center pt-4 animate-fade-in" style="animation-delay: ${(steps.length + 1) * 50}ms">
+                    <div class="w-10 h-10 rounded-full bg-[#111] border border-[#333] flex items-center justify-center">
+                        <i class="ph ph-flag-checkered text-[#666]"></i>
+                    </div>
+                    <span class="text-xs text-[#666] mt-2">Koniec</span>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function renderTriggerCard() {
+            const trigger = TRIGGERS[flow.trigger_type] || TRIGGERS.offer_created;
+            const filterLabel = getFilterLabel(flow.trigger_filters);
+
+            return `
+                <div class="animate-fade-in">
+                    <div class="step-card trigger p-4 cursor-pointer" onclick="openTriggerConfig()">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                <i class="ph ${trigger.icon} text-blue-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="badge badge-blue">Trigger</span>
+                                    ${filterLabel ? `<span class="badge badge-green">${filterLabel}</span>` : ''}
+                                </div>
+                                <div class="text-white font-medium">${trigger.label}</div>
+                                <div class="text-sm text-[#666] mt-1">Rozpoczyna automatyzację</div>
+                            </div>
+                            <i class="ph ph-caret-right text-[#666]"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStepCard(step, index) {
+            const isSelected = selectedStepIndex === index;
+            const delay = (index + 1) * 50;
+
+            let icon, color, badge, title, subtitle;
+
+            if (step.step_type === 'action') {
+                icon = 'ph-paper-plane-tilt';
+                color = 'purple';
+                badge = 'Akcja';
+                title = EMAIL_TYPES[step.config?.email_type] || 'Wyślij email';
+                subtitle = step.config?.email_type || 'Wybierz typ emaila';
+            } else if (step.step_type === 'delay') {
+                icon = 'ph-clock';
+                color = 'cyan';
+                badge = 'Opóźnienie';
+                const unit = step.config?.delay_unit === 'hours' ? 'godz.' : step.config?.delay_unit === 'days' ? 'dni' : 'tyg.';
+                title = `Poczekaj ${step.config?.delay_value || 1} ${unit}`;
+                subtitle = 'Opóźnienie przed następnym krokiem';
+            } else if (step.step_type === 'condition') {
+                icon = 'ph-git-branch';
+                color = 'amber';
+                badge = 'Warunek';
+                const cond = CONDITIONS[step.config?.field];
+                title = cond?.label || 'Warunek';
+                subtitle = step.config?.operator === 'eq' && step.config?.value === false ? 'Jeśli NIE' : 'Jeśli TAK';
+            }
+
+            return `
+                <div class="animate-fade-in" style="animation-delay: ${delay}ms">
+                    <div class="step-card ${step.step_type} ${isSelected ? 'selected' : ''} p-4 cursor-pointer relative group" onclick="selectStep(${index})">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-${color}-500/20 flex items-center justify-center flex-shrink-0">
+                                <i class="ph ${icon} text-${color}-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="badge badge-${color}">${badge}</span>
+                                </div>
+                                <div class="text-white font-medium">${title}</div>
+                                <div class="text-sm text-[#666] mt-1">${subtitle}</div>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="event.stopPropagation(); deleteStep(${index})"
+                                    class="w-8 h-8 rounded-lg hover:bg-red-500/20 flex items-center justify-center text-[#666] hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+                                    <i class="ph ph-trash text-lg"></i>
+                                </button>
+                                <i class="ph ph-caret-right text-[#666]"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAddStepButton(afterIndex) {
+            return `
+                <div class="flex flex-col items-center py-2">
+                    <div class="flow-line h-6"></div>
+                    <button class="add-step-btn" onclick="showAddStepMenu(event, ${afterIndex})">
+                        <i class="ph ph-plus text-sm"></i>
+                    </button>
+                    <div class="flow-line h-6"></div>
+                </div>
+            `;
+        }
+
+        function getFilterLabel(filters) {
+            if (!filters || Object.keys(filters).length === 0) return null;
+            if (filters.offer_type === 'full') return 'Full';
+            if (filters.offer_type === 'starter') return 'Starter';
+            return null;
+        }
+
+        // ============================================
+        // STEP MANAGEMENT
+        // ============================================
+        function showAddStepMenu(event, afterIndex) {
+            event.stopPropagation();
+            insertAfterIndex = afterIndex;
+
+            const dropdown = document.getElementById('add-step-dropdown');
+            const rect = event.target.getBoundingClientRect();
+
+            dropdown.style.left = `${rect.left + rect.width / 2 - 112}px`;
+            dropdown.style.top = `${rect.bottom + 8}px`;
+            dropdown.classList.remove('hidden');
+        }
+
+        function addStep(type) {
+            document.getElementById('add-step-dropdown').classList.add('hidden');
+
+            const newStep = {
+                step_type: type,
+                config: getDefaultConfig(type)
+            };
+
+            // Insert at correct position
+            const insertAt = insertAfterIndex + 1;
+            steps.splice(insertAt, 0, newStep);
+
+            markAsChanged();
+            renderFlow();
+
+            // Open config for new step
+            setTimeout(() => selectStep(insertAt), 100);
+        }
+
+        function getDefaultConfig(type) {
+            if (type === 'action') {
+                return { action_type: 'send_email', email_type: 'offer_created' };
+            } else if (type === 'delay') {
+                return { delay_value: 3, delay_unit: 'days' };
+            } else if (type === 'condition') {
+                return { field: 'has_purchased', operator: 'eq', value: false };
+            }
+            return {};
+        }
+
+        function deleteStep(index) {
+            if (!confirm('Usunąć ten krok?')) return;
+
+            steps.splice(index, 1);
+
+            if (selectedStepIndex === index) {
+                closePanel();
+            } else if (selectedStepIndex > index) {
+                selectedStepIndex--;
+            }
+
+            markAsChanged();
+            renderFlow();
+        }
+
+        function selectStep(index) {
+            selectedStepIndex = index;
+            renderFlow();
+            openStepConfig(index);
+        }
+
+        // ============================================
+        // CONFIG PANEL
+        // ============================================
+        function openTriggerConfig() {
+            selectedStepIndex = null;
+            renderFlow();
+
+            document.getElementById('panel-title').textContent = 'Konfiguracja triggera';
+            document.getElementById('panel-content').innerHTML = `
+                <div class="space-y-6 animate-slide-in">
+                    <div>
+                        <label class="block text-sm text-[#888] mb-2">Zdarzenie wyzwalające</label>
+                        <select id="trigger-type" class="input-field" onchange="updateTrigger()">
+                            <optgroup label="Oferty">
+                                <option value="offer_created" ${flow.trigger_type === 'offer_created' ? 'selected' : ''}>Oferta utworzona</option>
+                                <option value="offer_viewed" ${flow.trigger_type === 'offer_viewed' ? 'selected' : ''}>Oferta obejrzana</option>
+                                <option value="offer_expired" ${flow.trigger_type === 'offer_expired' ? 'selected' : ''}>Oferta wygasła</option>
+                            </optgroup>
+                            <optgroup label="Płatności">
+                                <option value="payment_received" ${flow.trigger_type === 'payment_received' ? 'selected' : ''}>Płatność otrzymana</option>
+                            </optgroup>
+                            <optgroup label="Workflow">
+                                <option value="workflow_created" ${flow.trigger_type === 'workflow_created' ? 'selected' : ''}>Workflow utworzony</option>
+                                <option value="stage_completed" ${flow.trigger_type === 'stage_completed' ? 'selected' : ''}>Etap ukończony</option>
+                                <option value="products_shared" ${flow.trigger_type === 'products_shared' ? 'selected' : ''}>Produkty udostępnione</option>
+                                <option value="report_published" ${flow.trigger_type === 'report_published' ? 'selected' : ''}>Raport opublikowany</option>
+                                <option value="branding_delivered" ${flow.trigger_type === 'branding_delivered' ? 'selected' : ''}>Branding dostarczony</option>
+                                <option value="sales_page_shared" ${flow.trigger_type === 'sales_page_shared' ? 'selected' : ''}>Sales page udostępniony</option>
+                                <option value="contract_signed" ${flow.trigger_type === 'contract_signed' ? 'selected' : ''}>Umowa podpisana</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div id="trigger-filters">
+                        ${renderTriggerFilters()}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-[#888] mb-2">Opis (opcjonalny)</label>
+                        <textarea id="flow-description" class="input-field h-24 resize-none" placeholder="Krótki opis automatyzacji..."
+                            onchange="flow.description = this.value; markAsChanged()">${flow.description || ''}</textarea>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('config-panel').classList.add('open');
+        }
+
+        function renderTriggerFilters() {
+            if (!flow.trigger_type.startsWith('offer_')) {
+                return '<p class="text-sm text-[#666]">Brak dodatkowych filtrów dla tego triggera.</p>';
+            }
+
+            return `
+                <div>
+                    <label class="block text-sm text-[#888] mb-2">Typ oferty</label>
+                    <select id="filter-offer-type" class="input-field" onchange="updateTriggerFilter()">
+                        <option value="" ${!flow.trigger_filters?.offer_type ? 'selected' : ''}>Wszystkie typy</option>
+                        <option value="full" ${flow.trigger_filters?.offer_type === 'full' ? 'selected' : ''}>Full (pełny pakiet)</option>
+                        <option value="starter" ${flow.trigger_filters?.offer_type === 'starter' ? 'selected' : ''}>Starter</option>
+                    </select>
+                </div>
+            `;
+        }
+
+        function updateTrigger() {
+            flow.trigger_type = document.getElementById('trigger-type').value;
+            document.getElementById('trigger-filters').innerHTML = renderTriggerFilters();
+            markAsChanged();
+            renderFlow();
+        }
+
+        function updateTriggerFilter() {
+            const offerType = document.getElementById('filter-offer-type')?.value;
+            if (offerType) {
+                flow.trigger_filters = { offer_type: offerType };
+            } else {
+                flow.trigger_filters = {};
+            }
+            markAsChanged();
+            renderFlow();
+        }
+
+        function openStepConfig(index) {
+            const step = steps[index];
+            if (!step) return;
+
+            let title, content;
+
+            if (step.step_type === 'action') {
+                title = 'Konfiguracja akcji';
+                content = `
+                    <div class="space-y-6 animate-slide-in">
+                        <div>
+                            <label class="block text-sm text-[#888] mb-2">Typ akcji</label>
+                            <select class="input-field" disabled>
+                                <option selected>Wyślij email</option>
+                            </select>
+                            <p class="text-xs text-[#666] mt-2">Więcej typów akcji wkrótce (Slack, webhook...)</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-[#888] mb-2">Szablon emaila</label>
+                            <select id="step-email-type" class="input-field" onchange="updateStepConfig(${index}, 'email_type', this.value)">
+                                ${Object.entries(EMAIL_TYPES).map(([key, label]) => `
+                                    <option value="${key}" ${step.config?.email_type === key ? 'selected' : ''}>${label}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <div class="bg-[#111] rounded-lg p-4 border border-[#1a1a1a]">
+                            <div class="flex items-center gap-2 text-sm text-[#888] mb-2">
+                                <i class="ph ph-info"></i>
+                                <span>Podgląd</span>
+                            </div>
+                            <p class="text-sm text-[#666]">Szablon emaila możesz edytować w <a href="/settings" class="text-white hover:underline">Ustawienia → Szablony email</a></p>
+                        </div>
+                    </div>
+                `;
+            } else if (step.step_type === 'delay') {
+                title = 'Konfiguracja opóźnienia';
+                content = `
+                    <div class="space-y-6 animate-slide-in">
+                        <div>
+                            <label class="block text-sm text-[#888] mb-2">Czas oczekiwania</label>
+                            <div class="flex gap-3">
+                                <input type="number" id="step-delay-value" class="input-field w-24" min="1" max="365"
+                                    value="${step.config?.delay_value || 1}"
+                                    onchange="updateStepConfig(${index}, 'delay_value', parseInt(this.value))">
+                                <select id="step-delay-unit" class="input-field flex-1"
+                                    onchange="updateStepConfig(${index}, 'delay_unit', this.value)">
+                                    <option value="hours" ${step.config?.delay_unit === 'hours' ? 'selected' : ''}>Godzin</option>
+                                    <option value="days" ${step.config?.delay_unit === 'days' ? 'selected' : ''}>Dni</option>
+                                    <option value="weeks" ${step.config?.delay_unit === 'weeks' ? 'selected' : ''}>Tygodni</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#111] rounded-lg p-4 border border-[#1a1a1a]">
+                            <div class="flex items-center gap-2 text-sm text-[#888] mb-2">
+                                <i class="ph ph-clock"></i>
+                                <span>Przykład</span>
+                            </div>
+                            <p class="text-sm text-[#666]">Jeśli trigger nastąpi o 10:00, następny krok wykona się o <span class="text-white">${getDelayExample(step.config)}</span></p>
+                        </div>
+                    </div>
+                `;
+            } else if (step.step_type === 'condition') {
+                title = 'Konfiguracja warunku';
+                content = `
+                    <div class="space-y-6 animate-slide-in">
+                        <div>
+                            <label class="block text-sm text-[#888] mb-2">Sprawdź czy</label>
+                            <select id="step-condition-field" class="input-field"
+                                onchange="updateStepConfig(${index}, 'field', this.value)">
+                                <option value="has_purchased" ${step.config?.field === 'has_purchased' ? 'selected' : ''}>Klient kupił</option>
+                                <option value="email_opened" ${step.config?.field === 'email_opened' ? 'selected' : ''}>Email został otwarty</option>
+                                <option value="offer_viewed" ${step.config?.field === 'offer_viewed' ? 'selected' : ''}>Oferta została obejrzana</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-[#888] mb-2">Warunek</label>
+                            <select id="step-condition-value" class="input-field"
+                                onchange="updateStepConfig(${index}, 'value', this.value === 'true')">
+                                <option value="false" ${step.config?.value === false ? 'selected' : ''}>Jest FAŁSZYWY (NIE)</option>
+                                <option value="true" ${step.config?.value === true ? 'selected' : ''}>Jest PRAWDZIWY (TAK)</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
+                            <div class="flex items-center gap-2 text-sm text-amber-400 mb-2">
+                                <i class="ph ph-warning"></i>
+                                <span>Uwaga</span>
+                            </div>
+                            <p class="text-sm text-[#888]">Jeśli warunek ${step.config?.value === false ? 'nie jest spełniony' : 'jest spełniony'}, automatyzacja przejdzie do następnego kroku. W przeciwnym razie zakończy się.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('panel-title').textContent = title;
+            document.getElementById('panel-content').innerHTML = content;
+            document.getElementById('config-panel').classList.add('open');
+        }
+
+        function getDelayExample(config) {
+            const value = config?.delay_value || 1;
+            const unit = config?.delay_unit || 'days';
+
+            const now = new Date();
+            if (unit === 'hours') {
+                now.setHours(now.getHours() + value);
+            } else if (unit === 'days') {
+                now.setDate(now.getDate() + value);
+            } else if (unit === 'weeks') {
+                now.setDate(now.getDate() + value * 7);
+            }
+
+            return now.toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' });
+        }
+
+        function updateStepConfig(index, key, value) {
+            if (!steps[index].config) steps[index].config = {};
+            steps[index].config[key] = value;
+            markAsChanged();
+            renderFlow();
+        }
+
+        function closePanel() {
+            document.getElementById('config-panel').classList.remove('open');
+            selectedStepIndex = null;
+            renderFlow();
+        }
+
+        // ============================================
+        // UI HELPERS
+        // ============================================
+        function markAsChanged() {
+            hasChanges = true;
+            updateSaveStatus(true);
+        }
+
+        function updateSaveStatus(unsaved) {
+            const status = document.getElementById('save-status');
+            if (unsaved) {
+                status.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse-subtle"></span><span>Niezapisane zmiany</span>';
+            } else {
+                status.innerHTML = '<i class="ph ph-check text-green-500"></i><span class="text-[#888]">Zapisano</span>';
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-green-500/10 border-green-500/20 text-green-400',
+                error: 'bg-red-500/10 border-red-500/20 text-red-400',
+                info: 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-lg border ${colors[type]} backdrop-blur-sm animate-fade-in flex items-center gap-2`;
+            toast.innerHTML = `
+                <i class="ph ${type === 'success' ? 'ph-check' : type === 'error' ? 'ph-x' : 'ph-info'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(16px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePanel();
+                document.getElementById('add-step-dropdown').classList.add('hidden');
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                saveFlow();
+            }
+        });
+    </script>
+</body>
+</html>

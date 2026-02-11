@@ -5,21 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TN Workflow - Automatyzacje</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#050505">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="../components/shared-sidebar.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                     }
                 }
@@ -27,45 +24,53 @@
         }
     </script>
     <style>
-        body { background: #000; color: #e5e5e5; }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-
-        ::selection { background: white; color: black; }
-
-        .glass-header {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+        * { box-sizing: border-box; }
+        body {
+            background: #000;
+            color: #ededed;
+            font-feature-settings: 'ss01' on, 'ss02' on, 'cv01' on, 'cv03' on;
         }
 
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* Selection */
+        ::selection { background: #fff; color: #000; }
+
+        /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
 
+        /* Flow card */
         .flow-card {
-            transition: all 0.2s;
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
         .flow-card:hover {
-            border-color: rgba(255,255,255,0.15);
-            transform: translateY(-1px);
+            border-color: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
 
         /* Toggle switch */
         .toggle-switch {
             position: relative;
-            width: 44px;
-            height: 24px;
-            background: #27272a;
-            border-radius: 12px;
+            width: 40px;
+            height: 22px;
+            background: #1a1a1a;
+            border-radius: 11px;
             cursor: pointer;
             transition: background 0.2s;
+            flex-shrink: 0;
         }
         .toggle-switch.active {
             background: #10b981;
@@ -75,14 +80,15 @@
             position: absolute;
             top: 2px;
             left: 2px;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             background: white;
             border-radius: 50%;
             transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
         .toggle-switch.active::after {
-            transform: translateX(20px);
+            transform: translateX(18px);
         }
 
         /* Step badges */
@@ -90,185 +96,164 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 500;
         }
-        .step-action { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-        .step-condition { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-        .step-delay { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .step-action { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+        .step-condition { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .step-delay { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+
+        /* Filter buttons */
+        .filter-btn {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+        .filter-btn:hover {
+            color: #999;
+        }
+        .filter-btn.active {
+            background: #111;
+            color: #fff;
+            border-color: #333;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge-blue { background: rgba(37, 99, 235, 0.15); color: #60a5fa; }
+        .badge-green { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        /* Button */
+        .btn-primary {
+            background: #fff;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary:hover {
+            background: #e5e5e5;
+        }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+<body class="h-screen flex overflow-hidden font-sans antialiased">
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+    <aside id="sidebar" class="w-[280px] bg-[#050505] border-r border-[#1a1a1a] flex flex-col flex-shrink-0"></aside>
 
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
         <!-- Header -->
-        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+        <header class="h-14 border-b border-[#1a1a1a] bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-30">
             <div class="flex items-center gap-3">
-                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-[#111] text-[#666] hover:text-white transition-colors">
                     <i class="ph ph-list text-xl"></i>
                 </button>
-                <div class="flex items-center gap-2 text-zinc-500">
-                    <span class="text-zinc-400 hidden sm:inline">tn-workflow</span>
-                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                <div class="flex items-center gap-2 text-[#666]">
+                    <span class="hidden sm:inline">tn-workflow</span>
+                    <span class="text-[#333] hidden sm:inline">/</span>
                     <span class="text-white font-medium">automatyzacje</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 md:gap-3">
+            <div class="flex items-center gap-4">
                 <!-- Master toggle -->
-                <div class="flex items-center gap-2 mr-2">
-                    <span class="text-xs text-zinc-500 hidden md:inline">Master</span>
-                    <div id="master-toggle" class="toggle-switch" onclick="toggleMaster()"></div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-[#666] hidden md:inline">Master switch</span>
+                    <div id="master-toggle" class="toggle-switch" onclick="event.stopPropagation(); toggleMaster()"></div>
                 </div>
-                <button onclick="openCreateModal()" class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-1.5">
+                <a href="/tn-workflow/automation-builder" class="btn-primary">
                     <i class="ph ph-plus"></i>
                     <span class="hidden md:inline">Nowa automatyzacja</span>
-                </button>
+                </a>
             </div>
         </header>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div class="max-w-5xl mx-auto animate-enter">
+        <div class="flex-1 overflow-y-auto">
+            <div class="max-w-4xl mx-auto px-6 py-10">
                 <!-- Title & Stats -->
-                <div class="flex items-start justify-between mb-6">
+                <div class="flex items-start justify-between mb-8 animate-fade-in">
                     <div>
-                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Automatyzacje</h1>
-                        <p class="text-zinc-500">Zarządzaj sekwencjami email i powiadomieniami</p>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Automatyzacje</h1>
+                        <p class="text-[#666] text-sm">Zarządzaj sekwencjami email i powiadomieniami</p>
                     </div>
-                    <div class="flex items-center gap-4 text-sm">
-                        <div class="text-center">
-                            <div id="stat-active" class="text-2xl font-semibold text-emerald-400">0</div>
-                            <div class="text-zinc-500">Aktywne</div>
+                    <div class="flex items-center gap-6 text-sm">
+                        <div class="text-right">
+                            <div id="stat-active" class="text-xl font-semibold text-emerald-400">0</div>
+                            <div class="text-[#666] text-xs">Aktywne</div>
                         </div>
-                        <div class="text-center">
-                            <div id="stat-total" class="text-2xl font-semibold text-white">0</div>
-                            <div class="text-zinc-500">Wszystkie</div>
+                        <div class="text-right">
+                            <div id="stat-total" class="text-xl font-semibold text-white">0</div>
+                            <div class="text-[#666] text-xs">Wszystkie</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Filters -->
-                <div class="flex items-center gap-3 mb-6">
-                    <button onclick="filterByTrigger(null)" class="filter-btn active px-3 py-1.5 rounded-lg text-sm transition-colors" data-trigger="">
+                <div class="flex items-center gap-2 mb-6 animate-fade-in" style="animation-delay: 50ms">
+                    <button onclick="filterByTrigger(null)" class="filter-btn active" data-trigger="">
                         Wszystkie
                     </button>
-                    <button onclick="filterByTrigger('offer')" class="filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors" data-trigger="offer">
+                    <button onclick="filterByTrigger('offer')" class="filter-btn" data-trigger="offer">
                         Oferty
                     </button>
-                    <button onclick="filterByTrigger('workflow')" class="filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors" data-trigger="workflow">
+                    <button onclick="filterByTrigger('workflow')" class="filter-btn" data-trigger="workflow">
                         Workflow
+                    </button>
+                    <button onclick="filterByTrigger('payment')" class="filter-btn" data-trigger="payment">
+                        Płatności
                     </button>
                 </div>
 
                 <!-- Flows list -->
                 <div id="flows-container" class="space-y-3">
                     <!-- Loading -->
-                    <div class="text-center py-12 text-zinc-500">
+                    <div class="text-center py-20 text-[#666]">
                         <i class="ph ph-spinner animate-spin text-2xl"></i>
-                        <p class="mt-2">Wczytywanie...</p>
                     </div>
                 </div>
 
                 <!-- Empty state -->
-                <div id="empty-state" class="hidden text-center py-16">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <i class="ph ph-lightning text-3xl text-zinc-600"></i>
+                <div id="empty-state" class="hidden animate-fade-in">
+                    <div class="text-center py-20 border border-dashed border-[#333] rounded-xl">
+                        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-[#111] flex items-center justify-center">
+                            <i class="ph ph-lightning text-2xl text-[#444]"></i>
+                        </div>
+                        <h3 class="text-base font-medium text-white mb-2">Brak automatyzacji</h3>
+                        <p class="text-[#666] text-sm mb-6">Utwórz pierwszą automatyzację, aby rozpocząć</p>
+                        <a href="/tn-workflow/automation-builder" class="btn-primary">
+                            <i class="ph ph-plus"></i>
+                            Nowa automatyzacja
+                        </a>
                     </div>
-                    <h3 class="text-lg font-medium text-white mb-2">Brak automatyzacji</h3>
-                    <p class="text-zinc-500 mb-6">Utwórz pierwszą automatyzację, aby rozpocząć</p>
-                    <button onclick="openCreateModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors">
-                        <i class="ph ph-plus mr-1"></i>
-                        Nowa automatyzacja
-                    </button>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Create/Edit Modal -->
-    <div id="flow-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="p-6 border-b border-white/5">
-                <h2 id="modal-title" class="text-xl font-semibold text-white">Nowa automatyzacja</h2>
-            </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-6">
-                <!-- Name -->
-                <div>
-                    <label class="block text-sm text-zinc-400 mb-2">Nazwa</label>
-                    <input type="text" id="flow-name" placeholder="np. Oferta Full - Sekwencja email"
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none">
-                </div>
-
-                <!-- Description -->
-                <div>
-                    <label class="block text-sm text-zinc-400 mb-2">Opis (opcjonalny)</label>
-                    <textarea id="flow-description" rows="2" placeholder="Krótki opis co robi ta automatyzacja..."
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none resize-none"></textarea>
-                </div>
-
-                <!-- Trigger -->
-                <div>
-                    <label class="block text-sm text-zinc-400 mb-2">Wyzwalacz (Trigger)</label>
-                    <select id="flow-trigger" onchange="onTriggerChange()"
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:border-zinc-500 focus:outline-none">
-                        <optgroup label="Oferty">
-                            <option value="offer_created">Oferta utworzona</option>
-                            <option value="offer_viewed">Oferta obejrzana</option>
-                            <option value="offer_expired">Oferta wygasła</option>
-                        </optgroup>
-                        <optgroup label="Płatności">
-                            <option value="payment_received">Płatność otrzymana</option>
-                        </optgroup>
-                        <optgroup label="Workflow">
-                            <option value="workflow_created">Workflow utworzony</option>
-                            <option value="stage_completed">Etap ukończony</option>
-                            <option value="products_shared">Produkty udostępnione</option>
-                            <option value="report_published">Raport opublikowany</option>
-                            <option value="branding_delivered">Branding dostarczony</option>
-                            <option value="sales_page_shared">Sales page udostępniony</option>
-                            <option value="contract_signed">Umowa podpisana</option>
-                        </optgroup>
-                    </select>
-                </div>
-
-                <!-- Trigger Filters (conditional) -->
-                <div id="filter-offer-type" class="hidden">
-                    <label class="block text-sm text-zinc-400 mb-2">Typ oferty</label>
-                    <select id="flow-offer-type"
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:border-zinc-500 focus:outline-none">
-                        <option value="">Wszystkie typy</option>
-                        <option value="full">Full (pełny pakiet)</option>
-                        <option value="starter">Starter</option>
-                    </select>
-                </div>
-
-                <!-- Steps preview -->
-                <div>
-                    <label class="block text-sm text-zinc-400 mb-2">Kroki (uproszczony podgląd)</label>
-                    <div id="steps-preview" class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4 min-h-[100px]">
-                        <p class="text-zinc-500 text-sm">Szczegółowy edytor kroków będzie dostępny po zapisaniu automatyzacji.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="p-6 border-t border-white/5 flex justify-end gap-3">
-                <button onclick="closeModal()" class="px-4 py-2 text-zinc-400 hover:text-white transition-colors">
-                    Anuluj
-                </button>
-                <button onclick="saveFlow()" class="bg-white text-black hover:bg-zinc-200 px-6 py-2 rounded-lg font-medium transition-colors">
-                    Zapisz
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast container -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
 
     <script>
         // ============================================
@@ -284,25 +269,21 @@
         let flows = [];
         let masterEnabled = true;
         let currentFilter = null;
-        let editingFlowId = null;
 
         // ============================================
         // INIT
         // ============================================
         document.addEventListener('DOMContentLoaded', async () => {
-            // Check auth
             const { data: { user } } = await sb.auth.getUser();
             if (!user) {
                 window.location.href = '/login';
                 return;
             }
 
-            // Render sidebar
             Sidebar.render({ appId: 'workflow' });
             Sidebar.setUserEmail(user.email);
             Sidebar.setupLogout(sb);
 
-            // Load user profile
             const { data: member } = await sb
                 .from('team_members')
                 .select('name, avatar_color, is_admin')
@@ -314,7 +295,6 @@
                 if (member.avatar_color) Sidebar.setUserColor(member.avatar_color);
             }
 
-            // Load data
             await loadMasterSetting();
             await loadFlows();
         });
@@ -360,7 +340,6 @@
             const container = document.getElementById('flows-container');
             const emptyState = document.getElementById('empty-state');
 
-            // Filter flows
             let filtered = flows;
             if (currentFilter) {
                 filtered = flows.filter(f => f.trigger_type.startsWith(currentFilter));
@@ -373,46 +352,52 @@
             }
 
             emptyState.classList.add('hidden');
-            container.innerHTML = filtered.map(flow => renderFlowCard(flow)).join('');
+            container.innerHTML = filtered.map((flow, i) => renderFlowCard(flow, i)).join('');
         }
 
-        function renderFlowCard(flow) {
+        function renderFlowCard(flow, index) {
             const steps = flow.steps || [];
             const stepsCount = steps.length;
             const triggerLabel = getTriggerLabel(flow.trigger_type);
+            const triggerIcon = getTriggerIcon(flow.trigger_type);
             const filterLabel = getFilterLabel(flow.trigger_filters);
+            const delay = index * 50 + 100;
 
             return `
-                <div class="flow-card bg-zinc-900/40 border border-white/5 rounded-lg p-5 group">
+                <div class="flow-card p-5 animate-fade-in" style="animation-delay: ${delay}ms" onclick="openFlow('${flow.id}')">
                     <div class="flex items-start justify-between gap-4">
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-3 mb-2">
-                                <h3 class="text-lg font-medium text-white truncate">${flow.name}</h3>
-                                ${filterLabel ? `<span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">${filterLabel}</span>` : ''}
+                        <div class="flex items-start gap-4 flex-1 min-w-0">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-600/20 flex items-center justify-center flex-shrink-0 border border-violet-500/20">
+                                <i class="ph ${triggerIcon} text-violet-400"></i>
                             </div>
-                            ${flow.description ? `<p class="text-sm text-zinc-500 mb-3">${flow.description}</p>` : ''}
-                            <div class="flex items-center gap-4 text-sm">
-                                <span class="flex items-center gap-1.5 text-zinc-400">
-                                    <i class="ph ph-lightning text-amber-400"></i>
-                                    ${triggerLabel}
-                                </span>
-                                <span class="flex items-center gap-1.5 text-zinc-400">
-                                    <i class="ph ph-list-numbers"></i>
-                                    ${stepsCount} ${stepsCount === 1 ? 'krok' : 'kroków'}
-                                </span>
-                            </div>
-                            <!-- Steps preview -->
-                            <div class="flex items-center gap-2 mt-3 flex-wrap">
-                                ${steps.sort((a,b) => a.step_order - b.step_order).slice(0, 5).map(s => renderStepBadge(s)).join('')}
-                                ${stepsCount > 5 ? `<span class="text-xs text-zinc-500">+${stepsCount - 5} więcej</span>` : ''}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h3 class="text-base font-medium text-white truncate">${flow.name}</h3>
+                                    ${filterLabel ? `<span class="badge badge-blue">${filterLabel}</span>` : ''}
+                                    ${flow.is_active ? '<span class="badge badge-green">Aktywna</span>' : ''}
+                                </div>
+                                ${flow.description ? `<p class="text-sm text-[#666] mb-3 line-clamp-1">${flow.description}</p>` : ''}
+                                <div class="flex items-center gap-4 text-xs text-[#666]">
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="ph ph-lightning text-amber-400"></i>
+                                        ${triggerLabel}
+                                    </span>
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="ph ph-list-numbers"></i>
+                                        ${stepsCount} ${stepsCount === 1 ? 'krok' : 'kroków'}
+                                    </span>
+                                </div>
+                                <!-- Steps preview -->
+                                <div class="flex items-center gap-2 mt-3 flex-wrap">
+                                    ${steps.sort((a,b) => a.step_order - b.step_order).slice(0, 4).map(s => renderStepBadge(s)).join('')}
+                                    ${stepsCount > 4 ? `<span class="text-xs text-[#666]">+${stepsCount - 4}</span>` : ''}
+                                </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
-                            <div class="toggle-switch ${flow.is_active ? 'active' : ''}" onclick="toggleFlow('${flow.id}', ${!flow.is_active})"></div>
-                            <button onclick="editFlow('${flow.id}')" class="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                                <i class="ph ph-pencil-simple"></i>
-                            </button>
-                            <button onclick="deleteFlow('${flow.id}')" class="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                            <div class="toggle-switch ${flow.is_active ? 'active' : ''}" onclick="event.stopPropagation(); toggleFlow('${flow.id}', ${!flow.is_active})"></div>
+                            <button onclick="event.stopPropagation(); deleteFlow('${flow.id}')"
+                                class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[#666] hover:text-red-400 transition-colors">
                                 <i class="ph ph-trash"></i>
                             </button>
                         </div>
@@ -438,20 +423,15 @@
                 delay: getDelayLabel(step.config)
             };
 
-            return `
-                <span class="step-badge ${classes[step.step_type]}">
-                    <i class="ph ${icons[step.step_type]}"></i>
-                    ${labels[step.step_type]}
-                </span>
-            `;
+            return `<span class="step-badge ${classes[step.step_type]}"><i class="ph ${icons[step.step_type]}"></i>${labels[step.step_type]}</span>`;
         }
 
         function getActionLabel(config) {
-            if (config.action_type === 'send_email') {
+            if (config?.action_type === 'send_email') {
                 const emailLabels = {
                     offer_created: 'Email: Oferta',
                     offer_reminder_halfway: 'Email: Reminder',
-                    workflow_created: 'Email: Workflow',
+                    workflow_created: 'Email: Powitanie',
                     workflow_stage_completed: 'Email: Etap'
                 };
                 return emailLabels[config.email_type] || 'Email';
@@ -460,14 +440,14 @@
         }
 
         function getConditionLabel(config) {
-            if (config.field === 'has_purchased') return 'Jeśli nie kupił';
-            if (config.field === 'email_opened') return 'Jeśli otworzył';
+            if (config?.field === 'has_purchased') return 'Nie kupił?';
+            if (config?.field === 'email_opened') return 'Otworzył?';
             return 'Warunek';
         }
 
         function getDelayLabel(config) {
-            const units = { hours: 'godz.', days: 'dni', weeks: 'tyg.' };
-            return `${config.delay_value} ${units[config.delay_unit] || config.delay_unit}`;
+            const units = { hours: 'h', days: 'd', weeks: 'tyg' };
+            return `${config?.delay_value || 1}${units[config?.delay_unit] || 'd'}`;
         }
 
         function getTriggerLabel(type) {
@@ -487,6 +467,23 @@
             return labels[type] || type;
         }
 
+        function getTriggerIcon(type) {
+            const icons = {
+                offer_created: 'ph-file-text',
+                offer_viewed: 'ph-eye',
+                offer_expired: 'ph-clock-countdown',
+                payment_received: 'ph-credit-card',
+                workflow_created: 'ph-play',
+                stage_completed: 'ph-check-circle',
+                products_shared: 'ph-package',
+                report_published: 'ph-file-doc',
+                branding_delivered: 'ph-paint-brush',
+                sales_page_shared: 'ph-globe',
+                contract_signed: 'ph-signature'
+            };
+            return icons[type] || 'ph-lightning';
+        }
+
         function getFilterLabel(filters) {
             if (!filters || Object.keys(filters).length === 0) return null;
             if (filters.offer_type === 'full') return 'Full';
@@ -502,11 +499,7 @@
 
         function updateMasterToggle() {
             const toggle = document.getElementById('master-toggle');
-            if (masterEnabled) {
-                toggle.classList.add('active');
-            } else {
-                toggle.classList.remove('active');
-            }
+            toggle.classList.toggle('active', masterEnabled);
         }
 
         // ============================================
@@ -515,16 +508,9 @@
         function filterByTrigger(filter) {
             currentFilter = filter;
 
-            // Update button states
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 const btnTrigger = btn.dataset.trigger;
-                if ((filter === null && btnTrigger === '') || btnTrigger === filter) {
-                    btn.classList.add('active', 'bg-white/10', 'text-white');
-                    btn.classList.remove('text-zinc-400', 'hover:bg-white/5');
-                } else {
-                    btn.classList.remove('active', 'bg-white/10', 'text-white');
-                    btn.classList.add('text-zinc-400', 'hover:bg-white/5');
-                }
+                btn.classList.toggle('active', (filter === null && btnTrigger === '') || btnTrigger === filter);
             });
 
             renderFlows();
@@ -533,6 +519,10 @@
         // ============================================
         // ACTIONS
         // ============================================
+        function openFlow(flowId) {
+            window.location.href = `/tn-workflow/automation-builder?id=${flowId}`;
+        }
+
         async function toggleMaster() {
             masterEnabled = !masterEnabled;
             updateMasterToggle();
@@ -563,7 +553,6 @@
                 return;
             }
 
-            // Update local state
             const flow = flows.find(f => f.id === flowId);
             if (flow) flow.is_active = newState;
 
@@ -592,135 +581,28 @@
         }
 
         // ============================================
-        // MODAL
-        // ============================================
-        function openCreateModal() {
-            editingFlowId = null;
-            document.getElementById('modal-title').textContent = 'Nowa automatyzacja';
-            document.getElementById('flow-name').value = '';
-            document.getElementById('flow-description').value = '';
-            document.getElementById('flow-trigger').value = 'offer_created';
-            document.getElementById('flow-offer-type').value = '';
-            onTriggerChange();
-            document.getElementById('flow-modal').classList.remove('hidden');
-            document.getElementById('flow-modal').classList.add('flex');
-        }
-
-        function editFlow(flowId) {
-            const flow = flows.find(f => f.id === flowId);
-            if (!flow) return;
-
-            editingFlowId = flowId;
-            document.getElementById('modal-title').textContent = 'Edytuj automatyzację';
-            document.getElementById('flow-name').value = flow.name;
-            document.getElementById('flow-description').value = flow.description || '';
-            document.getElementById('flow-trigger').value = flow.trigger_type;
-            document.getElementById('flow-offer-type').value = flow.trigger_filters?.offer_type || '';
-            onTriggerChange();
-            document.getElementById('flow-modal').classList.remove('hidden');
-            document.getElementById('flow-modal').classList.add('flex');
-        }
-
-        function closeModal() {
-            document.getElementById('flow-modal').classList.add('hidden');
-            document.getElementById('flow-modal').classList.remove('flex');
-            editingFlowId = null;
-        }
-
-        function onTriggerChange() {
-            const trigger = document.getElementById('flow-trigger').value;
-            const offerTypeFilter = document.getElementById('filter-offer-type');
-
-            // Show offer_type filter only for offer triggers
-            if (trigger.startsWith('offer_')) {
-                offerTypeFilter.classList.remove('hidden');
-            } else {
-                offerTypeFilter.classList.add('hidden');
-            }
-        }
-
-        async function saveFlow() {
-            const name = document.getElementById('flow-name').value.trim();
-            const description = document.getElementById('flow-description').value.trim();
-            const trigger = document.getElementById('flow-trigger').value;
-            const offerType = document.getElementById('flow-offer-type').value;
-
-            if (!name) {
-                showToast('Podaj nazwę automatyzacji', 'error');
-                return;
-            }
-
-            const filters = {};
-            if (offerType && trigger.startsWith('offer_')) {
-                filters.offer_type = offerType;
-            }
-
-            const flowData = {
-                name,
-                description: description || null,
-                trigger_type: trigger,
-                trigger_filters: filters
-            };
-
-            let error;
-            if (editingFlowId) {
-                // Update
-                const result = await sb
-                    .from('automation_flows')
-                    .update(flowData)
-                    .eq('id', editingFlowId);
-                error = result.error;
-            } else {
-                // Insert
-                const result = await sb
-                    .from('automation_flows')
-                    .insert(flowData);
-                error = result.error;
-            }
-
-            if (error) {
-                showToast('Błąd zapisywania: ' + error.message, 'error');
-                return;
-            }
-
-            closeModal();
-            await loadFlows();
-            showToast(editingFlowId ? 'Automatyzacja zaktualizowana' : 'Automatyzacja utworzona', 'success');
-        }
-
-        // ============================================
         // TOAST
         // ============================================
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const colors = {
-                success: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400',
-                error: 'bg-red-500/20 border-red-500/30 text-red-400',
-                info: 'bg-blue-500/20 border-blue-500/30 text-blue-400'
+                success: 'bg-green-500/10 border-green-500/20 text-green-400',
+                error: 'bg-red-500/10 border-red-500/20 text-red-400',
+                info: 'bg-blue-500/10 border-blue-500/20 text-blue-400'
             };
 
             const toast = document.createElement('div');
-            toast.className = `px-4 py-3 rounded-lg border ${colors[type]} backdrop-blur-sm animate-enter`;
-            toast.textContent = message;
+            toast.className = `px-4 py-3 rounded-lg border ${colors[type]} backdrop-blur-sm animate-fade-in flex items-center gap-2 text-sm`;
+            toast.innerHTML = `<i class="ph ${type === 'success' ? 'ph-check' : type === 'error' ? 'ph-x' : 'ph-info'}"></i><span>${message}</span>`;
             container.appendChild(toast);
 
             setTimeout(() => {
                 toast.style.opacity = '0';
-                toast.style.transform = 'translateY(10px)';
+                toast.style.transform = 'translateX(16px)';
                 toast.style.transition = 'all 0.3s ease';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
-
-        // Close modal on escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // Close modal on backdrop click
-        document.getElementById('flow-modal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) closeModal();
-        });
     </script>
 </body>
 </html>
