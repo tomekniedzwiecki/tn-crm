@@ -1,4 +1,29 @@
 -- =============================================
+-- EMAIL TEMPLATES TABLE
+-- =============================================
+CREATE TABLE IF NOT EXISTS email_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email_type TEXT UNIQUE NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    variables JSONB DEFAULT '[]',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS
+ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'email_templates' AND policyname = 'Admin full access email_templates') THEN
+        CREATE POLICY "Admin full access email_templates" ON email_templates
+            FOR ALL TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- =============================================
 -- EMAIL TEMPLATE: TakeDrop Activation (Stage 2 Start)
 -- =============================================
 -- Wysyłany gdy admin aktywuje zakładkę TakeDrop dla klienta
@@ -78,6 +103,25 @@ ON CONFLICT (email_type) DO UPDATE SET
 -- =============================================
 -- Automatycznie wysyła email gdy admin włączy widoczność TakeDrop
 
+-- Dodaj kolumnę category jeśli nie istnieje
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'automation_flows' AND column_name = 'category') THEN
+        ALTER TABLE automation_flows ADD COLUMN category TEXT DEFAULT 'workflow';
+    END IF;
+END $$;
+
+-- Dodaj takedrop_account_created do dozwolonych trigger_type
+ALTER TABLE automation_flows DROP CONSTRAINT IF EXISTS automation_flows_trigger_type_check;
+ALTER TABLE automation_flows ADD CONSTRAINT automation_flows_trigger_type_check
+CHECK (trigger_type IN (
+    'offer_created', 'offer_viewed', 'offer_expired',
+    'payment_received', 'contract_signed',
+    'workflow_created', 'stage_completed',
+    'products_shared', 'report_published', 'branding_delivered', 'sales_page_shared',
+    'takedrop_account_created'
+));
+
 DO $$
 DECLARE
   v_flow_id UUID;
@@ -95,14 +139,12 @@ BEGIN
       description,
       trigger_type,
       trigger_filters,
-      category,
       is_active
     ) VALUES (
       'Etap 2 - Powiadomienie o TakeDrop',
       'Wysyła email do klienta gdy admin aktywuje zakładkę TakeDrop',
       'takedrop_account_created',
       '{}',
-      'workflow',
       true
     )
     RETURNING id INTO v_flow_id;
