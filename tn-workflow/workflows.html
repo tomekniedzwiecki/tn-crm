@@ -67,6 +67,19 @@
         .workflow-card:hover .progress-bar {
             background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
         }
+
+        /* Logo hover zoom */
+        .workflow-logo {
+            transition: transform 0.2s ease;
+            cursor: zoom-in;
+        }
+        .workflow-logo:hover {
+            transform: scale(3);
+            z-index: 50;
+            position: relative;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -765,13 +778,16 @@
             // Unified checklist for all stages - shows completion status
             const items = [];
 
-            // Contract - only show if relevant (not starter offer without contract)
-            const contractDone = w.contract_status === 'signed';
-            const contractInProgress = w.contract_status && !['pending_data', 'signed'].includes(w.contract_status);
-            if (contractDone) {
-                items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Umowa</span>`);
-            } else if (contractInProgress) {
-                items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Umowa</span>`);
+            // Contract - skip for Starter offer (no contract required)
+            const isStarter = w.offer_name?.toLowerCase().includes('starter');
+            if (!isStarter) {
+                const contractDone = w.contract_status === 'signed';
+                const contractInProgress = w.contract_status && !['pending_data', 'signed'].includes(w.contract_status);
+                if (contractDone) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Umowa</span>`);
+                } else if (contractInProgress) {
+                    items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Umowa</span>`);
+                }
             }
 
             // Product selection
@@ -950,11 +966,11 @@
                 const milestoneTitle = w.current_milestone_title || 'Brak etapów';
                 const milestoneNum = w.total_milestones > 0 ? `${w.completed_milestones + 1}/${w.total_milestones}` : '-';
 
-                // Task progress for current milestone
+                // Task progress for current milestone - only show if some tasks completed
                 const tasks = w.current_milestone_tasks || [];
                 const completedTasks = tasks.filter(t => t.completed).length;
                 const totalTasks = tasks.length;
-                const taskInfo = totalTasks > 0 ? `${completedTasks}/${totalTasks} zadań` : '';
+                const taskInfo = (totalTasks > 0 && completedTasks > 0) ? `${completedTasks}/${totalTasks} zadań` : '';
 
                 return `
                     <div class="py-2">
@@ -981,6 +997,25 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(price || 0);
+        }
+
+        function getDaysSinceUpdate(updatedAt) {
+            if (!updatedAt) return null;
+            const updated = new Date(updatedAt);
+            const now = new Date();
+            const diffMs = now - updated;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        function formatDaysSince(days) {
+            if (days === null || days === undefined) return '';
+            if (days === 0) return 'dzisiaj';
+            if (days === 1) return '1 dzień';
+            if (days < 5) return `${days} dni`;
+            if (days < 14) return `${days} dni`;
+            if (days < 30) return `${Math.floor(days / 7)} tyg.`;
+            return `${Math.floor(days / 30)} mies.`;
         }
 
         function renderWorkflows() {
@@ -1010,6 +1045,10 @@
                     deadlineHtml = `<span class="flex items-center gap-1"><i class="ph ph-clock text-zinc-600"></i>${formatDeadline(w.current_milestone_deadline)}</span>`;
                 }
 
+                // Days since last admin update
+                const daysSince = getDaysSinceUpdate(w.updated_at);
+                const daysSinceColor = daysSince > 7 ? 'text-red-400' : (daysSince > 3 ? 'text-amber-400' : 'text-zinc-500');
+
                 // Start date
                 const startDate = new Date(w.started_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 
@@ -1017,7 +1056,7 @@
                 <a href="${getWorkflowPath(w.workflow_id)}" class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg overflow-hidden transition-all cursor-pointer block">
                     <!-- Header: Logo + Customer + Status -->
                     <div class="flex items-start gap-3 p-4 pb-0">
-                        ${logoUrl ? `<img src="${logoUrl}" alt="" class="w-10 h-10 object-contain flex-shrink-0 rounded-lg bg-zinc-800/50">` : `<div class="w-10 h-10 rounded-lg bg-zinc-800/50 flex items-center justify-center text-zinc-600"><i class="ph ph-user text-lg"></i></div>`}
+                        ${logoUrl ? `<img src="${logoUrl}" alt="" class="workflow-logo w-10 h-10 object-contain flex-shrink-0 rounded-lg bg-zinc-800/50">` : `<div class="w-10 h-10 rounded-lg bg-zinc-800/50 flex items-center justify-center text-zinc-600"><i class="ph ph-user text-lg"></i></div>`}
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center justify-between mb-0.5">
                                 <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
@@ -1055,7 +1094,7 @@
                         ${getStatusChecklist(w)}
                     </div>
 
-                    <!-- Footer: Deadline + Comments + Actions -->
+                    <!-- Footer: Deadline + Comments + Days Since + Actions -->
                     <div class="flex items-center justify-between px-4 py-2.5 bg-zinc-900/50 border-t border-white/5">
                         <div class="flex items-center gap-3 text-[11px]">
                             ${deadlineHtml}
@@ -1063,6 +1102,12 @@
                                 <span class="flex items-center gap-1 text-amber-400" title="${unread} nieprzeczytanych wiadomości">
                                     <i class="ph-fill ph-chat-circle"></i>
                                     ${unread}
+                                </span>
+                            ` : ''}
+                            ${daysSince !== null ? `
+                                <span class="flex items-center gap-1 ${daysSinceColor}" title="Ostatnia zmiana admina">
+                                    <i class="ph ph-pencil-simple"></i>
+                                    ${formatDaysSince(daysSince)}
                                 </span>
                             ` : ''}
                             <span class="text-zinc-600 font-mono" title="Data rozpoczęcia">${startDate}</span>
