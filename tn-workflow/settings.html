@@ -299,6 +299,90 @@
                         </div>
                     </div>
 
+                    <!-- Products Voice Message -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <i class="ph ph-package text-emerald-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-[14px] font-medium text-white">Wybor produktow</h3>
+                                <p class="text-[12px] text-[#666]">Wiadomosc glosowa przy wyborze produktu</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[12px] text-[#888] mb-2">URL do pliku MP3</label>
+                                <input type="url" id="products-voice-url" placeholder="https://supabase.co/.../file.mp3" class="input-field">
+                            </div>
+
+                            <!-- Preview - WhatsApp style -->
+                            <div id="products-voice-preview" class="hidden">
+                                <label class="block text-[12px] text-[#888] mb-2">Podglad</label>
+                                <div class="whatsapp-voice-msg">
+                                    <div class="flex items-center gap-3">
+                                        <button id="products-voice-play-btn" onclick="toggleProductsVoicePreview()" class="w-11 h-11 rounded-full bg-[#00a884] flex items-center justify-center hover:bg-[#00c897] transition-colors flex-shrink-0 shadow-lg">
+                                            <i class="ph-fill ph-play text-white text-lg" id="products-voice-play-icon"></i>
+                                        </button>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex-1 flex items-center gap-[2px] h-8" id="products-voice-waveform">
+                                                    <div class="waveform-bar" style="height: 40%"></div>
+                                                    <div class="waveform-bar" style="height: 70%"></div>
+                                                    <div class="waveform-bar" style="height: 55%"></div>
+                                                    <div class="waveform-bar" style="height: 90%"></div>
+                                                    <div class="waveform-bar" style="height: 65%"></div>
+                                                    <div class="waveform-bar" style="height: 80%"></div>
+                                                    <div class="waveform-bar" style="height: 45%"></div>
+                                                    <div class="waveform-bar" style="height: 95%"></div>
+                                                    <div class="waveform-bar" style="height: 60%"></div>
+                                                    <div class="waveform-bar" style="height: 75%"></div>
+                                                    <div class="waveform-bar" style="height: 50%"></div>
+                                                    <div class="waveform-bar" style="height: 85%"></div>
+                                                    <div class="waveform-bar" style="height: 70%"></div>
+                                                    <div class="waveform-bar" style="height: 55%"></div>
+                                                    <div class="waveform-bar" style="height: 90%"></div>
+                                                    <div class="waveform-bar" style="height: 40%"></div>
+                                                    <div class="waveform-bar" style="height: 65%"></div>
+                                                    <div class="waveform-bar" style="height: 80%"></div>
+                                                    <div class="waveform-bar" style="height: 50%"></div>
+                                                    <div class="waveform-bar" style="height: 70%"></div>
+                                                    <div class="waveform-bar" style="height: 60%"></div>
+                                                    <div class="waveform-bar" style="height: 85%"></div>
+                                                    <div class="waveform-bar" style="height: 45%"></div>
+                                                    <div class="waveform-bar" style="height: 75%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="h-[3px] bg-[#333] rounded-full overflow-hidden mt-1">
+                                                <div id="products-voice-progress" class="h-full bg-[#00a884] rounded-full transition-all" style="width: 0%"></div>
+                                            </div>
+                                            <div class="flex justify-between mt-1">
+                                                <span id="products-voice-current" class="text-[10px] text-[#8696a0]">0:00</span>
+                                                <span id="products-voice-duration" class="text-[10px] text-[#8696a0]">0:00</span>
+                                            </div>
+                                        </div>
+                                        <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-[#00a884] shadow-lg">
+                                            <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <audio id="products-voice-audio" class="hidden"></audio>
+                            </div>
+
+                            <div class="flex items-center gap-3 pt-2">
+                                <button onclick="saveProductsVoiceSetting()" class="btn-primary flex items-center gap-2">
+                                    <i class="ph ph-floppy-disk"></i>
+                                    Zapisz
+                                </button>
+                                <button onclick="previewProductsVoiceUrl()" class="btn-secondary flex items-center gap-2">
+                                    <i class="ph ph-play"></i>
+                                    Podglad
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Future: More voice recordings can be added here -->
                     <div class="card p-5 border-dashed border-[#333] bg-transparent">
                         <div class="text-center py-4">
@@ -324,8 +408,11 @@
         // ============================================
         let currentTab = 'voice';
         let videoVoiceUrl = '';
+        let productsVoiceUrl = '';
         let audioElement = null;
+        let productsAudioElement = null;
         let isPlaying = false;
+        let isProductsPlaying = false;
 
         // ============================================
         // INIT
@@ -358,8 +445,9 @@
             // Load settings
             await loadSettings();
 
-            // Setup audio preview
+            // Setup audio previews
             setupAudioPreview();
+            setupProductsAudioPreview();
         });
 
         // ============================================
@@ -389,7 +477,7 @@
                 const { data, error } = await sb
                     .from('settings')
                     .select('key, value')
-                    .in('key', ['video_stage_voice_message_url']);
+                    .in('key', ['video_stage_voice_message_url', 'products_voice_message_url']);
 
                 if (error) throw error;
 
@@ -400,6 +488,14 @@
                         if (videoVoiceUrl) {
                             document.getElementById('video-voice-preview').classList.remove('hidden');
                             document.getElementById('video-voice-audio').src = videoVoiceUrl;
+                        }
+                    }
+                    if (setting.key === 'products_voice_message_url') {
+                        productsVoiceUrl = setting.value || '';
+                        document.getElementById('products-voice-url').value = productsVoiceUrl;
+                        if (productsVoiceUrl) {
+                            document.getElementById('products-voice-preview').classList.remove('hidden');
+                            document.getElementById('products-voice-audio').src = productsVoiceUrl;
                         }
                     }
                 });
@@ -519,6 +615,106 @@
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ============================================
+        // PRODUCTS VOICE FUNCTIONS
+        // ============================================
+        async function saveProductsVoiceSetting() {
+            const url = document.getElementById('products-voice-url').value.trim();
+
+            try {
+                const { error } = await sb
+                    .from('settings')
+                    .upsert({
+                        key: 'products_voice_message_url',
+                        value: url
+                    }, { onConflict: 'key' });
+
+                if (error) throw error;
+
+                productsVoiceUrl = url;
+                showToast('Ustawienia zapisane', 'success');
+
+                if (url) {
+                    document.getElementById('products-voice-preview').classList.remove('hidden');
+                    document.getElementById('products-voice-audio').src = url;
+                } else {
+                    document.getElementById('products-voice-preview').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Error saving setting:', err);
+                showToast('Blad zapisu', 'error');
+            }
+        }
+
+        function setupProductsAudioPreview() {
+            productsAudioElement = document.getElementById('products-voice-audio');
+            if (!productsAudioElement) return;
+
+            productsAudioElement.addEventListener('loadedmetadata', () => {
+                const duration = formatTime(productsAudioElement.duration);
+                document.getElementById('products-voice-duration').textContent = duration;
+            });
+
+            productsAudioElement.addEventListener('timeupdate', () => {
+                const current = formatTime(productsAudioElement.currentTime);
+                const progress = (productsAudioElement.currentTime / productsAudioElement.duration) * 100;
+                document.getElementById('products-voice-current').textContent = current;
+                document.getElementById('products-voice-progress').style.width = `${progress}%`;
+                updateProductsWaveformProgress(progress);
+            });
+
+            productsAudioElement.addEventListener('ended', () => {
+                isProductsPlaying = false;
+                document.getElementById('products-voice-play-icon').className = 'ph-fill ph-play text-white text-lg';
+                resetProductsWaveform();
+            });
+        }
+
+        function updateProductsWaveformProgress(progress) {
+            const bars = document.querySelectorAll('#products-voice-waveform .waveform-bar');
+            const playedCount = Math.floor((progress / 100) * bars.length);
+            bars.forEach((bar, index) => {
+                if (index < playedCount) {
+                    bar.classList.add('played');
+                } else {
+                    bar.classList.remove('played');
+                }
+            });
+        }
+
+        function resetProductsWaveform() {
+            document.querySelectorAll('#products-voice-waveform .waveform-bar').forEach(bar => {
+                bar.classList.remove('played');
+            });
+        }
+
+        function previewProductsVoiceUrl() {
+            const url = document.getElementById('products-voice-url').value.trim();
+            if (!url) {
+                showToast('Wprowadz URL', 'error');
+                return;
+            }
+
+            document.getElementById('products-voice-preview').classList.remove('hidden');
+            productsAudioElement.src = url;
+            productsAudioElement.load();
+            resetProductsWaveform();
+        }
+
+        function toggleProductsVoicePreview() {
+            if (!productsAudioElement || !productsAudioElement.src) return;
+
+            if (isProductsPlaying) {
+                productsAudioElement.pause();
+                isProductsPlaying = false;
+                document.getElementById('products-voice-play-icon').className = 'ph-fill ph-play text-white text-lg';
+            } else {
+                productsAudioElement.play();
+                isProductsPlaying = true;
+                document.getElementById('products-voice-play-icon').className = 'ph-fill ph-pause text-white text-lg';
+            }
         }
 
         // ============================================
