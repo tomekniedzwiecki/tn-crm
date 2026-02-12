@@ -75,7 +75,14 @@ SELECT
         FROM workflow_video wv
         WHERE wv.workflow_id = w.id
         LIMIT 1
-    ) AS waiting_for_client
+    ) AS waiting_for_client,
+    -- When video stage was activated (for calculating waiting days)
+    (
+        SELECT wv.activated_at
+        FROM workflow_video wv
+        WHERE wv.workflow_id = w.id
+        LIMIT 1
+    ) AS video_activated_at
 FROM workflows w
 LEFT JOIN workflow_tasks wt ON wt.workflow_id = w.id
 GROUP BY w.id;

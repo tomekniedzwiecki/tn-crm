@@ -1077,10 +1077,15 @@
                 const daysSince = isWaitingForClient ? null : getDaysSinceUpdate(w.updated_at);
                 const daysSinceColor = daysSince > 7 ? 'text-red-400' : (daysSince > 3 ? 'text-amber-400' : 'text-zinc-500');
 
-                // Waiting for client badge
-                const waitingBadge = isWaitingForClient
-                    ? `<span class="flex items-center gap-1 text-cyan-400" title="Video udostępnione - czekam na klienta"><i class="ph ph-hourglass"></i>Czekam</span>`
-                    : '';
+                // Waiting for client badge with days count
+                let waitingBadge = '';
+                if (isWaitingForClient) {
+                    const waitingDays = w.video_activated_at
+                        ? Math.floor((new Date() - new Date(w.video_activated_at)) / (1000 * 60 * 60 * 24))
+                        : 0;
+                    const daysText = waitingDays === 0 ? 'dziś' : waitingDays === 1 ? '1 dzień' : `${waitingDays} dni`;
+                    waitingBadge = `<span class="flex items-center gap-1 text-cyan-400" title="Video udostępnione - czekam na klienta od ${daysText}"><i class="ph ph-hourglass"></i>Czekam ${daysText}</span>`;
+                }
 
                 // Start date
                 const startDate = new Date(w.started_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
