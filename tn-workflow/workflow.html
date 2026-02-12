@@ -3514,6 +3514,10 @@
         async function toggleVideoActive() {
             const isActive = document.getElementById('video-active').checked;
 
+            // Store previous state BEFORE any updates
+            const wasActive = videoAdminData?.is_active || false;
+            const shouldTriggerAutomation = isActive && !wasActive;
+
             try {
                 if (videoAdminData) {
                     // Update existing record
@@ -3544,11 +3548,11 @@
                 loadVideoAdmin();
                 showToast(isActive ? 'Zakładka Video aktywowana' : 'Zakładka Video wyłączona', 'success');
 
-                // Trigger automation if activating
-                if (isActive && (!videoAdminData || !videoAdminData.is_active)) {
+                // Trigger automation if activating for the first time (was inactive, now active)
+                if (shouldTriggerAutomation) {
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#video`;
                     try {
-                        await supabaseClient.functions.invoke('automation-trigger', {
+                        const { data, error } = await supabaseClient.functions.invoke('automation-trigger', {
                             body: {
                                 trigger_type: 'video_activated',
                                 entity_type: 'workflow_video',
@@ -3561,9 +3565,17 @@
                                 }
                             }
                         });
-                        console.log('Video activation automation triggered');
+
+                        if (error) {
+                            console.error('Automation trigger error:', error);
+                            showToast('Video aktywowane, ale email nie został wysłany', 'warning');
+                        } else {
+                            console.log('Video activation automation triggered:', data);
+                            showToast('Email do klienta został wysłany', 'success');
+                        }
                     } catch (triggerErr) {
                         console.error('Error triggering automation:', triggerErr);
+                        showToast('Video aktywowane, ale wystąpił błąd wysyłki emaila', 'warning');
                     }
                 }
             } catch (err) {
