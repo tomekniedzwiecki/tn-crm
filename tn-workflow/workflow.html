@@ -4109,6 +4109,13 @@
                 loadVideoAdmin();
                 showToast(isActive ? 'Zakładka Video aktywowana' : 'Zakładka Video wyłączona', 'success');
 
+                // Log activity
+                if (isActive && !wasActive) {
+                    logActivity('video_activated', 'Udostępniono zakładkę Video klientowi', {});
+                } else if (!isActive && wasActive) {
+                    logActivity('video_deactivated', 'Wyłączono zakładkę Video dla klienta', {});
+                }
+
                 // Trigger automation if activating for the first time (was inactive, now active)
                 if (shouldTriggerAutomation) {
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#video`;
