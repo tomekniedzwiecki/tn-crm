@@ -1830,17 +1830,22 @@
 
             await logAccess();
 
-            // Contract flow
-            if (workflow.contract_seller_signed_url || workflow.contract_status === 'signed') {
-                // Continue to project
-            } else if (workflow.contract_status === 'pending_data') {
-                prefillContractForm();
-                showScreen('contract-data');
-                return;
-            } else if (['data_filled', 'pending_signature'].includes(workflow.contract_status)) {
-                prepareContractHtml();
-                showScreen('contract-signing');
-                return;
+            // Contract flow - skip entirely for Starter offer (no contract needed)
+            const STARTER_OFFER_ID = '6ee10c3a-f8c7-409e-8570-8eff29e2b759';
+            const isStarterOffer = workflow.offer_id === STARTER_OFFER_ID;
+
+            if (!isStarterOffer) {
+                if (workflow.contract_seller_signed_url || workflow.contract_status === 'signed') {
+                    // Continue to project
+                } else if (workflow.contract_status === 'pending_data') {
+                    prefillContractForm();
+                    showScreen('contract-data');
+                    return;
+                } else if (['data_filled', 'pending_signature'].includes(workflow.contract_status)) {
+                    prepareContractHtml();
+                    showScreen('contract-signing');
+                    return;
+                }
             }
 
             await loadAllData();
