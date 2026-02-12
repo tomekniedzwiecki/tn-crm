@@ -63,6 +63,7 @@ Użytkownik mówi: "Wygeneruj scenariusze video dla workflow X"
 - ❌ Efekty specjalne wymagające umiejętności montażu
 - ❌ Scenariusze dłuższe niż 30 sekund
 - ❌ **CENY** — nigdy nie podawaj cen produktu w scenariuszach (ani w textOverlay, ani w hook/action/ending)
+- ❌ **ANGIELSKIE ZWROTY** — unikaj angielskich słów i fraz (np. "glow up", "morning routine", "goals") — klienci mogą ich nie zrozumieć. Pisz po polsku!
 
 ### Scenariusze BEZ TWARZY (showFace: false):
 - ❌ Nigdy nie wymagają pokazywania twarzy

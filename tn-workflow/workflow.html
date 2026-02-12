@@ -414,24 +414,6 @@
                     <!-- TAB: Przeglad (Overview) -->
                     <div id="tab-przeglad" class="workflow-panel">
 
-                    <!-- Quick Actions Bar -->
-                    <div class="flex flex-wrap items-center gap-3 mb-8">
-                        <a id="crm-lead-link" href="#" target="_blank" class="hidden h-9 px-4 bg-transparent hover:bg-[#1a1a1a] border border-[#333] text-[#888] hover:text-white text-[13px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
-                            <i class="ph ph-address-book text-violet-400"></i>
-                            CRM
-                        </a>
-                        <button onclick="openClientPreview()" class="h-9 px-4 bg-transparent hover:bg-[#1a1a1a] border border-[#333] text-[#888] hover:text-white text-[13px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
-                            <i class="ph ph-eye"></i>
-                            Portal klienta
-                        </button>
-                        <button onclick="copyClientLink()" class="h-9 px-4 bg-transparent hover:bg-[#1a1a1a] border border-[#333] text-[#888] hover:text-white text-[13px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
-                            <i class="ph ph-link"></i>
-                            Kopiuj link
-                        </button>
-                        <div class="flex-1"></div>
-                        <div id="status-badge" class="h-7 px-3 rounded-full text-[11px] font-semibold uppercase tracking-wider flex items-center">Aktywny</div>
-                    </div>
-
                     <!-- Main Grid: Client + Progress -->
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-5">
 
@@ -444,7 +426,11 @@
                                     </div>
                                     <div>
                                         <h2 id="customer-name" class="text-[22px] font-semibold text-white tracking-tight">-</h2>
-                                        <p id="customer-email" class="text-[#666] text-[13px] mt-0.5">-</p>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <p id="customer-email" class="text-[#666] text-[13px]">-</p>
+                                            <span class="text-[#333]">•</span>
+                                            <code id="unique-token-display" class="text-[#555] text-[11px] font-mono bg-[#111] px-1.5 py-0.5 rounded">-</code>
+                                        </div>
                                     </div>
                                 </div>
                                 <button onclick="toggleEditClientInfo()" id="edit-client-btn" class="w-8 h-8 text-[#444] hover:text-[#888] hover:bg-[#1a1a1a] transition-all duration-200 rounded-lg flex items-center justify-center" title="Edytuj">
@@ -469,6 +455,26 @@
                                 <div>
                                     <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider block mb-1.5">Kwota</span>
                                     <span id="amount" class="text-white text-[14px] font-mono font-semibold">-</span>
+                                </div>
+                            </div>
+
+                            <!-- Actions Section -->
+                            <div class="mt-6 pt-5 border-t border-[#1a1a1a]">
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <div id="status-badge" class="h-7 px-3 rounded-full text-[11px] font-semibold uppercase tracking-wider flex items-center">Aktywny</div>
+                                    <div class="flex-1"></div>
+                                    <a id="crm-lead-link" href="#" target="_blank" class="hidden h-8 px-3 bg-transparent hover:bg-[#1a1a1a] border border-[#262626] text-[#666] hover:text-white text-[12px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
+                                        <i class="ph ph-address-book text-violet-400"></i>
+                                        CRM
+                                    </a>
+                                    <button onclick="openClientPreview()" class="h-8 px-3 bg-transparent hover:bg-[#1a1a1a] border border-[#262626] text-[#666] hover:text-white text-[12px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
+                                        <i class="ph ph-eye"></i>
+                                        Portal
+                                    </button>
+                                    <button onclick="copyClientLink()" class="h-8 px-3 bg-transparent hover:bg-[#1a1a1a] border border-[#262626] text-[#666] hover:text-white text-[12px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
+                                        <i class="ph ph-link"></i>
+                                        Kopiuj link
+                                    </button>
                                 </div>
                             </div>
 
@@ -527,6 +533,18 @@
                                 <div class="text-right">
                                     <div class="text-[#555] text-[10px] uppercase tracking-wider mb-1">Deadline</div>
                                     <div id="current-deadline" class="text-[#ccc] text-[12px]">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Last Admin Action -->
+                            <div id="last-admin-action" class="mt-4 pt-4 border-t border-[#1a1a1a] hidden">
+                                <div class="text-[#555] text-[10px] uppercase tracking-wider mb-2">Ostatnie działanie</div>
+                                <div class="flex items-start gap-2">
+                                    <i id="last-action-icon" class="ph ph-lightning text-amber-400 text-[12px] mt-0.5"></i>
+                                    <div class="flex-1 min-w-0">
+                                        <div id="last-action-text" class="text-[#ccc] text-[12px] truncate">-</div>
+                                        <div id="last-action-time" class="text-[#555] text-[10px] mt-0.5">-</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2484,6 +2502,38 @@
             document.getElementById('client-messages-count').textContent = msgCount || 0;
         }
 
+        async function loadLastAdminAction() {
+            if (!workflow) return;
+
+            // Load last admin activity (not system actions)
+            const { data: activities } = await supabaseClient
+                .from('workflow_activities')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .not('performed_by_name', 'is', null)
+                .neq('performed_by_name', 'System')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            const container = document.getElementById('last-admin-action');
+            if (!container) return;
+
+            if (activities && activities.length > 0) {
+                const activity = activities[0];
+                const timeAgo = formatTimeAgo(new Date(activity.created_at));
+                const iconClass = getActivityIcon(activity.action);
+                const iconColor = getActivityColor(activity.action);
+
+                document.getElementById('last-action-icon').className = `ph ${iconClass} ${iconColor} text-[12px] mt-0.5`;
+                document.getElementById('last-action-text').textContent = activity.description;
+                document.getElementById('last-action-text').title = activity.description;
+                document.getElementById('last-action-time').textContent = timeAgo;
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
         // ============================================
         // QUICK ACTIONS
         // ============================================
@@ -2666,6 +2716,7 @@
             checkPendingActions();
             loadCrmLeadLink();
             loadClientEngagement();
+            loadLastAdminAction();
             loadEmailHistory();
         }
 
@@ -2843,6 +2894,7 @@
             }
             document.getElementById('customer-company').textContent = workflow.customer_company || '-';
             document.getElementById('customer-phone').textContent = workflow.customer_phone || '-';
+            document.getElementById('unique-token-display').textContent = workflow.unique_token || '-';
             document.getElementById('offer-name').textContent = workflow.offer_name;
             document.getElementById('amount').textContent = formatPrice(workflow.amount);
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);

@@ -343,9 +343,11 @@ Deno.serve(async (req) => {
 
       if (!isValid) {
         console.error('[tpay-webhook] Invalid signature - rejecting request!')
-        // Return 403 Forbidden for invalid signature - this is a security issue
         return new Response('FALSE', { headers: corsHeaders, status: 403 })
       }
+      console.log('[tpay-webhook] Signature verified successfully')
+    } else {
+      console.log('[tpay-webhook] Signature verification skipped (not configured)')
     }
 
     // Find order by transaction ID or CRC (order ID)

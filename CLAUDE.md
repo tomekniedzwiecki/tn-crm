@@ -62,6 +62,21 @@ Wzorce: `landing-pages/vibestrike/` (ciemny), `landing-pages/dentaflow/` (jasny)
 
 ## Supabase Edge Functions
 
+### ⚠️ KRYTYCZNE: NIE PSUJ INTEGRACJI TPAY ⚠️
+
+**PRZED deployem jakiejkolwiek funkcji Supabase przeczytaj to:**
+
+1. **tpay-webhook** MUSI byc ZAWSZE deployowany z `--no-verify-jwt` (uzyj `npm run deploy:tpay-webhook`)
+2. **NIE ZMIENIAJ** logiki weryfikacji podpisu w tpay-webhook - jest OPCJONALNA i tak ma byc
+3. **NIE MODYFIKUJ** nazw zmiennych srodowiskowych w tpay-webhook (`tpay_client_secret`, `tpay_merchant_id`)
+4. **Po KAZDYM DEPLOYU** funkcji sprawdz czy platnosci dzialaja (endpoint zwraca 200)
+
+Test: `npm run test:webhooks` - uruchom PO KAZDYM DEPLOYU funkcji!
+
+Jezeli zmieniasz COKOLWIEK w supabase/functions/ - NIE DOTYKAJ tpay-webhook chyba ze uzytkownik wyraznie o to prosi!
+
+---
+
 ### Deploy
 Wymagany `SUPABASE_ACCESS_TOKEN` w zmiennych srodowiskowych lub zalogowanie przez `npx supabase login`.
 
@@ -91,6 +106,34 @@ Glowne funkcje:
 - `workflow-stage-completed` - powiadomienia o ukonczeniu etapu
 - `automation-executor` - wykonuje kroki automatyzacji (cron co 2 min)
 - `automation-trigger` - tworzy automation_execution gdy wystapi event
+- `tpay-webhook` - webhook platnosci TPay (oznacza zamowienia jako oplacone)
+- `tpay-create-transaction` - tworzenie transakcji TPay
+
+### WAZNE: Funkcje webhook wymagaja --no-verify-jwt
+
+Funkcje odbierajace zewnetrzne webhooks (TPay, Resend itp.) **MUSZA** byc deployowane z flaga `--no-verify-jwt`:
+
+```bash
+# TPay webhook - BEZ JWT (zewnetrzny serwer nie ma tokena)
+npm run deploy:tpay-webhook
+
+# Resend webhook - BEZ JWT
+npm run deploy:resend-webhook
+```
+
+Skrypty w package.json maja juz ustawiona flage `--no-verify-jwt`. **ZAWSZE uzywaj npm scripts zamiast bezposrednich komend supabase.**
+
+**Dlaczego?** Supabase domyslnie wymaga naglowka Authorization z tokenem JWT. Zewnetrzne serwisy (TPay, Resend) nie moga wyslac tego tokena, wiec dostaja blad 401 Unauthorized.
+
+**NIGDY nie deployuj tych funkcji bez --no-verify-jwt** - zepsuje to integracje platnosci!
+
+### Bezpieczenstwo webhookow
+
+Webhooks bez JWT musza miec wlasna weryfikacje:
+- **tpay-webhook**: weryfikuje MD5 checksum (opcjonalnie, jesli ustawione `tpay_client_secret` i `tpay_merchant_id`)
+- **resend-webhook**: weryfikuje podpis Resend (wymaga `RESEND_WEBHOOK_SECRET`)
+
+Te zmienne MUSZA byc ustawione w Supabase Dashboard > Edge Functions > Secrets. Bez nich webhook odrzuci wszystkie requesty (500).
 
 ## System automatyzacji
 
