@@ -278,41 +278,6 @@
                     <span id="breadcrumb-name" class="text-white font-medium truncate max-w-[200px]">...</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 md:gap-3">
-                <button id="preview-client-btn" class="text-zinc-300 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2" title="Podgląd widoku klienta">
-                    <i class="ph ph-eye"></i>
-                    <span class="hidden md:inline">Podgląd</span>
-                </button>
-                <button id="copy-link-btn" class="text-zinc-300 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2">
-                    <i class="ph ph-link"></i>
-                    <span class="hidden md:inline">Link klienta</span>
-                </button>
-                <div class="relative">
-                    <button id="actions-btn" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2">
-                        <i class="ph ph-dots-three"></i>
-                        <span class="hidden md:inline">Akcje</span>
-                    </button>
-                    <div id="actions-menu" class="hidden absolute right-0 top-full mt-2 bg-zinc-900 border border-white/10 rounded-lg shadow-xl py-1 min-w-[180px] z-50">
-                        <button onclick="openPasswordModal()" class="w-full text-left px-4 py-2.5 hover:bg-white/5 text-zinc-300 flex items-center gap-2">
-                            <i class="ph ph-key"></i>
-                            Ustaw haslo klienta
-                        </button>
-                        <button onclick="changeStatus('paused')" class="w-full text-left px-4 py-2.5 hover:bg-white/5 text-amber-400 flex items-center gap-2">
-                            <i class="ph ph-pause"></i>
-                            Wstrzymaj projekt
-                        </button>
-                        <button onclick="changeStatus('completed')" class="w-full text-left px-4 py-2.5 hover:bg-white/5 text-blue-400 flex items-center gap-2">
-                            <i class="ph ph-check-circle"></i>
-                            Oznacz jako ukonczony
-                        </button>
-                        <hr class="border-white/5 my-1">
-                        <button onclick="changeStatus('cancelled')" class="w-full text-left px-4 py-2.5 hover:bg-white/5 text-red-400 flex items-center gap-2">
-                            <i class="ph ph-x-circle"></i>
-                            Anuluj projekt
-                        </button>
-                    </div>
-                </div>
-            </div>
         </header>
 
         <!-- Mobile Tab Bar -->
@@ -472,7 +437,7 @@
                                     </a>
                                     <button onclick="openClientPreview()" class="h-8 px-3 bg-transparent hover:bg-[#1a1a1a] border border-[#262626] text-[#666] hover:text-white text-[12px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
                                         <i class="ph ph-eye"></i>
-                                        Portal
+                                        Podgląd
                                     </button>
                                     <button onclick="copyClientLink()" class="h-8 px-3 bg-transparent hover:bg-[#1a1a1a] border border-[#262626] text-[#666] hover:text-white text-[12px] font-medium rounded-lg transition-all duration-200 flex items-center gap-2">
                                         <i class="ph ph-link"></i>
@@ -2543,7 +2508,7 @@
         // ============================================
         function openClientPreview() {
             if (!workflow) return;
-            const url = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}?admin_preview=true`;
+            const url = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}?admin_preview=1`;
             window.open(url, '_blank');
         }
 
@@ -3254,41 +3219,8 @@
             await loadWorkflow();
         }
 
-        // Actions Menu
-        document.getElementById('actions-btn').addEventListener('click', function(e) {
-            e.stopPropagation();
-            document.getElementById('actions-menu').classList.toggle('hidden');
-        });
-
-        function closeActionsMenu() {
-            document.getElementById('actions-menu').classList.add('hidden');
-        }
-
-        document.addEventListener('click', closeActionsMenu);
-
-        // Preview client view (admin preview mode)
-        document.getElementById('preview-client-btn').addEventListener('click', function() {
-            const url = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}?admin_preview=1`;
-            window.open(url, '_blank');
-        });
-
-        // Copy client link
-        document.getElementById('copy-link-btn').addEventListener('click', async function() {
-            const url = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
-
-            try {
-                await navigator.clipboard.writeText(url);
-                showToast('Link skopiowany!', 'success');
-            } catch (err) {
-                const textArea = document.createElement('textarea');
-                textArea.value = url;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showToast('Link skopiowany!', 'success');
-            }
-        });
+        // No-op for backwards compatibility
+        function closeActionsMenu() {}
 
         // Password Modal
         function openPasswordModal() {
