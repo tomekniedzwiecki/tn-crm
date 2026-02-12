@@ -1789,24 +1789,34 @@
             if (error || !workflowData) { showScreen('not-found'); return; }
             workflow = workflowData;
 
-            // Admin preview mode - check if admin is authenticated
+            // Admin preview mode - check if admin is authenticated AND has admin role
             const urlParams = new URLSearchParams(window.location.search);
             const isAdminPreview = urlParams.get('admin_preview') === '1';
 
-            // Admin preview mode - check if admin is authenticated
             let isAdminPreviewMode = false;
             if (isAdminPreview) {
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (session) {
-                    // Admin is authenticated - bypass ALL password screens
-                    isAuthenticated = true;
-                    isAdminPreviewMode = true;
-                    console.log('[Admin Preview] Authenticated as admin, bypassing password');
-                    // Show admin preview banner
-                    const banner = document.getElementById('admin-preview-banner');
-                    if (banner) {
-                        banner.classList.remove('hidden');
-                        document.body.style.paddingTop = '40px';
+                    // Verify user has admin role in team_members table
+                    const { data: teamMember } = await supabaseClient
+                        .from('team_members')
+                        .select('role')
+                        .eq('user_id', session.user.id)
+                        .single();
+
+                    if (teamMember?.role === 'admin') {
+                        // Admin confirmed - bypass ALL password screens
+                        isAuthenticated = true;
+                        isAdminPreviewMode = true;
+                        console.log('[Admin Preview] Verified admin role, bypassing password');
+                        // Show admin preview banner
+                        const banner = document.getElementById('admin-preview-banner');
+                        if (banner) {
+                            banner.classList.remove('hidden');
+                            document.body.style.paddingTop = '40px';
+                        }
+                    } else {
+                        console.log('[Admin Preview] User authenticated but not admin role');
                     }
                 }
             }
