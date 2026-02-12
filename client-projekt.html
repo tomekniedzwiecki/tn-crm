@@ -1793,11 +1793,14 @@
             const urlParams = new URLSearchParams(window.location.search);
             const isAdminPreview = urlParams.get('admin_preview') === '1';
 
+            // Admin preview mode - check if admin is authenticated
+            let isAdminPreviewMode = false;
             if (isAdminPreview) {
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (session) {
-                    // Admin is authenticated - bypass password
+                    // Admin is authenticated - bypass ALL password screens
                     isAuthenticated = true;
+                    isAdminPreviewMode = true;
                     console.log('[Admin Preview] Authenticated as admin, bypassing password');
                     // Show admin preview banner
                     const banner = document.getElementById('admin-preview-banner');
@@ -1808,9 +1811,12 @@
                 }
             }
 
-            if (!workflow.client_password_hash) { showScreen('set-password'); return; }
-            if (!isAuthenticated && checkSavedAuth()) { isAuthenticated = true; }
-            if (!isAuthenticated) { showScreen('password'); return; }
+            // Password screens - skip entirely for admin preview
+            if (!isAdminPreviewMode) {
+                if (!workflow.client_password_hash) { showScreen('set-password'); return; }
+                if (!isAuthenticated && checkSavedAuth()) { isAuthenticated = true; }
+                if (!isAuthenticated) { showScreen('password'); return; }
+            }
 
             await logAccess();
 
