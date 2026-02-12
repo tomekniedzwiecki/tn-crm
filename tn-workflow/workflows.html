@@ -54,9 +54,18 @@
             transition: width 0.5s ease;
         }
 
+        .workflow-card {
+            transition: all 0.2s ease;
+        }
         .workflow-card:hover {
             border-color: rgba(255,255,255,0.15);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        /* Stage timeline connector animation */
+        .workflow-card:hover .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
         }
     </style>
 </head>
@@ -752,53 +761,46 @@
             return `<span class="text-xs px-2 py-0.5 rounded border ${styles[status] || styles.active}">${labels[status] || status}</span>`;
         }
 
-        function getStatusIcons(w) {
-            // Don't show Stage 1 icons when project is in Stage 2 or 3
-            const stage = getWorkflowStage(w);
-            if (stage > 1) return '';
+        function getStatusChecklist(w) {
+            // Unified checklist for all stages - shows completion status
+            const items = [];
 
-            const icons = [];
-
-            // Contract status
-            const contractConfig = {
-                data_filled: { icon: 'ph-user-check', label: 'Dane', class: 'text-cyan-400' },
-                contract_sent: { icon: 'ph-paper-plane-tilt', label: 'Wysłano', class: 'text-violet-400' },
-                pending_signature: { icon: 'ph-pen', label: 'Do podpisu', class: 'text-amber-400' },
-                signed: { icon: 'ph-check-circle', label: 'Podpisana', class: 'text-emerald-400' },
-                rejected: { icon: 'ph-x-circle', label: 'Odrzucona', class: 'text-red-400' }
-            };
-            const cc = w.contract_status && w.contract_status !== 'pending_data' ? contractConfig[w.contract_status] : null;
-            if (cc) {
-                icons.push(`<span class="flex items-center gap-1 ${cc.class}"><i class="ph ph-file-text"></i>${cc.label}</span>`);
+            // Contract - only show if relevant (not starter offer without contract)
+            const contractDone = w.contract_status === 'signed';
+            const contractInProgress = w.contract_status && !['pending_data', 'signed'].includes(w.contract_status);
+            if (contractDone) {
+                items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Umowa</span>`);
+            } else if (contractInProgress) {
+                items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Umowa</span>`);
             }
 
-            // Product status
+            // Product selection
             if (w.selected_product_id) {
-                icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-package"></i>Wybrany</span>`);
+                items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Produkt</span>`);
             } else if (w.products_shared_at) {
-                icons.push(`<span class="flex items-center gap-1 text-violet-400"><i class="ph ph-package"></i>Wysłano</span>`);
+                items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Produkt</span>`);
             }
 
-            // Report status
+            // Report
             const rc = reportCounts[w.workflow_id];
             if (rc && rc.published > 0) {
-                icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-chart-bar"></i>Raport</span>`);
+                items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Raport</span>`);
             } else if (rc && rc.total > 0) {
-                icons.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-chart-bar"></i>Raport</span>`);
+                items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Raport</span>`);
             }
 
-            // Branding status
+            // Branding
             if (w.branding_shared_at) {
-                icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-paint-brush"></i>Branding</span>`);
+                items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Branding</span>`);
             }
 
-            // Sales page status
+            // Sales page
             if (w.sales_page_shared_at) {
-                icons.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph ph-browser"></i>Strona</span>`);
+                items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Strona</span>`);
             }
 
-            if (!icons.length) return '';
-            return `<div class="flex items-center gap-3 text-[10px] mb-2">${icons.join('')}</div>`;
+            if (!items.length) return '';
+            return `<div class="flex items-center gap-3 text-[10px] py-2 border-t border-white/5">${items.join('')}</div>`;
         }
 
         function formatDeadline(deadline) {
@@ -846,85 +848,127 @@
             return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
         }
 
-        function renderTaskDots(tasks) {
-            if (!tasks || tasks.length === 0) return '';
-
-            const dots = tasks.map(t => {
-                const color = t.completed ? 'bg-emerald-400' : 'bg-zinc-600';
-                const title = t.title ? t.title.substring(0, 40) + (t.title.length > 40 ? '...' : '') : '';
-                return `<span class="w-1.5 h-1.5 rounded-full ${color}" title="${title}"></span>`;
-            }).join('');
-
-            return `<div class="flex items-center gap-1 mt-1.5">${dots}</div>`;
-        }
-
-        function renderStageProgress(w) {
-            const stage = getWorkflowStage(w);
+        function renderStageTimeline(w) {
+            const currentStage = getWorkflowStage(w);
             const stage1Complete = isStage1Completed(w);
 
+            // Stage 1 status
+            let s1Class = 'bg-zinc-700';
+            let s1Label = 'Etap 1';
+            if (currentStage === 1) {
+                s1Class = 'bg-amber-500';
+            } else if (stage1Complete) {
+                s1Class = 'bg-emerald-500';
+            }
+
+            // Stage 2 status
+            let s2Class = 'bg-zinc-700';
+            let s2Label = 'Etap 2';
+            const hasVideo = w.video_stage?.is_active;
+            if (currentStage === 2) {
+                s2Class = 'bg-amber-500';
+            } else if (currentStage === 3 || (hasVideo && w.video_stage?.video_shared)) {
+                s2Class = 'bg-emerald-500';
+            }
+
+            // Stage 3 status
+            let s3Class = 'bg-zinc-700';
+            let s3Label = 'Etap 3';
+            const hasTakedrop = w.takedrop_stage?.is_active;
+            if (currentStage === 3) {
+                s3Class = hasTakedrop && w.takedrop_stage?.stage_accepted ? 'bg-emerald-500' : 'bg-amber-500';
+            }
+
+            // Line between stages
+            const line1Class = stage1Complete ? 'bg-emerald-500/50' : 'bg-zinc-700';
+            const line2Class = currentStage === 3 ? 'bg-emerald-500/50' : 'bg-zinc-700';
+
+            return `
+                <div class="flex items-center gap-1 py-2 border-t border-white/5">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full ${s1Class}"></span>
+                        <span class="text-[10px] ${currentStage === 1 ? 'text-amber-400 font-medium' : (stage1Complete ? 'text-emerald-400' : 'text-zinc-500')}">1</span>
+                    </div>
+                    <div class="flex-1 h-px ${line1Class}"></div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full ${s2Class}"></span>
+                        <span class="text-[10px] ${currentStage === 2 ? 'text-amber-400 font-medium' : (currentStage > 2 ? 'text-emerald-400' : 'text-zinc-500')}">2</span>
+                    </div>
+                    <div class="flex-1 h-px ${line2Class}"></div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full ${s3Class}"></span>
+                        <span class="text-[10px] ${currentStage === 3 ? 'text-amber-400 font-medium' : 'text-zinc-500'}">3</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCurrentWork(w) {
+            const stage = getWorkflowStage(w);
+            const progressPercent = w.progress_percent || 0;
+
             if (stage === 3) {
-                // Stage 3: TakeDrop
+                // TakeDrop
                 const td = w.takedrop_stage;
                 const status = td?.stage_accepted ? 'Zaakceptowany' : 'Oczekuje na akceptację';
-                const color = td?.stage_accepted ? 'text-emerald-400' : 'text-blue-400';
+                const icon = td?.stage_accepted ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-hourglass text-amber-400';
                 return `
-                    <div class="mb-2.5">
-                        <div class="flex items-center gap-2 text-[11px] mb-1.5">
-                            <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 1</span>
-                            <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 2</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400">Etap 3: TakeDrop</span>
-                            <span class="text-[10px] ${color}">${status}</span>
+                    <div class="py-2">
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <i class="${icon}"></i>
+                            <span class="text-white font-medium">TakeDrop</span>
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400">${status}</span>
                         </div>
                     </div>
                 `;
             } else if (stage === 2) {
-                // Stage 2: Video
+                // Video
                 const v = w.video_stage;
                 const isShared = v?.video_shared || false;
-                let status = 'Aktywny';
-                let color = 'text-cyan-400';
+                let status = 'W trakcie';
+                let icon = 'ph ph-video-camera text-amber-400';
                 if (isShared) {
-                    status = 'Video udostępnione';
-                    color = 'text-emerald-400';
+                    status = 'Udostępnione klientowi';
+                    icon = 'ph-fill ph-check-circle text-emerald-400';
                 } else if (v?.stage_accepted) {
                     status = 'Oczekuje na video';
-                    color = 'text-amber-400';
+                    icon = 'ph ph-hourglass text-amber-400';
                 }
                 return `
-                    <div class="mb-2.5">
-                        <div class="flex items-center gap-2 text-[11px] mb-1.5">
-                            <span class="text-emerald-400 flex items-center gap-1"><i class="ph ph-check-circle"></i> Etap 1 ukończony</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">Etap 2: Video</span>
-                                <span class="text-[10px] ${color}">${status}</span>
-                            </div>
-                            <label class="flex items-center gap-1.5 cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); toggleVideoSharedCard('${w.workflow_id}', ${!isShared})">
-                                <input type="checkbox" ${isShared ? 'checked' : ''} class="w-3.5 h-3.5 rounded border-zinc-600 bg-zinc-800 text-emerald-500 focus:ring-0 cursor-pointer pointer-events-none">
-                                <span class="text-[10px] text-zinc-500">Udostępnione</span>
-                            </label>
+                    <div class="py-2">
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <i class="${icon}"></i>
+                            <span class="text-white font-medium">Video</span>
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400">${status}</span>
                         </div>
                     </div>
                 `;
             } else {
-                // Stage 1: Milestones
-                const progressPercent = w.progress_percent || 0;
-                const milestoneInfo = w.current_milestone_title
-                    ? `[${w.completed_milestones + 1}/${w.total_milestones}] ${w.current_milestone_title}`
-                    : 'Brak etapów';
+                // Milestones
+                const milestoneTitle = w.current_milestone_title || 'Brak etapów';
+                const milestoneNum = w.total_milestones > 0 ? `${w.completed_milestones + 1}/${w.total_milestones}` : '-';
+
+                // Task progress for current milestone
+                const tasks = w.current_milestone_tasks || [];
+                const completedTasks = tasks.filter(t => t.completed).length;
+                const totalTasks = tasks.length;
+                const taskInfo = totalTasks > 0 ? `${completedTasks}/${totalTasks} zadań` : '';
+
                 return `
-                    <div class="mb-2.5">
-                        <div class="flex items-center justify-between text-[11px] mb-1">
-                            <span class="text-zinc-500 truncate">${milestoneInfo}</span>
+                    <div class="py-2">
+                        <div class="flex items-center justify-between text-[11px] mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="text-amber-400 font-mono flex-shrink-0">[${milestoneNum}]</span>
+                                <span class="text-white truncate">${milestoneTitle}</span>
+                            </div>
                             <span class="text-zinc-500 font-mono flex-shrink-0 ml-2">${progressPercent}%</span>
                         </div>
-                        <div class="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                             <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
                         </div>
-                        ${renderTaskDots(w.current_milestone_tasks)}
+                        ${taskInfo ? `<div class="text-[10px] text-zinc-500 mt-1">${taskInfo}</div>` : ''}
                     </div>
                 `;
             }
@@ -958,13 +1002,24 @@
                 const unread = unreadCounts[w.workflow_id] || 0;
                 const customerDisplay = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
                 const logoUrl = workflowLogos[w.workflow_id];
+                const currentStage = getWorkflowStage(w);
+
+                // Deadline info
+                let deadlineHtml = '';
+                if (w.current_milestone_deadline) {
+                    deadlineHtml = `<span class="flex items-center gap-1"><i class="ph ph-clock text-zinc-600"></i>${formatDeadline(w.current_milestone_deadline)}</span>`;
+                }
+
+                // Start date
+                const startDate = new Date(w.started_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 
                 return `
-                <a href="${getWorkflowPath(w.workflow_id)}" class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg p-4 transition-all cursor-pointer block">
-                    <div class="flex items-start gap-3 mb-2">
-                        ${logoUrl ? `<img src="${logoUrl}" alt="" class="w-12 h-12 object-contain flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-[2.5] hover:z-50 hover:relative">` : ''}
+                <a href="${getWorkflowPath(w.workflow_id)}" class="workflow-card group bg-zinc-900/40 border border-white/5 rounded-lg overflow-hidden transition-all cursor-pointer block">
+                    <!-- Header: Logo + Customer + Status -->
+                    <div class="flex items-start gap-3 p-4 pb-0">
+                        ${logoUrl ? `<img src="${logoUrl}" alt="" class="w-10 h-10 object-contain flex-shrink-0 rounded-lg bg-zinc-800/50">` : `<div class="w-10 h-10 rounded-lg bg-zinc-800/50 flex items-center justify-center text-zinc-600"><i class="ph ph-user text-lg"></i></div>`}
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center justify-between mb-0.5">
                                 <h3 class="font-medium text-white text-sm truncate">${customerDisplay}</h3>
                                 <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                     ${getStatusBadge(w.status)}
@@ -977,42 +1032,47 @@
                                     ` : ''}
                                 </div>
                             </div>
-                            <div class="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                            <div class="flex items-center gap-1.5 text-xs text-zinc-400">
                                 <span class="truncate">${w.offer_name}</span>
                                 <span class="text-zinc-700">·</span>
-                                <span class="font-mono flex-shrink-0">${formatPrice(w.amount)}</span>
+                                <span class="font-mono text-zinc-300 flex-shrink-0">${formatPrice(w.amount)}</span>
                             </div>
                         </div>
                     </div>
-                    ${getStatusIcons(w)}
-                    ${renderStageProgress(w)}
 
-                    <div class="flex items-center justify-between pt-2 border-t border-white/5">
-                        <div class="flex items-center gap-2 text-[11px]">
-                            ${w.last_activity_at ? `
-                                <span class="flex items-center gap-1 text-zinc-500" title="${w.last_activity_description || 'Ostatnia aktywność'}">
-                                    <i class="ph ph-lightning text-zinc-600"></i>
-                                    ${formatLastActivity(w.last_activity_at)}
-                                </span>
-                            ` : (w.current_milestone_deadline ? `
-                                <span class="flex items-center gap-1">
-                                    <i class="ph ph-clock text-zinc-600"></i>
-                                    ${formatDeadline(w.current_milestone_deadline)}
-                                </span>
-                            ` : `<span class="text-zinc-600 font-mono">${new Date(w.started_at).toLocaleDateString('pl-PL')}</span>`)}
+                    <!-- Stage Timeline: 1 — 2 — 3 -->
+                    <div class="px-4">
+                        ${renderStageTimeline(w)}
+                    </div>
+
+                    <!-- Current Work Section -->
+                    <div class="px-4">
+                        ${renderCurrentWork(w)}
+                    </div>
+
+                    <!-- Status Checklist (if any) -->
+                    <div class="px-4">
+                        ${getStatusChecklist(w)}
+                    </div>
+
+                    <!-- Footer: Deadline + Comments + Actions -->
+                    <div class="flex items-center justify-between px-4 py-2.5 bg-zinc-900/50 border-t border-white/5">
+                        <div class="flex items-center gap-3 text-[11px]">
+                            ${deadlineHtml}
                             ${unread > 0 ? `
-                                <span class="flex items-center gap-1 text-amber-400">
+                                <span class="flex items-center gap-1 text-amber-400" title="${unread} nieprzeczytanych wiadomości">
                                     <i class="ph-fill ph-chat-circle"></i>
                                     ${unread}
                                 </span>
                             ` : ''}
+                            <span class="text-zinc-600 font-mono" title="Data rozpoczęcia">${startDate}</span>
                         </div>
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                             <button onclick="event.preventDefault(); event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
                                 <i class="ph ph-link text-xs"></i>
                             </button>
                             <button onclick="event.preventDefault(); event.stopPropagation(); window.open(getWorkflowPath('${w.workflow_id}'), '_blank')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Otworz w nowej karcie">
-                                <i class="ph ph-arrow-right text-xs"></i>
+                                <i class="ph ph-arrow-square-out text-xs"></i>
                             </button>
                         </div>
                     </div>
