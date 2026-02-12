@@ -58,20 +58,20 @@ SELECT
     ) AS completed_milestones,
     -- Video status fields
     (
-        SELECT wv.video_shared
+        SELECT wv.is_active
         FROM workflow_video wv
         WHERE wv.workflow_id = w.id
         LIMIT 1
-    ) AS video_shared,
+    ) AS video_stage_active,
     (
         SELECT COALESCE(jsonb_array_length(wv.video_links), 0) > 0
         FROM workflow_video wv
         WHERE wv.workflow_id = w.id
         LIMIT 1
     ) AS has_client_video_links,
-    -- Waiting for client = video shared but no client links yet
+    -- Waiting for client = video stage active but no client video links yet
     (
-        SELECT wv.video_shared = true AND COALESCE(jsonb_array_length(wv.video_links), 0) = 0
+        SELECT wv.is_active = true AND COALESCE(jsonb_array_length(wv.video_links), 0) = 0
         FROM workflow_video wv
         WHERE wv.workflow_id = w.id
         LIMIT 1
