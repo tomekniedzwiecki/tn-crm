@@ -429,7 +429,10 @@
                                         <div class="flex items-center gap-2 mt-0.5">
                                             <p id="customer-email" class="text-[#666] text-[13px]">-</p>
                                             <span class="text-[#333]">•</span>
-                                            <code id="unique-token-display" class="text-[#555] text-[11px] font-mono bg-[#111] px-1.5 py-0.5 rounded">-</code>
+                                            <code id="workflow-id-display" class="text-[#555] text-[11px] font-mono bg-[#111] px-1.5 py-0.5 rounded">-</code>
+                                            <button onclick="copyWorkflowId()" class="p-1 text-[#444] hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj ID">
+                                                <i class="ph ph-copy text-[10px]"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -2562,6 +2565,22 @@
             }
         }
 
+        async function copyWorkflowId() {
+            if (!workflow) return;
+            try {
+                await navigator.clipboard.writeText(workflow.id);
+                showToast('ID skopiowane');
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = workflow.id;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('ID skopiowane');
+            }
+        }
+
         function showToast(message) {
             const existing = document.getElementById('toast-notification');
             if (existing) existing.remove();
@@ -2895,7 +2914,7 @@
             }
             document.getElementById('customer-company').textContent = workflow.customer_company || '-';
             document.getElementById('customer-phone').textContent = workflow.customer_phone || '-';
-            document.getElementById('unique-token-display').textContent = workflow.unique_token || '-';
+            document.getElementById('workflow-id-display').textContent = workflow.id || '-';
             document.getElementById('offer-name').textContent = workflow.offer_name;
             document.getElementById('amount').textContent = formatPrice(workflow.amount);
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);
