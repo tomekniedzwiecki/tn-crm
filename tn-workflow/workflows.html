@@ -635,8 +635,13 @@
                 return searchMatch && statusMatch && offerMatch && stageMatch && statusStageMatch;
             });
 
-            // Sort
+            // Sort - starred always first, then by selected criteria
             filteredWorkflows.sort((a, b) => {
+                // Starred items always come first
+                if (a.starred && !b.starred) return -1;
+                if (!a.starred && b.starred) return 1;
+
+                // Then apply secondary sort
                 switch (sortFilter) {
                     case 'created_asc':
                         return new Date(a.started_at) - new Date(b.started_at);
@@ -648,10 +653,8 @@
                         return b.progress_percent - a.progress_percent;
                     case 'progress_asc':
                         return a.progress_percent - b.progress_percent;
-                    default: // deadline_asc
-                        if (!a.current_milestone_deadline) return 1;
-                        if (!b.current_milestone_deadline) return -1;
-                        return new Date(a.current_milestone_deadline) - new Date(b.current_milestone_deadline);
+                    default: // created_desc (newest first)
+                        return new Date(b.started_at) - new Date(a.started_at);
                 }
             });
 
@@ -1178,15 +1181,9 @@
                 const workflow = workflows.find(w => w.workflow_id === workflowId);
                 if (workflow) workflow.starred = newStarred;
 
-                // Re-sort if needed (starred should be at top)
-                if (newStarred) {
-                    workflows.sort((a, b) => {
-                        if (a.starred && !b.starred) return -1;
-                        if (!a.starred && b.starred) return 1;
-                        return new Date(b.started_at) - new Date(a.started_at);
-                    });
-                    applyFilters();
-                }
+                // Re-sort and re-render (starred should always be at top)
+                applyFilters();
+                renderWorkflows();
 
             } catch (err) {
                 console.error('Error toggling star:', err);
