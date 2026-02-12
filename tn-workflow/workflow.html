@@ -348,7 +348,7 @@
                     <button onclick="switchTab('video')" data-tab="video" class="workflow-sidebar-btn">
                         <i class="ph ph-video-camera"></i>
                         Video
-                        <span id="nav-check-video" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        <span id="nav-check-video" class="ml-auto hidden"><i id="nav-check-video-icon" class="ph-fill ph-check-circle text-sm"></i></span>
                     </button>
                 </div>
 
@@ -3676,7 +3676,6 @@
                     acceptedDate.textContent = videoAdminData.stage_accepted_at
                         ? new Date(videoAdminData.stage_accepted_at).toLocaleDateString('pl-PL')
                         : '-';
-                    if (navCheck) navCheck.classList.remove('hidden');
                 } else if (videoAdminData.is_active) {
                     statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
                     statusText.textContent = 'Oczekuje na akceptację klienta';
@@ -3711,6 +3710,23 @@
                         videoSharedInfo.classList.add('hidden');
                     }
                 }
+
+                // Update nav check for video tab
+                // Yellow = admin shared, waiting for client
+                // Green = client added at least one video link
+                const videoLinks = videoAdminData.video_links || [];
+                const navCheckIcon = document.getElementById('nav-check-video-icon');
+                if (videoLinks.length > 0) {
+                    // Green - client added video
+                    navCheck.classList.remove('hidden');
+                    if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+                } else if (videoAdminData.video_shared) {
+                    // Yellow - admin shared, waiting for client
+                    navCheck.classList.remove('hidden');
+                    if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-amber-400 text-sm';
+                } else {
+                    navCheck.classList.add('hidden');
+                }
             } else {
                 activeCheckbox.checked = false;
                 activatedInfo.classList.add('hidden');
@@ -3725,6 +3741,9 @@
                     videoSharedCheckbox.checked = false;
                     videoSharedInfo.classList.add('hidden');
                 }
+
+                // Hide nav check
+                if (navCheck) navCheck.classList.add('hidden');
             }
         }
 

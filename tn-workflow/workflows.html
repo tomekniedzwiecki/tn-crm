@@ -649,11 +649,17 @@
                 return searchMatch && statusMatch && offerMatch && stageMatch && statusStageMatch;
             });
 
-            // Sort - starred always first, then by selected criteria
+            // Sort - starred first, then active projects, then waiting_for_client at end
             filteredWorkflows.sort((a, b) => {
                 // Starred items always come first
                 if (a.starred && !b.starred) return -1;
                 if (!a.starred && b.starred) return 1;
+
+                // Waiting for client goes to the end (unless starred)
+                const aWaiting = a.waiting_for_client === true;
+                const bWaiting = b.waiting_for_client === true;
+                if (aWaiting && !bWaiting) return 1;
+                if (!aWaiting && bWaiting) return -1;
 
                 // Then apply secondary sort
                 switch (sortFilter) {
@@ -1058,15 +1064,23 @@
                 const logoUrl = workflowLogos[w.workflow_id];
                 const currentStage = getWorkflowStage(w);
 
-                // Deadline info
+                // Check if waiting for client (video shared but no client links)
+                const isWaitingForClient = w.waiting_for_client === true;
+
+                // Deadline info - don't show warning when waiting for client
                 let deadlineHtml = '';
-                if (w.current_milestone_deadline) {
+                if (w.current_milestone_deadline && !isWaitingForClient) {
                     deadlineHtml = `<span class="flex items-center gap-1"><i class="ph ph-clock text-zinc-600"></i>${formatDeadline(w.current_milestone_deadline)}</span>`;
                 }
 
-                // Days since last admin update
-                const daysSince = getDaysSinceUpdate(w.updated_at);
+                // Days since last admin update - don't show warning when waiting for client
+                const daysSince = isWaitingForClient ? null : getDaysSinceUpdate(w.updated_at);
                 const daysSinceColor = daysSince > 7 ? 'text-red-400' : (daysSince > 3 ? 'text-amber-400' : 'text-zinc-500');
+
+                // Waiting for client badge
+                const waitingBadge = isWaitingForClient
+                    ? `<span class="flex items-center gap-1 text-cyan-400" title="Video udostępnione - czekam na klienta"><i class="ph ph-hourglass"></i>Czekam</span>`
+                    : '';
 
                 // Start date
                 const startDate = new Date(w.started_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
@@ -1116,6 +1130,7 @@
                     <!-- Footer: Deadline + Comments + Days Since + Actions -->
                     <div class="flex items-center justify-between px-4 py-2.5 bg-zinc-900/50 border-t border-white/5">
                         <div class="flex items-center gap-3 text-[11px]">
+                            ${waitingBadge}
                             ${deadlineHtml}
                             ${unread > 0 ? `
                                 <span class="flex items-center gap-1 text-amber-400" title="${unread} nieprzeczytanych wiadomości">
