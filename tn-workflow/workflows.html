@@ -128,6 +128,20 @@
                     </div>
                 </div>
 
+                <!-- Recent Admin Activity (collapsible) -->
+                <div id="activity-section" class="mb-6 hidden">
+                    <button onclick="toggleActivityPanel()" class="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-3">
+                        <i id="activity-toggle-icon" class="ph ph-caret-right text-xs transition-transform"></i>
+                        <span>Ostatnie działania</span>
+                        <span id="activity-count" class="text-xs text-zinc-600 font-mono">(0)</span>
+                    </button>
+                    <div id="activity-panel" class="hidden pl-4 border-l border-zinc-800">
+                        <div id="activity-list" class="space-y-2 max-h-48 overflow-y-auto pr-2">
+                            <!-- Activities will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Filters -->
                 <div class="flex flex-wrap items-center gap-3 mb-6">
                     <div class="relative flex-1 min-w-[200px] max-w-xs">
@@ -1568,6 +1582,128 @@
             if (e.target === e.currentTarget) closeDeleteModal();
         });
 
+        // =============================================
+        // ADMIN ACTIVITY HISTORY
+        // =============================================
+        let recentActivities = [];
+        let activityPanelOpen = false;
+
+        async function loadRecentActivities() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_activities')
+                    .select(`
+                        id,
+                        workflow_id,
+                        action,
+                        description,
+                        performed_by_name,
+                        created_at,
+                        workflows!inner(customer_name, customer_company, customer_email)
+                    `)
+                    .order('created_at', { ascending: false })
+                    .limit(15);
+
+                if (error) {
+                    console.error('Error loading activities:', error);
+                    return;
+                }
+
+                recentActivities = data || [];
+                renderActivities();
+            } catch (err) {
+                console.error('Failed to load activities:', err);
+            }
+        }
+
+        function renderActivities() {
+            const section = document.getElementById('activity-section');
+            const list = document.getElementById('activity-list');
+            const countEl = document.getElementById('activity-count');
+
+            if (recentActivities.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            countEl.textContent = `(${recentActivities.length})`;
+
+            list.innerHTML = recentActivities.map(a => {
+                const customer = a.workflows?.customer_name || a.workflows?.customer_company || a.workflows?.customer_email?.split('@')[0] || 'Nieznany';
+                const timeAgo = formatActivityTime(a.created_at);
+                const actionIcon = getActivityIcon(a.action);
+
+                return `
+                    <a href="${getWorkflowPath(a.workflow_id)}" class="flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group">
+                        <div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="ph ${actionIcon} text-xs text-zinc-400"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs text-white truncate">${a.description}</div>
+                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mt-0.5">
+                                <span class="truncate">${customer}</span>
+                                <span class="text-zinc-700">·</span>
+                                <span class="flex-shrink-0">${timeAgo}</span>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        function formatActivityTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'przed chwilą';
+            if (diffMins < 60) return `${diffMins} min temu`;
+            if (diffHours < 24) return `${diffHours}h temu`;
+            if (diffDays === 1) return 'wczoraj';
+            if (diffDays < 7) return `${diffDays} dni temu`;
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function getActivityIcon(action) {
+            const icons = {
+                'contract_sent': 'ph-file-text',
+                'contract_signed': 'ph-check-circle',
+                'products_shared': 'ph-package',
+                'product_selected': 'ph-check-square',
+                'report_uploaded': 'ph-chart-bar',
+                'report_published': 'ph-eye',
+                'branding_shared': 'ph-paint-brush',
+                'branding_uploaded': 'ph-image',
+                'sales_page_shared': 'ph-browser',
+                'milestone_completed': 'ph-flag',
+                'task_completed': 'ph-check',
+                'comment_added': 'ph-chat-circle',
+                'status_changed': 'ph-arrows-clockwise',
+                'video_shared': 'ph-video-camera',
+                'email_sent': 'ph-envelope'
+            };
+            return icons[action] || 'ph-activity';
+        }
+
+        function toggleActivityPanel() {
+            activityPanelOpen = !activityPanelOpen;
+            const panel = document.getElementById('activity-panel');
+            const icon = document.getElementById('activity-toggle-icon');
+
+            if (activityPanelOpen) {
+                panel.classList.remove('hidden');
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                panel.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
         // Make functions available globally
         window.getWorkflowPath = getWorkflowPath;
         window.copyClientLink = copyClientLink;
@@ -1577,11 +1713,12 @@
         window.closeAddModal = closeAddModal;
         window.searchOrder = searchOrder;
         window.createWorkflowFromOrder = createWorkflowFromOrder;
+        window.toggleActivityPanel = toggleActivityPanel;
 
         async function init() {
             const session = await checkAuth();
             if (session) {
-                await loadWorkflows();
+                await Promise.all([loadWorkflows(), loadRecentActivities()]);
             }
         }
         init();
