@@ -1224,7 +1224,7 @@
                             </div>
                         </div>
                     </div>
-                    <audio id="product-voice-audio" class="hidden" preload="metadata" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/tn_voice/wybor_produkty.mp3"></audio>
+                    <audio id="product-voice-audio" class="hidden" preload="metadata"></audio>
                 </div>
 
                 <!-- Selected product hero -->
@@ -1907,7 +1907,7 @@
         }
 
         async function loadAllData() {
-            const [milestonesRes, tasksRes, docsRes, matsRes, brandRes, prodsRes, repsRes, comsRes] = await Promise.all([
+            const [milestonesRes, tasksRes, docsRes, matsRes, brandRes, prodsRes, repsRes, comsRes, productsVoiceRes] = await Promise.all([
                 supabaseClient.from('workflow_milestones').select('*').eq('workflow_id', workflow.id).order('milestone_index'),
                 supabaseClient.from('workflow_tasks').select('*').eq('workflow_id', workflow.id).order('task_index'),
                 supabaseClient.from('workflow_documents').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('uploaded_at', { ascending: false }),
@@ -1915,7 +1915,8 @@
                 supabaseClient.from('workflow_branding').select('*').eq('workflow_id', workflow.id).order('sort_order'),
                 supabaseClient.from('workflow_products').select('*').is('workflow_id', null).eq('visible_to_client', true).eq('is_active', true).order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_reports').select('*').eq('workflow_id', workflow.id).eq('visible_to_client', true).order('created_at', { ascending: false }),
-                supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true })
+                supabaseClient.from('workflow_comments').select('*').eq('workflow_id', workflow.id).order('created_at', { ascending: true }),
+                supabaseClient.from('settings').select('value').eq('key', 'products_voice_message_url').maybeSingle()
             ]);
 
             milestones = milestonesRes.data || [];
@@ -1926,6 +1927,13 @@
             products = prodsRes.data || [];
             reports = repsRes.data || [];
             comments = comsRes.data || [];
+
+            // Set products voice URL
+            if (productsVoiceRes.data?.value) {
+                globalProductsVoiceUrl = productsVoiceRes.data.value;
+                const productAudio = document.getElementById('product-voice-audio');
+                if (productAudio) productAudio.src = globalProductsVoiceUrl;
+            }
 
             // Update comments badge after loading
             updateCommentsBadge();
@@ -2169,6 +2177,7 @@
         let videoData = null;
         let videoCelebrationShown = false;
         let globalVoiceMessageUrl = null;
+        let globalProductsVoiceUrl = null;
 
         async function loadVideoData() {
             try {
@@ -3680,12 +3689,14 @@
                 return;
             }
 
-            // No selection yet — show grid and voice message
+            // No selection yet — show grid and voice message (if URL is set)
             heroEl.classList.add('hidden');
             heroEl.innerHTML = '';
-            if (voiceSection) {
+            if (voiceSection && globalProductsVoiceUrl) {
                 voiceSection.classList.remove('hidden');
                 initProductVoicePlayer();
+            } else if (voiceSection) {
+                voiceSection.classList.add('hidden');
             }
 
             container.innerHTML = products.map(p => `
