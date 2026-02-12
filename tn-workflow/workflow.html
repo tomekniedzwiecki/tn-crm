@@ -326,6 +326,8 @@
             <button onclick="switchTab('strona')" data-tab="strona" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Strona</button>
             <button onclick="switchTab('materialy')" data-tab="materialy" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Materiały</button>
             <button onclick="switchTab('komentarze')" data-tab="komentarze" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Komentarze</button>
+            <button onclick="switchTab('historia')" data-tab="historia" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Historia</button>
+            <button onclick="switchTab('wiadomosci')" data-tab="wiadomosci" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Wiadomości</button>
             <span class="text-[10px] text-zinc-600 px-2">|</span>
             <button onclick="switchTab('video')" data-tab="video" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">Video</button>
             <button onclick="switchTab('takedrop')" data-tab="takedrop" class="workflow-sidebar-btn py-2.5 text-xs rounded-none" style="border-radius:0">TakeDrop</button>
@@ -378,6 +380,14 @@
                     Komentarze
                     <span id="comments-badge" class="hidden ml-auto bg-emerald-500 text-black text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">0</span>
                 </button>
+                <button onclick="switchTab('historia')" data-tab="historia" class="workflow-sidebar-btn">
+                    <i class="ph ph-clock-counter-clockwise"></i>
+                    Historia
+                </button>
+                <button onclick="switchTab('wiadomosci')" data-tab="wiadomosci" class="workflow-sidebar-btn">
+                    <i class="ph ph-envelope"></i>
+                    Wiadomości
+                </button>
 
                 <!-- Etap 2 - Video -->
                 <div class="pt-4 mt-4 border-t border-white/5">
@@ -416,14 +426,32 @@
                     <!-- TAB: Przeglad (Overview) -->
                     <div id="tab-przeglad" class="workflow-panel">
 
+                    <!-- Quick Actions Bar -->
+                    <div class="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-white/5">
+                        <a id="crm-lead-link" href="#" target="_blank" class="hidden px-3 py-1.5 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-address-book"></i>
+                            Zobacz w CRM
+                        </a>
+                        <button onclick="openClientPreview()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-zinc-300 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-eye"></i>
+                            Podgląd portalu
+                        </button>
+                        <button onclick="copyClientLink()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-zinc-300 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-link"></i>
+                            Kopiuj link
+                        </button>
+                        <div class="flex-1"></div>
+                        <div id="status-badge" class="px-3 py-1 rounded-lg text-xs font-medium">Aktywny</div>
+                    </div>
+
                     <!-- Top Section: Info + Progress -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
                         <!-- Client Info Card -->
                         <div class="lg:col-span-2 bg-zinc-900/40 border border-white/5 rounded-lg p-5">
                             <div class="flex items-start justify-between mb-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center">
+                                    <div id="client-logo-container" class="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center overflow-hidden">
                                         <i class="ph ph-user text-xl text-violet-400"></i>
                                     </div>
                                     <div>
@@ -431,12 +459,9 @@
                                         <p id="customer-email" class="text-zinc-500 text-sm">-</p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="toggleEditClientInfo()" id="edit-client-btn" class="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors rounded-lg hover:bg-white/5" title="Edytuj dane klienta">
-                                        <i class="ph ph-pencil-simple text-sm"></i>
-                                    </button>
-                                    <div id="status-badge" class="px-3 py-1 rounded-lg text-xs font-medium">Aktywny</div>
-                                </div>
+                                <button onclick="toggleEditClientInfo()" id="edit-client-btn" class="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors rounded-lg hover:bg-white/5" title="Edytuj dane klienta">
+                                    <i class="ph ph-pencil-simple text-sm"></i>
+                                </button>
                             </div>
 
                             <!-- View mode -->
@@ -488,29 +513,16 @@
                                     </button>
                                 </div>
                             </div>
-
-                            <div class="flex items-center gap-4 mt-4 pt-4 border-t border-white/5 text-xs">
-                                <div class="flex items-center gap-2">
-                                    <i class="ph ph-calendar text-zinc-500"></i>
-                                    <span class="text-zinc-500">Start:</span>
-                                    <span id="started-at" class="text-zinc-300">-</span>
-                                </div>
-                                <div id="client-access-info" class="flex items-center gap-2">
-                                    <i class="ph ph-eye text-zinc-500"></i>
-                                    <span class="text-zinc-500">Wizyty klienta:</span>
-                                    <span id="access-count" class="text-zinc-300">0</span>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Progress Card -->
                         <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5">
-                            <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4">Postep projektu</h3>
+                            <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4">Postęp projektu</h3>
 
                             <div class="text-center mb-4">
                                 <div id="progress-percent" class="text-4xl font-bold text-white mb-1">0%</div>
                                 <div class="text-zinc-500 text-xs font-mono">
-                                    <span id="completed-tasks">0</span> / <span id="total-tasks">0</span> zadan
+                                    <span id="completed-tasks">0</span> / <span id="total-tasks">0</span> zadań
                                 </div>
                             </div>
 
@@ -531,24 +543,94 @@
                         </div>
                     </div>
 
-                    <!-- Product Sharing Card -->
-                    <div id="products-sharing-card" class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mt-6">
-                        <div id="products-sharing-content"></div>
+                    <!-- Checklist & Engagement Row -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                        <!-- Status Checklist -->
+                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5">
+                            <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <i class="ph ph-check-square"></i>
+                                Status realizacji
+                            </h3>
+                            <div id="status-checklist" class="grid grid-cols-2 gap-3">
+                                <!-- Will be populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Client Engagement -->
+                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5">
+                            <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <i class="ph ph-users"></i>
+                                Zaangażowanie klienta
+                            </h3>
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <div id="access-count" class="text-2xl font-bold text-white">0</div>
+                                    <div class="text-zinc-500 text-xs">Wizyty</div>
+                                </div>
+                                <div>
+                                    <div id="last-visit" class="text-sm font-medium text-zinc-300">-</div>
+                                    <div class="text-zinc-500 text-xs">Ostatnia wizyta</div>
+                                </div>
+                                <div>
+                                    <div id="client-messages-count" class="text-2xl font-bold text-white">0</div>
+                                    <div class="text-zinc-500 text-xs">Wiadomości</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-white/5">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <i class="ph ph-calendar text-zinc-500"></i>
+                                    <span class="text-zinc-500">Start projektu:</span>
+                                    <span id="started-at" class="text-zinc-300">-</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Reports Card -->
-                    <div id="reports-overview-card" class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mt-4">
-                        <div id="reports-overview-content"></div>
-                    </div>
-
-                    <!-- Activity Log Card -->
-                    <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5 mt-4">
-                        <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
-                            <i class="ph ph-clock-counter-clockwise"></i>
-                            Ostatnie działania
+                    <!-- Pending Actions -->
+                    <div id="pending-actions-card" class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-5 mb-6 hidden">
+                        <h3 class="text-amber-400 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="ph ph-warning"></i>
+                            Wymaga uwagi
                         </h3>
-                        <div id="activity-log" class="space-y-2">
-                            <div class="text-zinc-600 text-xs">Brak aktywności</div>
+                        <div id="pending-actions-list" class="space-y-2">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Activities + Messages -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- Recent Activities (3 items) -->
+                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider flex items-center gap-2">
+                                    <i class="ph ph-clock-counter-clockwise"></i>
+                                    Ostatnie działania
+                                </h3>
+                                <button onclick="switchTab('historia')" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                                    Zobacz wszystkie →
+                                </button>
+                            </div>
+                            <div id="activity-log" class="space-y-2">
+                                <div class="text-zinc-600 text-xs">Brak aktywności</div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Emails -->
+                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-zinc-400 text-xs font-medium uppercase tracking-wider flex items-center gap-2">
+                                    <i class="ph ph-envelope"></i>
+                                    Wysłane wiadomości
+                                </h3>
+                                <button onclick="switchTab('wiadomosci')" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                                    Zobacz wszystkie →
+                                </button>
+                            </div>
+                            <div id="recent-emails" class="space-y-2">
+                                <div class="text-zinc-600 text-xs">Brak wysłanych wiadomości</div>
+                            </div>
                         </div>
                     </div>
 
@@ -1445,6 +1527,59 @@
                         </div>
                     </div><!-- /tab-takedrop -->
 
+                    <!-- TAB: Historia (Full Activity History) -->
+                    <div id="tab-historia" class="workflow-panel hidden">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                                <i class="ph ph-clock-counter-clockwise text-violet-400"></i>
+                                Historia aktywności
+                            </h3>
+                            <p class="text-zinc-500 text-sm">Pełna historia wszystkich działań w projekcie</p>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <select id="history-filter-type" onchange="filterHistory()" class="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-300">
+                                <option value="">Wszystkie typy</option>
+                                <option value="task">Zadania</option>
+                                <option value="milestone">Etapy</option>
+                                <option value="products">Produkty</option>
+                                <option value="branding">Branding</option>
+                                <option value="report">Raporty</option>
+                                <option value="contract">Umowa</option>
+                                <option value="comment">Komentarze</option>
+                            </select>
+                        </div>
+
+                        <!-- Activity List -->
+                        <div id="full-activity-log" class="space-y-3">
+                            <div class="text-zinc-600 text-sm text-center py-8">Ładowanie historii...</div>
+                        </div>
+
+                        <!-- Load More -->
+                        <div id="history-load-more" class="hidden text-center mt-6">
+                            <button onclick="loadMoreHistory()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors">
+                                Załaduj więcej
+                            </button>
+                        </div>
+                    </div><!-- /tab-historia -->
+
+                    <!-- TAB: Wiadomosci (Email History) -->
+                    <div id="tab-wiadomosci" class="workflow-panel hidden">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                                <i class="ph ph-envelope text-cyan-400"></i>
+                                Wysłane wiadomości
+                            </h3>
+                            <p class="text-zinc-500 text-sm">Historia emaili wysłanych do klienta</p>
+                        </div>
+
+                        <!-- Email List -->
+                        <div id="email-history-list" class="space-y-3">
+                            <div class="text-zinc-600 text-sm text-center py-8">Ładowanie wiadomości...</div>
+                        </div>
+                    </div><!-- /tab-wiadomosci -->
+
                 </div>
             </div>
             </div>
@@ -1972,7 +2107,7 @@
             renderActivities();
         }
 
-        function renderActivities() {
+        function renderActivities(limit = 3) {
             const container = document.getElementById('activity-log');
             if (!container) return;
 
@@ -1981,7 +2116,10 @@
                 return;
             }
 
-            container.innerHTML = activities.map(a => {
+            // Show only limited items on overview
+            const itemsToShow = activities.slice(0, limit);
+
+            container.innerHTML = itemsToShow.map(a => {
                 const timeAgo = formatTimeAgo(new Date(a.created_at));
                 const actionIcon = getActivityIcon(a.action);
 
@@ -2001,6 +2139,487 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        // Full activity history for Historia tab
+        let historyOffset = 0;
+        const historyLimit = 50;
+
+        async function loadFullHistory(reset = true) {
+            if (!workflow) return;
+
+            if (reset) historyOffset = 0;
+
+            const filterType = document.getElementById('history-filter-type')?.value || '';
+            let query = supabaseClient
+                .from('workflow_activities')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('created_at', { ascending: false })
+                .range(historyOffset, historyOffset + historyLimit - 1);
+
+            if (filterType) {
+                query = query.ilike('action', `%${filterType}%`);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('Error loading history:', error);
+                return;
+            }
+
+            const container = document.getElementById('full-activity-log');
+            if (!container) return;
+
+            if (reset && (!data || data.length === 0)) {
+                container.innerHTML = '<div class="text-zinc-600 text-sm text-center py-8">Brak aktywności do wyświetlenia</div>';
+                document.getElementById('history-load-more')?.classList.add('hidden');
+                return;
+            }
+
+            const html = data.map(a => {
+                const date = new Date(a.created_at);
+                const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                const actionIcon = getActivityIcon(a.action);
+                const actionColor = getActivityColor(a.action);
+
+                return `
+                    <div class="flex items-start gap-4 p-4 bg-zinc-900/40 border border-white/5 rounded-lg">
+                        <div class="w-10 h-10 rounded-full ${actionColor} flex items-center justify-center flex-shrink-0">
+                            <i class="ph ${actionIcon} text-base"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-zinc-200 text-sm">${escapeHtml(a.description)}</div>
+                            <div class="flex items-center gap-3 mt-2 text-zinc-500 text-xs">
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-user"></i>
+                                    ${a.performed_by_name || 'System'}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-calendar"></i>
+                                    ${dateStr}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-clock"></i>
+                                    ${timeStr}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (reset) {
+                container.innerHTML = html;
+            } else {
+                container.innerHTML += html;
+            }
+
+            // Show/hide load more button
+            if (data.length >= historyLimit) {
+                document.getElementById('history-load-more')?.classList.remove('hidden');
+            } else {
+                document.getElementById('history-load-more')?.classList.add('hidden');
+            }
+
+            historyOffset += data.length;
+        }
+
+        function filterHistory() {
+            loadFullHistory(true);
+        }
+
+        function loadMoreHistory() {
+            loadFullHistory(false);
+        }
+
+        function getActivityColor(action) {
+            const colors = {
+                'task_completed': 'bg-emerald-500/20 text-emerald-400',
+                'milestone_completed': 'bg-violet-500/20 text-violet-400',
+                'products_shared': 'bg-cyan-500/20 text-cyan-400',
+                'branding_shared': 'bg-pink-500/20 text-pink-400',
+                'sales_page_shared': 'bg-blue-500/20 text-blue-400',
+                'report_published': 'bg-amber-500/20 text-amber-400',
+                'contract_signed': 'bg-emerald-500/20 text-emerald-400',
+                'comment_added': 'bg-zinc-500/20 text-zinc-400'
+            };
+            return colors[action] || 'bg-zinc-700/50 text-zinc-400';
+        }
+
+        // ============================================
+        // EMAIL HISTORY (Wiadomości tab)
+        // ============================================
+        let workflowEmails = [];
+
+        async function loadEmailHistory() {
+            if (!workflow) return;
+
+            const { data, error } = await supabaseClient
+                .from('email_messages')
+                .select('*')
+                .eq('to_email', workflow.customer_email)
+                .eq('direction', 'outbound')
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            if (error) {
+                console.error('Error loading emails:', error);
+                return;
+            }
+
+            workflowEmails = data || [];
+            renderEmailHistory();
+            renderRecentEmails();
+        }
+
+        function renderEmailHistory() {
+            const container = document.getElementById('email-history-list');
+            if (!container) return;
+
+            if (workflowEmails.length === 0) {
+                container.innerHTML = '<div class="text-zinc-600 text-sm text-center py-8">Brak wysłanych wiadomości</div>';
+                return;
+            }
+
+            container.innerHTML = workflowEmails.map(email => {
+                const date = new Date(email.created_at);
+                const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+
+                const statusConfig = {
+                    'sent': { icon: 'ph-paper-plane-tilt', color: 'text-zinc-400', label: 'Wysłano' },
+                    'delivered': { icon: 'ph-check', color: 'text-emerald-400', label: 'Dostarczono' },
+                    'bounced': { icon: 'ph-x-circle', color: 'text-red-400', label: 'Odrzucono' },
+                    'failed': { icon: 'ph-warning', color: 'text-red-400', label: 'Błąd' }
+                };
+                const status = statusConfig[email.status] || statusConfig['sent'];
+
+                return `
+                    <div class="p-4 bg-zinc-900/40 border border-white/5 rounded-lg">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-envelope text-cyan-400"></i>
+                                <span class="text-white font-medium text-sm">${escapeHtml(email.subject || 'Bez tematu')}</span>
+                            </div>
+                            <span class="flex items-center gap-1 text-xs ${status.color}">
+                                <i class="ph ${status.icon}"></i>
+                                ${status.label}
+                            </span>
+                        </div>
+                        <div class="text-zinc-400 text-xs mb-3 line-clamp-2">${escapeHtml(email.body_text?.substring(0, 150) || '')}</div>
+                        <div class="flex items-center gap-3 text-zinc-500 text-xs">
+                            <span class="flex items-center gap-1">
+                                <i class="ph ph-at"></i>
+                                ${email.to_email}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="ph ph-calendar"></i>
+                                ${dateStr} ${timeStr}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRecentEmails() {
+            const container = document.getElementById('recent-emails');
+            if (!container) return;
+
+            if (workflowEmails.length === 0) {
+                container.innerHTML = '<div class="text-zinc-600 text-xs">Brak wysłanych wiadomości</div>';
+                return;
+            }
+
+            // Show only 3 most recent
+            const recentEmails = workflowEmails.slice(0, 3);
+
+            container.innerHTML = recentEmails.map(email => {
+                const timeAgo = formatTimeAgo(new Date(email.created_at));
+                const statusConfig = {
+                    'sent': { icon: 'ph-paper-plane-tilt', color: 'text-zinc-400' },
+                    'delivered': { icon: 'ph-check', color: 'text-emerald-400' },
+                    'bounced': { icon: 'ph-x-circle', color: 'text-red-400' },
+                    'failed': { icon: 'ph-warning', color: 'text-red-400' }
+                };
+                const status = statusConfig[email.status] || statusConfig['sent'];
+
+                return `
+                    <div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+                        <i class="ph ${status.icon} ${status.color}"></i>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-zinc-300 text-xs truncate">${escapeHtml(email.subject || 'Bez tematu')}</div>
+                            <div class="text-zinc-600 text-[10px]">${timeAgo}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // STATUS CHECKLIST
+        // ============================================
+        function renderStatusChecklist() {
+            const container = document.getElementById('status-checklist');
+            if (!container || !workflow) return;
+
+            const isStarter = workflow.offer_name?.toLowerCase().includes('starter');
+
+            const items = [];
+
+            // Contract (skip for Starter)
+            if (!isStarter) {
+                const contractDone = workflow.contract_status === 'signed';
+                items.push({
+                    label: 'Umowa',
+                    done: contractDone,
+                    inProgress: workflow.contract_status && !['pending_data', 'signed'].includes(workflow.contract_status),
+                    icon: 'ph-file-text'
+                });
+            }
+
+            // Products
+            items.push({
+                label: 'Produkty',
+                done: !!workflow.selected_product_id,
+                inProgress: !!workflow.products_shared_at && !workflow.selected_product_id,
+                icon: 'ph-package'
+            });
+
+            // Reports
+            items.push({
+                label: 'Raporty',
+                done: false, // Will check later
+                inProgress: false,
+                icon: 'ph-chart-bar',
+                checkAsync: true
+            });
+
+            // Branding
+            items.push({
+                label: 'Branding',
+                done: !!workflow.branding_shared_at,
+                icon: 'ph-paint-brush'
+            });
+
+            // Sales Page
+            items.push({
+                label: 'Strona',
+                done: !!workflow.sales_page_shared_at,
+                icon: 'ph-globe'
+            });
+
+            container.innerHTML = items.map(item => {
+                let statusClass = 'bg-zinc-800 border-white/5 text-zinc-500';
+                let iconClass = 'text-zinc-600';
+                let checkIcon = '';
+
+                if (item.done) {
+                    statusClass = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+                    iconClass = 'text-emerald-400';
+                    checkIcon = '<i class="ph-fill ph-check-circle text-emerald-400 ml-auto"></i>';
+                } else if (item.inProgress) {
+                    statusClass = 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+                    iconClass = 'text-amber-400';
+                    checkIcon = '<i class="ph ph-circle-notch text-amber-400 ml-auto"></i>';
+                }
+
+                return `
+                    <div class="flex items-center gap-2 p-2.5 rounded-lg border ${statusClass}">
+                        <i class="ph ${item.icon} ${iconClass}"></i>
+                        <span class="text-xs font-medium">${item.label}</span>
+                        ${checkIcon}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // PENDING ACTIONS
+        // ============================================
+        function checkPendingActions() {
+            if (!workflow) return;
+
+            const actions = [];
+            const isStarter = workflow.offer_name?.toLowerCase().includes('starter');
+
+            // Unsigned contract (not for Starter)
+            if (!isStarter && workflow.contract_status !== 'signed') {
+                if (workflow.contract_status === 'pending_signature') {
+                    actions.push({
+                        icon: 'ph-pen',
+                        text: 'Klient nie podpisał jeszcze umowy',
+                        color: 'text-amber-400'
+                    });
+                } else if (workflow.contract_status === 'pending_data') {
+                    actions.push({
+                        icon: 'ph-user',
+                        text: 'Klient nie wypełnił danych do umowy',
+                        color: 'text-amber-400'
+                    });
+                }
+            }
+
+            // Products not shared
+            if (!workflow.products_shared_at) {
+                actions.push({
+                    icon: 'ph-package',
+                    text: 'Produkty nie zostały jeszcze udostępnione',
+                    color: 'text-zinc-400',
+                    action: "switchTab('produkty')",
+                    actionLabel: 'Udostępnij'
+                });
+            } else if (!workflow.selected_product_id) {
+                actions.push({
+                    icon: 'ph-package',
+                    text: 'Klient nie wybrał jeszcze produktu',
+                    color: 'text-amber-400'
+                });
+            }
+
+            // Branding not shared
+            if (!workflow.branding_shared_at) {
+                actions.push({
+                    icon: 'ph-paint-brush',
+                    text: 'Branding nie został jeszcze udostępniony',
+                    color: 'text-zinc-400'
+                });
+            }
+
+            // Sales page not shared
+            if (!workflow.sales_page_shared_at && workflow.sales_page_url) {
+                actions.push({
+                    icon: 'ph-globe',
+                    text: 'Strona sprzedażowa gotowa, ale nie udostępniona',
+                    color: 'text-amber-400',
+                    action: "switchTab('strona')",
+                    actionLabel: 'Udostępnij'
+                });
+            }
+
+            const container = document.getElementById('pending-actions-list');
+            const card = document.getElementById('pending-actions-card');
+            if (!container || !card) return;
+
+            if (actions.length === 0) {
+                card.classList.add('hidden');
+                return;
+            }
+
+            card.classList.remove('hidden');
+            container.innerHTML = actions.map(a => `
+                <div class="flex items-center gap-3 py-2">
+                    <i class="ph ${a.icon} ${a.color}"></i>
+                    <span class="text-zinc-300 text-sm flex-1">${a.text}</span>
+                    ${a.action ? `<button onclick="${a.action}" class="text-xs text-emerald-400 hover:text-emerald-300">${a.actionLabel} →</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // CRM LEAD LINK
+        // ============================================
+        async function loadCrmLeadLink() {
+            if (!workflow || !workflow.customer_email) return;
+
+            const { data: lead } = await supabaseClient
+                .from('leads')
+                .select('id')
+                .eq('email', workflow.customer_email)
+                .single();
+
+            if (lead) {
+                const link = document.getElementById('crm-lead-link');
+                if (link) {
+                    const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                        ? '/leads.html' : '/leads';
+                    link.href = `${basePath}?id=${lead.id}`;
+                    link.classList.remove('hidden');
+                }
+            }
+        }
+
+        // ============================================
+        // CLIENT ENGAGEMENT
+        // ============================================
+        async function loadClientEngagement() {
+            if (!workflow) return;
+
+            // Load access log
+            const { data: accessLogs, count } = await supabaseClient
+                .from('workflow_access_log')
+                .select('accessed_at', { count: 'exact' })
+                .eq('workflow_id', workflow.id)
+                .order('accessed_at', { ascending: false })
+                .limit(1);
+
+            // Update visit count
+            document.getElementById('access-count').textContent = count || 0;
+
+            // Update last visit
+            if (accessLogs && accessLogs.length > 0) {
+                const lastVisit = formatTimeAgo(new Date(accessLogs[0].accessed_at));
+                document.getElementById('last-visit').textContent = lastVisit;
+            } else {
+                document.getElementById('last-visit').textContent = 'Brak wizyt';
+            }
+
+            // Load client messages count
+            const { count: msgCount } = await supabaseClient
+                .from('workflow_comments')
+                .select('id', { count: 'exact', head: true })
+                .eq('workflow_id', workflow.id)
+                .eq('author_type', 'client');
+
+            document.getElementById('client-messages-count').textContent = msgCount || 0;
+        }
+
+        // ============================================
+        // QUICK ACTIONS
+        // ============================================
+        function openClientPreview() {
+            if (!workflow) return;
+            const url = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}?admin_preview=true`;
+            window.open(url, '_blank');
+        }
+
+        async function copyClientLink() {
+            if (!workflow) return;
+            const url = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast('Link skopiowany do schowka');
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Link skopiowany do schowka');
+            }
+        }
+
+        function showToast(message) {
+            const existing = document.getElementById('toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-enter';
+            toast.innerHTML = `<i class="ph ph-check-circle text-emerald-400"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function getActivityIcon(action) {
@@ -2132,9 +2751,15 @@
             workflow.accessCount = accessCount || 0;
 
             renderWorkflow();
-            renderProductSharingCard();
             updateNavChecks();
             loadActivities();
+
+            // New dashboard functions
+            renderStatusChecklist();
+            checkPendingActions();
+            loadCrmLeadLink();
+            loadClientEngagement();
+            loadEmailHistory();
         }
 
         async function updateNavChecks() {
@@ -3086,6 +3711,12 @@
                     break;
                 case 'takedrop':
                     loadTakeDrop();
+                    break;
+                case 'historia':
+                    loadFullHistory(true);
+                    break;
+                case 'wiadomosci':
+                    loadEmailHistory();
                     break;
             }
         }
@@ -5455,7 +6086,17 @@
                     const d = new Date(workflow.products_shared_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
                     banner.innerHTML = `<div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-2.5 text-sm"><i class="ph-fill ph-check-circle text-emerald-400"></i><span class="text-emerald-300 text-xs">Produkty udostępnione klientowi ${d}</span></div>`;
                 } else {
-                    banner.innerHTML = `<div class="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-2.5 text-sm"><i class="ph ph-warning text-amber-400"></i><span class="text-amber-300 text-xs">Produkty jeszcze nie udostępnione klientowi</span></div>`;
+                    banner.innerHTML = `
+                        <div class="flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-warning text-amber-400"></i>
+                                <span class="text-amber-300 text-xs">Produkty jeszcze nie udostępnione klientowi</span>
+                            </div>
+                            <button onclick="shareProducts()" id="share-products-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1.5 flex-shrink-0">
+                                <i class="ph ph-share-network"></i>
+                                Udostępnij produkty
+                            </button>
+                        </div>`;
                 }
             }
 
@@ -5640,6 +6281,7 @@
 
                 showToast('Produkty udostępnione — email wysłany', 'success');
                 renderProductSharingCard();
+                loadProducts(); // Refresh Products tab banner
             } catch (err) {
                 console.error('Error sharing products:', err);
                 showToast('Błąd: ' + err.message, 'error');
