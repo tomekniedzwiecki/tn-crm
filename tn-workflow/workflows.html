@@ -340,10 +340,12 @@
 
         async function loadWorkflows() {
             // Load workflows with progress data using the view
+            // Order by starred first, then by started_at
             const { data, error } = await supabaseClient
                 .from('workflow_progress')
                 .select('*')
-                .order('workflow_id');
+                .order('starred', { ascending: false, nullsFirst: false })
+                .order('started_at', { ascending: false });
 
             if (error) {
                 console.error('Error loading workflows:', error);
@@ -1112,13 +1114,21 @@
                             ` : ''}
                             <span class="text-zinc-600 font-mono" title="Data rozpoczęcia">${startDate}</span>
                         </div>
-                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onclick="event.preventDefault(); event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
-                                <i class="ph ph-link text-xs"></i>
+                        <div class="flex items-center gap-1">
+                            <button onclick="toggleStar('${w.workflow_id}', event)"
+                                    data-starred="${w.starred ? 'true' : 'false'}"
+                                    class="p-1.5 ${w.starred ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-400'} hover:bg-white/5 rounded transition-colors"
+                                    title="${w.starred ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}">
+                                <i class="ph${w.starred ? '-fill' : ''} ph-star text-sm"></i>
                             </button>
-                            <button onclick="event.preventDefault(); event.stopPropagation(); window.open(getWorkflowPath('${w.workflow_id}'), '_blank')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Otworz w nowej karcie">
-                                <i class="ph ph-arrow-square-out text-xs"></i>
-                            </button>
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button onclick="event.preventDefault(); event.stopPropagation(); copyClientLink('${w.unique_token}', '${customerDisplay}')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Kopiuj link klienta">
+                                    <i class="ph ph-link text-xs"></i>
+                                </button>
+                                <button onclick="event.preventDefault(); event.stopPropagation(); window.open(getWorkflowPath('${w.workflow_id}'), '_blank')" class="p-1 text-zinc-500 hover:text-white hover:bg-white/5 rounded transition-colors" title="Otworz w nowej karcie">
+                                    <i class="ph ph-arrow-square-out text-xs"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </a>
@@ -1139,6 +1149,53 @@
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
                 showToast(`Link skopiowany: ${customerName}`);
+            }
+        }
+
+        async function toggleStar(workflowId, event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const btn = event.currentTarget;
+            const currentlyStarred = btn.dataset.starred === 'true';
+            const newStarred = !currentlyStarred;
+
+            // Optimistic UI update
+            btn.dataset.starred = newStarred.toString();
+            btn.innerHTML = newStarred
+                ? '<i class="ph-fill ph-star text-amber-400"></i>'
+                : '<i class="ph ph-star"></i>';
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ starred: newStarred })
+                    .eq('id', workflowId);
+
+                if (error) throw error;
+
+                // Update local data
+                const workflow = workflows.find(w => w.workflow_id === workflowId);
+                if (workflow) workflow.starred = newStarred;
+
+                // Re-sort if needed (starred should be at top)
+                if (newStarred) {
+                    workflows.sort((a, b) => {
+                        if (a.starred && !b.starred) return -1;
+                        if (!a.starred && b.starred) return 1;
+                        return new Date(b.started_at) - new Date(a.started_at);
+                    });
+                    applyFilters();
+                }
+
+            } catch (err) {
+                console.error('Error toggling star:', err);
+                // Revert on error
+                btn.dataset.starred = currentlyStarred.toString();
+                btn.innerHTML = currentlyStarred
+                    ? '<i class="ph-fill ph-star text-amber-400"></i>'
+                    : '<i class="ph ph-star"></i>';
+                showToast('Błąd zapisu');
             }
         }
 
