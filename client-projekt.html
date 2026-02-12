@@ -596,6 +596,65 @@
                         Zaloguj
                     </button>
                 </form>
+                <div class="mt-4 text-center">
+                    <button onclick="showScreen('forgot-password')" class="text-sm text-zinc-500 hover:text-white transition-colors">
+                        Zapomniałem hasła
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Screen -->
+    <div id="forgot-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
+        <div class="w-full max-w-sm animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i class="ph ph-envelope text-xl text-amber-400"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Resetuj hasło</h1>
+                <p class="text-tertiary text-sm">Wyślemy link do resetu hasła na Twój email.</p>
+            </div>
+
+            <div class="card p-6">
+                <p id="forgot-password-email" class="text-center text-white mb-6 font-medium"></p>
+                <button onclick="requestPasswordReset()" id="request-reset-btn" class="btn-primary w-full py-3">
+                    Wyślij link do resetu
+                </button>
+                <div class="mt-4 text-center">
+                    <button onclick="showScreen('password')" class="text-sm text-zinc-500 hover:text-white transition-colors">
+                        ← Wróć do logowania
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Screen (with token) -->
+    <div id="reset-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
+        <div class="w-full max-w-sm animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <i class="ph ph-key text-xl text-emerald-400"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Ustaw nowe hasło</h1>
+                <p class="text-tertiary text-sm">Wprowadź nowe hasło do panelu projektu.</p>
+            </div>
+
+            <div class="card p-6">
+                <form onsubmit="resetPassword(event)">
+                    <div class="mb-4">
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Nowe hasło</label>
+                        <input type="password" id="reset-password-input" class="form-input" placeholder="Minimum 6 znaków" required minlength="6">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Potwierdź hasło</label>
+                        <input type="password" id="reset-password-confirm" class="form-input" placeholder="Powtórz hasło" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-full py-3">
+                        Zapisz nowe hasło
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -1741,7 +1800,7 @@
         }
 
         function showScreen(screenName) {
-            ['loading', 'set-password', 'password', 'not-found', 'contract-data', 'contract-signing', 'project'].forEach(name => {
+            ['loading', 'set-password', 'password', 'forgot-password', 'reset-password', 'not-found', 'contract-data', 'contract-signing', 'project'].forEach(name => {
                 const el = document.getElementById(`${name}-screen`);
                 if (el) el.classList.toggle('hidden', name !== screenName);
             });
@@ -1757,6 +1816,15 @@
 
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Mask email for display (e.g., t***@gmail.com)
+        function maskEmail(email) {
+            if (!email) return '';
+            const [local, domain] = email.split('@');
+            if (!domain) return email;
+            const maskedLocal = local.charAt(0) + '***';
+            return `${maskedLocal}@${domain}`;
         }
 
         // PESEL validation
@@ -1821,11 +1889,39 @@
                 }
             }
 
+            // Check for password reset token in URL
+            const resetTokenParam = urlParams.get('reset_token');
+            if (resetTokenParam) {
+                // Verify token is valid
+                if (workflow.password_reset_token === resetTokenParam) {
+                    const expiresAt = new Date(workflow.password_reset_expires);
+                    if (expiresAt > new Date()) {
+                        // Token is valid - show reset password screen
+                        resetToken = resetTokenParam;
+                        showScreen('reset-password');
+                        return;
+                    } else {
+                        showToast('Link do resetu wygasł', 'error');
+                    }
+                } else {
+                    showToast('Nieprawidłowy link do resetu', 'error');
+                }
+            }
+
             // Password screens - skip entirely for admin preview
             if (!isAdminPreviewMode) {
                 if (!workflow.client_password_hash) { showScreen('set-password'); return; }
                 if (!isAuthenticated && checkSavedAuth()) { isAuthenticated = true; }
-                if (!isAuthenticated) { showScreen('password'); return; }
+                if (!isAuthenticated) {
+                    // Show customer email on forgot password screen
+                    const emailEl = document.getElementById('forgot-password-email');
+                    if (emailEl && workflow.customer_email) {
+                        const maskedEmail = maskEmail(workflow.customer_email);
+                        emailEl.textContent = maskedEmail;
+                    }
+                    showScreen('password');
+                    return;
+                }
             }
 
             await logAccess();
@@ -1924,6 +2020,99 @@
             }
         }
         window.checkPassword = checkPassword;
+
+        // Password reset functions
+        let resetToken = null;
+
+        async function requestPasswordReset() {
+            const btn = document.getElementById('request-reset-btn');
+            btn.disabled = true;
+            btn.textContent = 'Wysyłanie...';
+
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('password-reset', {
+                    body: { unique_token: getToken() }
+                });
+
+                if (error) throw error;
+                if (!data.success) throw new Error(data.error);
+
+                showToast('Link do resetu hasła został wysłany na email!', 'success');
+                showScreen('password');
+            } catch (err) {
+                console.error('Password reset error:', err);
+                showToast(err.message || 'Błąd wysyłki emaila', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Wyślij link do resetu';
+            }
+        }
+        window.requestPasswordReset = requestPasswordReset;
+
+        async function resetPassword(e) {
+            e.preventDefault();
+            const password = document.getElementById('reset-password-input').value;
+            const confirm = document.getElementById('reset-password-confirm').value;
+
+            if (password !== confirm) {
+                showToast('Hasła nie pasują do siebie', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Hasło musi mieć minimum 6 znaków', 'error');
+                return;
+            }
+
+            try {
+                // Verify token is still valid
+                const { data: tokenCheck, error: tokenError } = await supabaseClient
+                    .from('workflows')
+                    .select('id, password_reset_expires')
+                    .eq('unique_token', getToken())
+                    .eq('password_reset_token', resetToken)
+                    .single();
+
+                if (tokenError || !tokenCheck) {
+                    showToast('Link do resetu wygasł lub jest nieprawidłowy', 'error');
+                    showScreen('password');
+                    return;
+                }
+
+                if (new Date(tokenCheck.password_reset_expires) < new Date()) {
+                    showToast('Link do resetu wygasł', 'error');
+                    showScreen('password');
+                    return;
+                }
+
+                // Hash new password and save
+                const hash = dcodeIO.bcrypt.hashSync(password, 10);
+                const { error: updateError } = await supabaseClient
+                    .from('workflows')
+                    .update({
+                        client_password_hash: hash,
+                        password_reset_token: null,
+                        password_reset_expires: null
+                    })
+                    .eq('id', tokenCheck.id);
+
+                if (updateError) throw updateError;
+
+                workflow.client_password_hash = hash;
+                isAuthenticated = true;
+                saveAuth();
+
+                showToast('Hasło zostało zmienione!', 'success');
+
+                // Clear URL params and load project
+                window.history.replaceState({}, '', window.location.pathname);
+                loadProject();
+            } catch (err) {
+                console.error('Reset password error:', err);
+                showToast('Błąd zmiany hasła', 'error');
+            }
+        }
+        window.resetPassword = resetPassword;
 
         // Contract functions
         function prefillContractForm() {
