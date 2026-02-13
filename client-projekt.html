@@ -1107,31 +1107,33 @@
                     </div>
                 </div>
 
-                <!-- ═══ ROW 2: Main Content Boxes ═══ -->
+                <!-- ═══ ROW 2: Branding (Large) + Produkty ═══ -->
 
-                <!-- BOX: Produkty -->
-                <div id="dash-box-produkty" class="bento-box bento-md p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.02]" onclick="switchToDashTab('produkty')">
-                    <div id="dash-produkty-content" class="h-full">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-
-                <!-- BOX: Branding -->
-                <div id="dash-box-branding" class="bento-box bento-md p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.02]" onclick="switchToDashTab('branding')">
+                <!-- BOX: Branding (Large - 8 cols) -->
+                <div id="dash-box-branding" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.01]" style="grid-column: span 8; min-height: 280px;" onclick="switchToDashTab('branding')">
                     <div id="dash-branding-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
                 </div>
 
-                <!-- BOX: Strona -->
-                <div id="dash-box-strona" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.02]" onclick="switchToDashTab('strona')">
+                <!-- BOX: Produkty (4 cols) -->
+                <div id="dash-box-produkty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.01]" style="grid-column: span 4; min-height: 280px;" onclick="switchToDashTab('produkty')">
+                    <div id="dash-produkty-content" class="h-full">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- ═══ ROW 3: Strona + Raporty ═══ -->
+
+                <!-- BOX: Strona (6 cols) -->
+                <div id="dash-box-strona" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.01]" style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('strona')">
                     <div id="dash-strona-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
                 </div>
 
-                <!-- BOX: Raporty -->
-                <div id="dash-box-raporty" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.02]" onclick="switchToDashTab('raporty')">
+                <!-- BOX: Raporty (6 cols) -->
+                <div id="dash-box-raporty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hover:scale-[1.01]" style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('raporty')">
                     <div id="dash-raporty-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
@@ -2312,12 +2314,12 @@
                 produktyBox.classList.add('opacity-50');
                 produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full p-5 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
-                        <div class="w-12 h-12 rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
-                            <i class="ph ph-package text-xl text-[#333]"></i>
+                    <div class="h-full p-6 flex flex-col justify-center items-center text-center">
+                        <div class="w-16 h-16 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
+                            <i class="ph ph-package text-2xl text-[#333]"></i>
                         </div>
-                        <p class="text-[#444] text-[11px] font-medium">Produkty</p>
-                        <p class="text-[#333] text-[10px] mt-1">W przygotowaniu</p>
+                        <p class="text-[#555] text-sm font-medium">Produkt</p>
+                        <p class="text-[#333] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else if (!workflow.selected_product_id) {
@@ -2325,24 +2327,45 @@
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-50');
                 produktyBox.classList.add('bento-action');
+
+                // Show product previews
+                const productPreviews = products.filter(p => p.image_url).slice(0, 3);
+
                 produktyContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
-                        <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-30 bg-amber-400"></div>
-                        <div class="relative p-5 h-full flex flex-col">
+                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/[0.12] via-orange-500/[0.06] to-transparent"></div>
+                        <div class="absolute -bottom-10 -left-10 w-40 h-40 rounded-full blur-[80px] opacity-40 bg-amber-500"></div>
+
+                        <div class="relative p-6 h-full flex flex-col">
                             <!-- Action badge -->
-                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-4">
-                                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                                <span class="text-amber-300 text-[11px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
+                            <div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 w-fit mb-4">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                <span class="text-amber-300 text-xs font-bold uppercase tracking-wider">Czeka na Ciebie</span>
                             </div>
 
-                            <p class="text-white text-[18px] font-bold mb-2">Wybierz produkt</p>
-                            <p class="text-amber-200/70 text-[13px] mb-4">${products.length} ${products.length === 1 ? 'propozycja czeka' : 'propozycje czekają'} na Twój wybór</p>
+                            <p class="text-white text-xl font-bold mb-2">Wybierz produkt</p>
+                            <p class="text-amber-200/60 text-sm mb-4">${products.length} ${products.length === 1 ? 'propozycja' : 'propozycje'} do wyboru</p>
 
-                            <div class="mt-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 w-fit group">
-                                <i class="ph ph-cursor-click text-amber-400"></i>
-                                <span class="text-amber-300 text-[12px] font-semibold">Wybierz teraz</span>
-                                <i class="ph ph-arrow-right text-amber-400 group-hover:translate-x-1 transition-transform"></i>
+                            <!-- Product previews -->
+                            ${productPreviews.length > 0 ? `
+                                <div class="flex gap-2 mb-4">
+                                    ${productPreviews.map(p => `
+                                        <div class="w-14 h-14 rounded-xl overflow-hidden border border-amber-500/20 bg-[#111]">
+                                            <img src="${p.image_url}" class="w-full h-full object-cover opacity-80" alt="">
+                                        </div>
+                                    `).join('')}
+                                    ${products.length > 3 ? `
+                                        <div class="w-14 h-14 rounded-xl border border-amber-500/20 bg-amber-500/10 flex items-center justify-center">
+                                            <span class="text-amber-400 text-xs font-bold">+${products.length - 3}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+
+                            <div class="mt-auto flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500 w-fit group">
+                                <i class="ph ph-cursor-click text-black"></i>
+                                <span class="text-black text-sm font-bold">Wybierz teraz</span>
+                                <i class="ph ph-arrow-right text-black group-hover:translate-x-1 transition-transform"></i>
                             </div>
                         </div>
                     </div>
@@ -2358,24 +2381,33 @@
                     <div class="h-full relative overflow-hidden">
                         ${productImg
                             ? `<div class="absolute inset-0" style="background: url('${productImg}') center/cover"></div>
-                               <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30"></div>`
-                            : `<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>`
+                               <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40"></div>`
+                            : `<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.08] to-transparent"></div>`
                         }
-                        <div class="relative p-5 h-full flex flex-col">
-                            <div class="flex items-center gap-2 mb-auto">
-                                <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                                    <i class="ph ph-check text-emerald-400 text-sm"></i>
-                                </div>
-                                <span class="text-emerald-400 text-[11px] font-medium">Wybrano</span>
+                        <div class="relative p-6 h-full flex flex-col">
+                            <!-- Status badge -->
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 w-fit mb-auto">
+                                <i class="ph ph-check-circle text-emerald-400"></i>
+                                <span class="text-emerald-400 text-xs font-medium">Produkt wybrany</span>
                             </div>
+
+                            <!-- Product image thumbnail -->
                             ${productImg ? `
-                                <div class="absolute top-4 right-4 w-16 h-16 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                                <div class="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl mb-4 mx-auto">
                                     <img src="${productImg}" class="w-full h-full object-cover" alt="">
                                 </div>
                             ` : ''}
-                            <div class="mt-auto">
-                                <p class="text-[10px] text-[#888] uppercase tracking-wider mb-1">Produkt</p>
-                                <p class="text-white text-[15px] font-semibold leading-snug">${selectedProduct?.name || 'Wybrany produkt'}</p>
+
+                            <div class="text-center mt-auto">
+                                <p class="text-white text-lg font-bold leading-snug mb-1">${selectedProduct?.name || 'Wybrany produkt'}</p>
+                                ${selectedProduct?.source_url ? `
+                                    <p class="text-[#666] text-xs truncate">${selectedProduct.source_url.replace(/^https?:\/\//, '').split('/')[0]}</p>
+                                ` : ''}
+                            </div>
+
+                            <div class="flex items-center justify-center gap-1 text-emerald-400 text-xs font-medium mt-3">
+                                <span>Zobacz szczegóły</span>
+                                <i class="ph ph-arrow-right"></i>
                             </div>
                         </div>
                     </div>
@@ -2388,6 +2420,7 @@
             const brandInfo = brandingItems.find(b => b.type === 'brand_info');
             const logos = brandingItems.filter(b => b.type === 'logo');
             const colors = brandingItems.filter(b => b.type === 'color');
+            const mockups = brandingItems.filter(b => b.type === 'mockup');
 
             if (!workflow.branding_shared_at) {
                 brandingBox.onclick = null;
@@ -2395,12 +2428,12 @@
                 brandingBox.classList.add('opacity-50');
                 brandingBox.classList.remove('bento-action');
                 brandingContent.innerHTML = `
-                    <div class="h-full p-5 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
-                        <div class="w-12 h-12 rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
-                            <i class="ph ph-paint-brush text-xl text-[#333]"></i>
+                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
+                        <div class="w-16 h-16 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
+                            <i class="ph ph-paint-brush text-2xl text-[#333]"></i>
                         </div>
-                        <p class="text-[#444] text-[11px] font-medium">Branding</p>
-                        <p class="text-[#333] text-[10px] mt-1">W przygotowaniu</p>
+                        <p class="text-[#555] text-sm font-medium">Branding</p>
+                        <p class="text-[#333] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
@@ -2413,30 +2446,82 @@
                 const brandName = brandInfo ? parseBrandNotes(brandInfo.value)?.name : null;
                 const primaryColor = colors.find(c => { const m = parseBrandNotes(c.notes); return m.role === 'primary'; });
 
+                // Get up to 4 mockups for preview
+                const mockupPreviews = mockups.slice(0, 4);
+
                 brandingContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent"></div>
-                        ${primaryColor ? `<div class="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20" style="background: ${primaryColor.value}"></div>` : ''}
-                        <div class="relative p-5 h-full flex flex-col">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="w-6 h-6 rounded-md bg-violet-500/15 flex items-center justify-center">
-                                    <i class="ph ph-check text-violet-400 text-xs"></i>
-                                </div>
-                                <span class="text-violet-400 text-[10px] font-medium">Gotowe</span>
-                            </div>
-                            <div class="flex items-center gap-4 mb-auto">
-                                ${logoUrl
-                                    ? `<img src="${logoUrl}" class="w-14 h-14 rounded-xl object-contain bg-white/5 p-2" alt="">`
-                                    : `<div class="w-14 h-14 rounded-xl bg-violet-500/10 flex items-center justify-center"><i class="ph ph-paint-brush text-violet-400 text-xl"></i></div>`
-                                }
-                                <div>
-                                    <p class="text-white text-[15px] font-semibold">${brandName || workflow.offer_name || 'Twoja marka'}</p>
-                                    ${colors.length > 0 ? `
-                                        <div class="flex gap-1 mt-2">
-                                            ${colors.slice(0, 4).map(c => `<div class="w-5 h-5 rounded-md border border-white/10" style="background: ${c.value}"></div>`).join('')}
+                        <!-- Gradient background -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] via-fuchsia-500/[0.04] to-transparent"></div>
+                        ${primaryColor ? `<div class="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-30" style="background: ${primaryColor.value}"></div>` : ''}
+
+                        <div class="relative p-6 h-full flex flex-col">
+                            <!-- Header -->
+                            <div class="flex items-start justify-between mb-5">
+                                <div class="flex items-center gap-4">
+                                    ${logoUrl
+                                        ? `<div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 p-2 flex items-center justify-center backdrop-blur-sm">
+                                               <img src="${logoUrl}" class="max-w-full max-h-full object-contain" alt="">
+                                           </div>`
+                                        : `<div class="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                                               <i class="ph ph-paint-brush text-violet-400 text-2xl"></i>
+                                           </div>`
+                                    }
+                                    <div>
+                                        <p class="text-white text-lg font-semibold">${brandName || workflow.offer_name || 'Twoja marka'}</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="inline-flex items-center gap-1 text-violet-400 text-[11px] font-medium">
+                                                <i class="ph ph-check-circle"></i> Branding gotowy
+                                            </span>
                                         </div>
-                                    ` : ''}
+                                    </div>
                                 </div>
+                                <!-- Color palette -->
+                                ${colors.length > 0 ? `
+                                    <div class="flex gap-1.5">
+                                        ${colors.slice(0, 5).map(c => `
+                                            <div class="w-8 h-8 rounded-lg border border-white/10 shadow-lg transition-transform hover:scale-110" style="background: ${c.value}"></div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Mockups gallery -->
+                            ${mockupPreviews.length > 0 ? `
+                                <div class="flex-1 mt-2">
+                                    <p class="text-[10px] text-[#666] uppercase tracking-wider font-medium mb-3">Mockupy produktów</p>
+                                    <div class="grid grid-cols-4 gap-2 h-[calc(100%-24px)]">
+                                        ${mockupPreviews.map(m => `
+                                            <div class="rounded-xl overflow-hidden bg-[#111] border border-[#1a1a1a] aspect-square">
+                                                <img src="${m.file_url}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" alt="${m.title || ''}">
+                                            </div>
+                                        `).join('')}
+                                        ${mockups.length > 4 ? `
+                                            <div class="rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center aspect-square">
+                                                <span class="text-[#666] text-sm font-medium">+${mockups.length - 4}</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="flex-1 flex items-center justify-center">
+                                    <div class="text-center">
+                                        <div class="flex gap-2 justify-center mb-3">
+                                            ${logos.slice(0, 3).map(l => `
+                                                <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-1.5">
+                                                    <img src="${l.file_url}" class="w-full h-full object-contain" alt="">
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        <p class="text-[#666] text-xs">${logos.length} logo${logos.length !== 1 ? 's' : ''} • ${colors.length} kolor${colors.length !== 1 ? 'ów' : ''}</p>
+                                    </div>
+                                </div>
+                            `}
+
+                            <!-- Footer link -->
+                            <div class="flex items-center gap-1 text-violet-400 text-xs font-medium mt-3">
+                                <span>Zobacz pełny branding</span>
+                                <i class="ph ph-arrow-right"></i>
                             </div>
                         </div>
                     </div>
@@ -2453,18 +2538,19 @@
                 stronaBox.classList.add('opacity-50');
                 stronaBox.classList.remove('bento-action');
                 stronaContent.innerHTML = `
-                    <div class="h-full p-4 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
-                        <div class="w-12 h-12 rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
-                            <i class="ph ph-globe text-xl text-[#333]"></i>
+                    <div class="h-full p-6 flex flex-col justify-center items-center text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
+                            <i class="ph ph-globe text-2xl text-[#333]"></i>
                         </div>
-                        <p class="text-[#444] text-[11px] font-medium">Strona sprzedażowa</p>
-                        <p class="text-[#333] text-[10px] mt-1">W przygotowaniu</p>
+                        <p class="text-[#555] text-sm font-medium">Strona sprzedażowa</p>
+                        <p class="text-[#333] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
                 const isLive = workflow.sales_page_status === 'live';
                 const pageUrl = workflow.sales_page_url || '';
                 const shortUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                const domain = shortUrl.split('/')[0];
 
                 stronaBox.onclick = () => switchToDashTab('strona');
                 stronaBox.style.cursor = 'pointer';
@@ -2473,30 +2559,54 @@
                 stronaContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
                         <!-- Gradient background -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-transparent"></div>
-                        <div class="absolute bottom-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20 bg-cyan-400"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-blue-500/[0.04] to-transparent"></div>
+                        <div class="absolute -bottom-10 -right-10 w-40 h-40 rounded-full blur-[80px] opacity-30 bg-cyan-500"></div>
 
-                        <div class="relative p-5 h-full flex flex-col">
-                            <!-- Status header -->
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-6 h-6 rounded-md ${isLive ? 'bg-emerald-500/15' : 'bg-cyan-500/15'} flex items-center justify-center">
-                                        <i class="ph ${isLive ? 'ph-check' : 'ph-globe'} ${isLive ? 'text-emerald-400' : 'text-cyan-400'} text-xs"></i>
+                        <div class="relative p-6 h-full flex flex-col">
+                            <!-- Header with status -->
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl ${isLive ? 'bg-emerald-500/15 border border-emerald-500/20' : 'bg-cyan-500/15 border border-cyan-500/20'} flex items-center justify-center">
+                                        <i class="ph ph-globe ${isLive ? 'text-emerald-400' : 'text-cyan-400'} text-lg"></i>
                                     </div>
-                                    <span class="${isLive ? 'text-emerald-400' : 'text-cyan-400'} text-[10px] font-medium">${isLive ? 'Live' : 'Gotowa'}</span>
+                                    <div>
+                                        <p class="text-white text-base font-semibold">Strona sprzedażowa</p>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            ${isLive
+                                                ? `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                                   <span class="text-emerald-400 text-xs font-medium">Live</span>`
+                                                : `<span class="text-cyan-400 text-xs font-medium">Gotowa</span>`
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
-                                ${isLive ? '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>' : ''}
                             </div>
 
-                            <!-- Title -->
-                            <p class="text-white text-[15px] font-semibold mb-2">Strona sprzedażowa</p>
+                            <!-- URL preview card -->
+                            <div class="flex-1 flex items-center">
+                                <div class="w-full p-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="flex gap-1.5">
+                                            <span class="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
+                                            <span class="w-3 h-3 rounded-full bg-[#febc2e]"></span>
+                                            <span class="w-3 h-3 rounded-full bg-[#28c840]"></span>
+                                        </div>
+                                        <div class="flex-1 px-3 py-1.5 rounded-md bg-[#111] border border-[#222]">
+                                            <span class="text-xs text-[#888] font-mono truncate block">${shortUrl || 'twoja-strona.pl'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="h-16 rounded-lg bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center">
+                                        <span class="text-[#333] text-xs">Podgląd strony</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <!-- URL preview -->
-                            <div class="mt-auto">
-                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#111] border border-[#1a1a1a] group-hover:border-cyan-500/30 transition-colors">
-                                    <i class="ph ph-link text-[#555] text-xs"></i>
-                                    <span class="text-[10px] text-[#888] font-mono truncate flex-1">${shortUrl || 'Link dostępny'}</span>
-                                    <i class="ph ph-arrow-square-out text-cyan-400 text-xs"></i>
+                            <!-- Footer -->
+                            <div class="flex items-center justify-between mt-4">
+                                <span class="text-[#666] text-xs">${domain}</span>
+                                <div class="flex items-center gap-1 text-cyan-400 text-xs font-medium">
+                                    <span>Otwórz stronę</span>
+                                    <i class="ph ph-arrow-square-out"></i>
                                 </div>
                             </div>
                         </div>
@@ -2513,9 +2623,12 @@
                 raportyBox.style.cursor = 'default';
                 raportyBox.classList.add('opacity-50');
                 raportyContent.innerHTML = `
-                    <div class="h-full p-4 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
-                        <i class="ph ph-chart-line-up text-xl text-[#333] mb-2"></i>
-                        <p class="text-[#444] text-[10px]">Brak raportów</p>
+                    <div class="h-full p-6 flex flex-col justify-center items-center text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
+                            <i class="ph ph-chart-line-up text-2xl text-[#333]"></i>
+                        </div>
+                        <p class="text-[#555] text-sm font-medium">Raporty</p>
+                        <p class="text-[#333] text-xs mt-1">Brak raportów</p>
                     </div>
                 `;
             } else {
@@ -2523,46 +2636,73 @@
                 raportyBox.style.cursor = 'pointer';
                 raportyBox.classList.remove('opacity-50');
 
-                // Get report type icon
-                const getReportIcon = (type) => {
+                // Get report type icon and color
+                const getReportStyle = (type) => {
                     switch(type) {
-                        case 'analytics': return 'ph-chart-bar';
-                        case 'performance': return 'ph-chart-line-up';
-                        case 'sales': return 'ph-currency-circle-dollar';
-                        default: return 'ph-file-text';
+                        case 'analytics': return { icon: 'ph-chart-bar', color: 'blue' };
+                        case 'performance': return { icon: 'ph-chart-line-up', color: 'emerald' };
+                        case 'sales': return { icon: 'ph-currency-circle-dollar', color: 'amber' };
+                        case 'report_video': return { icon: 'ph-video-camera', color: 'violet' };
+                        default: return { icon: 'ph-file-text', color: 'slate' };
                     }
                 };
 
-                // Show up to 3 recent reports
-                const recentReports = reports.slice(0, 3);
+                // Show up to 4 recent reports
+                const recentReports = reports.slice(0, 4);
 
                 raportyContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent"></div>
-                        <div class="relative p-4 h-full flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-6 h-6 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                                        <i class="ph ph-chart-line-up text-blue-400 text-sm"></i>
+                        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/[0.08] via-indigo-500/[0.04] to-transparent"></div>
+                        <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-[60px] opacity-30 bg-blue-500"></div>
+
+                        <div class="relative p-6 h-full flex flex-col">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                                        <i class="ph ph-chart-line-up text-blue-400 text-lg"></i>
                                     </div>
-                                    <span class="text-[11px] text-white font-medium">Raporty</span>
+                                    <div>
+                                        <p class="text-white text-base font-semibold">Raporty</p>
+                                        <p class="text-blue-400 text-xs font-medium">${reports.length} ${reports.length === 1 ? 'raport' : 'raportów'}</p>
+                                    </div>
                                 </div>
-                                <span class="text-[10px] text-blue-400 font-semibold">${reports.length}</span>
                             </div>
-                            <div class="flex-1 space-y-2 overflow-hidden">
-                                ${recentReports.map(r => `
-                                    <div class="flex items-center gap-2 group">
-                                        <i class="ph ${getReportIcon(r.type)} text-[10px] text-[#555] group-hover:text-blue-400 transition-colors"></i>
-                                        <span class="text-[11px] text-[#888] group-hover:text-white truncate flex-1 transition-colors">${r.title}</span>
-                                        ${r.file_url ? `<i class="ph ph-arrow-square-out text-[10px] text-[#444] group-hover:text-blue-400 transition-colors"></i>` : ''}
+
+                            <!-- Reports list -->
+                            <div class="flex-1 space-y-2">
+                                ${recentReports.map(r => {
+                                    const style = getReportStyle(r.type);
+                                    return `
+                                        <div class="flex items-center gap-3 p-2.5 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] hover:border-${style.color}-500/30 transition-colors group">
+                                            <div class="w-8 h-8 rounded-lg bg-${style.color}-500/10 flex items-center justify-center flex-shrink-0">
+                                                <i class="ph ${style.icon} text-${style.color}-400 text-sm"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm text-white truncate group-hover:text-${style.color}-400 transition-colors">${r.title}</p>
+                                                <p class="text-[10px] text-[#555]">${new Date(r.created_at).toLocaleDateString('pl-PL')}</p>
+                                            </div>
+                                            ${r.file_url ? `<i class="ph ph-arrow-square-out text-[#444] group-hover:text-${style.color}-400 transition-colors"></i>` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <!-- Footer -->
+                            ${reports.length > 4 ? `
+                                <div class="mt-3 pt-3 border-t border-[#1a1a1a] flex items-center justify-between">
+                                    <span class="text-[#555] text-xs">+${reports.length - 4} więcej</span>
+                                    <div class="flex items-center gap-1 text-blue-400 text-xs font-medium">
+                                        <span>Zobacz wszystkie</span>
+                                        <i class="ph ph-arrow-right"></i>
                                     </div>
-                                `).join('')}
-                                ${reports.length > 3 ? `<div class="text-[10px] text-[#555]">+${reports.length - 3} więcej...</div>` : ''}
-                            </div>
-                            <div class="mt-auto pt-2 flex items-center gap-1 text-blue-400 text-[10px] font-medium">
-                                <span>Zobacz wszystkie</span>
-                                <i class="ph ph-arrow-right"></i>
-                            </div>
+                                </div>
+                            ` : `
+                                <div class="mt-3 flex items-center gap-1 text-blue-400 text-xs font-medium">
+                                    <span>Zobacz wszystkie</span>
+                                    <i class="ph ph-arrow-right"></i>
+                                </div>
+                            `}
                         </div>
                     </div>
                 `;
