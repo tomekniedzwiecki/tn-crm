@@ -1270,6 +1270,18 @@
                         <button onclick="switchTab('video')" data-tab="video" class="sidebar-btn">
                             <i class="ph ph-video-camera"></i> Video
                         </button>
+                        <button id="video-intro-btn-desktop" onclick="switchTab('video-intro')" data-tab="video-intro" class="sidebar-btn hidden">
+                            <i class="ph ph-play-circle"></i> Wprowadzenie
+                            <i id="video-intro-check-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </button>
+                        <button id="video-profiles-btn-desktop" onclick="switchTab('video-profiles')" data-tab="video-profiles" class="sidebar-btn hidden">
+                            <i class="ph ph-share-network"></i> Profile
+                            <i id="video-profiles-check-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </button>
+                        <button id="video-recordings-btn-desktop" onclick="switchTab('video-recordings')" data-tab="video-recordings" class="sidebar-btn hidden">
+                            <i class="ph ph-upload"></i> Nagrania
+                            <i id="video-recordings-check-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </button>
                     </div>
 
                     <!-- Etap 3 - TakeDrop -->
@@ -1326,6 +1338,18 @@
                             <span class="text-[10px] text-[#444] uppercase tracking-wider px-3 mb-2 block">Etap 2</span>
                             <button onclick="switchTab('video');toggleMobileMenu()" data-tab="video" class="sidebar-btn">
                                 <i class="ph ph-video-camera"></i> Video
+                            </button>
+                            <button id="video-intro-btn-mobile" onclick="switchTab('video-intro');toggleMobileMenu()" data-tab="video-intro" class="sidebar-btn hidden">
+                                <i class="ph ph-play-circle"></i> Wprowadzenie
+                                <i id="video-intro-check-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </button>
+                            <button id="video-profiles-btn-mobile" onclick="switchTab('video-profiles');toggleMobileMenu()" data-tab="video-profiles" class="sidebar-btn hidden">
+                                <i class="ph ph-share-network"></i> Profile
+                                <i id="video-profiles-check-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </button>
+                            <button id="video-recordings-btn-mobile" onclick="switchTab('video-recordings');toggleMobileMenu()" data-tab="video-recordings" class="sidebar-btn hidden">
+                                <i class="ph ph-upload"></i> Nagrania
+                                <i id="video-recordings-check-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </button>
                         </div>
 
@@ -1911,6 +1935,231 @@
                         <div id="video-links-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-xl p-8 text-center">
                             <i class="ph ph-video-camera text-3xl text-[#333] mb-3"></i>
                             <p class="text-[#555] text-[13px]">Brak nagrań. Kliknij "Dodaj link" aby przesłać pierwsze video.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Video - Wprowadzenie (Etap 2 - Krok 1) -->
+            <div id="tab-video-intro" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Etap 2 — Wprowadzenie</h2>
+
+                <!-- Voice Message Section -->
+                <div id="video-intro-voice-section" class="mb-10 hidden">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph ph-microphone text-[#25d366]"></i>
+                        <h3 class="text-[15px] font-medium text-white">Wiadomość od Tomka</h3>
+                    </div>
+                    <div class="whatsapp-voice-player">
+                        <div class="voice-main-row">
+                            <div class="voice-avatar">
+                                <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                            </div>
+                            <button id="intro-voice-play-btn" onclick="toggleIntroVoice()" class="voice-play-btn">
+                                <i id="intro-voice-play-icon" class="ph-fill ph-play text-white text-lg"></i>
+                            </button>
+                            <div class="voice-content">
+                                <div class="voice-waveform-container" id="intro-voice-waveform-container">
+                                    <div class="voice-waveform" id="intro-voice-waveform"></div>
+                                    <div class="voice-scrubber" id="intro-voice-scrubber"></div>
+                                </div>
+                                <div class="voice-time-row">
+                                    <span id="intro-voice-current-time" class="voice-time">0:00</span>
+                                    <span id="intro-voice-duration" class="voice-time">0:00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <audio id="intro-voice-audio" class="hidden" preload="metadata"></audio>
+                </div>
+
+                <!-- Instructions Section -->
+                <div class="mb-10">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph ph-package text-amber-400"></i>
+                        <h3 class="text-[15px] font-medium text-white">Zamów produkt do nagrań</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-amber-400 font-bold">1</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white text-[14px] font-medium mb-1">Wybierz wariant</h4>
+                                    <p class="text-[#666] text-[13px] leading-relaxed">Zdecyduj, który wariant produktu chcesz pokazać w nagraniach.</p>
+                                    <div id="intro-step1-product" class="hidden mt-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg flex items-center gap-3">
+                                        <div id="intro-step1-product-image" class="w-12 h-12 rounded-lg bg-[#080808] flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                            <i class="ph ph-package text-xl text-[#333]"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[10px] text-amber-400/70 uppercase tracking-wider mb-0.5">Twój produkt</p>
+                                            <a id="intro-step1-product-link" href="#" target="_blank" class="text-white text-[13px] font-medium hover:text-amber-400 transition-colors flex items-center gap-1.5">
+                                                <span id="intro-step1-product-name" class="truncate">—</span>
+                                                <i class="ph ph-arrow-square-out text-amber-400 flex-shrink-0"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-amber-400 font-bold">2</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white text-[14px] font-medium mb-1">Złóż zamówienie</h4>
+                                    <p class="text-[#666] text-[13px] leading-relaxed">Zamów produkt bezpośrednio u dostawcy na swój adres.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-amber-400 font-bold">3</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white text-[14px] font-medium mb-1">Poczekaj na dostawę</h4>
+                                    <p class="text-[#666] text-[13px] leading-relaxed">Czas dostawy to zazwyczaj 5-7 dni, jak chcesz szybciej to możesz poszukać tego produktu np. na Allegro.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-amber-400 font-bold">4</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white text-[14px] font-medium mb-1">Nagraj materiały</h4>
+                                    <p class="text-[#666] text-[13px] leading-relaxed">Gdy produkt dotrze, nagraj video według scenariuszy poniżej.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Scenarios Section -->
+                <div id="intro-scenarios-section" class="mb-10 hidden">
+                    <div class="mb-5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-film-script text-purple-400"></i>
+                            <h3 class="text-[15px] font-medium text-white">Scenariusze do nagrania</h3>
+                        </div>
+                        <p class="text-[#666] text-[13px]">Kliknij w scenariusz aby zobaczyć szczegóły. Każdy składa się z 3 prostych kroków.</p>
+                    </div>
+
+                    <div id="intro-scenarios-list" class="space-y-3">
+                        <!-- Scenarios will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Video - Profile (Etap 2 - Krok 2) -->
+            <div id="tab-video-profiles" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Etap 2 — Profile</h2>
+
+                <div class="max-w-xl">
+                    <div class="mb-6">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-share-network text-pink-400"></i>
+                            <h3 class="text-[17px] font-medium text-white">Twoje profile społecznościowe</h3>
+                        </div>
+                        <p class="text-[#666] text-[13px]">Podaj linki do profili, na których będziesz publikować nagrania. Wszystkie 3 platformy są wymagane.</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- TikTok -->
+                        <div>
+                            <label class="flex items-center gap-2 text-[12px] text-[#666] mb-1.5">
+                                <i class="ph ph-tiktok-logo"></i> TikTok <span class="text-red-400">*</span>
+                            </label>
+                            <input type="url" id="profiles-tiktok" placeholder="https://tiktok.com/@..."
+                                class="w-full bg-transparent border border-[#333] rounded-lg px-3 py-2.5 text-[13px] text-white placeholder-[#555] focus:border-pink-500/50 focus:outline-none transition-colors"
+                                onchange="saveProfilesField('tiktok', this.value)">
+                            <p id="profiles-tiktok-error" class="text-red-400 text-[11px] mt-1 hidden">To pole jest wymagane</p>
+                        </div>
+
+                        <!-- YouTube -->
+                        <div>
+                            <label class="flex items-center gap-2 text-[12px] text-[#666] mb-1.5">
+                                <i class="ph ph-youtube-logo"></i> YouTube <span class="text-red-400">*</span>
+                            </label>
+                            <input type="url" id="profiles-youtube" placeholder="https://youtube.com/@..."
+                                class="w-full bg-transparent border border-[#333] rounded-lg px-3 py-2.5 text-[13px] text-white placeholder-[#555] focus:border-red-500/50 focus:outline-none transition-colors"
+                                onchange="saveProfilesField('youtube', this.value)">
+                            <p id="profiles-youtube-error" class="text-red-400 text-[11px] mt-1 hidden">To pole jest wymagane</p>
+                        </div>
+
+                        <!-- Instagram -->
+                        <div>
+                            <label class="flex items-center gap-2 text-[12px] text-[#666] mb-1.5">
+                                <i class="ph ph-instagram-logo"></i> Instagram <span class="text-red-400">*</span>
+                            </label>
+                            <input type="url" id="profiles-instagram" placeholder="https://instagram.com/..."
+                                class="w-full bg-transparent border border-[#333] rounded-lg px-3 py-2.5 text-[13px] text-white placeholder-[#555] focus:border-purple-500/50 focus:outline-none transition-colors"
+                                onchange="saveProfilesField('instagram', this.value)">
+                            <p id="profiles-instagram-error" class="text-red-400 text-[11px] mt-1 hidden">To pole jest wymagane</p>
+                        </div>
+                    </div>
+
+                    <!-- Status messages -->
+                    <div id="profiles-incomplete-warning" class="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg hidden">
+                        <div class="flex items-center gap-2 text-amber-400 text-[13px]">
+                            <i class="ph ph-warning"></i>
+                            <span>Uzupełnij wszystkie 3 profile aby kontynuować</span>
+                        </div>
+                    </div>
+
+                    <div id="profiles-complete-success" class="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hidden">
+                        <div class="flex items-center gap-2 text-emerald-400 text-[13px]">
+                            <i class="ph ph-check-circle"></i>
+                            <span>Profile zapisane. Możesz przejść do nagrywania!</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Video - Nagrania (Etap 2 - Krok 3) -->
+            <div id="tab-video-recordings" class="tab-panel hidden animate-enter">
+                <h2 class="page-title">Etap 2 — Nagrania</h2>
+
+                <div class="max-w-2xl">
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-upload text-emerald-400"></i>
+                                <h3 class="text-[17px] font-medium text-white">Twoje nagrania</h3>
+                            </div>
+                            <button onclick="addRecordingLink()" class="text-[12px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors">
+                                <i class="ph ph-plus"></i> Dodaj nagranie
+                            </button>
+                        </div>
+                        <p class="text-[#666] text-[13px] mt-2">Wklej linki do nagranych video (YouTube, TikTok, Google Drive, itp.)</p>
+                    </div>
+
+                    <div id="recordings-links-list" class="space-y-3">
+                        <!-- Video links will be loaded here -->
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="recordings-links-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-xl p-8 text-center">
+                        <i class="ph ph-video-camera text-3xl text-[#333] mb-3"></i>
+                        <p class="text-[#555] text-[13px]">Brak nagrań. Kliknij "Dodaj nagranie" aby przesłać pierwsze video.</p>
+                    </div>
+
+                    <!-- Info box -->
+                    <div class="mt-8 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <i class="ph ph-info text-cyan-400 text-lg mt-0.5"></i>
+                            <div class="text-[13px] text-[#888]">
+                                <p class="mb-2">Możesz dodawać i edytować nagrania w dowolnym momencie.</p>
+                                <p>Gdy skończysz nagrywać, poczekaj na kontakt od zespołu.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3292,6 +3541,15 @@
                         setTimeout(() => createVideoConfetti(), 300);
                     }
                     break;
+                case 'video-intro':
+                    renderVideoIntro();
+                    break;
+                case 'video-profiles':
+                    renderVideoProfiles();
+                    break;
+                case 'video-recordings':
+                    renderVideoRecordings();
+                    break;
             }
         }
         window.switchTab = switchTab;
@@ -3346,6 +3604,7 @@
                 }
 
                 renderVideoTab();
+                updateVideoNavigation();
             } catch (err) {
                 console.error('Error loading Video data:', err);
             }
@@ -4098,9 +4357,12 @@
                 // Create confetti effect
                 createVideoConfetti();
 
-                // After short delay, show content
+                // Update navigation to show new tabs
+                updateVideoNavigation();
+
+                // After short delay, go to Wprowadzenie tab
                 setTimeout(() => {
-                    renderVideoTab();
+                    switchTab('video-intro');
                 }, 1500);
 
             } catch (err) {
@@ -4148,6 +4410,435 @@
                       .replace(/>/g, '&gt;')
                       .replace(/"/g, '&quot;')
                       .replace(/'/g, '&#039;');
+        }
+
+        // =============================================
+        // VIDEO STEPS NAVIGATION (Etap 2)
+        // =============================================
+
+        function updateVideoNavigation() {
+            const isActive = videoData?.is_active;
+            const isAccepted = videoData?.stage_accepted;
+
+            // Desktop buttons
+            const introDesktop = document.getElementById('video-intro-btn-desktop');
+            const profilesDesktop = document.getElementById('video-profiles-btn-desktop');
+            const recordingsDesktop = document.getElementById('video-recordings-btn-desktop');
+
+            // Mobile buttons
+            const introMobile = document.getElementById('video-intro-btn-mobile');
+            const profilesMobile = document.getElementById('video-profiles-btn-mobile');
+            const recordingsMobile = document.getElementById('video-recordings-btn-mobile');
+
+            // Show/hide buttons based on acceptance
+            const showSteps = isActive && isAccepted;
+
+            [introDesktop, introMobile].forEach(el => el?.classList.toggle('hidden', !showSteps));
+            [profilesDesktop, profilesMobile].forEach(el => el?.classList.toggle('hidden', !showSteps));
+            [recordingsDesktop, recordingsMobile].forEach(el => el?.classList.toggle('hidden', !showSteps));
+
+            // Update checkmarks
+            if (showSteps) {
+                // Wprowadzenie - always checked after acceptance
+                document.getElementById('video-intro-check-desktop')?.classList.remove('hidden');
+                document.getElementById('video-intro-check-mobile')?.classList.remove('hidden');
+
+                // Profile - check if all 3 filled
+                const profiles = videoData?.social_profiles || {};
+                const hasAllProfiles = profiles.tiktok && profiles.youtube && profiles.instagram;
+                document.getElementById('video-profiles-check-desktop')?.classList.toggle('hidden', !hasAllProfiles);
+                document.getElementById('video-profiles-check-mobile')?.classList.toggle('hidden', !hasAllProfiles);
+
+                // Nagrania - check if at least 1 video
+                const hasVideos = (videoData?.video_links?.length || 0) > 0;
+                document.getElementById('video-recordings-check-desktop')?.classList.toggle('hidden', !hasVideos);
+                document.getElementById('video-recordings-check-mobile')?.classList.toggle('hidden', !hasVideos);
+            }
+        }
+        window.updateVideoNavigation = updateVideoNavigation;
+
+        // =============================================
+        // VIDEO INTRO TAB (Krok 1)
+        // =============================================
+
+        function renderVideoIntro() {
+            // Voice message
+            const voiceSection = document.getElementById('video-intro-voice-section');
+            const audio = document.getElementById('intro-voice-audio');
+            const waveform = document.getElementById('intro-voice-waveform');
+
+            if (globalVoiceMessageUrl && voiceSection) {
+                voiceSection.classList.remove('hidden');
+                if (audio) audio.src = globalVoiceMessageUrl;
+
+                // Generate waveform bars
+                if (waveform && waveform.children.length === 0) {
+                    const pattern = [35,50,45,70,55,80,40,90,60,75,45,85,65,55,75,40,60,80,50,70,55,85,45,75,60,90,50,65,75,45,80,55,70,40,85,60,75,50,65,80,45,70,55,85,40,75,60,50,70,55];
+                    for (let i = 0; i < 50; i++) {
+                        const bar = document.createElement('div');
+                        bar.className = 'voice-bar';
+                        bar.style.height = `${pattern[i % pattern.length]}%`;
+                        waveform.appendChild(bar);
+                    }
+                }
+
+                // Setup audio events
+                if (audio) {
+                    audio.addEventListener('loadedmetadata', () => {
+                        const duration = document.getElementById('intro-voice-duration');
+                        if (duration) duration.textContent = formatVoiceTime(audio.duration);
+                    });
+
+                    audio.addEventListener('timeupdate', () => {
+                        const progress = audio.currentTime / audio.duration;
+                        updateIntroVoiceProgress(progress);
+                        const currentEl = document.getElementById('intro-voice-current-time');
+                        if (currentEl) currentEl.textContent = formatVoiceTime(audio.currentTime);
+                    });
+
+                    audio.addEventListener('ended', () => {
+                        const icon = document.getElementById('intro-voice-play-icon');
+                        if (icon) icon.className = 'ph-fill ph-play text-white text-lg';
+                        resetIntroVoiceWaveform();
+                    });
+                }
+
+                // Setup seek
+                const container = document.getElementById('intro-voice-waveform-container');
+                if (container && audio) {
+                    container.onclick = (e) => {
+                        const rect = container.getBoundingClientRect();
+                        const percent = (e.clientX - rect.left) / rect.width;
+                        if (audio.duration) audio.currentTime = percent * audio.duration;
+                    };
+                }
+            }
+
+            // Product info
+            const selectedProduct = products.find(p => p.id === workflow.selected_product_id);
+            const productSection = document.getElementById('intro-step1-product');
+            if (selectedProduct && productSection) {
+                productSection.classList.remove('hidden');
+                const imgEl = document.getElementById('intro-step1-product-image');
+                const nameEl = document.getElementById('intro-step1-product-name');
+                const linkEl = document.getElementById('intro-step1-product-link');
+
+                if (selectedProduct.image_url && imgEl) {
+                    imgEl.innerHTML = `<img src="${selectedProduct.image_url}" class="w-full h-full object-cover" alt="">`;
+                }
+                if (nameEl) nameEl.textContent = selectedProduct.name;
+                if (linkEl && selectedProduct.source_url) linkEl.href = selectedProduct.source_url;
+            }
+
+            // Scenarios
+            renderIntroScenarios();
+        }
+        window.renderVideoIntro = renderVideoIntro;
+
+        function toggleIntroVoice() {
+            const audio = document.getElementById('intro-voice-audio');
+            const icon = document.getElementById('intro-voice-play-icon');
+            if (!audio) return;
+
+            if (audio.paused) {
+                audio.play();
+                if (icon) icon.className = 'ph-fill ph-pause text-white text-lg';
+            } else {
+                audio.pause();
+                if (icon) icon.className = 'ph-fill ph-play text-white text-lg';
+            }
+        }
+        window.toggleIntroVoice = toggleIntroVoice;
+
+        function updateIntroVoiceProgress(progress) {
+            const waveform = document.getElementById('intro-voice-waveform');
+            const scrubber = document.getElementById('intro-voice-scrubber');
+            if (waveform) {
+                const bars = waveform.querySelectorAll('.voice-bar');
+                const playedBars = Math.floor(progress * bars.length);
+                bars.forEach((bar, i) => bar.classList.toggle('played', i < playedBars));
+            }
+            if (scrubber) scrubber.style.left = `${progress * 100}%`;
+        }
+
+        function resetIntroVoiceWaveform() {
+            const waveform = document.getElementById('intro-voice-waveform');
+            const scrubber = document.getElementById('intro-voice-scrubber');
+            if (waveform) {
+                waveform.querySelectorAll('.voice-bar').forEach(bar => bar.classList.remove('played'));
+            }
+            if (scrubber) scrubber.style.left = '0%';
+        }
+
+        function renderIntroScenarios() {
+            const section = document.getElementById('intro-scenarios-section');
+            const list = document.getElementById('intro-scenarios-list');
+            const scenarios = videoData?.video_scenarios || [];
+
+            if (!section || !list) return;
+
+            if (scenarios.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+
+            // Split by showFace
+            const withFace = scenarios.filter(s => s.showFace === true);
+            const withoutFace = scenarios.filter(s => s.showFace === false);
+            const ungrouped = scenarios.filter(s => s.showFace === undefined);
+
+            let html = '';
+
+            // With face
+            if (withFace.length > 0) {
+                html += `<div class="mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-user text-cyan-400"></i>
+                        <span class="text-[13px] text-[#888] font-medium">Z twarzą</span>
+                        <span class="text-[11px] text-[#555]">(${withFace.length} scenariuszy)</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${withFace.map((s, i) => renderIntroScenarioCard(s, `face-${i}`)).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // Without face
+            if (withoutFace.length > 0) {
+                html += `<div class="mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-hand text-emerald-400"></i>
+                        <span class="text-[13px] text-[#888] font-medium">Bez twarzy</span>
+                        <span class="text-[11px] text-[#555]">(${withoutFace.length} scenariuszy)</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${withoutFace.map((s, i) => renderIntroScenarioCard(s, `noface-${i}`)).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // Ungrouped
+            if (ungrouped.length > 0 && withFace.length === 0 && withoutFace.length === 0) {
+                html += `<div class="space-y-2">
+                    ${ungrouped.map((s, i) => renderIntroScenarioCard(s, `s-${i}`)).join('')}
+                </div>`;
+            }
+
+            list.innerHTML = html;
+        }
+
+        function renderIntroScenarioCard(scenario, id) {
+            const typeColors = {
+                'POV': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                'Rutyna': 'bg-green-500/20 text-green-400 border-green-500/30',
+                'Reakcja': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                'Efekt WOW': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+                'Porównanie': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                'ASMR': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+                'Unboxing': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                'Tutorial': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+                'Estetyka': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+                'Storytime': 'bg-violet-500/20 text-violet-400 border-violet-500/30',
+                'GRWM': 'bg-teal-500/20 text-teal-400 border-teal-500/30'
+            };
+            const typeClass = typeColors[scenario.type] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+
+            return `
+                <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden">
+                    <button onclick="toggleIntroScenario('${id}')" class="w-full p-4 flex items-center justify-between text-left hover:bg-[#111] transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[11px] px-2 py-0.5 rounded border ${typeClass}">${scenario.type || 'Video'}</span>
+                            ${scenario.duration ? `<span class="text-[11px] text-[#555]">${scenario.duration}</span>` : ''}
+                            <span class="text-[13px] text-white font-medium">${escapeHtml(scenario.title)}</span>
+                        </div>
+                        <i id="intro-scenario-arrow-${id}" class="ph ph-caret-down text-[#555] transition-transform"></i>
+                    </button>
+                    <div id="intro-scenario-content-${id}" class="hidden px-4 pb-4 pt-0 border-t border-[#1a1a1a]">
+                        ${scenario.hook ? `<div class="mt-3"><p class="text-[11px] text-emerald-400 uppercase tracking-wider mb-1">Start</p><p class="text-[13px] text-[#888]">${escapeHtml(scenario.hook)}</p></div>` : ''}
+                        ${scenario.action ? `<div class="mt-3"><p class="text-[11px] text-amber-400 uppercase tracking-wider mb-1">Akcja</p><p class="text-[13px] text-[#888]">${escapeHtml(scenario.action)}</p></div>` : ''}
+                        ${scenario.ending ? `<div class="mt-3"><p class="text-[11px] text-rose-400 uppercase tracking-wider mb-1">Koniec</p><p class="text-[13px] text-[#888]">${escapeHtml(scenario.ending)}</p></div>` : ''}
+                        ${scenario.tip ? `<div class="mt-4 p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg"><p class="text-[12px] text-cyan-400/80"><i class="ph ph-lightbulb mr-1"></i> ${escapeHtml(scenario.tip)}</p></div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleIntroScenario(id) {
+            const content = document.getElementById(`intro-scenario-content-${id}`);
+            const arrow = document.getElementById(`intro-scenario-arrow-${id}`);
+            if (content) content.classList.toggle('hidden');
+            if (arrow) arrow.classList.toggle('rotate-180');
+        }
+        window.toggleIntroScenario = toggleIntroScenario;
+
+        // =============================================
+        // VIDEO PROFILES TAB (Krok 2)
+        // =============================================
+
+        function renderVideoProfiles() {
+            const profiles = videoData?.social_profiles || {};
+
+            // Fill inputs
+            const tiktokInput = document.getElementById('profiles-tiktok');
+            const youtubeInput = document.getElementById('profiles-youtube');
+            const instagramInput = document.getElementById('profiles-instagram');
+
+            if (tiktokInput) tiktokInput.value = profiles.tiktok || '';
+            if (youtubeInput) youtubeInput.value = profiles.youtube || '';
+            if (instagramInput) instagramInput.value = profiles.instagram || '';
+
+            // Update status
+            updateProfilesStatus();
+        }
+        window.renderVideoProfiles = renderVideoProfiles;
+
+        async function saveProfilesField(platform, value) {
+            const profiles = videoData?.social_profiles || {};
+            profiles[platform] = value.trim();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ social_profiles: profiles })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.social_profiles = profiles;
+                updateProfilesStatus();
+                updateVideoNavigation();
+                showToast('Zapisano', 'success');
+            } catch (err) {
+                console.error('Error saving profile:', err);
+                showToast('Błąd zapisu', 'error');
+            }
+        }
+        window.saveProfilesField = saveProfilesField;
+
+        function updateProfilesStatus() {
+            const profiles = videoData?.social_profiles || {};
+            const hasAll = profiles.tiktok && profiles.youtube && profiles.instagram;
+            const hasAny = profiles.tiktok || profiles.youtube || profiles.instagram;
+
+            const warning = document.getElementById('profiles-incomplete-warning');
+            const success = document.getElementById('profiles-complete-success');
+
+            if (warning) warning.classList.toggle('hidden', !hasAny || hasAll);
+            if (success) success.classList.toggle('hidden', !hasAll);
+        }
+
+        // =============================================
+        // VIDEO RECORDINGS TAB (Krok 3)
+        // =============================================
+
+        function renderVideoRecordings() {
+            const list = document.getElementById('recordings-links-list');
+            const empty = document.getElementById('recordings-links-empty');
+            const links = videoData?.video_links || [];
+
+            if (!list) return;
+
+            if (links.length === 0) {
+                list.innerHTML = '';
+                if (empty) empty.classList.remove('hidden');
+                return;
+            }
+
+            if (empty) empty.classList.add('hidden');
+
+            list.innerHTML = links.map((link, i) => `
+                <div class="flex items-center gap-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
+                    <i class="ph ph-video text-emerald-400"></i>
+                    <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Nazwa nagrania"
+                        class="flex-1 bg-transparent border-none text-[13px] text-white placeholder-[#555] focus:outline-none"
+                        onchange="updateRecordingLink(${i}, 'title', this.value)">
+                    <input type="url" value="${escapeHtml(link.url || '')}" placeholder="https://..."
+                        class="flex-1 bg-transparent border-none text-[13px] text-white placeholder-[#555] focus:outline-none"
+                        onchange="updateRecordingLink(${i}, 'url', this.value)">
+                    ${link.url ? `<a href="${escapeHtml(link.url)}" target="_blank" class="text-cyan-400 hover:text-cyan-300"><i class="ph ph-arrow-square-out"></i></a>` : ''}
+                    <button onclick="removeRecordingLink(${i})" class="text-[#555] hover:text-red-400 transition-colors">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+        window.renderVideoRecordings = renderVideoRecordings;
+
+        async function addRecordingLink() {
+            const links = videoData?.video_links || [];
+            links.push({ title: '', url: '', uploaded_at: new Date().toISOString() });
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ video_links: links })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.video_links = links;
+                renderVideoRecordings();
+                updateVideoNavigation();
+            } catch (err) {
+                console.error('Error adding link:', err);
+                showToast('Błąd', 'error');
+            }
+        }
+        window.addRecordingLink = addRecordingLink;
+
+        async function updateRecordingLink(index, field, value) {
+            const links = videoData?.video_links || [];
+            if (links[index]) {
+                links[index][field] = value.trim();
+
+                try {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .update({ video_links: links })
+                        .eq('workflow_id', workflow.id);
+
+                    if (error) throw error;
+
+                    videoData.video_links = links;
+                    showToast('Zapisano', 'success');
+                } catch (err) {
+                    console.error('Error updating link:', err);
+                    showToast('Błąd', 'error');
+                }
+            }
+        }
+        window.updateRecordingLink = updateRecordingLink;
+
+        async function removeRecordingLink(index) {
+            const links = videoData?.video_links || [];
+            links.splice(index, 1);
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ video_links: links })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.video_links = links;
+                renderVideoRecordings();
+                updateVideoNavigation();
+                showToast('Usunięto', 'success');
+            } catch (err) {
+                console.error('Error removing link:', err);
+                showToast('Błąd', 'error');
+            }
+        }
+        window.removeRecordingLink = removeRecordingLink;
+
+        function formatVoiceTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         // TakeDrop functions
