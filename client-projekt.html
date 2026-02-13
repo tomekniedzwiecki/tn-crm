@@ -1096,7 +1096,7 @@
                     </div>
                 </div>
 
-                <!-- ═══ ROW 2: Produkty + Branding ═══ -->
+                <!-- ═══ ROW 2-3: Produkty + Raporty (left) + Branding (right, spans 2 rows) ═══ -->
 
                 <!-- BOX: Produkty (4 cols - square) -->
                 <div id="dash-box-produkty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all aspect-square" style="grid-column: span 4;" onclick="switchToDashTab('produkty')">
@@ -1105,19 +1105,21 @@
                     </div>
                 </div>
 
-                <!-- BOX: Branding (8 cols) -->
-                <div id="dash-box-branding" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 8;" onclick="switchToDashTab('branding')">
+                <!-- BOX: Branding (8 cols, spans 2 rows) -->
+                <div id="dash-box-branding" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 8; grid-row: span 2;" onclick="switchToDashTab('branding')">
                     <div id="dash-branding-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
                 </div>
 
-                <!-- ═══ ROW 3: Strona (full width, Raporty are now in Produkty box) ═══ -->
-
-                <!-- BOX: Raporty (HIDDEN - kept for JS compatibility) -->
-                <div id="dash-box-raporty" class="hidden">
-                    <div id="dash-raporty-content"></div>
+                <!-- BOX: Raporty (4 cols - square, under Produkty) -->
+                <div id="dash-box-raporty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all aspect-square" style="grid-column: span 4;" onclick="switchToDashTab('raporty')">
+                    <div id="dash-raporty-content" class="h-full">
+                        <!-- Rendered by JS -->
+                    </div>
                 </div>
+
+                <!-- ═══ ROW 4: Strona (full width) ═══ -->
 
                 <!-- BOX: Strona (full 12 cols) -->
                 <div id="dash-box-strona" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 12; min-height: 180px;" onclick="switchToDashTab('strona')">
@@ -2341,30 +2343,14 @@
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-60', 'bento-action');
 
-                // Helper to get report icon
-                const getReportIconInline = (title) => {
-                    const t = title.toLowerCase();
-                    if (t.includes('video') || t.includes('wideo')) return 'ph-video-camera';
-                    if (t.includes('prezentacja')) return 'ph-presentation-chart';
-                    if (t.includes('infografik')) return 'ph-chart-bar';
-                    if (t.includes('analiz')) return 'ph-chart-line-up';
-                    if (t.includes('pdf')) return 'ph-file-pdf';
-                    return 'ph-file-text';
-                };
-                const reportsPreview = reports.slice(0, 4);
-
                 produktyContent.innerHTML = `
                     <div class="h-full relative">
-                        <!-- Zdjęcie produktu - tło -->
                         ${productImg ? `
-                            <img src="${productImg}" class="absolute top-0 left-0 w-full h-1/2 object-cover object-top" alt="">
+                            <img src="${productImg}" class="absolute inset-0 w-full h-full object-cover" alt="">
                         ` : ''}
-                        <!-- Gradient -->
-                        <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-black/70 via-transparent to-black"></div>
-
-                        <!-- Content -->
-                        <div class="relative h-full p-4 flex flex-col">
-                            <!-- Header -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-transparent"></div>
+                        <div class="relative h-full p-5 flex flex-col">
                             <div class="flex items-center justify-between">
                                 <span class="text-white/90 text-[11px] uppercase tracking-wider font-medium">Produkt</span>
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/30 backdrop-blur-sm border border-emerald-500/40 text-emerald-300 text-[11px] font-medium">
@@ -2372,31 +2358,8 @@
                                     Wybrano
                                 </span>
                             </div>
-
-                            <!-- Product name - middle -->
-                            <div class="mt-auto mb-4" style="margin-top: 35%;">
-                                <h3 class="text-white text-base font-medium leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
-                            </div>
-
-                            <!-- Raporty - bottom -->
                             <div class="mt-auto">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[#666] text-[10px] uppercase tracking-wider font-medium">Raporty</span>
-                                    ${reports.length > 0 ? `<span class="text-emerald-400 text-[10px]">${reports.length}</span>` : ''}
-                                </div>
-                                ${reports.length > 0 ? `
-                                    <div class="grid grid-cols-2 gap-1.5">
-                                        ${reportsPreview.map(r => `
-                                            <a href="${r.file_url || '#'}" target="_blank" onclick="event.stopPropagation()"
-                                               class="rounded bg-[#111]/80 backdrop-blur-sm border border-[#333] p-2 flex items-center gap-2 hover:border-[#444] hover:bg-[#1a1a1a] transition-all group">
-                                                <i class="ph ${getReportIconInline(r.title)} text-[#888] text-xs group-hover:text-white"></i>
-                                                <span class="text-[10px] text-[#ccc] truncate group-hover:text-white">${r.title}</span>
-                                            </a>
-                                        `).join('')}
-                                    </div>
-                                ` : `
-                                    <div class="text-[#444] text-xs">W przygotowaniu</div>
-                                `}
+                                <h3 class="text-white text-lg font-medium leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
                             </div>
                         </div>
                     </div>
