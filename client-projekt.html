@@ -2437,9 +2437,13 @@
                 produktyBox.classList.remove('opacity-60');
                 produktyBox.classList.add('bento-action');
 
+                // Get product thumbnails (max 4)
+                const productThumbnails = products.slice(0, 4);
+                const remainingCount = products.length - 4;
+
                 produktyContent.innerHTML = `
                     <div class="h-full p-4 flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center justify-between mb-2">
                             <span class="text-[#888] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[11px]">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
@@ -2447,11 +2451,28 @@
                             </span>
                         </div>
 
+                        <!-- Product thumbnails grid -->
+                        <div class="flex gap-1.5 mb-2 justify-center">
+                            ${productThumbnails.map(p => `
+                                <div class="w-11 h-11 rounded-lg bg-[#111] border border-[#222] overflow-hidden flex-shrink-0">
+                                    ${p.image_url
+                                        ? `<img src="${p.image_url}" class="w-full h-full object-cover" alt="">`
+                                        : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-lg text-[#444]"></i></div>`
+                                    }
+                                </div>
+                            `).join('')}
+                            ${remainingCount > 0 ? `
+                                <div class="w-11 h-11 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center flex-shrink-0">
+                                    <span class="text-[#666] text-xs font-medium">+${remainingCount}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+
                         <!-- Voice message player -->
                         <div class="flex-1 flex flex-col items-center justify-center">
                             ${globalProductsVoiceUrl ? renderVoicePlayer('dash-produkty-voice', globalProductsVoiceUrl, { compact: true }) : `
-                                <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center mb-3">
-                                    <i class="ph ph-package text-2xl text-[#444]"></i>
+                                <div class="w-12 h-12 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
+                                    <i class="ph ph-package text-xl text-[#444]"></i>
                                 </div>
                             `}
                         </div>
