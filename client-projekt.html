@@ -2311,29 +2311,48 @@
                     </div>
                 `;
             } else if (!workflow.selected_product_id) {
-                produktyBox.onclick = () => switchToDashTab('produkty');
-                produktyBox.style.cursor = 'pointer';
+                produktyBox.onclick = null; // Don't navigate on box click
+                produktyBox.style.cursor = 'default';
                 produktyBox.classList.remove('opacity-60');
                 produktyBox.classList.add('bento-action');
 
                 produktyContent.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between">
+                    <div class="h-full p-4 flex flex-col">
+                        <div class="flex items-center justify-between mb-3">
                             <span class="text-[#888] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[11px]">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                                 Wybierz
                             </span>
                         </div>
-                        <div class="flex-1 flex items-center justify-center">
-                            <div class="w-16 h-16 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
-                                <i class="ph ph-package text-3xl text-[#444]"></i>
-                            </div>
+
+                        <!-- Voice message player -->
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            ${globalProductsVoiceUrl ? `
+                                <div class="w-full max-w-[200px] mb-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <img src="https://tomekniedzwiecki.pl/wp-content/uploads/2025/01/cropped-fav.png"
+                                             class="w-10 h-10 rounded-full object-cover border-2 border-[#333]" alt="Tomek">
+                                        <div>
+                                            <p class="text-white text-sm font-medium">Tomek</p>
+                                            <p class="text-[#666] text-[10px]">Wiadomość głosowa</p>
+                                        </div>
+                                    </div>
+                                    <audio id="produkty-voice-audio" src="${globalProductsVoiceUrl}" class="w-full h-8" style="filter: invert(1) hue-rotate(180deg);" controls></audio>
+                                </div>
+                            ` : `
+                                <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center mb-3">
+                                    <i class="ph ph-package text-2xl text-[#444]"></i>
+                                </div>
+                            `}
                         </div>
-                        <div>
-                            <h3 class="text-white text-lg font-medium mb-1">Wybierz produkt</h3>
-                            <p class="text-[#666] text-sm">${products.length} produktów do wyboru</p>
-                        </div>
+
+                        <!-- CTA Button -->
+                        <button onclick="switchToDashTab('produkty')"
+                                class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-package"></i>
+                            Wybierz produkt
+                        </button>
                     </div>
                 `;
             } else {
