@@ -2229,8 +2229,11 @@
 
             // === PROGRESS HERO ===
             // Calculate progress based on actual completion states, NOT tasks/harmonogram
+            // "Budowa sklepu starter" - nie pokazuj Umowy
+            const isStarterPackage = workflow.offer_name?.toLowerCase().includes('starter');
+
             const statusItems = [
-                { label: 'Umowa', done: workflow.contract_seller_signed_url || workflow.contract_status === 'signed', icon: 'ph-file-text', color: 'emerald' },
+                ...(!isStarterPackage ? [{ label: 'Umowa', done: workflow.contract_seller_signed_url || workflow.contract_status === 'signed', icon: 'ph-file-text', color: 'emerald' }] : []),
                 { label: 'Produkt', done: !!workflow.selected_product_id, icon: 'ph-package', color: 'amber' },
                 { label: 'Raporty', done: reports.length > 0, icon: 'ph-chart-line-up', color: 'blue' },
                 { label: 'Branding', done: !!workflow.branding_shared_at, icon: 'ph-paint-brush', color: 'violet' },
