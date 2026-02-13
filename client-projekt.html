@@ -1942,6 +1942,51 @@
 
             <!-- TAB: Video - Wprowadzenie (Etap 2 - Krok 1) -->
             <div id="tab-video-intro" class="tab-panel hidden animate-enter">
+                <!-- Celebration Modal (shown when stage not accepted) -->
+                <div id="video-intro-celebration" class="hidden fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+                    <div class="text-center px-4 max-w-lg">
+                        <!-- Animated Icon -->
+                        <div class="w-24 h-24 mb-8 mx-auto relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-full animate-pulse"></div>
+                            <div class="absolute inset-2 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                                <i class="ph-fill ph-video-camera text-4xl text-white"></i>
+                            </div>
+                        </div>
+
+                        <!-- Title -->
+                        <h1 id="video-intro-celebration-title" class="text-3xl md:text-4xl font-bold text-white mb-4">
+                            Gratulacje!
+                        </h1>
+
+                        <!-- Description -->
+                        <p class="text-[#888] text-base md:text-lg mb-8 leading-relaxed">
+                            Twoja marka jest gotowa. Teraz przechodzimy do następnego etapu.
+                        </p>
+
+                        <!-- Features -->
+                        <div class="flex flex-wrap justify-center gap-3 mb-10">
+                            <div class="flex items-center gap-2 bg-[#111] border border-[#222] rounded-full px-4 py-2">
+                                <i class="ph ph-microphone text-cyan-400"></i>
+                                <span class="text-[13px] text-[#888]">Wiadomość głosowa</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-[#111] border border-[#222] rounded-full px-4 py-2">
+                                <i class="ph ph-film-script text-cyan-400"></i>
+                                <span class="text-[13px] text-[#888]">Scenariusze video</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-[#111] border border-[#222] rounded-full px-4 py-2">
+                                <i class="ph ph-upload text-cyan-400"></i>
+                                <span class="text-[13px] text-[#888]">Upload nagrań</span>
+                            </div>
+                        </div>
+
+                        <!-- Accept Button -->
+                        <button onclick="acceptVideoStageFromIntro()" class="group bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-semibold px-8 py-3.5 rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 flex items-center gap-2 mx-auto">
+                            <span>Zaczynamy</span>
+                            <i class="ph ph-arrow-right text-lg group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <h2 class="page-title">Etap 2 — Wprowadzenie</h2>
 
                 <!-- Voice Message Section -->
@@ -3594,9 +3639,9 @@
                     if (videoDesktop) videoDesktop.classList.remove('hidden');
                     if (videoMobile) videoMobile.classList.remove('hidden');
 
-                    // Handle #video hash from email link - switch to video tab after it's visible
-                    if (window.location.hash === '#video') {
-                        switchTab('video');
+                    // Handle #video or #video-intro hash from email link
+                    if (window.location.hash === '#video' || window.location.hash === '#video-intro') {
+                        switchTab('video-intro');
                     }
                 } else {
                     if (videoDesktop) videoDesktop.classList.add('hidden');
@@ -4372,6 +4417,42 @@
         }
         window.acceptVideoStage = acceptVideoStage;
 
+        async function acceptVideoStageFromIntro() {
+            if (!videoData) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_video')
+                    .update({
+                        stage_accepted: true,
+                        stage_accepted_at: new Date().toISOString()
+                    })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                videoData.stage_accepted = true;
+                videoData.stage_accepted_at = new Date().toISOString();
+
+                // Create confetti effect
+                createVideoConfetti();
+
+                // Hide celebration modal after short delay
+                setTimeout(() => {
+                    const modal = document.getElementById('video-intro-celebration');
+                    if (modal) modal.classList.add('hidden');
+
+                    // Update navigation to show checkmarks etc.
+                    updateVideoNavigation();
+                }, 1500);
+
+            } catch (err) {
+                console.error('Error accepting video stage:', err);
+                showToast('Błąd akceptacji etapu', 'error');
+            }
+        }
+        window.acceptVideoStageFromIntro = acceptVideoStageFromIntro;
+
         function createVideoConfetti() {
             const colors = ['#06b6d4', '#22d3ee', '#67e8f9', '#a855f7', '#c084fc', '#10b981'];
 
@@ -4420,6 +4501,10 @@
             const isActive = videoData?.is_active;
             const isAccepted = videoData?.stage_accepted;
 
+            // Hide Video button (celebration is now in modal on Wprowadzenie)
+            document.getElementById('video-stage-desktop')?.classList.add('hidden');
+            document.getElementById('video-stage-mobile')?.classList.add('hidden');
+
             // Desktop buttons
             const introDesktop = document.getElementById('video-intro-btn-desktop');
             const profilesDesktop = document.getElementById('video-profiles-btn-desktop');
@@ -4430,15 +4515,27 @@
             const profilesMobile = document.getElementById('video-profiles-btn-mobile');
             const recordingsMobile = document.getElementById('video-recordings-btn-mobile');
 
-            // Show/hide buttons based on acceptance
-            const showSteps = isActive && isAccepted;
+            // Wprowadzenie - visible when Video is active (even before acceptance)
+            [introDesktop, introMobile].forEach(el => el?.classList.toggle('hidden', !isActive));
 
-            [introDesktop, introMobile].forEach(el => el?.classList.toggle('hidden', !showSteps));
-            [profilesDesktop, profilesMobile].forEach(el => el?.classList.toggle('hidden', !showSteps));
-            [recordingsDesktop, recordingsMobile].forEach(el => el?.classList.toggle('hidden', !showSteps));
+            // Profile & Nagrania - only after acceptance
+            const showOtherSteps = isActive && isAccepted;
+            [profilesDesktop, profilesMobile].forEach(el => el?.classList.toggle('hidden', !showOtherSteps));
+            [recordingsDesktop, recordingsMobile].forEach(el => el?.classList.toggle('hidden', !showOtherSteps));
+
+            // Celebration modal - show if active but not accepted
+            const celebrationModal = document.getElementById('video-intro-celebration');
+            if (celebrationModal) {
+                celebrationModal.classList.toggle('hidden', !isActive || isAccepted);
+                // Set client name in celebration title
+                const celebrationTitle = document.getElementById('video-intro-celebration-title');
+                if (celebrationTitle && workflow?.client_name && !isAccepted) {
+                    celebrationTitle.textContent = `Gratulacje, ${workflow.client_name.split(' ')[0]}!`;
+                }
+            }
 
             // Update checkmarks
-            if (showSteps) {
+            if (showOtherSteps) {
                 // Wprowadzenie - always checked after acceptance
                 document.getElementById('video-intro-check-desktop')?.classList.remove('hidden');
                 document.getElementById('video-intro-check-mobile')?.classList.remove('hidden');
