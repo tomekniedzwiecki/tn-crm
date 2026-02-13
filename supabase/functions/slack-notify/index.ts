@@ -408,6 +408,7 @@ function formatZapisyLeadMessage(data: {
 function formatOfferViewedMessage(data: {
   lead_name?: string
   lead_email: string
+  lead_phone?: string
   lead_company?: string
   lead_id?: string
   offer_name: string
@@ -430,6 +431,10 @@ function formatOfferViewedMessage(data: {
 
   if (data.lead_email !== displayName) {
     fields.push({ type: 'mrkdwn', text: `*Email:*\n${leadLink(data.lead_email, data.lead_email, data.lead_id)}` })
+  }
+
+  if (data.lead_phone) {
+    fields.push({ type: 'mrkdwn', text: `*Telefon:*\n${data.lead_phone}` })
   }
 
   const blocks: any[] = [
