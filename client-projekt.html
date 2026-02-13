@@ -572,39 +572,10 @@
 
         /* Action required state - VERY PROMINENT */
         .bento-action {
-            border: 2px solid rgba(251, 191, 36, 0.5) !important;
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.02) 50%, transparent 100%);
-            box-shadow: 0 0 30px rgba(251, 191, 36, 0.15), inset 0 0 30px rgba(251, 191, 36, 0.03);
-            animation: action-pulse 2s ease-in-out infinite;
-        }
-        @keyframes action-pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.15), inset 0 0 20px rgba(251, 191, 36, 0.02); }
-            50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.25), inset 0 0 40px rgba(251, 191, 36, 0.05); }
-        }
-        .bento-action::before {
-            content: '';
-            position: absolute;
-            top: -1px;
-            right: -1px;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 0 28px 28px 0;
-            border-color: transparent #fbbf24 transparent transparent;
-            border-radius: 0 14px 0 0;
-        }
-        .bento-action::after {
-            content: '!';
-            position: absolute;
-            top: 3px;
-            right: 6px;
-            color: black;
-            font-size: 10px;
-            font-weight: 700;
+            border-color: rgba(251, 191, 36, 0.4) !important;
         }
         .bento-action:hover {
-            border-color: rgba(251, 191, 36, 0.7) !important;
-            transform: translateY(-4px) scale(1.02);
+            border-color: rgba(251, 191, 36, 0.6) !important;
         }
 
         /* Ready/success state */
@@ -2308,58 +2279,47 @@
             if (!workflow.products_shared_at) {
                 produktyBox.onclick = null;
                 produktyBox.style.cursor = 'default';
-                produktyBox.classList.add('opacity-50');
+                produktyBox.classList.add('opacity-60');
                 produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
-                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
-                            <i class="ph ph-package text-xl text-[#444]"></i>
+                    <div class="h-full p-6 flex flex-col">
+                        <span class="text-[#666] text-xs uppercase tracking-wide">Produkt</span>
+                        <div class="flex-1 flex items-center justify-center">
+                            <span class="text-[#444] text-sm">W przygotowaniu</span>
                         </div>
-                        <p class="text-[#666] text-sm font-medium">Produkt</p>
-                        <p class="text-[#444] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else if (!workflow.selected_product_id) {
                 produktyBox.onclick = () => switchToDashTab('produkty');
                 produktyBox.style.cursor = 'pointer';
-                produktyBox.classList.remove('opacity-50');
+                produktyBox.classList.remove('opacity-60');
                 produktyBox.classList.add('bento-action');
 
-                const productPreviews = products.filter(p => p.image_url).slice(0, 3);
+                const productPreviews = products.filter(p => p.image_url).slice(0, 4);
 
                 produktyContent.innerHTML = `
-                    <div class="h-full relative">
-                        <div class="absolute inset-0 bg-gradient-to-b from-amber-950/20 to-transparent"></div>
-                        <div class="relative p-6 h-full flex flex-col">
-                            <div class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 w-fit mb-5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                <span class="text-amber-500 text-[11px] font-medium">Wymaga wyboru</span>
-                            </div>
-
-                            <h3 class="text-white text-lg font-semibold mb-1">Wybierz produkt</h3>
-                            <p class="text-[#888] text-sm">${products.length} ${products.length === 1 ? 'opcja' : 'opcje'} do wyboru</p>
-
-                            ${productPreviews.length > 0 ? `
-                                <div class="flex gap-2 mt-5">
-                                    ${productPreviews.map(p => `
-                                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-[#111] border border-[#222]">
-                                            <img src="${p.image_url}" class="w-full h-full object-cover" alt="">
-                                        </div>
-                                    `).join('')}
-                                    ${products.length > 3 ? `
-                                        <div class="w-12 h-12 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center">
-                                            <span class="text-[#666] text-xs">+${products.length - 3}</span>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            ` : ''}
-
-                            <div class="mt-auto pt-4">
-                                <span class="inline-flex items-center gap-2 text-amber-500 text-sm font-medium group-hover:gap-3 transition-all">
-                                    Wybierz <i class="ph ph-arrow-right"></i>
-                                </span>
-                            </div>
+                    <div class="h-full p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Produkt</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                Wymaga wyboru
+                            </span>
                         </div>
+                        <div class="flex-1">
+                            <h3 class="text-white text-xl font-medium mb-2">Wybierz produkt</h3>
+                            <p class="text-[#666] text-sm">${products.length} do wyboru</p>
+                        </div>
+                        ${productPreviews.length > 0 ? `
+                            <div class="flex gap-1 mt-4">
+                                ${productPreviews.map(p => `
+                                    <div class="w-10 h-10 rounded bg-[#111] overflow-hidden">
+                                        <img src="${p.image_url}" class="w-full h-full object-cover" alt="">
+                                    </div>
+                                `).join('')}
+                                ${products.length > 4 ? `<span class="w-10 h-10 rounded bg-[#111] flex items-center justify-center text-[#666] text-xs">+${products.length - 4}</span>` : ''}
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             } else {
@@ -2367,26 +2327,23 @@
                 const productImg = selectedProduct?.image_url;
                 produktyBox.onclick = () => switchToDashTab('produkty');
                 produktyBox.style.cursor = 'pointer';
-                produktyBox.classList.remove('opacity-50');
-                produktyBox.classList.remove('bento-action');
+                produktyBox.classList.remove('opacity-60', 'bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full relative">
+                    <div class="h-full flex flex-col">
                         ${productImg ? `
-                            <div class="absolute inset-0">
+                            <div class="h-32 bg-[#111]">
                                 <img src="${productImg}" class="w-full h-full object-cover" alt="">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30"></div>
                             </div>
                         ` : ''}
-                        <div class="relative p-6 h-full flex flex-col">
-                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
-                                <i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i>
-                                <span class="text-emerald-500 text-[11px] font-medium">Wybrano</span>
+                        <div class="p-6 flex-1 flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-[#666] text-xs uppercase tracking-wide">Produkt</span>
+                                <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                    <i class="ph-fill ph-check-circle"></i>
+                                    Wybrano
+                                </span>
                             </div>
-
-                            <div class="mt-auto">
-                                <p class="text-white/60 text-[11px] uppercase tracking-wider mb-1">Produkt</p>
-                                <h3 class="text-white text-lg font-semibold leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
-                            </div>
+                            <h3 class="text-white text-lg font-medium">${selectedProduct?.name || 'Wybrany produkt'}</h3>
                         </div>
                     </div>
                 `;
@@ -2403,21 +2360,20 @@
             if (!workflow.branding_shared_at) {
                 brandingBox.onclick = null;
                 brandingBox.style.cursor = 'default';
-                brandingBox.classList.add('opacity-50');
+                brandingBox.classList.add('opacity-60');
                 brandingBox.classList.remove('bento-action');
                 brandingContent.innerHTML = `
-                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
-                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
-                            <i class="ph ph-paint-brush text-xl text-[#444]"></i>
+                    <div class="h-full p-6 flex flex-col">
+                        <span class="text-[#666] text-xs uppercase tracking-wide">Branding</span>
+                        <div class="flex-1 flex items-center justify-center">
+                            <span class="text-[#444] text-sm">W przygotowaniu</span>
                         </div>
-                        <p class="text-[#666] text-sm font-medium">Branding</p>
-                        <p class="text-[#444] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
                 brandingBox.onclick = () => switchToDashTab('branding');
                 brandingBox.style.cursor = 'pointer';
-                brandingBox.classList.remove('opacity-50');
+                brandingBox.classList.remove('opacity-60');
 
                 const mainLogo = logos.find(l => { const m = parseBrandNotes(l.notes); return m.variant === 'main'; }) || logos[0];
                 const logoUrl = mainLogo?.file_url;
@@ -2425,75 +2381,48 @@
                 const mockupPreviews = mockups.slice(0, 4);
 
                 brandingContent.innerHTML = `
-                    <div class="h-full relative">
-                        <div class="absolute inset-0 bg-gradient-to-br from-fuchsia-950/30 via-transparent to-transparent"></div>
-                        <div class="relative p-6 h-full flex flex-col">
-                            <!-- Header row -->
-                            <div class="flex items-start justify-between mb-6">
-                                <div class="flex items-center gap-4">
-                                    ${logoUrl
-                                        ? `<div class="w-14 h-14 rounded-xl bg-white p-2 flex items-center justify-center">
-                                               <img src="${logoUrl}" class="max-w-full max-h-full object-contain" alt="">
-                                           </div>`
-                                        : `<div class="w-14 h-14 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
-                                               <i class="ph ph-paint-brush text-[#666] text-xl"></i>
-                                           </div>`
-                                    }
-                                    <div>
-                                        <h3 class="text-white text-lg font-semibold">${brandName || workflow.offer_name || 'Marka'}</h3>
-                                        <div class="flex items-center gap-1.5 mt-1">
-                                            <i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i>
-                                            <span class="text-[#888] text-xs">Branding gotowy</span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div class="h-full p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Branding</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Gotowy
+                            </span>
+                        </div>
 
-                                <!-- Colors -->
+                        <div class="flex items-start gap-5 mb-6">
+                            ${logoUrl
+                                ? `<div class="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 flex-shrink-0">
+                                       <img src="${logoUrl}" class="max-w-full max-h-full object-contain" alt="">
+                                   </div>`
+                                : ''
+                            }
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-white text-lg font-medium truncate">${brandName || workflow.offer_name || 'Marka'}</h3>
                                 ${colors.length > 0 ? `
-                                    <div class="flex gap-1">
-                                        ${colors.slice(0, 5).map(c => `
-                                            <div class="w-6 h-6 rounded-md border border-white/5" style="background: ${c.value}"></div>
-                                        `).join('')}
+                                    <div class="flex gap-1 mt-2">
+                                        ${colors.slice(0, 6).map(c => `<div class="w-5 h-5 rounded" style="background: ${c.value}"></div>`).join('')}
                                     </div>
                                 ` : ''}
                             </div>
+                        </div>
 
-                            <!-- Mockups grid -->
-                            ${mockupPreviews.length > 0 ? `
-                                <div class="flex-1">
-                                    <p class="text-[#666] text-[11px] uppercase tracking-wider mb-3">Mockupy</p>
-                                    <div class="grid grid-cols-4 gap-2">
-                                        ${mockupPreviews.map(m => `
-                                            <div class="aspect-square rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#1a1a1a]">
-                                                <img src="${m.file_url}" class="w-full h-full object-cover" alt="">
-                                            </div>
-                                        `).join('')}
-                                        ${mockups.length > 4 ? `
-                                            <div class="aspect-square rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center">
-                                                <span class="text-[#555] text-sm">+${mockups.length - 4}</span>
-                                            </div>
-                                        ` : ''}
-                                    </div>
+                        ${mockupPreviews.length > 0 ? `
+                            <div class="flex-1">
+                                <span class="text-[#666] text-xs uppercase tracking-wide mb-3 block">Mockupy</span>
+                                <div class="grid grid-cols-4 gap-2">
+                                    ${mockupPreviews.map(m => `
+                                        <div class="aspect-square rounded bg-[#111] overflow-hidden">
+                                            <img src="${m.file_url}" class="w-full h-full object-cover" alt="">
+                                        </div>
+                                    `).join('')}
                                 </div>
-                            ` : `
-                                <div class="flex-1 flex items-center">
-                                    <div class="flex gap-3">
-                                        ${logos.slice(0, 3).map(l => `
-                                            <div class="w-16 h-16 rounded-lg bg-white/5 border border-[#222] p-2">
-                                                <img src="${l.file_url}" class="w-full h-full object-contain" alt="">
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            `}
-
-                            <!-- Footer -->
-                            <div class="mt-4 pt-4 border-t border-[#1a1a1a] flex items-center justify-between">
-                                <span class="text-[#666] text-xs">${logos.length} logo • ${colors.length} kolorów • ${mockups.length} mockupów</span>
-                                <span class="text-white text-xs font-medium flex items-center gap-1">
-                                    Zobacz wszystko <i class="ph ph-arrow-right"></i>
-                                </span>
+                                ${mockups.length > 4 ? `<span class="text-[#666] text-xs mt-2 block">+${mockups.length - 4} więcej</span>` : ''}
                             </div>
+                        ` : ''}
+
+                        <div class="mt-auto pt-4 border-t border-[#222] text-[#666] text-xs">
+                            ${logos.length} logo • ${colors.length} kolorów${mockups.length > 0 ? ` • ${mockups.length} mockupów` : ''}
                         </div>
                     </div>
                 `;
@@ -2506,15 +2435,14 @@
             if (!workflow.sales_page_url && !workflow.sales_page_shared_at) {
                 stronaBox.onclick = null;
                 stronaBox.style.cursor = 'default';
-                stronaBox.classList.add('opacity-50');
+                stronaBox.classList.add('opacity-60');
                 stronaBox.classList.remove('bento-action');
                 stronaContent.innerHTML = `
-                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
-                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
-                            <i class="ph ph-globe text-xl text-[#444]"></i>
+                    <div class="h-full p-6 flex flex-col">
+                        <span class="text-[#666] text-xs uppercase tracking-wide">Strona</span>
+                        <div class="flex-1 flex items-center justify-center">
+                            <span class="text-[#444] text-sm">W przygotowaniu</span>
                         </div>
-                        <p class="text-[#666] text-sm font-medium">Strona sprzedażowa</p>
-                        <p class="text-[#444] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
@@ -2524,47 +2452,35 @@
 
                 stronaBox.onclick = () => switchToDashTab('strona');
                 stronaBox.style.cursor = 'pointer';
-                stronaBox.classList.remove('opacity-50');
+                stronaBox.classList.remove('opacity-60');
 
                 stronaContent.innerHTML = `
-                    <div class="h-full relative">
-                        <div class="absolute inset-0 bg-gradient-to-br from-sky-950/30 via-transparent to-transparent"></div>
-                        <div class="relative p-6 h-full flex flex-col">
-                            <!-- Header -->
-                            <div class="flex items-center justify-between mb-5">
-                                <h3 class="text-white text-base font-semibold">Strona sprzedażowa</h3>
-                                <div class="flex items-center gap-1.5 px-2 py-1 rounded-full ${isLive ? 'bg-emerald-500/10' : 'bg-sky-500/10'}">
-                                    ${isLive ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>` : ''}
-                                    <span class="${isLive ? 'text-emerald-500' : 'text-sky-500'} text-[11px] font-medium">${isLive ? 'Live' : 'Gotowa'}</span>
-                                </div>
-                            </div>
+                    <div class="h-full p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Strona</span>
+                            <span class="flex items-center gap-1 ${isLive ? 'text-emerald-500' : 'text-cyan-500'} text-xs">
+                                ${isLive ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>' : '<i class="ph-fill ph-check-circle"></i>'}
+                                ${isLive ? 'Live' : 'Gotowa'}
+                            </span>
+                        </div>
 
-                            <!-- Browser mockup -->
-                            <div class="flex-1 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
-                                <div class="flex items-center gap-2 px-3 py-2 bg-[#111] border-b border-[#1a1a1a]">
-                                    <div class="flex gap-1.5">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#ff5f57]"></span>
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#febc2e]"></span>
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#28c840]"></span>
-                                    </div>
-                                    <div class="flex-1 px-2 py-1 rounded bg-[#0a0a0a] border border-[#222]">
-                                        <span class="text-[11px] text-[#666] font-mono truncate block">${shortUrl}</span>
-                                    </div>
+                        <div class="flex-1 rounded-lg bg-[#0a0a0a] border border-[#222] overflow-hidden">
+                            <div class="flex items-center gap-2 px-3 py-2 border-b border-[#222]">
+                                <div class="flex gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-[#333]"></span>
+                                    <span class="w-2 h-2 rounded-full bg-[#333]"></span>
+                                    <span class="w-2 h-2 rounded-full bg-[#333]"></span>
                                 </div>
-                                <div class="h-full flex items-center justify-center p-4">
-                                    <div class="text-center">
-                                        <i class="ph ph-browser text-2xl text-[#333] mb-2"></i>
-                                        <p class="text-[#444] text-xs">Kliknij, aby zobaczyć</p>
-                                    </div>
-                                </div>
+                                <span class="text-[10px] text-[#555] font-mono truncate">${shortUrl}</span>
                             </div>
+                            <div class="p-4 flex items-center justify-center">
+                                <i class="ph ph-globe text-2xl text-[#333]"></i>
+                            </div>
+                        </div>
 
-                            <!-- Footer -->
-                            <div class="mt-4 flex items-center justify-end">
-                                <span class="text-white text-xs font-medium flex items-center gap-1">
-                                    Otwórz <i class="ph ph-arrow-square-out"></i>
-                                </span>
-                            </div>
+                        <div class="mt-4 pt-4 border-t border-[#222] flex items-center justify-between text-[#666] text-xs">
+                            <span>Strona sprzedażowa</span>
+                            <span class="text-white flex items-center gap-1">Otwórz <i class="ph ph-arrow-square-out"></i></span>
                         </div>
                     </div>
                 `;
@@ -2577,56 +2493,51 @@
             if (reports.length === 0) {
                 raportyBox.onclick = null;
                 raportyBox.style.cursor = 'default';
-                raportyBox.classList.add('opacity-50');
+                raportyBox.classList.add('opacity-60');
                 raportyContent.innerHTML = `
-                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
-                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
-                            <i class="ph ph-chart-line-up text-xl text-[#444]"></i>
+                    <div class="h-full p-6 flex flex-col">
+                        <span class="text-[#666] text-xs uppercase tracking-wide">Raporty</span>
+                        <div class="flex-1 flex items-center justify-center">
+                            <span class="text-[#444] text-sm">Brak raportów</span>
                         </div>
-                        <p class="text-[#666] text-sm font-medium">Raporty</p>
-                        <p class="text-[#444] text-xs mt-1">Brak raportów</p>
                     </div>
                 `;
             } else {
                 raportyBox.onclick = () => switchToDashTab('raporty');
                 raportyBox.style.cursor = 'pointer';
-                raportyBox.classList.remove('opacity-50');
+                raportyBox.classList.remove('opacity-60');
 
                 const recentReports = reports.slice(0, 3);
 
                 raportyContent.innerHTML = `
-                    <div class="h-full relative">
-                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-transparent to-transparent"></div>
-                        <div class="relative p-6 h-full flex flex-col">
-                            <!-- Header -->
-                            <div class="flex items-center justify-between mb-5">
-                                <h3 class="text-white text-base font-semibold">Raporty</h3>
-                                <span class="text-[#888] text-xs">${reports.length} ${reports.length === 1 ? 'raport' : 'raportów'}</span>
-                            </div>
-
-                            <!-- Reports list -->
-                            <div class="flex-1 space-y-2">
-                                ${recentReports.map(r => `
-                                    <div class="flex items-center gap-3 p-3 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a]">
-                                        <div class="w-8 h-8 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center flex-shrink-0">
-                                            <i class="ph ph-file-text text-[#666] text-sm"></i>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm text-white truncate">${r.title}</p>
-                                            <p class="text-[11px] text-[#555]">${new Date(r.created_at).toLocaleDateString('pl-PL')}</p>
-                                        </div>
-                                        ${r.file_url ? `<i class="ph ph-arrow-square-out text-[#555]"></i>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-
-                            <!-- Footer -->
-                            <div class="mt-4 pt-4 border-t border-[#1a1a1a] flex items-center justify-end">
-                                <span class="text-white text-xs font-medium flex items-center gap-1">
-                                    Zobacz wszystkie <i class="ph ph-arrow-right"></i>
-                                </span>
-                            </div>
+                    <div class="h-full p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Raporty</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                ${reports.length} ${reports.length === 1 ? 'raport' : 'raportów'}
+                            </span>
                         </div>
+
+                        <div class="flex-1 space-y-2">
+                            ${recentReports.map(r => `
+                                <div class="flex items-center gap-3 p-3 rounded-lg bg-[#0a0a0a] border border-[#222]">
+                                    <div class="w-8 h-8 rounded bg-[#111] flex items-center justify-center flex-shrink-0">
+                                        <i class="ph ph-file-text text-[#555] text-sm"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm text-white truncate">${r.title}</p>
+                                        <p class="text-[11px] text-[#555]">${new Date(r.created_at).toLocaleDateString('pl-PL')}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        ${reports.length > 3 ? `
+                            <div class="mt-4 pt-4 border-t border-[#222] text-[#666] text-xs">
+                                +${reports.length - 3} więcej
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }
@@ -2641,66 +2552,51 @@
                 videoBox.style.cursor = 'pointer';
 
                 const videoLinks = videoData.video_links || [];
-                const needsAction = !videoData.stage_accepted || videoLinks.length === 0;
 
                 if (!videoData.stage_accepted) {
                     videoBox.classList.add('bento-action');
                     videoContent.innerHTML = `
-                        <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
-                            <div class="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-3xl opacity-30 bg-amber-400"></div>
-                            <div class="relative p-5 h-full flex flex-col">
-                                <!-- Action badge -->
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-3">
-                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                                    <span class="text-amber-300 text-[11px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
-                                </div>
-                                <p class="text-white text-[16px] font-bold mb-1">Etap Video</p>
-                                <p class="text-amber-200/70 text-[12px]">Kliknij aby rozpocząć</p>
-                                <div class="mt-auto flex items-center gap-1 text-amber-300 text-[11px] font-semibold">
-                                    <span>Rozpocznij</span>
-                                    <i class="ph ph-arrow-right"></i>
-                                </div>
+                        <div class="h-full p-5 flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-[#666] text-xs uppercase tracking-wide">Video</span>
+                                <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Wymaga akcji
+                                </span>
                             </div>
+                            <h3 class="text-white text-lg font-medium mb-1">Etap Video</h3>
+                            <p class="text-[#666] text-sm">Kliknij aby rozpocząć</p>
                         </div>
                     `;
                 } else if (videoLinks.length === 0) {
                     videoBox.classList.add('bento-action');
                     videoContent.innerHTML = `
-                        <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
-                            <div class="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-3xl opacity-30 bg-amber-400"></div>
-                            <div class="relative p-5 h-full flex flex-col">
-                                <!-- Action badge -->
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-3">
-                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                                    <span class="text-amber-300 text-[11px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
-                                </div>
-                                <p class="text-white text-[16px] font-bold mb-1">Prześlij nagrania</p>
-                                <p class="text-amber-200/70 text-[12px]">Nagraj video według scenariuszy</p>
-                                <div class="mt-auto flex items-center gap-1 text-amber-300 text-[11px] font-semibold">
-                                    <i class="ph ph-upload"></i>
-                                    <span>Prześlij</span>
-                                </div>
+                        <div class="h-full p-5 flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-[#666] text-xs uppercase tracking-wide">Video</span>
+                                <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Wymaga akcji
+                                </span>
                             </div>
+                            <h3 class="text-white text-lg font-medium mb-1">Prześlij nagrania</h3>
+                            <p class="text-[#666] text-sm">Nagraj video według scenariuszy</p>
                         </div>
                     `;
                 } else {
                     videoBox.classList.remove('bento-action');
                     videoContent.innerHTML = `
-                        <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
-                            <div class="relative p-5 h-full flex flex-col">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                                        <i class="ph ph-check text-emerald-400 text-sm"></i>
-                                    </div>
-                                    <span class="text-emerald-400 text-[11px] font-medium">Przesłano</span>
-                                </div>
-                                <div class="mt-auto">
-                                    <span class="text-[28px] font-bold text-white">${videoLinks.length}</span>
-                                    <span class="text-[11px] text-[#666] ml-1">${videoLinks.length === 1 ? 'nagranie' : 'nagrań'}</span>
-                                </div>
+                        <div class="h-full p-5 flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-[#666] text-xs uppercase tracking-wide">Video</span>
+                                <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                    <i class="ph-fill ph-check-circle"></i>
+                                    Przesłano
+                                </span>
+                            </div>
+                            <div class="mt-auto">
+                                <span class="text-3xl font-medium text-white">${videoLinks.length}</span>
+                                <span class="text-[#666] text-sm ml-1">${videoLinks.length === 1 ? 'nagranie' : 'nagrań'}</span>
                             </div>
                         </div>
                     `;
@@ -2722,38 +2618,35 @@
                 if (!takeDropData.account_created) {
                     takedropBox.classList.add('bento-action');
                     takedropContent.innerHTML = `
-                        <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
-                            <div class="relative p-4 h-full flex flex-col">
-                                <!-- Action badge -->
-                                <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-2">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                                    <span class="text-amber-300 text-[9px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
-                                </div>
-                                <p class="text-white text-[13px] font-bold">TakeDrop</p>
-                                <p class="text-amber-300 text-[10px] mt-auto flex items-center gap-1 font-medium">
-                                    <i class="ph ph-storefront"></i>
-                                    <span>Załóż konto</span>
-                                    <i class="ph ph-arrow-right"></i>
-                                </p>
+                        <div class="h-full p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wide">TakeDrop</span>
+                                <span class="flex items-center gap-1 text-amber-500 text-[10px]">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Akcja
+                                </span>
                             </div>
+                            <p class="text-white text-sm font-medium">Załóż konto</p>
+                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
+                                <i class="ph ph-storefront"></i> Dropshipping
+                            </p>
                         </div>
                     `;
                 } else {
                     takedropBox.classList.remove('bento-action');
                     takedropContent.innerHTML = `
-                        <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
-                            <div class="relative p-4 h-full flex flex-col">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <div class="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center">
-                                        <i class="ph ph-check text-emerald-400 text-[10px]"></i>
-                                    </div>
-                                    <span class="text-emerald-400 text-[10px] font-medium">Gotowe</span>
-                                </div>
-                                <p class="text-white text-[13px] font-medium">TakeDrop</p>
-                                <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1"><i class="ph ph-storefront"></i> Konto aktywne</p>
+                        <div class="h-full p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wide">TakeDrop</span>
+                                <span class="flex items-center gap-1 text-emerald-500 text-[10px]">
+                                    <i class="ph-fill ph-check-circle"></i>
+                                    Gotowe
+                                </span>
                             </div>
+                            <p class="text-white text-sm font-medium">Konto aktywne</p>
+                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
+                                <i class="ph ph-storefront"></i> Dropshipping
+                            </p>
                         </div>
                     `;
                 }
