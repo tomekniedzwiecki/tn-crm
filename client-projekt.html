@@ -570,23 +570,41 @@
             .bento-xs { grid-column: span 1; }
         }
 
-        /* Action required state */
+        /* Action required state - VERY PROMINENT */
         .bento-action {
-            border-color: rgba(251, 191, 36, 0.3);
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.03) 0%, transparent 50%);
+            border: 2px solid rgba(251, 191, 36, 0.5) !important;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.02) 50%, transparent 100%);
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.15), inset 0 0 30px rgba(251, 191, 36, 0.03);
+            animation: action-pulse 2s ease-in-out infinite;
+        }
+        @keyframes action-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.15), inset 0 0 20px rgba(251, 191, 36, 0.02); }
+            50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.25), inset 0 0 40px rgba(251, 191, 36, 0.05); }
         }
         .bento-action::before {
             content: '';
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 8px;
-            height: 8px;
-            background: #fbbf24;
-            border-radius: 0 16px 0 8px;
+            top: -1px;
+            right: -1px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 28px 28px 0;
+            border-color: transparent #fbbf24 transparent transparent;
+            border-radius: 0 14px 0 0;
+        }
+        .bento-action::after {
+            content: '!';
+            position: absolute;
+            top: 3px;
+            right: 6px;
+            color: black;
+            font-size: 10px;
+            font-weight: 700;
         }
         .bento-action:hover {
-            border-color: rgba(251, 191, 36, 0.5);
+            border-color: rgba(251, 191, 36, 0.7) !important;
+            transform: translateY(-4px) scale(1.02);
         }
 
         /* Ready/success state */
@@ -2219,9 +2237,16 @@
                 : status.text;
 
             // === PROGRESS HERO ===
-            const totalTasks = tasks.length;
-            const completedTasks = tasks.filter(t => t.completed).length;
-            const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            // Calculate progress based on actual completion states, NOT tasks/harmonogram
+            const statusItems = [
+                { label: 'Umowa', done: workflow.contract_seller_signed_url || workflow.contract_status === 'signed', icon: 'ph-file-text', color: 'emerald' },
+                { label: 'Produkt', done: !!workflow.selected_product_id, icon: 'ph-package', color: 'amber' },
+                { label: 'Branding', done: !!workflow.branding_shared_at, icon: 'ph-paint-brush', color: 'violet' },
+                { label: 'Strona', done: !!workflow.sales_page_url || !!workflow.sales_page_shared_at, icon: 'ph-globe', color: 'cyan' }
+            ];
+
+            const completedSteps = statusItems.filter(s => s.done).length;
+            const progressPercent = Math.round((completedSteps / statusItems.length) * 100);
 
             document.getElementById('dash-progress-percent').textContent = progressPercent;
             document.getElementById('dash-progress-bar').style.width = progressPercent + '%';
@@ -2234,13 +2259,6 @@
             }
 
             // Status pills - what's done and what's pending
-            const statusItems = [
-                { label: 'Umowa', done: workflow.contract_seller_signed_url || workflow.contract_status === 'signed', icon: 'ph-file-text', color: 'emerald' },
-                { label: 'Produkt', done: !!workflow.selected_product_id, icon: 'ph-package', color: 'amber' },
-                { label: 'Branding', done: !!workflow.branding_shared_at, icon: 'ph-paint-brush', color: 'violet' },
-                { label: 'Strona', done: !!workflow.sales_page_url || !!workflow.sales_page_shared_at, icon: 'ph-globe', color: 'cyan' }
-            ];
-
             document.getElementById('dash-status-pills').innerHTML = statusItems.map(item => {
                 if (item.done) {
                     return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-${item.color}-500/10 border border-${item.color}-500/20 text-${item.color}-400 text-[11px] font-medium">
@@ -2284,6 +2302,7 @@
                 produktyBox.onclick = null;
                 produktyBox.style.cursor = 'default';
                 produktyBox.classList.add('opacity-50');
+                produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
                     <div class="h-full p-5 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
                         <div class="w-12 h-12 rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
@@ -2297,22 +2316,25 @@
                 produktyBox.onclick = () => switchToDashTab('produkty');
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-50');
+                produktyBox.classList.add('bento-action');
                 produktyContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent"></div>
-                        <div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-30 bg-amber-400"></div>
                         <div class="relative p-5 h-full flex flex-col">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                                    <i class="ph ph-hand-pointing text-amber-400"></i>
-                                </div>
-                                <span class="text-amber-400 text-[10px] font-semibold uppercase tracking-wider">Wymaga akcji</span>
+                            <!-- Action badge -->
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-4">
+                                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                <span class="text-amber-300 text-[11px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
                             </div>
-                            <p class="text-white text-[15px] font-semibold mb-1">Wybierz produkt</p>
-                            <p class="text-[#666] text-[12px] mb-3">${products.length} propozycji czeka na Ciebie</p>
-                            <div class="mt-auto flex items-center gap-1 text-amber-400 text-[11px] font-medium">
-                                <span>Zobacz produkty</span>
-                                <i class="ph ph-arrow-right"></i>
+
+                            <p class="text-white text-[18px] font-bold mb-2">Wybierz produkt</p>
+                            <p class="text-amber-200/70 text-[13px] mb-4">${products.length} ${products.length === 1 ? 'propozycja czeka' : 'propozycje czekają'} na Twój wybór</p>
+
+                            <div class="mt-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 w-fit group">
+                                <i class="ph ph-cursor-click text-amber-400"></i>
+                                <span class="text-amber-300 text-[12px] font-semibold">Wybierz teraz</span>
+                                <i class="ph ph-arrow-right text-amber-400 group-hover:translate-x-1 transition-transform"></i>
                             </div>
                         </div>
                     </div>
@@ -2322,23 +2344,29 @@
                 produktyBox.onclick = () => switchToDashTab('produkty');
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-50');
+                produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
                         ${selectedProduct?.main_image_url
-                            ? `<div class="absolute inset-0 opacity-20" style="background: url('${selectedProduct.main_image_url}') center/cover"></div>
-                               <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40"></div>`
-                            : `<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent"></div>`
+                            ? `<div class="absolute inset-0" style="background: url('${selectedProduct.main_image_url}') center/cover"></div>
+                               <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30"></div>`
+                            : `<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>`
                         }
                         <div class="relative p-5 h-full flex flex-col">
                             <div class="flex items-center gap-2 mb-auto">
-                                <div class="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center">
-                                    <i class="ph ph-check text-emerald-400 text-xs"></i>
+                                <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                                    <i class="ph ph-check text-emerald-400 text-sm"></i>
                                 </div>
-                                <span class="text-emerald-400 text-[10px] font-medium">Wybrano</span>
+                                <span class="text-emerald-400 text-[11px] font-medium">Wybrano</span>
                             </div>
-                            <div>
-                                <p class="text-[10px] text-[#666] uppercase tracking-wider mb-1">Produkt</p>
-                                <p class="text-white text-[14px] font-semibold leading-snug">${selectedProduct?.name || 'Wybrany produkt'}</p>
+                            ${selectedProduct?.main_image_url ? `
+                                <div class="absolute top-4 right-4 w-16 h-16 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                                    <img src="${selectedProduct.main_image_url}" class="w-full h-full object-cover" alt="">
+                                </div>
+                            ` : ''}
+                            <div class="mt-auto">
+                                <p class="text-[10px] text-[#888] uppercase tracking-wider mb-1">Produkt</p>
+                                <p class="text-white text-[15px] font-semibold leading-snug">${selectedProduct?.name || 'Wybrany produkt'}</p>
                             </div>
                         </div>
                     </div>
@@ -2356,6 +2384,7 @@
                 brandingBox.onclick = null;
                 brandingBox.style.cursor = 'default';
                 brandingBox.classList.add('opacity-50');
+                brandingBox.classList.remove('bento-action');
                 brandingContent.innerHTML = `
                     <div class="h-full p-5 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
                         <div class="w-12 h-12 rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
@@ -2408,31 +2437,58 @@
             const stronaContent = document.getElementById('dash-strona-content');
             const stronaBox = document.getElementById('dash-box-strona');
 
-            if (!workflow.sales_page_shared_at || !workflow.sales_page_url) {
+            if (!workflow.sales_page_url && !workflow.sales_page_shared_at) {
                 stronaBox.onclick = null;
                 stronaBox.style.cursor = 'default';
                 stronaBox.classList.add('opacity-50');
+                stronaBox.classList.remove('bento-action');
                 stronaContent.innerHTML = `
                     <div class="h-full p-4 flex flex-col justify-center items-center text-center bg-[#0a0a0a]">
-                        <i class="ph ph-globe text-xl text-[#333] mb-2"></i>
-                        <p class="text-[#444] text-[10px]">W przygotowaniu</p>
+                        <div class="w-12 h-12 rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
+                            <i class="ph ph-globe text-xl text-[#333]"></i>
+                        </div>
+                        <p class="text-[#444] text-[11px] font-medium">Strona sprzedażowa</p>
+                        <p class="text-[#333] text-[10px] mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
                 const isLive = workflow.sales_page_status === 'live';
+                const pageUrl = workflow.sales_page_url || '';
+                const shortUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
                 stronaBox.onclick = () => switchToDashTab('strona');
                 stronaBox.style.cursor = 'pointer';
                 stronaBox.classList.remove('opacity-50');
+
                 stronaContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br ${isLive ? 'from-emerald-500/10' : 'from-amber-500/10'} to-transparent"></div>
-                        <div class="relative p-4 h-full flex flex-col">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}"></span>
-                                <span class="text-[10px] font-semibold ${isLive ? 'text-emerald-400' : 'text-amber-400'}">${isLive ? 'LIVE' : 'DRAFT'}</span>
+                        <!-- Gradient background -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-transparent"></div>
+                        <div class="absolute bottom-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20 bg-cyan-400"></div>
+
+                        <div class="relative p-5 h-full flex flex-col">
+                            <!-- Status header -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-md ${isLive ? 'bg-emerald-500/15' : 'bg-cyan-500/15'} flex items-center justify-center">
+                                        <i class="ph ${isLive ? 'ph-check' : 'ph-globe'} ${isLive ? 'text-emerald-400' : 'text-cyan-400'} text-xs"></i>
+                                    </div>
+                                    <span class="${isLive ? 'text-emerald-400' : 'text-cyan-400'} text-[10px] font-medium">${isLive ? 'Live' : 'Gotowa'}</span>
+                                </div>
+                                ${isLive ? '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>' : ''}
                             </div>
-                            <p class="text-white text-[12px] font-medium mb-1">Strona sprzedażowa</p>
-                            <p class="text-[#555] text-[9px] font-mono truncate mt-auto">${workflow.sales_page_url.replace(/^https?:\/\//, '')}</p>
+
+                            <!-- Title -->
+                            <p class="text-white text-[15px] font-semibold mb-2">Strona sprzedażowa</p>
+
+                            <!-- URL preview -->
+                            <div class="mt-auto">
+                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#111] border border-[#1a1a1a] group-hover:border-cyan-500/30 transition-colors">
+                                    <i class="ph ph-link text-[#555] text-xs"></i>
+                                    <span class="text-[10px] text-[#888] font-mono truncate flex-1">${shortUrl || 'Link dostępny'}</span>
+                                    <i class="ph ph-arrow-square-out text-cyan-400 text-xs"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2456,19 +2512,46 @@
                 raportyBox.onclick = () => switchToDashTab('raporty');
                 raportyBox.style.cursor = 'pointer';
                 raportyBox.classList.remove('opacity-50');
+
+                // Get report type icon
+                const getReportIcon = (type) => {
+                    switch(type) {
+                        case 'analytics': return 'ph-chart-bar';
+                        case 'performance': return 'ph-chart-line-up';
+                        case 'sales': return 'ph-currency-circle-dollar';
+                        default: return 'ph-file-text';
+                    }
+                };
+
+                // Show up to 3 recent reports
+                const recentReports = reports.slice(0, 3);
+
                 raportyContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent"></div>
                         <div class="relative p-4 h-full flex flex-col">
-                            <div class="flex items-center gap-2 mb-2">
-                                <div class="w-5 h-5 rounded bg-blue-500/15 flex items-center justify-center">
-                                    <i class="ph ph-chart-line-up text-blue-400 text-xs"></i>
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                                        <i class="ph ph-chart-line-up text-blue-400 text-sm"></i>
+                                    </div>
+                                    <span class="text-[11px] text-white font-medium">Raporty</span>
                                 </div>
-                                <span class="text-[10px] text-[#666] uppercase tracking-wider">Raporty</span>
+                                <span class="text-[10px] text-blue-400 font-semibold">${reports.length}</span>
                             </div>
-                            <div class="mt-auto">
-                                <span class="text-[28px] font-bold text-white leading-none">${reports.length}</span>
-                                <span class="text-[11px] text-[#666] ml-1">${reports.length === 1 ? 'raport' : 'raportów'}</span>
+                            <div class="flex-1 space-y-2 overflow-hidden">
+                                ${recentReports.map(r => `
+                                    <div class="flex items-center gap-2 group">
+                                        <i class="ph ${getReportIcon(r.type)} text-[10px] text-[#555] group-hover:text-blue-400 transition-colors"></i>
+                                        <span class="text-[11px] text-[#888] group-hover:text-white truncate flex-1 transition-colors">${r.title}</span>
+                                        ${r.file_url ? `<i class="ph ph-arrow-square-out text-[10px] text-[#444] group-hover:text-blue-400 transition-colors"></i>` : ''}
+                                    </div>
+                                `).join('')}
+                                ${reports.length > 3 ? `<div class="text-[10px] text-[#555]">+${reports.length - 3} więcej...</div>` : ''}
+                            </div>
+                            <div class="mt-auto pt-2 flex items-center gap-1 text-blue-400 text-[10px] font-medium">
+                                <span>Zobacz wszystkie</span>
+                                <i class="ph ph-arrow-right"></i>
                             </div>
                         </div>
                     </div>
@@ -2488,18 +2571,20 @@
                 const needsAction = !videoData.stage_accepted || videoLinks.length === 0;
 
                 if (!videoData.stage_accepted) {
+                    videoBox.classList.add('bento-action');
                     videoContent.innerHTML = `
                         <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-blue-500/10 to-transparent"></div>
-                            <div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-3xl opacity-30 bg-amber-400"></div>
                             <div class="relative p-5 h-full flex flex-col">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <i class="ph ph-confetti text-cyan-400"></i>
-                                    <span class="text-cyan-400 text-[10px] font-semibold uppercase tracking-wider">Nowy etap!</span>
+                                <!-- Action badge -->
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-3">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span class="text-amber-300 text-[11px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
                                 </div>
-                                <p class="text-white text-[15px] font-semibold mb-1">Etap Video</p>
-                                <p class="text-[#666] text-[12px]">Kliknij aby rozpocząć</p>
-                                <div class="mt-auto flex items-center gap-1 text-cyan-400 text-[11px] font-medium">
+                                <p class="text-white text-[16px] font-bold mb-1">Etap Video</p>
+                                <p class="text-amber-200/70 text-[12px]">Kliknij aby rozpocząć</p>
+                                <div class="mt-auto flex items-center gap-1 text-amber-300 text-[11px] font-semibold">
                                     <span>Rozpocznij</span>
                                     <i class="ph ph-arrow-right"></i>
                                 </div>
@@ -2507,35 +2592,40 @@
                         </div>
                     `;
                 } else if (videoLinks.length === 0) {
+                    videoBox.classList.add('bento-action');
                     videoContent.innerHTML = `
                         <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent"></div>
-                            <div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-3xl opacity-30 bg-amber-400"></div>
                             <div class="relative p-5 h-full flex flex-col">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                                        <i class="ph ph-video-camera text-amber-400"></i>
-                                    </div>
-                                    <span class="text-amber-400 text-[10px] font-semibold uppercase tracking-wider">Czeka na Ciebie</span>
+                                <!-- Action badge -->
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-3">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span class="text-amber-300 text-[11px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
                                 </div>
-                                <p class="text-white text-[14px] font-semibold mb-1">Prześlij nagrania</p>
-                                <p class="text-[#666] text-[11px]">Nagraj video według scenariuszy</p>
+                                <p class="text-white text-[16px] font-bold mb-1">Prześlij nagrania</p>
+                                <p class="text-amber-200/70 text-[12px]">Nagraj video według scenariuszy</p>
+                                <div class="mt-auto flex items-center gap-1 text-amber-300 text-[11px] font-semibold">
+                                    <i class="ph ph-upload"></i>
+                                    <span>Prześlij</span>
+                                </div>
                             </div>
                         </div>
                     `;
                 } else {
+                    videoBox.classList.remove('bento-action');
                     videoContent.innerHTML = `
                         <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
                             <div class="relative p-5 h-full flex flex-col">
                                 <div class="flex items-center gap-2 mb-3">
-                                    <div class="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center">
-                                        <i class="ph ph-check text-emerald-400 text-xs"></i>
+                                    <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                                        <i class="ph ph-check text-emerald-400 text-sm"></i>
                                     </div>
-                                    <span class="text-emerald-400 text-[10px] font-medium">Przesłano</span>
+                                    <span class="text-emerald-400 text-[11px] font-medium">Przesłano</span>
                                 </div>
                                 <div class="mt-auto">
-                                    <span class="text-[24px] font-bold text-white">${videoLinks.length}</span>
+                                    <span class="text-[28px] font-bold text-white">${videoLinks.length}</span>
                                     <span class="text-[11px] text-[#666] ml-1">${videoLinks.length === 1 ? 'nagranie' : 'nagrań'}</span>
                                 </div>
                             </div>
@@ -2544,6 +2634,7 @@
                 }
             } else {
                 videoBox.classList.add('hidden');
+                videoBox.classList.remove('bento-action');
             }
 
             // === TAKEDROP BOX ===
@@ -2556,37 +2647,46 @@
                 takedropBox.style.cursor = 'pointer';
 
                 if (!takeDropData.account_created) {
+                    takedropBox.classList.add('bento-action');
                     takedropContent.innerHTML = `
                         <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-transparent"></div>
-                            <div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-rose-400 animate-pulse"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent"></div>
                             <div class="relative p-4 h-full flex flex-col">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="ph ph-storefront text-rose-400"></i>
-                                    <span class="text-rose-400 text-[9px] font-semibold uppercase tracking-wider">Etap 3</span>
+                                <!-- Action badge -->
+                                <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 w-fit mb-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span class="text-amber-300 text-[9px] font-bold uppercase tracking-wider">Czeka na Ciebie</span>
                                 </div>
-                                <p class="text-white text-[12px] font-medium">TakeDrop</p>
-                                <p class="text-amber-400 text-[10px] mt-auto">Załóż konto →</p>
+                                <p class="text-white text-[13px] font-bold">TakeDrop</p>
+                                <p class="text-amber-300 text-[10px] mt-auto flex items-center gap-1 font-medium">
+                                    <i class="ph ph-storefront"></i>
+                                    <span>Załóż konto</span>
+                                    <i class="ph ph-arrow-right"></i>
+                                </p>
                             </div>
                         </div>
                     `;
                 } else {
+                    takedropBox.classList.remove('bento-action');
                     takedropContent.innerHTML = `
                         <div class="h-full relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
                             <div class="relative p-4 h-full flex flex-col">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <i class="ph ph-storefront text-[#666]"></i>
-                                    <span class="text-[9px] text-[#666] uppercase tracking-wider">Etap 3</span>
+                                    <div class="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center">
+                                        <i class="ph ph-check text-emerald-400 text-[10px]"></i>
+                                    </div>
+                                    <span class="text-emerald-400 text-[10px] font-medium">Gotowe</span>
                                 </div>
-                                <p class="text-white text-[12px] font-medium">TakeDrop</p>
-                                <p class="text-emerald-400 text-[10px] mt-auto flex items-center gap-1"><i class="ph ph-check-circle"></i> Gotowe</p>
+                                <p class="text-white text-[13px] font-medium">TakeDrop</p>
+                                <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1"><i class="ph ph-storefront"></i> Konto aktywne</p>
                             </div>
                         </div>
                     `;
                 }
             } else {
                 takedropBox.classList.add('hidden');
+                takedropBox.classList.remove('bento-action');
             }
         }
 
