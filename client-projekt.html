@@ -1065,7 +1065,7 @@
                         <div class="relative p-6 md:p-8 h-full flex flex-col">
                             <div class="flex items-start justify-between mb-6">
                                 <div>
-                                    <p class="text-[11px] text-[#666] uppercase tracking-wider font-medium mb-2">Postęp realizacji</p>
+                                    <p id="dash-progress-label" class="text-[11px] text-[#666] uppercase tracking-wider font-medium mb-2">Postęp realizacji</p>
                                     <div class="flex items-baseline gap-2">
                                         <span id="dash-progress-percent" class="text-[48px] md:text-[56px] font-bold text-white leading-none tracking-tight">0</span>
                                         <span class="text-[24px] text-[#666] font-medium">%</span>
@@ -2249,6 +2249,13 @@
             const completedSteps = statusItems.filter(s => s.done).length;
             const progressPercent = Math.round((completedSteps / statusItems.length) * 100);
 
+            // Find current milestone (in_progress) or the first pending one
+            const currentMilestone = milestones.find(m => m.status === 'in_progress') || milestones.find(m => m.status === 'pending');
+            const milestoneLabel = currentMilestone
+                ? `Postęp realizacji: ${currentMilestone.title}`
+                : (progressPercent === 100 ? 'Realizacja zakończona' : 'Postęp realizacji');
+
+            document.getElementById('dash-progress-label').textContent = milestoneLabel;
             document.getElementById('dash-progress-percent').textContent = progressPercent;
             document.getElementById('dash-progress-bar').style.width = progressPercent + '%';
 
