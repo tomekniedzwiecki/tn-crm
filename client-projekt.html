@@ -2437,52 +2437,59 @@
                 produktyBox.classList.remove('opacity-60');
                 produktyBox.classList.add('bento-action');
 
-                // Get product thumbnails (max 4)
+                // Get product thumbnails (max 4 for 2x2 grid background)
                 const productThumbnails = products.slice(0, 4);
-                const remainingCount = products.length - 4;
+                const remainingCount = Math.max(0, products.length - 4);
 
                 produktyContent.innerHTML = `
-                    <div class="h-full p-4 flex flex-col">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-[#888] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[11px]">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                                Wybierz
-                            </span>
-                        </div>
-
-                        <!-- Product thumbnails grid -->
-                        <div class="flex gap-1.5 mb-2 justify-center">
+                    <div class="h-full relative">
+                        <!-- Background: 2x2 product grid -->
+                        <div class="absolute inset-0 grid grid-cols-2 grid-rows-2">
                             ${productThumbnails.map(p => `
-                                <div class="w-11 h-11 rounded-lg bg-[#111] border border-[#222] overflow-hidden flex-shrink-0">
+                                <div class="overflow-hidden">
                                     ${p.image_url
                                         ? `<img src="${p.image_url}" class="w-full h-full object-cover" alt="">`
-                                        : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-lg text-[#444]"></i></div>`
+                                        : `<div class="w-full h-full bg-[#111] flex items-center justify-center"><i class="ph ph-package text-2xl text-[#333]"></i></div>`
                                     }
                                 </div>
                             `).join('')}
+                            ${[...Array(Math.max(0, 4 - productThumbnails.length))].map(() => `
+                                <div class="bg-[#111]"></div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Gradient overlays -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
+
+                        <!-- Content on top -->
+                        <div class="relative h-full p-4 flex flex-col">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between mb-auto">
+                                <span class="text-white/90 text-[11px] uppercase tracking-wider font-medium">Produkt</span>
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/20 backdrop-blur-sm border border-amber-500/30 text-amber-400 text-[11px]">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                    Wybierz
+                                </span>
+                            </div>
+
                             ${remainingCount > 0 ? `
-                                <div class="w-11 h-11 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center flex-shrink-0">
-                                    <span class="text-[#666] text-xs font-medium">+${remainingCount}</span>
+                                <div class="absolute top-4 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-white/70 text-[11px] font-medium">
+                                    ${products.length} produktów do wyboru
                                 </div>
                             ` : ''}
-                        </div>
 
-                        <!-- Voice message player -->
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            ${globalProductsVoiceUrl ? renderVoicePlayer('dash-produkty-voice', globalProductsVoiceUrl, { compact: true }) : `
-                                <div class="w-12 h-12 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
-                                    <i class="ph ph-package text-xl text-[#444]"></i>
-                                </div>
-                            `}
-                        </div>
+                            <!-- Voice message player -->
+                            <div class="mb-3">
+                                ${globalProductsVoiceUrl ? renderVoicePlayer('dash-produkty-voice', globalProductsVoiceUrl, { compact: true }) : ''}
+                            </div>
 
-                        <!-- CTA Button -->
-                        <button onclick="switchToDashTab('produkty')"
-                                class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-medium text-sm transition-colors flex items-center justify-center gap-2">
-                            <i class="ph ph-package"></i>
-                            Wybierz produkt
-                        </button>
+                            <!-- CTA Button -->
+                            <button onclick="switchToDashTab('produkty')"
+                                    class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                                <i class="ph ph-package"></i>
+                                Wybierz produkt
+                            </button>
+                        </div>
                     </div>
                 `;
 
