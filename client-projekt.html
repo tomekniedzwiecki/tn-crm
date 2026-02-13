@@ -1112,17 +1112,15 @@
                     </div>
                 </div>
 
-                <!-- ═══ ROW 3: Raporty + Strona ═══ -->
+                <!-- ═══ ROW 3: Strona (full width, Raporty are now in Produkty box) ═══ -->
 
-                <!-- BOX: Raporty (6 cols) -->
-                <div id="dash-box-raporty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('raporty')">
-                    <div id="dash-raporty-content" class="h-full">
-                        <!-- Rendered by JS -->
-                    </div>
+                <!-- BOX: Raporty (HIDDEN - kept for JS compatibility) -->
+                <div id="dash-box-raporty" class="hidden">
+                    <div id="dash-raporty-content"></div>
                 </div>
 
-                <!-- BOX: Strona (6 cols) -->
-                <div id="dash-box-strona" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('strona')">
+                <!-- BOX: Strona (full 12 cols) -->
+                <div id="dash-box-strona" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 12; min-height: 180px;" onclick="switchToDashTab('strona')">
                     <div id="dash-strona-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
@@ -2342,26 +2340,65 @@
                 produktyBox.onclick = () => switchToDashTab('produkty');
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-60', 'bento-action');
+
+                // Helper to get report icon
+                const getReportIconInline = (title) => {
+                    const t = title.toLowerCase();
+                    if (t.includes('video') || t.includes('wideo')) return 'ph-video-camera';
+                    if (t.includes('prezentacja')) return 'ph-presentation-chart';
+                    if (t.includes('infografik')) return 'ph-chart-bar';
+                    if (t.includes('analiz')) return 'ph-chart-line-up';
+                    if (t.includes('pdf')) return 'ph-file-pdf';
+                    return 'ph-file-text';
+                };
+                const reportsPreview = reports.slice(0, 4);
+
                 produktyContent.innerHTML = `
-                    <div class="h-full relative">
-                        ${productImg ? `
-                            <img src="${productImg}" class="absolute inset-0 w-full h-full object-cover" alt="">
-                        ` : ''}
-                        <!-- Gradient from bottom -->
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                        <!-- Gradient from top for labels -->
-                        <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-transparent"></div>
-                        <div class="relative h-full p-5 flex flex-col">
-                            <div class="flex items-center justify-between">
-                                <span class="text-white/90 text-[11px] uppercase tracking-wider font-medium">Produkt</span>
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/30 backdrop-blur-sm border border-emerald-500/40 text-emerald-300 text-[11px] font-medium">
-                                    <i class="ph-fill ph-check-circle text-[10px]"></i>
-                                    Wybrano
-                                </span>
+                    <div class="h-full flex flex-col">
+                        <!-- Produkt - górna część -->
+                        <div class="h-1/2 relative">
+                            ${productImg ? `
+                                <img src="${productImg}" class="absolute inset-0 w-full h-full object-cover" alt="">
+                            ` : ''}
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-transparent"></div>
+                            <div class="relative h-full p-4 flex flex-col">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-white/90 text-[11px] uppercase tracking-wider font-medium">Produkt</span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/30 backdrop-blur-sm border border-emerald-500/40 text-emerald-300 text-[11px] font-medium">
+                                        <i class="ph-fill ph-check-circle text-[10px]"></i>
+                                        Wybrano
+                                    </span>
+                                </div>
+                                <div class="mt-auto">
+                                    <h3 class="text-white text-base font-medium leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
+                                </div>
                             </div>
-                            <div class="mt-auto">
-                                <h3 class="text-white text-lg font-medium leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
+                        </div>
+
+                        <!-- Raporty - dolna część -->
+                        <div class="h-1/2 p-3 bg-[#0a0a0a] border-t border-[#222]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wider font-medium">Raporty</span>
+                                ${reports.length > 0 ? `
+                                    <span class="text-emerald-400 text-[10px]">${reports.length}</span>
+                                ` : ''}
                             </div>
+                            ${reports.length > 0 ? `
+                                <div class="grid grid-cols-2 gap-1.5">
+                                    ${reportsPreview.map(r => `
+                                        <a href="${r.file_url || '#'}" target="_blank" onclick="event.stopPropagation()"
+                                           class="rounded bg-[#111] border border-[#222] p-2 flex items-center gap-2 hover:border-[#333] hover:bg-[#1a1a1a] transition-all group">
+                                            <i class="ph ${getReportIconInline(r.title)} text-[#666] text-xs group-hover:text-[#888]"></i>
+                                            <span class="text-[10px] text-[#999] truncate group-hover:text-white">${r.title}</span>
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <div class="h-full flex items-center justify-center">
+                                    <span class="text-[#444] text-xs">W przygotowaniu</span>
+                                </div>
+                            `}
                         </div>
                     </div>
                 `;
