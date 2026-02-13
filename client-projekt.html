@@ -586,6 +586,20 @@
         @media (max-width: 640px) {
             .bento-lg, .bento-md, .bento-sm { grid-column: span 2; }
             .bento-xs { grid-column: span 1; }
+
+            /* Mobile overrides for dashboard bento boxes */
+            #dashboard-screen .bento-grid > div[style*="span 12"],
+            #dashboard-screen .bento-grid > div[style*="span 8"] {
+                grid-column: span 2 !important;
+                grid-row: span 1 !important;
+            }
+            #dashboard-screen .bento-grid > div[style*="span 4"] {
+                grid-column: span 1 !important;
+                aspect-ratio: 1;
+            }
+            #dashboard-screen #dash-box-strona {
+                min-height: 140px !important;
+            }
         }
 
         /* Action required state - VERY PROMINENT */
@@ -2437,12 +2451,8 @@
                 produktyBox.classList.remove('opacity-60');
                 produktyBox.classList.add('bento-action');
 
-                // Get product thumbnails (max 3)
-                const productThumbnails = products.slice(0, 3);
-                const remainingCount = Math.max(0, products.length - 3);
-
                 produktyContent.innerHTML = `
-                    <div class="h-full p-4 flex flex-col bg-gradient-to-b from-[#0d0d0d] to-[#080808]">
+                    <div class="h-full p-5 flex flex-col">
                         <!-- Header -->
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-[#666] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
@@ -2452,41 +2462,24 @@
                             </span>
                         </div>
 
-                        <!-- Product thumbnails row -->
-                        <div class="flex items-center justify-center gap-2 mb-4">
-                            ${productThumbnails.map((p, i) => `
-                                <div class="w-14 h-14 rounded-xl bg-[#161616] border border-[#252525] overflow-hidden shadow-lg ${i > 0 ? '-ml-3' : ''}" style="z-index: ${3-i}">
-                                    ${p.image_url
-                                        ? `<img src="${p.image_url}" class="w-full h-full object-cover" alt="">`
-                                        : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-lg text-[#444]"></i></div>`
-                                    }
-                                </div>
-                            `).join('')}
-                            ${remainingCount > 0 ? `
-                                <div class="w-14 h-14 rounded-xl bg-[#161616] border border-[#252525] flex items-center justify-center -ml-3 shadow-lg" style="z-index: 0">
-                                    <span class="text-[#888] text-sm font-semibold">+${remainingCount}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-
-                        <!-- Voice message player -->
-                        <div class="flex-1 flex items-center justify-center mb-3">
-                            ${globalProductsVoiceUrl ? renderVoicePlayer('dash-produkty-voice', globalProductsVoiceUrl, { compact: true }) : ''}
+                        <!-- Info -->
+                        <div class="flex-1 flex flex-col items-center justify-center text-center">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3">
+                                <i class="ph ph-package text-xl text-amber-500"></i>
+                            </div>
+                            <p class="text-[#888] text-sm leading-relaxed">
+                                Wybierz produkt, wokół którego zbudujemy Twój sklep
+                            </p>
                         </div>
 
                         <!-- CTA Button -->
                         <button onclick="switchToDashTab('produkty')"
-                                class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20">
+                                class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-colors flex items-center justify-center gap-2">
                             <i class="ph ph-package"></i>
                             Wybierz produkt
                         </button>
                     </div>
                 `;
-
-                // Initialize voice player after DOM update
-                if (globalProductsVoiceUrl) {
-                    setTimeout(() => initVoicePlayer('dash-produkty-voice'), 0);
-                }
             } else {
                 const selectedProduct = products.find(p => p.id === workflow.selected_product_id);
                 const productImg = selectedProduct?.image_url;
