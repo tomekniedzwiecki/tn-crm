@@ -96,8 +96,13 @@
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
         }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
         .animate-enter { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-slide { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-marquee { animation: marquee 15s linear infinite; }
 
         /* Design Tokens */
         .border-default { border-color: var(--border); }
@@ -2486,21 +2491,18 @@
                             </div>
                         </div>
 
-                        <!-- Product thumbnails -->
-                        <div class="flex items-center justify-center gap-1.5 mt-4">
-                            ${products.slice(0, 5).map((p, i) => `
-                                <div class="w-10 h-10 rounded-lg bg-[#161616] border border-[#252525] overflow-hidden flex-shrink-0 ${i > 0 ? '-ml-2' : ''}" style="z-index: ${5-i}">
-                                    ${p.image_url
-                                        ? `<img src="${p.image_url}" class="w-full h-full object-cover" alt="">`
-                                        : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-sm text-[#444]"></i></div>`
-                                    }
-                                </div>
-                            `).join('')}
-                            ${products.length > 5 ? `
-                                <div class="w-10 h-10 rounded-lg bg-[#161616] border border-[#252525] flex items-center justify-center -ml-2" style="z-index: 0">
-                                    <span class="text-[#666] text-xs font-medium">+${products.length - 5}</span>
-                                </div>
-                            ` : ''}
+                        <!-- Product thumbnails marquee -->
+                        <div class="relative overflow-hidden mt-4" style="mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);">
+                            <div class="flex gap-2 animate-marquee">
+                                ${[...products, ...products].map(p => `
+                                    <div class="w-12 h-12 rounded-xl bg-[#161616] border border-[#252525] overflow-hidden flex-shrink-0">
+                                        ${p.image_url
+                                            ? `<img src="${p.image_url}" class="w-full h-full object-cover" alt="">`
+                                            : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-lg text-[#444]"></i></div>`
+                                        }
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
 
                         <!-- CTA Button -->
