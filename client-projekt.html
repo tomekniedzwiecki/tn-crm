@@ -1105,8 +1105,8 @@
                     </div>
                 </div>
 
-                <!-- BOX: Produkty (4 cols) -->
-                <div id="dash-box-produkty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all " style="grid-column: span 4; min-height: 280px;" onclick="switchToDashTab('produkty')">
+                <!-- BOX: Produkty (4 cols, square) -->
+                <div id="dash-box-produkty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all aspect-square" style="grid-column: span 4;" onclick="switchToDashTab('produkty')">
                     <div id="dash-produkty-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
@@ -2300,8 +2300,8 @@
                 produktyBox.classList.add('opacity-60');
                 produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full p-6 flex flex-col">
-                        <span class="text-[#666] text-xs uppercase tracking-wide">Produkt</span>
+                    <div class="h-full p-5 flex flex-col">
+                        <span class="text-[#888] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
                         <div class="flex-1 flex items-center justify-center">
                             <span class="text-[#444] text-sm">W przygotowaniu</span>
                         </div>
@@ -2313,31 +2313,29 @@
                 produktyBox.classList.remove('opacity-60');
                 produktyBox.classList.add('bento-action');
 
-                const productPreviews = products.filter(p => p.image_url).slice(0, 4);
+                // Get first product with image for background
+                const bgProduct = products.find(p => p.image_url);
+                const bgImage = bgProduct?.image_url;
 
                 produktyContent.innerHTML = `
-                    <div class="h-full p-6 flex flex-col">
-                        <div class="flex items-center justify-between mb-6">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Produkt</span>
-                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                Wymaga wyboru
-                            </span>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-white text-xl font-medium mb-2">Wybierz produkt</h3>
-                            <p class="text-[#666] text-sm">${products.length} do wyboru</p>
-                        </div>
-                        ${productPreviews.length > 0 ? `
-                            <div class="flex gap-1 mt-4">
-                                ${productPreviews.map(p => `
-                                    <div class="w-10 h-10 rounded bg-[#111] overflow-hidden">
-                                        <img src="${p.image_url}" class="w-full h-full object-cover" alt="">
-                                    </div>
-                                `).join('')}
-                                ${products.length > 4 ? `<span class="w-10 h-10 rounded bg-[#111] flex items-center justify-center text-[#666] text-xs">+${products.length - 4}</span>` : ''}
-                            </div>
+                    <div class="h-full relative">
+                        ${bgImage ? `
+                            <img src="${bgImage}" class="absolute inset-0 w-full h-full object-cover opacity-40" alt="">
                         ` : ''}
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+                        <div class="relative h-full p-5 flex flex-col">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[#888] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[11px]">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                    Wybierz
+                                </span>
+                            </div>
+                            <div class="mt-auto">
+                                <h3 class="text-white text-xl font-medium mb-1">Wybierz produkt</h3>
+                                <p class="text-[#888] text-sm">${products.length} produktów do wyboru</p>
+                            </div>
+                        </div>
                     </div>
                 `;
             } else {
@@ -2347,21 +2345,22 @@
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-60', 'bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full flex flex-col">
+                    <div class="h-full relative">
                         ${productImg ? `
-                            <div class="h-32 bg-[#111]">
-                                <img src="${productImg}" class="w-full h-full object-cover" alt="">
-                            </div>
+                            <img src="${productImg}" class="absolute inset-0 w-full h-full object-cover" alt="">
                         ` : ''}
-                        <div class="p-6 flex-1 flex flex-col">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-[#666] text-xs uppercase tracking-wide">Produkt</span>
-                                <span class="flex items-center gap-1 text-emerald-500 text-xs">
-                                    <i class="ph-fill ph-check-circle"></i>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                        <div class="relative h-full p-5 flex flex-col">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white/70 text-[11px] uppercase tracking-wider font-medium">Produkt</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px]">
+                                    <i class="ph-fill ph-check-circle text-[10px]"></i>
                                     Wybrano
                                 </span>
                             </div>
-                            <h3 class="text-white text-lg font-medium">${selectedProduct?.name || 'Wybrany produkt'}</h3>
+                            <div class="mt-auto">
+                                <h3 class="text-white text-lg font-medium leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
+                            </div>
                         </div>
                     </div>
                 `;
