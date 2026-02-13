@@ -2205,6 +2205,127 @@
             return colors[action] || 'text-[#666]';
         }
 
+        // Reusable Voice Player Component
+        function renderVoicePlayer(prefix, audioUrl, options = {}) {
+            const { compact = false, showTitle = true } = options;
+            if (!audioUrl) return '';
+
+            return `
+                <div class="whatsapp-voice-player ${compact ? 'compact-voice' : ''}" style="${compact ? 'max-width: 100%; padding: 8px 10px;' : ''}">
+                    <div class="voice-main-row">
+                        <div class="voice-avatar" style="${compact ? 'width: 32px; height: 32px;' : ''}">
+                            <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                        </div>
+                        <button id="${prefix}-play-btn" onclick="toggleVoicePlayer('${prefix}')" class="voice-play-btn" style="${compact ? 'width: 28px; height: 28px;' : ''}">
+                            <i id="${prefix}-play-icon" class="ph-fill ph-play text-white ${compact ? 'text-sm' : 'text-lg'}"></i>
+                        </button>
+                        <div class="voice-content">
+                            <div class="voice-waveform-container" id="${prefix}-waveform-container">
+                                <div class="voice-waveform" id="${prefix}-waveform"></div>
+                                <div class="voice-scrubber" id="${prefix}-scrubber"></div>
+                            </div>
+                            <div class="voice-time-row">
+                                <span id="${prefix}-current-time" class="voice-time">0:00</span>
+                                <span id="${prefix}-duration" class="voice-time">0:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <audio id="${prefix}-audio" src="${audioUrl}" class="hidden" preload="metadata"></audio>
+                </div>
+            `;
+        }
+
+        // Generic voice player toggle function
+        function toggleVoicePlayer(prefix) {
+            const audio = document.getElementById(`${prefix}-audio`);
+            const icon = document.getElementById(`${prefix}-play-icon`);
+            const btn = document.getElementById(`${prefix}-play-btn`);
+            if (!audio) return;
+
+            if (audio.paused) {
+                audio.play();
+                icon.classList.remove('ph-play');
+                icon.classList.add('ph-pause');
+                btn.classList.add('playing');
+            } else {
+                audio.pause();
+                icon.classList.remove('ph-pause');
+                icon.classList.add('ph-play');
+                btn.classList.remove('playing');
+            }
+        }
+
+        // Initialize voice player waveform and events
+        function initVoicePlayer(prefix) {
+            const audio = document.getElementById(`${prefix}-audio`);
+            const waveform = document.getElementById(`${prefix}-waveform`);
+            const container = document.getElementById(`${prefix}-waveform-container`);
+            if (!audio || !waveform) return;
+
+            // Generate waveform bars
+            const barCount = 35;
+            waveform.innerHTML = '';
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'voice-bar';
+                const height = 8 + Math.random() * 16;
+                bar.style.height = `${height}px`;
+                waveform.appendChild(bar);
+            }
+
+            // Update progress
+            audio.addEventListener('timeupdate', () => {
+                const progress = audio.currentTime / audio.duration;
+                const bars = waveform.querySelectorAll('.voice-bar');
+                const playedBars = Math.floor(progress * bars.length);
+                bars.forEach((bar, i) => {
+                    bar.classList.toggle('played', i < playedBars);
+                });
+
+                const currentEl = document.getElementById(`${prefix}-current-time`);
+                if (currentEl) {
+                    const mins = Math.floor(audio.currentTime / 60);
+                    const secs = Math.floor(audio.currentTime % 60);
+                    currentEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+
+                const scrubber = document.getElementById(`${prefix}-scrubber`);
+                if (scrubber) {
+                    scrubber.style.left = `${progress * 100}%`;
+                }
+            });
+
+            // Duration loaded
+            audio.addEventListener('loadedmetadata', () => {
+                const durationEl = document.getElementById(`${prefix}-duration`);
+                if (durationEl) {
+                    const mins = Math.floor(audio.duration / 60);
+                    const secs = Math.floor(audio.duration % 60);
+                    durationEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+            });
+
+            // Ended
+            audio.addEventListener('ended', () => {
+                const icon = document.getElementById(`${prefix}-play-icon`);
+                const btn = document.getElementById(`${prefix}-play-btn`);
+                if (icon) {
+                    icon.classList.remove('ph-pause');
+                    icon.classList.add('ph-play');
+                }
+                if (btn) btn.classList.remove('playing');
+            });
+
+            // Seek on click
+            if (container) {
+                container.addEventListener('click', (e) => {
+                    const rect = container.getBoundingClientRect();
+                    const percent = (e.clientX - rect.left) / rect.width;
+                    audio.currentTime = percent * audio.duration;
+                });
+            }
+        }
+
         function renderDashboard() {
             // Header
             document.getElementById('dash-project-name').textContent = workflow.offer_name || 'Projekt';
@@ -2328,19 +2449,7 @@
 
                         <!-- Voice message player -->
                         <div class="flex-1 flex flex-col items-center justify-center">
-                            ${globalProductsVoiceUrl ? `
-                                <div class="w-full max-w-[200px] mb-4">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <img src="https://tomekniedzwiecki.pl/wp-content/uploads/2025/01/cropped-fav.png"
-                                             class="w-10 h-10 rounded-full object-cover border-2 border-[#333]" alt="Tomek">
-                                        <div>
-                                            <p class="text-white text-sm font-medium">Tomek</p>
-                                            <p class="text-[#666] text-[10px]">Wiadomość głosowa</p>
-                                        </div>
-                                    </div>
-                                    <audio id="produkty-voice-audio" src="${globalProductsVoiceUrl}" class="w-full h-8" style="filter: invert(1) hue-rotate(180deg);" controls></audio>
-                                </div>
-                            ` : `
+                            ${globalProductsVoiceUrl ? renderVoicePlayer('dash-produkty-voice', globalProductsVoiceUrl, { compact: true }) : `
                                 <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center mb-3">
                                     <i class="ph ph-package text-2xl text-[#444]"></i>
                                 </div>
@@ -2355,6 +2464,11 @@
                         </button>
                     </div>
                 `;
+
+                // Initialize voice player after DOM update
+                if (globalProductsVoiceUrl) {
+                    setTimeout(() => initVoicePlayer('dash-produkty-voice'), 0);
+                }
             } else {
                 const selectedProduct = products.find(p => p.id === workflow.selected_product_id);
                 const productImg = selectedProduct?.image_url;
