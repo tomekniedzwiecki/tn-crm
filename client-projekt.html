@@ -2341,14 +2341,15 @@
                 `;
             } else {
                 const selectedProduct = products.find(p => p.id === workflow.selected_product_id);
+                const productImg = selectedProduct?.image_url;
                 produktyBox.onclick = () => switchToDashTab('produkty');
                 produktyBox.style.cursor = 'pointer';
                 produktyBox.classList.remove('opacity-50');
                 produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
                     <div class="h-full relative overflow-hidden">
-                        ${selectedProduct?.main_image_url
-                            ? `<div class="absolute inset-0" style="background: url('${selectedProduct.main_image_url}') center/cover"></div>
+                        ${productImg
+                            ? `<div class="absolute inset-0" style="background: url('${productImg}') center/cover"></div>
                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30"></div>`
                             : `<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>`
                         }
@@ -2359,9 +2360,9 @@
                                 </div>
                                 <span class="text-emerald-400 text-[11px] font-medium">Wybrano</span>
                             </div>
-                            ${selectedProduct?.main_image_url ? `
+                            ${productImg ? `
                                 <div class="absolute top-4 right-4 w-16 h-16 rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                                    <img src="${selectedProduct.main_image_url}" class="w-full h-full object-cover" alt="">
+                                    <img src="${productImg}" class="w-full h-full object-cover" alt="">
                                 </div>
                             ` : ''}
                             <div class="mt-auto">
@@ -2400,6 +2401,7 @@
                 brandingBox.classList.remove('opacity-50');
 
                 const mainLogo = logos.find(l => { const m = parseBrandNotes(l.notes); return m.variant === 'main'; }) || logos[0];
+                const logoUrl = mainLogo?.file_url;
                 const brandName = brandInfo ? parseBrandNotes(brandInfo.value)?.name : null;
                 const primaryColor = colors.find(c => { const m = parseBrandNotes(c.notes); return m.role === 'primary'; });
 
@@ -2415,8 +2417,8 @@
                                 <span class="text-violet-400 text-[10px] font-medium">Gotowe</span>
                             </div>
                             <div class="flex items-center gap-4 mb-auto">
-                                ${mainLogo?.value
-                                    ? `<img src="${mainLogo.value}" class="w-14 h-14 rounded-xl object-contain bg-white/5 p-2" alt="">`
+                                ${logoUrl
+                                    ? `<img src="${logoUrl}" class="w-14 h-14 rounded-xl object-contain bg-white/5 p-2" alt="">`
                                     : `<div class="w-14 h-14 rounded-xl bg-violet-500/10 flex items-center justify-center"><i class="ph ph-paint-brush text-violet-400 text-xl"></i></div>`
                                 }
                                 <div>
