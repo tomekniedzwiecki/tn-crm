@@ -2311,12 +2311,12 @@
                 produktyBox.classList.add('opacity-50');
                 produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full p-6 flex flex-col justify-center items-center text-center">
-                        <div class="w-16 h-16 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
-                            <i class="ph ph-package text-2xl text-[#333]"></i>
+                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
+                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
+                            <i class="ph ph-package text-xl text-[#444]"></i>
                         </div>
-                        <p class="text-[#555] text-sm font-medium">Produkt</p>
-                        <p class="text-[#333] text-xs mt-1">W przygotowaniu</p>
+                        <p class="text-[#666] text-sm font-medium">Produkt</p>
+                        <p class="text-[#444] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else if (!workflow.selected_product_id) {
@@ -2325,44 +2325,39 @@
                 produktyBox.classList.remove('opacity-50');
                 produktyBox.classList.add('bento-action');
 
-                // Show product previews
                 const productPreviews = products.filter(p => p.image_url).slice(0, 3);
 
                 produktyContent.innerHTML = `
-                    <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/[0.12] via-orange-500/[0.06] to-transparent"></div>
-                        <div class="absolute -bottom-10 -left-10 w-40 h-40 rounded-full blur-[80px] opacity-40 bg-amber-500"></div>
-
+                    <div class="h-full relative">
+                        <div class="absolute inset-0 bg-gradient-to-b from-amber-950/20 to-transparent"></div>
                         <div class="relative p-6 h-full flex flex-col">
-                            <!-- Action badge -->
-                            <div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 w-fit mb-4">
-                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-                                <span class="text-amber-300 text-xs font-bold uppercase tracking-wider">Czeka na Ciebie</span>
+                            <div class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 w-fit mb-5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span class="text-amber-500 text-[11px] font-medium">Wymaga wyboru</span>
                             </div>
 
-                            <p class="text-white text-xl font-bold mb-2">Wybierz produkt</p>
-                            <p class="text-amber-200/60 text-sm mb-4">${products.length} ${products.length === 1 ? 'propozycja' : 'propozycje'} do wyboru</p>
+                            <h3 class="text-white text-lg font-semibold mb-1">Wybierz produkt</h3>
+                            <p class="text-[#888] text-sm">${products.length} ${products.length === 1 ? 'opcja' : 'opcje'} do wyboru</p>
 
-                            <!-- Product previews -->
                             ${productPreviews.length > 0 ? `
-                                <div class="flex gap-2 mb-4">
+                                <div class="flex gap-2 mt-5">
                                     ${productPreviews.map(p => `
-                                        <div class="w-14 h-14 rounded-xl overflow-hidden border border-amber-500/20 bg-[#111]">
-                                            <img src="${p.image_url}" class="w-full h-full object-cover opacity-80" alt="">
+                                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-[#111] border border-[#222]">
+                                            <img src="${p.image_url}" class="w-full h-full object-cover" alt="">
                                         </div>
                                     `).join('')}
                                     ${products.length > 3 ? `
-                                        <div class="w-14 h-14 rounded-xl border border-amber-500/20 bg-amber-500/10 flex items-center justify-center">
-                                            <span class="text-amber-400 text-xs font-bold">+${products.length - 3}</span>
+                                        <div class="w-12 h-12 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center">
+                                            <span class="text-[#666] text-xs">+${products.length - 3}</span>
                                         </div>
                                     ` : ''}
                                 </div>
                             ` : ''}
 
-                            <div class="mt-auto flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500 w-fit group">
-                                <i class="ph ph-cursor-click text-black"></i>
-                                <span class="text-black text-sm font-bold">Wybierz teraz</span>
-                                <i class="ph ph-arrow-right text-black group-hover:translate-x-1 transition-transform"></i>
+                            <div class="mt-auto pt-4">
+                                <span class="inline-flex items-center gap-2 text-amber-500 text-sm font-medium group-hover:gap-3 transition-all">
+                                    Wybierz <i class="ph ph-arrow-right"></i>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -2375,36 +2370,22 @@
                 produktyBox.classList.remove('opacity-50');
                 produktyBox.classList.remove('bento-action');
                 produktyContent.innerHTML = `
-                    <div class="h-full relative overflow-hidden">
-                        ${productImg
-                            ? `<div class="absolute inset-0" style="background: url('${productImg}') center/cover"></div>
-                               <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40"></div>`
-                            : `<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.08] to-transparent"></div>`
-                        }
+                    <div class="h-full relative">
+                        ${productImg ? `
+                            <div class="absolute inset-0">
+                                <img src="${productImg}" class="w-full h-full object-cover" alt="">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30"></div>
+                            </div>
+                        ` : ''}
                         <div class="relative p-6 h-full flex flex-col">
-                            <!-- Status badge -->
-                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 w-fit mb-auto">
-                                <i class="ph ph-check-circle text-emerald-400"></i>
-                                <span class="text-emerald-400 text-xs font-medium">Produkt wybrany</span>
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+                                <i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i>
+                                <span class="text-emerald-500 text-[11px] font-medium">Wybrano</span>
                             </div>
 
-                            <!-- Product image thumbnail -->
-                            ${productImg ? `
-                                <div class="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl mb-4 mx-auto">
-                                    <img src="${productImg}" class="w-full h-full object-cover" alt="">
-                                </div>
-                            ` : ''}
-
-                            <div class="text-center mt-auto">
-                                <p class="text-white text-lg font-bold leading-snug mb-1">${selectedProduct?.name || 'Wybrany produkt'}</p>
-                                ${selectedProduct?.source_url ? `
-                                    <p class="text-[#666] text-xs truncate">${selectedProduct.source_url.replace(/^https?:\/\//, '').split('/')[0]}</p>
-                                ` : ''}
-                            </div>
-
-                            <div class="flex items-center justify-center gap-1 text-emerald-400 text-xs font-medium mt-3">
-                                <span>Zobacz szczegóły</span>
-                                <i class="ph ph-arrow-right"></i>
+                            <div class="mt-auto">
+                                <p class="text-white/60 text-[11px] uppercase tracking-wider mb-1">Produkt</p>
+                                <h3 class="text-white text-lg font-semibold leading-tight">${selectedProduct?.name || 'Wybrany produkt'}</h3>
                             </div>
                         </div>
                     </div>
@@ -2426,11 +2407,11 @@
                 brandingBox.classList.remove('bento-action');
                 brandingContent.innerHTML = `
                     <div class="h-full p-8 flex flex-col justify-center items-center text-center">
-                        <div class="w-16 h-16 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
-                            <i class="ph ph-paint-brush text-2xl text-[#333]"></i>
+                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
+                            <i class="ph ph-paint-brush text-xl text-[#444]"></i>
                         </div>
-                        <p class="text-[#555] text-sm font-medium">Branding</p>
-                        <p class="text-[#333] text-xs mt-1">W przygotowaniu</p>
+                        <p class="text-[#666] text-sm font-medium">Branding</p>
+                        <p class="text-[#444] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
@@ -2441,84 +2422,77 @@
                 const mainLogo = logos.find(l => { const m = parseBrandNotes(l.notes); return m.variant === 'main'; }) || logos[0];
                 const logoUrl = mainLogo?.file_url;
                 const brandName = brandInfo ? parseBrandNotes(brandInfo.value)?.name : null;
-                const primaryColor = colors.find(c => { const m = parseBrandNotes(c.notes); return m.role === 'primary'; });
-
-                // Get up to 4 mockups for preview
                 const mockupPreviews = mockups.slice(0, 4);
 
                 brandingContent.innerHTML = `
-                    <div class="h-full relative overflow-hidden">
-                        <!-- Gradient background -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] via-fuchsia-500/[0.04] to-transparent"></div>
-                        ${primaryColor ? `<div class="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-30" style="background: ${primaryColor.value}"></div>` : ''}
-
+                    <div class="h-full relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-fuchsia-950/30 via-transparent to-transparent"></div>
                         <div class="relative p-6 h-full flex flex-col">
-                            <!-- Header -->
-                            <div class="flex items-start justify-between mb-5">
+                            <!-- Header row -->
+                            <div class="flex items-start justify-between mb-6">
                                 <div class="flex items-center gap-4">
                                     ${logoUrl
-                                        ? `<div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 p-2 flex items-center justify-center backdrop-blur-sm">
+                                        ? `<div class="w-14 h-14 rounded-xl bg-white p-2 flex items-center justify-center">
                                                <img src="${logoUrl}" class="max-w-full max-h-full object-contain" alt="">
                                            </div>`
-                                        : `<div class="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                                               <i class="ph ph-paint-brush text-violet-400 text-2xl"></i>
+                                        : `<div class="w-14 h-14 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
+                                               <i class="ph ph-paint-brush text-[#666] text-xl"></i>
                                            </div>`
                                     }
                                     <div>
-                                        <p class="text-white text-lg font-semibold">${brandName || workflow.offer_name || 'Twoja marka'}</p>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span class="inline-flex items-center gap-1 text-violet-400 text-[11px] font-medium">
-                                                <i class="ph ph-check-circle"></i> Branding gotowy
-                                            </span>
+                                        <h3 class="text-white text-lg font-semibold">${brandName || workflow.offer_name || 'Marka'}</h3>
+                                        <div class="flex items-center gap-1.5 mt-1">
+                                            <i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i>
+                                            <span class="text-[#888] text-xs">Branding gotowy</span>
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Color palette -->
+
+                                <!-- Colors -->
                                 ${colors.length > 0 ? `
-                                    <div class="flex gap-1.5">
+                                    <div class="flex gap-1">
                                         ${colors.slice(0, 5).map(c => `
-                                            <div class="w-8 h-8 rounded-lg border border-white/10 shadow-lg transition-transform hover:scale-110" style="background: ${c.value}"></div>
+                                            <div class="w-6 h-6 rounded-md border border-white/5" style="background: ${c.value}"></div>
                                         `).join('')}
                                     </div>
                                 ` : ''}
                             </div>
 
-                            <!-- Mockups gallery -->
+                            <!-- Mockups grid -->
                             ${mockupPreviews.length > 0 ? `
-                                <div class="flex-1 mt-2">
-                                    <p class="text-[10px] text-[#666] uppercase tracking-wider font-medium mb-3">Mockupy produktów</p>
-                                    <div class="grid grid-cols-4 gap-2 h-[calc(100%-24px)]">
+                                <div class="flex-1">
+                                    <p class="text-[#666] text-[11px] uppercase tracking-wider mb-3">Mockupy</p>
+                                    <div class="grid grid-cols-4 gap-2">
                                         ${mockupPreviews.map(m => `
-                                            <div class="rounded-xl overflow-hidden bg-[#111] border border-[#1a1a1a] aspect-square">
-                                                <img src="${m.file_url}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" alt="${m.title || ''}">
+                                            <div class="aspect-square rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#1a1a1a]">
+                                                <img src="${m.file_url}" class="w-full h-full object-cover" alt="">
                                             </div>
                                         `).join('')}
                                         ${mockups.length > 4 ? `
-                                            <div class="rounded-xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center aspect-square">
-                                                <span class="text-[#666] text-sm font-medium">+${mockups.length - 4}</span>
+                                            <div class="aspect-square rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center">
+                                                <span class="text-[#555] text-sm">+${mockups.length - 4}</span>
                                             </div>
                                         ` : ''}
                                     </div>
                                 </div>
                             ` : `
-                                <div class="flex-1 flex items-center justify-center">
-                                    <div class="text-center">
-                                        <div class="flex gap-2 justify-center mb-3">
-                                            ${logos.slice(0, 3).map(l => `
-                                                <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-1.5">
-                                                    <img src="${l.file_url}" class="w-full h-full object-contain" alt="">
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                        <p class="text-[#666] text-xs">${logos.length} logo${logos.length !== 1 ? 's' : ''} • ${colors.length} kolor${colors.length !== 1 ? 'ów' : ''}</p>
+                                <div class="flex-1 flex items-center">
+                                    <div class="flex gap-3">
+                                        ${logos.slice(0, 3).map(l => `
+                                            <div class="w-16 h-16 rounded-lg bg-white/5 border border-[#222] p-2">
+                                                <img src="${l.file_url}" class="w-full h-full object-contain" alt="">
+                                            </div>
+                                        `).join('')}
                                     </div>
                                 </div>
                             `}
 
-                            <!-- Footer link -->
-                            <div class="flex items-center gap-1 text-violet-400 text-xs font-medium mt-3">
-                                <span>Zobacz pełny branding</span>
-                                <i class="ph ph-arrow-right"></i>
+                            <!-- Footer -->
+                            <div class="mt-4 pt-4 border-t border-[#1a1a1a] flex items-center justify-between">
+                                <span class="text-[#666] text-xs">${logos.length} logo • ${colors.length} kolorów • ${mockups.length} mockupów</span>
+                                <span class="text-white text-xs font-medium flex items-center gap-1">
+                                    Zobacz wszystko <i class="ph ph-arrow-right"></i>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -2535,76 +2509,61 @@
                 stronaBox.classList.add('opacity-50');
                 stronaBox.classList.remove('bento-action');
                 stronaContent.innerHTML = `
-                    <div class="h-full p-6 flex flex-col justify-center items-center text-center">
-                        <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
-                            <i class="ph ph-globe text-2xl text-[#333]"></i>
+                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
+                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
+                            <i class="ph ph-globe text-xl text-[#444]"></i>
                         </div>
-                        <p class="text-[#555] text-sm font-medium">Strona sprzedażowa</p>
-                        <p class="text-[#333] text-xs mt-1">W przygotowaniu</p>
+                        <p class="text-[#666] text-sm font-medium">Strona sprzedażowa</p>
+                        <p class="text-[#444] text-xs mt-1">W przygotowaniu</p>
                     </div>
                 `;
             } else {
                 const isLive = workflow.sales_page_status === 'live';
                 const pageUrl = workflow.sales_page_url || '';
                 const shortUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                const domain = shortUrl.split('/')[0];
 
                 stronaBox.onclick = () => switchToDashTab('strona');
                 stronaBox.style.cursor = 'pointer';
                 stronaBox.classList.remove('opacity-50');
 
                 stronaContent.innerHTML = `
-                    <div class="h-full relative overflow-hidden">
-                        <!-- Gradient background -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-blue-500/[0.04] to-transparent"></div>
-                        <div class="absolute -bottom-10 -right-10 w-40 h-40 rounded-full blur-[80px] opacity-30 bg-cyan-500"></div>
-
+                    <div class="h-full relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-sky-950/30 via-transparent to-transparent"></div>
                         <div class="relative p-6 h-full flex flex-col">
-                            <!-- Header with status -->
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl ${isLive ? 'bg-emerald-500/15 border border-emerald-500/20' : 'bg-cyan-500/15 border border-cyan-500/20'} flex items-center justify-center">
-                                        <i class="ph ph-globe ${isLive ? 'text-emerald-400' : 'text-cyan-400'} text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <p class="text-white text-base font-semibold">Strona sprzedażowa</p>
-                                        <div class="flex items-center gap-2 mt-0.5">
-                                            ${isLive
-                                                ? `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                                   <span class="text-emerald-400 text-xs font-medium">Live</span>`
-                                                : `<span class="text-cyan-400 text-xs font-medium">Gotowa</span>`
-                                            }
-                                        </div>
-                                    </div>
+                            <!-- Header -->
+                            <div class="flex items-center justify-between mb-5">
+                                <h3 class="text-white text-base font-semibold">Strona sprzedażowa</h3>
+                                <div class="flex items-center gap-1.5 px-2 py-1 rounded-full ${isLive ? 'bg-emerald-500/10' : 'bg-sky-500/10'}">
+                                    ${isLive ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>` : ''}
+                                    <span class="${isLive ? 'text-emerald-500' : 'text-sky-500'} text-[11px] font-medium">${isLive ? 'Live' : 'Gotowa'}</span>
                                 </div>
                             </div>
 
-                            <!-- URL preview card -->
-                            <div class="flex-1 flex items-center">
-                                <div class="w-full p-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
-                                    <div class="flex items-center gap-3 mb-3">
-                                        <div class="flex gap-1.5">
-                                            <span class="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
-                                            <span class="w-3 h-3 rounded-full bg-[#febc2e]"></span>
-                                            <span class="w-3 h-3 rounded-full bg-[#28c840]"></span>
-                                        </div>
-                                        <div class="flex-1 px-3 py-1.5 rounded-md bg-[#111] border border-[#222]">
-                                            <span class="text-xs text-[#888] font-mono truncate block">${shortUrl || 'twoja-strona.pl'}</span>
-                                        </div>
+                            <!-- Browser mockup -->
+                            <div class="flex-1 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
+                                <div class="flex items-center gap-2 px-3 py-2 bg-[#111] border-b border-[#1a1a1a]">
+                                    <div class="flex gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#ff5f57]"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#febc2e]"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#28c840]"></span>
                                     </div>
-                                    <div class="h-16 rounded-lg bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center">
-                                        <span class="text-[#333] text-xs">Podgląd strony</span>
+                                    <div class="flex-1 px-2 py-1 rounded bg-[#0a0a0a] border border-[#222]">
+                                        <span class="text-[11px] text-[#666] font-mono truncate block">${shortUrl}</span>
+                                    </div>
+                                </div>
+                                <div class="h-full flex items-center justify-center p-4">
+                                    <div class="text-center">
+                                        <i class="ph ph-browser text-2xl text-[#333] mb-2"></i>
+                                        <p class="text-[#444] text-xs">Kliknij, aby zobaczyć</p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Footer -->
-                            <div class="flex items-center justify-between mt-4">
-                                <span class="text-[#666] text-xs">${domain}</span>
-                                <div class="flex items-center gap-1 text-cyan-400 text-xs font-medium">
-                                    <span>Otwórz stronę</span>
-                                    <i class="ph ph-arrow-square-out"></i>
-                                </div>
+                            <div class="mt-4 flex items-center justify-end">
+                                <span class="text-white text-xs font-medium flex items-center gap-1">
+                                    Otwórz <i class="ph ph-arrow-square-out"></i>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -2620,12 +2579,12 @@
                 raportyBox.style.cursor = 'default';
                 raportyBox.classList.add('opacity-50');
                 raportyContent.innerHTML = `
-                    <div class="h-full p-6 flex flex-col justify-center items-center text-center">
-                        <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
-                            <i class="ph ph-chart-line-up text-2xl text-[#333]"></i>
+                    <div class="h-full p-8 flex flex-col justify-center items-center text-center">
+                        <div class="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#222] flex items-center justify-center mb-4">
+                            <i class="ph ph-chart-line-up text-xl text-[#444]"></i>
                         </div>
-                        <p class="text-[#555] text-sm font-medium">Raporty</p>
-                        <p class="text-[#333] text-xs mt-1">Brak raportów</p>
+                        <p class="text-[#666] text-sm font-medium">Raporty</p>
+                        <p class="text-[#444] text-xs mt-1">Brak raportów</p>
                     </div>
                 `;
             } else {
@@ -2633,73 +2592,40 @@
                 raportyBox.style.cursor = 'pointer';
                 raportyBox.classList.remove('opacity-50');
 
-                // Get report type icon and color
-                const getReportStyle = (type) => {
-                    switch(type) {
-                        case 'analytics': return { icon: 'ph-chart-bar', color: 'blue' };
-                        case 'performance': return { icon: 'ph-chart-line-up', color: 'emerald' };
-                        case 'sales': return { icon: 'ph-currency-circle-dollar', color: 'amber' };
-                        case 'report_video': return { icon: 'ph-video-camera', color: 'violet' };
-                        default: return { icon: 'ph-file-text', color: 'slate' };
-                    }
-                };
-
-                // Show up to 4 recent reports
-                const recentReports = reports.slice(0, 4);
+                const recentReports = reports.slice(0, 3);
 
                 raportyContent.innerHTML = `
-                    <div class="h-full relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/[0.08] via-indigo-500/[0.04] to-transparent"></div>
-                        <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-[60px] opacity-30 bg-blue-500"></div>
-
+                    <div class="h-full relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-transparent to-transparent"></div>
                         <div class="relative p-6 h-full flex flex-col">
                             <!-- Header -->
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
-                                        <i class="ph ph-chart-line-up text-blue-400 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <p class="text-white text-base font-semibold">Raporty</p>
-                                        <p class="text-blue-400 text-xs font-medium">${reports.length} ${reports.length === 1 ? 'raport' : 'raportów'}</p>
-                                    </div>
-                                </div>
+                            <div class="flex items-center justify-between mb-5">
+                                <h3 class="text-white text-base font-semibold">Raporty</h3>
+                                <span class="text-[#888] text-xs">${reports.length} ${reports.length === 1 ? 'raport' : 'raportów'}</span>
                             </div>
 
                             <!-- Reports list -->
                             <div class="flex-1 space-y-2">
-                                ${recentReports.map(r => {
-                                    const style = getReportStyle(r.type);
-                                    return `
-                                        <div class="flex items-center gap-3 p-2.5 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] hover:border-${style.color}-500/30 transition-colors group">
-                                            <div class="w-8 h-8 rounded-lg bg-${style.color}-500/10 flex items-center justify-center flex-shrink-0">
-                                                <i class="ph ${style.icon} text-${style.color}-400 text-sm"></i>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm text-white truncate group-hover:text-${style.color}-400 transition-colors">${r.title}</p>
-                                                <p class="text-[10px] text-[#555]">${new Date(r.created_at).toLocaleDateString('pl-PL')}</p>
-                                            </div>
-                                            ${r.file_url ? `<i class="ph ph-arrow-square-out text-[#444] group-hover:text-${style.color}-400 transition-colors"></i>` : ''}
+                                ${recentReports.map(r => `
+                                    <div class="flex items-center gap-3 p-3 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a]">
+                                        <div class="w-8 h-8 rounded-lg bg-[#111] border border-[#222] flex items-center justify-center flex-shrink-0">
+                                            <i class="ph ph-file-text text-[#666] text-sm"></i>
                                         </div>
-                                    `;
-                                }).join('')}
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm text-white truncate">${r.title}</p>
+                                            <p class="text-[11px] text-[#555]">${new Date(r.created_at).toLocaleDateString('pl-PL')}</p>
+                                        </div>
+                                        ${r.file_url ? `<i class="ph ph-arrow-square-out text-[#555]"></i>` : ''}
+                                    </div>
+                                `).join('')}
                             </div>
 
                             <!-- Footer -->
-                            ${reports.length > 4 ? `
-                                <div class="mt-3 pt-3 border-t border-[#1a1a1a] flex items-center justify-between">
-                                    <span class="text-[#555] text-xs">+${reports.length - 4} więcej</span>
-                                    <div class="flex items-center gap-1 text-blue-400 text-xs font-medium">
-                                        <span>Zobacz wszystkie</span>
-                                        <i class="ph ph-arrow-right"></i>
-                                    </div>
-                                </div>
-                            ` : `
-                                <div class="mt-3 flex items-center gap-1 text-blue-400 text-xs font-medium">
-                                    <span>Zobacz wszystkie</span>
-                                    <i class="ph ph-arrow-right"></i>
-                                </div>
-                            `}
+                            <div class="mt-4 pt-4 border-t border-[#1a1a1a] flex items-center justify-end">
+                                <span class="text-white text-xs font-medium flex items-center gap-1">
+                                    Zobacz wszystkie <i class="ph ph-arrow-right"></i>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 `;
