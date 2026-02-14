@@ -162,6 +162,32 @@
                         <img id="product-image-preview-img" class="w-24 h-24 object-cover rounded-lg border border-zinc-800" src="">
                     </div>
                 </div>
+
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Screenshot do raportów (PDF)</label>
+                    <div id="report-screenshot-upload" class="relative">
+                        <input type="file" id="report-screenshot-file" accept=".pdf" class="hidden" onchange="handleReportScreenshotUpload(event)">
+                        <div id="report-screenshot-empty" class="border-2 border-dashed border-zinc-800 rounded-lg p-4 text-center cursor-pointer hover:border-zinc-600 transition-colors" onclick="document.getElementById('report-screenshot-file').click()">
+                            <i class="ph ph-file-pdf text-2xl text-zinc-600 mb-2"></i>
+                            <p class="text-zinc-500 text-xs">Kliknij aby dodać PDF</p>
+                        </div>
+                        <div id="report-screenshot-preview" class="hidden border border-zinc-800 rounded-lg p-3 bg-zinc-900">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                    <i class="ph ph-file-pdf text-red-400 text-lg"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p id="report-screenshot-filename" class="text-white text-sm truncate">plik.pdf</p>
+                                    <p class="text-zinc-500 text-xs">PDF</p>
+                                </div>
+                                <button onclick="removeReportScreenshot()" class="text-zinc-500 hover:text-red-400 transition-colors p-1">
+                                    <i class="ph ph-trash text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="product-report-screenshot-url">
+                </div>
             </div>
 
             <div class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50 flex-shrink-0">
@@ -362,7 +388,9 @@
             document.getElementById('product-name').value = '';
             document.getElementById('product-source-url').value = '';
             document.getElementById('product-image-url').value = '';
+            document.getElementById('product-report-screenshot-url').value = '';
             updateImagePreview();
+            resetReportScreenshotPreview();
 
             if (editId) {
                 const p = products.find(x => x.id === editId);
@@ -373,6 +401,12 @@
                     document.getElementById('product-source-url').value = p.source_url || '';
                     document.getElementById('product-image-url').value = p.image_url || '';
                     updateImagePreview();
+
+                    // PDF screenshot
+                    if (p.report_screenshot_url) {
+                        document.getElementById('product-report-screenshot-url').value = p.report_screenshot_url;
+                        showReportScreenshotPreview(p.report_screenshot_url);
+                    }
                 }
             } else {
                 title.innerHTML = '<i class="ph ph-package text-orange-400"></i> Dodaj produkt';
@@ -404,6 +438,69 @@
             if (imgInput) imgInput.addEventListener('input', updateImagePreview);
         });
 
+        // Report Screenshot PDF functions
+        async function handleReportScreenshotUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                showToast('Wybierz plik PDF', 'error');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('Plik jest za duży (max 10MB)', 'error');
+                return;
+            }
+
+            // Show loading state
+            const emptyEl = document.getElementById('report-screenshot-empty');
+            emptyEl.innerHTML = '<i class="ph ph-spinner text-2xl text-zinc-500 animate-spin"></i><p class="text-zinc-500 text-xs mt-2">Przesyłanie...</p>';
+
+            // Upload to Supabase Storage
+            const fileName = `product_screenshots/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            const { data, error } = await supabaseClient.storage
+                .from('attachments')
+                .upload(fileName, file, { contentType: 'application/pdf' });
+
+            if (error) {
+                console.error('Upload error:', error);
+                showToast('Błąd przesyłania: ' + error.message, 'error');
+                resetReportScreenshotPreview();
+                return;
+            }
+
+            // Get public URL
+            const { data: { publicUrl } } = supabaseClient.storage
+                .from('attachments')
+                .getPublicUrl(fileName);
+
+            document.getElementById('product-report-screenshot-url').value = publicUrl;
+            showReportScreenshotPreview(publicUrl, file.name);
+            showToast('PDF przesłany', 'success');
+        }
+
+        function showReportScreenshotPreview(url, filename = null) {
+            document.getElementById('report-screenshot-empty').classList.add('hidden');
+            document.getElementById('report-screenshot-preview').classList.remove('hidden');
+            document.getElementById('report-screenshot-filename').textContent = filename || url.split('/').pop();
+        }
+
+        function resetReportScreenshotPreview() {
+            document.getElementById('report-screenshot-empty').classList.remove('hidden');
+            document.getElementById('report-screenshot-empty').innerHTML = `
+                <i class="ph ph-file-pdf text-2xl text-zinc-600 mb-2"></i>
+                <p class="text-zinc-500 text-xs">Kliknij aby dodać PDF</p>
+            `;
+            document.getElementById('report-screenshot-preview').classList.add('hidden');
+            document.getElementById('report-screenshot-file').value = '';
+        }
+
+        function removeReportScreenshot() {
+            document.getElementById('product-report-screenshot-url').value = '';
+            resetReportScreenshotPreview();
+        }
+
         async function saveProduct() {
             const id = document.getElementById('product-edit-id').value;
             const name = document.getElementById('product-name').value.trim();
@@ -415,6 +512,7 @@
                 name,
                 image_url: document.getElementById('product-image-url').value.trim() || null,
                 source_url: document.getElementById('product-source-url').value.trim() || null,
+                report_screenshot_url: document.getElementById('product-report-screenshot-url').value.trim() || null,
                 visible_to_client: true,
             };
 
