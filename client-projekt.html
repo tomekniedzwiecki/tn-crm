@@ -3951,10 +3951,6 @@
             document.getElementById('dashboard-screen').classList.add('hidden');
             document.getElementById('project-screen').classList.remove('hidden');
             switchTab(tabName);
-            // Update URL without ?dash
-            const url = new URL(window.location);
-            url.searchParams.delete('dash');
-            window.history.replaceState({}, '', url);
         }
         window.switchToDashTab = switchToDashTab;
 
@@ -4097,9 +4093,9 @@
 
             await loadAllData();
 
-            // Check for dashboard mode (?dash in URL)
-            const dashParam = urlParams.get('dash');
-            isDashboardMode = dashParam !== null;
+            // Check for legacy mode (?legacy in URL) - default is new dashboard
+            const legacyParam = urlParams.get('legacy');
+            isDashboardMode = legacyParam === null;
 
             if (isDashboardMode) {
                 // Load video, takedrop and activities data for dashboard
@@ -4111,6 +4107,12 @@
                 if (isAdminPreviewMode) {
                     const spacer = document.getElementById('dash-admin-banner-spacer');
                     if (spacer) spacer.classList.remove('hidden');
+                }
+
+                // Handle hash in URL (e.g. #video-intro from email link)
+                const hash = window.location.hash.replace('#', '');
+                if (hash && document.getElementById(`tab-${hash}`)) {
+                    switchToDashTab(hash);
                 }
             } else {
                 renderProject();
