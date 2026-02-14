@@ -783,21 +783,23 @@
 
         /* Stage Navigation - Vercel style */
         .stage-nav {
-            display: inline-flex;
+            display: flex;
             align-items: center;
+            justify-content: flex-start;
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px;
-            padding: 4px;
-            gap: 2px;
+            border-radius: 14px;
+            padding: 6px;
+            gap: 4px;
+            width: 100%;
         }
         .stage-nav-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 13px;
+            gap: 10px;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 500;
             color: #555;
             transition: all 0.15s ease;
@@ -864,14 +866,15 @@
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: none;
+                padding: 4px;
             }
             .stage-nav::-webkit-scrollbar {
                 display: none;
             }
             .stage-nav-item {
-                padding: 10px 14px;
-                font-size: 12px;
-                gap: 6px;
+                padding: 12px 18px;
+                font-size: 13px;
+                gap: 8px;
             }
         }
         @media (max-width: 480px) {
@@ -879,7 +882,144 @@
                 display: none;
             }
             .stage-nav-item {
-                padding: 12px 16px;
+                padding: 14px 18px;
+            }
+        }
+
+        /* Dashboard Layout with Sidebar */
+        .dash-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .dash-sidebar {
+            width: 240px;
+            background: #0a0a0a;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 50;
+        }
+        .dash-sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .dash-sidebar-nav {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+        }
+        .dash-sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .dash-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #888;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            margin-bottom: 2px;
+        }
+        .dash-nav-item:hover {
+            background: rgba(255,255,255,0.04);
+            color: #bbb;
+        }
+        .dash-nav-item.active {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+        .dash-nav-item i {
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+            opacity: 0.7;
+        }
+        .dash-nav-item.active i {
+            opacity: 1;
+        }
+        .dash-nav-section {
+            padding: 16px 12px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #555;
+        }
+        .dash-nav-section:first-child {
+            padding-top: 8px;
+        }
+        .dash-main {
+            flex: 1;
+            margin-left: 240px;
+        }
+
+        /* Bottom Navigation (Mobile) */
+        .dash-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10,10,10,0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 8px 16px;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 50;
+        }
+        .dash-bottom-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .dash-bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            color: #666;
+            font-size: 10px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .dash-bottom-nav-item:active {
+            transform: scale(0.95);
+        }
+        .dash-bottom-nav-item.active {
+            color: #fff;
+        }
+        .dash-bottom-nav-item i {
+            font-size: 22px;
+        }
+        .dash-bottom-nav-item.active i {
+            color: #06b6d4;
+        }
+
+        @media (max-width: 1024px) {
+            .dash-sidebar {
+                display: none;
+            }
+            .dash-main {
+                margin-left: 0;
+            }
+            .dash-bottom-nav {
+                display: block;
+            }
+            .dash-main-content {
+                padding-bottom: 80px;
             }
         }
     </style>
@@ -1170,30 +1310,112 @@
     </div>
 
     <!-- Dashboard Screen (accessed via ?dash) -->
-    <div id="dashboard-screen" class="hidden min-h-screen bg-black">
+    <div id="dashboard-screen" class="hidden bg-black">
         <!-- Admin Preview Banner space -->
         <div id="dash-admin-banner-spacer" class="hidden h-10"></div>
 
-        <!-- Header -->
-        <header class="sticky top-0 z-40 bg-black/90 backdrop-blur-xl border-b border-[#1a1a1a]">
-            <div class="max-w-5xl mx-auto px-4 md:px-6">
-                <div class="flex items-center justify-between h-14">
+        <div class="dash-layout">
+            <!-- Sidebar (Desktop) -->
+            <aside class="dash-sidebar">
+                <div class="dash-sidebar-header">
                     <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
-                            <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
+                        <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                            <span class="text-black text-[11px] font-bold tracking-tight">TN</span>
                         </div>
-                        <span id="dash-project-name" class="text-[14px] font-medium text-white tracking-tight">Projekt</span>
+                        <div>
+                            <div id="dash-sidebar-project" class="text-[13px] font-medium text-white truncate max-w-[140px]">Projekt</div>
+                            <div id="dash-sidebar-status" class="text-[10px] text-emerald-500 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                Aktywny
+                            </div>
+                        </div>
                     </div>
-                    <span id="dash-status-badge" class="badge badge-success text-[10px] px-2.5 py-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
-                        Aktywny
-                    </span>
                 </div>
-            </div>
-        </header>
 
-        <!-- Dashboard Content -->
-        <main class="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10">
+                <nav class="dash-sidebar-nav">
+                    <div class="dash-nav-section">Przegląd</div>
+                    <div class="dash-nav-item active" onclick="switchDashView('dashboard')">
+                        <i class="ph ph-squares-four"></i>
+                        <span>Dashboard</span>
+                    </div>
+
+                    <div class="dash-nav-section">Etap 1 — Marka</div>
+                    <div class="dash-nav-item" onclick="switchToDashTab('produkty')">
+                        <i class="ph ph-package"></i>
+                        <span>Produkty</span>
+                    </div>
+                    <div class="dash-nav-item" onclick="switchToDashTab('raporty')">
+                        <i class="ph ph-chart-line-up"></i>
+                        <span>Raporty</span>
+                    </div>
+                    <div class="dash-nav-item" onclick="switchToDashTab('branding')">
+                        <i class="ph ph-paint-brush"></i>
+                        <span>Branding</span>
+                    </div>
+                    <div class="dash-nav-item" onclick="switchToDashTab('strona')">
+                        <i class="ph ph-globe"></i>
+                        <span>Strona</span>
+                    </div>
+
+                    <div id="dash-sidebar-etap2" class="hidden">
+                        <div class="dash-nav-section">Etap 2 — Video</div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('video-intro')">
+                            <i class="ph ph-hand-waving"></i>
+                            <span>Wprowadzenie</span>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('video-profiles')">
+                            <i class="ph ph-share-network"></i>
+                            <span>Profile</span>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('video-recordings')">
+                            <i class="ph ph-video-camera"></i>
+                            <span>Nagrania</span>
+                        </div>
+                    </div>
+
+                    <div id="dash-sidebar-etap3" class="hidden">
+                        <div class="dash-nav-section">Etap 3</div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('takedrop')">
+                            <i class="ph ph-storefront"></i>
+                            <span>Konto</span>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="dash-sidebar-footer">
+                    <div class="dash-nav-item" onclick="switchToDashTab('wiadomosci')">
+                        <i class="ph ph-chat-circle"></i>
+                        <span>Wiadomości</span>
+                    </div>
+                    <a href="mailto:kontakt@tomekniedzwiecki.pl" class="dash-nav-item">
+                        <i class="ph ph-envelope"></i>
+                        <span>Kontakt</span>
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <div class="dash-main">
+                <!-- Mobile Header -->
+                <header class="sticky top-0 z-40 bg-black/90 backdrop-blur-xl border-b border-[#1a1a1a] lg:hidden">
+                    <div class="px-4 md:px-6">
+                        <div class="flex items-center justify-between h-14">
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
+                                    <span class="text-black text-[10px] font-bold tracking-tight">TN</span>
+                                </div>
+                                <span id="dash-project-name" class="text-[14px] font-medium text-white tracking-tight">Projekt</span>
+                            </div>
+                            <span id="dash-status-badge" class="badge badge-success text-[10px] px-2.5 py-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+                                Aktywny
+                            </span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Dashboard Content -->
+                <main class="dash-main-content max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10 lg:py-8">
 
             <!-- Hero Section -->
             <div class="mb-6 md:mb-8">
@@ -1399,15 +1621,39 @@
                 </div>
             </div><!-- /dash-bento-placeholder -->
 
-            <!-- Footer -->
-            <div class="mt-12 pt-6 border-t border-[#1a1a1a] flex items-center justify-between">
+            <!-- Footer (hidden on mobile, visible on desktop) -->
+            <div class="mt-12 pt-6 border-t border-[#1a1a1a] items-center justify-between hidden lg:flex">
                 <a href="mailto:kontakt@tomekniedzwiecki.pl" class="text-[#555] hover:text-white text-[12px] transition-colors flex items-center gap-1.5">
                     <i class="ph ph-envelope"></i> Kontakt
                 </a>
                 <p class="text-[#333] text-[11px] font-mono">tomekniedzwiecki.pl</p>
             </div>
-        </main>
-    </div>
+                </main>
+            </div><!-- /dash-main -->
+
+            <!-- Bottom Navigation (Mobile) -->
+            <nav class="dash-bottom-nav">
+                <div class="dash-bottom-nav-inner">
+                    <div class="dash-bottom-nav-item active" onclick="switchDashView('dashboard')" data-view="dashboard">
+                        <i class="ph ph-squares-four"></i>
+                        <span>Przegląd</span>
+                    </div>
+                    <div class="dash-bottom-nav-item" onclick="switchToDashTab('produkty')" data-view="produkty">
+                        <i class="ph ph-package"></i>
+                        <span>Produkty</span>
+                    </div>
+                    <div class="dash-bottom-nav-item" onclick="switchToDashTab('branding')" data-view="branding">
+                        <i class="ph ph-paint-brush"></i>
+                        <span>Branding</span>
+                    </div>
+                    <div class="dash-bottom-nav-item" onclick="switchToDashTab('wiadomosci')" data-view="wiadomosci">
+                        <i class="ph ph-chat-circle"></i>
+                        <span>Wiadomości</span>
+                    </div>
+                </div>
+            </nav>
+        </div><!-- /dash-layout -->
+    </div><!-- /dashboard-screen -->
 
     <!-- Main Project Screen -->
     <div id="project-screen" class="hidden min-h-screen flex flex-col">
@@ -2705,7 +2951,7 @@
         const STAGES = [
             { id: 1, name: 'Marka', icon: 'ph-paint-brush' },
             { id: 2, name: 'Video', icon: 'ph-video-camera' },
-            { id: 3, name: 'TakeDrop', icon: 'ph-storefront' },
+            { id: 3, name: 'Etap 3', icon: 'ph-storefront' },
             { id: 4, name: 'Etap 4', icon: 'ph-circle-dashed' },
             { id: 5, name: 'Etap 5', icon: 'ph-circle-dashed' }
         ];
@@ -3279,6 +3525,7 @@
             currentStage = activeStage;
             renderStageTimeline();
             renderStageDashboard(currentStage);
+            updateDashSidebar();
         }
 
         function renderDashboardEtap1() {
@@ -3711,6 +3958,43 @@
             window.history.replaceState({}, '', url);
         }
         window.switchToDashTab = switchToDashTab;
+
+        function switchDashView(view) {
+            // Update bottom nav active state
+            document.querySelectorAll('.dash-bottom-nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.view === view);
+            });
+            // Update sidebar active state
+            document.querySelectorAll('.dash-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // If view is dashboard, just stay on dashboard
+            if (view === 'dashboard') {
+                // Find and activate dashboard nav item
+                document.querySelector('.dash-nav-item[onclick*="dashboard"]')?.classList.add('active');
+            }
+        }
+        window.switchDashView = switchDashView;
+
+        function updateDashSidebar() {
+            // Update project name in sidebar
+            const sidebarProject = document.getElementById('dash-sidebar-project');
+            if (sidebarProject) {
+                sidebarProject.textContent = workflow?.offer_name || 'Projekt';
+            }
+
+            // Show/hide Etap 2 section
+            const etap2Section = document.getElementById('dash-sidebar-etap2');
+            if (etap2Section) {
+                etap2Section.classList.toggle('hidden', !(videoData && videoData.is_active));
+            }
+
+            // Show/hide Etap 3 section
+            const etap3Section = document.getElementById('dash-sidebar-etap3');
+            if (etap3Section) {
+                etap3Section.classList.toggle('hidden', !(takeDropData && takeDropData.is_active));
+            }
+        }
 
         async function loadProject() {
             const token = getToken();
