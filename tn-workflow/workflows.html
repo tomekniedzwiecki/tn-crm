@@ -1548,29 +1548,26 @@
                     }
                 }
 
-                // Send email to client
+                // Trigger automation for email
                 if (workflow.customer_email) {
                     try {
                         const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                         const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
-                        await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                            },
-                            body: JSON.stringify({
-                                type: 'workflow_created',
-                                data: {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'workflow_created',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
                                     email: workflow.customer_email,
                                     clientName,
                                     offerName: workflow.offer_name || 'Projekt',
                                     projectUrl
                                 }
-                            })
+                            }
                         });
                     } catch (emailErr) {
-                        console.warn('Email error:', emailErr);
+                        console.warn('Automation trigger error:', emailErr);
                     }
                 }
 

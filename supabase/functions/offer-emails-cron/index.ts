@@ -276,84 +276,48 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Get template
-        const subjectKey = `email_template_${scheduledEmail.email_type}_subject`
-        const bodyKey = `email_template_${scheduledEmail.email_type}_body`
-
-        const subjectTemplate = settings[subjectKey]
-        const bodyTemplate = settings[bodyKey]
-
-        if (!subjectTemplate || !bodyTemplate) {
-          console.error(`[offer-emails-cron] Template not found for ${scheduledEmail.email_type}`)
-          await markAsCancelled(supabase, scheduledEmail.id, 'template_not_found')
-          totalCancelled++
-          continue
-        }
-
         // Prepare template data
         const offerData = clientOffer.offer as any
         const templateData = {
+          email: lead.email,
           clientName: lead.name || lead.company || 'Cześć',
           offerName: offerData?.name || '',
           offerPrice: offerData?.price || 0,
           validUntil: clientOffer.valid_until,
-          offerUrl: getOfferUrl(clientOffer.unique_token),
-          email: lead.email,
-          senderName: 'Tomek Niedzwiecki'
+          offerUrl: getOfferUrl(clientOffer.unique_token)
         }
 
-        const subject = replaceVariables(subjectTemplate, templateData)
-        let body = replaceVariables(bodyTemplate, templateData)
+        // Trigger automation for email
+        const triggerResponse = await fetch(
+          `${supabaseUrl}/functions/v1/automation-trigger`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`
+            },
+            body: JSON.stringify({
+              trigger_type: scheduledEmail.email_type,
+              entity_type: 'client_offer',
+              entity_id: clientOffer.id,
+              context: templateData
+            })
+          }
+        )
 
-        // Send email via Resend
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: lead.email,
-            subject: subject,
-            html: body,
-            reply_to: replyTo
-          })
-        })
-
-        const result = await response.json()
-
-        if (!response.ok) {
-          throw new Error(result.message || 'Resend API error')
-        }
+        const triggerResult = await triggerResponse.json()
+        console.log(`[offer-emails-cron] Automation trigger result:`, triggerResult)
 
         const sentAt = new Date().toISOString()
 
-        // Mark as sent
+        // Mark as sent (automation was triggered)
         await supabase
           .from('scheduled_emails')
           .update({ sent_at: sentAt })
           .eq('id', scheduledEmail.id)
 
-        // Log to email_messages
-        await supabase
-          .from('email_messages')
-          .insert({
-            direction: 'outbound',
-            from_email: fromEmail,
-            from_name: fromName,
-            to_email: lead.email,
-            subject: subject,
-            body_html: body,
-            lead_id: lead.id,
-            resend_id: result.id,
-            status: 'sent',
-            sent_at: sentAt,
-            email_type: scheduledEmail.email_type
-          })
-
         totalSent++
-        console.log(`[offer-emails-cron] Sent ${scheduledEmail.email_type} to ${lead.email}`)
+        console.log(`[offer-emails-cron] Triggered ${scheduledEmail.email_type} automation for ${lead.email}`)
 
         // Small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 100))

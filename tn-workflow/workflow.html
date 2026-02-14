@@ -3244,27 +3244,6 @@
                     .eq('id', workflow.id);
             }
 
-            // Send email notification
-            try {
-                const currentIndex = milestones.findIndex(m => m.id === milestoneId);
-                await fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/workflow-stage-completed', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({
-                        workflow_id: workflow.id,
-                        milestone_id: milestoneId,
-                        milestone_title: milestone.title,
-                        milestone_index: currentIndex,
-                        total_milestones: milestones.length
-                    })
-                });
-            } catch (emailErr) {
-                console.log('Could not send notification email:', emailErr);
-            }
-
             // Log activity
             const milestoneIndex = milestones.findIndex(m => m.id === milestoneId);
             logActivity('milestone_completed', `Ukończono etap ${milestoneIndex + 1}: ${milestone.title}`, {
@@ -5081,30 +5060,22 @@
 
             if (clientEmail) {
                 try {
-                    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                        },
-                        body: JSON.stringify({
-                            type: 'contract_sent',
-                            data: {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'contract_sent',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
                                 email: clientEmail,
                                 clientName: clientName,
                                 offerName: offerName,
                                 projectUrl: projectUrl,
                                 contractUrl: sellerSignedUrl || projectUrl
                             }
-                        })
+                        }
                     });
-
-                    const result = await response.json();
-                    if (!result.success) {
-                        console.warn('Email failed:', result.error);
-                    }
                 } catch (emailError) {
-                    console.warn('Email error:', emailError);
+                    console.warn('Automation trigger error:', emailError);
                 }
             }
 
@@ -6006,29 +5977,24 @@
                     const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#branding`;
 
-                    const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                        },
-                        body: JSON.stringify({
-                            type: 'branding_delivered',
-                            data: {
-                                email: workflow.customer_email,
-                                clientName,
-                                projectUrl
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'branding_delivered',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName,
+                                    projectUrl
+                                }
                             }
-                        })
-                    });
-
-                    const emailResult = await emailRes.json();
-                    if (!emailRes.ok || !emailResult.success) {
-                        console.error('Email send failed:', emailResult);
-                        showToast('Branding przekazany, ale email nie został wysłany: ' + (emailResult.error || 'Nieznany błąd'), 'error');
-                    } else {
+                        });
                         lastBrandingEmailSentAt = emailNow;
-                        showToast('Branding przekazany — email wysłany do klienta', 'success');
+                        showToast('Branding przekazany', 'success');
+                    } catch (e) {
+                        console.error('Automation trigger error:', e);
+                        showToast('Branding przekazany', 'success');
                     }
                 } else {
                     showToast('Branding przekazany klientowi', 'success');
@@ -6140,30 +6106,25 @@
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#strona`;
                     const salesPageUrl = workflow.sales_page_url || '';
 
-                    const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                        },
-                        body: JSON.stringify({
-                            type: 'sales_page_shared',
-                            data: {
-                                email: workflow.customer_email,
-                                clientName,
-                                projectUrl,
-                                salesPageUrl
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'sales_page_shared',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName,
+                                    projectUrl,
+                                    salesPageUrl
+                                }
                             }
-                        })
-                    });
-
-                    const emailResult = await emailRes.json();
-                    if (!emailRes.ok || !emailResult.success) {
-                        console.error('Email send failed:', emailResult);
-                        showToast('Strona przekazana, ale email nie został wysłany: ' + (emailResult.error || 'Nieznany błąd'), 'error');
-                    } else {
+                        });
                         lastSalesPageEmailSentAt = emailNow;
-                        showToast('Strona przekazana — email wysłany do klienta', 'success');
+                        showToast('Strona przekazana', 'success');
+                    } catch (e) {
+                        console.error('Automation trigger error:', e);
+                        showToast('Strona przekazana', 'success');
                     }
                 } else {
                     showToast('Strona przekazana klientowi', 'success');
@@ -6359,27 +6320,28 @@
                 // Log activity
                 logActivity('products_shared', 'Udostępniono katalog produktów klientowi', {});
 
-                // Send email via template
+                // Trigger automation for email
                 const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
-                const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#produkty`;
 
-                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({
-                        type: 'products_shared',
-                        data: {
-                            email: workflow.customer_email,
-                            clientName,
-                            projectUrl
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'products_shared',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                email: workflow.customer_email,
+                                clientName,
+                                projectUrl
+                            }
                         }
-                    })
-                });
+                    });
+                } catch (e) {
+                    console.error('Automation trigger error:', e);
+                }
 
-                showToast('Produkty udostępnione — email wysłany', 'success');
+                showToast('Produkty udostępnione', 'success');
                 renderProductSharingCard();
                 loadProducts(); // Refresh Products tab banner
             } catch (err) {
@@ -6594,26 +6556,27 @@
                     const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#raporty`;
 
-                    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                        },
-                        body: JSON.stringify({
-                            type: 'report_published',
-                            data: {
-                                email: workflow.customer_email,
-                                clientName,
-                                projectUrl,
-                                reportTitle: report.title
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'report_published',
+                                entity_type: 'workflow_report',
+                                entity_id: report.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName,
+                                    projectUrl,
+                                    reportTitle: report.title || report.type
+                                }
                             }
-                        })
-                    });
+                        });
+                    } catch (e) {
+                        console.error('Automation trigger error:', e);
+                    }
 
                     lastReportEmailSentAt = now;
                     renderReports();
-                    showToast('Raport zatwierdzony — email wysłany do klienta', 'success');
+                    showToast('Raport zatwierdzony', 'success');
                 } else {
                     renderReports();
                     showToast('Raport zatwierdzony (email już wysłany wcześniej)', 'success');

@@ -2963,19 +2963,26 @@
             // Calculate halfway point between now and expiration
             const halfwayTime = new Date(now.getTime() + (validUntilDate.getTime() - now.getTime()) / 2);
 
-            // 1. Send first email (offer_created) immediately
+            // 1. Trigger automation for offer_created email
             try {
-                await sendEmail('offer_created', {
-                    email: lead.email,
-                    clientName: lead.name || lead.company || 'Cześć',
-                    offerName: selectedOffer.name,
-                    offerPrice: effectivePrice,
-                    validUntil: validUntil,
-                    offerUrl: offerUrl
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'offer_created',
+                        entity_type: 'client_offer',
+                        entity_id: clientOffer.id,
+                        context: {
+                            email: lead.email,
+                            clientName: lead.name || lead.company || 'Cześć',
+                            offerName: selectedOffer.name,
+                            offerPrice: effectivePrice,
+                            validUntil: validUntil,
+                            offerUrl: offerUrl
+                        }
+                    }
                 });
-                console.log('Sent offer_created email immediately to:', lead.email);
+                console.log('Triggered offer_created automation for:', lead.email);
             } catch (emailErr) {
-                console.error('Error sending offer_created email:', emailErr);
+                console.error('Error triggering offer_created automation:', emailErr);
             }
 
             // 2. Schedule reminder email at halfway point

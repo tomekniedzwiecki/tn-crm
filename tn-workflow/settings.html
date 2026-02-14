@@ -183,7 +183,11 @@
         <aside class="w-[200px] bg-[#050505] border-r border-[#1a1a1a] flex-shrink-0 h-screen sticky top-0 py-6 px-3">
             <div class="text-[11px] uppercase tracking-wider text-[#555] font-semibold px-3 mb-3">Ustawienia</div>
             <nav class="space-y-1">
-                <button onclick="switchSettingsTab('voice')" data-settings-tab="voice" class="settings-nav-btn active">
+                <button onclick="switchSettingsTab('email')" data-settings-tab="email" class="settings-nav-btn active">
+                    <i class="ph ph-envelope"></i>
+                    <span>Konfiguracja email</span>
+                </button>
+                <button onclick="switchSettingsTab('voice')" data-settings-tab="voice" class="settings-nav-btn">
                     <i class="ph ph-microphone"></i>
                     <span>Nagrania glosowe</span>
                 </button>
@@ -201,8 +205,92 @@
 
             <!-- Content -->
             <div class="p-6 max-w-3xl">
+                <!-- Email Settings Tab -->
+                <div id="tab-email" class="settings-tab animate-fade-in">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white mb-1">Konfiguracja email</h2>
+                        <p class="text-[13px] text-[#888]">Adresy nadawcy i odpowiedzi dla wszystkich typow emaili.</p>
+                    </div>
+
+                    <!-- Reply-To -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <i class="ph ph-arrow-bend-up-left text-blue-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-[14px] font-medium text-white">Reply-To</h3>
+                                <p class="text-[12px] text-[#666]">Adres na ktory trafiaja odpowiedzi klientow</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="email" id="email-reply-to" placeholder="ceo@tomekniedzwiecki.pl" class="input-field flex-1">
+                            <button onclick="saveEmailSetting('email_reply_to', 'email-reply-to')" class="btn-primary">Zapisz</button>
+                        </div>
+                    </div>
+
+                    <!-- Reply-To Offer Flow -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                <i class="ph ph-handshake text-amber-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-[14px] font-medium text-white">Reply-To flow ofertowego</h3>
+                                <p class="text-[12px] text-[#666]">Osobny adres dla sekwencji ofertowej</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="email" id="offer-flow-reply-to" placeholder="ceo@tomekniedzwiecki.pl" class="input-field flex-1">
+                            <button onclick="saveEmailSetting('offer_flow_reply_to', 'offer-flow-reply-to')" class="btn-primary">Zapisz</button>
+                        </div>
+                    </div>
+
+                    <!-- Sender Domains -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <i class="ph ph-globe text-emerald-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-[14px] font-medium text-white">Domeny wysylkowe</h3>
+                                <p class="text-[12px] text-[#666]">Adresy nadawcy dla roznych typow emaili</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Transactional -->
+                            <div>
+                                <label class="block text-[11px] uppercase tracking-wider text-[#555] mb-2">Transakcyjny</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="email-from-name-transactional" placeholder="Tomek Niedzwiecki" class="input-field w-1/3">
+                                    <span class="text-[#555] self-center">&lt;</span>
+                                    <input type="email" id="email-from-transactional" placeholder="ceo@tomekniedzwiecki.pl" class="input-field flex-1">
+                                    <span class="text-[#555] self-center">&gt;</span>
+                                </div>
+                            </div>
+
+                            <!-- Outreach -->
+                            <div>
+                                <label class="block text-[11px] uppercase tracking-wider text-[#555] mb-2">Outreach</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="email-from-name-outreach" placeholder="Tomek Niedzwiecki" class="input-field w-1/3">
+                                    <span class="text-[#555] self-center">&lt;</span>
+                                    <input type="email" id="email-from-outreach" placeholder="ceo@tomekniedzwiecki.pl" class="input-field flex-1">
+                                    <span class="text-[#555] self-center">&gt;</span>
+                                </div>
+                            </div>
+
+                            <button onclick="saveEmailDomains()" class="btn-primary flex items-center gap-2 mt-2">
+                                <i class="ph ph-floppy-disk"></i>
+                                Zapisz domeny
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Voice Recordings Tab -->
-                <div id="tab-voice" class="settings-tab animate-fade-in">
+                <div id="tab-voice" class="settings-tab hidden animate-fade-in">
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-white mb-1">Nagrania glosowe</h2>
                         <p class="text-[13px] text-[#888]">Zarzadzaj globalnymi nagraniami glosowymi dla etapow workflow.</p>
@@ -406,7 +494,7 @@
         // ============================================
         // STATE
         // ============================================
-        let currentTab = 'voice';
+        let currentTab = 'email';
         let videoVoiceUrl = '';
         let productsVoiceUrl = '';
         let audioElement = null;
@@ -477,31 +565,98 @@
                 const { data, error } = await sb
                     .from('settings')
                     .select('key, value')
-                    .in('key', ['video_stage_voice_message_url', 'products_voice_message_url']);
+                    .in('key', [
+                        'video_stage_voice_message_url',
+                        'products_voice_message_url',
+                        'email_reply_to',
+                        'offer_flow_reply_to',
+                        'email_from_name_transactional',
+                        'email_from_transactional',
+                        'email_from_name_outreach',
+                        'email_from_outreach'
+                    ]);
 
                 if (error) throw error;
 
-                data?.forEach(setting => {
-                    if (setting.key === 'video_stage_voice_message_url') {
-                        videoVoiceUrl = setting.value || '';
-                        document.getElementById('video-voice-url').value = videoVoiceUrl;
-                        if (videoVoiceUrl) {
-                            document.getElementById('video-voice-preview').classList.remove('hidden');
-                            document.getElementById('video-voice-audio').src = videoVoiceUrl;
-                        }
-                    }
-                    if (setting.key === 'products_voice_message_url') {
-                        productsVoiceUrl = setting.value || '';
-                        document.getElementById('products-voice-url').value = productsVoiceUrl;
-                        if (productsVoiceUrl) {
-                            document.getElementById('products-voice-preview').classList.remove('hidden');
-                            document.getElementById('products-voice-audio').src = productsVoiceUrl;
-                        }
-                    }
-                });
+                const settingsMap = {};
+                data?.forEach(s => { settingsMap[s.key] = s.value; });
+
+                // Voice settings
+                if (settingsMap.video_stage_voice_message_url) {
+                    videoVoiceUrl = settingsMap.video_stage_voice_message_url;
+                    document.getElementById('video-voice-url').value = videoVoiceUrl;
+                    document.getElementById('video-voice-preview').classList.remove('hidden');
+                    document.getElementById('video-voice-audio').src = videoVoiceUrl;
+                }
+                if (settingsMap.products_voice_message_url) {
+                    productsVoiceUrl = settingsMap.products_voice_message_url;
+                    document.getElementById('products-voice-url').value = productsVoiceUrl;
+                    document.getElementById('products-voice-preview').classList.remove('hidden');
+                    document.getElementById('products-voice-audio').src = productsVoiceUrl;
+                }
+
+                // Email settings
+                if (settingsMap.email_reply_to) {
+                    document.getElementById('email-reply-to').value = settingsMap.email_reply_to;
+                }
+                if (settingsMap.offer_flow_reply_to) {
+                    document.getElementById('offer-flow-reply-to').value = settingsMap.offer_flow_reply_to;
+                }
+                if (settingsMap.email_from_name_transactional) {
+                    document.getElementById('email-from-name-transactional').value = settingsMap.email_from_name_transactional;
+                }
+                if (settingsMap.email_from_transactional) {
+                    document.getElementById('email-from-transactional').value = settingsMap.email_from_transactional;
+                }
+                if (settingsMap.email_from_name_outreach) {
+                    document.getElementById('email-from-name-outreach').value = settingsMap.email_from_name_outreach;
+                }
+                if (settingsMap.email_from_outreach) {
+                    document.getElementById('email-from-outreach').value = settingsMap.email_from_outreach;
+                }
             } catch (err) {
                 console.error('Error loading settings:', err);
                 showToast('Blad ladowania ustawien', 'error');
+            }
+        }
+
+        // ============================================
+        // EMAIL SETTINGS
+        // ============================================
+        async function saveEmailSetting(key, inputId) {
+            const value = document.getElementById(inputId).value.trim();
+            try {
+                const { error } = await sb
+                    .from('settings')
+                    .upsert({ key, value }, { onConflict: 'key' });
+
+                if (error) throw error;
+                showToast('Zapisano', 'success');
+            } catch (err) {
+                console.error('Error saving setting:', err);
+                showToast('Blad zapisu', 'error');
+            }
+        }
+
+        async function saveEmailDomains() {
+            const settings = [
+                { key: 'email_from_name_transactional', value: document.getElementById('email-from-name-transactional').value.trim() },
+                { key: 'email_from_transactional', value: document.getElementById('email-from-transactional').value.trim() },
+                { key: 'email_from_name_outreach', value: document.getElementById('email-from-name-outreach').value.trim() },
+                { key: 'email_from_outreach', value: document.getElementById('email-from-outreach').value.trim() }
+            ];
+
+            try {
+                for (const s of settings) {
+                    const { error } = await sb
+                        .from('settings')
+                        .upsert(s, { onConflict: 'key' });
+                    if (error) throw error;
+                }
+                showToast('Domeny zapisane', 'success');
+            } catch (err) {
+                console.error('Error saving domains:', err);
+                showToast('Blad zapisu', 'error');
             }
         }
 

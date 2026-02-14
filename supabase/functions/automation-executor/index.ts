@@ -326,7 +326,17 @@ async function processActionStep(
       projectUrl: context.projectUrl || context.project_url,
       // Workflow specific
       milestoneName: context.milestone_title,
-      progressPercent: context.progress_percent
+      progressPercent: context.progress_percent,
+      reportTitle: context.reportTitle,
+      salesPageUrl: context.salesPageUrl,
+      // Contract specific
+      contractUrl: context.contractUrl,
+      // Invoice specific
+      invoiceNumber: context.invoiceNumber,
+      amount: context.amount,
+      description: context.description,
+      pdfUrl: context.pdfUrl,
+      viewUrl: context.viewUrl
     }
 
     // Call send-email function

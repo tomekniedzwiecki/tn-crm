@@ -155,19 +155,21 @@ Deno.serve(async (req) => {
     if (order.customer_email) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-        console.log('[fakturownia-invoice] Sending email notification to:', order.customer_email)
+        console.log('[fakturownia-invoice] Triggering automation for:', order.customer_email)
 
-        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+        const triggerResponse = await fetch(`${supabaseUrl}/functions/v1/automation-trigger`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`
+            'Authorization': `Bearer ${supabaseServiceKey}`
           },
           body: JSON.stringify({
-            type: 'invoice_sent',
-            data: {
+            trigger_type: 'invoice_sent',
+            entity_type: 'order',
+            entity_id: order.id,
+            context: {
               email: order.customer_email,
               clientName: order.customer_name || order.customer_company || 'Cześć',
               invoiceNumber: result.number,
@@ -179,14 +181,10 @@ Deno.serve(async (req) => {
           })
         })
 
-        const emailResult = await emailResponse.json()
-        console.log('[fakturownia-invoice] Email result:', emailResult)
-
-        if (!emailResult.success) {
-          console.warn('[fakturownia-invoice] Email failed but invoice created:', emailResult.error)
-        }
+        const triggerResult = await triggerResponse.json()
+        console.log('[fakturownia-invoice] Automation trigger result:', triggerResult)
       } catch (emailError) {
-        console.warn('[fakturownia-invoice] Email error (invoice still created):', emailError)
+        console.warn('[fakturownia-invoice] Automation trigger error (invoice still created):', emailError)
       }
     }
 
