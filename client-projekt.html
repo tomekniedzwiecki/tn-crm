@@ -961,50 +961,13 @@
             margin-left: 240px;
         }
 
-        /* Bottom Navigation (Mobile) */
-        .dash-bottom-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(10,10,10,0.95);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255,255,255,0.06);
-            padding: 8px 16px;
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
-            z-index: 50;
+        /* Mobile Menu Animation */
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
         }
-        .dash-bottom-nav-inner {
-            display: flex;
-            justify-content: space-around;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-        .dash-bottom-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 12px;
-            border-radius: 12px;
-            color: #666;
-            font-size: 10px;
-            font-weight: 500;
-            transition: all 0.15s ease;
-            cursor: pointer;
-        }
-        .dash-bottom-nav-item:active {
-            transform: scale(0.95);
-        }
-        .dash-bottom-nav-item.active {
-            color: #fff;
-        }
-        .dash-bottom-nav-item i {
-            font-size: 22px;
-        }
-        .dash-bottom-nav-item.active i {
-            color: #06b6d4;
+        .animate-slide-in {
+            animation: slideIn 0.2s ease-out;
         }
 
         @media (max-width: 1024px) {
@@ -1013,12 +976,6 @@
             }
             .dash-main {
                 margin-left: 0;
-            }
-            .dash-bottom-nav {
-                display: block;
-            }
-            .dash-main-content {
-                padding-bottom: 80px;
             }
         }
     </style>
@@ -1393,11 +1350,93 @@
                 </div>
             </aside>
 
+            <!-- Mobile Menu Overlay -->
+            <div id="dash-mobile-menu" class="hidden fixed inset-0 z-50 lg:hidden">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleDashMobileMenu()"></div>
+                <div class="absolute left-0 top-0 bottom-0 w-[280px] bg-[#0a0a0a] border-r border-[#1a1a1a] animate-slide-in overflow-y-auto">
+                    <div class="p-4 border-b border-[#1a1a1a] flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                                <span class="text-black text-[11px] font-bold tracking-tight">TN</span>
+                            </div>
+                            <div>
+                                <div id="dash-mobile-project" class="text-[13px] font-medium text-white">Projekt</div>
+                                <div class="text-[10px] text-emerald-500 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                    Aktywny
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="toggleDashMobileMenu()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#1a1a1a] transition-colors">
+                            <i class="ph ph-x text-lg text-white"></i>
+                        </button>
+                    </div>
+                    <nav class="p-3">
+                        <div class="dash-nav-section">Etap 1 — Marka</div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('projekt');toggleDashMobileMenu()">
+                            <i class="ph ph-house-simple"></i>
+                            <span>Przegląd</span>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('produkty');toggleDashMobileMenu()">
+                            <i class="ph ph-package"></i>
+                            <span>Produkty</span>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('branding');toggleDashMobileMenu()">
+                            <i class="ph ph-paint-brush"></i>
+                            <span>Branding</span>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('raporty');toggleDashMobileMenu()">
+                            <i class="ph ph-chart-line-up"></i>
+                            <span>Raporty</span>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('strona');toggleDashMobileMenu()">
+                            <i class="ph ph-globe"></i>
+                            <span>Strona</span>
+                        </div>
+
+                        <div id="dash-mobile-etap2" class="hidden">
+                            <div class="dash-nav-section">Etap 2 — Video</div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('video-intro');toggleDashMobileMenu()">
+                                <i class="ph ph-play-circle"></i>
+                                <span>Wprowadzenie</span>
+                            </div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('video-profiles');toggleDashMobileMenu()">
+                                <i class="ph ph-share-network"></i>
+                                <span>Profile</span>
+                            </div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('video-recordings');toggleDashMobileMenu()">
+                                <i class="ph ph-upload"></i>
+                                <span>Nagrania</span>
+                            </div>
+                        </div>
+
+                        <div id="dash-mobile-etap3" class="hidden">
+                            <div class="dash-nav-section">Etap 3</div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('takedrop');toggleDashMobileMenu()">
+                                <i class="ph ph-storefront"></i>
+                                <span>Konto</span>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-[#1a1a1a] mt-4 pt-4">
+                            <div class="dash-nav-item" onclick="switchToDashTab('wiadomosci');toggleDashMobileMenu()">
+                                <i class="ph ph-chat-circle"></i>
+                                <span>Wiadomości</span>
+                            </div>
+                            <a href="mailto:kontakt@tomekniedzwiecki.pl" class="dash-nav-item">
+                                <i class="ph ph-envelope"></i>
+                                <span>Kontakt</span>
+                            </a>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+
             <!-- Main Content -->
             <div class="dash-main">
                 <!-- Mobile Header -->
                 <header class="sticky top-0 z-40 bg-black/90 backdrop-blur-xl border-b border-[#1a1a1a] lg:hidden">
-                    <div class="px-4 md:px-6">
+                    <div class="px-4">
                         <div class="flex items-center justify-between h-14">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-md bg-white flex items-center justify-center">
@@ -1405,10 +1444,9 @@
                                 </div>
                                 <span id="dash-project-name" class="text-[14px] font-medium text-white tracking-tight">Projekt</span>
                             </div>
-                            <span id="dash-status-badge" class="badge badge-success text-[10px] px-2.5 py-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
-                                Aktywny
-                            </span>
+                            <button onclick="toggleDashMobileMenu()" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#1a1a1a] transition-colors">
+                                <i class="ph ph-list text-xl text-white"></i>
+                            </button>
                         </div>
                     </div>
                 </header>
@@ -1629,28 +1667,6 @@
             </div>
                 </main>
             </div><!-- /dash-main -->
-
-            <!-- Bottom Navigation (Mobile) -->
-            <nav class="dash-bottom-nav">
-                <div class="dash-bottom-nav-inner">
-                    <div class="dash-bottom-nav-item active" onclick="switchDashView('dashboard')" data-view="dashboard">
-                        <i class="ph ph-squares-four"></i>
-                        <span>Przegląd</span>
-                    </div>
-                    <div class="dash-bottom-nav-item" onclick="switchToDashTab('produkty')" data-view="produkty">
-                        <i class="ph ph-package"></i>
-                        <span>Produkty</span>
-                    </div>
-                    <div class="dash-bottom-nav-item" onclick="switchToDashTab('branding')" data-view="branding">
-                        <i class="ph ph-paint-brush"></i>
-                        <span>Branding</span>
-                    </div>
-                    <div class="dash-bottom-nav-item" onclick="switchToDashTab('wiadomosci')" data-view="wiadomosci">
-                        <i class="ph ph-chat-circle"></i>
-                        <span>Wiadomości</span>
-                    </div>
-                </div>
-            </nav>
         </div><!-- /dash-layout -->
     </div><!-- /dashboard-screen -->
 
@@ -3954,41 +3970,37 @@
         }
         window.switchToDashTab = switchToDashTab;
 
-        function switchDashView(view) {
-            // Update bottom nav active state
-            document.querySelectorAll('.dash-bottom-nav-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.view === view);
-            });
-            // Update sidebar active state
-            document.querySelectorAll('.dash-nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            // If view is dashboard, just stay on dashboard
-            if (view === 'dashboard') {
-                // Find and activate dashboard nav item
-                document.querySelector('.dash-nav-item[onclick*="dashboard"]')?.classList.add('active');
+        function toggleDashMobileMenu() {
+            const menu = document.getElementById('dash-mobile-menu');
+            if (menu) {
+                menu.classList.toggle('hidden');
+                document.body.style.overflow = menu.classList.contains('hidden') ? '' : 'hidden';
             }
         }
-        window.switchDashView = switchDashView;
+        window.toggleDashMobileMenu = toggleDashMobileMenu;
 
         function updateDashSidebar() {
-            // Update project name in sidebar
+            const projectName = workflow?.offer_name || 'Projekt';
+
+            // Update project name in sidebar and mobile menu
             const sidebarProject = document.getElementById('dash-sidebar-project');
-            if (sidebarProject) {
-                sidebarProject.textContent = workflow?.offer_name || 'Projekt';
-            }
+            if (sidebarProject) sidebarProject.textContent = projectName;
 
-            // Show/hide Etap 2 section
-            const etap2Section = document.getElementById('dash-sidebar-etap2');
-            if (etap2Section) {
-                etap2Section.classList.toggle('hidden', !(videoData && videoData.is_active));
-            }
+            const mobileProject = document.getElementById('dash-mobile-project');
+            if (mobileProject) mobileProject.textContent = projectName;
 
-            // Show/hide Etap 3 section
-            const etap3Section = document.getElementById('dash-sidebar-etap3');
-            if (etap3Section) {
-                etap3Section.classList.toggle('hidden', !(takeDropData && takeDropData.is_active));
-            }
+            const dashProjectName = document.getElementById('dash-project-name');
+            if (dashProjectName) dashProjectName.textContent = projectName;
+
+            // Show/hide Etap 2 section (sidebar + mobile)
+            const isVideoActive = videoData && videoData.is_active;
+            document.getElementById('dash-sidebar-etap2')?.classList.toggle('hidden', !isVideoActive);
+            document.getElementById('dash-mobile-etap2')?.classList.toggle('hidden', !isVideoActive);
+
+            // Show/hide Etap 3 section (sidebar + mobile)
+            const isTakeDropActive = takeDropData && takeDropData.is_active;
+            document.getElementById('dash-sidebar-etap3')?.classList.toggle('hidden', !isTakeDropActive);
+            document.getElementById('dash-mobile-etap3')?.classList.toggle('hidden', !isTakeDropActive);
         }
 
         async function loadProject() {
