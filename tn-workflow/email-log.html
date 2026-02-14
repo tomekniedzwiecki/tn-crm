@@ -741,7 +741,7 @@
                     .select(`
                         id, email_type, scheduled_for, sent_at, cancelled_at, created_at,
                         lead_id, leads(id, email, name),
-                        client_offer_id, client_offers(id, name)
+                        client_offer_id, client_offers(id, offer:offers(name))
                     `, { count: 'exact' })
                     .order('scheduled_for', { ascending: false })
                     .range((scheduledCurrentPage - 1) * pageSize, scheduledCurrentPage * pageSize - 1);
@@ -821,9 +821,9 @@
                             <span class="text-xs text-zinc-400">${typeLabel}</span>
                         </td>
                         <td class="px-4 py-3">
-                            ${offer ? `
+                            ${offer?.offer ? `
                                 <span class="text-sm text-white truncate max-w-[200px] block">
-                                    ${DOMPurify.sanitize(offer.name || 'Bez nazwy')}
+                                    ${DOMPurify.sanitize(offer.offer.name || 'Bez nazwy')}
                                 </span>
                             ` : '<span class="text-zinc-600">-</span>'}
                         </td>
