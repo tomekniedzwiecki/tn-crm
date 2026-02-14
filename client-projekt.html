@@ -781,100 +781,105 @@
             flex-shrink: 0;
         }
 
-        /* Stage Timeline */
-        .stage-timeline {
-            display: flex;
+        /* Stage Navigation - Vercel style */
+        .stage-nav {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 0;
-            padding: 16px 0;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 2px;
         }
-        .stage-timeline-item {
+        .stage-nav-item {
             display: flex;
             align-items: center;
-        }
-        .stage-timeline-node {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            transition: all 0.15s ease;
             cursor: default;
-        }
-        .stage-timeline-node.completed {
-            background: rgba(16, 185, 129, 0.15);
-            border: 2px solid rgba(16, 185, 129, 0.4);
-            color: #10b981;
-            cursor: pointer;
-        }
-        .stage-timeline-node.completed:hover {
-            border-color: rgba(16, 185, 129, 0.7);
-            transform: scale(1.08);
-        }
-        .stage-timeline-node.current {
-            background: rgba(6, 182, 212, 0.15);
-            border: 2px solid rgba(6, 182, 212, 0.5);
-            color: #06b6d4;
-            cursor: pointer;
-            animation: timeline-pulse 2s infinite;
-        }
-        @keyframes timeline-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(6, 182, 212, 0); }
-        }
-        .stage-timeline-node.locked {
-            background: #111;
-            border: 2px solid #333;
-            color: #555;
-        }
-        .stage-timeline-node.viewing {
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
-        }
-        .stage-timeline-connector {
-            width: 48px;
-            height: 2px;
-            background: #333;
-            transition: background 0.3s ease;
-        }
-        .stage-timeline-connector.completed {
-            background: #10b981;
-        }
-        .stage-timeline-connector.active {
-            background: linear-gradient(90deg, #10b981, #06b6d4);
-        }
-        .stage-timeline-label {
-            position: absolute;
-            top: calc(100% + 6px);
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
-            color: #555;
             white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.2s;
         }
-        .stage-timeline-node:hover .stage-timeline-label,
-        .stage-timeline-node.current .stage-timeline-label,
-        .stage-timeline-node.viewing .stage-timeline-label {
-            opacity: 1;
-            color: #888;
+        .stage-nav-item.unlocked {
+            cursor: pointer;
+            color: #777;
         }
-        @media (max-width: 640px) {
-            .stage-timeline-node {
-                width: 32px;
-                height: 32px;
+        .stage-nav-item.unlocked:hover {
+            background: rgba(255,255,255,0.04);
+            color: #999;
+        }
+        .stage-nav-item.active {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+        .stage-nav-item.active:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .stage-nav-check {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .stage-nav-item.completed .stage-nav-check {
+            display: flex;
+        }
+        .stage-nav-item.completed .stage-nav-num {
+            display: none;
+        }
+        .stage-nav-check i {
+            font-size: 10px;
+            color: #fff;
+        }
+        .stage-nav-item.locked {
+            opacity: 0.35;
+        }
+        .stage-nav-num {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .stage-nav-item.active .stage-nav-num {
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            color: #fff;
+        }
+        @media (max-width: 768px) {
+            .stage-nav {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .stage-nav::-webkit-scrollbar {
+                display: none;
+            }
+            .stage-nav-item {
+                padding: 10px 14px;
                 font-size: 12px;
+                gap: 6px;
             }
-            .stage-timeline-connector {
-                width: 28px;
+        }
+        @media (max-width: 480px) {
+            .stage-nav-item .stage-nav-label {
+                display: none;
             }
-            .stage-timeline-label {
-                font-size: 9px;
+            .stage-nav-item {
+                padding: 12px 16px;
             }
         }
     </style>
@@ -1196,9 +1201,9 @@
                 <p class="text-[#666] text-[14px] mt-1">Oto podsumowanie Twojego projektu</p>
             </div>
 
-            <!-- Stage Timeline -->
-            <div id="dash-stage-timeline" class="mb-8 md:mb-10">
-                <div class="stage-timeline" id="stage-timeline-container">
+            <!-- Stage Navigation -->
+            <div id="dash-stage-timeline" class="mb-8 md:mb-10 flex justify-center">
+                <div class="stage-nav" id="stage-timeline-container">
                     <!-- Rendered by JS -->
                 </div>
             </div>
@@ -1290,12 +1295,6 @@
                     </div>
                 </div>
 
-                <!-- BOX: Video (Etap 2) - conditional -->
-                <div id="dash-box-video" class="bento-box bento-md p-0 overflow-hidden cursor-pointer transition-all  hidden" onclick="switchToDashTab('video')">
-                    <div id="dash-video-content" class="h-full">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
 
                 <!-- BOX: TakeDrop (Etap 3) - conditional -->
                 <div id="dash-box-takedrop" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all  hidden" onclick="switchToDashTab('takedrop')">
@@ -2944,47 +2943,24 @@
             if (!container) return;
 
             let html = '';
-            STAGES.forEach((stage, index) => {
+            STAGES.forEach((stage) => {
                 const isCompleted = isStageCompleted(stage.id);
                 const isUnlocked = isStageUnlocked(stage.id);
-                const isCurrent = stage.id === activeStage;
-                const isViewing = stage.id === currentStage;
+                const isActive = stage.id === currentStage;
 
-                let nodeClass = 'locked';
-                let nodeContent = stage.id;
-
-                if (isCompleted) {
-                    nodeClass = 'completed';
-                    nodeContent = '<i class="ph-fill ph-check"></i>';
-                } else if (isCurrent) {
-                    nodeClass = 'current';
-                } else if (isUnlocked) {
-                    nodeClass = 'completed';
-                }
-
-                if (isViewing && !isCurrent) {
-                    nodeClass += ' viewing';
-                }
+                let itemClass = 'stage-nav-item';
+                if (isCompleted) itemClass += ' completed';
+                if (isUnlocked) itemClass += ' unlocked';
+                if (isActive) itemClass += ' active';
+                if (!isUnlocked) itemClass += ' locked';
 
                 const clickHandler = isUnlocked ? `onclick="switchStage(${stage.id})"` : '';
 
-                // Connector logic
-                let connectorClass = '';
-                if (index < STAGES.length - 1) {
-                    if (isCompleted) {
-                        connectorClass = 'completed';
-                    } else if (isCurrent) {
-                        connectorClass = 'active';
-                    }
-                }
-
                 html += `
-                    <div class="stage-timeline-item">
-                        <div class="stage-timeline-node ${nodeClass}" ${clickHandler}>
-                            ${nodeContent}
-                            <span class="stage-timeline-label">${stage.name}</span>
-                        </div>
-                        ${index < STAGES.length - 1 ? `<div class="stage-timeline-connector ${connectorClass}"></div>` : ''}
+                    <div class="${itemClass}" ${clickHandler}>
+                        <span class="stage-nav-check"><i class="ph-fill ph-check"></i></span>
+                        <span class="stage-nav-num">${stage.id}</span>
+                        <span class="stage-nav-label">${stage.name}</span>
                     </div>
                 `;
             });
@@ -3671,70 +3647,6 @@
                         </div>
                     </div>
                 `;
-            }
-
-            // === VIDEO BOX ===
-            const videoContent = document.getElementById('dash-video-content');
-            const videoBox = document.getElementById('dash-box-video');
-
-            if (videoData && videoData.is_active) {
-                videoBox.classList.remove('hidden');
-                videoBox.onclick = () => switchToDashTab('video');
-                videoBox.style.cursor = 'pointer';
-
-                const videoLinks = videoData.video_links || [];
-
-                if (!videoData.stage_accepted) {
-                    videoBox.classList.add('bento-action');
-                    videoContent.innerHTML = `
-                        <div class="h-full p-5 flex flex-col">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-[#666] text-xs uppercase tracking-wide">Video</span>
-                                <span class="flex items-center gap-1.5 text-amber-500 text-xs">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                    Wymaga akcji
-                                </span>
-                            </div>
-                            <h3 class="text-white text-lg font-medium mb-1">Etap Video</h3>
-                            <p class="text-[#666] text-sm">Kliknij aby rozpocząć</p>
-                        </div>
-                    `;
-                } else if (videoLinks.length === 0) {
-                    videoBox.classList.add('bento-action');
-                    videoContent.innerHTML = `
-                        <div class="h-full p-5 flex flex-col">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-[#666] text-xs uppercase tracking-wide">Video</span>
-                                <span class="flex items-center gap-1.5 text-amber-500 text-xs">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                    Wymaga akcji
-                                </span>
-                            </div>
-                            <h3 class="text-white text-lg font-medium mb-1">Prześlij nagrania</h3>
-                            <p class="text-[#666] text-sm">Nagraj video według scenariuszy</p>
-                        </div>
-                    `;
-                } else {
-                    videoBox.classList.remove('bento-action');
-                    videoContent.innerHTML = `
-                        <div class="h-full p-5 flex flex-col">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-[#666] text-xs uppercase tracking-wide">Video</span>
-                                <span class="flex items-center gap-1 text-emerald-500 text-xs">
-                                    <i class="ph-fill ph-check-circle"></i>
-                                    Przesłano
-                                </span>
-                            </div>
-                            <div class="mt-auto">
-                                <span class="text-3xl font-medium text-white">${videoLinks.length}</span>
-                                <span class="text-[#666] text-sm ml-1">${videoLinks.length === 1 ? 'nagranie' : 'nagrań'}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            } else {
-                videoBox.classList.add('hidden');
-                videoBox.classList.remove('bento-action');
             }
 
             // === TAKEDROP BOX ===
