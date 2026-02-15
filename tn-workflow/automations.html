@@ -166,6 +166,42 @@
             opacity: 1;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
+
+        /* Editable name */
+        .flow-name-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+        }
+        .flow-name-wrapper:hover .edit-name-btn {
+            opacity: 1;
+        }
+        .edit-name-btn {
+            opacity: 0;
+            padding: 2px;
+            color: #666;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .edit-name-btn:hover {
+            color: #fff;
+        }
+        .flow-name-input {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 4px 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            width: 100%;
+            max-width: 300px;
+        }
+        .flow-name-input:focus {
+            outline: none;
+            border-color: #666;
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans antialiased">
@@ -394,8 +430,13 @@
                                 <i class="ph ${triggerIcon} text-violet-400"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <h3 class="text-base font-medium text-white truncate">${flow.name}</h3>
+                                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                    <div class="flow-name-wrapper" id="name-wrapper-${flow.id}">
+                                        <h3 class="text-base font-medium text-white truncate">${flow.name}</h3>
+                                        <button class="edit-name-btn" onclick="event.stopPropagation(); startEditName('${flow.id}', '${flow.name.replace(/'/g, "\\'")}')">
+                                            <i class="ph ph-pencil-simple text-sm"></i>
+                                        </button>
+                                    </div>
                                     <span class="badge ${categoryColor}">${categoryLabel}</span>
                                     ${filterLabel ? `<span class="badge badge-amber">${filterLabel}</span>` : ''}
                                     ${flow.is_active ? '<span class="badge badge-green">Aktywna</span>' : ''}
@@ -690,6 +731,64 @@
                 console.error('Error saving order:', err);
                 showToast('Błąd zapisywania kolejności', 'error');
             }
+        }
+
+        // ============================================
+        // EDIT NAME
+        // ============================================
+        function startEditName(flowId, currentName) {
+            const wrapper = document.getElementById(`name-wrapper-${flowId}`);
+            if (!wrapper) return;
+
+            wrapper.innerHTML = `
+                <input type="text" class="flow-name-input" value="${currentName}"
+                    onblur="saveFlowName('${flowId}', this.value)"
+                    onkeydown="handleNameKeydown(event, '${flowId}', this.value)"
+                    onclick="event.stopPropagation()">
+            `;
+
+            const input = wrapper.querySelector('input');
+            input.focus();
+            input.select();
+        }
+
+        function handleNameKeydown(event, flowId, value) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveFlowName(flowId, value);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                renderFlows(); // Cancel - re-render to restore original
+            }
+        }
+
+        async function saveFlowName(flowId, newName) {
+            newName = newName.trim();
+            if (!newName) {
+                renderFlows(); // Restore if empty
+                return;
+            }
+
+            const flow = flows.find(f => f.id === flowId);
+            if (!flow || flow.name === newName) {
+                renderFlows(); // No change
+                return;
+            }
+
+            const { error } = await sb
+                .from('automation_flows')
+                .update({ name: newName })
+                .eq('id', flowId);
+
+            if (error) {
+                showToast('Błąd zapisywania nazwy', 'error');
+                renderFlows();
+                return;
+            }
+
+            flow.name = newName;
+            renderFlows();
+            showToast('Nazwa zapisana', 'success');
         }
 
         // ============================================
