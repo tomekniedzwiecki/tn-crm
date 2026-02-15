@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021525';
+        const APP_VERSION = '2026021301';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -76,6 +76,9 @@
             --warning: var(--ds-amber-900);
             --error: var(--ds-red-900);
             --info: var(--ds-blue-900);
+
+            /* Accent color for buttons */
+            --accent: #fff;
         }
 
         body {
@@ -1028,101 +1031,159 @@
 
     <!-- Loading Screen -->
     <div id="loading-screen" class="min-h-screen flex items-center justify-center bg-black">
-        <div class="text-center animate-enter">
-            <div class="w-7 h-7 mx-auto mb-5 border-2 border-[#222] border-t-white rounded-full animate-spin"></div>
-            <p class="text-tertiary text-sm">Ładowanie projektu...</p>
+        <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(16,185,129,0.05)_0%,_transparent_50%)] pointer-events-none"></div>
+        <div class="text-center animate-enter relative z-10">
+            <div class="w-10 h-10 mx-auto mb-6 border-2 border-zinc-800 border-t-emerald-500 rounded-full animate-spin"></div>
+            <p class="text-zinc-500 text-sm">Ładowanie projektu...</p>
         </div>
     </div>
 
     <!-- Not Found Screen -->
     <div id="not-found-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
-        <div class="text-center animate-enter max-w-md">
-            <div class="w-14 h-14 mx-auto mb-6 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
-                <i class="ph ph-warning text-2xl text-[#f5a623]"></i>
+        <div class="fixed inset-0 bg-gradient-to-br from-red-950/10 via-black to-black pointer-events-none"></div>
+        <div class="text-center animate-enter max-w-md relative z-10">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20 flex items-center justify-center">
+                <i class="ph ph-warning text-2xl text-red-400"></i>
             </div>
-            <h1 class="text-xl font-semibold text-white mb-3">Projekt nie znaleziony</h1>
-            <p class="text-tertiary text-sm leading-relaxed">Link do projektu jest nieprawidłowy lub wygasł.<br>Skontaktuj się z zespołem.</p>
+            <h1 class="text-2xl font-semibold text-white mb-3 tracking-tight">Projekt nie znaleziony</h1>
+            <p class="text-zinc-500 text-sm leading-relaxed">Link do projektu jest nieprawidłowy lub wygasł.<br>Skontaktuj się z zespołem.</p>
         </div>
     </div>
 
     <!-- Set Password Screen (First Time) -->
     <div id="set-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
-        <div class="w-full max-w-sm animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-[#00d084]/10 border border-[#00d084]/20 flex items-center justify-center">
-                    <i class="ph ph-lock-key text-xl text-[#00d084]"></i>
+        <!-- Background gradient -->
+        <div class="fixed inset-0 bg-gradient-to-br from-emerald-950/20 via-black to-black pointer-events-none"></div>
+        <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(16,185,129,0.08)_0%,_transparent_50%)] pointer-events-none"></div>
+
+        <div class="w-full max-w-[380px] animate-enter relative z-10">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                    <i class="ph ph-key text-2xl text-emerald-400"></i>
                 </div>
-                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Ustaw hasło dostępu</h1>
-                <p class="text-tertiary text-sm">Utwórz hasło do logowania do projektu.</p>
+                <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Ustaw hasło dostępu</h1>
+                <p class="text-zinc-500 text-sm">Utwórz hasło do logowania do projektu</p>
             </div>
 
-            <div class="card p-6">
+            <!-- Form Card -->
+            <div class="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-8 shadow-2xl shadow-black/50">
                 <form onsubmit="setPassword(event)">
-                    <div class="mb-4">
-                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Hasło</label>
-                        <input type="password" id="set-password-input" class="form-input" placeholder="Minimum 6 znaków" required minlength="6">
+                    <div class="mb-5">
+                        <label class="block text-zinc-400 text-xs font-medium uppercase tracking-wider mb-2.5">Hasło</label>
+                        <div class="relative">
+                            <input type="password" id="set-password-input"
+                                   class="w-full bg-black/50 border border-zinc-700/80 hover:border-zinc-600 focus:border-emerald-500/50 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all duration-200 placeholder:text-zinc-600"
+                                   placeholder="Minimum 6 znaków" required minlength="6">
+                            <button type="button" onclick="togglePasswordVisibility('set-password-input', this)"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                                <i class="ph ph-eye text-lg"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="mb-6">
-                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Potwierdź hasło</label>
-                        <input type="password" id="set-password-confirm" class="form-input" placeholder="Powtórz hasło" required>
+                        <label class="block text-zinc-400 text-xs font-medium uppercase tracking-wider mb-2.5">Potwierdź hasło</label>
+                        <div class="relative">
+                            <input type="password" id="set-password-confirm"
+                                   class="w-full bg-black/50 border border-zinc-700/80 hover:border-zinc-600 focus:border-emerald-500/50 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all duration-200 placeholder:text-zinc-600"
+                                   placeholder="Powtórz hasło" required>
+                        </div>
                     </div>
-                    <button type="submit" class="btn-primary w-full py-3">
-                        Ustaw hasło
+                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-medium py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0">
+                        Ustaw hasło i kontynuuj
                     </button>
                 </form>
             </div>
+
+            <!-- Footer -->
+            <p class="text-center text-zinc-600 text-xs mt-8">
+                Twoje hasło jest bezpiecznie szyfrowane
+            </p>
         </div>
     </div>
 
     <!-- Password Screen (Login) -->
     <div id="password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
-        <div class="w-full max-w-sm animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
-                    <i class="ph ph-lock text-xl text-[#666]"></i>
+        <!-- Background gradient -->
+        <div class="fixed inset-0 bg-gradient-to-br from-emerald-950/20 via-black to-black pointer-events-none"></div>
+        <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(16,185,129,0.08)_0%,_transparent_50%)] pointer-events-none"></div>
+
+        <div class="w-full max-w-[380px] animate-enter relative z-10">
+            <!-- Logo / Brand -->
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                    <i class="ph ph-lock-simple text-2xl text-emerald-400"></i>
                 </div>
-                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Zaloguj się</h1>
-                <p class="text-tertiary text-sm">Wprowadź hasło, aby uzyskać dostęp.</p>
+                <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Panel projektu</h1>
+                <p class="text-zinc-500 text-sm">Wprowadź hasło, aby kontynuować</p>
             </div>
 
-            <div class="card p-6">
+            <!-- Login Card -->
+            <div class="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-8 shadow-2xl shadow-black/50">
                 <form onsubmit="checkPassword(event)">
                     <div class="mb-6">
-                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Hasło</label>
-                        <input type="password" id="password-input" class="form-input" placeholder="Wprowadź hasło" required>
+                        <label class="block text-zinc-400 text-xs font-medium uppercase tracking-wider mb-2.5">Hasło</label>
+                        <div class="relative">
+                            <input type="password" id="password-input"
+                                   class="w-full bg-black/50 border border-zinc-700/80 hover:border-zinc-600 focus:border-emerald-500/50 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all duration-200 placeholder:text-zinc-600"
+                                   placeholder="••••••••" required>
+                            <button type="button" onclick="togglePasswordVisibility('password-input', this)"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                                <i class="ph ph-eye text-lg"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button type="submit" class="btn-primary w-full py-3">
-                        Zaloguj
+                    <button type="submit" class="w-full bg-white hover:bg-zinc-100 text-black font-medium py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-white/5 hover:shadow-white/10 hover:-translate-y-0.5 active:translate-y-0">
+                        Zaloguj się
                     </button>
                 </form>
-                <div class="mt-4 text-center">
-                    <button onclick="showScreen('forgot-password')" class="text-sm text-zinc-500 hover:text-white transition-colors">
-                        Zapomniałem hasła
+
+                <div class="mt-6 pt-6 border-t border-zinc-800/80 text-center">
+                    <button onclick="showScreen('forgot-password')" class="text-sm text-zinc-500 hover:text-emerald-400 transition-colors">
+                        Nie pamiętam hasła
                     </button>
                 </div>
             </div>
+
+            <!-- Footer -->
+            <p class="text-center text-zinc-600 text-xs mt-8">
+                Chronione hasłem dla Twojego bezpieczeństwa
+            </p>
         </div>
     </div>
 
     <!-- Forgot Password Screen -->
     <div id="forgot-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
-        <div class="w-full max-w-sm animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                    <i class="ph ph-envelope text-xl text-amber-400"></i>
+        <!-- Background gradient -->
+        <div class="fixed inset-0 bg-gradient-to-br from-amber-950/20 via-black to-black pointer-events-none"></div>
+        <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,166,35,0.06)_0%,_transparent_50%)] pointer-events-none"></div>
+
+        <div class="w-full max-w-[380px] animate-enter relative z-10">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                    <i class="ph ph-envelope-simple text-2xl text-amber-400"></i>
                 </div>
-                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Resetuj hasło</h1>
-                <p class="text-tertiary text-sm">Wyślemy link do resetu hasła na Twój email.</p>
+                <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Resetuj hasło</h1>
+                <p class="text-zinc-500 text-sm">Wyślemy link do resetu na Twój email</p>
             </div>
 
-            <div class="card p-6">
-                <p id="forgot-password-email" class="text-center text-white mb-6 font-medium"></p>
-                <button onclick="requestPasswordReset()" id="request-reset-btn" class="btn-primary w-full py-3">
+            <!-- Form Card -->
+            <div class="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-8 shadow-2xl shadow-black/50">
+                <div class="bg-zinc-800/50 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                    <i class="ph ph-at text-zinc-500"></i>
+                    <span id="forgot-password-email" class="text-white text-sm font-medium truncate"></span>
+                </div>
+
+                <button onclick="requestPasswordReset()" id="request-reset-btn"
+                        class="w-full bg-amber-500 hover:bg-amber-400 text-black font-medium py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-0">
                     Wyślij link do resetu
                 </button>
-                <div class="mt-4 text-center">
-                    <button onclick="showScreen('password')" class="text-sm text-zinc-500 hover:text-white transition-colors">
-                        ← Wróć do logowania
+
+                <div class="mt-6 pt-6 border-t border-zinc-800/80 text-center">
+                    <button onclick="showScreen('password')" class="text-sm text-zinc-500 hover:text-white transition-colors flex items-center gap-2 mx-auto">
+                        <i class="ph ph-arrow-left"></i>
+                        Wróć do logowania
                     </button>
                 </div>
             </div>
@@ -1131,30 +1192,53 @@
 
     <!-- Reset Password Screen (with token) -->
     <div id="reset-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
-        <div class="w-full max-w-sm animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 mx-auto mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <i class="ph ph-key text-xl text-emerald-400"></i>
+        <!-- Background gradient -->
+        <div class="fixed inset-0 bg-gradient-to-br from-emerald-950/20 via-black to-black pointer-events-none"></div>
+        <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(16,185,129,0.08)_0%,_transparent_50%)] pointer-events-none"></div>
+
+        <div class="w-full max-w-[380px] animate-enter relative z-10">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                    <i class="ph ph-shield-check text-2xl text-emerald-400"></i>
                 </div>
-                <h1 class="text-xl font-semibold text-white mb-2 tracking-tight">Ustaw nowe hasło</h1>
-                <p class="text-tertiary text-sm">Wprowadź nowe hasło do panelu projektu.</p>
+                <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">Ustaw nowe hasło</h1>
+                <p class="text-zinc-500 text-sm">Wprowadź nowe hasło do panelu projektu</p>
             </div>
 
-            <div class="card p-6">
+            <!-- Form Card -->
+            <div class="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-8 shadow-2xl shadow-black/50">
                 <form onsubmit="resetPassword(event)">
-                    <div class="mb-4">
-                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Nowe hasło</label>
-                        <input type="password" id="reset-password-input" class="form-input" placeholder="Minimum 6 znaków" required minlength="6">
+                    <div class="mb-5">
+                        <label class="block text-zinc-400 text-xs font-medium uppercase tracking-wider mb-2.5">Nowe hasło</label>
+                        <div class="relative">
+                            <input type="password" id="reset-password-input"
+                                   class="w-full bg-black/50 border border-zinc-700/80 hover:border-zinc-600 focus:border-emerald-500/50 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all duration-200 placeholder:text-zinc-600"
+                                   placeholder="Minimum 6 znaków" required minlength="6">
+                            <button type="button" onclick="togglePasswordVisibility('reset-password-input', this)"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                                <i class="ph ph-eye text-lg"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="mb-6">
-                        <label class="block text-tertiary text-xs uppercase tracking-wider mb-2">Potwierdź hasło</label>
-                        <input type="password" id="reset-password-confirm" class="form-input" placeholder="Powtórz hasło" required>
+                        <label class="block text-zinc-400 text-xs font-medium uppercase tracking-wider mb-2.5">Potwierdź hasło</label>
+                        <div class="relative">
+                            <input type="password" id="reset-password-confirm"
+                                   class="w-full bg-black/50 border border-zinc-700/80 hover:border-zinc-600 focus:border-emerald-500/50 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all duration-200 placeholder:text-zinc-600"
+                                   placeholder="Powtórz hasło" required>
+                        </div>
                     </div>
-                    <button type="submit" class="btn-primary w-full py-3">
+                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-medium py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0">
                         Zapisz nowe hasło
                     </button>
                 </form>
             </div>
+
+            <!-- Footer -->
+            <p class="text-center text-zinc-600 text-xs mt-8">
+                Twoje hasło jest bezpiecznie szyfrowane
+            </p>
         </div>
     </div>
 
@@ -2959,6 +3043,20 @@
                 const el = document.getElementById(`${name}-screen`);
                 if (el) el.classList.toggle('hidden', name !== screenName);
             });
+        }
+
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('ph-eye');
+                icon.classList.add('ph-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('ph-eye-slash');
+                icon.classList.add('ph-eye');
+            }
         }
 
         function showToast(message, type = 'success') {
