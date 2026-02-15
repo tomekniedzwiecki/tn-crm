@@ -3999,6 +3999,8 @@
             isDashboardMode = true;
             document.getElementById('project-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
+            // Clear hash when going back to dashboard
+            history.replaceState(null, '', window.location.pathname + window.location.search);
         }
         window.goToDashboard = goToDashboard;
 
@@ -4430,6 +4432,9 @@
 
         // Tab switching
         function switchTab(tabName) {
+            // Update URL hash for direct linking
+            history.replaceState(null, '', `#${tabName}`);
+
             // Update active state for both old sidebar-btn and new dash-nav-item
             document.querySelectorAll('.sidebar-btn, .dash-nav-item').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
