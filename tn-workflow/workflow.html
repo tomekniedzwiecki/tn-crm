@@ -553,7 +553,7 @@
                         <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
                             <div class="text-[#555] text-[11px] font-medium uppercase tracking-wider mb-5">Zaangażowanie klienta</div>
                             <div class="grid grid-cols-3 gap-0">
-                                <div class="text-center py-4">
+                                <div class="text-center py-4 cursor-pointer hover:bg-white/5 rounded-lg transition-colors" onclick="openVisitsModal()">
                                     <div id="access-count" class="text-[36px] font-bold text-white leading-none">0</div>
                                     <div class="text-[#555] text-[10px] mt-3 uppercase tracking-wider">Wizyty</div>
                                 </div>
@@ -1921,6 +1921,29 @@
         </div>
     </div>
 
+    <!-- Visits History Modal -->
+    <div id="visits-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <i class="ph ph-eye text-emerald-400"></i>
+                    </div>
+                    <span class="font-medium text-white">Historia wizyt klienta</span>
+                </div>
+                <button onclick="closeVisitsModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div id="visits-modal-content" class="p-5 overflow-y-auto flex-1">
+                <div class="text-zinc-500 text-sm text-center py-8">Ładowanie...</div>
+            </div>
+            <div class="px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <button onclick="closeVisitsModal()" class="w-full text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Image Lightbox -->
     <div id="image-lightbox" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 z-[60] cursor-pointer" onclick="closeImageLightbox()">
         <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
@@ -2487,6 +2510,58 @@
                 .eq('author_type', 'client');
 
             document.getElementById('client-messages-count').textContent = msgCount || 0;
+        }
+
+        async function openVisitsModal() {
+            if (!workflow) return;
+            document.getElementById('visits-modal').classList.remove('hidden');
+            document.getElementById('visits-modal-content').innerHTML = '<div class="text-zinc-500 text-sm text-center py-8"><i class="ph ph-spinner animate-spin mr-2"></i>Ładowanie...</div>';
+
+            // Load all visits
+            const { data: visits, error } = await supabaseClient
+                .from('workflow_access_log')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .order('accessed_at', { ascending: false })
+                .limit(100);
+
+            if (error || !visits || visits.length === 0) {
+                document.getElementById('visits-modal-content').innerHTML = '<div class="text-zinc-500 text-sm text-center py-8">Brak wizyt klienta</div>';
+                return;
+            }
+
+            // Group visits by day
+            const visitsByDay = {};
+            visits.forEach(v => {
+                const date = new Date(v.accessed_at);
+                const dayKey = date.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                if (!visitsByDay[dayKey]) visitsByDay[dayKey] = [];
+                visitsByDay[dayKey].push(v);
+            });
+
+            let html = '';
+            for (const [day, dayVisits] of Object.entries(visitsByDay)) {
+                html += `<div class="mb-4">
+                    <div class="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2">${day}</div>
+                    <div class="space-y-1">`;
+                dayVisits.forEach(v => {
+                    const time = new Date(v.accessed_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                    const device = v.user_agent?.includes('Mobile') ? 'ph-device-mobile' : 'ph-desktop';
+                    const browser = v.user_agent?.includes('Chrome') ? 'Chrome' : v.user_agent?.includes('Safari') ? 'Safari' : v.user_agent?.includes('Firefox') ? 'Firefox' : 'Przeglądarka';
+                    html += `<div class="flex items-center gap-3 py-2 px-3 bg-zinc-800/50 rounded-lg">
+                        <i class="ph ${device} text-zinc-500"></i>
+                        <span class="text-white text-sm">${time}</span>
+                        <span class="text-zinc-500 text-xs">${browser}</span>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+
+            document.getElementById('visits-modal-content').innerHTML = html;
+        }
+
+        function closeVisitsModal() {
+            document.getElementById('visits-modal').classList.add('hidden');
         }
 
         async function loadLastAdminAction() {
