@@ -144,9 +144,13 @@
 
                 <!-- Filters -->
                 <div class="flex flex-wrap items-center gap-3 mb-6">
-                    <div class="relative flex-1 min-w-[200px] max-w-xs">
+                    <div class="relative flex-1 min-w-[200px] max-w-md group">
                         <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
-                        <input type="text" id="search-input" placeholder="Szukaj klienta lub ID projektu..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 transition-colors">
+                        <input type="text" id="search-input" placeholder="Imię, nazwisko, email, telefon..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-16 py-2.5 text-sm text-white outline-none focus:border-zinc-600 transition-colors" autocomplete="off">
+                        <button id="search-clear" onclick="clearSearch()" class="hidden absolute right-9 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1 transition-colors">
+                            <i class="ph ph-x text-sm"></i>
+                        </button>
+                        <kbd class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded font-mono pointer-events-none">/</kbd>
                     </div>
                     <select id="status-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
                         <option value="">Wszystkie statusy</option>
@@ -412,6 +416,7 @@
                         customer_email: w.customer_email,
                         customer_name: w.customer_name,
                         customer_company: w.customer_company,
+                        customer_phone: w.customer_phone,
                         offer_name: w.offer_name,
                         amount: w.amount,
                         status: w.status,
@@ -610,20 +615,66 @@
             return w.video_stage?.is_active || (w.total_milestones > 0 && w.completed_milestones >= w.total_milestones);
         }
 
+        // Normalize phone number for comparison (remove spaces, dashes, +48 prefix)
+        function normalizePhone(phone) {
+            if (!phone) return '';
+            return phone.replace(/[\s\-\(\)]/g, '').replace(/^\+48/, '').replace(/^48/, '');
+        }
+
+        // Smart search matching
+        function matchesSearch(workflow, searchTerm) {
+            if (!searchTerm) return true;
+
+            const term = searchTerm.toLowerCase().trim();
+            const terms = term.split(/\s+/); // Split by spaces for multi-word search
+
+            // Normalize phone for comparison
+            const normalizedSearchPhone = normalizePhone(term);
+            const customerPhone = normalizePhone(workflow.customer_phone);
+
+            // Fields to search
+            const name = (workflow.customer_name || '').toLowerCase();
+            const company = (workflow.customer_company || '').toLowerCase();
+            const email = (workflow.customer_email || '').toLowerCase();
+            const offer = (workflow.offer_name || '').toLowerCase();
+            const id = (workflow.workflow_id || '').toLowerCase();
+
+            // Single term search - check all fields
+            if (terms.length === 1) {
+                // Phone match (if search looks like a phone number)
+                if (/^\d{3,}$/.test(normalizedSearchPhone) && customerPhone.includes(normalizedSearchPhone)) {
+                    return true;
+                }
+
+                // Standard field matching
+                return name.includes(term) ||
+                       company.includes(term) ||
+                       email.includes(term) ||
+                       offer.includes(term) ||
+                       id.includes(term);
+            }
+
+            // Multi-word search - all terms must match somewhere (great for "Jan Kowalski")
+            return terms.every(t => {
+                const normalizedT = normalizePhone(t);
+                return name.includes(t) ||
+                       company.includes(t) ||
+                       email.includes(t) ||
+                       offer.includes(t) ||
+                       id.includes(t) ||
+                       (/^\d{3,}$/.test(normalizedT) && customerPhone.includes(normalizedT));
+            });
+        }
+
         function applyFilters() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const searchTerm = document.getElementById('search-input').value;
             const statusFilter = document.getElementById('status-filter').value;
             const offerFilter = document.getElementById('offer-filter').value;
             const sortFilter = document.getElementById('sort-filter').value;
 
             filteredWorkflows = workflows.filter(w => {
-                // Search filter (name, company, email, offer, or workflow ID)
-                const searchMatch = !searchTerm ||
-                    (w.customer_name || '').toLowerCase().includes(searchTerm) ||
-                    (w.customer_company || '').toLowerCase().includes(searchTerm) ||
-                    w.customer_email.toLowerCase().includes(searchTerm) ||
-                    w.offer_name.toLowerCase().includes(searchTerm) ||
-                    w.workflow_id.toLowerCase().includes(searchTerm);
+                // Smart search filter
+                const searchMatch = matchesSearch(w, searchTerm);
 
                 // Status filter
                 const statusMatch = !statusFilter || w.status === statusFilter;
@@ -1344,10 +1395,43 @@
             }
         }
 
-        // Event listeners for filters
-        document.getElementById('search-input').addEventListener('input', () => {
+        // Clear search function
+        function clearSearch() {
+            const searchInput = document.getElementById('search-input');
+            searchInput.value = '';
+            document.getElementById('search-clear').classList.add('hidden');
             applyFilters();
             renderWorkflows();
+        }
+        window.clearSearch = clearSearch;
+
+        // Event listeners for filters
+        const searchInput = document.getElementById('search-input');
+        const searchClearBtn = document.getElementById('search-clear');
+        const searchHint = searchInput.parentElement.querySelector('kbd');
+
+        searchInput.addEventListener('input', (e) => {
+            if (e.target.value) {
+                searchClearBtn.classList.remove('hidden');
+                searchHint.classList.add('hidden');
+            } else {
+                searchClearBtn.classList.add('hidden');
+                if (document.activeElement !== searchInput) {
+                    searchHint.classList.remove('hidden');
+                }
+            }
+            applyFilters();
+            renderWorkflows();
+        });
+
+        searchInput.addEventListener('focus', () => {
+            searchHint.classList.add('hidden');
+        });
+
+        searchInput.addEventListener('blur', () => {
+            if (!searchInput.value) {
+                searchHint.classList.remove('hidden');
+            }
         });
 
         document.getElementById('status-filter').addEventListener('change', () => {
@@ -1363,6 +1447,25 @@
         document.getElementById('sort-filter').addEventListener('change', () => {
             applyFilters();
             renderWorkflows();
+        });
+
+        // Keyboard shortcuts for search
+        document.addEventListener('keydown', (e) => {
+            const searchInput = document.getElementById('search-input');
+
+            // "/" to focus search (like GitHub/Slack)
+            if (e.key === '/' && document.activeElement !== searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+
+            // Escape to clear and blur search
+            if (e.key === 'Escape' && document.activeElement === searchInput) {
+                searchInput.value = '';
+                searchInput.blur();
+                applyFilters();
+                renderWorkflows();
+            }
         });
 
         // =============================================
