@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021524';
+        const APP_VERSION = '2025021525';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2196,16 +2196,13 @@
 
             <!-- TAB: Raporty -->
             <div id="tab-raporty" class="tab-panel hidden animate-enter">
-                <!-- Layout: Sidebar + Content -->
-                <div class="flex gap-2 h-[calc(100vh-180px)]">
-                    <!-- Submenu - compact -->
-                    <div id="reports-menu" class="flex flex-col gap-1">
-                        <!-- Menu rendered by JS -->
-                    </div>
-                    <!-- Content - full height -->
-                    <div id="reports-view" class="flex-1 min-w-0 rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden flex flex-col">
-                        <!-- Report content rendered by JS -->
-                    </div>
+                <!-- Tabs on top -->
+                <div id="reports-tabs" class="flex items-center gap-2 mb-4 overflow-x-auto hide-scrollbar">
+                    <!-- Tabs rendered by JS -->
+                </div>
+                <!-- Content -->
+                <div id="reports-view" class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden flex flex-col" style="height: calc(100vh - 240px);">
+                    <!-- Report content rendered by JS -->
                 </div>
 
                 <!-- Empty State -->
@@ -6684,34 +6681,34 @@
         let currentReportIndex = 0;
 
         function renderReports() {
-            const menu = document.getElementById('reports-menu');
+            const tabs = document.getElementById('reports-tabs');
             const view = document.getElementById('reports-view');
             const empty = document.getElementById('reports-empty');
-            const container = menu?.parentElement;
 
-            if (!menu || !view) return;
+            if (!tabs || !view) return;
 
             if (reports.length === 0) {
-                menu.innerHTML = '';
+                tabs.innerHTML = '';
                 view.innerHTML = '';
-                container?.classList.add('hidden');
+                tabs.classList.add('hidden');
                 empty?.classList.remove('hidden');
                 return;
             }
 
-            container?.classList.remove('hidden');
+            tabs.classList.remove('hidden');
             empty?.classList.add('hidden');
 
             // Sort: infographic, video, presentation, pdf
             const sortOrder = { 'report_infographic': 1, 'report_video': 2, 'report_presentation': 3, 'report_pdf': 4 };
             reportsData = [...reports].sort((a, b) => (sortOrder[a.type] || 99) - (sortOrder[b.type] || 99));
 
-            // Render menu - compact icons only
-            menu.innerHTML = reportsData.map((r, i) => {
+            // Render horizontal tabs
+            tabs.innerHTML = reportsData.map((r, i) => {
                 const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
                 return `
-                    <button onclick="showReport(${i})" id="report-menu-${i}" title="${config.label}" class="w-9 h-9 rounded-md flex items-center justify-center transition-all ${i === 0 ? 'bg-white' : 'bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]'}">
+                    <button onclick="showReport(${i})" id="report-tab-${i}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all whitespace-nowrap ${i === 0 ? 'bg-white text-black' : 'bg-[#111] text-[#888] hover:text-white hover:bg-[#1a1a1a] border border-[#1a1a1a]'}">
                         <i class="ph ${config.icon} text-base" style="color: ${i === 0 ? '#000' : config.accent};"></i>
+                        <span class="text-[13px] font-medium">${config.label}</span>
                     </button>
                 `;
             }).join('');
@@ -6730,17 +6727,17 @@
             const isImage = r.type === 'report_infographic';
             const isPdf = r.type === 'report_pdf' || r.type === 'report_presentation';
 
-            // Update menu
+            // Update tabs
             reportsData.forEach((_, i) => {
-                const btn = document.getElementById(`report-menu-${i}`);
-                if (!btn) return;
+                const tab = document.getElementById(`report-tab-${i}`);
+                if (!tab) return;
                 const cfg = REPORT_TYPE_CONFIG_CLIENT[reportsData[i].type] || REPORT_FALLBACK_CONFIG;
                 if (i === index) {
-                    btn.className = 'w-9 h-9 rounded-md flex items-center justify-center transition-all bg-white';
-                    btn.querySelector('i').style.color = '#000';
+                    tab.className = 'flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all whitespace-nowrap bg-white text-black';
+                    tab.querySelector('i').style.color = '#000';
                 } else {
-                    btn.className = 'w-9 h-9 rounded-md flex items-center justify-center transition-all bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]';
-                    btn.querySelector('i').style.color = cfg.accent;
+                    tab.className = 'flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all whitespace-nowrap bg-[#111] text-[#888] hover:text-white hover:bg-[#1a1a1a] border border-[#1a1a1a]';
+                    tab.querySelector('i').style.color = cfg.accent;
                 }
             });
 
