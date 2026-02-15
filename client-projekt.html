@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021519';
+        const APP_VERSION = '2025021521';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2197,7 +2197,7 @@
             <!-- TAB: Raporty -->
             <div id="tab-raporty" class="tab-panel hidden animate-enter">
                 <!-- Layout: Sidebar + Content -->
-                <div class="flex gap-3 h-[calc(100vh-180px)]">
+                <div class="flex gap-2 h-[calc(100vh-180px)]">
                     <!-- Submenu - compact -->
                     <div id="reports-menu" class="flex flex-col gap-1">
                         <!-- Menu rendered by JS -->
@@ -6710,8 +6710,8 @@
             menu.innerHTML = reportsData.map((r, i) => {
                 const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
                 return `
-                    <button onclick="showReport(${i})" id="report-menu-${i}" title="${config.label}" class="w-10 h-10 rounded-lg flex items-center justify-center transition-all ${i === 0 ? 'bg-white' : 'bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]'}">
-                        <i class="ph ${config.icon} text-lg" style="color: ${i === 0 ? '#000' : config.accent};"></i>
+                    <button onclick="showReport(${i})" id="report-menu-${i}" title="${config.label}" class="w-9 h-9 rounded-md flex items-center justify-center transition-all ${i === 0 ? 'bg-white' : 'bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]'}">
+                        <i class="ph ${config.icon} text-base" style="color: ${i === 0 ? '#000' : config.accent};"></i>
                     </button>
                 `;
             }).join('');
@@ -6736,13 +6736,19 @@
                 if (!btn) return;
                 const cfg = REPORT_TYPE_CONFIG_CLIENT[reportsData[i].type] || REPORT_FALLBACK_CONFIG;
                 if (i === index) {
-                    btn.className = 'w-10 h-10 rounded-lg flex items-center justify-center transition-all bg-white';
+                    btn.className = 'w-9 h-9 rounded-md flex items-center justify-center transition-all bg-white';
                     btn.querySelector('i').style.color = '#000';
                 } else {
-                    btn.className = 'w-10 h-10 rounded-lg flex items-center justify-center transition-all bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]';
+                    btn.className = 'w-9 h-9 rounded-md flex items-center justify-center transition-all bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]';
                     btn.querySelector('i').style.color = cfg.accent;
                 }
             });
+
+            // Get prev/next labels
+            const prevIndex = (index - 1 + reportsData.length) % reportsData.length;
+            const nextIndex = (index + 1) % reportsData.length;
+            const prevConfig = REPORT_TYPE_CONFIG_CLIENT[reportsData[prevIndex]?.type] || REPORT_FALLBACK_CONFIG;
+            const nextConfig = REPORT_TYPE_CONFIG_CLIENT[reportsData[nextIndex]?.type] || REPORT_FALLBACK_CONFIG;
 
             // Render content - full height
             view.innerHTML = `
@@ -6777,6 +6783,20 @@
                         </div>
                     `}
                 </div>
+                ${reportsData.length > 1 ? `
+                <!-- Navigation footer -->
+                <div class="flex items-center justify-between px-4 py-3 border-t border-[#1a1a1a] flex-shrink-0 bg-[#080808]">
+                    <button onclick="showReport(${prevIndex})" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#151515] text-[13px] text-[#888] hover:text-white transition-all">
+                        <i class="ph ph-caret-left"></i>
+                        <span>${prevConfig.label}</span>
+                    </button>
+                    <span class="text-[12px] text-[#555]">${index + 1} / ${reportsData.length}</span>
+                    <button onclick="showReport(${nextIndex})" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#151515] text-[13px] text-[#888] hover:text-white transition-all">
+                        <span>${nextConfig.label}</span>
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                </div>
+                ` : ''}
             `;
         }
         window.showReport = showReport;
