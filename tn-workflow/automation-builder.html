@@ -596,7 +596,23 @@
             }
 
             // Save steps
-            // Delete old steps first
+            // First, get existing step IDs for this flow
+            const { data: existingSteps } = await sb
+                .from('automation_steps')
+                .select('id')
+                .eq('flow_id', savedFlowId);
+
+            const existingStepIds = (existingSteps || []).map(s => s.id);
+
+            // Clear current_step_id references in executions (to avoid FK violation)
+            if (existingStepIds.length > 0) {
+                await sb
+                    .from('automation_executions')
+                    .update({ current_step_id: null })
+                    .in('current_step_id', existingStepIds);
+            }
+
+            // Now delete old steps
             const { error: deleteError } = await sb
                 .from('automation_steps')
                 .delete()
