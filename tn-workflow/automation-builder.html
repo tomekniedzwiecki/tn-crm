@@ -356,13 +356,22 @@
     <div id="add-step-dropdown" class="dropdown-menu fixed hidden z-50 w-56 animate-fade-in">
         <div class="p-2">
             <div class="text-[10px] uppercase tracking-wider text-[#666] px-3 py-2 font-semibold">Dodaj krok</div>
-            <div class="dropdown-item" onclick="addStep('action')">
+            <div class="dropdown-item" onclick="addStep('action', 'send_email')">
                 <div class="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                    <i class="ph ph-lightning text-violet-400"></i>
+                    <i class="ph ph-envelope text-violet-400"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-white">Wyślij email</div>
+                    <div class="text-xs text-[#666]">Automatyczny email</div>
+                </div>
+            </div>
+            <div class="dropdown-item" onclick="addStep('action', 'share_products')">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <i class="ph ph-share-network text-emerald-400"></i>
                 </div>
                 <div>
                     <div class="text-sm font-medium text-white">Akcja</div>
-                    <div class="text-xs text-[#666]">Email, produkty...</div>
+                    <div class="text-xs text-[#666]">Udostępnij produkty...</div>
                 </div>
             </div>
             <div class="dropdown-item" onclick="addStep('delay')">
@@ -797,12 +806,12 @@
             dropdown.classList.remove('hidden');
         }
 
-        function addStep(type) {
+        function addStep(type, actionType = null) {
             document.getElementById('add-step-dropdown').classList.add('hidden');
 
             const newStep = {
                 step_type: type,
-                config: getDefaultConfig(type)
+                config: getDefaultConfig(type, actionType)
             };
 
             // Insert at correct position
@@ -816,8 +825,11 @@
             setTimeout(() => selectStep(insertAt), 100);
         }
 
-        function getDefaultConfig(type) {
+        function getDefaultConfig(type, actionType = null) {
             if (type === 'action') {
+                if (actionType === 'share_products') {
+                    return { action_type: 'share_products' };
+                }
                 return { action_type: 'send_email', email_type: 'offer_created' };
             } else if (type === 'delay') {
                 return { delay_value: 3, delay_unit: 'days' };
