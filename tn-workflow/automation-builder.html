@@ -696,11 +696,20 @@
             let icon, color, badge, title, subtitle;
 
             if (step.step_type === 'action') {
-                icon = 'ph-paper-plane-tilt';
-                color = 'purple';
-                badge = 'Akcja';
-                title = EMAIL_TYPES[step.config?.email_type] || 'Wyślij email';
-                subtitle = step.config?.email_type || 'Wybierz typ emaila';
+                const actionType = step.config?.action_type || 'send_email';
+                if (actionType === 'share_products') {
+                    icon = 'ph-package';
+                    color = 'cyan';
+                    badge = 'Akcja';
+                    title = 'Udostępnij produkty';
+                    subtitle = 'Katalog produktów';
+                } else {
+                    icon = 'ph-paper-plane-tilt';
+                    color = 'purple';
+                    badge = 'Akcja';
+                    title = EMAIL_TYPES[step.config?.email_type] || 'Wyślij email';
+                    subtitle = step.config?.email_type || 'Wybierz typ emaila';
+                }
             } else if (step.step_type === 'delay') {
                 icon = 'ph-clock';
                 color = 'cyan';
@@ -1124,16 +1133,11 @@
 
             if (step.step_type === 'action') {
                 title = 'Konfiguracja akcji';
-                content = `
-                    <div class="space-y-6 animate-slide-in">
-                        <div>
-                            <label class="block text-sm text-[#888] mb-2">Typ akcji</label>
-                            <select class="input-field" disabled>
-                                <option selected>Wyślij email</option>
-                            </select>
-                            <p class="text-xs text-[#666] mt-2">Więcej typów akcji wkrótce (Slack, webhook...)</p>
-                        </div>
+                const actionType = step.config?.action_type || 'send_email';
 
+                let actionContent = '';
+                if (actionType === 'send_email') {
+                    actionContent = `
                         <div>
                             <label class="block text-sm text-[#888] mb-2">Szablon emaila</label>
                             <select id="step-email-type" class="input-field" onchange="updateStepConfig(${index}, 'email_type', this.value); loadEmailTemplatePreview(this.value)">
@@ -1159,13 +1163,46 @@
                                 </div>
                             </div>
                         </div>
+                    `;
+                } else if (actionType === 'share_products') {
+                    actionContent = `
+                        <div class="bg-[#111] rounded-lg p-4 border border-[#1a1a1a]">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                                    <i class="ph ph-package text-cyan-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-white font-medium">Udostępnij produkty</div>
+                                    <div class="text-sm text-[#666]">Automatycznie udostępni katalog produktów klientowi</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-[#666]">
+                            <i class="ph ph-info mr-1"></i>
+                            Po udostępnieniu zostanie wysłany email (jeśli masz aktywną automatyzację "Produkty udostępnione")
+                        </div>
+                    `;
+                }
+
+                content = `
+                    <div class="space-y-6 animate-slide-in">
+                        <div>
+                            <label class="block text-sm text-[#888] mb-2">Typ akcji</label>
+                            <select class="input-field" onchange="updateStepConfig(${index}, 'action_type', this.value); renderStepPanel(${index})">
+                                <option value="send_email" ${actionType === 'send_email' ? 'selected' : ''}>Wyślij email</option>
+                                <option value="share_products" ${actionType === 'share_products' ? 'selected' : ''}>Udostępnij produkty</option>
+                            </select>
+                        </div>
+                        ${actionContent}
                     </div>
                 `;
-                // Load email template preview after rendering
-                setTimeout(() => {
-                    const emailType = step.config?.email_type || Object.keys(EMAIL_TYPES)[0];
-                    loadEmailTemplatePreview(emailType);
-                }, 50);
+                // Load email template preview after rendering (only for send_email)
+                if (actionType === 'send_email') {
+                    setTimeout(() => {
+                        const emailType = step.config?.email_type || Object.keys(EMAIL_TYPES)[0];
+                        loadEmailTemplatePreview(emailType);
+                    }, 50);
+                }
             } else if (step.step_type === 'delay') {
                 title = 'Konfiguracja opóźnienia';
                 content = `

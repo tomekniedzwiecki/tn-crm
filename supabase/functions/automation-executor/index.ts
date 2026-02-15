@@ -385,6 +385,102 @@ async function processActionStep(
     }
   }
 
+  // Share products action
+  if (action_type === 'share_products') {
+    console.log(`[automation-executor] Sharing products for workflow`)
+
+    const workflowId = execution.entity_id
+
+    if (execution.entity_type !== 'workflow') {
+      throw new Error('share_products action requires entity_type=workflow')
+    }
+
+    // Check if already shared
+    const { data: workflow } = await supabase
+      .from('workflows')
+      .select('id, products_shared_at, customer_email, customer_name, unique_token')
+      .eq('id', workflowId)
+      .single()
+
+    if (!workflow) {
+      throw new Error(`Workflow not found: ${workflowId}`)
+    }
+
+    if (workflow.products_shared_at) {
+      console.log(`[automation-executor] Products already shared for ${workflowId}, skipping`)
+      return {
+        log: {
+          timestamp,
+          action: 'share_products',
+          skipped: true,
+          reason: 'already_shared'
+        }
+      }
+    }
+
+    // Update workflow
+    const now = new Date().toISOString()
+    const { error: updateError } = await supabase
+      .from('workflows')
+      .update({ products_shared_at: now })
+      .eq('id', workflowId)
+
+    if (updateError) {
+      throw new Error(`Failed to update workflow: ${updateError.message}`)
+    }
+
+    // Log activity
+    await supabase
+      .from('workflow_activities')
+      .insert({
+        workflow_id: workflowId,
+        action: 'products_shared',
+        description: 'Produkty udostępnione automatycznie',
+        metadata: { auto: true, automation_execution_id: execution.id }
+      })
+
+    // Trigger products_shared automation (for email)
+    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć'
+    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#produkty`
+
+    try {
+      await fetch(
+        `${Deno.env.get('SUPABASE_URL')}/functions/v1/automation-trigger`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          },
+          body: JSON.stringify({
+            trigger_type: 'products_shared',
+            entity_type: 'workflow',
+            entity_id: workflowId,
+            context: {
+              email: workflow.customer_email,
+              clientName,
+              projectUrl
+            }
+          })
+        }
+      )
+    } catch (triggerError) {
+      console.error(`[automation-executor] Failed to trigger products_shared:`, triggerError)
+      // Don't throw - products are shared, email trigger failure is not critical
+    }
+
+    console.log(`[automation-executor] Products shared successfully for ${workflowId}`)
+
+    return {
+      log: {
+        timestamp,
+        action: 'share_products',
+        workflow_id: workflowId,
+        success: true
+      }
+    }
+  }
+
   throw new Error(`Unknown action type: ${action_type}`)
 }
 
