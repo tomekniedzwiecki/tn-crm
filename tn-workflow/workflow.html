@@ -5851,8 +5851,31 @@
         }
 
         function renderPrompts(type) {
-            const prompts = generateBrandingPrompts();
-            const list = prompts[type] || [];
+            // First check if we have custom AI prompts in database
+            const dbPrompts = brandingItems.filter(b => b.type === 'ai_prompt');
+            let list = [];
+
+            if (dbPrompts.length > 0) {
+                // Use prompts from database - filter by category
+                const categoryMatch = type === 'logo' ? 'logo' : 'mockup';
+                list = dbPrompts
+                    .filter(p => {
+                        const notes = parseNotes(p.notes);
+                        return notes.category === categoryMatch;
+                    })
+                    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                    .map(p => ({
+                        label: p.title,
+                        prompt: p.value
+                    }));
+            }
+
+            // Fallback to generated prompts if no custom prompts
+            if (list.length === 0) {
+                const prompts = generateBrandingPrompts();
+                list = prompts[type] || [];
+            }
+
             const container = document.getElementById(`prompts-list-${type}`);
 
             if (list.length === 0) {
@@ -5892,8 +5915,30 @@
         }
 
         function copyPrompt(type, index) {
-            const prompts = generateBrandingPrompts();
-            const list = prompts[type] || [];
+            // First check if we have custom AI prompts in database
+            const dbPrompts = brandingItems.filter(b => b.type === 'ai_prompt');
+            let list = [];
+
+            if (dbPrompts.length > 0) {
+                const categoryMatch = type === 'logo' ? 'logo' : 'mockup';
+                list = dbPrompts
+                    .filter(p => {
+                        const notes = parseNotes(p.notes);
+                        return notes.category === categoryMatch;
+                    })
+                    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                    .map(p => ({
+                        label: p.title,
+                        prompt: p.value
+                    }));
+            }
+
+            // Fallback to generated prompts
+            if (list.length === 0) {
+                const prompts = generateBrandingPrompts();
+                list = prompts[type] || [];
+            }
+
             if (list[index]) {
                 navigator.clipboard.writeText(list[index].prompt);
                 showToast('Prompt skopiowany', 'success');
