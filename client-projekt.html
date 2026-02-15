@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021518';
+        const APP_VERSION = '2025021519';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2197,9 +2197,9 @@
             <!-- TAB: Raporty -->
             <div id="tab-raporty" class="tab-panel hidden animate-enter">
                 <!-- Layout: Sidebar + Content -->
-                <div class="flex gap-4 h-[calc(100vh-180px)]">
-                    <!-- Submenu -->
-                    <div id="reports-menu" class="w-48 flex-shrink-0 flex flex-col gap-1">
+                <div class="flex gap-3 h-[calc(100vh-180px)]">
+                    <!-- Submenu - compact -->
+                    <div id="reports-menu" class="flex flex-col gap-1">
                         <!-- Menu rendered by JS -->
                     </div>
                     <!-- Content - full height -->
@@ -6706,13 +6706,12 @@
             const sortOrder = { 'report_infographic': 1, 'report_video': 2, 'report_presentation': 3, 'report_pdf': 4 };
             reportsData = [...reports].sort((a, b) => (sortOrder[a.type] || 99) - (sortOrder[b.type] || 99));
 
-            // Render menu
+            // Render menu - compact icons only
             menu.innerHTML = reportsData.map((r, i) => {
                 const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
                 return `
-                    <button onclick="showReport(${i})" id="report-menu-${i}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all ${i === 0 ? 'bg-white text-black' : 'text-[#888] hover:text-white hover:bg-[#151515]'}">
-                        <i class="ph ${config.icon} text-base" style="color: ${i === 0 ? '#000' : config.accent};"></i>
-                        <span class="text-[13px] font-medium truncate">${config.label}</span>
+                    <button onclick="showReport(${i})" id="report-menu-${i}" title="${config.label}" class="w-10 h-10 rounded-lg flex items-center justify-center transition-all ${i === 0 ? 'bg-white' : 'bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]'}">
+                        <i class="ph ${config.icon} text-lg" style="color: ${i === 0 ? '#000' : config.accent};"></i>
                     </button>
                 `;
             }).join('');
@@ -6737,10 +6736,10 @@
                 if (!btn) return;
                 const cfg = REPORT_TYPE_CONFIG_CLIENT[reportsData[i].type] || REPORT_FALLBACK_CONFIG;
                 if (i === index) {
-                    btn.className = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all bg-white text-black';
+                    btn.className = 'w-10 h-10 rounded-lg flex items-center justify-center transition-all bg-white';
                     btn.querySelector('i').style.color = '#000';
                 } else {
-                    btn.className = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all text-[#888] hover:text-white hover:bg-[#151515]';
+                    btn.className = 'w-10 h-10 rounded-lg flex items-center justify-center transition-all bg-[#111] hover:bg-[#1a1a1a] border border-[#1a1a1a]';
                     btn.querySelector('i').style.color = cfg.accent;
                 }
             });
