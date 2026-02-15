@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021515';
+        const APP_VERSION = '2025021517';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2196,15 +2196,14 @@
 
             <!-- TAB: Raporty -->
             <div id="tab-raporty" class="tab-panel hidden animate-enter">
-                <!-- Header -->
-                <div class="mb-8">
-                    <h2 class="text-[24px] font-semibold text-white tracking-tight mb-1">Raporty</h2>
-                    <p class="text-[13px] text-[#666]">Materiały analityczne przygotowane dla Twojego produktu</p>
+                <!-- Report Tabs -->
+                <div id="reports-tabs" class="flex items-center gap-2 mb-6 overflow-x-auto hide-scrollbar">
+                    <!-- Tabs rendered by JS -->
                 </div>
 
-                <!-- Reports Grid - all reports rendered here -->
-                <div id="reports-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Reports will be rendered by JS -->
+                <!-- Current Report View -->
+                <div id="reports-view">
+                    <!-- Report content rendered by JS -->
                 </div>
 
                 <!-- Empty State -->
@@ -2219,21 +2218,16 @@
                 </div>
 
                 <!-- Fullscreen Modal -->
-                <div id="report-modal" class="fixed inset-0 z-50 hidden" style="background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);">
-                    <!-- Close button -->
-                    <button onclick="closeReportModal()" class="absolute top-5 right-5 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group">
-                        <i class="ph ph-x text-white/70 group-hover:text-white text-lg"></i>
+                <div id="report-modal" class="fixed inset-0 z-50 hidden" style="background: rgba(0,0,0,0.95);">
+                    <button onclick="closeReportModal()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all">
+                        <i class="ph ph-x text-white text-lg"></i>
                     </button>
-                    <!-- Download button in modal -->
-                    <a id="report-modal-download" href="#" download class="absolute top-5 right-20 z-10 h-10 px-4 rounded-full bg-white hover:bg-gray-100 flex items-center gap-2 transition-all">
+                    <a id="report-modal-download" href="#" download class="absolute top-4 right-16 z-10 h-10 px-4 rounded-full bg-white hover:bg-gray-100 flex items-center gap-2 transition-all">
                         <i class="ph ph-download-simple text-black text-sm"></i>
                         <span class="text-black text-[13px] font-medium">Pobierz</span>
                     </a>
-                    <!-- Content container -->
-                    <div class="absolute inset-0 flex items-center justify-center p-8 pt-20" onclick="event.target === this && closeReportModal()">
-                        <div id="report-modal-content" class="max-w-6xl max-h-full overflow-auto rounded-xl">
-                            <!-- Content loaded here -->
-                        </div>
+                    <div class="absolute inset-0 flex items-center justify-center p-4 pt-16" onclick="event.target === this && closeReportModal()">
+                        <div id="report-modal-content" class="max-w-[95vw] max-h-[90vh] overflow-auto"></div>
                     </div>
                 </div>
             </div>
@@ -6681,108 +6675,120 @@
         const REPORT_FALLBACK_CONFIG = { icon: 'ph-file', label: 'Plik', accent: '#666', gradient: 'linear-gradient(135deg, #111 0%, #0a0a0a 100%)', pattern: '' };
 
         // ===================================
-        // RENDER REPORTS - Professional Vercel-style
+        // RENDER REPORTS - Full inline preview
         // ===================================
 
-        // Store reports data for modal access
         let reportsData = [];
+        let currentReportIndex = 0;
 
         function renderReports() {
-            const grid = document.getElementById('reports-grid');
+            const tabs = document.getElementById('reports-tabs');
+            const view = document.getElementById('reports-view');
             const empty = document.getElementById('reports-empty');
 
-            if (!grid) return;
+            if (!tabs || !view) return;
 
             if (reports.length === 0) {
-                grid.innerHTML = '';
+                tabs.innerHTML = '';
+                view.innerHTML = '';
                 empty?.classList.remove('hidden');
                 return;
             }
 
             empty?.classList.add('hidden');
-            reportsData = reports;
 
-            // Sort: infographic first, then video, then others
-            const sortOrder = { 'report_infographic': 1, 'report_video': 2 };
-            const sortedReports = [...reports].sort((a, b) => {
-                return (sortOrder[a.type] || 99) - (sortOrder[b.type] || 99);
-            });
+            // Sort: infographic, video, presentation, pdf
+            const sortOrder = { 'report_infographic': 1, 'report_video': 2, 'report_presentation': 3, 'report_pdf': 4 };
+            reportsData = [...reports].sort((a, b) => (sortOrder[a.type] || 99) - (sortOrder[b.type] || 99));
 
-            grid.innerHTML = sortedReports.map((r, index) => {
+            // Render tabs
+            tabs.innerHTML = reportsData.map((r, i) => {
                 const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
-                const fileSize = r.content?.file_size ? formatFileSize(r.content.file_size) : '';
-                const isVideo = r.type === 'report_video';
-                const isImage = r.type === 'report_infographic';
-                const isPdf = r.type === 'report_pdf' || r.type === 'report_presentation';
-
                 return `
-                    <div class="group rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden transition-all duration-300 hover:border-[#2a2a2a] hover:shadow-xl hover:shadow-black/20" data-report-index="${index}">
-                        <!-- Preview Area -->
-                        <div class="relative cursor-pointer" onclick="openReportModal(${index})">
-                            ${isVideo ? `
-                                <div class="aspect-video bg-gradient-to-br from-[#1a0a14] via-[#0a0a0a] to-[#0a0a0a] flex items-center justify-center relative overflow-hidden">
-                                    <video class="absolute inset-0 w-full h-full object-cover opacity-60" preload="metadata" muted>
-                                        <source src="${r.file_url}" type="video/mp4">
-                                    </video>
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                    <div class="relative z-10 w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300">
-                                        <i class="ph-fill ph-play text-xl text-black ml-0.5"></i>
-                                    </div>
-                                </div>
-                            ` : isImage ? `
-                                <div class="aspect-[4/3] bg-gradient-to-br from-[#0d0519] via-[#0a0a0a] to-[#0a0a0a] overflow-hidden relative">
-                                    <img src="${r.file_url}" alt="${r.title}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500">
-                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                        <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100">
-                                            <i class="ph ph-arrows-out text-lg text-black"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : `
-                                <div class="aspect-[4/3] flex items-center justify-center relative overflow-hidden" style="background: ${config.gradient};">
-                                    ${config.pattern}
-                                    <div class="relative z-10 flex flex-col items-center">
-                                        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300" style="background: ${config.accent}15; border: 1px solid ${config.accent}25;">
-                                            <i class="ph ${config.icon} text-3xl" style="color: ${config.accent};"></i>
-                                        </div>
-                                        <span class="text-[11px] uppercase tracking-wider text-[#555]">${config.label}</span>
-                                    </div>
-                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-                                </div>
-                            `}
-                        </div>
-
-                        <!-- Info & Actions -->
-                        <div class="p-4 border-t border-[#1a1a1a]">
-                            <div class="flex items-start justify-between gap-3 mb-4">
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="text-[14px] font-medium text-white truncate mb-1">${r.title}</h3>
-                                    <div class="flex items-center gap-2 text-[12px] text-[#555]">
-                                        <span>${config.label}</span>
-                                        ${fileSize ? `<span>·</span><span>${fileSize}</span>` : ''}
-                                    </div>
-                                </div>
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: ${config.accent}10;">
-                                    <i class="ph ${config.icon} text-sm" style="color: ${config.accent};"></i>
-                                </div>
-                            </div>
-
-                            <!-- Buttons -->
-                            <div class="flex gap-2">
-                                <button onclick="openReportModal(${index})" class="flex-1 h-9 rounded-lg border border-[#2a2a2a] hover:border-[#3a3a3a] bg-transparent hover:bg-white/5 text-[13px] text-[#999] hover:text-white font-medium transition-all flex items-center justify-center gap-1.5">
-                                    <i class="ph ph-arrows-out text-sm"></i>
-                                    Powiększ
-                                </button>
-                                <a href="${r.file_url}" download class="flex-1 h-9 rounded-lg bg-white hover:bg-gray-100 text-[13px] text-black font-medium transition-all flex items-center justify-center gap-1.5">
-                                    <i class="ph ph-download-simple text-sm"></i>
-                                    Pobierz
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                    <button onclick="showReport(${i})" id="report-tab-${i}" class="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap ${i === 0 ? 'bg-white text-black' : 'bg-[#111] text-[#888] hover:text-white hover:bg-[#1a1a1a] border border-[#1a1a1a]'}">
+                        <i class="ph ${config.icon}" style="color: ${i === 0 ? '#000' : config.accent};"></i>
+                        ${config.label}
+                    </button>
                 `;
             }).join('');
+
+            showReport(0);
         }
+
+        function showReport(index) {
+            currentReportIndex = index;
+            const r = reportsData[index];
+            if (!r) return;
+
+            const view = document.getElementById('reports-view');
+            const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
+            const isVideo = r.type === 'report_video';
+            const isImage = r.type === 'report_infographic';
+            const isPdf = r.type === 'report_pdf' || r.type === 'report_presentation';
+
+            // Update tabs
+            reportsData.forEach((_, i) => {
+                const tab = document.getElementById(`report-tab-${i}`);
+                if (!tab) return;
+                const cfg = REPORT_TYPE_CONFIG_CLIENT[reportsData[i].type] || REPORT_FALLBACK_CONFIG;
+                if (i === index) {
+                    tab.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap bg-white text-black';
+                    tab.querySelector('i').style.color = '#000';
+                } else {
+                    tab.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap bg-[#111] text-[#888] hover:text-white hover:bg-[#1a1a1a] border border-[#1a1a1a]';
+                    tab.querySelector('i').style.color = cfg.accent;
+                }
+            });
+
+            // Render content
+            view.innerHTML = `
+                <div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a]">
+                        <h3 class="text-[14px] font-medium text-white truncate">${r.title}</h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openReportModal(${index})" class="h-8 px-3 rounded-lg border border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-white/5 text-[12px] text-[#888] hover:text-white transition-all flex items-center gap-1.5">
+                                <i class="ph ph-arrows-out text-sm"></i>
+                                <span class="hidden sm:inline">Pełny ekran</span>
+                            </button>
+                            <a href="${r.file_url}" download class="h-8 px-3 rounded-lg bg-white hover:bg-gray-100 text-[12px] text-black font-medium transition-all flex items-center gap-1.5">
+                                <i class="ph ph-download-simple text-sm"></i>
+                                <span class="hidden sm:inline">Pobierz</span>
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Content -->
+                    ${isImage ? `
+                        <img src="${r.file_url}" alt="${r.title}" class="w-full cursor-pointer" onclick="openReportModal(${index})">
+                    ` : isVideo ? `
+                        <video controls class="w-full bg-black" preload="metadata">
+                            <source src="${r.file_url}" type="video/mp4">
+                        </video>
+                    ` : isPdf ? `
+                        <iframe src="${r.file_url}" class="w-full border-0" style="height: 70vh;"></iframe>
+                    ` : `
+                        <div class="p-12 text-center">
+                            <i class="ph ${config.icon} text-4xl mb-4" style="color: ${config.accent};"></i>
+                            <p class="text-[#666] text-sm">Pobierz plik aby go otworzyć</p>
+                        </div>
+                    `}
+                </div>
+                ${reportsData.length > 1 ? `
+                    <div class="flex justify-between items-center mt-4">
+                        <button onclick="showReport(${(index - 1 + reportsData.length) % reportsData.length})" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111] border border-[#1a1a1a] text-[13px] text-[#888] hover:text-white hover:bg-[#1a1a1a] transition-all">
+                            <i class="ph ph-caret-left"></i>
+                            Poprzedni
+                        </button>
+                        <span class="text-[12px] text-[#555]">${index + 1} / ${reportsData.length}</span>
+                        <button onclick="showReport(${(index + 1) % reportsData.length})" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111] border border-[#1a1a1a] text-[13px] text-[#888] hover:text-white hover:bg-[#1a1a1a] transition-all">
+                            Następny
+                            <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+                ` : ''}
+            `;
+        }
+        window.showReport = showReport;
 
         function formatFileSize(bytes) {
             if (!bytes) return '';
