@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021512';
+        const APP_VERSION = '2025021513';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2203,30 +2203,43 @@
                         <p class="text-[13px] text-[#666]">Materiały analityczne przygotowane dla Twojego produktu</p>
                     </div>
 
-                    <!-- Media Grid (Video + Infographic) -->
+                    <!-- Media Grid (Infographic + Video) -->
                     <div id="reports-media-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <!-- Video Card -->
-                        <div id="reports-video-section" class="hidden">
-                            <div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
-                                <div id="reports-video-container" class="bg-black">
-                                    <!-- Video embed here -->
+                        <!-- Infographic Card (first) -->
+                        <div id="reports-infographic-section" class="hidden">
+                            <div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden cursor-pointer group" onclick="openReportModal('infographic')">
+                                <div id="reports-infographic-container" class="max-h-[250px] overflow-hidden relative">
+                                    <!-- Infographic image here -->
+                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                        <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <i class="ph ph-arrows-out text-black"></i>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="p-3 flex items-center gap-2">
-                                    <i class="ph ph-video text-pink-400 text-sm"></i>
-                                    <span class="text-[12px] text-[#888]">Video analiza</span>
+                                <div class="p-3 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <i class="ph ph-image text-violet-400 text-sm"></i>
+                                        <span class="text-[12px] text-[#888]">Infografika</span>
+                                    </div>
+                                    <i class="ph ph-arrows-out text-[#555] text-sm"></i>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Infographic Card -->
-                        <div id="reports-infographic-section" class="hidden">
+                        <!-- Video Card (second) -->
+                        <div id="reports-video-section" class="hidden">
                             <div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
-                                <div id="reports-infographic-container" class="max-h-[300px] overflow-hidden">
-                                    <!-- Infographic image here -->
+                                <div id="reports-video-container" class="bg-black relative cursor-pointer" onclick="playReportVideo(this)">
+                                    <!-- Video embed here -->
                                 </div>
-                                <div class="p-3 flex items-center gap-2">
-                                    <i class="ph ph-image text-violet-400 text-sm"></i>
-                                    <span class="text-[12px] text-[#888]">Infografika</span>
+                                <div class="p-3 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <i class="ph ph-video text-pink-400 text-sm"></i>
+                                        <span class="text-[12px] text-[#888]">Video analiza</span>
+                                    </div>
+                                    <button onclick="openReportModal('video')" class="text-[#555] hover:text-white transition-colors">
+                                        <i class="ph ph-arrows-out text-sm"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2245,6 +2258,16 @@
                             <i class="ph ph-chart-line-up text-2xl text-[#333] mb-3"></i>
                             <p class="text-[13px] text-[#555]">Raporty w przygotowaniu</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Fullscreen Modal -->
+                <div id="report-fullscreen-modal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4">
+                    <button onclick="closeReportModal()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                        <i class="ph ph-x text-white text-xl"></i>
+                    </button>
+                    <div id="report-modal-content" class="max-w-5xl max-h-[90vh] overflow-auto">
+                        <!-- Content loaded here -->
                     </div>
                 </div>
             </div>
@@ -6720,23 +6743,31 @@
             const infographicReport = reports.find(r => r.type === 'report_infographic');
             const documentReports = reports.filter(r => !['report_video', 'report_infographic'].includes(r.type));
 
-            // Render Video Analysis (mp4)
+            // Render Video Analysis (mp4) with play button overlay
             if (videoReport && videoContainer) {
                 videoSection.classList.remove('hidden');
+                videoContainer.dataset.videoUrl = videoReport.file_url;
                 videoContainer.innerHTML = `
-                    <video controls class="w-full" preload="metadata">
-                        <source src="${videoReport.file_url}" type="video/mp4">
-                    </video>
+                    <div class="relative aspect-video bg-gradient-to-br from-pink-900/20 to-black">
+                        <video id="report-video-player" class="w-full h-full" preload="metadata" poster="">
+                            <source src="${videoReport.file_url}" type="video/mp4">
+                        </video>
+                        <div id="report-video-play-overlay" class="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/40">
+                            <div class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                                <i class="ph-fill ph-play text-2xl text-black ml-1"></i>
+                            </div>
+                        </div>
+                    </div>
                 `;
             }
 
             // Render Infographic
             if (infographicReport && infographicContainer) {
                 infographicSection.classList.remove('hidden');
+                // Store URL for modal
+                infographicContainer.dataset.imageUrl = infographicReport.file_url;
                 infographicContainer.innerHTML = `
-                    <a href="${infographicReport.file_url}" target="_blank" class="block">
-                        <img src="${infographicReport.file_url}" alt="${infographicReport.title}" class="w-full h-auto object-cover object-top">
-                    </a>
+                    <img src="${infographicReport.file_url}" alt="${infographicReport.title}" class="w-full h-auto object-cover object-top">
                 `;
             }
 
@@ -6769,6 +6800,57 @@
             return (bytes / 1048576).toFixed(1) + ' MB';
         }
 
+        // Report modal and video functions
+        function playReportVideo(container) {
+            const video = document.getElementById('report-video-player');
+            const overlay = document.getElementById('report-video-play-overlay');
+            if (video && overlay) {
+                overlay.classList.add('hidden');
+                video.controls = true;
+                video.play();
+            }
+        }
+        window.playReportVideo = playReportVideo;
+
+        function openReportModal(type) {
+            const modal = document.getElementById('report-fullscreen-modal');
+            const content = document.getElementById('report-modal-content');
+            if (!modal || !content) return;
+
+            if (type === 'infographic') {
+                const container = document.getElementById('reports-infographic-container');
+                const imageUrl = container?.dataset.imageUrl;
+                if (imageUrl) {
+                    content.innerHTML = `<img src="${imageUrl}" alt="Infografika" class="max-w-full max-h-[85vh] object-contain">`;
+                }
+            } else if (type === 'video') {
+                const container = document.getElementById('reports-video-container');
+                const videoUrl = container?.dataset.videoUrl;
+                if (videoUrl) {
+                    content.innerHTML = `<video controls autoplay class="max-w-full max-h-[85vh]"><source src="${videoUrl}" type="video/mp4"></video>`;
+                }
+            }
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        window.openReportModal = openReportModal;
+
+        function closeReportModal() {
+            const modal = document.getElementById('report-fullscreen-modal');
+            const content = document.getElementById('report-modal-content');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+            // Stop video if playing
+            if (content) {
+                const video = content.querySelector('video');
+                if (video) video.pause();
+                content.innerHTML = '';
+            }
+        }
+        window.closeReportModal = closeReportModal;
 
         function renderComments() {
             const container = document.getElementById('comments-list');
