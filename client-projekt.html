@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021510';
+        const APP_VERSION = '2025021511';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2196,21 +2196,61 @@
 
             <!-- TAB: Raporty -->
             <div id="tab-raporty" class="tab-panel hidden animate-enter">
-                <h2 class="page-title">Raporty</h2>
-
-                <p class="text-zinc-500 text-sm mb-8 leading-relaxed">Raporty zostały przygotowane przy pomocy AI. Nie są ostatecznym źródłem decyzyjnym a jedynie podpowiedzią.</p>
-
-                <div id="reports-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Reports rendered here -->
+                <!-- Header -->
+                <div class="mb-10">
+                    <h2 class="text-[28px] font-semibold text-white tracking-tight mb-2">Raporty</h2>
+                    <p class="text-[14px] text-[#666]">Analiza rynku i materiały przygotowane dla Twojego produktu</p>
                 </div>
 
-                <div id="reports-empty" class="empty-state">
-                    <div class="card p-10 md:p-16 text-center max-w-lg mx-auto" style="border-style: dashed;">
-                        <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
-                            <i class="ph ph-chart-line-up text-3xl text-[#444]"></i>
+                <!-- Video Analysis Section -->
+                <div id="reports-video-section" class="hidden mb-10">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center">
+                            <i class="ph ph-video text-pink-400"></i>
                         </div>
-                        <h3 class="text-white font-medium text-lg mb-2">Brak raportów</h3>
-                        <p class="text-tertiary text-sm leading-relaxed">Raporty analityczne i wyniki kampanii będą widoczne tutaj po ich wygenerowaniu.</p>
+                        <h3 class="text-[17px] font-medium text-white">Video analiza</h3>
+                    </div>
+                    <div id="reports-video-container" class="rounded-2xl overflow-hidden border border-[#1a1a1a] bg-black">
+                        <!-- Video embed here -->
+                    </div>
+                </div>
+
+                <!-- Infographic Section -->
+                <div id="reports-infographic-section" class="hidden mb-10">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                            <i class="ph ph-image text-violet-400"></i>
+                        </div>
+                        <h3 class="text-[17px] font-medium text-white">Infografika</h3>
+                    </div>
+                    <div id="reports-infographic-container" class="rounded-2xl overflow-hidden border border-[#1a1a1a]">
+                        <!-- Infographic image here -->
+                    </div>
+                </div>
+
+                <!-- Documents Section -->
+                <div id="reports-documents-section" class="hidden mb-10">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                            <i class="ph ph-files text-blue-400"></i>
+                        </div>
+                        <h3 class="text-[17px] font-medium text-white">Dokumenty</h3>
+                    </div>
+                    <div id="reports-documents-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Document cards here -->
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="reports-empty" class="hidden">
+                    <div class="text-center py-16 px-8 bg-[#0a0a0a] border border-dashed border-[#222] rounded-2xl">
+                        <div class="w-16 h-16 rounded-full bg-[#111] flex items-center justify-center mx-auto mb-5">
+                            <i class="ph ph-chart-line-up text-2xl text-[#444]"></i>
+                        </div>
+                        <h3 class="text-[17px] font-medium text-white mb-2">Raporty w przygotowaniu</h3>
+                        <p class="text-[14px] text-[#666] max-w-sm mx-auto">
+                            Analiza rynku i materiały pojawią się tutaj wkrótce.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -6661,53 +6701,76 @@
         // RENDER REPORTS
         // ===================================
         function renderReports() {
-            const container = document.getElementById('reports-list');
+            const videoSection = document.getElementById('reports-video-section');
+            const videoContainer = document.getElementById('reports-video-container');
+            const infographicSection = document.getElementById('reports-infographic-section');
+            const infographicContainer = document.getElementById('reports-infographic-container');
+            const documentsSection = document.getElementById('reports-documents-section');
+            const documentsList = document.getElementById('reports-documents-list');
             const empty = document.getElementById('reports-empty');
 
+            // Reset all sections
+            videoSection?.classList.add('hidden');
+            infographicSection?.classList.add('hidden');
+            documentsSection?.classList.add('hidden');
+
             if (reports.length === 0) {
-                container.innerHTML = '';
-                empty.classList.remove('hidden');
+                empty?.classList.remove('hidden');
                 return;
             }
 
-            empty.classList.add('hidden');
+            empty?.classList.add('hidden');
 
-            container.innerHTML = reports.map((r, i) => {
-                const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
-                const fileSize = r.content?.file_size ? formatFileSize(r.content.file_size) : '';
+            // Categorize reports
+            const videoReport = reports.find(r => r.type === 'report_video');
+            const infographicReport = reports.find(r => r.type === 'report_infographic');
+            const documentReports = reports.filter(r => !['report_video', 'report_infographic'].includes(r.type));
 
-                return `
-                    <div class="group rounded-xl border border-[#1a1a1a] hover:border-[#2a2a2a] bg-[#111] overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/20" style="animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.08}s both;">
-                        <!-- Visual header -->
-                        <div class="relative h-36 overflow-hidden" style="background: ${config.gradient};">
-                            ${config.pattern}
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <div class="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style="background: ${config.accent}12; backdrop-filter: blur(8px); border: 1px solid ${config.accent}20;">
-                                    <i class="ph ${config.icon} text-3xl" style="color: ${config.accent};"></i>
-                                </div>
-                            </div>
-                            <!-- Glow effect -->
-                            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-16 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" style="background: ${config.accent};"></div>
-                        </div>
-
-                        <!-- Content -->
-                        <div class="p-4">
-                            <h3 class="text-[15px] font-semibold text-white">${r.title}</h3>
-                            <p class="text-zinc-500 text-xs mt-1">${config.label}${fileSize ? ' · ' + fileSize : ''}</p>
-
-                            <!-- Actions -->
-                            <div class="flex gap-2 mt-4">
-                                <a href="${r.file_url}" target="_blank" class="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium rounded-lg border border-[#2a2a2a] text-zinc-300 hover:text-white hover:border-[#444] hover:bg-white/5 transition-all">
-                                    <i class="ph ph-arrow-square-out text-sm"></i> Otwórz
-                                </a>
-                                <a href="${r.file_url}" target="_blank" download class="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium rounded-lg text-black bg-white hover:bg-zinc-200 transition-all">
-                                    <i class="ph ph-download-simple text-sm"></i> Pobierz
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+            // Render Video Analysis (mp4)
+            if (videoReport && videoContainer) {
+                videoSection.classList.remove('hidden');
+                videoContainer.innerHTML = `
+                    <video controls class="w-full rounded-2xl" preload="metadata">
+                        <source src="${videoReport.file_url}" type="video/mp4">
+                        Twoja przeglądarka nie obsługuje video.
+                    </video>
                 `;
-            }).join('');
+            }
+
+            // Render Infographic
+            if (infographicReport && infographicContainer) {
+                infographicSection.classList.remove('hidden');
+                infographicContainer.innerHTML = `
+                    <a href="${infographicReport.file_url}" target="_blank" class="block group">
+                        <img src="${infographicReport.file_url}" alt="${infographicReport.title}" class="w-full h-auto transition-transform duration-300 group-hover:scale-[1.02]">
+                    </a>
+                `;
+            }
+
+            // Render Documents
+            if (documentReports.length > 0 && documentsList) {
+                documentsSection.classList.remove('hidden');
+                documentsList.innerHTML = documentReports.map(r => {
+                    const config = REPORT_TYPE_CONFIG_CLIENT[r.type] || REPORT_FALLBACK_CONFIG;
+                    const fileSize = r.content?.file_size ? formatFileSize(r.content.file_size) : '';
+
+                    return `
+                        <a href="${r.file_url}" target="_blank" class="group flex items-center gap-4 p-4 rounded-xl border border-[#1a1a1a] hover:border-[#333] bg-[#0a0a0a] hover:bg-[#111] transition-all duration-200">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: ${config.accent}10;">
+                                <i class="ph ${config.icon} text-xl" style="color: ${config.accent};"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-[14px] font-medium text-white truncate group-hover:text-${config.accent === '#ef4444' ? 'red' : config.accent === '#3b82f6' ? 'blue' : 'white'}-400 transition-colors">${r.title}</h4>
+                                <p class="text-[12px] text-[#666]">${config.label}${fileSize ? ' · ' + fileSize : ''}</p>
+                            </div>
+                            <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="text-[12px] text-[#666]">Otwórz</span>
+                                <i class="ph ph-arrow-square-out text-[#666]"></i>
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+            }
         }
 
         function formatFileSize(bytes) {
