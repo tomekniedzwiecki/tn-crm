@@ -89,20 +89,6 @@
         .workflow-sidebar-btn.active i { opacity: 1; }
         .workflow-sidebar-btn .ph-check-circle { opacity: 1 !important; }
 
-        /* Video sub-tab buttons */
-        .video-subtab-btn {
-            color: #666;
-            background: transparent;
-        }
-        .video-subtab-btn:hover {
-            color: #888;
-            background: #1a1a1a;
-        }
-        .video-subtab-btn.active {
-            color: #fff;
-            background: #222;
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
@@ -1209,224 +1195,143 @@
 
                     <!-- TAB: Video (Etap 2) -->
                     <div id="tab-video" class="workflow-panel hidden">
-                        <!-- Sub-tabs navigation -->
-                        <div class="flex gap-1 p-1 bg-[#111] rounded-lg mb-4 border border-[#1a1a1a]">
-                            <button onclick="switchVideoSubTab('settings')" id="video-subtab-settings" class="video-subtab-btn active flex-1 py-2 px-3 text-[12px] rounded-md transition-all">
-                                <i class="ph ph-gear mr-1.5"></i>Ustawienia
-                            </button>
-                            <button onclick="switchVideoSubTab('intro')" id="video-subtab-intro" class="video-subtab-btn flex-1 py-2 px-3 text-[12px] rounded-md transition-all">
-                                <i class="ph ph-play-circle mr-1.5"></i>Wprowadzenie
-                            </button>
-                            <button onclick="switchVideoSubTab('profiles')" id="video-subtab-profiles" class="video-subtab-btn flex-1 py-2 px-3 text-[12px] rounded-md transition-all">
-                                <i class="ph ph-share-network mr-1.5"></i>Profile
-                            </button>
-                            <button onclick="switchVideoSubTab('recordings')" id="video-subtab-recordings" class="video-subtab-btn flex-1 py-2 px-3 text-[12px] rounded-md transition-all">
-                                <i class="ph ph-upload mr-1.5"></i>Nagrania
-                            </button>
+                        <!-- Header -->
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-video-camera text-cyan-400"></i>
+                                Video
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <span id="video-delivered-badge" class="hidden text-xs text-amber-400 flex items-center gap-1">
+                                    <i class="ph ph-clock"></i> Oczekuje na klienta
+                                </span>
+                                <span id="video-completed-badge" class="hidden text-xs text-emerald-400 flex items-center gap-1">
+                                    <i class="ph ph-check-circle"></i> Materiały otrzymane
+                                </span>
+                            </div>
                         </div>
 
-                        <!-- Sub-tab: Settings -->
-                        <div id="video-subtab-content-settings">
-                        <!-- Toggle widoczności -->
-                        <div class="flex items-center justify-between py-4 border-b border-[#222]">
-                            <div>
-                                <div class="text-[13px] text-white">Widoczność dla klienta</div>
-                                <div class="text-[12px] text-[#666] mt-0.5">Włącz, aby klient widział zakładkę Video</div>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="video-active" class="sr-only peer" onchange="toggleVideoActive()">
-                                <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-cyan-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
-                            </label>
-                        </div>
-                        <div id="video-activated-info" class="hidden py-3 border-b border-[#222] text-[12px] text-[#666]">
-                            Aktywowano: <span id="video-activated-date" class="text-[#888]">-</span>
-                        </div>
-
-                        <!-- Status klienta -->
-                        <div class="py-4 border-b border-[#222]">
-                            <div class="text-[12px] text-[#666] mb-3">Status klienta</div>
-                            <div id="video-client-status" class="flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-[#666]" id="video-status-dot"></span>
-                                <span class="text-[13px] text-[#888]" id="video-status-text">Oczekuje na aktywację</span>
-                            </div>
-                            <div id="video-accepted-info" class="hidden mt-3 text-[12px] text-[#666]">
-                                Etap zaakceptowany: <span id="video-accepted-date" class="text-[#888]">-</span>
-                            </div>
-
-                            <!-- Postęp kroków (widoczny po akceptacji) -->
-                            <div id="video-steps-progress" class="hidden mt-4 pt-4 border-t border-[#222]">
-                                <div class="text-[12px] text-[#666] mb-3">Postęp kroków</div>
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <i id="video-step-intro-icon" class="ph-fill ph-check-circle text-emerald-400 text-sm"></i>
-                                        <span class="text-[12px] text-[#888]">Wprowadzenie</span>
-                                        <span class="text-[11px] text-emerald-400/60 ml-auto">Obejrzane</span>
+                        <!-- 1. Widoczność dla klienta -->
+                        <div class="mb-8">
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Udostępnienie</h4>
+                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-[13px] text-white">Widoczność dla klienta</div>
+                                        <div class="text-[12px] text-[#666] mt-0.5">Włącz, aby klient widział zakładkę Video</div>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <i id="video-step-profiles-icon" class="ph ph-circle text-[#444] text-sm"></i>
-                                        <span class="text-[12px] text-[#888]">Profile</span>
-                                        <span id="video-step-profiles-status" class="text-[11px] text-[#555] ml-auto">0/3</span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <i id="video-step-recordings-icon" class="ph ph-circle text-[#444] text-sm"></i>
-                                        <span class="text-[12px] text-[#888]">Nagrania</span>
-                                        <span id="video-step-recordings-status" class="text-[11px] text-[#555] ml-auto">Brak</span>
-                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="video-active" class="sr-only peer" onchange="toggleVideoActive()">
+                                        <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-cyan-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                                    </label>
+                                </div>
+                                <div id="video-activated-info" class="hidden mt-3 pt-3 border-t border-[#222] text-[12px] text-[#666]">
+                                    <i class="ph ph-calendar-check mr-1"></i> Aktywowano: <span id="video-activated-date" class="text-[#888]">-</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Wiadomość głosowa -->
-                        <div class="py-4 border-b border-[#222]">
-                            <div class="flex items-center gap-2 mb-3">
-                                <i class="ph ph-microphone text-cyan-400"></i>
-                                <span class="text-[13px] text-white">Wiadomość głosowa</span>
-                            </div>
-
-                            <!-- URL Input -->
-                            <div class="mb-4">
-                                <label class="block text-[12px] text-[#666] mb-1.5">URL pliku audio</label>
-                                <div class="flex gap-2">
-                                    <input type="url" id="admin-voice-url"
-                                           class="flex-1 bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors"
-                                           placeholder="https://example.com/audio.mp3">
-                                    <button onclick="saveVoiceMessageUrl()" class="bg-white text-black text-[12px] font-medium px-3 py-2 rounded-md hover:bg-[#e5e5e5] transition-colors">
-                                        Zapisz
-                                    </button>
+                        <!-- 2. Status klienta -->
+                        <div class="mb-8">
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Status klienta</h4>
+                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
+                                <div id="video-client-status" class="flex items-center gap-2 mb-3">
+                                    <span class="w-2 h-2 rounded-full bg-[#666]" id="video-status-dot"></span>
+                                    <span class="text-[13px] text-[#888]" id="video-status-text">Oczekuje na aktywację</span>
                                 </div>
-                            </div>
+                                <div id="video-accepted-info" class="hidden text-[12px] text-[#666]">
+                                    <i class="ph ph-check-circle mr-1 text-emerald-400"></i> Etap zaakceptowany: <span id="video-accepted-date" class="text-[#888]">-</span>
+                                </div>
 
-                            <!-- Voice Player Preview -->
-                            <div id="admin-voice-preview" class="hidden">
-                                <div class="text-[12px] text-[#666] mb-2">Podgląd</div>
-                                <div class="whatsapp-voice-player">
-                                    <div class="voice-main-row">
-                                        <div class="voice-avatar">
-                                            <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                                <!-- Postęp kroków (widoczny po akceptacji) -->
+                                <div id="video-steps-progress" class="hidden mt-4 pt-4 border-t border-[#222]">
+                                    <div class="text-[12px] text-[#666] mb-3">Postęp kroków</div>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center gap-2">
+                                            <i id="video-step-intro-icon" class="ph-fill ph-check-circle text-emerald-400 text-sm"></i>
+                                            <span class="text-[12px] text-[#888]">Wprowadzenie</span>
+                                            <span class="text-[11px] text-emerald-400/60 ml-auto">Obejrzane</span>
                                         </div>
-                                        <button id="admin-voice-play-btn" onclick="toggleAdminVoice()" class="voice-play-btn">
-                                            <i id="admin-voice-play-icon" class="ph-fill ph-play text-white text-lg"></i>
-                                        </button>
-                                        <div class="voice-content">
-                                            <div class="voice-waveform-container" id="admin-voice-waveform-container">
-                                                <div class="voice-waveform" id="admin-voice-waveform"></div>
-                                                <div class="voice-scrubber" id="admin-voice-scrubber"></div>
-                                            </div>
-                                            <div class="voice-time-row">
-                                                <span id="admin-voice-current-time" class="voice-time">0:00</span>
-                                                <span id="admin-voice-duration" class="voice-time">0:00</span>
-                                            </div>
+                                        <div class="flex items-center gap-2">
+                                            <i id="video-step-profiles-icon" class="ph ph-circle text-[#444] text-sm"></i>
+                                            <span class="text-[12px] text-[#888]">Profile</span>
+                                            <span id="video-step-profiles-status" class="text-[11px] text-[#555] ml-auto">0/3</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i id="video-step-recordings-icon" class="ph ph-circle text-[#444] text-sm"></i>
+                                            <span class="text-[12px] text-[#888]">Nagrania</span>
+                                            <span id="video-step-recordings-status" class="text-[11px] text-[#555] ml-auto">Brak</span>
                                         </div>
                                     </div>
                                 </div>
-                                <audio id="admin-voice-audio" class="hidden" preload="metadata"></audio>
-                            </div>
-
-                            <div id="admin-voice-empty" class="bg-[#0a0a0a] border border-dashed border-[#333] rounded-lg p-4 text-center">
-                                <i class="ph ph-microphone text-xl text-[#333] mb-1"></i>
-                                <p class="text-[#555] text-[11px]">Wklej URL pliku audio powyżej</p>
                             </div>
                         </div>
 
-                        <!-- Scenariusze video -->
-                        <div class="py-4 border-b border-[#222]">
-                            <div class="flex items-center gap-2 mb-3">
-                                <i class="ph ph-film-script text-purple-400"></i>
-                                <span class="text-[13px] text-white">Scenariusze video</span>
+                        <!-- 3. Scenariusze video -->
+                        <div class="mb-8">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider">Scenariusze video</h4>
                                 <span id="video-scenarios-count" class="text-[11px] text-[#555]"></span>
                             </div>
                             <div id="video-scenarios-admin" class="space-y-2">
                                 <!-- Scenarios will be loaded here -->
                             </div>
-                            <div id="video-scenarios-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-lg p-4 text-center">
-                                <i class="ph ph-film-script text-xl text-[#333] mb-1"></i>
-                                <p class="text-[#555] text-[11px]">Brak scenariuszy. Wygeneruj je przez Claude.</p>
+                            <div id="video-scenarios-empty" class="hidden bg-zinc-900/40 border border-dashed border-zinc-700 rounded-lg p-8 text-center">
+                                <i class="ph ph-film-script text-2xl text-zinc-600 mb-2"></i>
+                                <p class="text-zinc-500 text-sm">Brak scenariuszy</p>
+                                <p class="text-zinc-600 text-xs mt-1">Wygeneruj scenariusze przez Claude</p>
                             </div>
                         </div>
-                        </div><!-- /video-subtab-content-settings -->
 
-                        <!-- Sub-tab: Wprowadzenie -->
-                        <div id="video-subtab-content-intro" class="hidden">
-                            <div class="py-4 text-center">
-                                <div class="w-16 h-16 mx-auto mb-4 bg-cyan-500/10 rounded-full flex items-center justify-center">
-                                    <i class="ph ph-play-circle text-3xl text-cyan-400"></i>
+                        <!-- 4. Profile społecznościowe klienta -->
+                        <div class="mb-8">
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Profile społecznościowe klienta</h4>
+                            <div id="video-client-profiles" class="grid grid-cols-3 gap-3">
+                                <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4 text-center">
+                                    <i class="ph ph-tiktok-logo text-2xl text-[#444] mb-2"></i>
+                                    <div id="video-client-tiktok" class="text-[12px] text-[#555] truncate">Nie podano</div>
                                 </div>
-                                <h3 class="text-white text-[15px] font-medium mb-2">Co widzi klient</h3>
-                                <p class="text-[#666] text-[13px] max-w-md mx-auto leading-relaxed">
-                                    Klient widzi wiadomość głosową od Tomka, instrukcje zamówienia produktu oraz listę scenariuszy do nagrania.
-                                </p>
-                                <div class="mt-6 flex flex-wrap justify-center gap-3">
-                                    <div class="bg-[#111] border border-[#222] rounded-lg px-4 py-2 text-[12px] text-[#888]">
-                                        <i class="ph ph-microphone text-cyan-400 mr-1.5"></i>Wiadomość głosowa
-                                    </div>
-                                    <div class="bg-[#111] border border-[#222] rounded-lg px-4 py-2 text-[12px] text-[#888]">
-                                        <i class="ph ph-package text-amber-400 mr-1.5"></i>Instrukcje produktu
-                                    </div>
-                                    <div class="bg-[#111] border border-[#222] rounded-lg px-4 py-2 text-[12px] text-[#888]">
-                                        <i class="ph ph-film-script text-purple-400 mr-1.5"></i>Scenariusze video
-                                    </div>
+                                <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4 text-center">
+                                    <i class="ph ph-youtube-logo text-2xl text-[#444] mb-2"></i>
+                                    <div id="video-client-youtube" class="text-[12px] text-[#555] truncate">Nie podano</div>
+                                </div>
+                                <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4 text-center">
+                                    <i class="ph ph-instagram-logo text-2xl text-[#444] mb-2"></i>
+                                    <div id="video-client-instagram" class="text-[12px] text-[#555] truncate">Nie podano</div>
                                 </div>
                             </div>
-                        </div><!-- /video-subtab-content-intro -->
+                        </div>
 
-                        <!-- Sub-tab: Profile -->
-                        <div id="video-subtab-content-profiles" class="hidden">
-                            <div class="py-4">
-                                <div class="flex items-center gap-2 mb-4">
-                                    <i class="ph ph-share-network text-blue-400"></i>
-                                    <span class="text-[13px] text-white">Profile społecznościowe klienta</span>
-                                </div>
-                                <p class="text-[12px] text-[#666] mb-4">Dane wypełnione przez klienta (wszystkie 3 wymagane)</p>
-                                <div class="text-[12px] text-[#666] mb-2">Profile społecznościowe</div>
-                                <div id="video-client-profiles" class="grid grid-cols-3 gap-3">
-                                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 text-center">
-                                        <i class="ph ph-tiktok-logo text-lg text-[#444] mb-1"></i>
-                                        <div id="video-client-tiktok" class="text-[11px] text-[#555] truncate">Nie podano</div>
+                        <!-- 5. Nagrania od klienta -->
+                        <div class="mb-8">
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Nagrania od klienta</h4>
+                            <div id="video-client-links" class="space-y-2">
+                                <!-- Video links will be loaded here -->
+                            </div>
+                            <div id="video-client-links-empty" class="bg-zinc-900/40 border border-dashed border-zinc-700 rounded-lg p-8 text-center">
+                                <i class="ph ph-video text-2xl text-zinc-600 mb-2"></i>
+                                <p class="text-zinc-500 text-sm">Brak nagrań</p>
+                                <p class="text-zinc-600 text-xs mt-1">Klient nie przesłał jeszcze żadnych linków</p>
+                            </div>
+                        </div>
+
+                        <!-- 6. Finalizacja -->
+                        <div>
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Finalizacja</h4>
+                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" id="video-shared-checkbox" onchange="toggleVideoShared()"
+                                           class="w-5 h-5 rounded border-[#333] bg-[#111] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 focus:ring-1 cursor-pointer">
+                                    <div>
+                                        <div class="text-[13px] text-white group-hover:text-emerald-400 transition-colors">Video udostępnione</div>
+                                        <div class="text-[11px] text-[#555]">Zaznacz gdy klient przekazał nagrane materiały</div>
                                     </div>
-                                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 text-center">
-                                        <i class="ph ph-youtube-logo text-lg text-[#444] mb-1"></i>
-                                        <div id="video-client-youtube" class="text-[11px] text-[#555] truncate">Nie podano</div>
-                                    </div>
-                                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 text-center">
-                                        <i class="ph ph-instagram-logo text-lg text-[#444] mb-1"></i>
-                                        <div id="video-client-instagram" class="text-[11px] text-[#555] truncate">Nie podano</div>
-                                    </div>
+                                </label>
+                                <div id="video-shared-info" class="hidden mt-3 pt-3 border-t border-[#222] text-[11px] text-emerald-400/60">
+                                    <i class="ph ph-check-circle"></i> Udostępniono: <span id="video-shared-date">-</span>
                                 </div>
                             </div>
-                        </div><!-- /video-subtab-content-profiles -->
-
-                        <!-- Sub-tab: Nagrania -->
-                        <div id="video-subtab-content-recordings" class="hidden">
-                            <div class="py-4">
-                                <div class="flex items-center gap-2 mb-4">
-                                    <i class="ph ph-upload text-emerald-400"></i>
-                                    <span class="text-[13px] text-white">Nagrania od klienta</span>
-                                </div>
-                                <p class="text-[12px] text-[#666] mb-4">Linki do nagrań przesłane przez klienta</p>
-
-                                <div id="video-client-links" class="space-y-2">
-                                    <!-- Video links will be loaded here -->
-                                </div>
-                                <div id="video-client-links-empty" class="hidden bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-4 text-center">
-                                    <p class="text-[#555] text-[12px]">Klient nie przesłał jeszcze żadnych nagrań</p>
-                                </div>
-
-                                <!-- Video shared checkbox -->
-                                <div class="mt-4 pt-4 border-t border-[#222]">
-                                    <label class="flex items-center gap-3 cursor-pointer group">
-                                        <input type="checkbox" id="video-shared-checkbox" onchange="toggleVideoShared()"
-                                               class="w-5 h-5 rounded border-[#333] bg-[#111] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 focus:ring-1 cursor-pointer">
-                                        <div>
-                                            <div class="text-[13px] text-white group-hover:text-emerald-400 transition-colors">Video udostępnione</div>
-                                            <div class="text-[11px] text-[#555]">Zaznacz gdy klient przekazał nagrane materiały</div>
-                                        </div>
-                                    </label>
-                                    <div id="video-shared-info" class="hidden mt-2 text-[11px] text-emerald-400/60">
-                                        <i class="ph ph-check-circle"></i> Udostępniono: <span id="video-shared-date">-</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div><!-- /video-subtab-content-recordings -->
+                        </div>
 
                     </div><!-- /tab-video -->
 
@@ -3718,25 +3623,6 @@
         // VIDEO (ETAP 2)
         // =============================================
         let videoAdminData = null;
-        let currentVideoSubTab = 'settings';
-
-        function switchVideoSubTab(subtab) {
-            currentVideoSubTab = subtab;
-
-            // Update sub-tab buttons
-            document.querySelectorAll('.video-subtab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.id === `video-subtab-${subtab}`);
-            });
-
-            // Update sub-tab content
-            ['settings', 'intro', 'profiles', 'recordings'].forEach(tab => {
-                const content = document.getElementById(`video-subtab-content-${tab}`);
-                if (content) {
-                    content.classList.toggle('hidden', tab !== subtab);
-                }
-            });
-        }
-        window.switchVideoSubTab = switchVideoSubTab;
 
         async function loadVideoAdmin() {
             try {
@@ -3763,11 +3649,28 @@
             const acceptedInfo = document.getElementById('video-accepted-info');
             const acceptedDate = document.getElementById('video-accepted-date');
             const navCheck = document.getElementById('nav-check-video');
+            const deliveredBadge = document.getElementById('video-delivered-badge');
+            const completedBadge = document.getElementById('video-completed-badge');
 
             if (!activeCheckbox) return;
 
             if (videoAdminData) {
                 activeCheckbox.checked = videoAdminData.is_active || false;
+
+                // Header badges
+                const videoLinks = videoAdminData.video_links || [];
+                if (deliveredBadge && completedBadge) {
+                    if (videoLinks.length > 0 || videoAdminData.video_shared) {
+                        deliveredBadge.classList.add('hidden');
+                        completedBadge.classList.remove('hidden');
+                    } else if (videoAdminData.is_active) {
+                        deliveredBadge.classList.remove('hidden');
+                        completedBadge.classList.add('hidden');
+                    } else {
+                        deliveredBadge.classList.add('hidden');
+                        completedBadge.classList.add('hidden');
+                    }
+                }
 
                 // Show activated info
                 if (videoAdminData.is_active && videoAdminData.activated_at) {
@@ -3800,9 +3703,6 @@
 
                 // Steps progress (only after acceptance)
                 renderVideoStepsProgress();
-
-                // Voice message
-                renderAdminVoicePlayer();
 
                 // Scenarios
                 renderVideoScenariosAdmin();
@@ -3857,155 +3757,6 @@
 
                 // Hide nav check
                 if (navCheck) navCheck.classList.add('hidden');
-            }
-        }
-
-        // Admin Voice Player
-        let adminVoiceAudio = null;
-
-        function renderAdminVoicePlayer() {
-            const urlInput = document.getElementById('admin-voice-url');
-            const preview = document.getElementById('admin-voice-preview');
-            const empty = document.getElementById('admin-voice-empty');
-            const waveform = document.getElementById('admin-voice-waveform');
-
-            const voiceUrl = videoAdminData?.voice_message_url;
-
-            if (urlInput) {
-                urlInput.value = voiceUrl || '';
-            }
-
-            if (voiceUrl) {
-                if (preview) preview.classList.remove('hidden');
-                if (empty) empty.classList.add('hidden');
-
-                // Setup audio
-                const audio = document.getElementById('admin-voice-audio');
-                if (audio && audio.src !== voiceUrl) {
-                    audio.src = voiceUrl;
-                    adminVoiceAudio = audio;
-                    setupAdminVoiceEvents(audio);
-                }
-
-                // Generate waveform
-                if (waveform && waveform.children.length === 0) {
-                    const pattern = [35,50,45,70,55,80,40,90,60,75,45,85,65,55,75,40,60,80,50,70,55,85,45,75,60,90,50,65,75,45,80,55,70,40,85,60,75,50,65,80,45,70,55,85,40,75,60,50,70,55];
-                    for (let i = 0; i < 50; i++) {
-                        const bar = document.createElement('div');
-                        bar.className = 'voice-bar';
-                        bar.style.height = `${pattern[i % pattern.length]}%`;
-                        waveform.appendChild(bar);
-                    }
-                }
-            } else {
-                if (preview) preview.classList.add('hidden');
-                if (empty) empty.classList.remove('hidden');
-            }
-        }
-
-        function setupAdminVoiceEvents(audio) {
-            audio.addEventListener('loadedmetadata', () => {
-                const duration = document.getElementById('admin-voice-duration');
-                if (duration) duration.textContent = formatVoiceTime(audio.duration);
-            });
-
-            audio.addEventListener('timeupdate', () => {
-                const currentTime = document.getElementById('admin-voice-current-time');
-                const progress = audio.duration ? audio.currentTime / audio.duration : 0;
-                if (currentTime) currentTime.textContent = formatVoiceTime(audio.currentTime);
-                updateAdminVoiceWaveform(progress);
-            });
-
-            audio.addEventListener('ended', () => {
-                const icon = document.getElementById('admin-voice-play-icon');
-                const btn = document.getElementById('admin-voice-play-btn');
-                if (icon) {
-                    icon.classList.remove('ph-pause');
-                    icon.classList.add('ph-play');
-                }
-                if (btn) btn.classList.remove('playing');
-                updateAdminVoiceWaveform(0);
-            });
-
-            // Seek on click
-            const container = document.getElementById('admin-voice-waveform-container');
-            if (container) {
-                container.onclick = (e) => {
-                    const rect = container.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const progress = x / rect.width;
-                    audio.currentTime = progress * audio.duration;
-                };
-            }
-        }
-
-        function toggleAdminVoice() {
-            const audio = document.getElementById('admin-voice-audio');
-            const icon = document.getElementById('admin-voice-play-icon');
-            const btn = document.getElementById('admin-voice-play-btn');
-
-            if (!audio) return;
-
-            if (audio.paused) {
-                audio.play();
-                if (icon) {
-                    icon.classList.remove('ph-play');
-                    icon.classList.add('ph-pause');
-                }
-                if (btn) btn.classList.add('playing');
-            } else {
-                audio.pause();
-                if (icon) {
-                    icon.classList.remove('ph-pause');
-                    icon.classList.add('ph-play');
-                }
-                if (btn) btn.classList.remove('playing');
-            }
-        }
-
-        function updateAdminVoiceWaveform(progress) {
-            const bars = document.querySelectorAll('#admin-voice-waveform .voice-bar');
-            const playedCount = Math.floor(progress * bars.length);
-            bars.forEach((bar, i) => {
-                bar.classList.toggle('played', i < playedCount);
-            });
-        }
-
-        function formatVoiceTime(seconds) {
-            if (!seconds || isNaN(seconds)) return '0:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        async function saveVoiceMessageUrl() {
-            const urlInput = document.getElementById('admin-voice-url');
-            const url = urlInput?.value?.trim() || null;
-
-            try {
-                if (videoAdminData) {
-                    const { error } = await supabaseClient
-                        .from('workflow_video')
-                        .update({ voice_message_url: url })
-                        .eq('workflow_id', workflow.id);
-
-                    if (error) throw error;
-                } else {
-                    const { error } = await supabaseClient
-                        .from('workflow_video')
-                        .insert({
-                            workflow_id: workflow.id,
-                            voice_message_url: url
-                        });
-
-                    if (error) throw error;
-                }
-
-                loadVideoAdmin();
-                showToast('Wiadomość głosowa zapisana', 'success');
-            } catch (err) {
-                console.error('Error saving voice message:', err);
-                showToast('Błąd zapisu', 'error');
             }
         }
 
