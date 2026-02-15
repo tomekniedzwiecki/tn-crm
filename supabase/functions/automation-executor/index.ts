@@ -346,7 +346,7 @@ async function processActionStep(
       .from('email_messages')
       .select('id, resend_id')
       .eq('automation_execution_id', execution.id)
-      .eq('type', email_type)
+      .eq('email_type', email_type)
       .single()
 
     if (existingEmail) {
