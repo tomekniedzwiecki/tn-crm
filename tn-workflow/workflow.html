@@ -1283,11 +1283,14 @@
 
                         <!-- 3. Scenariusze video -->
                         <div class="mb-8">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider">Scenariusze video</h4>
-                                <span id="video-scenarios-count" class="text-[11px] text-[#555]"></span>
-                            </div>
-                            <div id="video-scenarios-admin" class="space-y-2">
+                            <button onclick="toggleVideoScenarios()" class="flex items-center justify-between w-full mb-4 group cursor-pointer">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider">Scenariusze video</h4>
+                                    <span id="video-scenarios-count" class="text-[11px] text-[#555]"></span>
+                                </div>
+                                <i id="video-scenarios-chevron" class="ph ph-caret-down text-zinc-500 text-xs transition-transform" style="transform: rotate(-90deg)"></i>
+                            </button>
+                            <div id="video-scenarios-admin" class="space-y-2 hidden">
                                 <!-- Scenarios will be loaded here -->
                             </div>
                             <div id="video-scenarios-empty" class="hidden bg-zinc-900/40 border border-dashed border-zinc-700 rounded-lg p-8 text-center">
@@ -3857,6 +3860,26 @@
             }
         }
 
+        function toggleVideoScenarios() {
+            const container = document.getElementById('video-scenarios-admin');
+            const empty = document.getElementById('video-scenarios-empty');
+            const chevron = document.getElementById('video-scenarios-chevron');
+            const scenarios = videoAdminData?.video_scenarios || [];
+
+            // Toggle visibility based on which element is shown
+            const targetEl = scenarios.length > 0 ? container : empty;
+            const isHidden = targetEl.classList.contains('hidden');
+
+            if (isHidden) {
+                targetEl.classList.remove('hidden');
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            } else {
+                targetEl.classList.add('hidden');
+                if (chevron) chevron.style.transform = 'rotate(-90deg)';
+            }
+        }
+        window.toggleVideoScenarios = toggleVideoScenarios;
+
         function renderVideoScenariosAdmin() {
             const container = document.getElementById('video-scenarios-admin');
             const empty = document.getElementById('video-scenarios-empty');
@@ -3870,13 +3893,17 @@
                 countEl.textContent = scenarios.length > 0 ? `(${scenarios.length})` : '';
             }
 
+            // Keep both hidden by default (collapsed state)
+            // User can expand with toggle button
             if (scenarios.length === 0) {
                 container.classList.add('hidden');
-                empty.classList.remove('hidden');
+                // Keep empty hidden too (collapsed by default)
+                empty.classList.add('hidden');
                 return;
             }
 
-            container.classList.remove('hidden');
+            // Keep container hidden (collapsed by default)
+            // Don't remove 'hidden' - user expands manually
             empty.classList.add('hidden');
 
             // Type badge colors
