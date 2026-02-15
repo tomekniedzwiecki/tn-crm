@@ -596,9 +596,18 @@
             }
 
             // Save steps
-            // Delete old steps and insert new ones
-            await sb.from('automation_steps').delete().eq('flow_id', savedFlowId);
+            // Delete old steps first
+            const { error: deleteError } = await sb
+                .from('automation_steps')
+                .delete()
+                .eq('flow_id', savedFlowId);
 
+            if (deleteError) {
+                showToast('Błąd usuwania kroków: ' + deleteError.message, 'error');
+                return;
+            }
+
+            // Insert new steps
             if (steps.length > 0) {
                 const stepsToInsert = steps.map((step, index) => ({
                     flow_id: savedFlowId,
@@ -617,8 +626,9 @@
                 }
             }
 
+            // Reload steps to get fresh IDs
+            await loadFlow();
             showToast('Zapisano', 'success');
-            updateSaveStatus(false);
         }
 
         // ============================================
