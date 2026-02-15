@@ -1196,15 +1196,20 @@
                     `;
                 }
 
+                // For email - no type selector needed (separate menu item)
+                // For other actions - show type selector without email option
+                const actionTypeSelector = actionType === 'send_email' ? '' : `
+                    <div>
+                        <label class="block text-sm text-[#888] mb-2">Typ akcji</label>
+                        <select class="input-field" onchange="updateStepConfig(${index}, 'action_type', this.value); renderStepPanel(${index})">
+                            <option value="share_products" ${actionType === 'share_products' ? 'selected' : ''}>Udostępnij produkty</option>
+                        </select>
+                    </div>
+                `;
+
                 content = `
                     <div class="space-y-6 animate-slide-in">
-                        <div>
-                            <label class="block text-sm text-[#888] mb-2">Typ akcji</label>
-                            <select class="input-field" onchange="updateStepConfig(${index}, 'action_type', this.value); renderStepPanel(${index})">
-                                <option value="send_email" ${actionType === 'send_email' ? 'selected' : ''}>Wyślij email</option>
-                                <option value="share_products" ${actionType === 'share_products' ? 'selected' : ''}>Udostępnij produkty</option>
-                            </select>
-                        </div>
+                        ${actionTypeSelector}
                         ${actionContent}
                     </div>
                 `;
