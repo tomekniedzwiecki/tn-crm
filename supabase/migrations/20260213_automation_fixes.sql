@@ -2,30 +2,9 @@
 -- Automation System Fixes
 -- =============================================
 
--- 1. Add missing trigger types (video_activated, takedrop_activated)
+-- 1. Remove trigger_type constraint (validation is done in application layer)
+-- This allows flexibility for new trigger types without migrations
 ALTER TABLE automation_flows DROP CONSTRAINT IF EXISTS automation_flows_trigger_type_check;
-
-ALTER TABLE automation_flows ADD CONSTRAINT automation_flows_trigger_type_check
-CHECK (trigger_type IN (
-    -- Offer triggers
-    'offer_created',
-    'offer_viewed',
-    'offer_reminder',
-    'offer_expired',
-    -- Payment triggers
-    'payment_received',
-    -- Workflow triggers
-    'workflow_created',
-    'stage_completed',
-    'products_shared',
-    'report_published',
-    'branding_delivered',
-    'sales_page_shared',
-    'contract_signed',
-    -- New triggers
-    'video_activated',
-    'takedrop_activated'
-));
 
 -- 2. Add idempotency tracking for emails
 ALTER TABLE automation_executions
