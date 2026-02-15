@@ -365,6 +365,15 @@
                     <div class="text-xs text-[#666]">Akcja</div>
                 </div>
             </div>
+            <div class="dropdown-item" onclick="addStep('action_share_products')">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <i class="ph ph-package text-emerald-400"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-white">Udostępnij produkty</div>
+                    <div class="text-xs text-[#666]">Akcja</div>
+                </div>
+            </div>
             <div class="dropdown-item" onclick="addStep('delay')">
                 <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
                     <i class="ph ph-clock text-cyan-400"></i>
@@ -800,9 +809,18 @@
         function addStep(type) {
             document.getElementById('add-step-dropdown').classList.add('hidden');
 
+            // Handle special action types
+            let stepType = type;
+            let config = getDefaultConfig(type);
+
+            if (type === 'action_share_products') {
+                stepType = 'action';
+                config = { action_type: 'share_products' };
+            }
+
             const newStep = {
-                step_type: type,
-                config: getDefaultConfig(type)
+                step_type: stepType,
+                config: config
             };
 
             // Insert at correct position
