@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2025021521';
+        const APP_VERSION = '2025021522';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -6753,29 +6753,34 @@
             // Render content - full height
             view.innerHTML = `
                 <!-- Header -->
-                <div class="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a] flex-shrink-0">
-                    <h3 class="text-[14px] font-medium text-white truncate">${r.title}</h3>
+                <div class="flex items-center justify-between px-5 py-2.5 border-b border-[#1a1a1a] flex-shrink-0">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background: ${config.accent}15;">
+                            <i class="ph ${config.icon} text-sm" style="color: ${config.accent};"></i>
+                        </div>
+                        <span class="text-[13px] font-medium text-white">${config.label}</span>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="openReportModal(${index})" class="h-8 px-3 rounded-lg border border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-white/5 text-[12px] text-[#888] hover:text-white transition-all flex items-center gap-1.5">
-                            <i class="ph ph-arrows-out text-sm"></i>
+                        <button onclick="openReportModal(${index})" class="h-7 px-2.5 rounded-md border border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-white/5 text-[11px] text-[#777] hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="ph ph-arrows-out text-xs"></i>
                             <span class="hidden sm:inline">Pełny ekran</span>
                         </button>
-                        <a href="${r.file_url}" download class="h-8 px-3 rounded-lg bg-white hover:bg-gray-100 text-[12px] text-black font-medium transition-all flex items-center gap-1.5">
-                            <i class="ph ph-download-simple text-sm"></i>
+                        <a href="${r.file_url}" download class="h-7 px-2.5 rounded-md bg-white hover:bg-gray-100 text-[11px] text-black font-medium transition-all flex items-center gap-1.5">
+                            <i class="ph ph-download-simple text-xs"></i>
                             <span class="hidden sm:inline">Pobierz</span>
                         </a>
                     </div>
                 </div>
-                <!-- Content - fills remaining height -->
-                <div class="flex-1 overflow-auto flex items-center justify-center bg-[#050505]">
+                <!-- Content -->
+                <div class="flex-1 overflow-auto flex items-center justify-center bg-[#060606] p-3">
                     ${isImage ? `
-                        <img src="${r.file_url}" alt="${r.title}" class="max-w-full max-h-full object-contain cursor-pointer" onclick="openReportModal(${index})">
+                        <img src="${r.file_url}" alt="${r.title}" class="max-w-full max-h-full object-contain cursor-pointer rounded-lg" onclick="openReportModal(${index})">
                     ` : isVideo ? `
-                        <video controls class="max-w-full max-h-full" preload="metadata">
+                        <video controls class="max-w-full max-h-full rounded-lg" preload="metadata">
                             <source src="${r.file_url}" type="video/mp4">
                         </video>
                     ` : isPdf ? `
-                        <iframe src="${r.file_url}" class="w-full h-full border-0"></iframe>
+                        <iframe src="${r.file_url}" class="w-full h-full border-0 rounded-lg bg-white"></iframe>
                     ` : `
                         <div class="text-center p-8">
                             <i class="ph ${config.icon} text-4xl mb-4" style="color: ${config.accent};"></i>
@@ -6784,16 +6789,18 @@
                     `}
                 </div>
                 ${reportsData.length > 1 ? `
-                <!-- Navigation footer -->
-                <div class="flex items-center justify-between px-4 py-3 border-t border-[#1a1a1a] flex-shrink-0 bg-[#080808]">
-                    <button onclick="showReport(${prevIndex})" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#151515] text-[13px] text-[#888] hover:text-white transition-all">
-                        <i class="ph ph-caret-left"></i>
+                <!-- Navigation -->
+                <div class="flex items-center justify-between px-3 py-2 border-t border-[#1a1a1a] flex-shrink-0">
+                    <button onclick="showReport(${prevIndex})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#222] hover:border-[#333] hover:bg-[#151515] text-[12px] text-[#666] hover:text-white transition-all">
+                        <i class="ph ph-caret-left text-xs"></i>
                         <span>${prevConfig.label}</span>
                     </button>
-                    <span class="text-[12px] text-[#555]">${index + 1} / ${reportsData.length}</span>
-                    <button onclick="showReport(${nextIndex})" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#151515] text-[13px] text-[#888] hover:text-white transition-all">
+                    <div class="flex items-center gap-1">
+                        ${reportsData.map((_, i) => `<div class="w-1.5 h-1.5 rounded-full ${i === index ? 'bg-white' : 'bg-[#333]'}"></div>`).join('')}
+                    </div>
+                    <button onclick="showReport(${nextIndex})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#222] hover:border-[#333] hover:bg-[#151515] text-[12px] text-[#666] hover:text-white transition-all">
                         <span>${nextConfig.label}</span>
-                        <i class="ph ph-caret-right"></i>
+                        <i class="ph ph-caret-right text-xs"></i>
                     </button>
                 </div>
                 ` : ''}
