@@ -5392,27 +5392,11 @@
             const isActive = videoData?.is_active;
             const isAccepted = videoData?.stage_accepted;
 
-            // Hide Video button (celebration is now in modal on Wprowadzenie)
-            document.getElementById('video-stage-desktop')?.classList.add('hidden');
-            document.getElementById('video-stage-mobile')?.classList.add('hidden');
-
-            // Desktop buttons
-            const introDesktop = document.getElementById('video-intro-btn-desktop');
-            const profilesDesktop = document.getElementById('video-profiles-btn-desktop');
-            const recordingsDesktop = document.getElementById('video-recordings-btn-desktop');
-
-            // Mobile buttons
-            const introMobile = document.getElementById('video-intro-btn-mobile');
-            const profilesMobile = document.getElementById('video-profiles-btn-mobile');
-            const recordingsMobile = document.getElementById('video-recordings-btn-mobile');
-
-            // Wprowadzenie - visible when Video is active (even before acceptance)
-            [introDesktop, introMobile].forEach(el => el?.classList.toggle('hidden', !isActive));
-
-            // Profile & Nagrania - only after acceptance
-            const showOtherSteps = isActive && isAccepted;
-            [profilesDesktop, profilesMobile].forEach(el => el?.classList.toggle('hidden', !showOtherSteps));
-            [recordingsDesktop, recordingsMobile].forEach(el => el?.classList.toggle('hidden', !showOtherSteps));
+            // Show/hide entire Video section based on is_active
+            const videoDesktop = document.getElementById('video-stage-desktop');
+            const videoMobile = document.getElementById('video-stage-mobile');
+            if (videoDesktop) videoDesktop.classList.toggle('hidden', !isActive);
+            if (videoMobile) videoMobile.classList.toggle('hidden', !isActive);
 
             // Celebration modal - show if active but not accepted
             const celebrationModal = document.getElementById('video-intro-celebration');
