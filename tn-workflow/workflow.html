@@ -2810,14 +2810,34 @@
                 toggle('nav-check-strona', !!workflow.sales_page_shared_at);
 
                 // These need DB queries
-                const [brandRes, repsRes] = await Promise.all([
+                const [brandRes, repsRes, videoRes] = await Promise.all([
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
-                    supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video'])
+                    supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
+                    supabaseClient.from('workflow_video').select('is_active, video_links').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 const hasPublished = (repsRes.data || []).some(r => r.visible_to_client);
                 toggle('nav-check-raporty', hasPublished);
                 toggle('nav-check-branding', !!workflow.branding_shared_at);
+
+                // Video check - yellow when active, green when client added links
+                const navCheckVideo = document.getElementById('nav-check-video');
+                const navCheckVideoIcon = document.getElementById('nav-check-video-icon');
+                const videoData = videoRes.data;
+                if (videoData) {
+                    const videoLinks = videoData.video_links || [];
+                    if (videoLinks.length > 0) {
+                        toggle('nav-check-video', true);
+                        if (navCheckVideoIcon) navCheckVideoIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+                    } else if (videoData.is_active) {
+                        toggle('nav-check-video', true);
+                        if (navCheckVideoIcon) navCheckVideoIcon.className = 'ph-fill ph-check-circle text-amber-400 text-sm';
+                    } else {
+                        toggle('nav-check-video', false);
+                    }
+                } else {
+                    toggle('nav-check-video', false);
+                }
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
