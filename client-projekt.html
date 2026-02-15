@@ -4218,6 +4218,18 @@
             reports = repsRes.data || [];
             comments = comsRes.data || [];
 
+            // If there's a selected product not in the list (e.g. is_active=false), fetch it separately
+            if (workflow.selected_product_id && !products.find(p => p.id === workflow.selected_product_id)) {
+                const { data: selectedProd } = await supabaseClient
+                    .from('workflow_products')
+                    .select('*')
+                    .eq('id', workflow.selected_product_id)
+                    .single();
+                if (selectedProd) {
+                    products.unshift(selectedProd); // Add to beginning of list
+                }
+            }
+
             // Set products voice URL
             if (productsVoiceRes.data?.value) {
                 globalProductsVoiceUrl = productsVoiceRes.data.value;
