@@ -237,160 +237,167 @@ FORMAT: 1024x1024px (ZAWSZE KWADRAT), PNG z przezroczystym tłem gdzie to możli
 
 ---
 
-### PROMPTY MOCKUPÓW — Lifestyle > Martwe produkty
+### PROMPTY MOCKUPÓW — Gadżety brandingowe z logo
 
-> **WAŻNE**: Mockupy to TYLKO fizyczne produkty z logo/brandingiem. NIE social media, NIE banery reklamowe, NIE UI/UX.
+> **WAŻNE**: Mockupy w sekcji branding to **gadżety reklamowe z logo marki**. Pokazują identyfikację wizualną na fizycznych produktach promocyjnych.
 
-#### Filozofia mockupów: LIFESTYLE > MARTWE PRODUKTY
+#### Filozofia mockupów brandingowych
 
-Mockupy powinny pokazywać produkty **w kontekście życia**, nie jako izolowane przedmioty na białym tle. Cel: klient ma poczuć emocję i wyobrazić sobie siebie z tym produktem.
+Mockupy to **standardowe gadżety promocyjne** z logo marki — ale pokazane w **kontekście dopasowanym do produktu**. Gadżety są uniwersalne, ale sceneria, tło i ewentualnie ludzie nawiązują do świata marki.
 
-| Typ mockupa | Kiedy używać | Proporcja |
-|-------------|--------------|-----------|
-| **Lifestyle z człowiekiem** | Odzież, akcesoria, produkty codziennego użytku | 60% mockupów |
-| **Lifestyle bez człowieka** | Opakowania, dekoracje, produkty w scenie | 30% mockupów |
-| **Produktowy (studio)** | Hero shot głównego produktu, detale | 10% mockupów |
+| Element | Uniwersalny | Dopasowany do produktu |
+|---------|-------------|------------------------|
+| **Gadżet** | ✅ Koszulka, kubek, czapka... | — |
+| **Sceneria/tło** | — | ✅ Warsztat, kuchnia, biuro, apartament |
+| **Osoba (opcjonalnie)** | — | ✅ Mechanik, kobieta w domu, sportowiec |
+| **Rekwizyty w tle** | — | ✅ Narzędzia, kawa, rośliny, panorama |
 
----
-
-#### KRYTYCZNE: Mockupy MUSZĄ pasować do produktu!
-
-> **ZASTANÓW SIĘ** zanim wybierzesz mockupy. Nie generuj "uniwersalnego" zestawu. Każdy produkt wymaga **przemyślanych** mockupów, które pasują do:
-> 1. **Kategorii produktu** — jakie akcesoria są logiczne dla tego typu produktu?
-> 2. **Grupy docelowej** — kto będzie używał produktu? Jak wygląda? Co robi?
-> 3. **Kontekstu użycia** — gdzie produkt jest używany? W jakich okolicznościach?
+**Przykład**: Kubek z logo marki robota okiennego — nie na białym tle stockowym, ale na blacie kuchennym z widokiem na panoramę miasta za oknem.
 
 ---
 
-#### Tabela: Dobór mockupów per kategoria produktu
+#### Tabela: Kontekst mockupów per kategoria produktu
 
-| Kategoria produktu | Pasujące mockupy | UNIKAJ |
-|-------------------|------------------|--------|
-| **Narzędzia (wiertarki, pistolet malarski, endoskop)** | Etui narzędziowe, torba monterska, kombinezon/bluza robocza, rękawice, skrzynka narzędziowa, produkt w użyciu na budowie | Kubki, koszulki lifestyle |
-| **AGD kuchenne (ekspresy, roboty, blendery)** | Fartuch kuchenny, kubek/filiżanka, torba na zakupy, opakowanie kawy/herbaty, ściereczka, rękawice kuchenne, produkt w kuchni | Czapki z daszkiem |
-| **Elektronika (kamery, głośniki, słuchawki)** | Etui na sprzęt, torba tech, naklejki, opakowanie premium, futerał, produkt w użyciu | Bidony sportowe |
-| **Sport/Fitness (masażery, sprzęt treningowy)** | Torba sportowa, bidon, ręcznik, koszulka sportowa, bluza, opaska, mata | Kubki porcelanowe |
-| **Beauty/Wellness (kosmetyki, masażery twarzy)** | Kosmetyczka, świece, ręcznik spa, opakowanie premium, torebka prezentowa | Bluzy robocze |
-| **Produkty dla dzieci** | Plecak dziecięcy, pudełko na lunch, bidoczek, piżamka, piórnik | Filiżanki do kawy |
-
----
-
-#### Ludzie w mockupach — DOPASUJ DO PRODUKTU
-
-Opisując osobę w prompcie, **ZAWSZE** dopasuj ją do grupy docelowej produktu:
-
-| Produkt | Typ osoby | Opis przykładowy |
-|---------|-----------|------------------|
-| **Wiertarka/narzędzia** | Profesjonalista 35-50 lat | "Mężczyzna 40 lat, krępa budowa, krótkie włosy, ubrany w roboczą bluzę, rękawice, pewna postawa, skupiony wzrok, na tle warsztatu" |
-| **Ekspres do kawy** | Kobieta/mężczyzna 28-45 | "Kobieta 32 lata, elegancki casualowy strój, w nowoczesnej kuchni, poranek, trzyma filiżankę, rozluźniona poza, ciepły uśmiech" |
-| **Sprzęt sportowy** | Aktywna osoba 25-40 | "Mężczyzna 30 lat, atletyczna budowa, sportowy strój, pot na czole, energiczna poza, na tle siłowni lub parku" |
-| **Kosmetyki/beauty** | Kobieta 25-45 | "Kobieta 35 lat, zadbana cera, naturalna uroda, minimalistyczny makijaż, w łazience spa lub jasnej sypialni, relaks" |
-| **Kamera inspekcyjna/endoskop** | Technik/mechanik 30-50 | "Mężczyzna 45 lat, robocze ubranie, okulary ochronne na czole, w garażu lub warsztacie, kuca przy maszynie, profesjonalna koncentracja" |
-| **Odkurzacz domowy** | Rodzina/kobieta 30-50 | "Kobieta 38 lat, casual domowy strój, w jasnym salonie, w ruchu podczas sprzątania, praktyczna elegancja" |
+| Kategoria produktu | Sceneria | Rekwizyty w tle | Typ osoby (jeśli jest) |
+|-------------------|----------|-----------------|------------------------|
+| **Smart Home / AGD** | Nowoczesna kuchnia, apartament z panoramą | Okno z widokiem, rośliny, minimalizm | Kobieta/mężczyzna 30-45, casual elegancki |
+| **Narzędzia** | Warsztat, garaż, budowa | Narzędzia, regały, drewno, metal | Mężczyzna 35-50, roboczy strój |
+| **Elektronika** | Biuro domowe, studio, salon | Monitor, słuchawki, minimalistyczne wnętrze | Młody profesjonalista 25-40 |
+| **Sport/Fitness** | Siłownia, park, domowa strefa treningowa | Hantle, mata, zielń, poranny świt | Osoba aktywna 25-40, sportowy strój |
+| **Beauty/Wellness** | Łazienka spa, sypialnia, gabinet | Świece, ręczniki, rośliny, bambus | Kobieta 28-45, naturalny look |
+| **Kawa/Gastronomia** | Kuchnia, kawiarnia, biuro | Ziarna kawy, filiżanki, ekspres | Kobieta/mężczyzna 28-45, casual |
 
 ---
 
-#### Scenerie — DOPASUJ DO KONTEKSTU UŻYCIA
+#### Lista gadżetów do mockupów (wybierz 10):
 
-Sceneria powinna pokazywać **GDZIE** produkt jest naturalnie używany:
+**Odzież:**
+1. **Koszulka** — bawełniana, logo na piersi lub plecach
+2. **Bluza z kapturem** — logo na piersi, haftowane lub nadruk
+3. **Czapka z daszkiem** — logo wyhaftowane na froncie
 
-| Produkt | Sceneria | Detale do opisania |
-|---------|----------|-------------------|
-| **Narzędzia budowlane** | Warsztat, budowa, garaż, wnętrze w remoncie | "Betonowa podłoga, regały z narzędziami, pył w powietrzu podświetlony słońcem, niedokończona ściana, kable, rury" |
-| **Ekspres/AGD kuchenne** | Nowoczesna kuchnia, kawiarnia, biuro | "Marmurowy blat, drewniane dodatki, rośliny w doniczkach, naturalne światło z okna, filiżanki, ziarna kawy" |
-| **Elektronika domowa** | Salon, biuro domowe, studio | "Minimalistyczne wnętrze, duży monitor, rośliny, ciepłe oświetlenie, skandynawski styl" |
-| **Sport/Fitness** | Siłownia, park, domowa strefa treningowa | "Mata do ćwiczeń, hantle, lustra, duże okna, poranny świt, zieleń za oknem" |
-| **Beauty/Spa** | Łazienka, sypialnia, gabinet spa | "Białe ręczniki, świece, bambus, naturalne kosmetyki, miękkie światło, rośliny" |
-| **Pistolet malarski/narzędzia malarskie** | Pracownia, warsztat malarski, garaż | "Zabezpieczona folia, puszki z farbą, karoseria samochodu, ściany do malowania" |
+**Akcesoria:**
+4. **Kubek / termos** — ceramiczny lub stalowy, logo + kolory marki
+5. **Torba / shopperka** — bawełniana lub ekologiczna z logo
+6. **Breloczek** — metalowy lub akrylowy z logo
+
+**Materiały biurowe:**
+7. **Notes / notatnik** — okładka z logo, kolory marki
+8. **Długopis** — metalowy z grawerem logo
+9. **Wizytówki** — logo, kolory, typografia
+
+**Tekstylia:**
+10. **Ściereczka z mikrofibry** — z wyhaftowanym lub nadrukowanym logo
+11. **Ręcznik** — z haftem logo
+
+**Inne gadżety:**
+12. **Naklejki** — zestaw naklejek z logo i elementami marki
+13. **Magnesy** — na lodówkę z logo
+14. **Smycz** — na identyfikator/klucze z logo
+15. **Opakowanie produktu** — pudełko premium z brandingiem
 
 ---
 
 #### Struktura każdego promptu mockupowego:
 
 ```
-1. TYP ZDJĘCIA: [Lifestyle z człowiekiem / Lifestyle bez człowieka / Produktowe]
-2. PRODUKT MOCKUPOWY: [konkretny produkt z brandinngiem — DOPASOWANY do kategorii produktu]
-3. ELEMENT BRANDINGU: [co jest na produkcie: logo, nazwa marki, kolory, ikona]
-4. KOLORY MARKI: [konkretne HEX: primary, secondary, accent — gdzie użyte]
+GADŻET: [nazwa gadżetu, np. "Koszulka bawełniana"]
+ELEMENT BRANDINGU: [co jest na gadżecie: logo, nazwa marki, tagline, ikona]
+UMIEJSCOWIENIE: [gdzie na gadżecie: na piersi, na plecach, na froncie, haft w rogu]
+TECHNIKA: [nadruk, haft, grawer, sublimacja, sitodruk]
 
-5. SCENERIA (szczegółowo):
-   - Miejsce: [dokładnie gdzie — warsztat, kuchnia, siłownia, łazienka]
-   - Pora dnia: [poranek, dzień, wieczór — wpływa na światło]
-   - Rekwizyty: [3-5 konkretnych obiektów pasujących do sceny]
-   - Atmosfera: [profesjonalizm, relaks, energia, przytulność]
+KOLORY:
+- Gadżet: [kolor bazowy gadżetu — np. biały, czarny, granatowy]
+- Logo: [kolor logo — HEX]
+- Akcenty: [dodatkowe kolory marki — HEX]
 
-6. CZŁOWIEK (jeśli jest):
-   - Kto: [płeć, wiek, typ sylwetki]
-   - Wygląd: [fryzura, kolor skóry, rysy twarzy]
-   - Ubranie: [dokładny opis stroju pasującego do kontekstu]
-   - Poza: [co robi, jak stoi/siedzi, wyraz twarzy]
-   - Relacja z produktem: [trzyma, używa, patrzy na, prezentuje]
+KONTEKST DOPASOWANY DO PRODUKTU:
+- Sceneria: [gdzie gadżet jest pokazany — dopasuj do świata produktu]
+  Przykłady: warsztat dla narzędzi, kuchnia dla AGD, nowoczesny apartament dla smart home,
+  siłownia dla fitness, gabinet spa dla beauty
+- Rekwizyty w tle: [2-3 elementy nawiązujące do produktu, rozmyte w tle]
+  Przykłady: panorama za oknem, ziarna kawy, narzędzia, rośliny, ręczniki
+- Osoba (opcjonalnie): [jeśli gadżet jest noszony — dopasuj osobę do grupy docelowej]
+  Przykłady: mechanik 40+ dla narzędzi, kobieta 30+ w domu dla AGD, sportowiec dla fitness
 
-7. OŚWIETLENIE: [typ światła, kierunek, nastrój — naturalne/studio/dramatyczne]
-8. KADR: [szeroki/średni/zbliżenie, kąt kamery, głębia ostrości]
-9. STYL: [słowa klucze oddające emocję marki + konkretne referencje]
-10. FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render
+PREZENTACJA:
+- Ujęcie: [flat lay / na osobie / złożony / w kontekście]
+- Oświetlenie: [naturalne dopasowane do scenerii / studio]
+- Głębia ostrości: [gadżet ostry, tło lekko rozmyte]
+
+STYL: [premium, lifestyle, autentyczny — NIE stockowy, dopasowany do marki]
+FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
 ```
 
 ---
 
-#### Minimum 10 mockupów — DOSTOSOWANE DO PRODUKTU:
+#### Minimum 10 mockupów dla każdej marki:
 
-**Zamiast generycznego zestawu (koszulka, kubek, czapka...), przemyśl:**
-
-1. **Opakowanie główne** — unboxing experience pasujący do produktu
-2. **Etui/torba** — dopasowane do produktu (narzędziowa, kosmetyczka, tech sleeve)
-3. **Odzież funkcjonalna** — pasująca do kontekstu (kombinezon roboczy LUB fartuch LUB bluza sportowa)
-4. **Akcesorium brandingowe** — mały gadżet pasujący do kategorii
-5. **Produkt w użyciu #1** — osoba dopasowana do grupy docelowej używa produktu
-6. **Produkt w użyciu #2** — inny kontekst użycia
-7. **Flat lay / zestaw** — produkt + dopasowane akcesoria
-8. **Opakowanie prezentowe** — gift box z brandingiem
-9. **Naklejki/magnesy** — małe elementy brandingu
-10. **Produkt specyficzny dla kategorii** — np. filiżanka dla kawy, rękawice dla narzędzi, kosmetyczka dla beauty
+1. **Koszulka z logo** — biała lub czarna, logo na piersi
+2. **Bluza z kapturem** — logo wyhaftowane
+3. **Czapka z daszkiem** — logo na froncie
+4. **Kubek ceramiczny** — logo + kolory marki
+5. **Torba bawełniana** — duże logo na froncie
+6. **Breloczek metalowy** — logo wygrawowane
+7. **Notes firmowy** — okładka z brandingiem
+8. **Zestaw naklejek** — różne warianty logo i ikony
+9. **Ściereczka z mikrofibry** — logo w rogu
+10. **Opakowanie produktu** — pudełko premium z pełnym brandingiem
 
 ---
 
-#### Przykład doboru mockupów dla różnych produktów:
+#### Przykładowe prompty mockupów (PanoView — robot okienny):
 
-**❌ ŹLE — Uniwersalny zestaw:**
-Koszulka, kubek, czapka, torba, bluza, bidogn, płaszcz — dla każdego produktu tak samo
+**Kubek z logo:**
+```
+GADŻET: Kubek ceramiczny matowy
+ELEMENT BRANDINGU: Logo PanoView (ikona + wordmark) + tagline "Czysta panorama, bez wysiłku"
+UMIEJSCOWIENIE: Logo na froncie kubka, tagline mniejszy pod spodem
+TECHNIKA: Nadruk ceramiczny, wysokiej jakości
 
-**✅ DOBRZE — Pistolet malarski:**
-1. Profesjonalne etui narzędziowe z logo
-2. Kombinezon ochronny z brandingiem
-3. Rękawice robocze z logo
-4. Pistolet w użyciu — malarz 40+ w warsztacie
-5. Pistolet w użyciu — malowanie karoserii
-6. Flat lay: pistolet + maski + farby + rękawice
-7. Opakowanie premium z instrukcją
-8. Naklejki ostrzegawcze z logo
-9. Torba na sprzęt malarski
-10. Skrzynka narzędziowa z brandingiem
+KOLORY:
+- Kubek: Biały matowy (#F8F8F8)
+- Logo: Crystal Cyan (#00D4E8) ikona, Deep Space (#0D1B2A) tekst
+- Akcent: Safety Orange (#FF6D3A) na elemencie sensora w ikonie
 
-**✅ DOBRZE — Ekspres do kawy:**
-1. Eleganckie opakowanie z okienkiem
-2. Fartuch kuchenny z haftem logo
-3. Zestaw filiżanek z logo
-4. Ekspres w użyciu — kobieta 30+ w kuchni
-5. Barista przygotowuje kawę
-6. Flat lay: ekspres + ziarna + filiżanki + ciastka
-7. Torba na zakupy "coffee lover"
-8. Mała kosmetyczka/saszetka na kawę
-9. Świece zapachowe z brandingiem
-10. Gift box z kawą i akcesoriami
+KONTEKST DOPASOWANY DO PRODUKTU:
+- Sceneria: Nowoczesna kuchnia z dużym oknem, za oknem panorama miasta
+- Rekwizyty w tle: Poranne światło, roślina w doniczce, czyste okno (rozmyte)
+- Osoba: Brak — sam kubek na blacie
 
-**✅ DOBRZE — Masażer:**
-1. Eleganckie etui wellness
-2. Ręcznik spa z haftem
-3. Torba sportowa z logo
-4. Masażer w użyciu — kobieta 35+ po treningu
-5. Masażer w użyciu — mężczyzna w domu
-6. Flat lay: masażer + świece + olejki
-7. Kosmetyczka podróżna
-8. Bidon sportowy
-9. Opakowanie prezentowe zen
-10. Zestaw wellness z brandingiem
+PREZENTACJA:
+- Ujęcie: Kubek na marmurowym blacie kuchennym, lekko z boku
+- Oświetlenie: Naturalne poranne światło z okna
+- Głębia ostrości: Kubek ostry, panorama za oknem rozmyta
+
+STYL: Premium smart home lifestyle, jak Dyson lub Apple home
+FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
+```
+
+**Koszulka z logo:**
+```
+GADŻET: Koszulka bawełniana premium
+ELEMENT BRANDINGU: Logo PanoView (ikona + wordmark)
+UMIEJSCOWIENIE: Na piersi po lewej stronie, rozmiar ok. 8cm
+TECHNIKA: Haft wysokiej jakości
+
+KOLORY:
+- Koszulka: Granatowa (#0D1B2A)
+- Logo: Crystal Cyan (#00D4E8) haftowany
+
+KONTEKST DOPASOWANY DO PRODUKTU:
+- Sceneria: Jasny, nowoczesny apartament z panoramicznymi oknami
+- Rekwizyty w tle: Widok na miasto, minimalistyczne wnętrze (rozmyte)
+- Osoba: Mężczyzna 35 lat, casualowy styl, stoi przy oknie z widokiem
+
+PREZENTACJA:
+- Ujęcie: Zbliżenie na tors z logo, twarz poza kadrem
+- Oświetlenie: Naturalne światło z okna, ciepłe
+- Głębia ostrości: Koszulka ostra, tło rozmyte
+
+STYL: Premium lifestyle, smart home, nowoczesny dom
+FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
+```
 
 ---
 
