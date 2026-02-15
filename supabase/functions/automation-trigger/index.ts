@@ -69,50 +69,55 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Check if execution already exists (prevent duplicates)
-      const { data: existing } = await supabase
-        .from('automation_executions')
-        .select('id')
-        .eq('flow_id', flow.id)
-        .eq('entity_type', entity_type)
-        .eq('entity_id', entity_id)
-        .single()
-
-      if (existing) {
-        console.log(`[automation-trigger] Execution already exists for flow ${flow.id}, skipping`)
-        continue
+      // Use UPSERT to prevent race condition duplicates
+      const executionContext = {
+        ...context,
+        triggered_at: new Date().toISOString(),
+        trigger_type
       }
 
-      // Create new execution
+      const executionLogs = [{
+        timestamp: new Date().toISOString(),
+        action: 'triggered',
+        trigger_type,
+        flow_name: flow.name
+      }]
+
+      // Try to insert with ON CONFLICT DO NOTHING (atomic operation)
       const { data: execution, error: execError } = await supabase
         .from('automation_executions')
-        .insert({
+        .upsert({
           flow_id: flow.id,
           entity_type,
           entity_id,
           status: 'pending',
-          context: {
-            ...context,
-            triggered_at: new Date().toISOString(),
-            trigger_type
-          },
-          logs: [{
-            timestamp: new Date().toISOString(),
-            action: 'triggered',
-            trigger_type,
-            flow_name: flow.name
-          }]
+          context: executionContext,
+          logs: executionLogs
+        }, {
+          onConflict: 'flow_id,entity_type,entity_id',
+          ignoreDuplicates: true
         })
-        .select('id')
+        .select('id, status')
         .single()
+
+      // If insert returned null (duplicate existed), skip
+      if (!execution) {
+        console.log(`[automation-trigger] Execution already exists for flow ${flow.id}, skipping`)
+        continue
+      }
 
       if (execError) {
         console.error(`[automation-trigger] Failed to create execution for flow ${flow.id}:`, execError)
         continue
       }
 
-      console.log(`[automation-trigger] Created execution ${execution.id} for flow ${flow.name}`)
-      createdExecutions.push(execution.id)
+      // Only count as new if it's in pending status
+      if (execution.status === 'pending') {
+        console.log(`[automation-trigger] Created execution ${execution.id} for flow ${flow.name}`)
+        createdExecutions.push(execution.id)
+      } else {
+        console.log(`[automation-trigger] Execution ${execution.id} already processed (${execution.status}), skipping`)
+      }
     }
 
     // Optionally: immediately trigger executor for pending executions

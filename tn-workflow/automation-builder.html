@@ -554,6 +554,27 @@
         }
 
         async function saveFlow() {
+            // Check for active executions before saving
+            if (flowId) {
+                const { data: activeExecutions, error: checkError } = await sb
+                    .from('automation_executions')
+                    .select('id, status')
+                    .eq('flow_id', flowId)
+                    .in('status', ['pending', 'running', 'waiting'])
+                    .limit(5);
+
+                if (!checkError && activeExecutions && activeExecutions.length > 0) {
+                    const proceed = confirm(
+                        `UWAGA: Ta automatyzacja ma ${activeExecutions.length} aktywnych wykonań.\n\n` +
+                        `Zmiana kroków może spowodować problemy z tymi wykonaniami.\n\n` +
+                        `Czy na pewno chcesz kontynuować?`
+                    );
+                    if (!proceed) {
+                        return;
+                    }
+                }
+            }
+
             const flowData = {
                 name: flow.name,
                 description: flow.description,
@@ -1276,6 +1297,15 @@
                 `;
             } else if (step.step_type === 'condition') {
                 title = 'Konfiguracja warunku';
+
+                const fieldLabels = {
+                    'has_purchased': 'Klient kupił',
+                    'email_opened': 'Email został otwarty',
+                    'offer_viewed': 'Oferta została obejrzana'
+                };
+                const selectedField = fieldLabels[step.config?.field] || 'Klient kupił';
+                const continueIf = step.config?.value === true ? 'TAK' : 'NIE';
+
                 content = `
                     <div class="space-y-6 animate-slide-in">
                         <div>
@@ -1289,20 +1319,24 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm text-[#888] mb-2">Warunek</label>
+                            <label class="block text-sm text-[#888] mb-2">Kontynuuj automatyzację jeśli</label>
                             <select id="step-condition-value" class="input-field"
                                 onchange="updateStepConfig(${index}, 'value', this.value === 'true')">
-                                <option value="false" ${step.config?.value === false ? 'selected' : ''}>Jest FAŁSZYWY (NIE)</option>
-                                <option value="true" ${step.config?.value === true ? 'selected' : ''}>Jest PRAWDZIWY (TAK)</option>
+                                <option value="false" ${step.config?.value === false ? 'selected' : ''}>NIE (warunek nie jest spełniony)</option>
+                                <option value="true" ${step.config?.value === true ? 'selected' : ''}>TAK (warunek jest spełniony)</option>
                             </select>
                         </div>
 
-                        <div class="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
-                            <div class="flex items-center gap-2 text-sm text-amber-400 mb-2">
-                                <i class="ph ph-warning"></i>
-                                <span>Uwaga</span>
+                        <div class="bg-cyan-500/10 rounded-lg p-4 border border-cyan-500/20">
+                            <div class="flex items-center gap-2 text-sm text-cyan-400 mb-2">
+                                <i class="ph ph-info"></i>
+                                <span>Jak to działa</span>
                             </div>
-                            <p class="text-sm text-[#888]">Jeśli warunek ${step.config?.value === false ? 'nie jest spełniony' : 'jest spełniony'}, automatyzacja przejdzie do następnego kroku. W przeciwnym razie zakończy się.</p>
+                            <p class="text-sm text-[#888]">
+                                <strong class="text-white">${selectedField}?</strong><br>
+                                Jeśli odpowiedź to <strong class="text-cyan-400">${continueIf}</strong> → kontynuuj automatyzację<br>
+                                Jeśli odpowiedź to <strong class="text-red-400">${continueIf === 'TAK' ? 'NIE' : 'TAK'}</strong> → zakończ automatyzację
+                            </p>
                         </div>
                     </div>
                 `;

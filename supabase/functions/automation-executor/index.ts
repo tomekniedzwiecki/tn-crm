@@ -210,6 +210,13 @@ async function processExecution(supabase: any, execution: AutomationExecution): 
   // Process current step
   const stepResult = await processStep(supabase, execution, currentStep, steps)
 
+  // Helper to append log with rotation (max 50 entries)
+  const appendLog = (logs: any[], newLog: any): any[] => {
+    const updated = [...(logs || []), newLog]
+    // Keep only last 50 logs to prevent bloat
+    return updated.length > 50 ? updated.slice(-50) : updated
+  }
+
   // Handle step result
   if (stepResult.nextStepId) {
     // Move to specific step (from condition)
@@ -221,7 +228,7 @@ async function processExecution(supabase: any, execution: AutomationExecution): 
           current_step_id: nextStep.id,
           scheduled_for: stepResult.scheduledFor || null,
           status: stepResult.status || 'running',
-          logs: [...(execution.logs || []), stepResult.log]
+          logs: appendLog(execution.logs, stepResult.log)
         })
         .eq('id', execution.id)
       return `moved to step ${nextStep.step_order}`
@@ -236,7 +243,7 @@ async function processExecution(supabase: any, execution: AutomationExecution): 
         status: 'waiting',
         scheduled_for: stepResult.scheduledFor,
         current_step_id: steps[currentStepIndex + 1]?.id || currentStep.id,
-        logs: [...(execution.logs || []), stepResult.log]
+        logs: appendLog(execution.logs, stepResult.log)
       })
       .eq('id', execution.id)
     return `waiting until ${stepResult.scheduledFor}`
@@ -250,22 +257,23 @@ async function processExecution(supabase: any, execution: AutomationExecution): 
       .from('automation_executions')
       .update({
         current_step_id: steps[nextStepIndex].id,
-        logs: [...(execution.logs || []), stepResult.log]
+        logs: appendLog(execution.logs, stepResult.log)
       })
       .eq('id', execution.id)
     return `moved to step ${nextStepIndex}`
   }
 
   // No more steps - completed
+  const finalLogs = appendLog(execution.logs, stepResult.log)
   await supabase
     .from('automation_executions')
     .update({
       status: 'completed',
       completed_at: new Date().toISOString(),
-      logs: [...(execution.logs || []), stepResult.log, {
+      logs: appendLog(finalLogs, {
         timestamp: new Date().toISOString(),
         action: 'completed'
-      }]
+      })
     })
     .eq('id', execution.id)
 
@@ -316,6 +324,45 @@ async function processActionStep(
     // Build email data from context
     const context = execution.context || {}
 
+    // Validate required email field
+    if (!context.email) {
+      console.error(`[automation-executor] Missing email address in context`)
+      return {
+        log: {
+          timestamp,
+          action: 'send_email',
+          email_type,
+          skipped: true,
+          reason: 'missing_email_address'
+        }
+      }
+    }
+
+    // Generate idempotency key for this step
+    const idempotencyKey = `${execution.id}_${step.id}_${email_type}`
+
+    // Check if email was already sent (idempotency)
+    const { data: existingEmail } = await supabase
+      .from('email_messages')
+      .select('id, resend_id')
+      .eq('automation_execution_id', execution.id)
+      .eq('type', email_type)
+      .single()
+
+    if (existingEmail) {
+      console.log(`[automation-executor] Email already sent (idempotency check), skipping`)
+      return {
+        log: {
+          timestamp,
+          action: 'send_email',
+          email_type,
+          skipped: true,
+          reason: 'already_sent',
+          existing_resend_id: existingEmail.resend_id
+        }
+      }
+    }
+
     const emailData = {
       email: context.email,
       clientName: context.clientName || context.customer_name,
@@ -339,26 +386,61 @@ async function processActionStep(
       viewUrl: context.viewUrl
     }
 
-    // Call send-email function
-    const response = await fetch(
-      `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-        },
-        body: JSON.stringify({
-          type: email_type,
-          data: emailData
-        })
+    // Call send-email function with retry logic
+    let result: any = null
+    let lastError: Error | null = null
+    const maxRetries = 3
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              'X-Idempotency-Key': idempotencyKey
+            },
+            body: JSON.stringify({
+              type: email_type,
+              data: emailData
+            })
+          }
+        )
+
+        result = await response.json()
+
+        if (response.ok) {
+          break // Success, exit retry loop
+        }
+
+        // Check if error is retryable
+        if (response.status >= 500 || response.status === 429) {
+          lastError = new Error(`Email sending failed (attempt ${attempt}): ${result.error || 'Server error'}`)
+          console.log(`[automation-executor] Retry ${attempt}/${maxRetries}: ${lastError.message}`)
+
+          // Exponential backoff: 1s, 2s, 4s
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000))
+          }
+        } else {
+          // Non-retryable error (4xx except 429)
+          throw new Error(`Email sending failed: ${result.error || 'Unknown error'}`)
+        }
+      } catch (fetchError) {
+        lastError = fetchError instanceof Error ? fetchError : new Error('Network error')
+        console.log(`[automation-executor] Retry ${attempt}/${maxRetries}: ${lastError.message}`)
+
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000))
+        }
       }
-    )
+    }
 
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(`Email sending failed: ${result.error || 'Unknown error'}`)
+    // If all retries failed, throw the last error
+    if (!result || (lastError && !result.id)) {
+      throw lastError || new Error('Email sending failed after retries')
     }
 
     console.log(`[automation-executor] Email sent successfully: ${result.id}`)
