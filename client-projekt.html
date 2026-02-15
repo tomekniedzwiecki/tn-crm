@@ -5034,20 +5034,24 @@
             `};
 
             if (hasNewFormat) {
-                // New format with face/no-face sections
-                let html = '';
+                // New format with face/no-face sections in 2 columns
                 let globalIndex = 0;
+                const faceIndex = globalIndex;
+                const faceCards = withFace.map((s, i) => renderScenarioCard(s, i, globalIndex++)).join('');
+                const noFaceCards = noFace.map((s, i) => renderScenarioCard(s, i, globalIndex++)).join('');
+
+                let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6">`;
 
                 if (withFace.length > 0) {
                     html += `
-                    <div class="mb-6">
+                    <div>
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-user text-pink-400"></i>
                             <h4 class="text-[13px] font-medium text-white">Z twarzą</h4>
-                            <span class="text-[11px] text-[#555]">(${withFace.length} scenariuszy)</span>
+                            <span class="text-[11px] text-[#555]">(${withFace.length})</span>
                         </div>
                         <div class="space-y-3">
-                            ${withFace.map((s, i) => renderScenarioCard(s, i, globalIndex++)).join('')}
+                            ${faceCards}
                         </div>
                     </div>
                     `;
@@ -5059,16 +5063,17 @@
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-hand text-cyan-400"></i>
                             <h4 class="text-[13px] font-medium text-white">Bez twarzy</h4>
-                            <span class="text-[11px] text-[#555]">(${noFace.length} scenariuszy)</span>
+                            <span class="text-[11px] text-[#555]">(${noFace.length})</span>
                         </div>
-                        <p class="text-[11px] text-[#555] mb-3">Idealne jeśli nie chcesz pokazywać twarzy — widać tylko ręce i produkt.</p>
+                        <p class="text-[11px] text-[#555] mb-3">Widać tylko ręce i produkt</p>
                         <div class="space-y-3">
-                            ${noFace.map((s, i) => renderScenarioCard(s, i, globalIndex++)).join('')}
+                            ${noFaceCards}
                         </div>
                     </div>
                     `;
                 }
 
+                html += `</div>`;
                 list.innerHTML = html;
             } else {
                 // Old format - show all scenarios
@@ -5528,37 +5533,45 @@
 
             let html = '';
 
-            // With face
-            if (withFace.length > 0) {
-                html += `<div class="mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                        <i class="ph ph-user text-cyan-400"></i>
-                        <span class="text-[13px] text-[#888] font-medium">Z twarzą</span>
-                        <span class="text-[11px] text-[#555]">(${withFace.length} scenariuszy)</span>
-                    </div>
-                    <div class="space-y-2">
-                        ${withFace.map((s, i) => renderIntroScenarioCard(s, `face-${i}`)).join('')}
-                    </div>
-                </div>`;
+            // Check if we have grouped scenarios
+            if (withFace.length > 0 || withoutFace.length > 0) {
+                html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6">`;
+
+                // With face
+                if (withFace.length > 0) {
+                    html += `<div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-user text-pink-400"></i>
+                            <span class="text-[13px] text-white font-medium">Z twarzą</span>
+                            <span class="text-[11px] text-[#555]">(${withFace.length})</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${withFace.map((s, i) => renderIntroScenarioCard(s, `face-${i}`)).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                // Without face
+                if (withoutFace.length > 0) {
+                    html += `<div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-hand text-cyan-400"></i>
+                            <span class="text-[13px] text-white font-medium">Bez twarzy</span>
+                            <span class="text-[11px] text-[#555]">(${withoutFace.length})</span>
+                        </div>
+                        <p class="text-[11px] text-[#555] mb-3">Widać tylko ręce i produkt</p>
+                        <div class="space-y-2">
+                            ${withoutFace.map((s, i) => renderIntroScenarioCard(s, `noface-${i}`)).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                html += `</div>`;
             }
 
-            // Without face
-            if (withoutFace.length > 0) {
-                html += `<div class="mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                        <i class="ph ph-hand text-emerald-400"></i>
-                        <span class="text-[13px] text-[#888] font-medium">Bez twarzy</span>
-                        <span class="text-[11px] text-[#555]">(${withoutFace.length} scenariuszy)</span>
-                    </div>
-                    <div class="space-y-2">
-                        ${withoutFace.map((s, i) => renderIntroScenarioCard(s, `noface-${i}`)).join('')}
-                    </div>
-                </div>`;
-            }
-
-            // Ungrouped
+            // Ungrouped (fallback for old format)
             if (ungrouped.length > 0 && withFace.length === 0 && withoutFace.length === 0) {
-                html += `<div class="space-y-2">
+                html = `<div class="space-y-2">
                     ${ungrouped.map((s, i) => renderIntroScenarioCard(s, `s-${i}`)).join('')}
                 </div>`;
             }
