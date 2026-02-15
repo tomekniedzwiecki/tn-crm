@@ -274,9 +274,11 @@ curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?work
 
 ## Format SQL wyjściowego
 
+> **WAŻNE**: Używaj `$$` delimitera zamiast pojedynczych apostrofów `'` dla JSON-a. Apostrofy w tekście scenariuszy (np. "what's this") powodują błędy SQL.
+
 ```sql
 INSERT INTO workflow_video (workflow_id, video_scenarios)
-VALUES ('[WORKFLOW_ID]', '[
+VALUES ('152f445f-b318-4e97-ba13-b9d901814ee8', $$[
   {"id": "scenario_1", "showFace": true, ...},
   {"id": "scenario_2", "showFace": true, ...},
   {"id": "scenario_3", "showFace": true, ...},
@@ -287,7 +289,7 @@ VALUES ('[WORKFLOW_ID]', '[
   {"id": "scenario_8", "showFace": false, ...},
   {"id": "scenario_9", "showFace": false, ...},
   {"id": "scenario_10", "showFace": false, ...}
-]'::jsonb)
+]$$::jsonb)
 ON CONFLICT (workflow_id) DO UPDATE SET video_scenarios = EXCLUDED.video_scenarios;
 ```
 

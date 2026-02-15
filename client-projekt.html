@@ -1316,25 +1316,30 @@
                     <div class="dash-nav-item" onclick="switchToDashTab('produkty')">
                         <i class="ph ph-package"></i>
                         <span>Produkty</span>
+                        <i id="dash-nav-check-produkty" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                     </div>
                     <div class="dash-nav-item" onclick="switchToDashTab('branding')">
                         <i class="ph ph-paint-brush"></i>
                         <span>Branding</span>
+                        <i id="dash-nav-check-branding" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                     </div>
                     <div class="dash-nav-item" onclick="switchToDashTab('raporty')">
                         <i class="ph ph-chart-line-up"></i>
                         <span>Raporty</span>
+                        <i id="dash-nav-check-raporty" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                     </div>
                     <div class="dash-nav-item" onclick="switchToDashTab('strona')">
                         <i class="ph ph-globe"></i>
                         <span>Strona</span>
+                        <i id="dash-nav-check-strona" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                     </div>
 
                     <div id="dash-sidebar-etap2" class="hidden">
                         <div class="dash-nav-section">Etap 2 — Video</div>
                         <div class="dash-nav-item" onclick="switchToDashTab('video-intro')">
                             <i class="ph ph-play-circle"></i>
-                            <span>Wprowadzenie</span>
+                            <span>Video</span>
+                            <i id="dash-nav-check-video" class="ph-fill ph-check-circle text-amber-400 ml-auto hidden"></i>
                         </div>
                         <div class="dash-nav-item" onclick="switchToDashTab('video-profiles')">
                             <i class="ph ph-share-network"></i>
@@ -1393,25 +1398,30 @@
                         <div class="dash-nav-item" onclick="switchToDashTab('produkty');toggleDashMobileMenu()">
                             <i class="ph ph-package"></i>
                             <span>Produkty</span>
+                            <i id="dash-nav-check-produkty-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                         <div class="dash-nav-item" onclick="switchToDashTab('branding');toggleDashMobileMenu()">
                             <i class="ph ph-paint-brush"></i>
                             <span>Branding</span>
+                            <i id="dash-nav-check-branding-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                         <div class="dash-nav-item" onclick="switchToDashTab('raporty');toggleDashMobileMenu()">
                             <i class="ph ph-chart-line-up"></i>
                             <span>Raporty</span>
+                            <i id="dash-nav-check-raporty-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                         <div class="dash-nav-item" onclick="switchToDashTab('strona');toggleDashMobileMenu()">
                             <i class="ph ph-globe"></i>
                             <span>Strona</span>
+                            <i id="dash-nav-check-strona-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
 
                         <div id="dash-mobile-etap2" class="hidden">
                             <div class="dash-nav-section">Etap 2 — Video</div>
                             <div class="dash-nav-item" onclick="switchToDashTab('video-intro');toggleDashMobileMenu()">
                                 <i class="ph ph-play-circle"></i>
-                                <span>Wprowadzenie</span>
+                                <span>Video</span>
+                                <i id="dash-nav-check-video-mobile" class="ph-fill ph-check-circle text-amber-400 ml-auto hidden"></i>
                             </div>
                             <div class="dash-nav-item" onclick="switchToDashTab('video-profiles');toggleDashMobileMenu()">
                                 <i class="ph ph-share-network"></i>
@@ -4012,6 +4022,25 @@
             const isTakeDropActive = takeDropData && takeDropData.is_active;
             document.getElementById('dash-sidebar-etap3')?.classList.toggle('hidden', !isTakeDropActive);
             document.getElementById('dash-mobile-etap3')?.classList.toggle('hidden', !isTakeDropActive);
+
+            // Update sidebar checkmarks for Etap 1
+            const hasProdukty = !!workflow?.selected_product_id;
+            const hasBranding = !!workflow?.branding_shared_at;
+            const hasRaporty = reports && reports.length > 0;
+            const hasStrona = !!workflow?.sales_page_url || !!workflow?.sales_page_shared_at;
+
+            document.getElementById('dash-nav-check-produkty')?.classList.toggle('hidden', !hasProdukty);
+            document.getElementById('dash-nav-check-produkty-mobile')?.classList.toggle('hidden', !hasProdukty);
+            document.getElementById('dash-nav-check-branding')?.classList.toggle('hidden', !hasBranding);
+            document.getElementById('dash-nav-check-branding-mobile')?.classList.toggle('hidden', !hasBranding);
+            document.getElementById('dash-nav-check-raporty')?.classList.toggle('hidden', !hasRaporty);
+            document.getElementById('dash-nav-check-raporty-mobile')?.classList.toggle('hidden', !hasRaporty);
+            document.getElementById('dash-nav-check-strona')?.classList.toggle('hidden', !hasStrona);
+            document.getElementById('dash-nav-check-strona-mobile')?.classList.toggle('hidden', !hasStrona);
+
+            // Update sidebar checkmark for Video (yellow when is_active - udostępnione)
+            document.getElementById('dash-nav-check-video')?.classList.toggle('hidden', !isVideoActive);
+            document.getElementById('dash-nav-check-video-mobile')?.classList.toggle('hidden', !isVideoActive);
         }
 
         async function loadProject() {
