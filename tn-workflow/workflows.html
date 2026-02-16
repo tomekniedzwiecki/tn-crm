@@ -177,9 +177,9 @@
                     <div id="stage-filter" class="flex flex-wrap items-center gap-1.5"></div>
                 </div>
 
-                <!-- Status Stage Filter (brak etapu) -->
+                <!-- Status Stage Filter (next step) -->
                 <div class="flex flex-wrap items-center gap-3 mb-6">
-                    <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Brak</span>
+                    <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Następny</span>
                     <div id="status-stage-filter" class="flex flex-wrap items-center gap-1.5">
                         <button onclick="toggleStatusStage('contract')" data-stage="contract"
                             class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
@@ -686,15 +686,11 @@
                 const currentStage = getCurrentStage(w);
                 const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
 
-                // Status stage filter (show only those MISSING selected stages)
+                // Status stage filter (show only where selected stage is NEXT step)
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
-                    for (const stage of selectedStatusStages) {
-                        if (hasStatusStage(w, stage)) {
-                            statusStageMatch = false;
-                            break;
-                        }
-                    }
+                    const nextStep = getNextStep(w);
+                    statusStageMatch = selectedStatusStages.has(nextStep);
                 }
 
                 return searchMatch && statusMatch && offerMatch && stageMatch && statusStageMatch;
@@ -821,6 +817,20 @@
                 default:
                     return false;
             }
+        }
+
+        // Returns next step to do: 'contract', 'product', 'report', 'branding', 'salespage', or null if all done
+        function getNextStep(w) {
+            const isStarter = w.offer_name?.toLowerCase().includes('starter');
+            const rc = reportCounts[w.workflow_id];
+
+            // Order: Umowa → Produkt → Raport → Branding → Strona
+            if (!isStarter && w.contract_status !== 'signed') return 'contract';
+            if (!w.selected_product_id) return 'product';
+            if (!(rc && rc.published > 0)) return 'report';
+            if (!w.branding_shared_at) return 'branding';
+            if (!w.sales_page_shared_at) return 'salespage';
+            return null; // all done
         }
 
         function getWorkflowPath(id) {
