@@ -88,12 +88,52 @@ Deno.serve(async (req) => {
 
     // Return PDF URL
     const pdfUrl = `https://${subdomain}.fakturownia.pl/invoices/${result.id}.pdf?api_token=${apiToken}`
+    const viewUrl = `https://${subdomain}.fakturownia.pl/invoice/${result.token}`
+
+    // Trigger automation for email notification
+    if (buyer.email) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+        console.log('[fakturownia-proforma] Triggering automation for:', buyer.email)
+
+        const triggerResponse = await fetch(`${supabaseUrl}/functions/v1/automation-trigger`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify({
+            trigger_type: 'proforma_generated',
+            entity_type: 'offer',
+            entity_id: offer.id || result.id,
+            context: {
+              email: buyer.email,
+              clientName: buyer.name || buyer.company || 'Cześć',
+              offerName: offer.name,
+              amount: offer.price?.toLocaleString('pl-PL', { minimumFractionDigits: 2 }) || '',
+              pdfUrl: pdfUrl,
+              viewUrl: viewUrl,
+              invoiceNumber: result.number
+            }
+          })
+        })
+
+        const triggerResult = await triggerResponse.json()
+        console.log('[fakturownia-proforma] Automation trigger result:', triggerResult)
+      } catch (emailError) {
+        console.warn('[fakturownia-proforma] Automation trigger error (proforma still created):', emailError)
+      }
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         invoiceId: result.id,
-        pdfUrl: pdfUrl
+        invoiceNumber: result.number,
+        pdfUrl: pdfUrl,
+        viewUrl: viewUrl
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
