@@ -1038,29 +1038,88 @@
                     </div>
                 `;
             } else {
-                // Milestones
-                const milestoneTitle = w.current_milestone_title || 'Brak etapów';
-                const milestoneNum = w.total_milestones > 0 ? `${w.completed_milestones + 1}/${w.total_milestones}` : '-';
+                // Stage 1: Show next item to do from checklist
+                // Order: Umowa → Produkt → Raport → Branding → Strona
+                const isStarter = w.offer_name?.toLowerCase().includes('starter');
+                const rc = reportCounts[w.workflow_id];
 
-                // Task progress for current milestone - only show if some tasks completed
-                const tasks = w.current_milestone_tasks || [];
-                const completedTasks = tasks.filter(t => t.completed).length;
-                const totalTasks = tasks.length;
-                const taskInfo = (totalTasks > 0 && completedTasks > 0) ? `${completedTasks}/${totalTasks} zadań` : '';
+                // Build list of stage 1 items with their status
+                const stage1Items = [];
+
+                // Umowa (skip for Starter)
+                if (!isStarter) {
+                    stage1Items.push({
+                        name: 'Umowa',
+                        icon: 'ph-file-text',
+                        done: w.contract_status === 'signed',
+                        inProgress: w.contract_status && !['pending_data', 'signed'].includes(w.contract_status)
+                    });
+                }
+
+                // Produkt
+                stage1Items.push({
+                    name: 'Produkt',
+                    icon: 'ph-package',
+                    done: !!w.selected_product_id,
+                    inProgress: !!w.products_shared_at && !w.selected_product_id
+                });
+
+                // Raport
+                stage1Items.push({
+                    name: 'Raport',
+                    icon: 'ph-chart-bar',
+                    done: rc && rc.published > 0,
+                    inProgress: rc && rc.total > 0 && rc.published === 0
+                });
+
+                // Branding
+                stage1Items.push({
+                    name: 'Branding',
+                    icon: 'ph-paint-brush',
+                    done: !!w.branding_shared_at,
+                    inProgress: false
+                });
+
+                // Strona
+                stage1Items.push({
+                    name: 'Strona',
+                    icon: 'ph-browser',
+                    done: !!w.sales_page_shared_at,
+                    inProgress: false
+                });
+
+                // Find next item to do (first not done)
+                const nextItem = stage1Items.find(item => !item.done);
+                const completedCount = stage1Items.filter(item => item.done).length;
+                const totalCount = stage1Items.length;
+
+                if (!nextItem) {
+                    // All done - Stage 1 complete
+                    return `
+                        <div class="py-2">
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <i class="ph-fill ph-check-circle text-emerald-400"></i>
+                                <span class="text-emerald-400 font-medium">Etap 1 ukończony</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const statusText = nextItem.inProgress ? 'W trakcie' : 'Do zrobienia';
+                const statusColor = nextItem.inProgress ? 'text-amber-400' : 'text-zinc-400';
+                const iconColor = nextItem.inProgress ? 'text-amber-400' : 'text-zinc-500';
 
                 return `
                     <div class="py-2">
-                        <div class="flex items-center justify-between text-[11px] mb-1.5">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="text-amber-400 font-mono flex-shrink-0">[${milestoneNum}]</span>
-                                <span class="text-white truncate">${milestoneTitle}</span>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ${nextItem.icon} ${iconColor}"></i>
+                                <span class="text-white font-medium">${nextItem.name}</span>
+                                <span class="text-zinc-600">·</span>
+                                <span class="${statusColor}">${statusText}</span>
                             </div>
-                            <span class="text-zinc-500 font-mono flex-shrink-0 ml-2">${progressPercent}%</span>
+                            <span class="text-zinc-500 font-mono">${completedCount}/${totalCount}</span>
                         </div>
-                        <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div class="progress-bar h-full rounded-full" style="width: ${progressPercent}%"></div>
-                        </div>
-                        ${taskInfo ? `<div class="text-[10px] text-zinc-500 mt-1">${taskInfo}</div>` : ''}
                     </div>
                 `;
             }
