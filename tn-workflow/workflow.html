@@ -3411,15 +3411,18 @@
 
         function renderLinks() {
             const container = document.getElementById('links-container');
-            container.innerHTML = currentTaskLinks.map((link, index) => `
+            container.innerHTML = currentTaskLinks.map((link, index) => {
+                // Validate URL to prevent javascript: XSS
+                const safeUrl = link.url && (link.url.startsWith('http://') || link.url.startsWith('https://')) ? escapeHtml(link.url) : '#';
+                return `
                 <div class="flex items-center gap-2 bg-zinc-900 rounded-lg px-3 py-2">
                     <i class="ph ph-link text-cyan-400"></i>
-                    <a href="${link.url}" target="_blank" class="flex-1 text-cyan-400 hover:text-cyan-300 text-sm truncate">${link.title || link.url}</a>
+                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 text-cyan-400 hover:text-cyan-300 text-sm truncate">${escapeHtml(link.title || link.url)}</a>
                     <button onclick="removeLink(${index})" class="text-zinc-500 hover:text-red-400 transition-colors">
                         <i class="ph ph-x"></i>
                     </button>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function addLink() {
@@ -6479,7 +6482,7 @@
                     : '';
 
                 const fileInfo = r.content?.file_name
-                    ? `<span class="text-zinc-600 text-[10px]">${r.content.file_name} · ${formatFileSize(r.content.file_size)}</span>`
+                    ? `<span class="text-zinc-600 text-[10px]">${escapeHtml(r.content.file_name)} · ${formatFileSize(r.content.file_size)}</span>`
                     : '';
 
                 return `
@@ -6490,7 +6493,7 @@
                                     <i class="ph ${config.icon} text-lg"></i>
                                 </div>
                                 <div>
-                                    <h4 class="text-white font-medium">${r.title}</h4>
+                                    <h4 class="text-white font-medium">${escapeHtml(r.title)}</h4>
                                     <div class="flex items-center gap-2 mt-1 flex-wrap">
                                         ${statusBadge}
                                         <span class="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">${config.label}</span>
@@ -6811,10 +6814,10 @@
                         <div class="flex-1 ${isTeam ? '' : 'text-right'}">
                             <div class="inline-block ${isTeam ? 'bg-zinc-900' : 'bg-violet-900/30'} border ${isTeam ? 'border-white/5' : 'border-violet-500/20'} rounded-lg px-4 py-3 max-w-[80%] ${isTeam ? '' : 'text-left'}">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-white text-sm font-medium">${c.author_name}</span>
+                                    <span class="text-white text-sm font-medium">${escapeHtml(c.author_name)}</span>
                                     <span class="text-zinc-600 text-xs">${formatDateTime(c.created_at)}</span>
                                 </div>
-                                <p class="text-zinc-300 text-sm whitespace-pre-wrap">${c.content}</p>
+                                <p class="text-zinc-300 text-sm whitespace-pre-wrap">${escapeHtml(c.content)}</p>
                                 ${c.attachments?.length ? `
                                     <div class="mt-2 pt-2 border-t border-white/5 flex flex-wrap gap-2">
                                         ${c.attachments.map(a => `

@@ -287,6 +287,25 @@
         let saveTimeout = null;
         let sortable = null;
 
+        // Security: Sanitize HTML to prevent XSS while preserving formatting
+        function sanitizeHtml(html) {
+            if (!html) return '';
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            // Remove script tags
+            div.querySelectorAll('script').forEach(el => el.remove());
+            // Remove event handlers
+            div.querySelectorAll('*').forEach(el => {
+                [...el.attributes].forEach(attr => {
+                    if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+                });
+                // Remove javascript: URLs
+                if (el.href && el.href.toLowerCase().startsWith('javascript:')) el.removeAttribute('href');
+                if (el.src && el.src.toLowerCase().startsWith('javascript:')) el.removeAttribute('src');
+            });
+            return div.innerHTML;
+        }
+
         // Auth check
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -433,7 +452,7 @@
 
             // Populate editor
             document.getElementById('note-title').value = note.title || '';
-            document.getElementById('note-content').innerHTML = note.content || '';
+            document.getElementById('note-content').innerHTML = sanitizeHtml(note.content || '');
             selectColor(note.color || 'zinc', false);
 
             const date = new Date(note.created_at).toLocaleDateString('pl-PL', {

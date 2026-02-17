@@ -320,6 +320,14 @@
 
         let teamMembers = [];
         let currentMember = null;
+
+        // Security: Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         let isAdmin = false;
 
         async function checkAuth() {
@@ -1180,7 +1188,8 @@
 
             grid.innerHTML = filteredWorkflows.map(w => {
                 const unread = unreadCounts[w.workflow_id] || 0;
-                const customerDisplay = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
+                const customerDisplayRaw = w.customer_name || w.customer_company || w.customer_email.split('@')[0];
+                const customerDisplay = escapeHtml(customerDisplayRaw);
                 const logoUrl = workflowLogos[w.workflow_id];
                 const currentStage = getWorkflowStage(w);
 
@@ -1230,7 +1239,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-1.5 text-xs text-zinc-400">
-                                <span class="truncate">${w.offer_name}</span>
+                                <span class="truncate">${escapeHtml(w.offer_name)}</span>
                                 <span class="text-zinc-700">·</span>
                                 <span class="font-mono text-zinc-300 flex-shrink-0">${formatPrice(w.amount)}</span>
                             </div>
@@ -1829,9 +1838,9 @@
                             <i class="ph ${actionIcon} text-xs text-zinc-400"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="text-xs text-white truncate">${a.description}</div>
+                            <div class="text-xs text-white truncate">${escapeHtml(a.description)}</div>
                             <div class="flex items-center gap-2 text-[10px] text-zinc-500 mt-0.5">
-                                <span class="truncate">${customer}</span>
+                                <span class="truncate">${escapeHtml(customer)}</span>
                                 <span class="text-zinc-700">·</span>
                                 <span class="flex-shrink-0">${timeAgo}</span>
                             </div>
