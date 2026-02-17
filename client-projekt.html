@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026021701';
+        const APP_VERSION = '2026021703';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4525,9 +4525,23 @@
                 contract_data_filled_at: new Date().toISOString()
             };
 
-            const { error } = await supabaseClient.from('workflows').update(updateData).eq('id', workflow.id);
+            // Use secure RPC function instead of direct UPDATE
+            const { data, error } = await supabaseClient.rpc('update_workflow_contract_data', {
+                p_token: getToken(),
+                p_customer_name: updateData.customer_name,
+                p_customer_company: updateData.customer_company,
+                p_customer_email: updateData.customer_email,
+                p_customer_phone: updateData.customer_phone,
+                p_client_pesel: updateData.client_pesel,
+                p_client_id_number: updateData.client_id_number,
+                p_client_nip: updateData.client_nip,
+                p_client_street: updateData.client_street,
+                p_client_postal_code: updateData.client_postal_code,
+                p_client_city: updateData.client_city,
+                p_client_country: updateData.client_country
+            });
 
-            if (error) { showToast('Blad zapisu', 'error'); return; }
+            if (error || data === false) { showToast('Blad zapisu', 'error'); return; }
 
             Object.assign(workflow, updateData);
             showScreen('contract-signing');
@@ -6687,14 +6701,15 @@
             if (!pendingProductId) return;
             const id = pendingProductId;
 
-            const { error } = await supabaseClient
-                .from('workflows')
-                .update({ selected_product_id: id })
-                .eq('id', workflow.id);
+            // Use secure RPC function instead of direct UPDATE
+            const { data, error } = await supabaseClient.rpc('update_workflow_selected_product', {
+                p_token: getToken(),
+                p_product_id: id
+            });
 
             closeConfirmModal();
 
-            if (error) {
+            if (error || data === false) {
                 console.error(error);
                 showToast('Wystąpił błąd', 'error');
                 return;
