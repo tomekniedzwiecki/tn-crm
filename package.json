@@ -3,7 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:webhooks": "bash scripts/test-webhooks.sh",
+    "test:critical": "vitest run --testNamePattern='CRITICAL|TEST-WEBHOOK|TEST-RLS|TEST-LEAD-001'",
+    "test:all": "npm run test:webhooks && npm run test",
     "deploy:functions": "npx supabase functions deploy --project-ref yxmavwkwnfuphjqbelws",
     "deploy:send-email": "npx supabase functions deploy send-email --project-ref yxmavwkwnfuphjqbelws",
     "deploy:resend-webhook": "npx supabase functions deploy resend-webhook --project-ref yxmavwkwnfuphjqbelws --no-verify-jwt",
@@ -13,8 +21,7 @@
     "deploy:automation-trigger": "npx supabase functions deploy automation-trigger --project-ref yxmavwkwnfuphjqbelws",
     "deploy:automations": "npx supabase functions deploy automation-executor automation-trigger --project-ref yxmavwkwnfuphjqbelws",
     "deploy:tpay-webhook": "npx supabase functions deploy tpay-webhook --project-ref yxmavwkwnfuphjqbelws --no-verify-jwt",
-    "deploy:tpay-create": "npx supabase functions deploy tpay-create-transaction --project-ref yxmavwkwnfuphjqbelws",
-    "test:webhooks": "bash scripts/test-webhooks.sh"
+    "deploy:tpay-create": "npx supabase functions deploy tpay-create-transaction --project-ref yxmavwkwnfuphjqbelws"
   },
   "repository": {
     "type": "git",
@@ -35,6 +42,10 @@
     "html-to-docx": "^1.8.0"
   },
   "devDependencies": {
-    "sharp": "^0.34.5"
+    "@playwright/test": "^1.41.0",
+    "@types/node": "^20.11.0",
+    "sharp": "^0.34.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   }
 }
