@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
       throw new Error(result.message || 'Błąd API Fakturownia')
     }
 
-    // Return PDF URL
-    const pdfUrl = `https://${subdomain}.fakturownia.pl/invoices/${result.id}.pdf?api_token=${apiToken}`
+    // Return public URLs using invoice token (no api_token exposure)
+    const pdfUrl = `https://${subdomain}.fakturownia.pl/invoice/${result.token}.pdf`
     const viewUrl = `https://${subdomain}.fakturownia.pl/invoice/${result.token}`
 
     // Trigger automation for email notification

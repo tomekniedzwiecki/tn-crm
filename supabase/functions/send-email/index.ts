@@ -69,6 +69,14 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
 // Offer flow email types (use special reply-to)
 const OFFER_FLOW_TYPES = ['offer_created', 'offer_personal', 'offer_reminder_halfway', 'offer_expired']
 
+// Validate email format
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false
+  // Basic email regex - catches most invalid formats
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email.trim())
+}
+
 // Extract first name for reply-to address (e.g. "Tomek Niedzwiecki" -> "tomek")
 function getFirstNameForReplyTo(name: string): string {
   const firstName = name.split(' ')[0].toLowerCase()
@@ -187,7 +195,7 @@ Deno.serve(async (req) => {
     console.log('[send-email] Resend API key present')
 
     const reqBody = await req.json()
-    console.log('[send-email] Request body:', JSON.stringify(reqBody))
+    console.log('[send-email] Request type:', reqBody.type || 'direct', 'to:', reqBody.to || reqBody.data?.email || 'N/A')
 
     // Support two formats:
     // 1. Template-based: { type: 'zapisy_confirmation', data: { email, ... } }
@@ -349,10 +357,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Validate recipient email
+    if (!isValidEmail(recipientEmail)) {
+      throw new Error(`Nieprawidłowy adres email: ${recipientEmail}`)
+    }
+
     // Send via Resend
     const emailPayload: Record<string, any> = {
       from: fromAddressTransactional,
-      to: recipientEmail,
+      to: recipientEmail.trim(),
       subject: finalSubject,
       html: finalBody
     }

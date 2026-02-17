@@ -41,6 +41,13 @@ interface Campaign {
   sent_count: number
 }
 
+// Validate email format
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email.trim())
+}
+
 // Replace template variables
 function replaceVariables(template: string, contact: OutreachContact): string {
   let result = template
@@ -210,7 +217,7 @@ Deno.serve(async (req) => {
 
       // Filter to only those with valid email and limit to daily_limit
       const validSends = (pendingSends as unknown as OutreachSend[])
-        .filter(s => s.contact && s.contact.email && s.contact.email.includes('@'))
+        .filter(s => s.contact && isValidEmail(s.contact.email))
         .slice(0, campaign.daily_limit)
 
       console.log(`[outreach-send] Fetched ${pendingSends.length}, valid: ${validSends.length}, sending up to ${campaign.daily_limit} for ${campaign.name}`)

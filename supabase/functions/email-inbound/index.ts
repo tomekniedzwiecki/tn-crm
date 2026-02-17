@@ -56,17 +56,27 @@ Deno.serve(async (req) => {
     // Pobierz body jako tekst do weryfikacji
     const bodyText = await req.text();
 
-    // Weryfikuj podpis jeśli mamy secret (opcjonalne - tylko logowanie)
-    if (webhookSecret && svixSignature && svixTimestamp) {
+    // Verify signature if secret is configured
+    if (webhookSecret) {
+      if (!svixSignature || !svixTimestamp) {
+        console.error("[email-inbound] Missing signature headers - rejecting");
+        return new Response(JSON.stringify({ success: false, error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const isValid = await verifyWebhookSignature(bodyText, svixSignature, svixTimestamp, webhookSecret);
       if (!isValid) {
-        // Log warning but don't block - signature verification can be flaky
-        console.warn("Webhook signature verification failed - proceeding anyway");
-      } else {
-        console.log("Webhook signature verified");
+        console.error("[email-inbound] Invalid signature - rejecting");
+        return new Response(JSON.stringify({ success: false, error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      console.log("[email-inbound] Webhook signature verified");
     } else {
-      console.log("Webhook received - no signature verification configured");
+      console.log("[email-inbound] Webhook received - no signature verification configured");
     }
 
     const supabase = createClient(

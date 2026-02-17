@@ -23,19 +23,59 @@ Deno.serve(async (req) => {
       throw new Error('Brak tokenu projektu')
     }
 
+    // Validate unique_token format (basic protection)
+    if (typeof unique_token !== 'string' || unique_token.length < 8 || unique_token.length > 100) {
+      throw new Error('Nieprawidłowy token')
+    }
+
     // Find workflow by unique_token
     const { data: workflow, error: workflowError } = await supabase
       .from('workflows')
-      .select('id, customer_email, customer_name, unique_token')
+      .select('id, customer_email, customer_name, unique_token, password_reset_expires')
       .eq('unique_token', unique_token)
       .single()
 
+    // Generic error message to prevent enumeration
     if (workflowError || !workflow) {
-      throw new Error('Nie znaleziono projektu')
+      // Return success to prevent enumeration attacks
+      console.log('[password-reset] Workflow not found for token (returning success to prevent enumeration)')
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Jeśli email istnieje w systemie, link do resetu został wysłany'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     if (!workflow.customer_email) {
-      throw new Error('Brak adresu email dla tego projektu')
+      // Return success to prevent enumeration
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Jeśli email istnieje w systemie, link do resetu został wysłany'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Rate limiting: check if reset was requested recently (within 5 minutes)
+    if (workflow.password_reset_expires) {
+      const lastResetExpires = new Date(workflow.password_reset_expires)
+      // Token expires in 1 hour, so subtract 55 minutes to get ~5 min cooldown
+      const cooldownEnd = new Date(lastResetExpires.getTime() - 55 * 60 * 1000)
+
+      if (new Date() < cooldownEnd) {
+        const waitMinutes = Math.ceil((cooldownEnd.getTime() - Date.now()) / 60000)
+        console.log('[password-reset] Rate limited, wait minutes:', waitMinutes)
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Proszę poczekać ${waitMinutes} minut przed ponowną próbą`
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        )
+      }
     }
 
     // Generate secure reset token

@@ -232,11 +232,16 @@ async function sendMetaConversion(order: any, supabase: any) {
       has_fbc: !!fbc
     }))
 
-    const url = `https://graph.facebook.com/${META_API_VERSION}/${META_PIXEL_ID}/events?access_token=${accessToken}`
+    // Meta Pixel ID from environment (fallback to hardcoded for backwards compatibility)
+    const pixelId = Deno.env.get('META_PIXEL_ID') || META_PIXEL_ID
+    const url = `https://graph.facebook.com/${META_API_VERSION}/${pixelId}/events`
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
       body: JSON.stringify(eventData)
     })
 
@@ -252,6 +257,21 @@ async function sendMetaConversion(order: any, supabase: any) {
   }
 }
 
+// Timing-safe string comparison to prevent timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false
+  }
+  const encoder = new TextEncoder()
+  const bufA = encoder.encode(a)
+  const bufB = encoder.encode(b)
+  let result = 0
+  for (let i = 0; i < bufA.length; i++) {
+    result |= bufA[i] ^ bufB[i]
+  }
+  return result === 0
+}
+
 // Verify Tpay notification signature using MD5 checksum
 function verifyTpaySignature(
   merchantId: string,
@@ -265,13 +285,13 @@ function verifyTpaySignature(
   const stringToHash = `${merchantId}${transactionId}${amount}${crc}${securityCode}`
   const calculatedMd5 = createHmac('md5', '').update(stringToHash).digest('hex')
 
+  const isMatch = timingSafeEqual(calculatedMd5.toLowerCase(), receivedMd5.toLowerCase())
+
   console.log('[tpay-webhook] Signature verification:', {
-    received: receivedMd5,
-    calculated: calculatedMd5,
-    match: calculatedMd5 === receivedMd5,
+    match: isMatch,
   })
 
-  return calculatedMd5 === receivedMd5
+  return isMatch
 }
 
 Deno.serve(async (req) => {
@@ -314,7 +334,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[tpay-webhook] Notification data:', JSON.stringify(notification))
+    // Log only non-sensitive fields
+    console.log('[tpay-webhook] Notification:', {
+      tr_id: notification.tr_id || notification.transactionId,
+      tr_status: notification.tr_status || notification.status,
+      tr_amount: notification.tr_amount || notification.amount,
+      tr_crc: notification.tr_crc || notification.hiddenDescription,
+    })
 
     // Extract key fields from Tpay notification
     const trId = notification.tr_id || notification.transactionId || ''

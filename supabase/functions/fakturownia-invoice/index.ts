@@ -115,9 +115,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('[fakturownia-invoice] Creating VAT invoice for order:', order.order_number)
-    console.log('[fakturownia-invoice] Subdomain:', subdomain)
-    console.log('[fakturownia-invoice] Department ID:', departmentId || 'not set')
-    console.log('[fakturownia-invoice] Invoice data:', JSON.stringify(invoiceData.invoice, null, 2))
+    console.log('[fakturownia-invoice] Subdomain:', subdomain, 'Department:', departmentId || 'default')
 
     // Call Fakturownia API
     const response = await fetch(`https://${subdomain}.fakturownia.pl/invoices.json`, {
@@ -145,10 +143,8 @@ Deno.serve(async (req) => {
 
     console.log('[fakturownia-invoice] Invoice created:', result.id, result.number)
 
-    // Get PDF URL
-    const pdfUrl = `https://${subdomain}.fakturownia.pl/invoices/${result.id}.pdf?api_token=${apiToken}`
-
-    // Get view URL (for sending to client)
+    // Get public URLs using invoice token (no api_token exposure)
+    const pdfUrl = `https://${subdomain}.fakturownia.pl/invoice/${result.token}.pdf`
     const viewUrl = `https://${subdomain}.fakturownia.pl/invoice/${result.token}`
 
     // Send email notification to customer
