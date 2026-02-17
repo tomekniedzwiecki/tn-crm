@@ -43,14 +43,15 @@ else
   ((FAIL++))
 fi
 
-# Test 4: resend-webhook dostepny
+# Test 4: resend-webhook dostepny (401 z "Missing signature" = OK, bo to odpowiedz z kodu nie z JWT)
 echo -n "4. resend-webhook dostepny bez JWT... "
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$SUPABASE_URL/resend-webhook" \
+RESPONSE=$(curl -s -X POST "$SUPABASE_URL/resend-webhook" \
   -H "Content-Type: application/json" \
   -d '{"type":"test"}')
+STATUS=$(echo "$RESPONSE" | grep -c "Missing signature\|Invalid signature\|success")
 
-if [ "$STATUS" != "401" ]; then
-  echo "OK (HTTP $STATUS)"
+if [ "$STATUS" -gt 0 ]; then
+  echo "OK (funkcja odpowiada)"
   ((PASS++))
 else
   echo "FAIL - uzyj: npm run deploy:resend-webhook"
