@@ -1572,6 +1572,7 @@
             await loadOffers();
 
             const { data, error } = await supabaseClient.from('leads').select('*').eq('id', id).single();
+            console.log('[DEBUG] Lead data loaded:', data ? { id: data.id, notes_history: data.notes_history } : 'null', 'error:', error);
             if (error || !data) {
                 alert('Lead nie znaleziony');
                 window.location.href = getLeadsPath();
@@ -1667,6 +1668,7 @@
 
             // Load and render notes history
             notesHistory = lead.notes_history || [];
+            console.log('[DEBUG] notes_history loaded:', notesHistory.length, 'notes');
             renderNotesHistory();
 
             // Load email history
@@ -1806,6 +1808,17 @@
             renderActivities();
         }
 
+        // Safe text escaping fallback if DOMPurify not available
+        function safeText(str) {
+            if (typeof DOMPurify !== 'undefined') {
+                return DOMPurify.sanitize(str || '');
+            }
+            // Basic HTML escaping fallback
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
         function renderActivities() {
             const timeline = document.getElementById('activity-timeline');
             const empty = document.getElementById('activity-empty');
@@ -1826,7 +1839,7 @@
 
             timeline.innerHTML = sorted.map((activity, index) => {
                 const performerName = activity.performed_by_name || (activity.type === 'created' ? 'System' : null);
-                const performerInfo = performerName ? `<span class="text-zinc-400">przez</span> <span class="text-zinc-300">${DOMPurify.sanitize(performerName)}</span>` : '';
+                const performerInfo = performerName ? `<span class="text-zinc-400">przez</span> <span class="text-zinc-300">${safeText(performerName)}</span>` : '';
 
                 return `
                     <div class="flex gap-3 relative ${index < sorted.length - 1 ? 'pb-4' : ''}">
@@ -1835,7 +1848,7 @@
                             <i class="ph ${getActivityIcon(activity.type)} text-white text-xs"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm text-white">${DOMPurify.sanitize(activity.content || '')}</div>
+                            <div class="text-sm text-white">${safeText(activity.content)}</div>
                             <div class="text-[10px] text-zinc-500 font-mono mt-0.5 flex items-center gap-2">
                                 <span>${formatDateRelative(activity.created_at)}</span>
                                 ${performerInfo}
@@ -1856,6 +1869,8 @@
             const notesCount = notesHistory ? notesHistory.length : 0;
             if (tabCountEl) tabCountEl.textContent = notesCount;
 
+            console.log('[DEBUG] renderNotesHistory called, count:', notesCount);
+
             if (!notesHistory || notesHistory.length === 0) {
                 container.classList.add('hidden');
                 if (countEl) countEl.textContent = '0';
@@ -1868,37 +1883,42 @@
             // Sort by date desc (newest first)
             const sorted = [...notesHistory].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            list.innerHTML = sorted.map(note => {
-                const statusLabel = getStatusLabel(note.lead_status);
-                const authorName = note.performed_by_name || 'Nieznany';
-                const dateStr = new Date(note.created_at).toLocaleString('pl-PL', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+            try {
+                list.innerHTML = sorted.map(note => {
+                    const statusLabel = getStatusLabel(note.lead_status);
+                    const authorName = note.performed_by_name || 'Nieznany';
+                    const dateStr = new Date(note.created_at).toLocaleString('pl-PL', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
 
-                return `
-                    <div class="p-3 bg-zinc-950/50 rounded-lg border border-white/5">
-                        <div class="text-sm text-white whitespace-pre-wrap mb-2">${DOMPurify.sanitize(note.content || '')}</div>
-                        <div class="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
-                            <span class="flex items-center gap-1">
-                                <i class="ph ph-clock"></i>
-                                ${dateStr}
-                            </span>
-                            <span class="flex items-center gap-1">
-                                <i class="ph ph-user"></i>
-                                ${DOMPurify.sanitize(authorName)}
-                            </span>
-                            <span class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800 border border-white/5">
-                                <i class="ph ph-tag"></i>
-                                ${statusLabel}
-                            </span>
+                    return `
+                        <div class="p-3 bg-zinc-950/50 rounded-lg border border-white/5">
+                            <div class="text-sm text-white whitespace-pre-wrap mb-2">${safeText(note.content)}</div>
+                            <div class="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-clock"></i>
+                                    ${dateStr}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-user"></i>
+                                    ${safeText(authorName)}
+                                </span>
+                                <span class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800 border border-white/5">
+                                    <i class="ph ph-tag"></i>
+                                    ${statusLabel}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('[ERROR] renderNotesHistory failed:', error);
+                list.innerHTML = '<div class="text-red-400 text-sm">Błąd renderowania notatek</div>';
+            }
         }
 
         // Email History
@@ -2000,9 +2020,9 @@
                                 <span class="text-zinc-500">${dateStr}</span>
                             </div>
                             <div class="text-xs text-zinc-400">
-                                <div><strong>Od:</strong> ${email.from_name ? DOMPurify.sanitize(email.from_name) + ' &lt;' + DOMPurify.sanitize(email.from_email) + '&gt;' : DOMPurify.sanitize(email.from_email)}</div>
-                                <div><strong>Do:</strong> ${DOMPurify.sanitize(email.to_email || '')}</div>
-                                <div><strong>Temat:</strong> ${DOMPurify.sanitize(email.subject || '(bez tematu)')}</div>
+                                <div><strong>Od:</strong> ${email.from_name ? safeText(email.from_name) + ' &lt;' + safeText(email.from_email) + '&gt;' : safeText(email.from_email)}</div>
+                                <div><strong>Do:</strong> ${safeText(email.to_email || '')}</div>
+                                <div><strong>Temat:</strong> ${safeText(email.subject || '(bez tematu)')}</div>
                             </div>
                             <div class="border-t border-white/10 pt-4">
                                 <div class="prose prose-invert prose-sm max-w-none text-zinc-300 text-sm email-body-content">
@@ -2018,7 +2038,7 @@
                     modal.innerHTML = `
                         <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
                             <div class="flex items-center justify-between p-4 border-b border-white/5">
-                                <h3 class="text-white font-medium">${DOMPurify.sanitize(email.subject || 'Email')}</h3>
+                                <h3 class="text-white font-medium">${safeText(email.subject || 'Email')}</h3>
                                 <button onclick="this.closest('.fixed').remove()" class="text-zinc-500 hover:text-white">
                                     <i class="ph ph-x text-xl"></i>
                                 </button>
@@ -2034,11 +2054,20 @@
                     const emailBodyEl = modal.querySelector('.email-body-content');
                     if (emailBodyEl) {
                         const bodyContent = email.body_html || email.body_text || '<em class="text-zinc-500">Brak treści</em>';
-                        emailBodyEl.innerHTML = DOMPurify.sanitize(bodyContent, {
-                            ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'a', 'ul', 'ol', 'li', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img'],
-                            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target'],
-                            ALLOW_DATA_ATTR: false
-                        });
+                        try {
+                            if (typeof DOMPurify !== 'undefined') {
+                                emailBodyEl.innerHTML = DOMPurify.sanitize(bodyContent, {
+                                    ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'a', 'ul', 'ol', 'li', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img'],
+                                    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target'],
+                                    ALLOW_DATA_ATTR: false
+                                });
+                            } else {
+                                emailBodyEl.textContent = bodyContent.replace(/<[^>]*>/g, '');
+                            }
+                        } catch (err) {
+                            console.error('Email body sanitization failed:', err);
+                            emailBodyEl.textContent = bodyContent.replace(/<[^>]*>/g, '');
+                        }
                     }
                 });
         }
