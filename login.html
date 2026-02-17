@@ -164,6 +164,14 @@
 
         let foundProjects = [];
 
+        // Security: Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // DOM elements
         const emailScreen = document.getElementById('email-screen');
         const projectsScreen = document.getElementById('projects-screen');
@@ -251,31 +259,56 @@
         }
 
         function renderProjectsList() {
-            projectsList.innerHTML = foundProjects.map((project, index) => {
+            projectsList.innerHTML = '';
+            foundProjects.forEach((project, index) => {
                 const date = new Date(project.created_at).toLocaleDateString('pl-PL', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric'
                 });
 
-                return `
-                    <button class="project-card" onclick="selectProject('${project.unique_token}')">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-white font-medium text-sm mb-0.5">Projekt z ${date}</p>
-                                <p class="text-[#888] text-xs">${project.customer_name || ''}</p>
-                            </div>
-                            <svg class="w-4 h-4 text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 18l6-6-6-6"/>
-                            </svg>
-                        </div>
-                    </button>
-                `;
-            }).join('');
+                const button = document.createElement('button');
+                button.className = 'project-card';
+                button.onclick = () => selectProject(index);
+
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between';
+
+                const textDiv = document.createElement('div');
+
+                const dateP = document.createElement('p');
+                dateP.className = 'text-white font-medium text-sm mb-0.5';
+                dateP.textContent = `Projekt z ${date}`;
+
+                const nameP = document.createElement('p');
+                nameP.className = 'text-[#888] text-xs';
+                nameP.textContent = project.customer_name || '';
+
+                textDiv.appendChild(dateP);
+                textDiv.appendChild(nameP);
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('class', 'w-4 h-4 text-[#666]');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.setAttribute('stroke-width', '2');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M9 18l6-6-6-6');
+                svg.appendChild(path);
+
+                div.appendChild(textDiv);
+                div.appendChild(svg);
+                button.appendChild(div);
+                projectsList.appendChild(button);
+            });
         }
 
-        function selectProject(token) {
-            window.location.href = `/projekt/${token}`;
+        function selectProject(index) {
+            const project = foundProjects[index];
+            if (project && project.unique_token) {
+                window.location.href = `/projekt/${project.unique_token}`;
+            }
         }
 
         // Event listeners

@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026021302';
+        const APP_VERSION = '2026021701';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4361,9 +4361,13 @@
             if (password.length < 6) { showToast('Haslo za krotkie', 'error'); return; }
 
             const hash = dcodeIO.bcrypt.hashSync(password, 10);
-            const { error } = await supabaseClient.from('workflows').update({ client_password_hash: hash }).eq('id', workflow.id);
+            // Use secure RPC function instead of direct UPDATE
+            const { data, error } = await supabaseClient.rpc('set_workflow_client_password', {
+                p_token: getToken(),
+                p_password_hash: hash
+            });
 
-            if (error) { showToast('Blad zapisu', 'error'); return; }
+            if (error || !data) { showToast('Blad zapisu', 'error'); console.error(error); return; }
 
             workflow.client_password_hash = hash;
             isAuthenticated = true;
@@ -4430,38 +4434,27 @@
             }
 
             try {
-                // Verify token is still valid
-                const { data: tokenCheck, error: tokenError } = await supabaseClient
-                    .from('workflows')
-                    .select('id, password_reset_expires')
-                    .eq('unique_token', getToken())
-                    .eq('password_reset_token', resetToken)
-                    .single();
-
-                if (tokenError || !tokenCheck) {
-                    showToast('Link do resetu wygasł lub jest nieprawidłowy', 'error');
-                    showScreen('password');
-                    return;
-                }
-
-                if (new Date(tokenCheck.password_reset_expires) < new Date()) {
-                    showToast('Link do resetu wygasł', 'error');
-                    showScreen('password');
-                    return;
-                }
-
-                // Hash new password and save
+                // Hash new password
                 const hash = dcodeIO.bcrypt.hashSync(password, 10);
-                const { error: updateError } = await supabaseClient
-                    .from('workflows')
-                    .update({
-                        client_password_hash: hash,
-                        password_reset_token: null,
-                        password_reset_expires: null
-                    })
-                    .eq('id', tokenCheck.id);
 
-                if (updateError) throw updateError;
+                // Use secure RPC function that validates reset token server-side
+                const { data, error } = await supabaseClient.rpc('reset_workflow_client_password', {
+                    p_token: getToken(),
+                    p_reset_token: resetToken,
+                    p_password_hash: hash
+                });
+
+                if (error) {
+                    console.error('Reset password error:', error);
+                    showToast('Błąd zmiany hasła', 'error');
+                    return;
+                }
+
+                if (!data.success) {
+                    showToast(data.error === 'Reset token expired' ? 'Link do resetu wygasł' : 'Link do resetu jest nieprawidłowy', 'error');
+                    showScreen('password');
+                    return;
+                }
 
                 workflow.client_password_hash = hash;
                 isAuthenticated = true;
