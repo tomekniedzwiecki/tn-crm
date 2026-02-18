@@ -90,6 +90,11 @@ async function sendTikTokEvent(data: TikTokEventRequest, supabase?: any): Promis
       userData.phone = await sha256Hash(normalizedPhone)
     }
 
+    // Add external_id (lead_id) for better matching - TikTok recommends this
+    if (data.lead_id) {
+      userData.external_id = await sha256Hash(data.lead_id)
+    }
+
     // Build properties based on event type
     const properties: Record<string, any> = {}
 

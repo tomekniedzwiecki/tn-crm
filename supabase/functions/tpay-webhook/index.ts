@@ -297,6 +297,11 @@ async function sendTikTokConversion(order: any, supabase: any) {
       userData.phone = await sha256Hash(normalizedPhone)
     }
 
+    // Add external_id (lead_id) for better matching
+    if (order.lead_id) {
+      userData.external_id = await sha256Hash(order.lead_id)
+    }
+
     // Build the event payload
     const eventTime = Math.floor(Date.now() / 1000)
     const pixelId = Deno.env.get('TIKTOK_PIXEL_ID') || TIKTOK_PIXEL_ID
