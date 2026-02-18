@@ -392,6 +392,158 @@ async function sendTikTokConversion(order: any, supabase: any) {
   }
 }
 
+// Google Ads Enhanced Conversions configuration
+const GOOGLE_ADS_API_VERSION = 'v18'
+
+// Get OAuth access token from refresh token
+async function getGoogleAccessToken(): Promise<string | null> {
+  const clientId = Deno.env.get('GOOGLE_ADS_CLIENT_ID')
+  const clientSecret = Deno.env.get('GOOGLE_ADS_CLIENT_SECRET')
+  const refreshToken = Deno.env.get('GOOGLE_ADS_REFRESH_TOKEN')
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null
+  }
+
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      })
+    })
+
+    const data = await response.json()
+    return data.access_token || null
+  } catch (err) {
+    console.error('[google] Error getting access token:', err)
+    return null
+  }
+}
+
+// Send Purchase event to Google Ads Enhanced Conversions
+async function sendGoogleConversion(order: any, supabase: any) {
+  const customerId = Deno.env.get('GOOGLE_ADS_CUSTOMER_ID')?.replace(/-/g, '')
+  const developerToken = Deno.env.get('GOOGLE_ADS_DEVELOPER_TOKEN')
+  const conversionActionId = Deno.env.get('GOOGLE_ADS_CONVERSION_ACTION_ID')
+
+  if (!customerId || !developerToken || !conversionActionId) {
+    console.log('[google] Google Ads credentials not configured, skipping')
+    return
+  }
+
+  const accessToken = await getGoogleAccessToken()
+  if (!accessToken) {
+    console.log('[google] Could not get access token, skipping')
+    return
+  }
+
+  try {
+    // Get gclid from lead_tracking if order has lead_id
+    let gclid: string | null = null
+    if (order.lead_id) {
+      const { data: tracking } = await supabase
+        .from('lead_tracking')
+        .select('gclid')
+        .eq('lead_id', order.lead_id)
+        .single()
+
+      if (tracking?.gclid) {
+        gclid = tracking.gclid
+        console.log('[google] Found gclid from lead_tracking')
+      }
+    }
+
+    // Build user identifiers
+    const userIdentifiers: any[] = []
+
+    if (order.customer_email) {
+      userIdentifiers.push({
+        hashedEmail: await sha256Hash(order.customer_email)
+      })
+    }
+
+    if (order.customer_phone) {
+      const normalizedPhone = normalizePhone(order.customer_phone)
+      userIdentifiers.push({
+        hashedPhoneNumber: await sha256Hash('+' + normalizedPhone)
+      })
+    }
+
+    if (order.customer_name) {
+      const nameParts = order.customer_name.trim().split(/\s+/)
+      const addressInfo: any = { countryCode: 'PL' }
+      if (nameParts.length >= 1) {
+        addressInfo.hashedFirstName = await sha256Hash(nameParts[0])
+      }
+      if (nameParts.length >= 2) {
+        addressInfo.hashedLastName = await sha256Hash(nameParts.slice(1).join(' '))
+      }
+      userIdentifiers.push({ addressInfo })
+    }
+
+    // Build conversion adjustment for enhanced conversions
+    const conversionTime = new Date().toISOString().replace('T', ' ').split('.')[0] + ' +0100'
+
+    const conversionAdjustment: any = {
+      conversionAction: `customers/${customerId}/conversionActions/${conversionActionId}`,
+      adjustmentType: 'ENHANCEMENT',
+      orderId: order.order_number,
+      adjustmentDateTime: conversionTime,
+      userIdentifiers: userIdentifiers.length > 0 ? userIdentifiers : undefined,
+      restatementValue: {
+        adjustedValue: parseFloat(order.amount) / 1.23, // netto
+        currencyCode: 'PLN'
+      }
+    }
+
+    if (gclid) {
+      conversionAdjustment.gclidDateTimePair = {
+        gclid: gclid,
+        conversionDateTime: conversionTime
+      }
+    }
+
+    const url = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:uploadConversionAdjustments`
+
+    console.log('[google] Sending conversion:', JSON.stringify({
+      order_id: order.order_number,
+      has_gclid: !!gclid,
+      has_email: userIdentifiers.some(u => u.hashedEmail),
+      has_phone: userIdentifiers.some(u => u.hashedPhoneNumber),
+      value: parseFloat(order.amount) / 1.23
+    }))
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'developer-token': developerToken,
+        'login-customer-id': customerId
+      },
+      body: JSON.stringify({
+        conversionAdjustments: [conversionAdjustment],
+        partialFailure: true
+      })
+    })
+
+    const result = await response.json()
+
+    if (response.ok && !result.partialFailureError) {
+      console.log('[google] Conversion sent successfully')
+    } else {
+      console.error('[google] Failed to send conversion:', result)
+    }
+  } catch (err) {
+    console.error('[google] Error sending conversion:', err)
+  }
+}
+
 // Timing-safe string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
@@ -561,6 +713,9 @@ Deno.serve(async (req) => {
 
       // Send TikTok Events API event
       await sendTikTokConversion(order, supabase)
+
+      // Send Google Ads Enhanced Conversion
+      await sendGoogleConversion(order, supabase)
 
       // Increment discount code usage only on successful payment
       if (order.discount_code_id) {
