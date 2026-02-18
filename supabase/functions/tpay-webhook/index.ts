@@ -162,12 +162,13 @@ async function sendMetaConversion(order: any, supabase: any) {
   }
 
   try {
-    // Get fbclid from lead_tracking if order has lead_id
+    // Get fbclid and fbp from lead_tracking if order has lead_id
     let fbc: string | null = null
+    let fbp: string | null = null
     if (order.lead_id) {
       const { data: tracking } = await supabase
         .from('lead_tracking')
-        .select('fbclid')
+        .select('fbclid, fbp')
         .eq('lead_id', order.lead_id)
         .single()
 
@@ -177,10 +178,16 @@ async function sendMetaConversion(order: any, supabase: any) {
         fbc = `fb.1.${timestamp}.${tracking.fbclid}`
         console.log('[meta] Found fbclid, using fbc:', fbc.substring(0, 30) + '...')
       }
+      if (tracking?.fbp) {
+        fbp = tracking.fbp
+        console.log('[meta] Found fbp cookie')
+      }
     }
 
     // Build user data with hashed PII
-    const userData: Record<string, any> = {}
+    const userData: Record<string, any> = {
+      country: ['pl'], // Always Poland
+    }
 
     if (order.customer_email) {
       userData.em = [await sha256Hash(order.customer_email)]
@@ -191,8 +198,17 @@ async function sendMetaConversion(order: any, supabase: any) {
       userData.ph = [await sha256Hash(normalizedPhone)]
     }
 
+    // Add external_id (lead_id) for cross-device matching
+    if (order.lead_id) {
+      userData.external_id = [await sha256Hash(order.lead_id)]
+    }
+
     if (fbc) {
       userData.fbc = fbc
+    }
+
+    if (fbp) {
+      userData.fbp = fbp
     }
 
     // Build the event
@@ -212,6 +228,8 @@ async function sendMetaConversion(order: any, supabase: any) {
             currency: 'PLN',
             value: parseFloat(order.amount) / 1.23, // netto (bez VAT 23%)
             content_name: order.description,
+            content_type: 'product',
+            content_ids: [order.order_number],
             order_id: order.order_number,
           }
         }
@@ -229,7 +247,9 @@ async function sendMetaConversion(order: any, supabase: any) {
       value: order.amount,
       has_email: !!userData.em,
       has_phone: !!userData.ph,
-      has_fbc: !!fbc
+      has_external_id: !!userData.external_id,
+      has_fbc: !!fbc,
+      has_fbp: !!fbp
     }))
 
     // Meta Pixel ID from environment (fallback to hardcoded for backwards compatibility)
