@@ -5,6 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Twoja spersonalizowana oferta</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W8CLDSHVFC"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-W8CLDSHVFC', {
+            'linker': {
+                'domains': ['tomekniedzwiecki.pl', 'crm.tomekniedzwiecki.pl'],
+                'accept_incoming': true
+            }
+        });
+    </script>
+
+    <!-- Meta Pixel -->
+    <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1182495496498498');
+        fbq('track', 'PageView');
+    </script>
+
+    <!-- TikTok Pixel -->
+    <script>
+        !function (w, d, t) {
+            w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var i=document.createElement("script");i.type="text/javascript",i.async=!0,i.src=r+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(i,a)};
+            ttq.load('D6AP4E3C77U3L7SP8O7G');
+            ttq.page();
+        }(window, document, 'ttq');
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -316,6 +354,204 @@
         let clientOffer = null;
         let offer = null;
         let lead = null;
+        let trackingEventsSent = {}; // Deduplikacja eventów
+
+        // SHA256 hash for enhanced conversions
+        async function sha256(str) {
+            const msgBuffer = new TextEncoder().encode(str.toLowerCase().trim());
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Track ViewContent event
+        async function trackViewContent() {
+            if (trackingEventsSent.viewContent) return;
+            trackingEventsSent.viewContent = true;
+
+            const eventId = `view_${clientOffer.id}_${Date.now()}`;
+            const value = offer.price / 1.23; // netto
+
+            console.log('[tracking] ViewContent:', offer.name, value);
+
+            // GA4
+            gtag('event', 'view_item', {
+                currency: 'PLN',
+                value: value,
+                items: [{
+                    item_id: offer.id,
+                    item_name: offer.name,
+                    price: value,
+                    quantity: 1
+                }]
+            });
+
+            // Meta
+            fbq('track', 'ViewContent', {
+                content_name: offer.name,
+                content_ids: [offer.id],
+                content_type: 'product',
+                value: value,
+                currency: 'PLN'
+            }, { eventID: eventId });
+
+            // TikTok
+            ttq.track('ViewContent', {
+                content_name: offer.name,
+                content_id: offer.id,
+                value: value,
+                currency: 'PLN'
+            });
+
+            // Server-side TikTok (for better EMQ)
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        event: 'ViewContent',
+                        email: lead.email,
+                        phone: lead.phone,
+                        lead_id: lead.id,
+                        content_name: offer.name,
+                        content_id: offer.id,
+                        value: value,
+                        currency: 'PLN',
+                        event_id: eventId,
+                        user_agent: navigator.userAgent
+                    })
+                });
+            } catch (e) {
+                console.warn('[tracking] TikTok server-side error:', e);
+            }
+        }
+
+        // Track AddToCart (proforma download)
+        async function trackProformaDownload() {
+            const eventId = `proforma_${clientOffer.id}_${Date.now()}`;
+            const value = offer.price / 1.23;
+
+            console.log('[tracking] AddToCart (proforma):', offer.name);
+
+            // GA4
+            gtag('event', 'add_to_cart', {
+                currency: 'PLN',
+                value: value,
+                items: [{
+                    item_id: offer.id,
+                    item_name: offer.name,
+                    price: value,
+                    quantity: 1
+                }]
+            });
+
+            // Meta - AddToCart for proforma
+            fbq('track', 'AddToCart', {
+                content_name: offer.name,
+                content_ids: [offer.id],
+                content_type: 'product',
+                value: value,
+                currency: 'PLN'
+            }, { eventID: eventId });
+
+            // TikTok browser
+            ttq.track('AddToCart', {
+                content_name: offer.name,
+                content_id: offer.id,
+                value: value,
+                currency: 'PLN'
+            });
+
+            // Server-side TikTok
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        event: 'AddToCart',
+                        email: lead.email,
+                        phone: lead.phone,
+                        lead_id: lead.id,
+                        content_name: offer.name,
+                        content_id: offer.id,
+                        value: value,
+                        currency: 'PLN',
+                        event_id: eventId,
+                        user_agent: navigator.userAgent
+                    })
+                });
+            } catch (e) {
+                console.warn('[tracking] TikTok server-side error:', e);
+            }
+        }
+
+        // Track InitiateCheckout
+        async function trackInitiateCheckout() {
+            if (trackingEventsSent.initiateCheckout) return;
+            trackingEventsSent.initiateCheckout = true;
+
+            const eventId = `checkout_${clientOffer.id}_${Date.now()}`;
+            const value = offer.price / 1.23;
+
+            console.log('[tracking] InitiateCheckout:', offer.name);
+
+            // GA4
+            gtag('event', 'begin_checkout', {
+                currency: 'PLN',
+                value: value,
+                items: [{
+                    item_id: offer.id,
+                    item_name: offer.name,
+                    price: value,
+                    quantity: 1
+                }]
+            });
+
+            // Meta
+            fbq('track', 'InitiateCheckout', {
+                content_name: offer.name,
+                content_ids: [offer.id],
+                content_type: 'product',
+                value: value,
+                currency: 'PLN',
+                num_items: 1
+            }, { eventID: eventId });
+
+            // TikTok browser
+            ttq.track('InitiateCheckout', {
+                content_name: offer.name,
+                content_id: offer.id,
+                value: value,
+                currency: 'PLN'
+            });
+
+            // Server-side TikTok (fire and forget - don't wait)
+            fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    event: 'InitiateCheckout',
+                    email: lead.email,
+                    phone: lead.phone,
+                    lead_id: lead.id,
+                    content_name: offer.name,
+                    content_id: offer.id,
+                    value: value,
+                    currency: 'PLN',
+                    event_id: eventId,
+                    user_agent: navigator.userAgent
+                })
+            }).catch(e => console.warn('[tracking] TikTok server-side error:', e));
+        }
 
         function getToken() {
             // Try URL path first (Vercel rewrite: /p/token)
@@ -495,6 +731,9 @@
 
             renderOffer();
             showScreen('offer-screen');
+
+            // Track ViewContent event
+            trackViewContent();
         }
 
         function renderOffer() {
@@ -763,6 +1002,9 @@
                 // Otwórz PDF
                 window.open(result.pdfUrl, '_blank');
 
+                // Track proforma download as AddToCart
+                trackProformaDownload();
+
                 // Loguj aktywność - proforma wygenerowana przez klienta
                 try {
                     await supabaseClient.from('lead_activities').insert([{
@@ -818,6 +1060,9 @@
         }
 
         function proceedToPayment() {
+            // Track InitiateCheckout before redirect
+            trackInitiateCheckout();
+
             // Redirect to checkout with offer ID
             const checkoutUrl = `/checkout?offer=${offer.id}`;
             window.location.href = checkoutUrl;

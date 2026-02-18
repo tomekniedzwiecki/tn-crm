@@ -13,7 +13,7 @@ const TIKTOK_PIXEL_ID = 'D6AP4E3C77U3L7SP8O7G'
 const TIKTOK_API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/'
 
 // Supported events
-type TikTokEventType = 'SubmitForm' | 'CompleteRegistration' | 'CompletePayment' | 'ViewContent' | 'AddToCart'
+type TikTokEventType = 'SubmitForm' | 'CompleteRegistration' | 'CompletePayment' | 'ViewContent' | 'AddToCart' | 'InitiateCheckout'
 
 interface TikTokEventRequest {
   event: TikTokEventType
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate event type
-    const validEvents: TikTokEventType[] = ['SubmitForm', 'CompleteRegistration', 'CompletePayment', 'ViewContent', 'AddToCart']
+    const validEvents: TikTokEventType[] = ['SubmitForm', 'CompleteRegistration', 'CompletePayment', 'ViewContent', 'AddToCart', 'InitiateCheckout']
     if (!validEvents.includes(data.event)) {
       throw new Error(`Invalid event type. Must be one of: ${validEvents.join(', ')}`)
     }
