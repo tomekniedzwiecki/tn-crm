@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 // Meta Conversions API configuration
-const META_PIXEL_ID = '1182495496498498'
+const META_PIXEL_ID = '1668188210820080'
 const META_API_VERSION = 'v23.0'
 
 // Supported events
