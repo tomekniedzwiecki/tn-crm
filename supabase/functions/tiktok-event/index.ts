@@ -28,6 +28,8 @@ interface TikTokEventRequest {
   lead_id?: string
   event_id?: string  // For deduplication with browser pixel
   url?: string
+  user_agent?: string
+  ip?: string  // Will be extracted from request headers if not provided
 }
 
 // SHA256 hash (TikTok requires lowercase hex)
@@ -52,7 +54,7 @@ function normalizePhone(phone: string): string {
 }
 
 // Send event to TikTok Events API
-async function sendTikTokEvent(data: TikTokEventRequest, supabase?: any): Promise<{ success: boolean; error?: string }> {
+async function sendTikTokEvent(data: TikTokEventRequest, supabase?: any, reqHeaders?: Headers): Promise<{ success: boolean; error?: string }> {
   const accessToken = Deno.env.get('tiktok_API_ads')
   if (!accessToken) {
     console.log('[tiktok] tiktok_API_ads not configured, skipping')
@@ -93,6 +95,29 @@ async function sendTikTokEvent(data: TikTokEventRequest, supabase?: any): Promis
     // Add external_id (lead_id) for better matching - TikTok recommends this
     if (data.lead_id) {
       userData.external_id = await sha256Hash(data.lead_id)
+    }
+
+    // Add IP address (from request headers or provided)
+    if (data.ip) {
+      userData.ip = data.ip
+    } else if (reqHeaders) {
+      // Try to get IP from various headers (Cloudflare, standard proxy, etc.)
+      const ip = reqHeaders.get('cf-connecting-ip')
+        || reqHeaders.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || reqHeaders.get('x-real-ip')
+      if (ip) {
+        userData.ip = ip
+      }
+    }
+
+    // Add user agent (from request body or headers)
+    if (data.user_agent) {
+      userData.user_agent = data.user_agent
+    } else if (reqHeaders) {
+      const ua = reqHeaders.get('user-agent')
+      if (ua) {
+        userData.user_agent = ua
+      }
     }
 
     // Build properties based on event type
@@ -145,6 +170,9 @@ async function sendTikTokEvent(data: TikTokEventRequest, supabase?: any): Promis
       has_ttclid: !!userData.ttclid,
       has_email: !!userData.email,
       has_phone: !!userData.phone,
+      has_external_id: !!userData.external_id,
+      has_ip: !!userData.ip,
+      has_user_agent: !!userData.user_agent,
       value: properties.value
     }))
 
@@ -205,7 +233,25 @@ Deno.serve(async (req) => {
       throw new Error(`Invalid event type. Must be one of: ${validEvents.join(', ')}`)
     }
 
-    const result = await sendTikTokEvent(data, supabase)
+    // Extract IP from headers for storing
+    const clientIp = req.headers.get('cf-connecting-ip')
+      || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+
+    // Store IP in lead_tracking if we have lead_id and IP (for future events like CompletePayment)
+    if (data.lead_id && clientIp) {
+      try {
+        await supabase
+          .from('lead_tracking')
+          .update({ ip: clientIp })
+          .eq('lead_id', data.lead_id)
+        console.log('[tiktok-event] Stored IP in lead_tracking')
+      } catch (e) {
+        console.warn('[tiktok-event] Could not update IP:', e)
+      }
+    }
+
+    const result = await sendTikTokEvent(data, supabase, req.headers)
 
     return new Response(
       JSON.stringify(result),

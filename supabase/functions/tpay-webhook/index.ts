@@ -293,17 +293,23 @@ async function sendTikTokConversion(order: any, supabase: any) {
     // Build user data
     const userData: Record<string, any> = {}
 
-    // Get ttclid from lead_tracking if order has lead_id
+    // Get ttclid, user_agent, ip from lead_tracking if order has lead_id
     if (order.lead_id) {
       const { data: tracking } = await supabase
         .from('lead_tracking')
-        .select('ttclid')
+        .select('ttclid, user_agent, ip')
         .eq('lead_id', order.lead_id)
         .single()
 
       if (tracking?.ttclid) {
         userData.ttclid = tracking.ttclid
         console.log('[tiktok] Found ttclid from lead_tracking')
+      }
+      if (tracking?.user_agent) {
+        userData.user_agent = tracking.user_agent
+      }
+      if (tracking?.ip) {
+        userData.ip = tracking.ip
       }
     }
 
@@ -359,7 +365,10 @@ async function sendTikTokConversion(order: any, supabase: any) {
       value: order.amount,
       has_ttclid: !!userData.ttclid,
       has_email: !!userData.email,
-      has_phone: !!userData.phone
+      has_phone: !!userData.phone,
+      has_external_id: !!userData.external_id,
+      has_user_agent: !!userData.user_agent,
+      has_ip: !!userData.ip
     }))
 
     const response = await fetch(TIKTOK_API_URL, {
