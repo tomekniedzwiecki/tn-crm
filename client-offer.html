@@ -403,30 +403,52 @@
                 currency: 'PLN'
             });
 
+            // Get _fbp cookie for Meta
+            const fbpCookie = document.cookie.split('; ').find(row => row.startsWith('_fbp='))?.split('=')[1];
+
             // Server-side TikTok (for better EMQ)
-            try {
-                await fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({
-                        event: 'ViewContent',
-                        email: lead.email,
-                        phone: lead.phone,
-                        lead_id: lead.id,
-                        content_name: offer.name,
-                        content_id: offer.id,
-                        value: value,
-                        currency: 'PLN',
-                        event_id: eventId,
-                        user_agent: navigator.userAgent
-                    })
-                });
-            } catch (e) {
-                console.warn('[tracking] TikTok server-side error:', e);
-            }
+            fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    event: 'ViewContent',
+                    email: lead.email,
+                    phone: lead.phone,
+                    lead_id: lead.id,
+                    content_name: offer.name,
+                    content_id: offer.id,
+                    value: value,
+                    currency: 'PLN',
+                    event_id: eventId,
+                    user_agent: navigator.userAgent
+                })
+            }).catch(e => console.warn('[tracking] TikTok server-side error:', e));
+
+            // Server-side Meta
+            fetch(`${SUPABASE_URL}/functions/v1/meta-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    event: 'ViewContent',
+                    email: lead.email,
+                    phone: lead.phone,
+                    lead_id: lead.id,
+                    content_name: offer.name,
+                    content_id: offer.id,
+                    value: value,
+                    currency: 'PLN',
+                    event_id: eventId,
+                    fbp: fbpCookie,
+                    user_agent: navigator.userAgent,
+                    url: window.location.href
+                })
+            }).catch(e => console.warn('[tracking] Meta server-side error:', e));
         }
 
         // Track AddToCart (proforma download)
@@ -465,30 +487,52 @@
                 currency: 'PLN'
             });
 
+            // Get _fbp cookie for Meta
+            const fbpCookie = document.cookie.split('; ').find(row => row.startsWith('_fbp='))?.split('=')[1];
+
             // Server-side TikTok
-            try {
-                await fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({
-                        event: 'AddToCart',
-                        email: lead.email,
-                        phone: lead.phone,
-                        lead_id: lead.id,
-                        content_name: offer.name,
-                        content_id: offer.id,
-                        value: value,
-                        currency: 'PLN',
-                        event_id: eventId,
-                        user_agent: navigator.userAgent
-                    })
-                });
-            } catch (e) {
-                console.warn('[tracking] TikTok server-side error:', e);
-            }
+            fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    event: 'AddToCart',
+                    email: lead.email,
+                    phone: lead.phone,
+                    lead_id: lead.id,
+                    content_name: offer.name,
+                    content_id: offer.id,
+                    value: value,
+                    currency: 'PLN',
+                    event_id: eventId,
+                    user_agent: navigator.userAgent
+                })
+            }).catch(e => console.warn('[tracking] TikTok server-side error:', e));
+
+            // Server-side Meta
+            fetch(`${SUPABASE_URL}/functions/v1/meta-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    event: 'AddToCart',
+                    email: lead.email,
+                    phone: lead.phone,
+                    lead_id: lead.id,
+                    content_name: offer.name,
+                    content_id: offer.id,
+                    value: value,
+                    currency: 'PLN',
+                    event_id: eventId,
+                    fbp: fbpCookie,
+                    user_agent: navigator.userAgent,
+                    url: window.location.href
+                })
+            }).catch(e => console.warn('[tracking] Meta server-side error:', e));
         }
 
         // Track InitiateCheckout
@@ -531,6 +575,9 @@
                 currency: 'PLN'
             });
 
+            // Get _fbp cookie for Meta
+            const fbpCookie = document.cookie.split('; ').find(row => row.startsWith('_fbp='))?.split('=')[1];
+
             // Server-side TikTok (fire and forget - don't wait)
             fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
                 method: 'POST',
@@ -551,6 +598,29 @@
                     user_agent: navigator.userAgent
                 })
             }).catch(e => console.warn('[tracking] TikTok server-side error:', e));
+
+            // Server-side Meta
+            fetch(`${SUPABASE_URL}/functions/v1/meta-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    event: 'InitiateCheckout',
+                    email: lead.email,
+                    phone: lead.phone,
+                    lead_id: lead.id,
+                    content_name: offer.name,
+                    content_id: offer.id,
+                    value: value,
+                    currency: 'PLN',
+                    event_id: eventId,
+                    fbp: fbpCookie,
+                    user_agent: navigator.userAgent,
+                    url: window.location.href
+                })
+            }).catch(e => console.warn('[tracking] Meta server-side error:', e));
         }
 
         function getToken() {
