@@ -318,6 +318,7 @@ async function sendTikTokConversion(order: any, supabase: any) {
           properties: {
             value: parseFloat(order.amount) / 1.23, // netto (bez VAT 23%)
             currency: 'PLN',
+            content_id: order.order_number, // wymagane przez TikTok
             content_name: order.description,
             content_type: 'product',
             order_id: order.order_number,
