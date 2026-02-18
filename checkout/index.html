@@ -33,8 +33,15 @@
             script.onload = function() {
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
+                window.gtag = gtag; // Make gtag globally available
                 gtag('js', new Date());
-                gtag('config', 'G-W8CLDSHVFC');
+                // Cross-domain tracking between tomekniedzwiecki.pl and crm.tomekniedzwiecki.pl
+                gtag('config', 'G-W8CLDSHVFC', {
+                    'linker': {
+                        'domains': ['tomekniedzwiecki.pl', 'crm.tomekniedzwiecki.pl'],
+                        'accept_incoming': true
+                    }
+                });
                 gtag('config', 'AW-17886093904');
             };
         });
@@ -1347,6 +1354,32 @@
                         value: currentOffer.price
                     });
                     console.log('[meta] ViewContent event sent');
+                }
+
+                // Track begin_checkout to GA4
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'begin_checkout', {
+                        currency: 'PLN',
+                        value: currentOffer.price / 1.23, // netto
+                        items: [{
+                            item_id: currentOffer.id || 'custom',
+                            item_name: currentOffer.name,
+                            price: currentOffer.price / 1.23,
+                            quantity: 1
+                        }]
+                    });
+                    console.log('[GA4] begin_checkout event sent');
+                }
+
+                // Track InitiateCheckout to TikTok
+                if (typeof ttq !== 'undefined') {
+                    ttq.track('InitiateCheckout', {
+                        content_id: currentOffer.id || 'custom',
+                        content_name: currentOffer.name,
+                        currency: 'PLN',
+                        value: currentOffer.price / 1.23
+                    });
+                    console.log('[TikTok] InitiateCheckout event sent');
                 }
 
                 // Check for discount code in URL

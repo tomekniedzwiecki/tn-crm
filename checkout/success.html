@@ -10,6 +10,58 @@
     <meta property="og:title" content="Dziękujemy za zakup">
     <meta name="theme-color" content="#10b981">
 
+    <!-- Google Consent Mode v2 -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('consent', 'default', {
+            'ad_storage': 'granted',
+            'ad_user_data': 'granted',
+            'ad_personalization': 'granted',
+            'analytics_storage': 'granted'
+        });
+    </script>
+
+    <!-- Google tag (gtag.js) - GA4 + Google Ads -->
+    <script>
+        var gtagScript = document.createElement('script');
+        gtagScript.async = true;
+        gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-W8CLDSHVFC';
+        document.head.appendChild(gtagScript);
+        gtagScript.onload = function() {
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', 'G-W8CLDSHVFC', {
+                'linker': {
+                    'domains': ['tomekniedzwiecki.pl', 'crm.tomekniedzwiecki.pl'],
+                    'accept_incoming': true
+                }
+            });
+            gtag('config', 'AW-17886093904');
+        };
+    </script>
+
+    <!-- Meta Pixel -->
+    <script>
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+        document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1668188210820080');
+    </script>
+
+    <!-- TikTok Pixel -->
+    <script>
+        !function (w, d, t) {
+            w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
+            var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
+            ttq.load('D6AP4E3C77U3L7SP8O7G');
+        }(window, document, 'ttq');
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -228,27 +280,80 @@
             }
         }
 
-        // Load order info
+        // Load order info and send purchase events
         async function loadOrderInfo() {
             const params = new URLSearchParams(window.location.search);
             const orderId = params.get('order');
 
             if (!orderId) return;
 
+            // Check if we already sent events for this order (prevent duplicates on refresh)
+            const sentKey = `purchase_sent_${orderId}`;
+            const alreadySent = sessionStorage.getItem(sentKey);
+
             try {
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 const { data: order } = await supabaseClient
                     .from('orders')
-                    .select('order_number')
+                    .select('id, order_number, amount, description, status')
                     .eq('id', orderId)
                     .single();
 
                 if (order?.order_number) {
                     document.getElementById('order-number').textContent = order.order_number;
                     document.getElementById('order-info').classList.remove('hidden');
+
+                    // Only send purchase events if not already sent and order is paid
+                    if (!alreadySent && order.status === 'paid') {
+                        const value = parseFloat(order.amount) / 1.23; // netto
+                        const transactionId = order.order_number;
+
+                        // GA4 purchase event
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'purchase', {
+                                transaction_id: transactionId,
+                                value: value,
+                                currency: 'PLN',
+                                items: [{
+                                    item_id: order.id,
+                                    item_name: order.description,
+                                    price: value,
+                                    quantity: 1
+                                }]
+                            });
+                            console.log('[GA4] Purchase event sent:', transactionId);
+                        }
+
+                        // Meta Purchase event (browser-side for deduplication)
+                        if (typeof fbq !== 'undefined') {
+                            fbq('track', 'Purchase', {
+                                value: value,
+                                currency: 'PLN',
+                                content_name: order.description,
+                                content_ids: [transactionId],
+                                content_type: 'product'
+                            }, { eventID: order.id });
+                            console.log('[Meta] Purchase event sent:', transactionId);
+                        }
+
+                        // TikTok CompletePayment event (browser-side for deduplication)
+                        if (typeof ttq !== 'undefined') {
+                            ttq.track('CompletePayment', {
+                                value: value,
+                                currency: 'PLN',
+                                content_id: transactionId,
+                                content_name: order.description,
+                                content_type: 'product'
+                            });
+                            console.log('[TikTok] CompletePayment event sent:', transactionId);
+                        }
+
+                        // Mark as sent
+                        sessionStorage.setItem(sentKey, 'true');
+                    }
                 }
             } catch (e) {
-                console.log('Could not load order info');
+                console.log('Could not load order info:', e);
             }
         }
 
