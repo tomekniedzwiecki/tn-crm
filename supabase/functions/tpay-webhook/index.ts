@@ -257,6 +257,106 @@ async function sendMetaConversion(order: any, supabase: any) {
   }
 }
 
+// TikTok Events API configuration
+const TIKTOK_PIXEL_ID = 'D6AP4E3C77U3L7SP8O7G'
+const TIKTOK_API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/'
+
+// Send Purchase event to TikTok Events API
+async function sendTikTokConversion(order: any, supabase: any) {
+  const accessToken = Deno.env.get('tiktok_API_ads')
+  if (!accessToken) {
+    console.log('[tiktok] tiktok_API_ads not configured, skipping')
+    return
+  }
+
+  try {
+    // Build user data
+    const userData: Record<string, any> = {}
+
+    // Get ttclid from lead_tracking if order has lead_id
+    if (order.lead_id) {
+      const { data: tracking } = await supabase
+        .from('lead_tracking')
+        .select('ttclid')
+        .eq('lead_id', order.lead_id)
+        .single()
+
+      if (tracking?.ttclid) {
+        userData.ttclid = tracking.ttclid
+        console.log('[tiktok] Found ttclid from lead_tracking')
+      }
+    }
+
+    // Hash email and phone
+    if (order.customer_email) {
+      userData.email = await sha256Hash(order.customer_email)
+    }
+
+    if (order.customer_phone) {
+      const normalizedPhone = normalizePhone(order.customer_phone)
+      userData.phone = await sha256Hash(normalizedPhone)
+    }
+
+    // Build the event payload
+    const eventTime = Math.floor(Date.now() / 1000)
+    const pixelId = Deno.env.get('TIKTOK_PIXEL_ID') || TIKTOK_PIXEL_ID
+
+    const payload = {
+      event_source: 'web',
+      event_source_id: pixelId,
+      data: [
+        {
+          event: 'CompletePayment',
+          event_time: eventTime,
+          event_id: order.id, // For deduplication
+          user: userData,
+          properties: {
+            value: parseFloat(order.amount),
+            currency: 'PLN',
+            content_name: order.description,
+            content_type: 'product',
+            order_id: order.order_number,
+          },
+          page: {
+            url: 'https://crm.tomekniedzwiecki.pl/checkout'
+          }
+        }
+      ],
+      // Test event code for debugging (set via env)
+      ...(Deno.env.get('TIKTOK_TEST_EVENT_CODE') && {
+        test_event_code: Deno.env.get('TIKTOK_TEST_EVENT_CODE')
+      })
+    }
+
+    console.log('[tiktok] Sending CompletePayment event:', JSON.stringify({
+      event_id: order.id,
+      value: order.amount,
+      has_ttclid: !!userData.ttclid,
+      has_email: !!userData.email,
+      has_phone: !!userData.phone
+    }))
+
+    const response = await fetch(TIKTOK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Token': accessToken,
+      },
+      body: JSON.stringify(payload)
+    })
+
+    const result = await response.json()
+
+    if (response.ok && result.code === 0) {
+      console.log('[tiktok] CompletePayment event sent successfully:', result.message)
+    } else {
+      console.error('[tiktok] Failed to send event:', result)
+    }
+  } catch (err) {
+    console.error('[tiktok] Error sending conversion:', err)
+  }
+}
+
 // Timing-safe string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
@@ -423,6 +523,9 @@ Deno.serve(async (req) => {
 
       // Send Meta Conversions API event
       await sendMetaConversion(order, supabase)
+
+      // Send TikTok Events API event
+      await sendTikTokConversion(order, supabase)
 
       // Increment discount code usage only on successful payment
       if (order.discount_code_id) {
