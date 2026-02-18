@@ -210,7 +210,7 @@ async function sendMetaConversion(order: any, supabase: any) {
           user_data: userData,
           custom_data: {
             currency: 'PLN',
-            value: parseFloat(order.amount),
+            value: parseFloat(order.amount) / 1.23, // netto (bez VAT 23%)
             content_name: order.description,
             order_id: order.order_number,
           }
@@ -316,7 +316,7 @@ async function sendTikTokConversion(order: any, supabase: any) {
           event_id: order.id, // For deduplication
           user: userData,
           properties: {
-            value: parseFloat(order.amount),
+            value: parseFloat(order.amount) / 1.23, // netto (bez VAT 23%)
             currency: 'PLN',
             content_name: order.description,
             content_type: 'product',
