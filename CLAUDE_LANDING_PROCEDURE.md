@@ -51,6 +51,7 @@ Kazdy landing sklada sie z tych sekcji w kolejnosci:
 | Element | Dlaczego źle | Co zamiast |
 |---------|--------------|------------|
 | `border-left: 4px solid [kolor]` na kartach | Typowy wzorzec AI, wygląda tanio | Subtelny cień + hover effect |
+| Tabela porównawcza z ✓ i ✗ | Najbardziej oczywisty wzorzec AI | Dwie karty z opisowym tekstem |
 | Czerwone/pomarańczowe kolory dla statystyk "problemu" | Zbyt oczywiste, krzykliwe | Użyj text-primary lub neutralnych kolorów |
 | Ikonki z checkmarks w każdym elemencie listy | Przewidywalne, nudne | Prosta lista lub numeracja |
 | Gradient border-top na kartach | Wygląda na wygenerowane | Brak lub bardzo subtelny |
