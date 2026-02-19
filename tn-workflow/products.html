@@ -167,9 +167,13 @@
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Screenshot do raportów (PDF)</label>
                     <div id="report-screenshot-upload" class="relative">
                         <input type="file" id="report-screenshot-file" accept=".pdf" class="hidden" onchange="handleReportScreenshotUpload(event)">
-                        <div id="report-screenshot-empty" class="border-2 border-dashed border-zinc-800 rounded-lg p-4 text-center cursor-pointer hover:border-zinc-600 transition-colors" onclick="document.getElementById('report-screenshot-file').click()">
+                        <div id="report-screenshot-empty" class="border-2 border-dashed border-zinc-800 rounded-lg p-4 text-center cursor-pointer hover:border-zinc-600 transition-colors"
+                            onclick="document.getElementById('report-screenshot-file').click()"
+                            ondragover="event.preventDefault(); this.classList.add('border-orange-500', 'bg-orange-500/5')"
+                            ondragleave="this.classList.remove('border-orange-500', 'bg-orange-500/5')"
+                            ondrop="event.preventDefault(); this.classList.remove('border-orange-500', 'bg-orange-500/5'); handleReportScreenshotDrop(event)">
                             <i class="ph ph-file-pdf text-2xl text-zinc-600 mb-2"></i>
-                            <p class="text-zinc-500 text-xs">Kliknij aby dodać PDF</p>
+                            <p class="text-zinc-500 text-xs">Przeciągnij PDF lub kliknij</p>
                         </div>
                         <div id="report-screenshot-preview" class="hidden border border-zinc-800 rounded-lg p-3 bg-zinc-900">
                             <div class="flex items-center gap-3">
@@ -440,8 +444,17 @@
         });
 
         // Report Screenshot PDF functions
+        function handleReportScreenshotDrop(event) {
+            const file = event.dataTransfer.files[0];
+            if (file) processReportScreenshotFile(file);
+        }
+
         async function handleReportScreenshotUpload(event) {
             const file = event.target.files[0];
+            if (file) processReportScreenshotFile(file);
+        }
+
+        async function processReportScreenshotFile(file) {
             if (!file) return;
 
             if (file.type !== 'application/pdf') {
@@ -491,7 +504,7 @@
             document.getElementById('report-screenshot-empty').classList.remove('hidden');
             document.getElementById('report-screenshot-empty').innerHTML = `
                 <i class="ph ph-file-pdf text-2xl text-zinc-600 mb-2"></i>
-                <p class="text-zinc-500 text-xs">Kliknij aby dodać PDF</p>
+                <p class="text-zinc-500 text-xs">Przeciągnij PDF lub kliknij</p>
             `;
             document.getElementById('report-screenshot-preview').classList.add('hidden');
             document.getElementById('report-screenshot-file').value = '';
