@@ -44,6 +44,20 @@ Kazdy landing sklada sie z tych sekcji w kolejnosci:
 
 > **WAŻNE**: Domyślnie ZAWSZE używaj jasnego motywu (białe tło). Ciemny motyw stosuj TYLKO gdy użytkownik wyraźnie o to poprosi lub produkt jest stricte z kategorii gaming/tech.
 
+### Unikaj typowych wzorców "AI-generated" (WAŻNE!)
+
+**NIE UŻYWAJ tych elementów — wyglądają generycznie:**
+
+| Element | Dlaczego źle | Co zamiast |
+|---------|--------------|------------|
+| `border-left: 4px solid [kolor]` na kartach | Typowy wzorzec AI, wygląda tanio | Subtelny cień + hover effect |
+| Czerwone/pomarańczowe kolory dla statystyk "problemu" | Zbyt oczywiste, krzykliwe | Użyj text-primary lub neutralnych kolorów |
+| Ikonki z checkmarks w każdym elemencie listy | Przewidywalne, nudne | Prosta lista lub numeracja |
+| Gradient border-top na kartach | Wygląda na wygenerowane | Brak lub bardzo subtelny |
+| "Neon glow" efekty na wszystkim | Przestarzałe, 2020 | Subtelne cienie, blur |
+
+**Zasada ogólna:** Jeśli element wygląda jak z szablonu lub "zbyt designersko" — usuń go. Prostota > efekty.
+
 ### Motyw jasny (DOMYŚLNY - używaj zawsze!)
 - Background: `#FFFFFF` (główny) i `#F8FAFC` (sekcje alternatywne)
 - Tekst: `#111827` (dark) z `#6B7280` (secondary)
