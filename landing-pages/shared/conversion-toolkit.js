@@ -1022,6 +1022,11 @@
         const stored = localStorage.getItem('ct_countdown_end');
         if (stored) {
           endDate = new Date(parseInt(stored));
+          // Reset if expired
+          if (endDate.getTime() <= Date.now()) {
+            endDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            localStorage.setItem('ct_countdown_end', endDate.getTime().toString());
+          }
         } else {
           endDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
           localStorage.setItem('ct_countdown_end', endDate.getTime().toString());
