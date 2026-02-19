@@ -51,13 +51,82 @@ Kazdy landing sklada sie z tych sekcji w kolejnosci:
 | Element | Dlaczego źle | Co zamiast |
 |---------|--------------|------------|
 | `border-left: 4px solid [kolor]` na kartach | Typowy wzorzec AI, wygląda tanio | Subtelny cień + hover effect |
-| Tabela porównawcza z ✓ i ✗ | Najbardziej oczywisty wzorzec AI | Dwie karty z opisowym tekstem |
+| Ikony ✓ i ✗ w porównaniach | Najbardziej oczywisty wzorzec AI | Opisowy tekst, karty lub tabela BEZ checkmarków |
 | Czerwone/pomarańczowe kolory dla statystyk "problemu" | Zbyt oczywiste, krzykliwe | Użyj text-primary lub neutralnych kolorów |
 | Ikonki z checkmarks w każdym elemencie listy | Przewidywalne, nudne | Prosta lista lub numeracja |
 | Gradient border-top na kartach | Wygląda na wygenerowane | Brak lub bardzo subtelny |
 | "Neon glow" efekty na wszystkim | Przestarzałe, 2020 | Subtelne cienie, blur |
 
 **Zasada ogólna:** Jeśli element wygląda jak z szablonu lub "zbyt designersko" — usuń go. Prostota > efekty.
+
+### Sekcja Comparison — dwa poprawne formaty
+
+**WYBIERZ JEDEN z dwóch formatów** — oba są akceptowalne, dostosuj do kontekstu produktu:
+
+#### Format A: Dwie karty z opisowym tekstem (ZALECANY dla produktów premium)
+
+Dwie karty obok siebie — "Tradycyjne rozwiązanie" i "Produkt [MARKA]". Każda karta zawiera **opisowy tekst** wyjaśniający zalety/wady, NIE używaj checkmarków.
+
+```html
+<div class="comparison-grid">
+  <div class="comparison-card">
+    <h3>Tradycyjne metody</h3>
+    <p class="comparison-desc">Krótki opis problemów tradycyjnego podejścia...</p>
+    <ul>
+      <li>Punkt negatywny opisany zdaniem</li>
+      <li>Kolejny problem wyjaśniony słowami</li>
+    </ul>
+  </div>
+  <div class="comparison-card highlight">
+    <h3>[MARKA]</h3>
+    <p class="comparison-desc">Krótki opis przewag produktu...</p>
+    <ul>
+      <li>Korzyść opisana pełnym zdaniem</li>
+      <li>Kolejna przewaga wyjaśniona słowami</li>
+    </ul>
+  </div>
+</div>
+```
+
+```css
+.comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.comparison-card { padding: 40px; border-radius: var(--radius-xl); background: var(--bg-white); }
+.comparison-card.highlight { border: 2px solid var(--primary); box-shadow: var(--shadow-lg); }
+```
+
+#### Format B: Tabela z opisowymi komórkami (dla produktów z wieloma cechami)
+
+Tabela porównująca cechy, ale **BEZ ikon ✓ i ✗**. Każda komórka zawiera krótki tekst opisowy.
+
+```html
+<table class="comparison-table">
+  <thead>
+    <tr>
+      <th>Cecha</th>
+      <th>Tradycyjne</th>
+      <th class="highlight">[MARKA]</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Czas działania</td>
+      <td>2-3 godziny</td>
+      <td class="highlight">Do 8 godzin</td>
+    </tr>
+    <tr>
+      <td>Łatwość obsługi</td>
+      <td>Wymaga szkolenia</td>
+      <td class="highlight">Intuicyjna, gotowa od razu</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+**Kiedy który format:**
+- **Format A (karty)**: produkty premium, mniej cech do porównania, nacisk na storytelling
+- **Format B (tabela)**: produkty tech, wiele mierzalnych parametrów, nacisk na specyfikację
+
+**NIGDY nie używaj:** ikon ✓ / ✗, kolorów czerwony/zielony dla tak/nie, emotikon w komórkach tabeli.
 
 ### Motyw jasny (DOMYŚLNY - używaj zawsze!)
 - Background: `#FFFFFF` (główny) i `#F8FAFC` (sekcje alternatywne)
