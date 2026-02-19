@@ -178,6 +178,48 @@ Kolory z brandingu (primary, secondary, accent) powinny być widoczne w **każde
 }
 ```
 
+### Trust Bar (WAŻNE - jedna linia!)
+
+**Trust Bar MUSI być w jednej linii na desktop.** Użyj `flex-wrap: nowrap` i kompaktowych rozmiarów.
+
+```css
+.trust-items {
+  display: flex;
+  justify-content: center;
+  gap: 20px;           /* NIE 48px - za duże! */
+  flex-wrap: nowrap;   /* WAŻNE: nowrap na desktop */
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;  /* Kompaktowy padding */
+  flex-shrink: 0;
+}
+
+.trust-icon {
+  width: 40px;         /* NIE 48px */
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.trust-text {
+  white-space: nowrap; /* Zapobiega łamaniu tekstu */
+}
+
+.trust-text strong { font-size: 13px; }
+.trust-text span { font-size: 12px; }
+
+/* Mobile - wtedy flex-wrap: wrap */
+@media (max-width: 768px) {
+  .trust-items {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+```
+
 ### Hero Glow Effect
 ```css
 .hero-glow {
@@ -590,7 +632,7 @@ Dodaj przed `</body>`:
       },
       urgency: {
         enabled: true,
-        countdown: { enabled: true, position: 'both' },
+        countdown: { enabled: true, position: 'both', text: 'Oferta wygasa za:' },
         stock: { enabled: true, initial: 20, min: 3 }
       },
       socialProof: {
