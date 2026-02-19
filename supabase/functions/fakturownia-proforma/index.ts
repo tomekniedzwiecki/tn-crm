@@ -112,9 +112,9 @@ Deno.serve(async (req) => {
               email: buyer.email,
               clientName: buyer.name || buyer.company || 'Cześć',
               offerName: offer.name,
-              amount: offer.price?.toLocaleString('pl-PL', { minimumFractionDigits: 2 }) || '',
+              offerPrice: offer.price?.toLocaleString('pl-PL', { minimumFractionDigits: 2 }) || '',
               pdfUrl: pdfUrl,
-              viewUrl: viewUrl,
+              checkoutUrl: viewUrl,
               invoiceNumber: result.number
             }
           })

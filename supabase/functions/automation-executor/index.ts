@@ -378,12 +378,13 @@ async function processActionStep(
       salesPageUrl: context.salesPageUrl,
       // Contract specific
       contractUrl: context.contractUrl,
-      // Invoice specific
+      // Invoice/Proforma specific
       invoiceNumber: context.invoiceNumber,
       amount: context.amount,
       description: context.description,
       pdfUrl: context.pdfUrl,
-      viewUrl: context.viewUrl
+      viewUrl: context.viewUrl,
+      checkoutUrl: context.checkoutUrl
     }
 
     // Call send-email function with retry logic
