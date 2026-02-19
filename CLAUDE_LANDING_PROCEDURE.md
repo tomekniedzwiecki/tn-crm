@@ -229,6 +229,123 @@ Kolory z brandingu (primary, secondary, accent) powinny być widoczne w **każde
 }
 ```
 
+### Hero Animation (WYMAGANE!)
+
+**KAŻDY landing MUSI mieć customową animację w sekcji hero** dopasowaną do produktu. NIE używaj placeholdera na obrazek — stwórz animację!
+
+#### Typy animacji w zależności od produktu:
+
+| Kategoria produktu | Typ animacji | Przykład |
+|-------------------|--------------|----------|
+| **Urządzenia 4D/multi-funkcyjne** | Koło z nodami (technologie) | Kineso: 4 nody (wibracja, kompresja, ciepło, światło) |
+| **Napoje/żywność** | Animowane cząsteczki/bąbelki | H2Vital: bąbelki wodoru |
+| **Kosmetyki/beauty** | Pulsujące krople/fale | Vellur: fale regeneracji |
+| **Tech/gadżety** | Obracające się elementy 3D | VizoCore: wirujące soczewki |
+| **Meble/dom** | Minimalistyczna ikona + efekty | Nomabar: bar z świecącymi elementami |
+
+#### Struktura animacji (szablon):
+
+```html
+<div class="hero-animation">
+  <!-- Obracające się pierścienie -->
+  <div class="hero-animation-ring hero-animation-ring-1"></div>
+  <div class="hero-animation-ring hero-animation-ring-2"></div>
+
+  <!-- Centralny element (ikona produktu) -->
+  <div class="hero-animation-center">
+    <svg><!-- Ikona dopasowana do produktu --></svg>
+  </div>
+
+  <!-- Nody z cechami/technologiami (opcjonalne) -->
+  <div class="hero-animation-nodes">
+    <div class="hero-animation-node hero-animation-node-1">
+      <svg><!-- Ikona cechy 1 --></svg>
+      <span>Cecha 1</span>
+    </div>
+    <!-- ... więcej nodów -->
+  </div>
+</div>
+```
+
+#### Podstawowe CSS dla animacji:
+
+```css
+.hero-animation {
+  position: relative;
+  width: 420px;
+  height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-animation-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--primary-rgb), 0.15);
+  animation: ring-rotate 20s linear infinite;
+}
+
+.hero-animation-ring-1 { width: 100%; height: 100%; }
+.hero-animation-ring-2 { width: 80%; height: 80%; animation-direction: reverse; }
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.hero-animation-center {
+  width: 140px;
+  height: 140px;
+  background: var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.15);
+  animation: center-pulse 2s ease-in-out infinite;
+}
+
+@keyframes center-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.hero-animation-node {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  background: var(--white);
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: node-float 3s ease-in-out infinite;
+}
+
+@keyframes node-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-animation { width: 320px; height: 320px; }
+  .hero-animation-center { width: 100px; height: 100px; }
+  .hero-animation-node { width: 56px; height: 56px; }
+}
+```
+
+#### Wskazówki:
+
+1. **Dostosuj ikony** — użyj SVG związanych z produktem (nie generycznych)
+2. **Użyj kolorów marki** — każdy node może mieć inny kolor z palety
+3. **Dodaj etykiety** — krótkie opisy cech (8-12 znaków max)
+4. **Przetestuj na mobile** — animacja musi działać płynnie
+5. **Nie przesadzaj** — max 4-5 elementów animowanych
+
 ### Bento Card with Spotlight
 ```css
 .bento-card .spotlight {
