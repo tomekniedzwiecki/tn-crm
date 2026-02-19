@@ -979,30 +979,30 @@
       border-radius: var(--radius-xl);
       overflow: hidden;
       box-shadow: var(--shadow-lg);
-      display: flex;
-      flex-direction: column;
+      width: 100%;
+      border-collapse: collapse;
     }
 
     .comparison-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      border-bottom: 1px solid var(--border-light);
-    }
-
-    .comparison-row:last-child {
-      border-bottom: none;
+      display: table-row;
     }
 
     .comparison-row.header {
       background: var(--bg-deep);
-      order: -1;
+    }
+
+    tbody .comparison-row {
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    tbody .comparison-row:last-child {
+      border-bottom: none;
     }
 
     .comparison-cell {
       padding: 20px 24px;
       font-size: 14px;
-      display: flex;
-      align-items: center;
+      vertical-align: middle;
     }
 
     .comparison-row.header .comparison-cell {
@@ -1013,21 +1013,25 @@
     .comparison-cell.feature {
       color: var(--text-primary);
       font-weight: 500;
+      width: 50%;
     }
 
     .comparison-cell.panoview {
       background: rgba(0, 212, 232, 0.08);
-      justify-content: center;
+      text-align: center;
+      width: 25%;
     }
 
     .comparison-cell.traditional {
-      justify-content: center;
+      text-align: center;
       color: var(--text-tertiary);
+      width: 25%;
     }
 
     .comparison-cell svg {
       width: 20px;
       height: 20px;
+      vertical-align: middle;
     }
 
     .comparison-cell svg.check {
@@ -1663,8 +1667,8 @@
         margin: 0 auto;
       }
 
-      .comparison-row {
-        grid-template-columns: 1.5fr 1fr 1fr;
+      .comparison-cell {
+        padding: 16px 20px;
       }
 
       .testimonials-grid {
@@ -1747,18 +1751,33 @@
         grid-template-columns: 1fr;
       }
 
+      .comparison-table {
+        display: block;
+      }
+
       .comparison-row {
-        grid-template-columns: 1fr;
+        display: block;
+        padding: 16px;
+        border-bottom: 1px solid var(--border-light);
+      }
+
+      .comparison-row.header {
+        display: none;
+      }
+
+      .comparison-cell {
+        display: block;
+        padding: 8px 0;
+        text-align: left;
       }
 
       .comparison-cell.feature {
-        border-bottom: 1px solid var(--border-light);
         font-weight: 600;
+        margin-bottom: 8px;
       }
 
       .comparison-cell.panoview,
       .comparison-cell.traditional {
-        justify-content: flex-start;
         padding-left: 24px;
       }
 
@@ -2119,57 +2138,61 @@
           Zobacz, dlaczego coraz więcej osób wybiera automatyczne rozwiązanie.
         </p>
       </div>
-      <div class="comparison-table reveal">
-        <div class="comparison-row header">
-          <div class="comparison-cell feature">Funkcja</div>
-          <div class="comparison-cell panoview">PanoView</div>
-          <div class="comparison-cell traditional">Tradycyjne</div>
-        </div>
-        <div class="comparison-row">
-          <div class="comparison-cell feature">Bezpieczeństwo na wysokości</div>
-          <div class="comparison-cell panoview">
-            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="comparison-cell traditional">
-            <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </div>
-        </div>
-        <div class="comparison-row">
-          <div class="comparison-cell feature">Czas mycia (4 okna)</div>
-          <div class="comparison-cell panoview">~30 min (automatycznie)</div>
-          <div class="comparison-cell traditional">2-3 godz.</div>
-        </div>
-        <div class="comparison-row">
-          <div class="comparison-cell feature">Wysiłek fizyczny</div>
-          <div class="comparison-cell panoview">Zerowy</div>
-          <div class="comparison-cell traditional">Wysoki</div>
-        </div>
-        <div class="comparison-row">
-          <div class="comparison-cell feature">Dostęp do trudnych miejsc</div>
-          <div class="comparison-cell panoview">
-            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="comparison-cell traditional">
-            <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </div>
-        </div>
-        <div class="comparison-row">
-          <div class="comparison-cell feature">Równomierne pokrycie</div>
-          <div class="comparison-cell panoview">
-            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="comparison-cell traditional">Zależy od umiejętności</div>
-        </div>
-        <div class="comparison-row">
-          <div class="comparison-cell feature">Idealne dla seniorów</div>
-          <div class="comparison-cell panoview">
-            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="comparison-cell traditional">
-            <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </div>
-        </div>
-      </div>
+      <table class="comparison-table reveal">
+        <thead>
+          <tr class="comparison-row header">
+            <th class="comparison-cell feature">Funkcja</th>
+            <th class="comparison-cell panoview">PanoView</th>
+            <th class="comparison-cell traditional">Tradycyjne</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="comparison-row">
+            <td class="comparison-cell feature">Bezpieczeństwo na wysokości</td>
+            <td class="comparison-cell panoview">
+              <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </td>
+            <td class="comparison-cell traditional">
+              <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </td>
+          </tr>
+          <tr class="comparison-row">
+            <td class="comparison-cell feature">Czas mycia (4 okna)</td>
+            <td class="comparison-cell panoview">~30 min (automatycznie)</td>
+            <td class="comparison-cell traditional">2-3 godz.</td>
+          </tr>
+          <tr class="comparison-row">
+            <td class="comparison-cell feature">Wysiłek fizyczny</td>
+            <td class="comparison-cell panoview">Zerowy</td>
+            <td class="comparison-cell traditional">Wysoki</td>
+          </tr>
+          <tr class="comparison-row">
+            <td class="comparison-cell feature">Dostęp do trudnych miejsc</td>
+            <td class="comparison-cell panoview">
+              <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </td>
+            <td class="comparison-cell traditional">
+              <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </td>
+          </tr>
+          <tr class="comparison-row">
+            <td class="comparison-cell feature">Równomierne pokrycie</td>
+            <td class="comparison-cell panoview">
+              <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </td>
+            <td class="comparison-cell traditional">Zależy od umiejętności</td>
+          </tr>
+          <tr class="comparison-row">
+            <td class="comparison-cell feature">Idealne dla seniorów</td>
+            <td class="comparison-cell panoview">
+              <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </td>
+            <td class="comparison-cell traditional">
+              <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
