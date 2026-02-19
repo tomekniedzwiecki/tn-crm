@@ -337,7 +337,9 @@ Deno.serve(async (req) => {
         viewUrl: data.viewUrl || '',
         // Contract-specific variables
         projectUrl: data.projectUrl || '',
-        contractUrl: data.contractUrl || ''
+        contractUrl: data.contractUrl || '',
+        // Sales page
+        salesPageUrl: data.salesPageUrl || ''
       }
 
       // Replace variables in subject and body
