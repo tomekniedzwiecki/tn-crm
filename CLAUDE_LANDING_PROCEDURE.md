@@ -514,16 +514,32 @@ Logo znajduje się w tabeli `workflow_branding` z `type='logo'`. URL w polu `fil
 
 ### Przetwarzanie logo
 
-**WAŻNE:** Przed przetwarzaniem logo, najpierw sprawdź oryginał używając narzędzia Read!
+**KRYTYCZNE:** Logo z Supabase zawsze ma duże białe marginesy (np. 1024x1024). **ZAWSZE** przytnij je po pobraniu!
 
-1. **Pobrać logo** z Supabase storage
-2. **Sprawdzić** czy logo już ma przezroczyste tło (Read tool)
-3. **Jeśli ma przezroczyste tło** → tylko przyciąć (trim)
-4. **Jeśli ma białe tło** → przyciąć + usunąć białe tło
+#### Szybka metoda (ZALECANA - jedna komenda)
+
+```bash
+cd /c/repos_tn/tn-crm && node -e "
+const sharp = require('sharp');
+sharp('landing-pages/[SLUG]/logo.png')
+  .trim()
+  .png()
+  .toFile('landing-pages/[SLUG]/logo_trimmed.png')
+  .then(() => {
+    require('fs').renameSync('landing-pages/[SLUG]/logo_trimmed.png', 'landing-pages/[SLUG]/logo.png');
+    console.log('Logo przycięte');
+  });
+"
+```
+
+#### Kroki:
+1. **Pobrać logo** z Supabase storage (curl)
+2. **Przyciąć marginesy** używając sharp.trim()
+3. **Sprawdzić** wynik używając Read tool
 
 ### Skrypt do przetwarzania (Node.js + sharp)
 
-**Wariant A: Logo JUŻ MA przezroczyste tło (najczęstszy przypadek)**
+**Wariant A: Tylko przycięcie marginesów (NAJCZĘŚCIEJ WYSTARCZY)**
 ```javascript
 const sharp = require('sharp');
 sharp('logo_original.png').trim().png().toFile('logo.png');
