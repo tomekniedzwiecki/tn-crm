@@ -1750,7 +1750,16 @@
                 </div>
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Plik logo</label>
-                    <input type="file" id="logo-file-input" accept=".png,.jpg,.jpeg,.svg,.webp" class="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-zinc-700 file:text-white hover:file:bg-zinc-600">
+                    <input type="file" id="logo-file-input" accept=".png,.jpg,.jpeg,.svg,.webp" class="hidden">
+                    <div id="logo-dropzone" class="border-2 border-dashed border-zinc-700 rounded-lg p-6 text-center cursor-pointer hover:border-zinc-500 transition-colors"
+                        onclick="document.getElementById('logo-file-input').click()"
+                        ondragover="event.preventDefault(); this.classList.add('border-orange-500', 'bg-orange-500/5')"
+                        ondragleave="this.classList.remove('border-orange-500', 'bg-orange-500/5')"
+                        ondrop="event.preventDefault(); this.classList.remove('border-orange-500', 'bg-orange-500/5'); handleLogoFileDrop(event)">
+                        <i class="ph ph-image text-2xl text-zinc-500 mb-2"></i>
+                        <p class="text-zinc-400 text-sm" id="logo-dropzone-text">Przeciągnij plik lub kliknij</p>
+                        <p class="text-zinc-600 text-xs mt-1">PNG, JPG, SVG, WebP</p>
+                    </div>
                 </div>
                 <div id="logo-upload-progress" class="hidden">
                     <div class="flex items-center gap-2 text-zinc-400 text-xs">
@@ -1862,7 +1871,16 @@
             <div class="p-5 space-y-4">
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Plik graficzny</label>
-                    <input type="file" id="mockup-file-input" accept=".png,.jpg,.jpeg,.webp" class="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-zinc-700 file:text-white hover:file:bg-zinc-600">
+                    <input type="file" id="mockup-file-input" accept=".png,.jpg,.jpeg,.webp" class="hidden">
+                    <div id="mockup-dropzone" class="border-2 border-dashed border-zinc-700 rounded-lg p-6 text-center cursor-pointer hover:border-zinc-500 transition-colors"
+                        onclick="document.getElementById('mockup-file-input').click()"
+                        ondragover="event.preventDefault(); this.classList.add('border-orange-500', 'bg-orange-500/5')"
+                        ondragleave="this.classList.remove('border-orange-500', 'bg-orange-500/5')"
+                        ondrop="event.preventDefault(); this.classList.remove('border-orange-500', 'bg-orange-500/5'); handleMockupFileDrop(event)">
+                        <i class="ph ph-t-shirt text-2xl text-zinc-500 mb-2"></i>
+                        <p class="text-zinc-400 text-sm" id="mockup-dropzone-text">Przeciągnij plik lub kliknij</p>
+                        <p class="text-zinc-600 text-xs mt-1">PNG, JPG, WebP</p>
+                    </div>
                 </div>
                 <div id="mockup-upload-progress" class="hidden">
                     <div class="flex items-center gap-2 text-zinc-400 text-xs">
@@ -5514,10 +5532,28 @@
         function openLogoModal() {
             document.getElementById('logo-variant-input').value = 'main';
             document.getElementById('logo-file-input').value = '';
+            document.getElementById('logo-dropzone-text').textContent = 'Przeciągnij plik lub kliknij';
             document.getElementById('logo-upload-progress').classList.add('hidden');
             document.getElementById('logo-modal').classList.remove('hidden');
         }
         function closeLogoModal() { document.getElementById('logo-modal').classList.add('hidden'); }
+
+        function handleLogoFileDrop(event) {
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                const input = document.getElementById('logo-file-input');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                document.getElementById('logo-dropzone-text').textContent = file.name;
+            }
+        }
+
+        document.getElementById('logo-file-input')?.addEventListener('change', function() {
+            if (this.files[0]) {
+                document.getElementById('logo-dropzone-text').textContent = this.files[0].name;
+            }
+        });
 
         async function saveLogo() {
             const variant = document.getElementById('logo-variant-input').value;
@@ -5616,10 +5652,28 @@
         // --- Mockup Modal ---
         function openMockupModal() {
             document.getElementById('mockup-file-input').value = '';
+            document.getElementById('mockup-dropzone-text').textContent = 'Przeciągnij plik lub kliknij';
             document.getElementById('mockup-upload-progress').classList.add('hidden');
             document.getElementById('mockup-modal').classList.remove('hidden');
         }
         function closeMockupModal() { document.getElementById('mockup-modal').classList.add('hidden'); }
+
+        function handleMockupFileDrop(event) {
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                const input = document.getElementById('mockup-file-input');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                document.getElementById('mockup-dropzone-text').textContent = file.name;
+            }
+        }
+
+        document.getElementById('mockup-file-input')?.addEventListener('change', function() {
+            if (this.files[0]) {
+                document.getElementById('mockup-dropzone-text').textContent = this.files[0].name;
+            }
+        });
 
         async function saveMockup() {
             const file = document.getElementById('mockup-file-input').files[0];
