@@ -244,122 +244,115 @@ Kolory z brandingu (primary, secondary, accent) powinny być widoczne w **każde
 }
 ```
 
-### Hero Animation (WYMAGANE!)
+### Hero Background Animation (WYMAGANE!)
 
-**KAŻDY landing MUSI mieć customową animację w sekcji hero** dopasowaną do produktu. NIE używaj placeholdera na obrazek — stwórz animację!
+**KAŻDY landing MUSI mieć subtelną animację W TLE sekcji hero** dopasowaną do produktu. Animacja jest dekoracyjna — placeholder/zdjęcie produktu pozostaje jako główny element wizualny!
+
+#### Zasady:
+- Animacja jest **w tle**, nie zastępuje placeholdera na zdjęcie
+- Musi być **subtelna** (opacity 0.1-0.4, delikatne ruchy)
+- Powinna **nawiązywać do produktu** (nie generyczna)
+- Nie może rozpraszać od głównej treści
 
 #### Typy animacji w zależności od produktu:
 
-| Kategoria produktu | Typ animacji | Przykład |
+| Kategoria produktu | Typ animacji | Elementy |
 |-------------------|--------------|----------|
-| **Urządzenia 4D/multi-funkcyjne** | Koło z nodami (technologie) | Kineso: 4 nody (wibracja, kompresja, ciepło, światło) |
-| **Napoje/żywność** | Animowane cząsteczki/bąbelki | H2Vital: bąbelki wodoru |
-| **Kosmetyki/beauty** | Pulsujące krople/fale | Vellur: fale regeneracji |
-| **Tech/gadżety** | Obracające się elementy 3D | VizoCore: wirujące soczewki |
-| **Meble/dom** | Minimalistyczna ikona + efekty | Nomabar: bar z świecącymi elementami |
+| **Urządzenia masujące/wibracyjne** | Pulsujące fale/kręgi | Koncentryczne kręgi rozchodzące się jak wibracje |
+| **Napoje/żywność** | Unoszące się cząsteczki | Bąbelki, kropelki płynące w górę |
+| **Kosmetyki/beauty** | Delikatne fale | Płynne, organiczne kształty |
+| **Tech/gadżety** | Geometryczne elementy | Linie, siatki, subtelne kształty |
+| **Ciepło/termoterapia** | Ciepłe cząsteczki | Pomarańczowe/czerwone punkty unoszące się |
 
-#### Struktura animacji (szablon):
+#### Struktura HTML (dodaj po hero-glow):
 
 ```html
-<div class="hero-animation">
-  <!-- Obracające się pierścienie -->
-  <div class="hero-animation-ring hero-animation-ring-1"></div>
-  <div class="hero-animation-ring hero-animation-ring-2"></div>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow-2"></div>
 
-  <!-- Centralny element (ikona produktu) -->
-  <div class="hero-animation-center">
-    <svg><!-- Ikona dopasowana do produktu --></svg>
-  </div>
-
-  <!-- Nody z cechami/technologiami (opcjonalne) -->
-  <div class="hero-animation-nodes">
-    <div class="hero-animation-node hero-animation-node-1">
-      <svg><!-- Ikona cechy 1 --></svg>
-      <span>Cecha 1</span>
+  <!-- Background animation - DODAJ TO -->
+  <div class="hero-bg-animation">
+    <div class="vibration-wave vibration-wave-1"></div>
+    <div class="vibration-wave vibration-wave-2"></div>
+    <div class="vibration-wave vibration-wave-3"></div>
+    <div class="heat-particles">
+      <span></span><span></span><span></span><span></span><span></span>
     </div>
-    <!-- ... więcej nodów -->
   </div>
-</div>
+
+  <div class="container">
+    <!-- ... reszta hero (zdjęcie produktu POZOSTAJE!) -->
+  </div>
+</section>
 ```
 
-#### Podstawowe CSS dla animacji:
+#### CSS dla animacji tła:
 
 ```css
-.hero-animation {
-  position: relative;
-  width: 420px;
-  height: 420px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hero-animation-ring {
+.hero-bg-animation {
   position: absolute;
-  border-radius: 50%;
-  border: 2px solid rgba(var(--primary-rgb), 0.15);
-  animation: ring-rotate 20s linear infinite;
+  top: 50%;
+  right: 10%;
+  transform: translateY(-50%);
+  width: 500px;
+  height: 500px;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.hero-animation-ring-1 { width: 100%; height: 100%; }
-.hero-animation-ring-2 { width: 80%; height: 80%; animation-direction: reverse; }
-
-@keyframes ring-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.hero-animation-center {
-  width: 140px;
-  height: 140px;
-  background: var(--white);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.15);
-  animation: center-pulse 2s ease-in-out infinite;
-}
-
-@keyframes center-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-.hero-animation-node {
+/* Pulsujące fale - subtelne kręgi */
+.vibration-wave {
   position: absolute;
-  width: 72px;
-  height: 72px;
-  background: var(--white);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid var(--primary);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  animation: node-float 3s ease-in-out infinite;
+  border: 1px solid rgba(var(--primary-rgb), 0.1);
+  animation: vibration-pulse 4s ease-out infinite;
 }
 
-@keyframes node-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+.vibration-wave-1 { width: 200px; height: 200px; }
+.vibration-wave-2 { width: 300px; height: 300px; animation-delay: 1s; }
+.vibration-wave-3 { width: 400px; height: 400px; animation-delay: 2s; }
+
+@keyframes vibration-pulse {
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.4; }
+  100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
 }
 
-/* Responsive */
+/* Unoszące się cząsteczki */
+.heat-particles span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: rgba(var(--secondary-rgb), 0.3);
+  border-radius: 50%;
+  animation: particle-float 6s ease-in-out infinite;
+}
+
+@keyframes particle-float {
+  0%, 100% { transform: translateY(0); opacity: 0.3; }
+  50% { transform: translateY(-20px); opacity: 0.6; }
+}
+
+/* Responsive - zmniejsz i przyciemnij na mobile */
 @media (max-width: 768px) {
-  .hero-animation { width: 320px; height: 320px; }
-  .hero-animation-center { width: 100px; height: 100px; }
-  .hero-animation-node { width: 56px; height: 56px; }
+  .hero-bg-animation {
+    width: 300px;
+    height: 300px;
+    opacity: 0.5;
+  }
 }
 ```
 
 #### Wskazówki:
 
-1. **Dostosuj ikony** — użyj SVG związanych z produktem (nie generycznych)
-2. **Użyj kolorów marki** — każdy node może mieć inny kolor z palety
-3. **Dodaj etykiety** — krótkie opisy cech (8-12 znaków max)
-4. **Przetestuj na mobile** — animacja musi działać płynnie
-5. **Nie przesadzaj** — max 4-5 elementów animowanych
+1. **Subtelność > efektowność** — animacja ma być ledwo zauważalna
+2. **Użyj kolorów marki** z niską opacity (0.1-0.3)
+3. **Pozycja** — zazwyczaj po prawej stronie, za zdjęciem produktu
+4. **Mobile** — zmniejsz rozmiar i opacity lub ukryj całkowicie
+5. **Dostosuj typ animacji** — zmień w zależności od produktu (fale dla masażerów, bąbelki dla napojów, itp.)
 
 ### Bento Card with Spotlight
 ```css
