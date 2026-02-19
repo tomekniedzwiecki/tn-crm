@@ -461,6 +461,75 @@ Kolory z brandingu (primary, secondary, accent) powinny być widoczne w **każde
 @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 ```
 
+## Hero Headline — NAJWAŻNIEJSZY ELEMENT LANDING PAGE
+
+> **KRYTYCZNE:** Nagłówek w Hero to pierwszy i najważniejszy element, który widzi użytkownik. To ON decyduje czy ktoś zostanie na stronie czy zamknie kartę. Poświęć na niego najwięcej czasu i uwagi!
+
+### Cel nagłówka
+
+Nagłówek MUSI w jednym zdaniu:
+1. **Trafić w ból** — użytkownik musi poczuć "to o mnie!"
+2. **Pokazać rozwiązanie** — dać nadzieję, że problem da się rozwiązać
+3. **Wzbudzić ciekawość** — zachęcić do scrollowania dalej
+
+### Struktura skutecznego nagłówka
+
+```
+[EFEKT/KORZYŚĆ] + [BEZ BÓLU/PROBLEMU] + [DZIĘKI CZEMU]
+```
+
+**Przykłady:**
+
+| Produkt | ŹLE (generyczne) | DOBRZE (trafia w ból) |
+|---------|------------------|----------------------|
+| Robot do okien | "Nowoczesny robot do mycia okien" | "Lśniące okna bez drabiny i ryzyka" |
+| Masażer | "Profesjonalny masażer do ciała" | "Koniec z bólem pleców. Bez wychodzenia do fizjoterapeuty." |
+| Napój H2 | "Woda wzbogacona wodorem" | "Więcej energii bez kawy. Naturalnie." |
+| Termofor | "Inteligentny termofor elektryczny" | "Głęboka ulga w bólu. Bez tabletek, bez skutków ubocznych." |
+
+### Proces tworzenia nagłówka
+
+1. **Zidentyfikuj główny ból** z raportu PDF (pain points grupy docelowej)
+2. **Znajdź emocję** — co najbardziej frustruje klienta?
+3. **Sformułuj obietnicę** — co zmieni się w życiu klienta po zakupie?
+4. **Skróć do max. 8-10 słów** — nagłówek musi być krótki i uderzający
+5. **Usuń żargon** — pisz jak do przyjaciela, nie jak marketingowiec
+
+### Subheadline (podtytuł)
+
+Subheadline rozszerza nagłówek i dodaje konkret:
+- **Mechanizm działania** — jak to działa?
+- **Dowód społeczny** — "Zaufało nam X osób"
+- **Unikalność** — co wyróżnia od konkurencji?
+
+**Przykład pełnego Hero copy:**
+
+```
+Headline: "Lśniące okna bez drabiny i ryzyka"
+Subheadline: "Robot GlassNova z siłą ssania 5600Pa myje nawet najtrudniej dostępne szyby. Ty odpoczywasz, on pracuje."
+```
+
+### Checklistka przed finalizacją nagłówka
+
+- [ ] Czy trafia w konkretny ból (nie ogólniki)?
+- [ ] Czy obiecuje rozwiązanie (nie tylko opisuje produkt)?
+- [ ] Czy jest krótki (max 10 słów)?
+- [ ] Czy brzmi naturalnie (nie marketingowo)?
+- [ ] Czy wzbudza emocję (strach, nadzieja, ulga)?
+- [ ] Czy jest unikalny (nie pasuje do konkurencji)?
+
+### Czego NIGDY nie pisać w nagłówku
+
+| ŹLE | Dlaczego |
+|-----|----------|
+| "Poznaj [MARKA]" | Nikogo nie obchodzi nazwa, obchodzi go rozwiązanie |
+| "Najlepszy produkt na rynku" | Puste słowa, każdy tak mówi |
+| "Innowacyjna technologia" | Żargon, nic nie znaczy |
+| "Wysoka jakość w przystępnej cenie" | Generyczne, nudne |
+| Nazwa produktu jako headline | Marka nic nie mówi nowemu użytkownikowi |
+
+**Zasada:** Nagłówek powinien działać nawet BEZ logo i nazwy marki. Jeśli usuniesz markę i nadal działa — jest dobry.
+
 ## Copywriting Framework (PAS)
 
 ### Problem Section
