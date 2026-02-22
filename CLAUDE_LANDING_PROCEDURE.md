@@ -591,22 +591,78 @@ CSS:
 }
 ```
 
-## Wymagane zdjęcia na landing page
+## Wymagane zdjęcia na landing page (KRYTYCZNE!)
 
-**WAŻNE**: Każdy landing page wymaga przygotowania następujących zdjęć/grafik. Użyj placeholderów podczas generowania, ale poinformuj użytkownika o potrzebie dostarczenia tych materiałów.
+> **KRYTYCZNE**: Przy generowaniu landing page MUSISZ dodać placeholder w KAŻDEJ sekcji wymagającej zdjęcia. NIE pomijaj żadnej sekcji! Użytkownik musi widzieć gdzie dokładnie wstawić zdjęcia.
 
 ### Lista wymaganych zdjęć
 
-| # | Sekcja | Nazwa | Rozmiar | Opis |
-|---|--------|-------|---------|------|
-| 1 | **Hero** | Hero Product | 1200×900 | Główne zdjęcie produktu na białym/przezroczystym tle |
-| 2 | **Problem** | Problem Visual | 800×600 | Ilustracja problemu (np. zmęczony człowiek, stary produkt) |
-| 3 | **Solution/Bento** | Feature 1-4 | 640×360 | 4 zdjęcia ilustrujące funkcje/cechy produktu |
-| 4 | **How It Works** | Krok 1-3 | 600×450 | 3 zdjęcia pokazujące kolejne kroki użycia |
-| 5 | **Testimonials** | Avatar 1-3 | 56×56 | 3 zdjęcia profilowe klientów (okrągłe) |
-| 6 | **Offer** | Zestaw produktu | 800×450 | Zdjęcie kompletnego zestawu/pakietu |
+| # | Sekcja | Nazwa | Rozmiar | Placeholder WYMAGANY |
+|---|--------|-------|---------|---------------------|
+| 1 | **Hero** | Hero Product | 1200×900 | TAK - w hero-visual |
+| 2 | **Problem** | Problem Visual | 800×600 | TAK - w problem-visual |
+| 3 | **Solution/Bento** | Feature 1-4 | 640×360 | TAK - w każdej bento-card (4x) |
+| 4 | **How It Works** | Krok 1-3 | 600×450 | TAK - w każdym how-step (3x) |
+| 5 | **Testimonials** | Avatar 1-3 | 56×56 | OPCJONALNIE - można użyć inicjałów |
+| 6 | **Offer** | Zestaw produktu | 800×450 | TAK - w offer-box |
 
-### Suma: 12-14 zdjęć na landing
+### Suma: 10-14 zdjęć na landing
+
+### Przykłady HTML placeholderów dla każdej sekcji
+
+#### Bento Card z placeholderem:
+```html
+<div class="bento-card fade-in">
+  <div class="spotlight"></div>
+  <!-- PLACEHOLDER NA ZDJĘCIE - WYMAGANE! -->
+  <div class="bento-image">
+    <div class="img-placeholder" style="aspect-ratio: 16/9; margin-bottom: 20px;">
+      <div class="ph-icon"><svg>...</svg></div>
+      <span class="ph-label">Feature 1</span>
+      <span class="ph-size">640×360px</span>
+    </div>
+  </div>
+  <div class="bento-icon">...</div>
+  <h3 class="bento-title">...</h3>
+  <p class="bento-text">...</p>
+</div>
+```
+
+#### How It Works z placeholderem:
+```html
+<div class="how-step fade-in">
+  <!-- PLACEHOLDER NA ZDJĘCIE - WYMAGANE! -->
+  <div class="how-step-image">
+    <div class="img-placeholder" style="aspect-ratio: 4/3; margin-bottom: 20px; border-radius: 12px;">
+      <div class="ph-icon"><svg>...</svg></div>
+      <span class="ph-label">Krok 1</span>
+      <span class="ph-size">600×450px</span>
+    </div>
+  </div>
+  <div class="how-step-number">1</div>
+  <h3 class="how-step-title">...</h3>
+  <p class="how-step-text">...</p>
+</div>
+```
+
+#### Offer z placeholderem:
+```html
+<div class="offer-box fade-in">
+  <div style="text-align: center;">
+    <span class="offer-badge">Bestseller</span>
+    <!-- PLACEHOLDER NA ZDJĘCIE ZESTAWU - WYMAGANE! -->
+    <div class="offer-image" style="margin: 24px 0;">
+      <div class="img-placeholder" style="aspect-ratio: 16/9; border-radius: 16px;">
+        <div class="ph-icon"><svg>...</svg></div>
+        <span class="ph-label">Zestaw produktu</span>
+        <span class="ph-size">800×450px</span>
+      </div>
+    </div>
+    <h3 class="offer-title">...</h3>
+    ...
+  </div>
+</div>
+```
 
 ### Wskazówki dotyczące zdjęć
 
@@ -1016,7 +1072,12 @@ Toolkit ma wbudowany `mobileBar` - nie twórz duplikatu `.sticky-cta`!
 - [ ] Hamburger menu działa
 - [ ] Sticky CTA na mobile
 - [ ] Cookie banner
-- [ ] Placeholdery na wszystkie obrazy
+- [ ] **PLACEHOLDERY NA WSZYSTKIE OBRAZY:**
+  - [ ] Hero (1x 1200×900)
+  - [ ] Problem (1x 800×600)
+  - [ ] Bento cards (4x 640×360)
+  - [ ] How It Works (3x 600×450)
+  - [ ] Offer (1x 800×450)
 - [ ] CTA buttony linkują do #offer
 - [ ] Meta tags (title, description, OG)
 - [ ] **Conversion Toolkit zintegrowany** (exit popup, urgency, social proof)
