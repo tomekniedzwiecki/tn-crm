@@ -163,6 +163,7 @@
                         <option value="">Wszystkie oferty</option>
                     </select>
                     <select id="sort-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600">
+                        <option value="activity_asc">Wymaga uwagi</option>
                         <option value="deadline_asc">Deadline (blisko)</option>
                         <option value="created_desc">Najnowsze</option>
                         <option value="created_asc">Najstarsze</option>
@@ -718,6 +719,11 @@
 
                 // Then apply secondary sort
                 switch (sortFilter) {
+                    case 'activity_asc':
+                        // Oldest admin activity first (needs attention)
+                        const aActivity = a.last_admin_activity || a.updated_at || a.started_at;
+                        const bActivity = b.last_admin_activity || b.updated_at || b.started_at;
+                        return new Date(aActivity) - new Date(bActivity);
                     case 'created_asc':
                         return new Date(a.started_at) - new Date(b.started_at);
                     case 'deadline_asc':
