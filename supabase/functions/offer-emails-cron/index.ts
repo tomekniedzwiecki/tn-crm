@@ -278,11 +278,12 @@ Deno.serve(async (req) => {
 
         // Prepare template data
         const offerData = clientOffer.offer as any
+        const effectivePrice = clientOffer.custom_price || offerData?.price || 0
         const templateData = {
           email: lead.email,
           clientName: lead.name || lead.company || 'Cześć',
           offerName: offerData?.name || '',
-          offerPrice: offerData?.price || 0,
+          offerPrice: effectivePrice,
           validUntil: clientOffer.valid_until,
           offerUrl: getOfferUrl(clientOffer.unique_token)
         }
