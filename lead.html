@@ -1557,7 +1557,7 @@
             select.innerHTML = '<option value="">— Wybierz ofertę —</option>';
             offers.forEach(offer => {
                 const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 0 }).format(offer.price || 0);
-                select.innerHTML += `<option value="${offer.id}" data-price="${offer.price || 0}">${offer.name} (${price})</option>`;
+                select.innerHTML += `<option value="${offer.id}" data-price="${offer.price || 0}" data-offer-type="${offer.offer_type || 'full'}">${offer.name} (${price})</option>`;
             });
         }
 
@@ -1647,6 +1647,20 @@
                 if (defaultOffer) {
                     document.getElementById('field-offer').value = defaultOffer.id;
                 }
+            }
+
+            // Sync offer type radio with selected offer
+            const offerSelect = document.getElementById('field-offer');
+            const selectedOfferOption = offerSelect.options[offerSelect.selectedIndex];
+            if (selectedOfferOption && selectedOfferOption.dataset.offerType) {
+                const offerType = selectedOfferOption.dataset.offerType;
+                document.querySelectorAll('.offer-type-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    if (opt.dataset.type === offerType) {
+                        opt.classList.add('selected');
+                        opt.querySelector('input').checked = true;
+                    }
+                });
             }
 
             // Set deal_value - use offer price as default if deal_value is empty
@@ -2408,6 +2422,18 @@
             // Always set price from offer when offer is selected
             if (price && price !== '0') {
                 valueField.value = price;
+            }
+
+            // Sync offer type radio with selected offer
+            const offerType = selectedOption.dataset.offerType;
+            if (offerType) {
+                document.querySelectorAll('.offer-type-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    if (opt.dataset.type === offerType) {
+                        opt.classList.add('selected');
+                        opt.querySelector('input').checked = true;
+                    }
+                });
             }
 
             triggerAutoSave();
@@ -3480,6 +3506,18 @@
                 document.querySelectorAll('.offer-type-option').forEach(o => o.classList.remove('selected'));
                 option.classList.add('selected');
                 option.querySelector('input').checked = true;
+
+                // Auto-select matching offer by type
+                const selectedType = option.dataset.type; // 'starter' or 'full'
+                const offerSelect = document.getElementById('field-offer');
+                const matchingOption = Array.from(offerSelect.options).find(opt =>
+                    opt.dataset.offerType === selectedType
+                );
+                if (matchingOption) {
+                    offerSelect.value = matchingOption.value;
+                    // Trigger change event to update deal value
+                    offerSelect.dispatchEvent(new Event('change'));
+                }
             });
         });
 
