@@ -356,6 +356,11 @@
         let lead = null;
         let trackingEventsSent = {}; // Deduplikacja eventów
 
+        // Helper to get effective price (custom_price or getEffectivePrice())
+        function getEffectivePrice() {
+            return clientOffer?.custom_price || offer?.price || 0;
+        }
+
         // SHA256 hash for enhanced conversions
         async function sha256(str) {
             const msgBuffer = new TextEncoder().encode(str.toLowerCase().trim());
@@ -370,7 +375,7 @@
             trackingEventsSent.viewContent = true;
 
             const eventId = `view_${clientOffer.id}_${Date.now()}`;
-            const value = offer.price / 1.23; // netto
+            const value = getEffectivePrice() / 1.23; // netto
 
             console.log('[tracking] ViewContent:', offer.name, value);
 
@@ -454,7 +459,7 @@
         // Track AddToCart (proforma download)
         async function trackProformaDownload() {
             const eventId = `proforma_${clientOffer.id}_${Date.now()}`;
-            const value = offer.price / 1.23;
+            const value = getEffectivePrice() / 1.23;
 
             console.log('[tracking] AddToCart (proforma):', offer.name);
 
@@ -541,7 +546,7 @@
             trackingEventsSent.initiateCheckout = true;
 
             const eventId = `checkout_${clientOffer.id}_${Date.now()}`;
-            const value = offer.price / 1.23;
+            const value = getEffectivePrice() / 1.23;
 
             console.log('[tracking] InitiateCheckout:', offer.name);
 
@@ -794,7 +799,7 @@
                 lead_company: lead.company,
                 lead_id: lead.id,
                 offer_name: offer.name,
-                offer_price: offer.price,
+                offer_price: getEffectivePrice(),
                 first_view: isFirstView,
                 view_history: viewHistory
             });
@@ -852,8 +857,8 @@
             // Offer details
             document.getElementById('offer-name').textContent = offer.name;
             document.getElementById('offer-description').textContent = offer.description || '';
-            document.getElementById('offer-price').textContent = formatPrice(offer.price);
-            document.getElementById('sticky-price').textContent = formatPrice(offer.price) + ' PLN';
+            document.getElementById('offer-price').textContent = formatPrice(getEffectivePrice());
+            document.getElementById('sticky-price').textContent = formatPrice(getEffectivePrice()) + ' PLN';
             document.getElementById('valid-until-display').textContent = formatDate(clientOffer.valid_until);
 
             // Render timeline
@@ -1048,7 +1053,7 @@
                     offer: {
                         name: offer.name,
                         description: offer.description,
-                        price: offer.price
+                        price: getEffectivePrice()
                     },
                     validUntil: clientOffer.valid_until
                 };
@@ -1083,7 +1088,7 @@
                         description: `Wygenerowano proformę przez klienta`,
                         metadata: {
                             offer_name: offer.name,
-                            offer_price: offer.price,
+                            offer_price: getEffectivePrice(),
                             invoice_id: result.invoiceId,
                             generated_by: 'client',
                             client_email: lead.email
@@ -1100,7 +1105,7 @@
                     lead_company: lead.company,
                     lead_id: lead.id,
                     offer_name: offer.name,
-                    offer_price: offer.price,
+                    offer_price: getEffectivePrice(),
                     generated_by: 'client'
                 });
 
@@ -1109,7 +1114,7 @@
                     email: lead.email,
                     clientName: lead.name,
                     offerName: offer.name,
-                    offerPrice: offer.price,
+                    offerPrice: getEffectivePrice(),
                     pdfUrl: result.pdfUrl
                 });
 
