@@ -1202,8 +1202,9 @@
                     deadlineHtml = `<span class="flex items-center gap-1"><i class="ph ph-clock text-zinc-600"></i>${formatDeadline(w.current_milestone_deadline)}</span>`;
                 }
 
-                // Days since last admin update - don't show warning when waiting for client
-                const daysSince = isWaitingForClient ? null : getDaysSinceUpdate(w.updated_at);
+                // Days since last admin update - use last_admin_activity if available, fallback to updated_at
+                const lastAdminDate = w.last_admin_activity || w.updated_at;
+                const daysSince = isWaitingForClient ? null : getDaysSinceUpdate(lastAdminDate);
                 const daysSinceColor = daysSince > 7 ? 'text-red-400' : (daysSince > 3 ? 'text-amber-400' : 'text-zinc-500');
 
                 // Waiting for client badge with days count
