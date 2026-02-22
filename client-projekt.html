@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026021704';
+        const APP_VERSION = '2026022202';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1398,7 +1398,7 @@
 
                 <nav class="dash-sidebar-nav">
                     <div class="dash-nav-section">Etap 1 — Marka</div>
-                    <div class="dash-nav-item" onclick="switchToDashTab('produkty')">
+                    <div id="dash-sidebar-produkty" class="dash-nav-item" onclick="switchToDashTab('produkty')">
                         <i class="ph ph-package"></i>
                         <span>Produkty</span>
                         <i id="dash-nav-check-produkty" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -1476,7 +1476,7 @@
                     </div>
                     <nav class="p-3">
                         <div class="dash-nav-section">Etap 1 — Marka</div>
-                        <div class="dash-nav-item" onclick="switchToDashTab('produkty');toggleDashMobileMenu()">
+                        <div id="dash-mobile-produkty" class="dash-nav-item" onclick="switchToDashTab('produkty');toggleDashMobileMenu()">
                             <i class="ph ph-package"></i>
                             <span>Produkty</span>
                             <i id="dash-nav-check-produkty-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -1625,7 +1625,7 @@
                 <!-- ═══ ROW 2-3: Produkty + Raporty (left) + Branding (right, spans 2 rows) ═══ -->
 
                 <!-- BOX: Produkty (4 cols - square) -->
-                <div id="dash-box-produkty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all aspect-square" style="grid-column: span 4;" onclick="switchToDashTab('produkty')">
+                <div id="dash-box-produkty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all aspect-square" style="grid-column: span 4;">
                     <div id="dash-produkty-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
@@ -4557,6 +4557,11 @@
 
         // Tab switching
         function switchTab(tabName) {
+            // Block access to produkty tab if not shared
+            if (tabName === 'produkty' && !workflow.products_shared_at) {
+                return;
+            }
+
             // Update URL hash for direct linking
             history.replaceState(null, '', `#${tabName}`);
 
@@ -6203,6 +6208,11 @@
             produktyBtns.forEach(btn => {
                 btn.style.display = workflow.products_shared_at ? '' : 'none';
             });
+            // Also hide dashboard sidebar/mobile produkty links
+            const dashSidebarProdukty = document.getElementById('dash-sidebar-produkty');
+            const dashMobileProdukty = document.getElementById('dash-mobile-produkty');
+            if (dashSidebarProdukty) dashSidebarProdukty.style.display = workflow.products_shared_at ? '' : 'none';
+            if (dashMobileProdukty) dashMobileProdukty.style.display = workflow.products_shared_at ? '' : 'none';
 
             // Hide Dokumenty tab for Budowa sklepu starter
             const STARTER_OFFER_ID = '6ee10c3a-f8c7-409e-8570-8eff29e2b759';

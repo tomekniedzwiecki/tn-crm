@@ -252,11 +252,12 @@ async function processExecution(supabase: any, execution: AutomationExecution): 
   // Check if there's a next step
   const nextStepIndex = currentStepIndex + 1
   if (nextStepIndex < steps.length) {
-    // Continue to next step
+    // Continue to next step - set status to 'pending' so executor picks it up again
     await supabase
       .from('automation_executions')
       .update({
         current_step_id: steps[nextStepIndex].id,
+        status: 'pending',
         logs: appendLog(execution.logs, stepResult.log)
       })
       .eq('id', execution.id)
