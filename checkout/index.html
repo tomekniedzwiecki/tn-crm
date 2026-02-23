@@ -882,14 +882,41 @@
                 return;
             }
 
-            // Apply discount
+            // Check if discount code has linked client_offer with custom_price
+            let basePrice = currentOffer.price;
+            try {
+                const { data: discountCodeData } = await supabaseClient
+                    .from('discount_codes')
+                    .select('client_offer_id, client_offers(custom_price)')
+                    .eq('id', result.id)
+                    .single();
+
+                if (discountCodeData?.client_offer_id && discountCodeData?.client_offers?.custom_price) {
+                    basePrice = parseFloat(discountCodeData.client_offers.custom_price);
+                    currentOffer.price = basePrice; // Update offer price to custom price
+                    console.log('[checkout] Using custom price from linked client_offer:', basePrice);
+
+                    // Update display with new base price
+                    document.getElementById('summary-price').textContent = formatPrice(basePrice);
+                }
+            } catch (e) {
+                console.log('[checkout] No linked client_offer or error fetching:', e);
+            }
+
+            // Apply discount - calculate based on base price (custom or original)
+            const discountPercent = parseFloat(result.discount_percent) || 0;
+            const discountAmount = Math.round(basePrice * discountPercent / 100);
+            const targetPrice = basePrice - discountAmount;
+
             appliedDiscount = {
                 id: result.id,
                 code: result.code,
-                target_price: parseFloat(result.target_price),
-                discount_amount: parseFloat(result.discount_amount),
-                discount_percent: parseFloat(result.discount_percent)
+                target_price: targetPrice,
+                discount_amount: discountAmount,
+                discount_percent: discountPercent
             };
+
+            console.log('[checkout] Discount applied:', { basePrice, discountPercent, discountAmount, targetPrice });
 
             errorEl.classList.add('hidden');
             input.classList.remove('input-error');

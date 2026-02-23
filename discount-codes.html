@@ -458,6 +458,16 @@
                     <p class="text-xs text-neutral-500 mt-1">Zostaw puste dla kodu działającego na wszystkie oferty</p>
                 </div>
 
+                <!-- Client Offer (for custom pricing) -->
+                <div id="client-offer-section" class="hidden">
+                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">
+                        Powiązana oferta klienta
+                        <span class="text-emerald-400 ml-1">(opcjonalne)</span>
+                    </label>
+                    <input type="text" id="code-client-offer" class="v-input w-full font-mono text-xs" placeholder="UUID oferty klienta">
+                    <p class="text-xs text-neutral-500 mt-1">Jeśli podasz, rabat będzie liczony od ceny customowej tej oferty</p>
+                </div>
+
                 <!-- Prices -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -602,9 +612,11 @@
                 Sidebar.render();
             }
 
-            // Check URL for pre-selected offer
+            // Check URL for pre-selected offer and client_offer
             const params = new URLSearchParams(window.location.search);
             const preSelectedOffer = params.get('offer');
+            const preSelectedClientOffer = params.get('client_offer');
+            const preSelectedCustomPrice = params.get('custom_price');
 
             // Load data
             await Promise.all([
@@ -621,6 +633,18 @@
                     document.getElementById('code-original-price').value = offer.price;
                     updateDiscountPreview();
                 }
+
+                // If client_offer is also provided, set it and use custom price
+                if (preSelectedClientOffer) {
+                    document.getElementById('code-client-offer').value = preSelectedClientOffer;
+                    document.getElementById('client-offer-section').classList.remove('hidden');
+
+                    if (preSelectedCustomPrice) {
+                        document.getElementById('code-original-price').value = preSelectedCustomPrice;
+                        updateDiscountPreview();
+                    }
+                }
+
                 openModal();
             }
         });
@@ -862,6 +886,7 @@
             const modal = document.getElementById('code-modal');
             const title = document.getElementById('modal-title');
             const saveBtn = document.getElementById('save-btn-text');
+            const clientOfferSection = document.getElementById('client-offer-section');
 
             if (code) {
                 title.textContent = 'Edytuj kod rabatowy';
@@ -870,6 +895,7 @@
                 document.getElementById('code-id').value = code.id;
                 document.getElementById('code-value').value = code.code;
                 document.getElementById('code-offer').value = code.offer_id || '';
+                document.getElementById('code-client-offer').value = code.client_offer_id || '';
                 document.getElementById('code-original-price').value = code.original_price || '';
                 document.getElementById('code-target-price').value = code.target_price || '';
                 document.getElementById('code-limit').value = code.uses_limit || '';
@@ -877,12 +903,21 @@
                 document.getElementById('code-valid-until').value = code.valid_until ? formatDateTimeLocal(code.valid_until) : '';
                 document.getElementById('code-description').value = code.description || '';
                 isActive = code.is_active;
+
+                // Show client offer section if code has linked client_offer
+                if (code.client_offer_id) {
+                    clientOfferSection.classList.remove('hidden');
+                } else {
+                    clientOfferSection.classList.add('hidden');
+                }
             } else {
                 title.textContent = 'Nowy kod rabatowy';
                 saveBtn.textContent = 'Zapisz';
 
                 document.getElementById('code-form').reset();
                 document.getElementById('code-id').value = '';
+                document.getElementById('code-client-offer').value = '';
+                clientOfferSection.classList.add('hidden');
                 isActive = true;
             }
 
@@ -956,6 +991,7 @@
             const id = document.getElementById('code-id').value;
             const code = document.getElementById('code-value').value.toUpperCase().trim();
             const offerId = document.getElementById('code-offer').value || null;
+            const clientOfferId = document.getElementById('code-client-offer').value.trim() || null;
             const originalPrice = document.getElementById('code-original-price').value || null;
             const targetPrice = document.getElementById('code-target-price').value;
             const limit = document.getElementById('code-limit').value || null;
@@ -971,6 +1007,7 @@
             const data = {
                 code,
                 offer_id: offerId,
+                client_offer_id: clientOfferId,
                 original_price: originalPrice ? parseFloat(originalPrice) : null,
                 target_price: parseFloat(targetPrice),
                 uses_limit: limit ? parseInt(limit) : null,

@@ -857,9 +857,12 @@
                                         <i class="ph ph-file-pdf"></i>
                                         Proforma
                                     </button>
+                                    <button onclick="createDiscountCodeForOffer()" class="flex-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-purple-500/30" title="Stwórz kod rabatowy powiązany z tą ofertą">
+                                        <i class="ph ph-ticket"></i>
+                                        Kod rabatowy
+                                    </button>
                                     <button onclick="deleteClientOffer()" class="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20 flex items-center justify-center gap-2">
                                         <i class="ph ph-trash"></i>
-                                        Usuń
                                     </button>
                                 </div>
                             </div>
@@ -3295,6 +3298,21 @@
             const match = address.match(/^(.+?),?\s*(\d{2}-\d{3})\s+(.+)$/);
             if (match) return { street: match[1].trim(), postCode: match[2], city: match[3].trim() };
             return { street: address, postCode: '', city: '' };
+        }
+
+        function createDiscountCodeForOffer() {
+            if (!clientOffer || !lead.offer_id) {
+                alert('Najpierw wygeneruj ofertę dla klienta');
+                return;
+            }
+
+            // Get custom price if set, otherwise use offer price
+            const selectedOffer = offers.find(o => o.id === lead.offer_id);
+            const customPrice = clientOffer.custom_price || selectedOffer?.price || 0;
+
+            // Open discount codes page with pre-filled data
+            const url = `/discount-codes?offer=${lead.offer_id}&client_offer=${clientOffer.id}&custom_price=${customPrice}`;
+            window.open(url, '_blank');
         }
 
         async function deleteClientOffer() {

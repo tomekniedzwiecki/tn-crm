@@ -1138,8 +1138,11 @@
             // Track InitiateCheckout before redirect
             trackInitiateCheckout();
 
-            // Redirect to checkout with offer ID
-            const checkoutUrl = `/checkout?offer=${offer.id}`;
+            // Redirect to checkout with offer ID and client_offer ID (for custom pricing)
+            let checkoutUrl = `/checkout?offer=${offer.id}`;
+            if (clientOffer?.id) {
+                checkoutUrl += `&client_offer=${clientOffer.id}`;
+            }
             window.location.href = checkoutUrl;
         }
 
