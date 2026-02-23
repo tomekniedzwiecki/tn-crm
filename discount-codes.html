@@ -464,8 +464,23 @@
                         Powiązana oferta klienta
                         <span class="text-emerald-400 ml-1">(opcjonalne)</span>
                     </label>
-                    <input type="text" id="code-client-offer" class="v-input w-full font-mono text-xs" placeholder="UUID oferty klienta">
-                    <p class="text-xs text-neutral-500 mt-1">Jeśli podasz, rabat będzie liczony od ceny customowej tej oferty</p>
+                    <input type="hidden" id="code-client-offer" value="">
+                    <div class="relative">
+                        <input type="text" id="client-offer-search" class="v-input w-full" placeholder="Szukaj po emailu klienta..." autocomplete="off">
+                        <div id="client-offer-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-[#0a0a0a] border border-[#262626] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                            <!-- Items will be populated here -->
+                        </div>
+                    </div>
+                    <div id="selected-client-offer" class="hidden mt-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 flex items-center justify-between">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="ph ph-user text-emerald-400"></i>
+                            <span id="selected-client-offer-text" class="text-sm text-emerald-300 truncate"></span>
+                        </div>
+                        <button type="button" onclick="clearClientOffer()" class="text-zinc-500 hover:text-red-400 p-1">
+                            <i class="ph ph-x"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-neutral-500 mt-1">Rabat będzie liczony od ceny customowej wybranej oferty</p>
                 </div>
 
                 <!-- Prices -->
@@ -637,7 +652,19 @@
                 // If client_offer is also provided, set it and use custom price
                 if (preSelectedClientOffer) {
                     document.getElementById('code-client-offer').value = preSelectedClientOffer;
-                    document.getElementById('client-offer-section').classList.remove('hidden');
+
+                    // Fetch client_offer details to show in UI
+                    const { data: clientOfferData } = await supabaseClient
+                        .from('client_offers')
+                        .select('id, custom_price, leads(email, name)')
+                        .eq('id', preSelectedClientOffer)
+                        .single();
+
+                    if (clientOfferData) {
+                        const email = clientOfferData.leads?.email || 'Nieznany';
+                        const price = clientOfferData.custom_price ? `${clientOfferData.custom_price} PLN` : '';
+                        selectClientOffer(clientOfferData.id, `${email} - ${price}`, clientOfferData.custom_price);
+                    }
 
                     if (preSelectedCustomPrice) {
                         document.getElementById('code-original-price').value = preSelectedCustomPrice;
@@ -671,6 +698,110 @@
                 select.appendChild(option);
             });
         }
+
+        // Client offer search functionality
+        let clientOffers = [];
+        let clientOfferSearchTimeout = null;
+
+        async function searchClientOffers(query) {
+            const dropdown = document.getElementById('client-offer-dropdown');
+
+            if (!query || query.length < 2) {
+                // Show recent client_offers if no query
+                const { data } = await supabaseClient
+                    .from('client_offers')
+                    .select('id, custom_price, created_at, leads(email, name)')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                clientOffers = data || [];
+            } else {
+                // Search by email
+                const { data } = await supabaseClient
+                    .from('client_offers')
+                    .select('id, custom_price, created_at, leads!inner(email, name)')
+                    .ilike('leads.email', `%${query}%`)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                clientOffers = data || [];
+            }
+
+            renderClientOfferDropdown();
+        }
+
+        function renderClientOfferDropdown() {
+            const dropdown = document.getElementById('client-offer-dropdown');
+
+            if (clientOffers.length === 0) {
+                dropdown.innerHTML = '<div class="px-3 py-2 text-sm text-neutral-500">Brak wyników</div>';
+            } else {
+                dropdown.innerHTML = clientOffers.map(co => {
+                    const email = co.leads?.email || 'Nieznany';
+                    const name = co.leads?.name || '';
+                    const price = co.custom_price ? `${parseFloat(co.custom_price).toFixed(0)} PLN` : 'brak ceny';
+                    const date = new Date(co.created_at).toLocaleDateString('pl-PL');
+
+                    return `
+                        <div class="px-3 py-2 hover:bg-[#171717] cursor-pointer border-b border-[#1a1a1a] last:border-0"
+                             onclick="selectClientOffer('${co.id}', '${email} - ${price}', ${co.custom_price || 'null'})">
+                            <div class="text-sm text-white">${email}</div>
+                            <div class="text-xs text-neutral-500 flex items-center gap-2">
+                                ${name ? `<span>${name}</span><span>•</span>` : ''}
+                                <span class="text-emerald-400">${price}</span>
+                                <span>•</span>
+                                <span>${date}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectClientOffer(id, label, customPrice) {
+            document.getElementById('code-client-offer').value = id;
+            document.getElementById('client-offer-search').value = '';
+            document.getElementById('client-offer-dropdown').classList.add('hidden');
+
+            // Show selected
+            document.getElementById('selected-client-offer').classList.remove('hidden');
+            document.getElementById('selected-client-offer-text').textContent = label;
+
+            // Update original price if custom price exists
+            if (customPrice) {
+                document.getElementById('code-original-price').value = customPrice;
+                updateDiscountPreview();
+            }
+        }
+
+        function clearClientOffer() {
+            document.getElementById('code-client-offer').value = '';
+            document.getElementById('selected-client-offer').classList.add('hidden');
+            document.getElementById('client-offer-search').value = '';
+        }
+
+        // Setup client offer search events
+        document.getElementById('client-offer-search')?.addEventListener('focus', () => {
+            searchClientOffers('');
+        });
+
+        document.getElementById('client-offer-search')?.addEventListener('input', (e) => {
+            clearTimeout(clientOfferSearchTimeout);
+            clientOfferSearchTimeout = setTimeout(() => {
+                searchClientOffers(e.target.value);
+            }, 300);
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('client-offer-dropdown');
+            const search = document.getElementById('client-offer-search');
+            if (dropdown && search && !dropdown.contains(e.target) && e.target !== search) {
+                dropdown.classList.add('hidden');
+            }
+        });
 
         async function loadCodes() {
             const { data, error } = await supabaseClient
@@ -882,11 +1013,13 @@
             }, 2000);
         }
 
-        function openModal(code = null) {
+        async function openModal(code = null) {
             const modal = document.getElementById('code-modal');
             const title = document.getElementById('modal-title');
             const saveBtn = document.getElementById('save-btn-text');
-            const clientOfferSection = document.getElementById('client-offer-section');
+
+            // Reset client offer UI
+            clearClientOffer();
 
             if (code) {
                 title.textContent = 'Edytuj kod rabatowy';
@@ -904,7 +1037,20 @@
                 document.getElementById('code-description').value = code.description || '';
                 isActive = code.is_active;
 
-                // Client offer section is always visible
+                // Load client_offer details if exists
+                if (code.client_offer_id) {
+                    const { data: co } = await supabaseClient
+                        .from('client_offers')
+                        .select('id, custom_price, leads(email)')
+                        .eq('id', code.client_offer_id)
+                        .single();
+
+                    if (co) {
+                        const email = co.leads?.email || 'Nieznany';
+                        const price = co.custom_price ? `${parseFloat(co.custom_price).toFixed(0)} PLN` : '';
+                        selectClientOffer(co.id, `${email} - ${price}`, co.custom_price);
+                    }
+                }
             } else {
                 title.textContent = 'Nowy kod rabatowy';
                 saveBtn.textContent = 'Zapisz';
