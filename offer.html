@@ -484,89 +484,6 @@
         </div>
     </main>
 
-    <!-- Quick Add Discount Code Modal -->
-    <div id="discount-code-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="modal-overlay absolute inset-0 bg-black/70" onclick="closeDiscountCodeModal()"></div>
-        <div class="modal-content w-full max-w-md relative animate-enter">
-            <!-- Header -->
-            <div class="flex items-center justify-between p-5 border-b border-[#262626]">
-                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                    <i class="ph ph-ticket text-emerald-400"></i>
-                    Nowy kod rabatowy
-                </h2>
-                <button onclick="closeDiscountCodeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#262626] text-neutral-400 hover:text-white transition-colors">
-                    <i class="ph ph-x text-lg"></i>
-                </button>
-            </div>
-
-            <!-- Form -->
-            <form id="discount-code-form" class="p-5 space-y-4">
-                <!-- Code -->
-                <div>
-                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Kod</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="dc-code" class="input-field flex-1 uppercase rounded-lg px-3 py-2.5" placeholder="np. RABAT20" required>
-                        <button type="button" onclick="generateDiscountCode()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-3 rounded-lg transition-colors" title="Generuj losowy kod">
-                            <i class="ph ph-shuffle text-lg"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Prices -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Cena oryginalna</label>
-                        <div class="relative">
-                            <input type="number" id="dc-original-price" class="input-field w-full pr-12 rounded-lg px-3 py-2.5" step="0.01" min="0" readonly>
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">PLN</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Cena po rabacie *</label>
-                        <div class="relative">
-                            <input type="number" id="dc-target-price" class="input-field w-full pr-12 rounded-lg px-3 py-2.5" step="0.01" min="0" placeholder="0.00" required>
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">PLN</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Discount preview -->
-                <div id="dc-discount-preview" class="hidden bg-zinc-900 border border-zinc-800 rounded-lg p-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-neutral-400 text-sm">Wysokość rabatu:</span>
-                        <span id="dc-preview-discount" class="text-emerald-400 font-medium">-</span>
-                    </div>
-                </div>
-
-                <!-- Usage limit -->
-                <div>
-                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Limit użyć</label>
-                    <div class="flex items-center gap-3">
-                        <input type="number" id="dc-limit" class="input-field w-32 rounded-lg px-3 py-2.5" min="1" placeholder="∞">
-                        <span class="text-neutral-500 text-xs">Zostaw puste = bez limitu</span>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div>
-                    <label class="block text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Opis (wewnętrzny)</label>
-                    <input type="text" id="dc-description" class="input-field w-full rounded-lg px-3 py-2.5" placeholder="np. Promocja dla subskrybentów">
-                </div>
-            </form>
-
-            <!-- Footer -->
-            <div class="flex items-center justify-between p-5 border-t border-[#262626]">
-                <button type="button" onclick="closeDiscountCodeModal()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
-                    Anuluj
-                </button>
-                <button type="button" onclick="saveDiscountCode()" class="bg-emerald-500 text-white hover:bg-emerald-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                    <i class="ph ph-check"></i>
-                    Zapisz kod
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -1532,110 +1449,17 @@
         function quickAddDiscountCode() {
             if (!offer) return;
 
-            // Reset form
-            document.getElementById('dc-code').value = '';
-            document.getElementById('dc-original-price').value = offer.price || 0;
-            document.getElementById('dc-target-price').value = '';
-            document.getElementById('dc-limit').value = '';
-            document.getElementById('dc-description').value = '';
-            document.getElementById('dc-discount-preview').classList.add('hidden');
-
-            // Generate a random code
-            generateDiscountCode();
-
-            // Show modal
-            document.getElementById('discount-code-modal').classList.remove('hidden');
-            document.getElementById('dc-target-price').focus();
-        }
-
-        function closeDiscountCodeModal() {
-            document.getElementById('discount-code-modal').classList.add('hidden');
-        }
-
-        function generateDiscountCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let code = '';
-            for (let i = 0; i < 8; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            document.getElementById('dc-code').value = code;
-        }
-
-        function updateDiscountPreview() {
-            const original = parseFloat(document.getElementById('dc-original-price').value) || 0;
-            const target = parseFloat(document.getElementById('dc-target-price').value) || 0;
-            const preview = document.getElementById('dc-discount-preview');
-            const previewText = document.getElementById('dc-preview-discount');
-
-            if (original > 0 && target > 0 && original > target) {
-                const discount = original - target;
-                const percent = ((discount / original) * 100).toFixed(0);
-                previewText.textContent = `-${discount.toFixed(0)} PLN (${percent}%)`;
-                preview.classList.remove('hidden');
-            } else {
-                preview.classList.add('hidden');
-            }
-        }
-
-        // Add event listener for discount preview
-        document.getElementById('dc-target-price')?.addEventListener('input', updateDiscountPreview);
-
-        async function saveDiscountCode() {
-            if (!offer) return;
-
-            const code = document.getElementById('dc-code').value.toUpperCase().trim();
-            const originalPrice = document.getElementById('dc-original-price').value;
-            const targetPrice = document.getElementById('dc-target-price').value;
-            const limit = document.getElementById('dc-limit').value;
-            const description = document.getElementById('dc-description').value.trim();
-
-            if (!code || !targetPrice) {
-                alert('Wypełnij wymagane pola: kod i cena po rabacie');
-                return;
-            }
-
-            const data = {
-                code,
-                offer_id: offer.id,
-                original_price: originalPrice ? parseFloat(originalPrice) : null,
-                target_price: parseFloat(targetPrice),
-                uses_limit: limit ? parseInt(limit) : null,
-                description: description || null,
-                is_active: true
-            };
-
-            try {
-                const { error } = await supabaseClient
-                    .from('discount_codes')
-                    .insert(data);
-
-                if (error) throw error;
-
-                closeDiscountCodeModal();
-                await loadOfferDiscountCodes();
-                showToast('Kod rabatowy utworzony');
-
-                // Log audit
-                await logAuditActivity(
-                    'create',
-                    'discount_code',
-                    null,
-                    code,
-                    null,
-                    data,
-                    { offer_id: offer.id, offer_name: offer.name }
-                );
-            } catch (err) {
-                console.error('Error saving discount code:', err);
-                alert('Błąd zapisywania kodu: ' + err.message);
-            }
+            // Open discount-codes page with pre-selected offer
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const base = isLocal ? getBasePath() : '';
+            const url = isLocal
+                ? `${base}/discount-codes.html?offer=${offer.id}`
+                : `/discount-codes?offer=${offer.id}`;
+            window.open(url, '_blank');
         }
 
         // Make discount code functions globally available
         window.quickAddDiscountCode = quickAddDiscountCode;
-        window.closeDiscountCodeModal = closeDiscountCodeModal;
-        window.generateDiscountCode = generateDiscountCode;
-        window.saveDiscountCode = saveDiscountCode;
         window.copyDiscountCode = copyDiscountCode;
         window.copyCheckoutWithCode = copyCheckoutWithCode;
 
