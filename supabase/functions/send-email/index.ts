@@ -22,6 +22,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 // Valid email types
 const VALID_EMAIL_TYPES = [
   'zapisy_confirmation',
+  'lead_intro_video',
   'proforma_generated',
   'invoice_sent',
   'contract_sent',
@@ -46,6 +47,7 @@ const VALID_EMAIL_TYPES = [
 // Fallback subjects only (body MUST come from database)
 const FALLBACK_SUBJECTS: Record<string, string> = {
   zapisy_confirmation: 'Dziękuję za zgłoszenie',
+  lead_intro_video: 'Zobacz jak buduję biznesy online',
   proforma_generated: 'Faktura proforma - {{offerName}}',
   invoice_sent: 'Faktura VAT - {{invoiceNumber}}',
   contract_sent: 'Umowa podpisana - {{offerName}}',
