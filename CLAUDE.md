@@ -144,6 +144,7 @@ Te zmienne MUSZA byc ustawione w Supabase Dashboard > Edge Functions > Secrets. 
 
 ### Triggery
 Dostepne trigger_type w automation_flows:
+- `lead_created` (nowy lead z formularza zapisy)
 - `offer_created`, `offer_viewed`, `offer_expired`
 - `payment_received`, `workflow_created`
 - `stage_completed`, `products_shared`, `report_published`

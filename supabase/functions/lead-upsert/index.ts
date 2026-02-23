@@ -138,10 +138,34 @@ Deno.serve(async (req) => {
       leadId = newLead.id
       isNewLead = true
       console.log(`Created new lead: ${email} (id: ${leadId})`)
-    }
 
-    // Slack notification is sent by the form at completion (zapisy/index.html)
-    // Don't send here to avoid duplicate notifications
+      // Trigger lead_created automation
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+
+        await fetch(`${supabaseUrl}/functions/v1/automation-trigger`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`
+          },
+          body: JSON.stringify({
+            trigger_type: 'lead_created',
+            entity_type: 'lead',
+            entity_id: leadId,
+            context: {
+              email: email,
+              clientName: data.name || 'Cześć'
+            }
+          })
+        })
+        console.log(`Triggered lead_created automation for ${leadId}`)
+      } catch (triggerErr) {
+        console.error('Failed to trigger automation:', triggerErr)
+        // Don't fail the request - lead is created, automation is not critical
+      }
+    }
 
     return new Response(
       JSON.stringify({
