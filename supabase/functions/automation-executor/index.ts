@@ -14,7 +14,7 @@ interface AutomationStep {
     action_type?: string
     email_type?: string
     delay_value?: number
-    delay_unit?: 'hours' | 'days' | 'weeks'
+    delay_unit?: 'minutes' | 'hours' | 'days' | 'weeks'
     field?: string
     operator?: string
     value?: any
@@ -578,6 +578,9 @@ function processDelayStep(
   let scheduledFor: Date
 
   switch (delay_unit) {
+    case 'minutes':
+      scheduledFor = new Date(now.getTime() + delay_value * 60 * 1000)
+      break
     case 'hours':
       scheduledFor = new Date(now.getTime() + delay_value * 60 * 60 * 1000)
       break
