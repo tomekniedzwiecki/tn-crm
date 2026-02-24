@@ -856,7 +856,9 @@
 
         function updateRecentRevenues(data) {
             const container = document.getElementById('recent-revenues');
-            const items = [...data.revenue.orders.slice(0, 5)];
+            // Sort by paid_at descending (most recent first)
+            const sortedOrders = [...data.revenue.orders].sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at));
+            const items = sortedOrders.slice(0, 5);
 
             if (items.length === 0) {
                 container.innerHTML = '<div class="text-center text-zinc-600 py-8">Brak przychodów w tym okresie</div>';
