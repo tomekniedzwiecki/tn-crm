@@ -1120,20 +1120,26 @@
             const labels = [];
             const values = [];
             const colors = [];
-            const cumulative = [];
-            let runningTotal = 0;
+            const movingAvg = [];
+            const windowSize = 5; // 5-dniowa średnia krocząca
 
             for (let d = 1; d <= daysInMonth; d++) {
                 labels.push(d);
                 values.push(dailyTotals[d]);
                 colors.push(d <= today ? 'rgba(16, 185, 129, 0.8)' : 'rgba(63, 63, 70, 0.4)');
 
-                // Cumulative only for past days
+                // Średnia krocząca - tylko dla minionych dni
                 if (d <= today) {
-                    runningTotal += dailyTotals[d];
-                    cumulative.push(runningTotal);
+                    // Oblicz średnią z ostatnich N dni (lub mniej jeśli początek miesiąca)
+                    let sum = 0;
+                    let count = 0;
+                    for (let i = Math.max(1, d - windowSize + 1); i <= d; i++) {
+                        sum += dailyTotals[i];
+                        count++;
+                    }
+                    movingAvg.push(sum / count);
                 } else {
-                    cumulative.push(null);
+                    movingAvg.push(null);
                 }
             }
 
@@ -1156,14 +1162,14 @@
                         },
                         {
                             type: 'line',
-                            data: cumulative,
-                            borderColor: '#14b8a6',
+                            data: movingAvg,
+                            borderColor: '#f59e0b',
                             backgroundColor: 'transparent',
                             borderWidth: 2,
                             pointRadius: 0,
                             pointHoverRadius: 4,
-                            tension: 0.3,
-                            yAxisID: 'y1'
+                            tension: 0.4,
+                            yAxisID: 'y'
                         }
                     ]
                 },
@@ -1177,7 +1183,7 @@
                                 title: (items) => `${items[0].label} ${new Date().toLocaleDateString('pl-PL', { month: 'long' })}`,
                                 label: (item) => {
                                     if (item.datasetIndex === 0) return `Dzień: ${formatMoney(item.raw)}`;
-                                    return `Narastająco: ${formatMoney(item.raw)}`;
+                                    return `Średnia 5-dni: ${formatMoney(item.raw)}`;
                                 }
                             }
                         }
@@ -1192,18 +1198,9 @@
                             }
                         },
                         y: {
-                            position: 'left',
                             grid: { color: 'rgba(255,255,255,0.05)' },
                             ticks: {
                                 color: '#71717a',
-                                callback: v => v > 0 ? formatMoney(v) : ''
-                            }
-                        },
-                        y1: {
-                            position: 'right',
-                            grid: { display: false },
-                            ticks: {
-                                color: '#14b8a6',
                                 callback: v => v > 0 ? formatMoney(v) : ''
                             }
                         }
