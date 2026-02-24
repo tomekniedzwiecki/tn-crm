@@ -934,6 +934,22 @@
                 return;
             }
 
+            // Fetch manual bonuses for this month
+            const { data: allBonuses } = await supabaseClient
+                .from('employee_bonuses')
+                .select('*')
+                .eq('month', monthStart);
+
+            const bonusesByMember = {};
+            if (allBonuses) {
+                for (const b of allBonuses) {
+                    if (!bonusesByMember[b.team_member_id]) {
+                        bonusesByMember[b.team_member_id] = [];
+                    }
+                    bonusesByMember[b.team_member_id].push(b);
+                }
+            }
+
             let processed = 0;
 
             for (const contract of contracts) {
@@ -953,8 +969,12 @@
                     contract.monthly_bonus_amount
                 );
 
+                // Calculate manual bonuses
+                const manualBonuses = bonusesByMember[contract.team_member_id] || [];
+                const manualBonusTotal = manualBonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+
                 const baseSalary = parseFloat(contract.base_salary) || 0;
-                const totalCost = baseSalary + commission + monthlyBonus;
+                const totalCost = baseSalary + commission + monthlyBonus + manualBonusTotal;
 
                 // Upsert employee_monthly_costs
                 const { data: empCost, error: empError } = await supabaseClient
@@ -982,7 +1002,9 @@
 
                 // Create/update biznes_costs entry
                 const costName = `Wynagrodzenie: ${contract.team_members.name}`;
-                const costDescription = `Sprzedaz netto: ${formatMoney(totalSales)} | Prowizja: ${formatMoney(commission)}${monthlyBonus > 0 ? ` | Bonus: ${formatMoney(monthlyBonus)}` : ''}`;
+                let costDescription = `Sprzedaz netto: ${formatMoney(totalSales)} | Prowizja: ${formatMoney(commission)}`;
+                if (monthlyBonus > 0) costDescription += ` | Bonus: ${formatMoney(monthlyBonus)}`;
+                if (manualBonusTotal > 0) costDescription += ` | Bonusy dodatkowe: ${formatMoney(manualBonusTotal)}`;
 
                 // Check if cost already exists
                 const { data: existingCost } = await supabaseClient

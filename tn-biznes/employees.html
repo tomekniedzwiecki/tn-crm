@@ -271,6 +271,48 @@
         </div>
     </div>
 
+    <!-- Bonus Modal -->
+    <div id="bonus-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-xl w-full max-w-md">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-white">Dodaj bonus</h3>
+                    <button onclick="closeBonusModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="bonus-form" onsubmit="saveBonus(event)">
+                    <input type="hidden" id="bonus-team-member-id">
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Nazwa bonusu</label>
+                        <input type="text" id="bonus-name" required class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="np. Premia swiateczna">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota (zl)</label>
+                        <input type="number" id="bonus-amount" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="1000">
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Notatka (opcjonalnie)</label>
+                        <textarea id="bonus-notes" rows="2" class="input-field w-full rounded-lg px-3 py-2.5 text-white resize-none" placeholder="Dodatkowe informacje..."></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeBonusModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-teal-500 text-black font-medium hover:bg-teal-400 transition-colors">
+                            Dodaj
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================
         // SUPABASE CONFIG
@@ -286,6 +328,7 @@
         let teamMembers = [];
         let employeeData = []; // Combined contracts + calculated costs
         let editingTiers = [];
+        let bonuses = []; // Manual bonuses for current month
 
         // Default tiers (used when creating new contract)
         const DEFAULT_TIERS = [
@@ -394,6 +437,27 @@
             }
         }
 
+        async function loadBonuses(monthStr) {
+            const monthDate = monthStr + '-01'; // Convert to first day of month
+            const { data, error } = await supabaseClient
+                .from('employee_bonuses')
+                .select('*')
+                .eq('month', monthDate)
+                .order('created_at');
+
+            if (!error) {
+                bonuses = data || [];
+            }
+        }
+
+        function getBonusesForMember(teamMemberId) {
+            return bonuses.filter(b => b.team_member_id === teamMemberId);
+        }
+
+        function getTotalBonuses(teamMemberId) {
+            return getBonusesForMember(teamMemberId).reduce((sum, b) => sum + parseFloat(b.amount), 0);
+        }
+
         async function loadTeamMembers() {
             const { data, error } = await supabaseClient
                 .from('team_members')
@@ -472,6 +536,9 @@
             const month = document.getElementById('filter-month').value;
             const { start, end } = getMonthRange(month);
 
+            // Load bonuses for this month
+            await loadBonuses(month);
+
             employeeData = [];
 
             for (const contract of contracts) {
@@ -492,7 +559,11 @@
                 // TODO: Quarterly bonus calculation (would need to check Q boundary)
                 const quarterlyBonus = 0;
 
-                const totalCost = parseFloat(contract.base_salary) + commission + monthlyBonus + quarterlyBonus;
+                // Get manual bonuses for this employee
+                const manualBonuses = getBonusesForMember(contract.team_member_id);
+                const manualBonusTotal = getTotalBonuses(contract.team_member_id);
+
+                const totalCost = parseFloat(contract.base_salary) + commission + monthlyBonus + quarterlyBonus + manualBonusTotal;
 
                 employeeData.push({
                     contract,
@@ -503,6 +574,8 @@
                     commission,
                     monthlyBonus,
                     quarterlyBonus,
+                    manualBonuses,
+                    manualBonusTotal,
                     totalCost
                 });
             }
@@ -553,6 +626,9 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
+                                <button onclick="openBonusModal('${emp.contract.team_member_id}')" class="p-2 text-zinc-500 hover:text-teal-400 transition-colors" title="Dodaj bonus">
+                                    <i class="ph ph-gift"></i>
+                                </button>
                                 <button onclick="showDetails('${emp.contract.id}')" class="p-2 text-zinc-500 hover:text-white transition-colors" title="Szczegoly">
                                     <i class="ph ph-list-magnifying-glass"></i>
                                 </button>
@@ -602,11 +678,27 @@
                         </div>
 
                         ${emp.monthlyBonus > 0 ? `
-                            <div class="px-5 pb-5">
+                            <div class="px-5 pb-3">
                                 <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 flex items-center gap-2">
                                     <i class="ph ph-trophy text-emerald-400"></i>
                                     <span class="text-emerald-400 text-sm">Bonus miesieczny: +${formatMoney(emp.monthlyBonus)}</span>
                                 </div>
+                            </div>
+                        ` : ''}
+
+                        ${emp.manualBonuses && emp.manualBonuses.length > 0 ? `
+                            <div class="px-5 pb-5 space-y-2">
+                                ${emp.manualBonuses.map(b => `
+                                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 flex items-center justify-between group">
+                                        <div class="flex items-center gap-2">
+                                            <i class="ph ph-gift text-amber-400"></i>
+                                            <span class="text-amber-400 text-sm">${b.name}: +${formatMoney(b.amount)}</span>
+                                        </div>
+                                        <button onclick="deleteBonus('${b.id}')" class="p-1 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all" title="Usun bonus">
+                                            <i class="ph ph-trash text-sm"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
                             </div>
                         ` : ''}
                     </div>
@@ -770,6 +862,12 @@
                                     <span class="text-emerald-400 font-mono">+${formatMoney(emp.monthlyBonus)}</span>
                                 </div>
                             ` : ''}
+                            ${emp.manualBonuses && emp.manualBonuses.length > 0 ? emp.manualBonuses.map(b => `
+                                <div class="flex justify-between">
+                                    <span class="text-zinc-400">${b.name}</span>
+                                    <span class="text-amber-400 font-mono">+${formatMoney(b.amount)}</span>
+                                </div>
+                            `).join('') : ''}
                             <div class="border-t border-white/10 pt-2 flex justify-between">
                                 <span class="text-white font-medium">Razem</span>
                                 <span class="text-amber-400 font-mono font-medium">${formatMoney(emp.totalCost)}</span>
@@ -819,6 +917,68 @@
             const modal = document.getElementById('details-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+
+        // ============================================
+        // BONUS MODAL
+        // ============================================
+        function openBonusModal(teamMemberId) {
+            document.getElementById('bonus-team-member-id').value = teamMemberId;
+            document.getElementById('bonus-name').value = '';
+            document.getElementById('bonus-amount').value = '';
+            document.getElementById('bonus-notes').value = '';
+
+            const modal = document.getElementById('bonus-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('bonus-name').focus();
+        }
+
+        function closeBonusModal() {
+            const modal = document.getElementById('bonus-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function saveBonus(e) {
+            e.preventDefault();
+
+            const teamMemberId = document.getElementById('bonus-team-member-id').value;
+            const month = document.getElementById('filter-month').value + '-01'; // First day of month
+
+            const bonusData = {
+                team_member_id: teamMemberId,
+                month: month,
+                name: document.getElementById('bonus-name').value,
+                amount: parseFloat(document.getElementById('bonus-amount').value),
+                notes: document.getElementById('bonus-notes').value || null
+            };
+
+            const { error } = await supabaseClient
+                .from('employee_bonuses')
+                .insert(bonusData);
+
+            if (!error) {
+                closeBonusModal();
+                await loadEmployeeData();
+            } else {
+                alert('Blad: ' + error.message);
+            }
+        }
+
+        async function deleteBonus(bonusId) {
+            if (!confirm('Na pewno usunac ten bonus?')) return;
+
+            const { error } = await supabaseClient
+                .from('employee_bonuses')
+                .delete()
+                .eq('id', bonusId);
+
+            if (!error) {
+                await loadEmployeeData();
+            } else {
+                alert('Blad: ' + error.message);
+            }
         }
 
         // ============================================
