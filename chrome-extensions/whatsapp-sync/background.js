@@ -1,7 +1,15 @@
 // WhatsApp CRM Sync - Background Service Worker
 
 const SCHEDULED_SYNC_ALARM = 'whatsapp-scheduled-sync';
+const HEARTBEAT_ALARM = 'whatsapp-heartbeat';
+const CHECK_CRM_SETTINGS_ALARM = 'whatsapp-check-crm-settings';
 const SYNC_INTERVAL_HOURS = 5;
+const HEARTBEAT_INTERVAL_MINUTES = 2;
+const CHECK_CRM_INTERVAL_MINUTES = 5;
+
+// Cache dla ustawień
+let cachedSettings = null;
+let cachedCrmScheduledSync = false;
 
 // Inicjalizacja alarmu dla auto-sync
 chrome.runtime.onInstalled.addListener(() => {
@@ -16,14 +24,138 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.sync.set({ scheduledSync: false });
     }
   });
+
+  // Ustaw alarm heartbeat
+  chrome.alarms.create(HEARTBEAT_ALARM, {
+    periodInMinutes: HEARTBEAT_INTERVAL_MINUTES
+  });
+
+  // Ustaw alarm sprawdzania ustawień CRM
+  chrome.alarms.create(CHECK_CRM_SETTINGS_ALARM, {
+    periodInMinutes: CHECK_CRM_INTERVAL_MINUTES
+  });
 });
 
-// Uruchom scheduled sync alarm jeśli włączony
+// Uruchom alarmy przy starcie
 chrome.storage.sync.get(['scheduledSync'], (result) => {
   if (result.scheduledSync) {
     setupScheduledSync();
   }
 });
+
+// Zawsze uruchom heartbeat i check CRM
+chrome.alarms.create(HEARTBEAT_ALARM, {
+  periodInMinutes: HEARTBEAT_INTERVAL_MINUTES
+});
+chrome.alarms.create(CHECK_CRM_SETTINGS_ALARM, {
+  delayInMinutes: 0.1, // Sprawdź od razu po starcie
+  periodInMinutes: CHECK_CRM_INTERVAL_MINUTES
+});
+
+// Pobierz ustawienia
+async function getSettings() {
+  if (cachedSettings) return cachedSettings;
+
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser'], (result) => {
+      cachedSettings = result;
+      resolve(result);
+    });
+  });
+}
+
+// Wyczyść cache ustawień
+function clearSettingsCache() {
+  cachedSettings = null;
+}
+
+// Wyślij heartbeat do CRM
+async function sendHeartbeat() {
+  const settings = await getSettings();
+
+  if (!settings.supabaseUrl || !settings.supabaseKey || !settings.syncUser) {
+    console.log('WhatsApp Sync: Heartbeat skipped - missing settings');
+    return;
+  }
+
+  const userName = settings.syncUser.charAt(0).toUpperCase() + settings.syncUser.slice(1).toLowerCase();
+
+  try {
+    const response = await fetch(
+      `${settings.supabaseUrl}/rest/v1/whatsapp_widget_status?user_name=eq.${userName}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': settings.supabaseKey,
+          'Authorization': `Bearer ${settings.supabaseKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          is_active: true,
+          last_seen_at: new Date().toISOString()
+        })
+      }
+    );
+
+    if (response.ok) {
+      console.log('WhatsApp Sync: Heartbeat sent for', userName);
+    } else {
+      console.warn('WhatsApp Sync: Heartbeat failed', response.status);
+    }
+  } catch (err) {
+    console.error('WhatsApp Sync: Heartbeat error', err);
+  }
+}
+
+// Sprawdź ustawienia scheduled sync w CRM
+async function checkCrmSettings() {
+  const settings = await getSettings();
+
+  if (!settings.supabaseUrl || !settings.supabaseKey || !settings.syncUser) {
+    console.log('WhatsApp Sync: CRM check skipped - missing settings');
+    return;
+  }
+
+  const userName = settings.syncUser.charAt(0).toUpperCase() + settings.syncUser.slice(1).toLowerCase();
+
+  try {
+    const response = await fetch(
+      `${settings.supabaseUrl}/rest/v1/whatsapp_widget_status?user_name=eq.${userName}&select=scheduled_sync_enabled`,
+      {
+        headers: {
+          'apikey': settings.supabaseKey,
+          'Authorization': `Bearer ${settings.supabaseKey}`
+        }
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const crmEnabled = data[0]?.scheduled_sync_enabled || false;
+
+      console.log('WhatsApp Sync: CRM scheduled_sync_enabled =', crmEnabled, 'for', userName);
+
+      // Jeśli ustawienie w CRM się zmieniło, zaktualizuj lokalne
+      if (crmEnabled !== cachedCrmScheduledSync) {
+        cachedCrmScheduledSync = crmEnabled;
+
+        if (crmEnabled) {
+          setupScheduledSync();
+          console.log('WhatsApp Sync: Scheduled sync ENABLED from CRM');
+        } else {
+          removeScheduledSync();
+          console.log('WhatsApp Sync: Scheduled sync DISABLED from CRM');
+        }
+
+        // Zaktualizuj też lokalne storage
+        chrome.storage.sync.set({ scheduledSync: crmEnabled });
+      }
+    }
+  } catch (err) {
+    console.error('WhatsApp Sync: CRM check error', err);
+  }
+}
 
 // Ustaw alarm dla scheduled sync
 function setupScheduledSync() {
@@ -44,6 +176,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === SCHEDULED_SYNC_ALARM) {
     console.log('WhatsApp Sync: Running scheduled sync...');
     await runScheduledSync();
+  }
+
+  if (alarm.name === HEARTBEAT_ALARM) {
+    await sendHeartbeat();
+  }
+
+  if (alarm.name === CHECK_CRM_SETTINGS_ALARM) {
+    await checkCrmSettings();
   }
 });
 
@@ -74,9 +214,43 @@ async function runScheduledSync() {
     // Pokaż powiadomienie
     if (response.success) {
       flashBadge(`+${response.totalInserted}`, '#25D366');
+
+      // Zaktualizuj last_sync_at w CRM
+      await updateLastSyncTime();
     }
   } catch (err) {
     console.error('WhatsApp Sync: Scheduled sync failed', err);
+  }
+}
+
+// Zaktualizuj czas ostatniej synchronizacji
+async function updateLastSyncTime() {
+  const settings = await getSettings();
+
+  if (!settings.supabaseUrl || !settings.supabaseKey || !settings.syncUser) {
+    return;
+  }
+
+  const userName = settings.syncUser.charAt(0).toUpperCase() + settings.syncUser.slice(1).toLowerCase();
+
+  try {
+    await fetch(
+      `${settings.supabaseUrl}/rest/v1/whatsapp_widget_status?user_name=eq.${userName}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': settings.supabaseKey,
+          'Authorization': `Bearer ${settings.supabaseKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          last_sync_at: new Date().toISOString()
+        })
+      }
+    );
+  } catch (err) {
+    console.error('WhatsApp Sync: Update last_sync_at error', err);
   }
 }
 
@@ -91,6 +265,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.runtime.sendMessage(message).catch(() => {
       // Popup nie jest otwarty - ignoruj
     });
+
+    // Zaktualizuj last_sync_at
+    updateLastSyncTime();
   }
 
   // Zwróć ID karty
@@ -116,7 +293,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Włącz/wyłącz scheduled sync
+  // Włącz/wyłącz scheduled sync (lokalne - z popup)
   if (message.type === 'SET_SCHEDULED_SYNC') {
     if (message.enabled) {
       setupScheduledSync();
@@ -135,6 +312,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         nextSync: alarm ? alarm.scheduledTime : null
       });
     });
+    return true;
+  }
+
+  // Wyczyść cache ustawień (po zmianie w popup)
+  if (message.type === 'SETTINGS_CHANGED') {
+    clearSettingsCache();
+    sendResponse({ success: true });
     return true;
   }
 

@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const syncUser = document.getElementById('sync-user');
   const autoSync = document.getElementById('auto-sync');
   const syncOnChange = document.getElementById('sync-on-change');
-  const scheduledSync = document.getElementById('scheduled-sync');
+  const scheduledSyncIndicator = document.getElementById('scheduled-sync-indicator');
+  const scheduledSyncText = document.getElementById('scheduled-sync-text');
   const nextSyncInfo = document.getElementById('next-sync-info');
   const nextSyncTime = document.getElementById('next-sync-time');
   const logContainer = document.getElementById('log');
@@ -37,32 +38,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Load saved settings
-  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange', 'scheduledSync'], (result) => {
+  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange'], (result) => {
     if (result.supabaseUrl) supabaseUrl.value = result.supabaseUrl;
     if (result.supabaseKey) supabaseKey.value = result.supabaseKey;
     if (result.syncApiKey) syncApiKey.value = result.syncApiKey;
     if (result.syncUser) syncUser.value = result.syncUser;
     autoSync.checked = result.autoSync || false;
     syncOnChange.checked = result.syncOnChange !== false;
-    scheduledSync.checked = result.scheduledSync || false;
 
-    // Pokaż info o następnym sync jeśli włączony
-    if (result.scheduledSync) {
-      updateNextSyncTime();
-    }
+    // Sprawdź status scheduled sync z CRM
+    checkScheduledSyncStatus(result);
   });
 
   // Save settings
   btnSave.addEventListener('click', () => {
-    chrome.storage.sync.set({
+    const settings = {
       supabaseUrl: supabaseUrl.value.trim(),
       supabaseKey: supabaseKey.value.trim(),
       syncApiKey: syncApiKey.value.trim(),
       syncUser: syncUser.value,
       autoSync: autoSync.checked,
       syncOnChange: syncOnChange.checked
-    }, () => {
+    };
+
+    chrome.storage.sync.set(settings, () => {
+      // Powiadom background script o zmianie ustawien
+      chrome.runtime.sendMessage({ type: 'SETTINGS_CHANGED' });
       addLog('Ustawienia zapisane', 'success');
+
+      // Sprawdz status scheduled sync z nowymi ustawieniami
+      checkScheduledSyncStatus(settings);
     });
   });
 
@@ -75,22 +80,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.sync.set({ syncOnChange: syncOnChange.checked });
   });
 
-  // Scheduled sync toggle
-  scheduledSync.addEventListener('change', () => {
-    const enabled = scheduledSync.checked;
-    chrome.storage.sync.set({ scheduledSync: enabled });
+  // Sprawdź status scheduled sync z CRM
+  async function checkScheduledSyncStatus(settings) {
+    if (!settings || !settings.supabaseUrl || !settings.supabaseKey || !settings.syncUser) {
+      scheduledSyncText.textContent = 'Sync co 5h: brak konfiguracji';
+      scheduledSyncIndicator.style.background = '#555';
+      return;
+    }
 
-    // Powiadom background script
-    chrome.runtime.sendMessage({ type: 'SET_SCHEDULED_SYNC', enabled }, () => {
-      if (enabled) {
-        addLog('Scheduled sync włączony (co 5h)', 'success');
-        updateNextSyncTime();
+    const userName = settings.syncUser.charAt(0).toUpperCase() + settings.syncUser.slice(1).toLowerCase();
+
+    try {
+      const response = await fetch(
+        `${settings.supabaseUrl}/rest/v1/whatsapp_widget_status?user_name=eq.${userName}&select=scheduled_sync_enabled`,
+        {
+          headers: {
+            'apikey': settings.supabaseKey,
+            'Authorization': `Bearer ${settings.supabaseKey}`
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const enabled = data[0]?.scheduled_sync_enabled || false;
+
+        if (enabled) {
+          scheduledSyncText.textContent = `Sync co 5h: wlaczony (${userName})`;
+          scheduledSyncIndicator.style.background = '#25D366';
+          updateNextSyncTime();
+        } else {
+          scheduledSyncText.textContent = `Sync co 5h: wylaczony`;
+          scheduledSyncIndicator.style.background = '#555';
+          nextSyncInfo.classList.add('hidden');
+        }
       } else {
-        addLog('Scheduled sync wyłączony', 'success');
-        nextSyncInfo.classList.add('hidden');
+        scheduledSyncText.textContent = 'Sync co 5h: blad sprawdzenia';
+        scheduledSyncIndicator.style.background = '#ff5252';
       }
-    });
-  });
+    } catch (err) {
+      scheduledSyncText.textContent = 'Sync co 5h: blad polaczenia';
+      scheduledSyncIndicator.style.background = '#ff5252';
+    }
+  }
 
   // Pokaż czas następnego sync
   function updateNextSyncTime() {

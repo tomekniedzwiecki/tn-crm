@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - WhatsApp Ustawienia</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .setting-card {
+            background: rgba(24, 24, 27, 0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #25D366;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .api-key-input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-crm</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <a href="/whatsapp" class="text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
+                        <i class="ph ph-whatsapp-logo text-[#25D366]"></i>
+                        whatsapp
+                    </a>
+                    <span class="text-zinc-700">/</span>
+                    <span class="text-white font-medium">ustawienia</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="/whatsapp/logs" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5">
+                    <i class="ph ph-clock-counter-clockwise"></i>
+                    <span class="hidden md:inline">Logi</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 max-w-3xl">
+            <!-- Auto Sync Settings -->
+            <section class="mb-8">
+                <h2 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="ph ph-timer text-[#25D366]"></i>
+                    Automatyczna synchronizacja
+                </h2>
+
+                <div class="setting-card rounded-lg p-5 mb-4">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-white font-medium mb-1">Sync co 5 godzin</h3>
+                            <p class="text-xs text-zinc-500">Automatycznie synchronizuj wszystkie czaty co 5 godzin</p>
+                        </div>
+                    </div>
+
+                    <!-- User toggles -->
+                    <div class="space-y-4" id="user-sync-settings">
+                        <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-medium">T</div>
+                                <span class="text-white">Tomek</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="sync-tomek" onchange="toggleUserSync('Tomek', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-400 font-medium">M</div>
+                                <span class="text-white">Maciek</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="sync-maciek" onchange="toggleUserSync('Maciek', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-zinc-600 mt-4">
+                        <i class="ph ph-info"></i>
+                        Widget Chrome musi byc uruchomiony (WhatsApp Web otwarty) aby synchronizacja dzialala
+                    </p>
+                </div>
+            </section>
+
+            <!-- API Key Settings -->
+            <section class="mb-8">
+                <h2 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="ph ph-key text-amber-400"></i>
+                    Klucz API
+                </h2>
+
+                <div class="setting-card rounded-lg p-5">
+                    <div class="mb-4">
+                        <h3 class="text-white font-medium mb-1">WhatsApp Sync API Key</h3>
+                        <p class="text-xs text-zinc-500">Klucz uzywany przez widget Chrome do autoryzacji</p>
+                    </div>
+
+                    <div class="flex gap-2 mb-3">
+                        <div class="flex-1 relative">
+                            <input type="password" id="api-key-input"
+                                   class="api-key-input w-full px-3 py-2 rounded-lg text-white font-mono text-xs"
+                                   placeholder="Brak klucza" readonly>
+                            <button onclick="toggleApiKeyVisibility()" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                                <i class="ph ph-eye" id="eye-icon"></i>
+                            </button>
+                        </div>
+                        <button onclick="copyApiKey()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors" title="Kopiuj">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="generateNewApiKey()" class="flex-1 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-arrows-clockwise"></i>
+                            Generuj nowy klucz
+                        </button>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <p class="text-xs text-amber-400 flex items-start gap-2">
+                            <i class="ph ph-warning mt-0.5"></i>
+                            <span>Po wygenerowaniu nowego klucza musisz go skopiowac do wtyczki Chrome. Stary klucz przestanie dzialac.</span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Widget Status -->
+            <section class="mb-8">
+                <h2 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="ph ph-broadcast text-cyan-400"></i>
+                    Status widgetow
+                </h2>
+
+                <div id="widget-status" class="space-y-3">
+                    <!-- Will be populated -->
+                </div>
+            </section>
+
+            <!-- Instructions -->
+            <section>
+                <h2 class="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="ph ph-book-open text-zinc-400"></i>
+                    Instrukcja konfiguracji
+                </h2>
+
+                <div class="setting-card rounded-lg p-5">
+                    <ol class="space-y-3 text-sm text-zinc-400">
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 text-white text-xs flex items-center justify-center font-medium">1</span>
+                            <span>Wygeneruj klucz API powyzej i skopiuj go</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 text-white text-xs flex items-center justify-center font-medium">2</span>
+                            <span>Zainstaluj wtyczke Chrome "WhatsApp CRM Sync"</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 text-white text-xs flex items-center justify-center font-medium">3</span>
+                            <span>Otworz wtyczke i wklej klucz API w zakladce Ustawienia</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 text-white text-xs flex items-center justify-center font-medium">4</span>
+                            <span>Wybierz uzytkownika (Tomek/Maciek) we wtyczce</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 text-white text-xs flex items-center justify-center font-medium">5</span>
+                            <span>Wlacz automatyczna synchronizacje tutaj w ustawieniach CRM</span>
+                        </li>
+                    </ol>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 opacity-0 invisible transition-all duration-300 transform translate-y-2">
+        <i class="ph ph-check-circle text-emerald-400"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let currentApiKey = null;
+        let isApiKeyVisible = false;
+
+        // ============================================
+        // AUTH
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            await loadTeamMembers(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMembers(userId) {
+            const { data, error } = await supabaseClient.from('team_members').select('*');
+            if (error) return;
+            const teamMembers = data || [];
+            const currentMember = teamMembers.find(m => m.user_id === userId);
+
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+
+            Sidebar.showAdminNav(currentMember?.role === 'admin');
+
+            // Tylko admin moze zmieniac ustawienia
+            if (currentMember?.role !== 'admin') {
+                document.querySelectorAll('input, button').forEach(el => {
+                    if (!el.closest('header') && !el.closest('#sidebar')) {
+                        el.disabled = true;
+                    }
+                });
+                showToast('Tylko admin moze zmieniac ustawienia');
+            }
+        }
+
+        // ============================================
+        // LOAD DATA
+        // ============================================
+        async function loadData() {
+            await Promise.all([
+                loadSyncSettings(),
+                loadApiKey(),
+                loadWidgetStatus()
+            ]);
+        }
+
+        async function loadSyncSettings() {
+            const { data, error } = await supabaseClient
+                .from('whatsapp_widget_status')
+                .select('*');
+
+            if (error) {
+                console.error('Error loading sync settings:', error);
+                return;
+            }
+
+            (data || []).forEach(status => {
+                const checkbox = document.getElementById(`sync-${status.user_name.toLowerCase()}`);
+                if (checkbox) {
+                    checkbox.checked = status.scheduled_sync_enabled || false;
+                }
+            });
+        }
+
+        async function loadApiKey() {
+            // Pobierz klucz z tabeli app_settings
+            const { data, error } = await supabaseClient
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'whatsapp_sync_api_key')
+                .single();
+
+            if (data?.value) {
+                currentApiKey = data.value;
+                document.getElementById('api-key-input').value = maskApiKey(currentApiKey);
+            } else {
+                document.getElementById('api-key-input').value = '';
+                document.getElementById('api-key-input').placeholder = 'Brak klucza - wygeneruj nowy';
+            }
+        }
+
+        async function loadWidgetStatus() {
+            const container = document.getElementById('widget-status');
+
+            const { data, error } = await supabaseClient
+                .from('whatsapp_widget_status')
+                .select('*');
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `
+                    <div class="setting-card rounded-lg p-4 text-center text-zinc-500 text-sm">
+                        Brak danych o widgetach
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.map(status => {
+                const isActive = status.is_active;
+                const lastSeen = status.last_seen_at ? new Date(status.last_seen_at) : null;
+                const lastSync = status.last_sync_at ? new Date(status.last_sync_at) : null;
+
+                // Uznajemy widget za aktywny jesli byl widziany w ciagu ostatnich 10 minut
+                const isRecentlyActive = lastSeen && (Date.now() - lastSeen.getTime()) < 10 * 60 * 1000;
+
+                const statusColor = isRecentlyActive ? 'bg-[#25D366]' : 'bg-zinc-700';
+                const statusText = isRecentlyActive ? 'Aktywny' : (lastSeen ? 'Nieaktywny' : 'Nigdy nie polaczony');
+
+                return `
+                    <div class="setting-card rounded-lg p-4 flex items-center gap-4">
+                        <div class="w-3 h-3 rounded-full ${statusColor}"></div>
+                        <div class="flex-1">
+                            <div class="text-white font-medium">${status.user_name}</div>
+                            <div class="text-xs text-zinc-500">
+                                ${statusText}
+                                ${lastSeen ? ` • Ostatnio: ${formatTimeAgo(lastSeen)}` : ''}
+                            </div>
+                            ${lastSync ? `<div class="text-[10px] text-zinc-600 mt-0.5">Ostatni sync: ${formatTimeAgo(lastSync)}</div>` : ''}
+                        </div>
+                        ${status.scheduled_sync_enabled ? `
+                            <span class="text-[10px] px-2 py-1 bg-[#25D366]/20 text-[#25D366] rounded">Auto sync</span>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // ACTIONS
+        // ============================================
+        async function toggleUserSync(userName, enabled) {
+            const { error } = await supabaseClient
+                .from('whatsapp_widget_status')
+                .upsert({
+                    user_name: userName,
+                    scheduled_sync_enabled: enabled
+                }, { onConflict: 'user_name' });
+
+            if (error) {
+                console.error('Error updating sync setting:', error);
+                showToast('Blad zapisu ustawien');
+                return;
+            }
+
+            showToast(`Automatyczny sync ${enabled ? 'wlaczony' : 'wylaczony'} dla ${userName}`);
+            loadWidgetStatus();
+        }
+
+        function maskApiKey(key) {
+            if (!key) return '';
+            if (key.length <= 8) return '*'.repeat(key.length);
+            return key.substring(0, 4) + '*'.repeat(key.length - 8) + key.substring(key.length - 4);
+        }
+
+        function toggleApiKeyVisibility() {
+            const input = document.getElementById('api-key-input');
+            const icon = document.getElementById('eye-icon');
+
+            if (!currentApiKey) return;
+
+            isApiKeyVisible = !isApiKeyVisible;
+
+            if (isApiKeyVisible) {
+                input.value = currentApiKey;
+                input.type = 'text';
+                icon.className = 'ph ph-eye-slash';
+            } else {
+                input.value = maskApiKey(currentApiKey);
+                input.type = 'password';
+                icon.className = 'ph ph-eye';
+            }
+        }
+
+        async function copyApiKey() {
+            if (!currentApiKey) {
+                showToast('Brak klucza do skopiowania');
+                return;
+            }
+
+            await navigator.clipboard.writeText(currentApiKey);
+            showToast('Klucz skopiowany!');
+        }
+
+        async function generateNewApiKey() {
+            if (!confirm('Czy na pewno wygenerowac nowy klucz? Stary klucz przestanie dzialac.')) {
+                return;
+            }
+
+            // Generuj nowy klucz (32 znaki)
+            const newKey = 'wa_' + Array.from(crypto.getRandomValues(new Uint8Array(24)))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+
+            // Zapisz do bazy
+            const { error } = await supabaseClient
+                .from('app_settings')
+                .upsert({
+                    key: 'whatsapp_sync_api_key',
+                    value: newKey,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+
+            if (error) {
+                console.error('Error saving API key:', error);
+                showToast('Blad zapisu klucza');
+                return;
+            }
+
+            currentApiKey = newKey;
+            document.getElementById('api-key-input').value = maskApiKey(newKey);
+            isApiKeyVisible = false;
+            document.getElementById('eye-icon').className = 'ph ph-eye';
+
+            showToast('Nowy klucz wygenerowany - skopiuj go do wtyczki!');
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (minutes < 1) return 'teraz';
+            if (minutes < 60) return `${minutes}m temu`;
+            if (hours < 24) return `${hours}h temu`;
+            if (days === 1) return 'wczoraj';
+            if (days < 7) return `${days} dni temu`;
+            return date.toLocaleDateString('pl-PL');
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').textContent = text;
+            toast.classList.remove('opacity-0', 'invisible', 'translate-y-2');
+            toast.classList.add('opacity-100', 'visible', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'invisible', 'translate-y-2');
+                toast.classList.remove('opacity-100', 'visible', 'translate-y-0');
+            }, 3000);
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (session) {
+                await loadData();
+            }
+        }
+
+        init();
+
+        // Auto-refresh status co 30s
+        setInterval(loadWidgetStatus, 30000);
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
