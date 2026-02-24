@@ -375,6 +375,33 @@
                             </div>
                         </div>
 
+                        <!-- Summary: Total Interest & Capital -->
+                        <div class="bg-gradient-to-r from-violet-500/10 to-blue-500/10 border border-violet-500/20 rounded-xl p-5 mb-6">
+                            <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-chart-pie text-violet-400"></i>
+                                Podsumowanie calego leasingu
+                            </h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-1">Suma rat (netto)</div>
+                                    <div class="text-lg font-mono text-white" id="lease-sum-total">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-1">Suma kapital</div>
+                                    <div class="text-lg font-mono text-emerald-400" id="lease-sum-capital">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-1">Suma odsetki</div>
+                                    <div class="text-lg font-mono text-amber-400" id="lease-sum-interest">-</div>
+                                    <div class="text-xs text-emerald-400 mt-1">100% do kosztow!</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-zinc-500 mb-1">Oszczednosc z odsetek (PIT 19%)</div>
+                                    <div class="text-lg font-mono text-emerald-400" id="lease-interest-pit-save">-</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Payment Schedule -->
                         <div class="bg-zinc-950/50 border border-white/5 rounded-xl overflow-hidden">
                             <div class="p-4 border-b border-white/5">
@@ -1338,6 +1365,17 @@
             document.getElementById('lease-savings').textContent = formatMoney(monthlySavings);
             document.getElementById('lease-total-paid').textContent = formatMoney(totalPaid);
             document.getElementById('lease-total-savings').textContent = formatMoney(totalSavings);
+
+            // Summary totals (caly leasing)
+            const sumTotal = schedule.reduce((s, p) => s + p.total, 0);
+            const sumCapital = schedule.reduce((s, p) => s + p.capital, 0);
+            const sumInterest = schedule.reduce((s, p) => s + p.interest, 0);
+            const interestPitSave = sumInterest * 0.19; // 100% odsetek do kosztow, 19% PIT
+
+            document.getElementById('lease-sum-total').textContent = formatMoney(sumTotal);
+            document.getElementById('lease-sum-capital').textContent = formatMoney(sumCapital);
+            document.getElementById('lease-sum-interest').textContent = formatMoney(sumInterest);
+            document.getElementById('lease-interest-pit-save').textContent = formatMoney(interestPitSave);
 
             // Schedule
             document.getElementById('lease-schedule').innerHTML = schedule.map(p => {
