@@ -266,15 +266,15 @@
 
     <!-- Modal -->
     <div id="lead-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-lg shadow-2xl">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5 flex-shrink-0">
                 <h2 class="text-sm font-medium text-white">Szczegóły leada</h2>
                 <button id="close-modal" class="text-zinc-500 hover:text-white transition-colors">
                     <i class="ph ph-x text-lg"></i>
                 </button>
             </div>
 
-            <div class="p-5">
+            <div class="p-5 overflow-y-auto flex-1">
                 <div id="modal-content" class="space-y-4 mb-5"></div>
 
                 <div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
@@ -299,6 +299,20 @@
                 <div class="mt-4">
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Notatki</label>
                     <textarea id="modal-notes" rows="3" class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-3 rounded-lg outline-none focus:border-zinc-600 resize-none" placeholder="Dodaj notatki..."></textarea>
+                </div>
+
+                <!-- WhatsApp History -->
+                <div id="whatsapp-section" class="mt-4 pt-4 border-t border-white/5 hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider flex items-center gap-2">
+                            <i class="ph ph-whatsapp-logo text-green-500 text-sm"></i>
+                            Historia WhatsApp
+                        </label>
+                        <span id="whatsapp-count" class="text-zinc-600 text-[10px] font-mono"></span>
+                    </div>
+                    <div id="whatsapp-messages" class="space-y-2 max-h-64 overflow-y-auto bg-zinc-900/50 rounded-lg p-3">
+                        <!-- Messages will be loaded here -->
+                    </div>
                 </div>
             </div>
 
@@ -1150,8 +1164,85 @@
             document.getElementById('modal-phone').value = lead.phone || '';
             document.getElementById('modal-notes').value = lead.notes || '';
             document.getElementById('lead-modal').classList.remove('hidden');
+
+            // Load WhatsApp messages
+            loadWhatsAppMessages(id, lead.phone);
         }
         window.openLead = openLead;
+
+        // Load WhatsApp messages for lead
+        async function loadWhatsAppMessages(leadId, phone) {
+            const section = document.getElementById('whatsapp-section');
+            const container = document.getElementById('whatsapp-messages');
+            const countEl = document.getElementById('whatsapp-count');
+
+            // Hide section initially
+            section.classList.add('hidden');
+            container.innerHTML = '';
+
+            if (!phone) return;
+
+            try {
+                // Normalize phone for query
+                const normalizedPhone = phone.replace(/[^0-9]/g, '').replace(/^00/, '');
+                const phoneVariants = [
+                    normalizedPhone,
+                    normalizedPhone.length === 9 ? '48' + normalizedPhone : normalizedPhone,
+                    normalizedPhone.startsWith('48') ? normalizedPhone.substring(2) : normalizedPhone
+                ];
+
+                // Query messages
+                const { data: messages, error } = await supabaseClient
+                    .from('whatsapp_messages')
+                    .select('*')
+                    .or(phoneVariants.map(p => `phone_number.eq.${p}`).join(','))
+                    .order('message_timestamp', { ascending: true })
+                    .limit(100);
+
+                if (error) {
+                    console.error('Error loading WhatsApp messages:', error);
+                    return;
+                }
+
+                if (!messages || messages.length === 0) return;
+
+                // Show section
+                section.classList.remove('hidden');
+                countEl.textContent = `${messages.length} wiadomości`;
+
+                // Render messages
+                container.innerHTML = messages.map(msg => {
+                    const isOutbound = msg.direction === 'outbound';
+                    const time = new Date(msg.message_timestamp).toLocaleString('pl-PL', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'}">
+                            <div class="max-w-[80%] ${isOutbound ? 'bg-green-900/30 border-green-800/30' : 'bg-zinc-800 border-zinc-700/30'} border rounded-lg px-3 py-2">
+                                <div class="text-sm text-white">${escapeHtml(msg.message_text)}</div>
+                                <div class="text-[10px] ${isOutbound ? 'text-green-600' : 'text-zinc-500'} mt-1 text-right">${time}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+
+            } catch (err) {
+                console.error('Error loading WhatsApp messages:', err);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         function closeModal() {
             document.getElementById('lead-modal').classList.add('hidden');
