@@ -777,22 +777,26 @@
             ]);
 
             // Orders are already filtered by paid_at in the database query
-            const orders = ordersRes.data || [];
-            const prevOrders = prevOrdersRes.data || [];
-            const manualRevenues = manualRevenuesRes.data || [];
+            const orders = ordersRes?.data || [];
+            const prevOrders = prevOrdersRes?.data || [];
+            const manualRevenues = manualRevenuesRes?.data || [];
 
             // Debug: log orders with their paid_at dates
             console.log('Orders for current period:', orders.map(o => ({ order_number: o.order_number, paid_at: o.paid_at, amount: o.amount })));
-            const prevManualRevenues = prevManualRevenuesRes.data || [];
-            const monthlyCosts = oneTimeCostsRes.data || []; // Teraz to są WSZYSTKIE koszty z biznes_costs
-            const prevMonthlyCosts = prevOneTimeCostsRes.data || [];
-            const plan = planRes.data;
-            const pipeline = pipelineRes.data || [];
+            const prevManualRevenues = prevManualRevenuesRes?.data || [];
+            const monthlyCosts = oneTimeCostsRes?.data || []; // Teraz to są WSZYSTKIE koszty z biznes_costs
+            const prevMonthlyCosts = prevOneTimeCostsRes?.data || [];
+            const plan = planRes?.data;
+            const pipeline = pipelineRes?.data || [];
 
             // Dynamicznie oblicz koszty pracowników (używamy nextDayStr jako exclusive upper bound)
             const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
             const employeeCostsTotal = employeeCosts.reduce((sum, c) => sum + c.amount, 0);
             console.log('Dynamic employee costs:', employeeCosts);
+
+            // Oblicz koszty pracowników dla POPRZEDNIEGO okresu (do poprawnego trendu)
+            const prevEmployeeCosts = await calculateEmployeeCosts(prevStartStr, prevNextDayStr, monthsInPeriod);
+            const prevEmployeeCostsTotal = prevEmployeeCosts.reduce((sum, c) => sum + c.amount, 0);
 
             // Calculate totals (wszystkie kwoty przeliczane na netto - VAT 23%)
             const crmRevenue = orders.reduce((sum, o) => sum + toNetto(parseFloat(o.amount || 0)), 0);
@@ -808,7 +812,7 @@
             const totalCosts = monthlyCostsTotal + employeeCostsTotal;
 
             const prevMonthlyCostsTotal = prevMonthlyCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
-            const prevTotalCosts = prevMonthlyCostsTotal + employeeCostsTotal;
+            const prevTotalCosts = prevMonthlyCostsTotal + prevEmployeeCostsTotal;
 
             const profit = totalRevenue - totalCosts;
             const prevProfit = prevTotalRevenue - prevTotalCosts;

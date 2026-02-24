@@ -230,7 +230,7 @@
         // CONSTANTS
         // ============================================
         const LIMIT_ZDROWOTNY_ROCZNY = 11600; // Limit odliczenia zdrowotnej jako koszt
-        const ZUS_SPOLECZNY_MIESIAC = 1600; // Stała składka ZUS społeczny
+        const ZUS_SPOLECZNY_MIESIECZNIE = 1600; // Stała składka ZUS społeczny (ok. 1600 zł/mies dla dużego ZUS)
 
 
         // ============================================
@@ -460,9 +460,9 @@
                     .lte('month', endStr)
             ]);
 
-            const orders = ordersRes.data || [];
-            const manualRevenues = manualRevenuesRes.data || [];
-            const monthlyCosts = monthlyCostsRes.data || [];
+            const orders = ordersRes?.data || [];
+            const manualRevenues = manualRevenuesRes?.data || [];
+            const monthlyCosts = monthlyCostsRes?.data || [];
 
             // Dynamiczne koszty pracowników
             const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
@@ -496,7 +496,7 @@
         // CALCULATIONS
         // ============================================
         function calculateTaxes(data) {
-            const zusBase = ZUS_SPOLECZNY_MIESIAC;
+            const zusBase = ZUS_SPOLECZNY_MIESIECZNIE;
             const monthsInPeriod = data.monthsInPeriod;
 
             // Przychody
