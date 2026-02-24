@@ -198,49 +198,6 @@ const CostsService = {
     },
 
     // ============================================
-    // AD EXPENSES
-    // ============================================
-    async getAdExpenses(supabaseClient, startDate, endDate) {
-        const { data, error } = await supabaseClient
-            .from('ad_expenses')
-            .select('source, amount')
-            .gte('date', startDate)
-            .lte('date', endDate);
-
-        if (error || !data || data.length === 0) {
-            return null;
-        }
-
-        // Sum by source
-        const bySource = { google: 0, meta: 0, tiktok: 0 };
-        for (const row of data) {
-            bySource[row.source] = (bySource[row.source] || 0) + parseFloat(row.amount || 0);
-        }
-
-        const totalAds = bySource.google + bySource.meta + bySource.tiktok;
-        if (totalAds <= 0) return null;
-
-        // Build description
-        const parts = [];
-        if (bySource.google > 0) parts.push(`Google: ${this.formatMoney(bySource.google)}`);
-        if (bySource.meta > 0) parts.push(`Meta: ${this.formatMoney(bySource.meta)}`);
-        if (bySource.tiktok > 0) parts.push(`TikTok: ${this.formatMoney(bySource.tiktok)}`);
-
-        return {
-            id: 'ads_live',
-            name: 'Budzet reklamowy',
-            description: parts.join(' | '),
-            category: 'marketing',
-            amount: totalAds,
-            vat_rate: 0.23,
-            cost_type: 'recurring',
-            is_paid: true,
-            is_virtual: true,
-            _bySource: bySource
-        };
-    },
-
-    // ============================================
     // MAIN: GET ALL COSTS
     // ============================================
     /**
@@ -275,11 +232,8 @@ const CostsService = {
         const employeeCosts = await this.getEmployeeCosts(supabaseClient, startDate, nextDayStr, monthsInPeriod);
         costs.push(...employeeCosts);
 
-        // 3. Pobierz wydatki reklamowe
-        const adExpenses = await this.getAdExpenses(supabaseClient, startDate, endDate);
-        if (adExpenses) {
-            costs.push(adExpenses);
-        }
+        // Wydatki reklamowe sa juz w biznes_costs (synchronizowane przez costs.html)
+        // Nie trzeba ich pobierac osobno!
 
         // Oblicz sumy
         const total = costs.reduce((sum, c) => sum + (c.amount || 0), 0);

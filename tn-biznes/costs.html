@@ -800,8 +800,7 @@
                 // Calculate employee costs live and add to monthlyCosts
                 await calculateLiveEmployeeCosts(monthStart);
 
-                // Calculate ad expenses live and add to monthlyCosts
-                await calculateLiveAdsCosts(monthStart);
+                // Wydatki reklamowe sa juz w biznes_costs (synchronizowane przez saveAdExpense)
 
                 renderMonthlyCosts();
                 updateStats();
@@ -889,48 +888,6 @@
                     is_virtual: true // Mark as virtual - not editable
                 });
             }
-        }
-
-        async function calculateLiveAdsCosts(monthStart) {
-            const [year, month] = monthStart.split('-').map(Number);
-            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-            const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-
-            const { data, error } = await supabaseClient
-                .from('ad_expenses')
-                .select('source, amount')
-                .gte('date', startDate)
-                .lte('date', endDate);
-
-            if (error || !data || data.length === 0) return;
-
-            // Sum by source
-            const bySource = { google: 0, meta: 0, tiktok: 0 };
-            for (const row of data) {
-                bySource[row.source] = (bySource[row.source] || 0) + parseFloat(row.amount || 0);
-            }
-
-            const totalAds = bySource.google + bySource.meta + bySource.tiktok;
-            if (totalAds <= 0) return;
-
-            // Build description
-            const parts = [];
-            if (bySource.google > 0) parts.push(`Google: ${formatMoney(bySource.google)}`);
-            if (bySource.meta > 0) parts.push(`Meta: ${formatMoney(bySource.meta)}`);
-            if (bySource.tiktok > 0) parts.push(`TikTok: ${formatMoney(bySource.tiktok)}`);
-
-            monthlyCosts.push({
-                id: 'ads_live',
-                name: 'Budzet reklamowy',
-                description: parts.join(' | '),
-                category: 'marketing',
-                amount: totalAds,
-                cost_type: 'recurring',
-                month: monthStart,
-                is_paid: true,
-                is_virtual: true,
-                has_vat: true
-            });
         }
 
         // ============================================
@@ -1571,7 +1528,7 @@
             const source = input.dataset.source;
             const amount = parseFloat(input.value) || 0;
 
-            // Upsert
+            // Upsert do ad_expenses (dla wykresu i siatki)
             const { error } = await supabaseClient
                 .from('ad_expenses')
                 .upsert({
@@ -1599,6 +1556,83 @@
                 renderAdsStats();
                 updateAdsChart();
                 updateGridTotals();
+
+                // Synchronizuj sume miesieczna do biznes_costs
+                await syncAdsToBiznesCosts(date);
+            }
+        }
+
+        async function syncAdsToBiznesCosts(dateInMonth) {
+            // Oblicz miesiac
+            const [year, month] = dateInMonth.split('-').slice(0, 2);
+            const monthStart = `${year}-${month}-01`;
+            const monthEnd = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+
+            // Pobierz wszystkie wydatki z tego miesiaca
+            const { data } = await supabaseClient
+                .from('ad_expenses')
+                .select('source, amount')
+                .gte('date', monthStart)
+                .lte('date', monthEnd);
+
+            if (!data) return;
+
+            // Sumuj per zrodlo
+            const bySource = { google: 0, meta: 0, tiktok: 0 };
+            for (const row of data) {
+                bySource[row.source] = (bySource[row.source] || 0) + parseFloat(row.amount || 0);
+            }
+
+            const totalAds = bySource.google + bySource.meta + bySource.tiktok;
+
+            // Buduj opis
+            const parts = [];
+            if (bySource.google > 0) parts.push(`Google: ${formatMoney(bySource.google)}`);
+            if (bySource.meta > 0) parts.push(`Meta: ${formatMoney(bySource.meta)}`);
+            if (bySource.tiktok > 0) parts.push(`TikTok: ${formatMoney(bySource.tiktok)}`);
+
+            // Znajdz lub utworz wpis w biznes_costs
+            const { data: existing } = await supabaseClient
+                .from('biznes_costs')
+                .select('id')
+                .eq('month', monthStart)
+                .eq('name', 'Budzet reklamowy')
+                .eq('category', 'marketing')
+                .maybeSingle();
+
+            if (totalAds > 0) {
+                if (existing) {
+                    // Aktualizuj
+                    await supabaseClient
+                        .from('biznes_costs')
+                        .update({
+                            amount: totalAds,
+                            description: parts.join(' | '),
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', existing.id);
+                } else {
+                    // Utworz nowy
+                    await supabaseClient
+                        .from('biznes_costs')
+                        .insert({
+                            name: 'Budzet reklamowy',
+                            description: parts.join(' | '),
+                            category: 'marketing',
+                            amount: totalAds,
+                            cost_type: 'recurring',
+                            month: monthStart,
+                            has_vat: true,
+                            vat_rate: 0.23,
+                            is_paid: true
+                        });
+                }
+            } else if (existing) {
+                // Usun jesli suma = 0
+                await supabaseClient
+                    .from('biznes_costs')
+                    .delete()
+                    .eq('id', existing.id);
             }
         }
 
