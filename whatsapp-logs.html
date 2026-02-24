@@ -293,7 +293,12 @@
             const users = ['Tomek', 'Maciek'];
             container.innerHTML = users.map(userName => {
                 const status = (widgetStatus || []).find(w => w.user_name === userName);
-                const isActive = status?.is_active || false;
+
+                // Widget jest aktywny jeśli last_seen_at było w ciągu ostatnich 5 minut
+                const lastSeenAt = status?.last_seen_at ? new Date(status.last_seen_at) : null;
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                const isActive = lastSeenAt && lastSeenAt > fiveMinutesAgo;
+
                 const scheduledEnabled = status?.scheduled_sync_enabled || false;
                 const lastSync = lastSyncByUser[userName.toLowerCase()];
                 const lastSyncFormatted = lastSync ? formatTimeAgo(new Date(lastSync)) : 'Nigdy';
@@ -311,8 +316,8 @@
                                 ${scheduledEnabled ? '<span class="text-[10px] px-1.5 py-0.5 bg-[#25D366]/20 text-[#25D366] rounded">Auto co 5h</span>' : ''}
                             </div>
                             <div class="text-xs text-zinc-500 mt-0.5">
-                                ${isActive ? 'Widget aktywny' : 'Widget nieaktywny'}
-                                ${lastSync ? ` • Ostatni sync: ${lastSyncFormatted}` : ''}
+                                ${isActive ? 'Widget aktywny' : (lastSeenAt ? `Ostatnio widziany: ${formatTimeAgo(lastSeenAt)}` : 'Widget nieaktywny')}
+                                ${lastSync ? ` • Sync: ${lastSyncFormatted}` : ''}
                             </div>
                             ${status?.next_scheduled_sync ? `
                                 <div class="text-[10px] text-zinc-600 mt-1">
@@ -503,21 +508,25 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2">
-                                <span class="text-white font-medium truncate">${conv.contact_name || conv.phone_number}</span>
+                                <span class="text-white font-medium truncate">${conv.contact_name || 'Nieznany'}</span>
+                                ${hasLead ? `
+                                    <a href="/lead?id=${conv.lead_id}" class="px-2 py-0.5 text-[10px] bg-[#25D366]/20 text-[#25D366] rounded hover:bg-[#25D366]/30 transition-colors flex items-center gap-1" title="Otwórz lead">
+                                        <i class="ph ph-eye"></i>
+                                    </a>
+                                ` : ''}
                                 ${statusBadge}
                             </div>
-                            <div class="text-xs text-zinc-500">
-                                ${conv.message_count} wiadomosci
-                                (${conv.inbound_count} przychodzacych, ${conv.outbound_count} wychodzacych)
+                            <div class="flex items-center gap-2 text-xs text-zinc-500">
+                                <span class="font-mono">${conv.phone_number || '-'}</span>
+                                <span>•</span>
+                                <span>${conv.message_count} wiad.</span>
                             </div>
                         </div>
                         <div class="text-right">
                             <div class="text-xs text-zinc-400">${formatTimeAgo(new Date(conv.last_message_at))}</div>
-                            ${hasLead ? `
-                                <a href="/lead?id=${conv.lead_id}" class="text-[10px] text-[#25D366] hover:underline">Zobacz lead</a>
-                            ` : `
+                            ${!hasLead ? `
                                 <span class="text-[10px] text-zinc-600">Brak leada</span>
-                            `}
+                            ` : ''}
                         </div>
                     </div>
                 `;
