@@ -512,29 +512,36 @@
 
     if (!messageContainer) {
       console.log('WhatsApp Sync: Could not find scrollable container');
-      // Wykonaj zwykły sync
       const messages = getMessagesFromChat();
       const result = await syncMessages(messages, phoneNumber, contactName);
       issyncing = false;
       return result;
     }
 
-    console.log('WhatsApp Sync: Starting deep sync with scroll');
+    console.log('WhatsApp Sync: Starting deep sync - scrolling until we hit synced messages');
 
     let totalInserted = 0;
     let totalSkipped = 0;
-    let previousMessageCount = 0;
-    let noNewMessagesCount = 0;
     let scrollAttempts = 0;
-    const maxScrollAttempts = 50; // Max 50 scrolli (około 30 dni wstecz)
+    let consecutiveNoNewMessages = 0;
+    const maxScrollAttempts = 100; // Max 100 scrolli
 
-    // Najpierw sync bieżących
+    // Najpierw sync bieżących wiadomości
     let messages = getMessagesFromChat();
     let result = await syncMessages(messages, phoneNumber, contactName);
     totalInserted += result.inserted || 0;
     totalSkipped += result.skipped || 0;
 
-    // Scrolluj w górę i syncuj
+    console.log(`WhatsApp Sync: Initial sync - ${result.inserted || 0} new, ${result.skipped || 0} skipped`);
+
+    // Jeśli już na starcie wszystko było zduplikowane, możemy skończyć
+    if (result.inserted === 0 && messages.length > 10) {
+      console.log('WhatsApp Sync: All messages already synced, no need to scroll');
+      issyncing = false;
+      return { success: true, inserted: 0, skipped: totalSkipped, scrolls: 0 };
+    }
+
+    // Scrolluj w górę aż trafimy na zsynchronizowane wiadomości
     while (scrollAttempts < maxScrollAttempts) {
       scrollAttempts++;
 
@@ -542,55 +549,57 @@
       const previousScrollTop = messageContainer.scrollTop;
       messageContainer.scrollTop = 0;
 
-      // Poczekaj na załadowanie
-      await new Promise(r => setTimeout(r, 800));
+      // Poczekaj na załadowanie nowych wiadomości
+      await new Promise(r => setTimeout(r, 1000));
 
-      // Sprawdź czy załadowały się nowe wiadomości
+      // Pobierz wiadomości
       messages = getMessagesFromChat();
 
-      if (messages.length === previousMessageCount) {
-        noNewMessagesCount++;
-        if (noNewMessagesCount >= 3) {
-          console.log('WhatsApp Sync: No more messages to load');
+      // Sync i sprawdź ile było nowych
+      result = await syncMessages(messages, phoneNumber, contactName);
+      const newInThisScroll = result.inserted || 0;
+      totalInserted += newInThisScroll;
+      totalSkipped += result.skipped || 0;
+
+      console.log(`WhatsApp Sync: Scroll ${scrollAttempts}, messages: ${messages.length}, new: ${newInThisScroll}`);
+
+      // Wyślij progress do popup
+      if (isExtensionContextValid()) {
+        chrome.runtime.sendMessage({
+          type: 'SYNC_PROGRESS',
+          data: {
+            phone: phoneNumber,
+            scroll: scrollAttempts,
+            messages: messages.length,
+            inserted: totalInserted
+          }
+        }).catch(() => {});
+      }
+
+      // Jeśli w tym scrollu nie było żadnych nowych wiadomości = trafiamy na zsynchronizowane
+      if (newInThisScroll === 0) {
+        consecutiveNoNewMessages++;
+        console.log(`WhatsApp Sync: No new messages (${consecutiveNoNewMessages} consecutive)`);
+
+        // Po 3 scrollach bez nowych wiadomości - kończymy
+        if (consecutiveNoNewMessages >= 3) {
+          console.log('WhatsApp Sync: Reached synced messages, stopping');
           break;
         }
       } else {
-        noNewMessagesCount = 0;
+        consecutiveNoNewMessages = 0;
       }
 
-      previousMessageCount = messages.length;
-
-      // Sprawdź czy wszystkie widoczne wiadomości są już zsyncowane
-      const newHashes = messages.filter(m => !lastSyncedHashes.has(m.message_hash));
-      if (newHashes.length === 0 && scrollAttempts > 3) {
-        console.log('WhatsApp Sync: All visible messages already synced, stopping');
-        break;
-      }
-
-      // Sync nowe wiadomości
-      result = await syncMessages(messages, phoneNumber, contactName);
-      totalInserted += result.inserted || 0;
-
-      // Wyślij progress do popup
-      chrome.runtime.sendMessage({
-        type: 'SYNC_PROGRESS',
-        data: {
-          phone: phoneNumber,
-          scroll: scrollAttempts,
-          messages: messages.length,
-          inserted: totalInserted
-        }
-      });
-
-      console.log(`WhatsApp Sync: Scroll ${scrollAttempts}, messages: ${messages.length}, new: ${result.inserted || 0}`);
-
-      // Jeśli scroll się nie zmienił (dotarliśmy do góry)
+      // Sprawdź czy dotarliśmy do góry konwersacji
       if (messageContainer.scrollTop === previousScrollTop && previousScrollTop === 0) {
-        noNewMessagesCount++;
+        console.log('WhatsApp Sync: Reached top of conversation');
+        break;
       }
     }
 
     issyncing = false;
+
+    console.log(`WhatsApp Sync: Deep sync complete - ${totalInserted} new, ${totalSkipped} skipped, ${scrollAttempts} scrolls`);
 
     return {
       success: true,
@@ -636,157 +645,159 @@
     });
   }
 
-  // Sync wszystkich czatów (iteruje po liście)
+  // Sync wszystkich czatów - synchronizuje aż trafi na już zsynchronizowane
   async function syncAllChats() {
     await loadConfig();
 
-    // Znajdź panel boczny z czatami
     const sidePanel = document.querySelector('#pane-side');
     if (!sidePanel) {
-      console.error('WhatsApp Sync: Side panel not found');
       return { success: false, error: 'Nie znaleziono panelu bocznego' };
     }
 
-    console.log('WhatsApp Sync: Found side panel');
-
-    // Znajdź elementy czatów - szukamy elementów z aria-label zawierającym czas (np. "12:30")
-    // lub elementów które wyglądają jak wiersz czatu
-    let chatItems = [];
-
-    // Metoda 1: Szukaj divów które mają role="listitem" lub są klikalne
-    const allDivs = sidePanel.querySelectorAll('div[tabindex="-1"]');
-    console.log('WhatsApp Sync: Found divs with tabindex:', allDivs.length);
-
-    // Metoda 2: Szukaj przez strukturę - każdy czat ma span z czasem
-    const timeSpans = sidePanel.querySelectorAll('span[dir="auto"]');
-    const chatContainers = new Set();
-
-    timeSpans.forEach(span => {
-      // Szukaj rodzica który jest "wierszem" czatu (ma onClick)
-      let parent = span.parentElement;
-      for (let i = 0; i < 10 && parent; i++) {
-        if (parent.getAttribute('tabindex') === '-1' && parent.querySelector('[data-icon]')) {
-          chatContainers.add(parent);
-          break;
-        }
-        parent = parent.parentElement;
-      }
-    });
-
-    chatItems = Array.from(chatContainers);
-    console.log('WhatsApp Sync: Found chat containers:', chatItems.length);
-
-    // Metoda 3: Fallback - szukaj przez data-testid
-    if (chatItems.length === 0) {
-      chatItems = Array.from(sidePanel.querySelectorAll('[data-testid="cell-frame-container"]'));
-      console.log('WhatsApp Sync: Fallback - cell-frame-container:', chatItems.length);
-    }
-
-    // Metoda 4: Jeszcze bardziej ogólna - wszystkie klikalne divy w panelu
-    if (chatItems.length === 0) {
-      const scrollContainer = sidePanel.querySelector('[role="application"]') || sidePanel.firstElementChild;
-      if (scrollContainer) {
-        // Szukamy bezpośrednich dzieci które wyglądają jak czaty
-        chatItems = Array.from(scrollContainer.querySelectorAll(':scope > div > div > div[tabindex]'));
-        console.log('WhatsApp Sync: Deep fallback:', chatItems.length);
-      }
-    }
-
-    if (chatItems.length === 0) {
-      // Debug: pokaż strukturę panelu
-      console.log('WhatsApp Sync: Panel structure:', sidePanel.innerHTML.substring(0, 500));
-      return { success: false, error: 'Nie znaleziono czatów - sprawdź konsolę' };
-    }
+    console.log('WhatsApp Sync: Starting sync all chats');
 
     const results = [];
     let totalInserted = 0;
     let totalSkipped = 0;
+    let consecutiveNoNewMessages = 0;
+    let chatIndex = 0;
+    const maxChats = 100; // Absolutny limit bezpieczeństwa
 
-    // Limit do 15 czatów
-    const maxChats = Math.min(chatItems.length, 15);
-    console.log(`WhatsApp Sync: Will process ${maxChats} chats`);
+    // Funkcja do znalezienia czatów
+    function findChatItems() {
+      const timeSpans = sidePanel.querySelectorAll('span[dir="auto"]');
+      const chatContainers = new Set();
 
-    for (let i = 0; i < maxChats; i++) {
-      const chatEl = chatItems[i];
+      timeSpans.forEach(span => {
+        let parent = span.parentElement;
+        for (let i = 0; i < 10 && parent; i++) {
+          if (parent.getAttribute('tabindex') === '-1' && parent.querySelector('[data-icon]')) {
+            chatContainers.add(parent);
+            break;
+          }
+          parent = parent.parentElement;
+        }
+      });
+
+      return Array.from(chatContainers);
+    }
+
+    const tabId = await getTabId();
+
+    while (chatIndex < maxChats && consecutiveNoNewMessages < 3) {
+      // Znajdź aktualne czaty (mogą się ładować nowe przy scrollowaniu)
+      const chatItems = findChatItems();
+
+      if (chatIndex >= chatItems.length) {
+        // Scrolluj listę czatów w dół żeby załadować więcej
+        console.log('WhatsApp Sync: Scrolling chat list to load more');
+        sidePanel.scrollTop = sidePanel.scrollHeight;
+        await new Promise(r => setTimeout(r, 1000));
+
+        const newChatItems = findChatItems();
+        if (newChatItems.length <= chatItems.length) {
+          console.log('WhatsApp Sync: No more chats to load');
+          break;
+        }
+        continue;
+      }
+
+      const chatEl = chatItems[chatIndex];
+      chatIndex++;
 
       try {
-        console.log(`WhatsApp Sync: Clicking chat ${i+1}/${maxChats}`, chatEl);
-
-        // Pobierz pozycję elementu
+        // Pobierz pozycję i kliknij
         const rect = chatEl.getBoundingClientRect();
-        const centerX = Math.round(rect.left + rect.width / 2);
-        const centerY = Math.round(rect.top + rect.height / 2);
 
-        console.log('WhatsApp Sync: Real click at', centerX, centerY);
+        // Jeśli element nie jest widoczny, scrolluj do niego
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          chatEl.scrollIntoView({ block: 'center' });
+          await new Promise(r => setTimeout(r, 300));
+        }
 
-        // Pobierz aktualny tytuł czatu
-        const currentTitle = document.querySelector('#main header span[title]')?.getAttribute('title');
+        const newRect = chatEl.getBoundingClientRect();
+        const centerX = Math.round(newRect.left + newRect.width / 2);
+        const centerY = Math.round(newRect.top + newRect.height / 2);
 
-        // Wyślij prawdziwe kliknięcie przez debugger API
-        const tabId = await getTabId();
-        const clickResult = await new Promise((resolve) => {
+        console.log(`WhatsApp Sync: Clicking chat ${chatIndex}`);
+
+        // Kliknij przez debugger API
+        await new Promise((resolve) => {
           chrome.runtime.sendMessage({
             type: 'REAL_CLICK',
             x: centerX,
             y: centerY,
             tabId: tabId
-          }, (response) => {
-            resolve(response || { success: false, error: 'No response' });
-          });
+          }, resolve);
         });
-
-        if (!clickResult.success) {
-          console.error('WhatsApp Sync: Click failed:', clickResult.error);
-        }
 
         // Poczekaj na załadowanie czatu
         await new Promise(r => setTimeout(r, 2000));
-
-        // Sprawdź czy czat się otworzył
-        const newTitle = document.querySelector('#main header span[title]')?.getAttribute('title');
-        const chatOpened = newTitle && newTitle !== currentTitle;
-
-        if (chatOpened) {
-          console.log('WhatsApp Sync: Chat opened:', newTitle);
-        } else {
-          console.log('WhatsApp Sync: Chat did not change');
-        }
 
         // Sync
         const phone = getCurrentChatPhone();
         const name = getCurrentChatName();
         const messages = getMessagesFromChat();
 
-        console.log(`WhatsApp Sync: Chat ${i+1}/${maxChats}: ${name || phone || 'unknown'}, ${messages.length} messages`);
-
         if (phone && messages.length > 0) {
           const result = await syncMessages(messages, phone, name);
+          const newMessages = result.inserted || 0;
+
           results.push({ phone, name, ...result });
-          totalInserted += result.inserted || 0;
+          totalInserted += newMessages;
           totalSkipped += result.skipped || 0;
 
-          // Powiadom popup o postępie
+          console.log(`WhatsApp Sync: Chat ${chatIndex} (${name || phone}): +${newMessages} new, ${result.skipped || 0} skipped`);
+
+          // Sprawdź czy są nowe wiadomości
+          if (newMessages === 0) {
+            consecutiveNoNewMessages++;
+            console.log(`WhatsApp Sync: No new messages (${consecutiveNoNewMessages} consecutive)`);
+          } else {
+            consecutiveNoNewMessages = 0;
+          }
+
+          // Powiadom popup
           if (isExtensionContextValid()) {
             chrome.runtime.sendMessage({
               type: 'SYNC_PROGRESS',
-              data: { current: i + 1, total: maxChats, name: name || phone }
+              data: {
+                current: chatIndex,
+                total: '?',
+                name: name || phone,
+                inserted: totalInserted
+              }
             }).catch(() => {});
           }
+        } else {
+          console.log(`WhatsApp Sync: Chat ${chatIndex}: no phone or messages, skipping`);
         }
 
         // Przerwa między czatami
-        await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+        await new Promise(r => setTimeout(r, 800));
 
       } catch (err) {
-        console.error('WhatsApp Sync: Error processing chat', i, err);
+        console.error('WhatsApp Sync: Error processing chat', chatIndex, err);
       }
     }
+
+    // Odłącz debugger po zakończeniu
+    if (isExtensionContextValid()) {
+      chrome.runtime.sendMessage({ type: 'DETACH_DEBUGGER' }).catch(() => {});
+    }
+
+    const reason = consecutiveNoNewMessages >= 3
+      ? 'Dotarliśmy do zsynchronizowanych czatów'
+      : 'Osiągnięto limit czatów';
+
+    console.log(`WhatsApp Sync: Complete - ${results.length} chats, ${totalInserted} new messages. ${reason}`);
 
     return {
       success: true,
       chatsProcessed: results.length,
       totalInserted,
       totalSkipped,
+      reason,
       details: results
     };
   }
