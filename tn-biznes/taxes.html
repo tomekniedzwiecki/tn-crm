@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Rozliczenia podatkowe</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .tax-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .tax-row {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .tax-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(20, 184, 166, 0.02) 100%);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+        }
+
+        .warning-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .period-btn {
+            transition: all 0.2s;
+        }
+        .period-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+            border-color: rgba(20, 184, 166, 0.3);
+        }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .input-field:focus {
+            border-color: rgba(20, 184, 166, 0.5);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">rozliczenia</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Period selector -->
+                <div class="flex items-center gap-1 bg-zinc-900/50 rounded-lg p-1 border border-white/5">
+                    <button onclick="setPeriod('month')" data-period="month" class="period-btn active px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400">
+                        Miesiąc
+                    </button>
+                    <button onclick="setPeriod('quarter')" data-period="quarter" class="period-btn px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400">
+                        Kwartał
+                    </button>
+                    <button onclick="setPeriod('year')" data-period="year" class="period-btn px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400">
+                        Rok
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-5xl mx-auto animate-enter">
+
+                <!-- Period indicator -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <button onclick="navigatePeriod(-1)" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            <i class="ph ph-caret-left"></i>
+                        </button>
+                        <h2 id="period-label" class="text-lg font-semibold text-white">Luty 2026</h2>
+                        <button onclick="navigatePeriod(1)" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+                            <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+                    <div class="text-xs text-zinc-500">
+                        Podatek liniowy 19% | VAT 23%
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div class="tax-card rounded-xl p-4">
+                        <div class="text-xs text-zinc-500 mb-1">Przychód netto</div>
+                        <div class="text-2xl font-mono text-emerald-400" id="summary-revenue">0 zł</div>
+                    </div>
+                    <div class="tax-card rounded-xl p-4">
+                        <div class="text-xs text-zinc-500 mb-1">Koszty netto</div>
+                        <div class="text-2xl font-mono text-red-400" id="summary-costs">0 zł</div>
+                    </div>
+                    <div class="tax-card rounded-xl p-4">
+                        <div class="text-xs text-zinc-500 mb-1">Dochód brutto</div>
+                        <div class="text-2xl font-mono text-white" id="summary-income">0 zł</div>
+                    </div>
+                    <div class="summary-card rounded-xl p-4">
+                        <div class="text-xs text-teal-400 mb-1">Zysk netto (na rękę)</div>
+                        <div class="text-2xl font-mono text-teal-400 font-semibold" id="summary-profit">0 zł</div>
+                    </div>
+                </div>
+
+                <!-- Daniny do zapłaty -->
+                <div class="warning-card rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph ph-warning text-amber-400 text-xl"></i>
+                        <h3 class="text-base font-semibold text-white">Daniny do zapłaty w tym okresie</h3>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">VAT</div>
+                            <div class="text-xl font-mono text-amber-400" id="due-vat">0 zł</div>
+                            <div class="text-[10px] text-zinc-600">do 25. następnego miesiąca</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">ZUS społeczny</div>
+                            <div class="text-xl font-mono text-amber-400" id="due-zus-spoleczny">0 zł</div>
+                            <div class="text-[10px] text-zinc-600">do 20. każdego miesiąca</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">ZUS zdrowotny</div>
+                            <div class="text-xl font-mono text-amber-400" id="due-zus-zdrowotny">0 zł</div>
+                            <div class="text-[10px] text-zinc-600">do 20. każdego miesiąca</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">PIT</div>
+                            <div class="text-xl font-mono text-amber-400" id="due-pit">0 zł</div>
+                            <div class="text-[10px] text-zinc-600">do 20. następnego miesiąca</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-amber-500/20 flex items-center justify-between">
+                        <span class="text-sm text-zinc-400">Suma wszystkich danin:</span>
+                        <span class="text-2xl font-mono text-amber-400 font-semibold" id="due-total">0 zł</span>
+                    </div>
+                </div>
+
+                <!-- VAT Section -->
+                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i class="ph ph-receipt text-zinc-500"></i>
+                            Rozliczenie VAT
+                        </h3>
+                        <span class="text-xs text-zinc-500">Stawka 23%</span>
+                    </div>
+
+                    <!-- VAT należny -->
+                    <div class="mb-4">
+                        <div class="text-xs text-zinc-500 uppercase mb-2">VAT należny (od sprzedaży)</div>
+                        <div class="bg-zinc-900/50 rounded-lg p-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-zinc-400">Przychód brutto</span>
+                                <span class="font-mono text-zinc-300" id="vat-revenue-brutto">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-zinc-400">Przychód netto</span>
+                                <span class="font-mono text-zinc-300" id="vat-revenue-netto">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                                <span class="text-white font-medium">VAT należny (23%)</span>
+                                <span class="font-mono text-emerald-400 font-medium" id="vat-output">0 zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VAT naliczony -->
+                    <div class="mb-4">
+                        <div class="text-xs text-zinc-500 uppercase mb-2">VAT naliczony (od zakupów)</div>
+                        <div class="bg-zinc-900/50 rounded-lg p-3">
+                            <div id="vat-costs-list" class="space-y-1.5 mb-2">
+                                <!-- Lista kosztów z VAT -->
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                                <span class="text-white font-medium">VAT naliczony łącznie</span>
+                                <span class="font-mono text-red-400 font-medium" id="vat-input">0 zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VAT do zapłaty -->
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-white font-medium">VAT do zapłaty</div>
+                                <div class="text-xs text-zinc-500">VAT należny - VAT naliczony</div>
+                            </div>
+                            <span class="text-2xl font-mono text-amber-400 font-semibold" id="vat-due">0 zł</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ZUS Section -->
+                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i class="ph ph-shield-check text-zinc-500"></i>
+                            Składki ZUS
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-zinc-500">Duży ZUS</span>
+                            <input type="number" id="zus-base-input" class="input-field w-24 rounded px-2 py-1 text-xs text-white text-right" value="1600" onchange="recalculate()">
+                            <span class="text-xs text-zinc-500">zł/mies</span>
+                        </div>
+                    </div>
+
+                    <!-- ZUS społeczny -->
+                    <div class="mb-4">
+                        <div class="text-xs text-zinc-500 uppercase mb-2">Składki społeczne (stałe)</div>
+                        <div class="bg-zinc-900/50 rounded-lg p-3 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Emerytalna (19.52%)</span>
+                                <span class="font-mono text-zinc-300" id="zus-emerytalna">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Rentowa (8%)</span>
+                                <span class="font-mono text-zinc-300" id="zus-rentowa">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Chorobowa (2.45%)</span>
+                                <span class="font-mono text-zinc-300" id="zus-chorobowa">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Wypadkowa (~1.67%)</span>
+                                <span class="font-mono text-zinc-300" id="zus-wypadkowa">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Fundusz Pracy (2.45%)</span>
+                                <span class="font-mono text-zinc-300" id="zus-fp">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                                <span class="text-white font-medium">Razem społeczne</span>
+                                <span class="font-mono text-zinc-300 font-medium" id="zus-spoleczny-total">0 zł</span>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-zinc-600">
+                            <i class="ph ph-info mr-1"></i>
+                            Składki społeczne są kosztem uzyskania przychodu (pomniejszają podstawę PIT)
+                        </div>
+                    </div>
+
+                    <!-- ZUS zdrowotny -->
+                    <div class="mb-4">
+                        <div class="text-xs text-zinc-500 uppercase mb-2">Składka zdrowotna (9% od dochodu)</div>
+                        <div class="bg-zinc-900/50 rounded-lg p-3 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Dochód (przychód - koszty)</span>
+                                <span class="font-mono text-zinc-300" id="zus-dochod">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Minus składki społeczne</span>
+                                <span class="font-mono text-zinc-300" id="zus-minus-spoleczny">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-zinc-400">Podstawa zdrowotnej</span>
+                                <span class="font-mono text-zinc-300" id="zus-podstawa-zdrowotna">0 zł</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                                <span class="text-white font-medium">Składka zdrowotna (9%)</span>
+                                <span class="font-mono text-zinc-300 font-medium" id="zus-zdrowotny-total">0 zł</span>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-zinc-600">
+                            <i class="ph ph-info mr-1"></i>
+                            Na podatku liniowym składka zdrowotna jest kosztem do limitu <span id="zus-zdrowotny-limit">967</span> zł/mies
+                        </div>
+                    </div>
+
+                    <!-- ZUS łącznie -->
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-white font-medium">Składki ZUS łącznie</div>
+                                <div class="text-xs text-zinc-500">Społeczne + zdrowotna</div>
+                            </div>
+                            <span class="text-2xl font-mono text-amber-400 font-semibold" id="zus-total">0 zł</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PIT Section -->
+                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i class="ph ph-calculator text-zinc-500"></i>
+                            Podatek dochodowy PIT
+                        </h3>
+                        <span class="text-xs text-zinc-500">Stawka liniowa 19%</span>
+                    </div>
+
+                    <div class="bg-zinc-900/50 rounded-lg p-3 space-y-2 mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Przychód netto</span>
+                            <span class="font-mono text-emerald-400" id="pit-przychod">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Koszty uzyskania przychodu</span>
+                            <span class="font-mono text-red-400" id="pit-koszty">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Składki ZUS społeczne (koszt)</span>
+                            <span class="font-mono text-red-400" id="pit-zus-spoleczny">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Składka zdrowotna (koszt do limitu)</span>
+                            <span class="font-mono text-red-400" id="pit-zus-zdrowotny">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                            <span class="text-white font-medium">Podstawa opodatkowania</span>
+                            <span class="font-mono text-white font-medium" id="pit-podstawa">0 zł</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-white font-medium">Podatek PIT do zapłaty</div>
+                                <div class="text-xs text-zinc-500">Podstawa × 19%</div>
+                            </div>
+                            <span class="text-2xl font-mono text-amber-400 font-semibold" id="pit-due">0 zł</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Koszty breakdown -->
+                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i class="ph ph-list-bullets text-zinc-500"></i>
+                            Struktura kosztów
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3" id="costs-breakdown">
+                        <!-- Koszty będą renderowane tutaj -->
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
+                        <span class="text-white font-medium">Koszty łącznie (netto)</span>
+                        <span class="font-mono text-red-400 font-medium" id="costs-total">0 zł</span>
+                    </div>
+                </div>
+
+                <!-- Podsumowanie końcowe -->
+                <div class="summary-card rounded-xl p-4 md:p-6">
+                    <h3 class="text-base font-semibold text-white mb-4">Podsumowanie</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Przychód netto</span>
+                            <span class="font-mono text-emerald-400" id="final-revenue">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Koszty działalności (netto)</span>
+                            <span class="font-mono text-red-400" id="final-costs">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Składki ZUS</span>
+                            <span class="font-mono text-red-400" id="final-zus">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-zinc-400">Podatek PIT</span>
+                            <span class="font-mono text-red-400" id="final-pit">0 zł</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-teal-500/30">
+                            <span class="text-white font-semibold text-lg">Zostaje na rękę</span>
+                            <span class="font-mono text-teal-400 font-bold text-2xl" id="final-profit">0 zł</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-teal-500/20 text-xs text-zinc-500">
+                        <i class="ph ph-info mr-1"></i>
+                        VAT nie jest wliczany do zysku - to podatek przechodni (dostajesz od klienta i oddajesz do US)
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIG
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // CONSTANTS
+        // ============================================
+        const LIMIT_ZDROWOTNY_ROCZNY = 11600; // Limit odliczenia zdrowotnej jako koszt
+
+        // Proporcje składek ZUS (przybliżone)
+        const ZUS_RATES = {
+            emerytalna: 0.1952,
+            rentowa: 0.08,
+            chorobowa: 0.0245,
+            wypadkowa: 0.0167,
+            fp: 0.0245
+        };
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentPeriod = 'month';
+        let currentDate = new Date();
+        let taxData = null;
+
+        // ============================================
+        // AUTH
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(amount)) + ' zł';
+        }
+
+        function toNetto(brutto) {
+            return brutto / 1.23;
+        }
+
+        function toDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getPeriodDates() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            if (currentPeriod === 'month') {
+                const start = new Date(year, month, 1);
+                const end = new Date(year, month + 1, 0);
+                return { start, end };
+            } else if (currentPeriod === 'quarter') {
+                const quarter = Math.floor(month / 3);
+                const start = new Date(year, quarter * 3, 1);
+                const end = new Date(year, quarter * 3 + 3, 0);
+                return { start, end };
+            } else {
+                const start = new Date(year, 0, 1);
+                const end = new Date(year, 11, 31);
+                return { start, end };
+            }
+        }
+
+        function formatPeriodLabel() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const months = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                           'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+
+            if (currentPeriod === 'month') {
+                return `${months[month]} ${year}`;
+            } else if (currentPeriod === 'quarter') {
+                const quarter = Math.floor(month / 3) + 1;
+                return `Q${quarter} ${year}`;
+            } else {
+                return `${year}`;
+            }
+        }
+
+        // ============================================
+        // EMPLOYEE COST CALCULATION
+        // ============================================
+        function calcCommission(sales, tiers) {
+            let commission = 0;
+            const sortedTiers = [...tiers].sort((a, b) => a.min - b.min);
+
+            for (const tier of sortedTiers) {
+                if (sales > tier.min) {
+                    const amt = Math.min(sales, tier.max) - tier.min;
+                    commission += amt * tier.rate;
+                }
+            }
+
+            if (sortedTiers.length > 0) {
+                const maxTier = sortedTiers[sortedTiers.length - 1];
+                if (sales > maxTier.max) {
+                    commission += (sales - maxTier.max) * maxTier.rate;
+                }
+            }
+
+            return commission;
+        }
+
+        function calcMonthlyBonus(sales, threshold, amount) {
+            if (!threshold || !amount) return 0;
+            return sales >= threshold ? amount : 0;
+        }
+
+        async function getEmployeeSales(teamMemberId, monthStart, monthEndExclusive) {
+            const { data: orders } = await supabaseClient
+                .from('orders')
+                .select('id, amount, lead_id, paid_at, customer_email')
+                .eq('status', 'paid')
+                .gte('paid_at', monthStart)
+                .lt('paid_at', monthEndExclusive);
+
+            if (!orders || orders.length === 0) {
+                return { totalSales: 0 };
+            }
+
+            const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
+            let leadsMap = {};
+
+            if (leadIds.length > 0) {
+                const { data: leads } = await supabaseClient
+                    .from('leads')
+                    .select('id, assigned_to')
+                    .in('id', leadIds);
+                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l.assigned_to]));
+            }
+
+            const ordersWithoutLead = orders.filter(o => !o.lead_id && o.customer_email);
+            if (ordersWithoutLead.length > 0) {
+                const emails = [...new Set(ordersWithoutLead.map(o => o.customer_email))];
+                const { data: leadsByEmail } = await supabaseClient
+                    .from('leads')
+                    .select('id, email, assigned_to')
+                    .in('email', emails);
+
+                if (leadsByEmail) {
+                    const emailToLead = Object.fromEntries(leadsByEmail.map(l => [l.email, l]));
+                    for (const order of ordersWithoutLead) {
+                        const lead = emailToLead[order.customer_email];
+                        if (lead) leadsMap[order.id] = lead.assigned_to;
+                    }
+                }
+            }
+
+            let totalSales = 0;
+            for (const order of orders) {
+                const assignedTo = order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id];
+                if (assignedTo === teamMemberId) {
+                    totalSales += toNetto(parseFloat(order.amount));
+                }
+            }
+
+            return { totalSales };
+        }
+
+        async function calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod) {
+            const { data: contracts } = await supabaseClient
+                .from('employee_contracts')
+                .select('*, team_members!inner(id, name)')
+                .is('effective_to', null);
+
+            if (!contracts || contracts.length === 0) return [];
+
+            const monthDate = startStr;
+            const { data: bonuses } = await supabaseClient
+                .from('employee_bonuses')
+                .select('*')
+                .eq('month', monthDate);
+
+            const employeeCosts = [];
+
+            for (const contract of contracts) {
+                const { totalSales } = await getEmployeeSales(contract.team_member_id, startStr, nextDayStr);
+                const tiers = contract.commission_tiers || [];
+                const commission = calcCommission(totalSales, tiers);
+                const monthlyBonus = calcMonthlyBonus(totalSales, contract.monthly_bonus_threshold, contract.monthly_bonus_amount);
+                const memberBonuses = (bonuses || []).filter(b => b.team_member_id === contract.team_member_id);
+                const manualBonusTotal = memberBonuses.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+                const baseSalary = parseFloat(contract.base_salary || 0) * monthsInPeriod;
+                const totalCost = baseSalary + commission + monthlyBonus + manualBonusTotal;
+
+                employeeCosts.push({
+                    name: `${contract.team_members.name} (${contract.contract_type})`,
+                    amount: totalCost,
+                    category: 'pracownik',
+                    vat_rate: 0,
+                    details: { baseSalary, commission, monthlyBonus, manualBonusTotal }
+                });
+            }
+
+            return employeeCosts;
+        }
+
+        // ============================================
+        // DATA FETCHING
+        // ============================================
+        async function fetchTaxData() {
+            const { start, end } = getPeriodDates();
+            const startStr = toDateString(start);
+            const endStr = toDateString(end);
+
+            const nextDay = new Date(end);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayStr = toDateString(nextDay);
+
+            const monthsInPeriod = currentPeriod === 'quarter' ? 3 : (currentPeriod === 'year' ? 12 : 1);
+
+            const [ordersRes, manualRevenuesRes, oneTimeCostsRes, recurringCostsRes] = await Promise.all([
+                supabaseClient
+                    .from('orders')
+                    .select('amount, paid_at')
+                    .eq('status', 'paid')
+                    .gte('paid_at', startStr)
+                    .lt('paid_at', nextDayStr),
+                supabaseClient
+                    .from('biznes_revenues')
+                    .select('*')
+                    .eq('is_received', true)
+                    .gte('date', startStr)
+                    .lte('date', endStr),
+                supabaseClient
+                    .from('biznes_costs')
+                    .select('*')
+                    .eq('cost_type', 'one_time')
+                    .neq('category', 'pracownik')
+                    .gte('month', startStr)
+                    .lte('month', endStr),
+                supabaseClient
+                    .from('biznes_recurring_costs')
+                    .select('*')
+                    .eq('is_active', true)
+                    .neq('category', 'pracownik')
+            ]);
+
+            const orders = ordersRes.data || [];
+            const manualRevenues = manualRevenuesRes.data || [];
+            const oneTimeCosts = oneTimeCostsRes.data || [];
+            const recurringCosts = recurringCostsRes.data || [];
+
+            // Dynamiczne koszty pracowników
+            const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
+
+            // Przychody
+            const crmRevenueBrutto = orders.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
+            const manualRevenueBrutto = manualRevenues.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+            const totalRevenueBrutto = crmRevenueBrutto + manualRevenueBrutto;
+            const totalRevenueNetto = toNetto(totalRevenueBrutto);
+
+            // Koszty - zbierz wszystkie
+            const allCosts = [
+                ...recurringCosts.map(c => ({
+                    ...c,
+                    amount: parseFloat(c.amount || 0) * monthsInPeriod
+                })),
+                ...oneTimeCosts.map(c => ({
+                    ...c,
+                    amount: parseFloat(c.amount || 0)
+                })),
+                ...employeeCosts
+            ];
+
+            return {
+                monthsInPeriod,
+                revenue: {
+                    brutto: totalRevenueBrutto,
+                    netto: totalRevenueNetto
+                },
+                costs: allCosts
+            };
+        }
+
+        // ============================================
+        // CALCULATIONS
+        // ============================================
+        function calculateTaxes(data) {
+            const zusBase = parseFloat(document.getElementById('zus-base-input').value) || 1600;
+            const monthsInPeriod = data.monthsInPeriod;
+
+            // Przychody
+            const revenueNetto = data.revenue.netto;
+            const revenueBrutto = data.revenue.brutto;
+
+            // VAT należny
+            const vatOutput = revenueBrutto - revenueNetto;
+
+            // Koszty - rozdziel na z VAT i bez VAT
+            let costsWithVatBrutto = 0;
+            let costsWithVatNetto = 0;
+            let costsWithoutVat = 0;
+            const costItems = [];
+
+            for (const cost of data.costs) {
+                const amount = cost.amount;
+                const vatRate = parseFloat(cost.vat_rate || 0);
+
+                if (vatRate > 0) {
+                    const netto = amount / (1 + vatRate);
+                    const vat = amount - netto;
+                    costsWithVatBrutto += amount;
+                    costsWithVatNetto += netto;
+                    costItems.push({
+                        name: cost.name,
+                        brutto: amount,
+                        netto: netto,
+                        vat: vat,
+                        vatRate: vatRate,
+                        category: cost.category
+                    });
+                } else {
+                    costsWithoutVat += amount;
+                    costItems.push({
+                        name: cost.name,
+                        brutto: amount,
+                        netto: amount,
+                        vat: 0,
+                        vatRate: 0,
+                        category: cost.category
+                    });
+                }
+            }
+
+            const costsNetto = costsWithVatNetto + costsWithoutVat;
+            const vatInput = costsWithVatBrutto - costsWithVatNetto;
+            const vatDue = Math.max(0, vatOutput - vatInput);
+
+            // Dochód
+            const dochod = Math.max(0, revenueNetto - costsNetto);
+
+            // ZUS społeczny
+            const zusSpoleczny = zusBase * monthsInPeriod;
+
+            // Rozbicie ZUS społecznego (przybliżone)
+            const totalRate = ZUS_RATES.emerytalna + ZUS_RATES.rentowa + ZUS_RATES.chorobowa + ZUS_RATES.wypadkowa + ZUS_RATES.fp;
+            const zusEmerytalna = (ZUS_RATES.emerytalna / totalRate) * zusSpoleczny;
+            const zusRentowa = (ZUS_RATES.rentowa / totalRate) * zusSpoleczny;
+            const zusChorobowa = (ZUS_RATES.chorobowa / totalRate) * zusSpoleczny;
+            const zusWypadkowa = (ZUS_RATES.wypadkowa / totalRate) * zusSpoleczny;
+            const zusFP = (ZUS_RATES.fp / totalRate) * zusSpoleczny;
+
+            // ZUS zdrowotny
+            const podstawaZdrowotna = Math.max(dochod - zusSpoleczny, 3500 * monthsInPeriod);
+            const zusZdrowotny = podstawaZdrowotna * 0.09;
+            const zusTotal = zusSpoleczny + zusZdrowotny;
+
+            // Limit zdrowotnej jako koszt
+            const limitZdrowotny = (LIMIT_ZDROWOTNY_ROCZNY / 12) * monthsInPeriod;
+            const zdrowotnyJakoKoszt = Math.min(zusZdrowotny, limitZdrowotny);
+
+            // PIT
+            const podstawaPit = Math.max(0, dochod - zusSpoleczny - zdrowotnyJakoKoszt);
+            const pit = podstawaPit * 0.19;
+
+            // Suma danin
+            const totalDaniny = vatDue + zusTotal + pit;
+
+            // Zysk netto
+            const zyskNetto = revenueNetto - costsNetto - zusTotal - pit;
+
+            return {
+                revenue: { brutto: revenueBrutto, netto: revenueNetto },
+                vat: { output: vatOutput, input: vatInput, due: vatDue },
+                costs: { items: costItems, netto: costsNetto },
+                dochod,
+                zus: {
+                    spoleczny: zusSpoleczny,
+                    emerytalna: zusEmerytalna,
+                    rentowa: zusRentowa,
+                    chorobowa: zusChorobowa,
+                    wypadkowa: zusWypadkowa,
+                    fp: zusFP,
+                    zdrowotny: zusZdrowotny,
+                    podstawaZdrowotna,
+                    limitZdrowotny,
+                    zdrowotnyJakoKoszt,
+                    total: zusTotal
+                },
+                pit: { podstawa: podstawaPit, due: pit },
+                totalDaniny,
+                zyskNetto,
+                monthsInPeriod
+            };
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        function updateUI(calc) {
+            // Summary
+            document.getElementById('summary-revenue').textContent = formatMoney(calc.revenue.netto);
+            document.getElementById('summary-costs').textContent = formatMoney(calc.costs.netto);
+            document.getElementById('summary-income').textContent = formatMoney(calc.dochod);
+            document.getElementById('summary-profit').textContent = formatMoney(calc.zyskNetto);
+
+            // Daniny do zapłaty
+            document.getElementById('due-vat').textContent = formatMoney(calc.vat.due);
+            document.getElementById('due-zus-spoleczny').textContent = formatMoney(calc.zus.spoleczny);
+            document.getElementById('due-zus-zdrowotny').textContent = formatMoney(calc.zus.zdrowotny);
+            document.getElementById('due-pit').textContent = formatMoney(calc.pit.due);
+            document.getElementById('due-total').textContent = formatMoney(calc.totalDaniny);
+
+            // VAT
+            document.getElementById('vat-revenue-brutto').textContent = formatMoney(calc.revenue.brutto);
+            document.getElementById('vat-revenue-netto').textContent = formatMoney(calc.revenue.netto);
+            document.getElementById('vat-output').textContent = formatMoney(calc.vat.output);
+            document.getElementById('vat-input').textContent = formatMoney(calc.vat.input);
+            document.getElementById('vat-due').textContent = formatMoney(calc.vat.due);
+
+            // VAT costs list
+            const vatCostsList = document.getElementById('vat-costs-list');
+            const costsWithVat = calc.costs.items.filter(c => c.vat > 0);
+            if (costsWithVat.length > 0) {
+                vatCostsList.innerHTML = costsWithVat.map(c => `
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-zinc-400">${c.name}</span>
+                        <span class="font-mono text-zinc-300">${formatMoney(c.vat)}</span>
+                    </div>
+                `).join('');
+            } else {
+                vatCostsList.innerHTML = '<div class="text-zinc-500 text-sm">Brak kosztów z VAT</div>';
+            }
+
+            // ZUS
+            document.getElementById('zus-emerytalna').textContent = formatMoney(calc.zus.emerytalna);
+            document.getElementById('zus-rentowa').textContent = formatMoney(calc.zus.rentowa);
+            document.getElementById('zus-chorobowa').textContent = formatMoney(calc.zus.chorobowa);
+            document.getElementById('zus-wypadkowa').textContent = formatMoney(calc.zus.wypadkowa);
+            document.getElementById('zus-fp').textContent = formatMoney(calc.zus.fp);
+            document.getElementById('zus-spoleczny-total').textContent = formatMoney(calc.zus.spoleczny);
+
+            document.getElementById('zus-dochod').textContent = formatMoney(calc.dochod);
+            document.getElementById('zus-minus-spoleczny').textContent = '-' + formatMoney(calc.zus.spoleczny);
+            document.getElementById('zus-podstawa-zdrowotna').textContent = formatMoney(calc.zus.podstawaZdrowotna);
+            document.getElementById('zus-zdrowotny-total').textContent = formatMoney(calc.zus.zdrowotny);
+            document.getElementById('zus-zdrowotny-limit').textContent = Math.round(calc.zus.limitZdrowotny / calc.monthsInPeriod);
+            document.getElementById('zus-total').textContent = formatMoney(calc.zus.total);
+
+            // PIT
+            document.getElementById('pit-przychod').textContent = formatMoney(calc.revenue.netto);
+            document.getElementById('pit-koszty').textContent = '-' + formatMoney(calc.costs.netto);
+            document.getElementById('pit-zus-spoleczny').textContent = '-' + formatMoney(calc.zus.spoleczny);
+            document.getElementById('pit-zus-zdrowotny').textContent = '-' + formatMoney(calc.zus.zdrowotnyJakoKoszt);
+            document.getElementById('pit-podstawa').textContent = formatMoney(calc.pit.podstawa);
+            document.getElementById('pit-due').textContent = formatMoney(calc.pit.due);
+
+            // Costs breakdown
+            const costsBreakdown = document.getElementById('costs-breakdown');
+            const categoryLabels = {
+                'infrastructure': 'Infrastruktura',
+                'tools': 'Narzędzia',
+                'marketing': 'Marketing',
+                'office': 'Biuro',
+                'services': 'Usługi',
+                'pracownik': 'Pracownik',
+                'other': 'Inne'
+            };
+
+            costsBreakdown.innerHTML = calc.costs.items.map(c => `
+                <div class="flex items-center justify-between bg-zinc-900/30 rounded-lg p-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">${categoryLabels[c.category] || c.category}</span>
+                        <span class="text-zinc-300">${c.name}</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono text-zinc-300">${formatMoney(c.netto)}</div>
+                        ${c.vat > 0 ? `<div class="text-xs text-zinc-500">VAT: ${formatMoney(c.vat)}</div>` : '<div class="text-xs text-zinc-600">bez VAT</div>'}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('costs-total').textContent = formatMoney(calc.costs.netto);
+
+            // Final summary
+            document.getElementById('final-revenue').textContent = formatMoney(calc.revenue.netto);
+            document.getElementById('final-costs').textContent = '-' + formatMoney(calc.costs.netto);
+            document.getElementById('final-zus').textContent = '-' + formatMoney(calc.zus.total);
+            document.getElementById('final-pit').textContent = '-' + formatMoney(calc.pit.due);
+            document.getElementById('final-profit').textContent = formatMoney(calc.zyskNetto);
+        }
+
+        // ============================================
+        // PERIOD NAVIGATION
+        // ============================================
+        function setPeriod(period) {
+            currentPeriod = period;
+            document.querySelectorAll('[data-period]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.period === period);
+            });
+            loadData();
+        }
+
+        function navigatePeriod(direction) {
+            if (currentPeriod === 'month') {
+                currentDate.setMonth(currentDate.getMonth() + direction);
+            } else if (currentPeriod === 'quarter') {
+                currentDate.setMonth(currentDate.getMonth() + direction * 3);
+            } else {
+                currentDate.setFullYear(currentDate.getFullYear() + direction);
+            }
+            loadData();
+        }
+
+        function recalculate() {
+            if (taxData) {
+                const calc = calculateTaxes(taxData);
+                updateUI(calc);
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function loadData() {
+            document.getElementById('period-label').textContent = formatPeriodLabel();
+
+            try {
+                taxData = await fetchTaxData();
+                const calc = calculateTaxes(taxData);
+                updateUI(calc);
+            } catch (err) {
+                console.error('Error loading tax data:', err);
+            }
+        }
+
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            if (!Sidebar.canAccessApp('biznes', session.user.email)) {
+                window.location.href = '/dashboard';
+                return;
+            }
+
+            Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+
+            await loadData();
+        }
+
+        init();
+    </script>
+</body>
+</html>
