@@ -54,17 +54,38 @@ Przeczytaj nazwe, opis produktu i raporty. Ustal:
 
 **ZAWSZE ZAPYTAJ UZYTKOWNIKA** o finalna nazwe marki i domene przed generowaniem SQL!
 
-Zaproponuj 3 propozycje nazw z dostepnymi domenami .pl, np:
-- NazwaA — nazwaA.pl
-- NazwaB — nazwaB.pl
-- NazwaC — nazwaC.pl
+**OBOWIAZKOWO SPRAWDZ DOSTEPNOSC DOMEN** przed zaproponowaniem nazw!
+
+Uzyj komendy DNS lookup do weryfikacji:
+```bash
+for domain in nazwa1.pl nazwa2.pl nazwa3.pl; do
+  result=$(nslookup $domain 2>&1)
+  if echo "$result" | grep -q "can't find\|NXDOMAIN\|Non-existent"; then
+    echo "$domain - WOLNA"
+  fi
+done
+```
+
+**Zaproponuj 10 propozycji nazw** — mix polskich i angielskich, dopasowanych do kategorii produktu:
+- Minimum 4 nazwy polskie (dla produktow skierowanych do polskich fachowcow/konsumentow)
+- Minimum 4 nazwy angielskie (dla produktow z potencjalem miedzynarodowym)
+- Pozostale 2 — dowolne lub mieszane (np. TechOko, LupaTech)
+
+Prezentuj w tabeli:
+| # | Nazwa | Domena | Styl | Uzasadnienie |
+|---|-------|--------|------|--------------|
+| 1 | **Nazwa** | nazwa.pl ✅ | PL/EN | Krotkie uzasadnienie |
+
+Na koncu dodaj **Top 3** z rekomendacja.
 
 Zasady dla nazw:
 - Krotka (1-2 slowa, max 12 znakow)
-- Latwa do wymowienia po angielsku
+- Latwa do wymowienia (polskie dla PL, angielskie dla EN)
 - Sugeruje emocje/kategorie produktu
 - Unikalna, nie koliduje z istniejacymi markami
-- Styl: nowoczesne DTC brandy (np. VibeStrike, NeoFlux, GlowAura)
+- **TYLKO NAZWY Z WOLNA DOMENA .pl** — nie proponuj zajetych!
+- Styl polski: bezposredni, fachowy (np. Wglad, Fachownik, Szperacz)
+- Styl angielski: nowoczesne DTC brandy (np. VisiCore, DualEye, LensGo)
 
 **CZEKAJ NA ODPOWIEDZ** uzytkownika z wybrana nazwa/domena zanim wygenerujesz SQL!
 
