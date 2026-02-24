@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="../components/shared-sidebar.js"></script>
+    <script src="shared-costs.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -307,124 +308,6 @@
         }
 
         // ============================================
-        // EMPLOYEE COST CALCULATION
-        // ============================================
-        function calcCommission(sales, tiers) {
-            let commission = 0;
-            const sortedTiers = [...tiers].sort((a, b) => a.min - b.min);
-
-            for (const tier of sortedTiers) {
-                if (sales > tier.min) {
-                    const amt = Math.min(sales, tier.max) - tier.min;
-                    commission += amt * tier.rate;
-                }
-            }
-
-            if (sortedTiers.length > 0) {
-                const maxTier = sortedTiers[sortedTiers.length - 1];
-                if (sales > maxTier.max) {
-                    commission += (sales - maxTier.max) * maxTier.rate;
-                }
-            }
-
-            return commission;
-        }
-
-        function calcMonthlyBonus(sales, threshold, amount) {
-            if (!threshold || !amount) return 0;
-            return sales >= threshold ? amount : 0;
-        }
-
-        async function getEmployeeSales(teamMemberId, monthStart, monthEndExclusive) {
-            const { data: orders } = await supabaseClient
-                .from('orders')
-                .select('id, amount, lead_id, paid_at, customer_email')
-                .eq('status', 'paid')
-                .gte('paid_at', monthStart)
-                .lt('paid_at', monthEndExclusive);
-
-            if (!orders || orders.length === 0) {
-                return { totalSales: 0 };
-            }
-
-            const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
-            let leadsMap = {};
-
-            if (leadIds.length > 0) {
-                const { data: leads } = await supabaseClient
-                    .from('leads')
-                    .select('id, assigned_to')
-                    .in('id', leadIds);
-                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l.assigned_to]));
-            }
-
-            const ordersWithoutLead = orders.filter(o => !o.lead_id && o.customer_email);
-            if (ordersWithoutLead.length > 0) {
-                const emails = [...new Set(ordersWithoutLead.map(o => o.customer_email))];
-                const { data: leadsByEmail } = await supabaseClient
-                    .from('leads')
-                    .select('id, email, assigned_to')
-                    .in('email', emails);
-
-                if (leadsByEmail) {
-                    const emailToLead = Object.fromEntries(leadsByEmail.map(l => [l.email, l]));
-                    for (const order of ordersWithoutLead) {
-                        const lead = emailToLead[order.customer_email];
-                        if (lead) leadsMap[order.id] = lead.assigned_to;
-                    }
-                }
-            }
-
-            let totalSales = 0;
-            for (const order of orders) {
-                const assignedTo = order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id];
-                if (assignedTo === teamMemberId) {
-                    totalSales += toNetto(parseFloat(order.amount));
-                }
-            }
-
-            return { totalSales };
-        }
-
-        async function calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod) {
-            const { data: contracts } = await supabaseClient
-                .from('employee_contracts')
-                .select('*, team_members!inner(id, name)')
-                .is('effective_to', null);
-
-            if (!contracts || contracts.length === 0) return [];
-
-            const monthDate = startStr;
-            const { data: bonuses } = await supabaseClient
-                .from('employee_bonuses')
-                .select('*')
-                .eq('month', monthDate);
-
-            const employeeCosts = [];
-
-            for (const contract of contracts) {
-                const { totalSales } = await getEmployeeSales(contract.team_member_id, startStr, nextDayStr);
-                const tiers = contract.commission_tiers || [];
-                const commission = calcCommission(totalSales, tiers);
-                const monthlyBonus = calcMonthlyBonus(totalSales, contract.monthly_bonus_threshold, contract.monthly_bonus_amount);
-                const memberBonuses = (bonuses || []).filter(b => b.team_member_id === contract.team_member_id);
-                const manualBonusTotal = memberBonuses.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
-                const baseSalary = parseFloat(contract.base_salary || 0) * monthsInPeriod;
-                const totalCost = baseSalary + commission + monthlyBonus + manualBonusTotal;
-
-                employeeCosts.push({
-                    name: `${contract.team_members.name} (${contract.contract_type})`,
-                    amount: totalCost,
-                    category: 'pracownik',
-                    vat_rate: 0,
-                    details: { baseSalary, commission, monthlyBonus, manualBonusTotal }
-                });
-            }
-
-            return employeeCosts;
-        }
-
-        // ============================================
         // DATA FETCHING
         // ============================================
         async function fetchTaxData() {
@@ -438,7 +321,7 @@
 
             const monthsInPeriod = currentPeriod === 'quarter' ? 3 : (currentPeriod === 'year' ? 12 : 1);
 
-            const [ordersRes, manualRevenuesRes, monthlyCostsRes, adsExpensesRes] = await Promise.all([
+            const [ordersRes, manualRevenuesRes] = await Promise.all([
                 supabaseClient
                     .from('orders')
                     .select('amount, paid_at')
@@ -450,32 +333,14 @@
                     .select('*')
                     .eq('is_received', true)
                     .gte('date', startStr)
-                    .lte('date', endStr),
-                // Wszystkie rzeczywiste koszty z biznes_costs (bez pracowników - ci są liczeni dynamicznie)
-                supabaseClient
-                    .from('biznes_costs')
-                    .select('*')
-                    .neq('category', 'pracownik')
-                    .gte('month', startStr)
-                    .lte('month', endStr),
-                // Wydatki reklamowe
-                supabaseClient
-                    .from('ad_expenses')
-                    .select('amount')
-                    .gte('date', startStr)
                     .lte('date', endStr)
             ]);
 
             const orders = ordersRes?.data || [];
             const manualRevenues = manualRevenuesRes?.data || [];
-            const monthlyCosts = monthlyCostsRes?.data || [];
-            const adsExpenses = adsExpensesRes?.data || [];
 
-            // Dynamiczne koszty pracowników
-            const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
-
-            // Wydatki reklamowe - suma
-            const adsExpensesTotal = adsExpenses.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+            // KOSZTY - uzyj centralnego serwisu CostsService
+            const costs = await CostsService.getAllCosts(supabaseClient, startStr, endStr, monthsInPeriod);
 
             // Przychody
             const crmRevenueBrutto = orders.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
@@ -483,31 +348,13 @@
             const totalRevenueBrutto = crmRevenueBrutto + manualRevenueBrutto;
             const totalRevenueNetto = toNetto(totalRevenueBrutto);
 
-            // Koszty - rzeczywiste z biznes_costs + pracownicy + reklamy
-            const allCosts = [
-                ...monthlyCosts.map(c => ({
-                    ...c,
-                    amount: parseFloat(c.amount || 0)
-                })),
-                ...employeeCosts,
-                // Wydatki reklamowe jako wirtualny wpis z VAT
-                ...(adsExpensesTotal > 0 ? [{
-                    id: 'ads_live',
-                    name: 'Budżet reklamowy',
-                    category: 'marketing',
-                    amount: adsExpensesTotal,
-                    vat_rate: 0.23,
-                    is_virtual: true
-                }] : [])
-            ];
-
             return {
                 monthsInPeriod,
                 revenue: {
                     brutto: totalRevenueBrutto,
                     netto: totalRevenueNetto
                 },
-                costs: allCosts
+                costs: costs.items
             };
         }
 
