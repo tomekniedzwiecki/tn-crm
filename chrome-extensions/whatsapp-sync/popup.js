@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSync = document.getElementById('btn-sync');
   const btnDeepSync = document.getElementById('btn-deep-sync');
   const btnSyncAll = document.getElementById('btn-sync-all');
+  const btnOpenLead = document.getElementById('btn-open-lead');
   const btnSave = document.getElementById('btn-save');
+
+  let currentPhoneNumber = null; // Aktualny numer do wyszukania leada
   const supabaseUrl = document.getElementById('supabase-url');
   const supabaseKey = document.getElementById('supabase-key');
   const syncApiKey = document.getElementById('sync-api-key');
@@ -74,6 +77,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       messageCount.textContent = '-';
       btnSync.disabled = true;
       btnSyncAll.disabled = true;
+      btnOpenLead.classList.add('hidden');
+      currentPhoneNumber = null;
       return;
     }
 
@@ -87,6 +92,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         messageCount.textContent = `${response.messageCount} wiadomości`;
         btnSync.disabled = false;
         btnSyncAll.disabled = false;
+        btnOpenLead.classList.remove('hidden');
+        currentPhoneNumber = response.phone;
       } else {
         chatName.textContent = 'Wybierz czat';
         chatPhone.textContent = 'Kliknij na rozmowę';
@@ -94,6 +101,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         messageCount.textContent = '-';
         btnSync.disabled = true;
         btnSyncAll.disabled = false;
+        btnOpenLead.classList.add('hidden');
+        currentPhoneNumber = null;
       }
     } catch (e) {
       chatName.textContent = 'Błąd połączenia';
@@ -102,6 +111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       messageCount.textContent = '-';
       btnSync.disabled = true;
       btnSyncAll.disabled = true;
+      btnOpenLead.classList.add('hidden');
+      currentPhoneNumber = null;
     }
   }
 
@@ -176,6 +187,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       btnSyncAll.disabled = false;
       btnSyncAll.textContent = 'Synchronizuj wszystkie nowe czaty';
+    }
+  });
+
+  // Open lead in CRM
+  btnOpenLead.addEventListener('click', async () => {
+    if (!currentPhoneNumber) {
+      addLog('Brak numeru telefonu', 'error');
+      return;
+    }
+
+    // Pobierz URL CRM z ustawień
+    const settings = await new Promise(resolve => {
+      chrome.storage.sync.get(['supabaseUrl', 'supabaseKey'], resolve);
+    });
+
+    if (!settings.supabaseUrl || !settings.supabaseKey) {
+      addLog('Brak konfiguracji Supabase', 'error');
+      return;
+    }
+
+    // Szukaj leada po numerze telefonu
+    const phone = currentPhoneNumber;
+    const phoneVariants = [
+      phone,
+      phone.length === 11 && phone.startsWith('48') ? phone.substring(2) : phone,
+      phone.length === 9 ? '48' + phone : phone
+    ];
+
+    try {
+      // Zapytanie do Supabase
+      const query = phoneVariants.map(p => `phone.ilike.%${p}%`).join(',');
+      const response = await fetch(
+        `${settings.supabaseUrl}/rest/v1/leads?or=(${query})&select=id,name,phone&limit=1`,
+        {
+          headers: {
+            'apikey': settings.supabaseKey,
+            'Authorization': `Bearer ${settings.supabaseKey}`
+          }
+        }
+      );
+
+      const leads = await response.json();
+
+      if (leads && leads.length > 0) {
+        const lead = leads[0];
+        // Otwórz lead w nowej karcie
+        const crmUrl = settings.supabaseUrl.replace('.supabase.co', '').replace('https://', '');
+        // Zakładamy że CRM jest na tej samej domenie co projekt
+        chrome.tabs.create({ url: `https://tn-crm.vercel.app/lead.html?id=${lead.id}` });
+        addLog(`Otwieram: ${lead.name || lead.phone}`, 'success');
+      } else {
+        addLog('Nie znaleziono leada', 'error');
+        // Otwórz listę leadów z wyszukiwaniem
+        chrome.tabs.create({ url: `https://tn-crm.vercel.app/leads.html?search=${phone}` });
+      }
+    } catch (err) {
+      addLog(`Błąd: ${err.message}`, 'error');
     }
   });
 
