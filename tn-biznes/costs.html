@@ -163,10 +163,6 @@
                                 <i class="ph ph-magic-wand"></i>
                                 <span class="hidden md:inline">Generuj z szablonu</span>
                             </button>
-                            <button onclick="generateEmployeeCosts()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors">
-                                <i class="ph ph-users"></i>
-                                <span class="hidden md:inline">Oblicz pracownikow</span>
-                            </button>
                         </div>
                         <button onclick="openOneTimeModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
                             <i class="ph ph-plus"></i>
@@ -452,13 +448,101 @@
                 .from('biznes_costs')
                 .select('*')
                 .eq('month', monthStart)
+                .neq('category', 'pracownik') // Exclude employee costs - we calculate them live
                 .order('cost_type')
                 .order('name');
 
             if (!error) {
                 monthlyCosts = data || [];
+
+                // Calculate employee costs live and add to monthlyCosts
+                await calculateLiveEmployeeCosts(monthStart);
+
                 renderMonthlyCosts();
                 updateStats();
+            }
+        }
+
+        async function calculateLiveEmployeeCosts(monthStart) {
+            const monthEnd = new Date(new Date(monthStart).setMonth(new Date(monthStart).getMonth() + 1) - 1)
+                .toISOString().split('T')[0] + 'T23:59:59';
+
+            // Get active contracts
+            const { data: contracts } = await supabaseClient
+                .from('employee_contracts')
+                .select('*, team_members!inner(id, name)')
+                .lte('effective_from', monthStart)
+                .or(`effective_to.is.null,effective_to.gte.${monthStart}`);
+
+            if (!contracts || contracts.length === 0) return;
+
+            // Fetch manual bonuses for this month
+            const { data: allBonuses } = await supabaseClient
+                .from('employee_bonuses')
+                .select('*')
+                .eq('month', monthStart);
+
+            const bonusesByMember = {};
+            if (allBonuses) {
+                for (const b of allBonuses) {
+                    if (!bonusesByMember[b.team_member_id]) {
+                        bonusesByMember[b.team_member_id] = [];
+                    }
+                    bonusesByMember[b.team_member_id].push(b);
+                }
+            }
+
+            for (const contract of contracts) {
+                // Calculate sales for this employee
+                const { totalSales, orderCount } = await getEmployeeSales(
+                    contract.team_member_id,
+                    monthStart,
+                    monthEnd
+                );
+
+                // Calculate costs
+                const tiers = contract.commission_tiers || [];
+                const commission = calcCommission(totalSales, tiers);
+                const monthlyBonus = calcMonthlyBonus(
+                    totalSales,
+                    contract.monthly_bonus_threshold,
+                    contract.monthly_bonus_amount
+                );
+
+                // Calculate manual bonuses
+                const manualBonuses = bonusesByMember[contract.team_member_id] || [];
+                const manualBonusTotal = manualBonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+
+                const baseSalary = parseFloat(contract.base_salary) || 0;
+                const totalCost = baseSalary + commission + monthlyBonus + manualBonusTotal;
+
+                // Build description
+                let description = `Podstawa: ${formatMoney(baseSalary)}`;
+                if (totalSales > 0) {
+                    description += ` | Sprzedaz netto: ${formatMoney(totalSales)} (${orderCount} zam.)`;
+                }
+                if (commission > 0) {
+                    description += ` | Prowizja: ${formatMoney(commission)}`;
+                }
+                if (monthlyBonus > 0) {
+                    description += ` | Bonus: ${formatMoney(monthlyBonus)}`;
+                }
+                if (manualBonusTotal > 0) {
+                    description += ` | Bonusy dodatkowe: ${formatMoney(manualBonusTotal)}`;
+                }
+
+                // Add to monthlyCosts as a virtual entry (not saved to DB)
+                monthlyCosts.push({
+                    id: `emp_${contract.team_member_id}`, // Virtual ID
+                    name: `${contract.team_members.name}`,
+                    description: description,
+                    category: 'pracownik',
+                    amount: totalCost,
+                    cost_type: 'recurring',
+                    month: monthStart,
+                    is_paid: false,
+                    is_virtual: true // Mark as virtual - not editable
+                });
             }
         }
 
@@ -534,17 +618,42 @@
                 const typeBadge = cost.cost_type === 'recurring' ? 'badge-recurring' : 'badge-one-time';
                 const statusBadge = cost.is_paid ? 'badge-paid' : 'badge-unpaid';
                 const statusLabel = cost.is_paid ? 'Oplacone' : 'Do zaplaty';
+                const isVirtual = cost.is_virtual;
+
+                // For virtual employee costs - show "Live" badge and no edit/delete buttons
+                const actionButtons = isVirtual ? `
+                    <span class="badge bg-teal-500/20 text-teal-400 text-[10px]">
+                        <i class="ph ph-lightning mr-1"></i>Live
+                    </span>
+                ` : `
+                    <div class="flex items-center gap-1">
+                        <button onclick="editCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-white transition-colors">
+                            <i class="ph ph-pencil"></i>
+                        </button>
+                        <button onclick="deleteCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                const statusButton = isVirtual ? `
+                    <span class="text-xs text-zinc-500">auto</span>
+                ` : `
+                    <button onclick="togglePaid('${cost.id}', ${!cost.is_paid})" class="badge ${statusBadge} cursor-pointer hover:opacity-80 transition-opacity">
+                        ${statusLabel}
+                    </button>
+                `;
 
                 return `
-                    <tr class="cost-row border-b border-white/5">
+                    <tr class="cost-row border-b border-white/5 ${isVirtual ? 'bg-teal-500/5' : ''}">
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                                    <i class="ph ${cat.icon} text-zinc-400"></i>
+                                <div class="w-8 h-8 rounded-lg ${isVirtual ? 'bg-teal-500/20' : 'bg-white/5'} flex items-center justify-center">
+                                    <i class="ph ${cat.icon} ${isVirtual ? 'text-teal-400' : 'text-zinc-400'}"></i>
                                 </div>
                                 <div>
                                     <div class="text-sm text-white font-medium">${cost.name}</div>
-                                    ${cost.description ? `<div class="text-xs text-zinc-500 truncate max-w-[200px]">${cost.description}</div>` : ''}
+                                    ${cost.description ? `<div class="text-xs text-zinc-500 max-w-[300px]">${cost.description}</div>` : ''}
                                 </div>
                             </div>
                         </td>
@@ -558,19 +667,10 @@
                             <span class="text-white font-mono">${formatMoney(cost.amount)}</span>
                         </td>
                         <td class="px-4 py-3">
-                            <button onclick="togglePaid('${cost.id}', ${!cost.is_paid})" class="badge ${statusBadge} cursor-pointer hover:opacity-80 transition-opacity">
-                                ${statusLabel}
-                            </button>
+                            ${statusButton}
                         </td>
                         <td class="px-4 py-3">
-                            <div class="flex items-center gap-1">
-                                <button onclick="editCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-white transition-colors">
-                                    <i class="ph ph-pencil"></i>
-                                </button>
-                                <button onclick="deleteCost('${cost.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors">
-                                    <i class="ph ph-trash"></i>
-                                </button>
-                            </div>
+                            ${actionButtons}
                         </td>
                     </tr>
                 `;
