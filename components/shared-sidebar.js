@@ -493,12 +493,12 @@ function renderSidebar(config = {}) {
             countHtml = `<span id="nav-${item.id}-count" class="ml-auto text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono border border-white/5">0</span>`;
         }
 
-        // Build correct href based on app
+        // Build correct href based on app (bez .html - Vercel ma rewrites)
         let href = `/${item.id}`;
         if (_currentAppId === 'biznes') {
-            href = `/tn-biznes/${item.id}.html`;
+            href = `/tn-biznes/${item.id}`;
         } else if (_currentAppId === 'workflow') {
-            href = `/tn-workflow/${item.id}.html`;
+            href = `/tn-workflow/${item.id}`;
         }
 
         return `
