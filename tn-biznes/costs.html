@@ -800,6 +800,9 @@
                 // Calculate employee costs live and add to monthlyCosts
                 await calculateLiveEmployeeCosts(monthStart);
 
+                // Calculate ad expenses live and add to monthlyCosts
+                await calculateLiveAdsCosts(monthStart);
+
                 renderMonthlyCosts();
                 updateStats();
             }
@@ -886,6 +889,48 @@
                     is_virtual: true // Mark as virtual - not editable
                 });
             }
+        }
+
+        async function calculateLiveAdsCosts(monthStart) {
+            const [year, month] = monthStart.split('-').map(Number);
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+            const { data, error } = await supabaseClient
+                .from('ad_expenses')
+                .select('source, amount')
+                .gte('date', startDate)
+                .lte('date', endDate);
+
+            if (error || !data || data.length === 0) return;
+
+            // Sum by source
+            const bySource = { google: 0, meta: 0, tiktok: 0 };
+            for (const row of data) {
+                bySource[row.source] = (bySource[row.source] || 0) + parseFloat(row.amount || 0);
+            }
+
+            const totalAds = bySource.google + bySource.meta + bySource.tiktok;
+            if (totalAds <= 0) return;
+
+            // Build description
+            const parts = [];
+            if (bySource.google > 0) parts.push(`Google: ${formatMoney(bySource.google)}`);
+            if (bySource.meta > 0) parts.push(`Meta: ${formatMoney(bySource.meta)}`);
+            if (bySource.tiktok > 0) parts.push(`TikTok: ${formatMoney(bySource.tiktok)}`);
+
+            monthlyCosts.push({
+                id: 'ads_live',
+                name: 'Budzet reklamowy',
+                description: parts.join(' | '),
+                category: 'marketing',
+                amount: totalAds,
+                cost_type: 'recurring',
+                month: monthStart,
+                is_paid: true,
+                is_virtual: true,
+                has_vat: true
+            });
         }
 
         // ============================================
