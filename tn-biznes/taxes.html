@@ -438,7 +438,7 @@
 
             const monthsInPeriod = currentPeriod === 'quarter' ? 3 : (currentPeriod === 'year' ? 12 : 1);
 
-            const [ordersRes, manualRevenuesRes, monthlyCostsRes] = await Promise.all([
+            const [ordersRes, manualRevenuesRes, monthlyCostsRes, adsExpensesRes] = await Promise.all([
                 supabaseClient
                     .from('orders')
                     .select('amount, paid_at')
@@ -457,15 +457,25 @@
                     .select('*')
                     .neq('category', 'pracownik')
                     .gte('month', startStr)
-                    .lte('month', endStr)
+                    .lte('month', endStr),
+                // Wydatki reklamowe
+                supabaseClient
+                    .from('ad_expenses')
+                    .select('amount')
+                    .gte('date', startStr)
+                    .lte('date', endStr)
             ]);
 
             const orders = ordersRes?.data || [];
             const manualRevenues = manualRevenuesRes?.data || [];
             const monthlyCosts = monthlyCostsRes?.data || [];
+            const adsExpenses = adsExpensesRes?.data || [];
 
             // Dynamiczne koszty pracowników
             const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
+
+            // Wydatki reklamowe - suma
+            const adsExpensesTotal = adsExpenses.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
 
             // Przychody
             const crmRevenueBrutto = orders.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
@@ -473,13 +483,22 @@
             const totalRevenueBrutto = crmRevenueBrutto + manualRevenueBrutto;
             const totalRevenueNetto = toNetto(totalRevenueBrutto);
 
-            // Koszty - rzeczywiste z biznes_costs + pracownicy dynamicznie
+            // Koszty - rzeczywiste z biznes_costs + pracownicy + reklamy
             const allCosts = [
                 ...monthlyCosts.map(c => ({
                     ...c,
                     amount: parseFloat(c.amount || 0)
                 })),
-                ...employeeCosts
+                ...employeeCosts,
+                // Wydatki reklamowe jako wirtualny wpis z VAT
+                ...(adsExpensesTotal > 0 ? [{
+                    id: 'ads_live',
+                    name: 'Budżet reklamowy',
+                    category: 'marketing',
+                    amount: adsExpensesTotal,
+                    vat_rate: 0.23,
+                    is_virtual: true
+                }] : [])
             ];
 
             return {

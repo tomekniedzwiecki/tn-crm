@@ -712,7 +712,7 @@
             const monthsInPeriod = currentPeriod === 'quarter' ? 3 : (currentPeriod === 'year' ? 12 : 1);
 
             // Fetch all data in parallel - filter orders by paid_at in database query
-            const [ordersRes, prevOrdersRes, manualRevenuesRes, prevManualRevenuesRes, oneTimeCostsRes, prevOneTimeCostsRes, planRes, pipelineRes] = await Promise.all([
+            const [ordersRes, prevOrdersRes, manualRevenuesRes, prevManualRevenuesRes, oneTimeCostsRes, prevOneTimeCostsRes, adsExpensesRes, prevAdsExpensesRes, planRes, pipelineRes] = await Promise.all([
                 // Current period orders - filter by paid_at in DB (>= start AND < nextDay)
                 supabaseClient
                     .from('orders')
@@ -761,6 +761,20 @@
                     .gte('month', prevStartStr)
                     .lte('month', prevEndStr),
 
+                // Wydatki reklamowe - bieżący okres
+                supabaseClient
+                    .from('ad_expenses')
+                    .select('amount')
+                    .gte('date', startStr)
+                    .lte('date', endStr),
+
+                // Wydatki reklamowe - poprzedni okres
+                supabaseClient
+                    .from('ad_expenses')
+                    .select('amount')
+                    .gte('date', prevStartStr)
+                    .lte('date', prevEndStr),
+
                 // Plan
                 supabaseClient
                     .from('biznes_plans')
@@ -807,22 +821,34 @@
             const prevManualRev = prevManualRevenues.reduce((sum, r) => sum + toNetto(parseFloat(r.amount || 0)), 0);
             const prevTotalRevenue = prevCrmRevenue + prevManualRev;
 
-            // Koszty = rzeczywiste koszty z biznes_costs + koszty pracowników (dynamiczne)
+            // Koszty = rzeczywiste koszty z biznes_costs + koszty pracowników (dynamiczne) + wydatki reklamowe
             const monthlyCostsTotal = monthlyCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
-            const totalCosts = monthlyCostsTotal + employeeCostsTotal;
+            const adsExpenses = adsExpensesRes?.data || [];
+            const adsExpensesTotal = adsExpenses.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+            const totalCosts = monthlyCostsTotal + employeeCostsTotal + adsExpensesTotal;
 
             const prevMonthlyCostsTotal = prevMonthlyCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
-            const prevTotalCosts = prevMonthlyCostsTotal + prevEmployeeCostsTotal;
+            const prevAdsExpenses = prevAdsExpensesRes?.data || [];
+            const prevAdsExpensesTotal = prevAdsExpenses.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+            const prevTotalCosts = prevMonthlyCostsTotal + prevEmployeeCostsTotal + prevAdsExpensesTotal;
 
             const profit = totalRevenue - totalCosts;
             const prevProfit = prevTotalRevenue - prevTotalCosts;
 
             const pipelineValue = pipeline.reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
 
-            // Przygotuj listę wszystkich kosztów do wyświetlenia (rzeczywiste + pracownicy)
+            // Przygotuj listę wszystkich kosztów do wyświetlenia (rzeczywiste + pracownicy + reklamy)
             const allCostsItems = [
                 ...monthlyCosts,
-                ...employeeCosts // Dynamicznie obliczone koszty pracowników
+                ...employeeCosts, // Dynamicznie obliczone koszty pracowników
+                // Wydatki reklamowe jako wirtualny wpis
+                ...(adsExpensesTotal > 0 ? [{
+                    id: 'ads_live',
+                    name: 'Budżet reklamowy',
+                    category: 'marketing',
+                    amount: adsExpensesTotal,
+                    is_virtual: true
+                }] : [])
             ];
 
             return {
