@@ -235,12 +235,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Otwórz lead w nowej karcie
         const crmUrl = settings.supabaseUrl.replace('.supabase.co', '').replace('https://', '');
         // Zakładamy że CRM jest na tej samej domenie co projekt
-        chrome.tabs.create({ url: `https://tn-crm.vercel.app/lead.html?id=${lead.id}` });
+        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/lead.html?id=${lead.id}` });
         addLog(`Otwieram: ${lead.name || lead.phone}`, 'success');
       } else {
         addLog('Nie znaleziono leada', 'error');
         // Otwórz listę leadów z wyszukiwaniem
-        chrome.tabs.create({ url: `https://tn-crm.vercel.app/leads.html?search=${phone}` });
+        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/leads.html?search=${phone}` });
       }
     } catch (err) {
       addLog(`Błąd: ${err.message}`, 'error');
