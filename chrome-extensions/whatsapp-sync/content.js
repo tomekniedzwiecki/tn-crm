@@ -600,38 +600,72 @@
   async function syncAllChats() {
     await loadConfig();
 
-    const chatList = document.querySelectorAll('[data-testid="cell-frame-container"]');
+    // Różne selektory dla elementów czatów na liście
+    const chatSelectors = [
+      '[data-testid="cell-frame-container"]',
+      '[data-testid="list-item-cell"]',
+      '#pane-side > div > div > div > div',
+      '[aria-label*="Chat"] [role="listitem"]',
+      '[role="listitem"][tabindex]'
+    ];
+
+    let chatList = [];
+    for (const selector of chatSelectors) {
+      const items = document.querySelectorAll(selector);
+      if (items.length > 0) {
+        chatList = Array.from(items);
+        console.log('WhatsApp Sync: Found chats with selector:', selector, 'count:', items.length);
+        break;
+      }
+    }
+
+    if (chatList.length === 0) {
+      console.error('WhatsApp Sync: No chat elements found');
+      return { success: false, error: 'Nie znaleziono czatów na liście' };
+    }
+
     const results = [];
     let totalInserted = 0;
     let totalSkipped = 0;
 
-    for (let i = 0; i < chatList.length; i++) {
+    // Limit do 20 czatów żeby nie trwało za długo
+    const maxChats = Math.min(chatList.length, 20);
+
+    for (let i = 0; i < maxChats; i++) {
       const chatEl = chatList[i];
 
-      // Kliknij czat
-      chatEl.click();
+      try {
+        // Kliknij czat
+        chatEl.click();
 
-      // Poczekaj na załadowanie
-      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+        // Poczekaj na załadowanie
+        await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
 
-      // Sync
-      const phone = getCurrentChatPhone();
-      const name = getCurrentChatName();
-      const messages = getMessagesFromChat();
+        // Sync
+        const phone = getCurrentChatPhone();
+        const name = getCurrentChatName();
+        const messages = getMessagesFromChat();
 
-      if (phone && messages.length > 0) {
-        const result = await syncMessages(messages, phone, name);
-        results.push({ phone, name, ...result });
-        totalInserted += result.inserted || 0;
-        totalSkipped += result.skipped || 0;
-      }
+        console.log(`WhatsApp Sync: Chat ${i+1}/${maxChats}: ${name || phone || 'unknown'}, ${messages.length} messages`);
 
-      // Losowa przerwa
-      await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+        if (phone && messages.length > 0) {
+          const result = await syncMessages(messages, phone, name);
+          results.push({ phone, name, ...result });
+          totalInserted += result.inserted || 0;
+          totalSkipped += result.skipped || 0;
 
-      // Co 10 czatów - dłuższa przerwa
-      if ((i + 1) % 10 === 0) {
-        await new Promise(r => setTimeout(r, 3000));
+          // Powiadom popup o postępie
+          chrome.runtime.sendMessage({
+            type: 'SYNC_PROGRESS',
+            data: { current: i + 1, total: maxChats, name: name || phone }
+          }).catch(() => {});
+        }
+
+        // Losowa przerwa między czatami
+        await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
+
+      } catch (err) {
+        console.error('WhatsApp Sync: Error processing chat', i, err);
       }
     }
 

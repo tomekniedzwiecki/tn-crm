@@ -205,6 +205,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       updateCurrentChat();
     }
+
+    if (message.type === 'SYNC_PROGRESS') {
+      const { current, total, name } = message.data;
+      btnSyncAll.textContent = `Sync ${current}/${total}: ${name}`;
+    }
   });
 
   // Initial update
