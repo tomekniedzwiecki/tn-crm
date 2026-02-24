@@ -438,7 +438,7 @@
 
             const monthsInPeriod = currentPeriod === 'quarter' ? 3 : (currentPeriod === 'year' ? 12 : 1);
 
-            const [ordersRes, manualRevenuesRes, oneTimeCostsRes, recurringCostsRes] = await Promise.all([
+            const [ordersRes, manualRevenuesRes, monthlyCostsRes] = await Promise.all([
                 supabaseClient
                     .from('orders')
                     .select('amount, paid_at')
@@ -451,24 +451,18 @@
                     .eq('is_received', true)
                     .gte('date', startStr)
                     .lte('date', endStr),
+                // Wszystkie rzeczywiste koszty z biznes_costs (bez pracowników - ci są liczeni dynamicznie)
                 supabaseClient
                     .from('biznes_costs')
                     .select('*')
-                    .eq('cost_type', 'one_time')
                     .neq('category', 'pracownik')
                     .gte('month', startStr)
-                    .lte('month', endStr),
-                supabaseClient
-                    .from('biznes_recurring_costs')
-                    .select('*')
-                    .eq('is_active', true)
-                    .neq('category', 'pracownik')
+                    .lte('month', endStr)
             ]);
 
             const orders = ordersRes.data || [];
             const manualRevenues = manualRevenuesRes.data || [];
-            const oneTimeCosts = oneTimeCostsRes.data || [];
-            const recurringCosts = recurringCostsRes.data || [];
+            const monthlyCosts = monthlyCostsRes.data || [];
 
             // Dynamiczne koszty pracowników
             const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
@@ -479,13 +473,9 @@
             const totalRevenueBrutto = crmRevenueBrutto + manualRevenueBrutto;
             const totalRevenueNetto = toNetto(totalRevenueBrutto);
 
-            // Koszty - zbierz wszystkie
+            // Koszty - rzeczywiste z biznes_costs + pracownicy dynamicznie
             const allCosts = [
-                ...recurringCosts.map(c => ({
-                    ...c,
-                    amount: parseFloat(c.amount || 0) * monthsInPeriod
-                })),
-                ...oneTimeCosts.map(c => ({
+                ...monthlyCosts.map(c => ({
                     ...c,
                     amount: parseFloat(c.amount || 0)
                 })),

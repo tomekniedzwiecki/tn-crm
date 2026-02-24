@@ -745,30 +745,21 @@
                     .gte('date', prevStartStr)
                     .lte('date', prevEndStr),
 
-                // Current one-time costs (excluding employee costs - those are calculated dynamically)
+                // Wszystkie koszty z biznes_costs dla bieżącego okresu (bez pracowników - ci są liczeni dynamicznie)
                 supabaseClient
                     .from('biznes_costs')
                     .select('*')
-                    .eq('cost_type', 'one_time')
                     .neq('category', 'pracownik')
                     .gte('month', startStr)
                     .lte('month', endStr),
 
-                // Previous one-time costs (excluding employee costs)
+                // Koszty z poprzedniego okresu (bez pracowników)
                 supabaseClient
                     .from('biznes_costs')
                     .select('amount, month')
-                    .eq('cost_type', 'one_time')
                     .neq('category', 'pracownik')
                     .gte('month', prevStartStr)
                     .lte('month', prevEndStr),
-
-                // Recurring costs template (aktywne, bez pracowników - ci są liczeni dynamicznie)
-                supabaseClient
-                    .from('biznes_recurring_costs')
-                    .select('*')
-                    .eq('is_active', true)
-                    .neq('category', 'pracownik'),
 
                 // Plan
                 supabaseClient
@@ -793,9 +784,8 @@
             // Debug: log orders with their paid_at dates
             console.log('Orders for current period:', orders.map(o => ({ order_number: o.order_number, paid_at: o.paid_at, amount: o.amount })));
             const prevManualRevenues = prevManualRevenuesRes.data || [];
-            const oneTimeCosts = oneTimeCostsRes.data || [];
-            const prevOneTimeCosts = prevOneTimeCostsRes.data || [];
-            const recurringCosts = recurringCostsRes.data || [];
+            const monthlyCosts = oneTimeCostsRes.data || []; // Teraz to są WSZYSTKIE koszty z biznes_costs
+            const prevMonthlyCosts = prevOneTimeCostsRes.data || [];
             const plan = planRes.data;
             const pipeline = pipelineRes.data || [];
 
@@ -803,9 +793,6 @@
             const employeeCosts = await calculateEmployeeCosts(startStr, nextDayStr, monthsInPeriod);
             const employeeCostsTotal = employeeCosts.reduce((sum, c) => sum + c.amount, 0);
             console.log('Dynamic employee costs:', employeeCosts);
-
-            // Suma miesięcznych kosztów stałych
-            const monthlyRecurringTotal = recurringCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
 
             // Calculate totals (wszystkie kwoty przeliczane na netto - VAT 23%)
             const crmRevenue = orders.reduce((sum, o) => sum + toNetto(parseFloat(o.amount || 0)), 0);
@@ -816,28 +803,21 @@
             const prevManualRev = prevManualRevenues.reduce((sum, r) => sum + toNetto(parseFloat(r.amount || 0)), 0);
             const prevTotalRevenue = prevCrmRevenue + prevManualRev;
 
-            // Koszty = koszty stałe (z szablonu) + koszty jednorazowe + koszty pracowników (dynamiczne)
-            // Koszty stałe są ZAWSZE traktowane jako poniesione (bo to są zobowiązania)
-            const recurringCostsForPeriod = monthlyRecurringTotal * monthsInPeriod;
-            const oneTimeCostsTotal = oneTimeCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
-            const totalCosts = recurringCostsForPeriod + oneTimeCostsTotal + employeeCostsTotal;
+            // Koszty = rzeczywiste koszty z biznes_costs + koszty pracowników (dynamiczne)
+            const monthlyCostsTotal = monthlyCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+            const totalCosts = monthlyCostsTotal + employeeCostsTotal;
 
-            const prevOneTimeCostsTotal = prevOneTimeCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
-            const prevTotalCosts = recurringCostsForPeriod + prevOneTimeCostsTotal + employeeCostsTotal; // zakładamy te same koszty pracowników
+            const prevMonthlyCostsTotal = prevMonthlyCosts.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+            const prevTotalCosts = prevMonthlyCostsTotal + employeeCostsTotal;
 
             const profit = totalRevenue - totalCosts;
             const prevProfit = prevTotalRevenue - prevTotalCosts;
 
             const pipelineValue = pipeline.reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
 
-            // Przygotuj listę wszystkich kosztów do wyświetlenia (stałe + jednorazowe + pracownicy)
+            // Przygotuj listę wszystkich kosztów do wyświetlenia (rzeczywiste + pracownicy)
             const allCostsItems = [
-                ...recurringCosts.map(c => ({
-                    ...c,
-                    cost_type: 'recurring',
-                    month: startStr // Przypisz do bieżącego miesiąca
-                })),
-                ...oneTimeCosts,
+                ...monthlyCosts,
                 ...employeeCosts // Dynamicznie obliczone koszty pracowników
             ];
 
