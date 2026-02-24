@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const syncUser = document.getElementById('sync-user');
   const autoSync = document.getElementById('auto-sync');
   const syncOnChange = document.getElementById('sync-on-change');
+  const scheduledSync = document.getElementById('scheduled-sync');
+  const nextSyncInfo = document.getElementById('next-sync-info');
+  const nextSyncTime = document.getElementById('next-sync-time');
   const logContainer = document.getElementById('log');
 
   // Tab switching
@@ -34,13 +37,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Load saved settings
-  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange'], (result) => {
+  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange', 'scheduledSync'], (result) => {
     if (result.supabaseUrl) supabaseUrl.value = result.supabaseUrl;
     if (result.supabaseKey) supabaseKey.value = result.supabaseKey;
     if (result.syncApiKey) syncApiKey.value = result.syncApiKey;
     if (result.syncUser) syncUser.value = result.syncUser;
     autoSync.checked = result.autoSync || false;
     syncOnChange.checked = result.syncOnChange !== false;
+    scheduledSync.checked = result.scheduledSync || false;
+
+    // Pokaż info o następnym sync jeśli włączony
+    if (result.scheduledSync) {
+      updateNextSyncTime();
+    }
   });
 
   // Save settings
@@ -65,6 +74,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   syncOnChange.addEventListener('change', () => {
     chrome.storage.sync.set({ syncOnChange: syncOnChange.checked });
   });
+
+  // Scheduled sync toggle
+  scheduledSync.addEventListener('change', () => {
+    const enabled = scheduledSync.checked;
+    chrome.storage.sync.set({ scheduledSync: enabled });
+
+    // Powiadom background script
+    chrome.runtime.sendMessage({ type: 'SET_SCHEDULED_SYNC', enabled }, () => {
+      if (enabled) {
+        addLog('Scheduled sync włączony (co 5h)', 'success');
+        updateNextSyncTime();
+      } else {
+        addLog('Scheduled sync wyłączony', 'success');
+        nextSyncInfo.classList.add('hidden');
+      }
+    });
+  });
+
+  // Pokaż czas następnego sync
+  function updateNextSyncTime() {
+    chrome.runtime.sendMessage({ type: 'GET_NEXT_SYNC' }, (response) => {
+      if (response && response.nextSync) {
+        const nextDate = new Date(response.nextSync);
+        nextSyncTime.textContent = nextDate.toLocaleString('pl-PL', {
+          hour: '2-digit',
+          minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit'
+        });
+        nextSyncInfo.classList.remove('hidden');
+      } else {
+        nextSyncInfo.classList.add('hidden');
+      }
+    });
+  }
 
   // Get current tab and chat info
   async function updateCurrentChat() {

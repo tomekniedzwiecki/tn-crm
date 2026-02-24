@@ -1,16 +1,84 @@
 // WhatsApp CRM Sync - Background Service Worker
 
+const SCHEDULED_SYNC_ALARM = 'whatsapp-scheduled-sync';
+const SYNC_INTERVAL_HOURS = 5;
+
 // Inicjalizacja alarmu dla auto-sync
 chrome.runtime.onInstalled.addListener(() => {
   console.log('WhatsApp CRM Sync installed');
 
   // Ustaw domyślne wartości
-  chrome.storage.sync.get(['autoSync'], (result) => {
+  chrome.storage.sync.get(['autoSync', 'scheduledSync'], (result) => {
     if (result.autoSync === undefined) {
       chrome.storage.sync.set({ autoSync: false });
     }
+    if (result.scheduledSync === undefined) {
+      chrome.storage.sync.set({ scheduledSync: false });
+    }
   });
 });
+
+// Uruchom scheduled sync alarm jeśli włączony
+chrome.storage.sync.get(['scheduledSync'], (result) => {
+  if (result.scheduledSync) {
+    setupScheduledSync();
+  }
+});
+
+// Ustaw alarm dla scheduled sync
+function setupScheduledSync() {
+  chrome.alarms.create(SCHEDULED_SYNC_ALARM, {
+    periodInMinutes: SYNC_INTERVAL_HOURS * 60 // 5 godzin
+  });
+  console.log(`WhatsApp Sync: Scheduled sync enabled every ${SYNC_INTERVAL_HOURS} hours`);
+}
+
+// Usuń alarm
+function removeScheduledSync() {
+  chrome.alarms.clear(SCHEDULED_SYNC_ALARM);
+  console.log('WhatsApp Sync: Scheduled sync disabled');
+}
+
+// Obsługa alarmu
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === SCHEDULED_SYNC_ALARM) {
+    console.log('WhatsApp Sync: Running scheduled sync...');
+    await runScheduledSync();
+  }
+});
+
+// Wykonaj scheduled sync
+async function runScheduledSync() {
+  // Znajdź kartę WhatsApp Web
+  const tabs = await chrome.tabs.query({ url: 'https://web.whatsapp.com/*' });
+
+  if (tabs.length === 0) {
+    console.log('WhatsApp Sync: No WhatsApp Web tab found, skipping scheduled sync');
+    return;
+  }
+
+  const tab = tabs[0];
+
+  // Aktywuj kartę (żeby była widoczna)
+  await chrome.tabs.update(tab.id, { active: true });
+  await chrome.windows.update(tab.windowId, { focused: true });
+
+  // Poczekaj chwilę żeby strona była gotowa
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Wyślij polecenie sync
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, { type: 'SYNC_ALL_CHATS' });
+    console.log('WhatsApp Sync: Scheduled sync completed', response);
+
+    // Pokaż powiadomienie
+    if (response.success) {
+      flashBadge(`+${response.totalInserted}`, '#25D366');
+    }
+  } catch (err) {
+    console.error('WhatsApp Sync: Scheduled sync failed', err);
+  }
+}
 
 // Debugger state
 let debuggerAttached = false;
@@ -45,6 +113,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     detachDebugger()
       .then(() => sendResponse({ success: true }))
       .catch(() => sendResponse({ success: false }));
+    return true;
+  }
+
+  // Włącz/wyłącz scheduled sync
+  if (message.type === 'SET_SCHEDULED_SYNC') {
+    if (message.enabled) {
+      setupScheduledSync();
+    } else {
+      removeScheduledSync();
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+
+  // Pobierz status następnego sync
+  if (message.type === 'GET_NEXT_SYNC') {
+    chrome.alarms.get(SCHEDULED_SYNC_ALARM, (alarm) => {
+      sendResponse({
+        enabled: !!alarm,
+        nextSync: alarm ? alarm.scheduledTime : null
+      });
+    });
     return true;
   }
 
