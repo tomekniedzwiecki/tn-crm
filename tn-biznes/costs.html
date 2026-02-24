@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -125,14 +126,17 @@
             <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
 
                 <!-- Tabs -->
-                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
-                    <button onclick="switchTab('recurring')" data-tab="recurring" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4 overflow-x-auto">
+                    <button onclick="switchTab('recurring')" data-tab="recurring" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
                         <i class="ph ph-repeat mr-1.5"></i>Koszty stale
                     </button>
-                    <button onclick="switchTab('monthly')" data-tab="monthly" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                    <button onclick="switchTab('monthly')" data-tab="monthly" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
                         <i class="ph ph-calendar mr-1.5"></i>Koszty miesieczne
                     </button>
-                    <button onclick="switchTab('leasing')" data-tab="leasing" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                    <button onclick="switchTab('ads')" data-tab="ads" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
+                        <i class="ph ph-megaphone mr-1.5"></i>Reklama
+                    </button>
+                    <button onclick="switchTab('leasing')" data-tab="leasing" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
                         <i class="ph ph-car mr-1.5"></i>Leasing
                     </button>
                 </div>
@@ -210,6 +214,121 @@
                                 <tbody id="monthly-costs-list">
                                     <tr><td colspan="6" class="px-4 py-12 text-center text-zinc-600">Wybierz miesiac</td></tr>
                                 </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== ADS TAB ==================== -->
+                <div id="ads-tab" class="hidden">
+                    <!-- Month selector -->
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <select id="ads-month" class="input-field rounded-lg px-4 py-2.5 text-white text-base font-medium" onchange="loadAdsData()">
+                            </select>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-mono text-rose-400" id="ads-total">0 zl</div>
+                            <div class="text-xs text-zinc-500">laczne wydatki</div>
+                        </div>
+                    </div>
+
+                    <!-- Stats by source -->
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                                <span class="text-sm text-zinc-400">Google</span>
+                            </div>
+                            <div class="text-xl font-semibold text-blue-400 font-mono" id="ads-google">0 zl</div>
+                        </div>
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
+                                <span class="text-sm text-zinc-400">Meta</span>
+                            </div>
+                            <div class="text-xl font-semibold text-indigo-400 font-mono" id="ads-meta">0 zl</div>
+                        </div>
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-3 h-3 rounded-full bg-pink-500"></div>
+                                <span class="text-sm text-zinc-400">TikTok</span>
+                            </div>
+                            <div class="text-xl font-semibold text-pink-400 font-mono" id="ads-tiktok">0 zl</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-semibold text-white">Wydatki dzienne</h3>
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="toggle-google" checked class="accent-blue-500" onchange="updateAdsChart()">
+                                    <span class="text-xs text-blue-400">Google</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="toggle-meta" checked class="accent-indigo-500" onchange="updateAdsChart()">
+                                    <span class="text-xs text-indigo-400">Meta</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="toggle-tiktok" checked class="accent-pink-500" onchange="updateAdsChart()">
+                                    <span class="text-xs text-pink-400">TikTok</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="ads-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Quick Entry Grid -->
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl overflow-hidden">
+                        <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-table text-emerald-400"></i>
+                                Szybkie wpisywanie
+                            </h3>
+                            <div class="text-xs text-zinc-500">Wpisz kwoty i nacisnij Enter lub Tab</div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-zinc-900/50">
+                                    <tr class="text-zinc-500 text-xs border-b border-white/5">
+                                        <th class="text-left py-3 px-4 w-28">Data</th>
+                                        <th class="text-center py-3 px-4 w-32">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                Google
+                                            </div>
+                                        </th>
+                                        <th class="text-center py-3 px-4 w-32">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                                Meta
+                                            </div>
+                                        </th>
+                                        <th class="text-center py-3 px-4 w-32">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <div class="w-2 h-2 rounded-full bg-pink-500"></div>
+                                                TikTok
+                                            </div>
+                                        </th>
+                                        <th class="text-right py-3 px-4 w-32">Suma</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ads-grid">
+                                    <tr><td colspan="5" class="text-center py-8 text-zinc-600">Ladowanie...</td></tr>
+                                </tbody>
+                                <tfoot class="bg-zinc-900/30 border-t border-white/10">
+                                    <tr>
+                                        <td class="py-3 px-4 font-medium text-white">SUMA</td>
+                                        <td class="py-3 px-4 text-center font-mono text-blue-400" id="grid-total-google">0</td>
+                                        <td class="py-3 px-4 text-center font-mono text-indigo-400" id="grid-total-meta">0</td>
+                                        <td class="py-3 px-4 text-center font-mono text-pink-400" id="grid-total-tiktok">0</td>
+                                        <td class="py-3 px-4 text-right font-mono text-white font-semibold" id="grid-total-all">0</td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -923,6 +1042,7 @@
 
             document.getElementById('recurring-tab').classList.toggle('hidden', tab !== 'recurring');
             document.getElementById('monthly-tab').classList.toggle('hidden', tab !== 'monthly');
+            document.getElementById('ads-tab').classList.toggle('hidden', tab !== 'ads');
             document.getElementById('leasing-tab').classList.toggle('hidden', tab !== 'leasing');
 
             // Update add button
@@ -936,12 +1056,14 @@
                 addBtn.classList.remove('hidden');
                 addBtn.onclick = () => openOneTimeModal();
                 addBtnText.textContent = 'Dodaj jednorazowy';
-            } else if (tab === 'leasing') {
-                addBtn.classList.add('hidden'); // Ukryj przycisk dodawania dla leasingu
+            } else if (tab === 'ads' || tab === 'leasing') {
+                addBtn.classList.add('hidden');
             }
 
             if (tab === 'monthly') {
                 loadMonthlyCosts();
+            } else if (tab === 'ads') {
+                loadAdsData();
             } else if (tab === 'leasing') {
                 loadLeasingData();
             }
@@ -1263,6 +1385,296 @@
             }
 
             return { totalSales, orderCount };
+        }
+
+        // ============================================
+        // ADS / REKLAMA
+        // ============================================
+        const AD_SOURCES = ['google', 'meta', 'tiktok'];
+        const AD_COLORS = {
+            google: { bg: 'rgba(59, 130, 246, 0.8)', border: 'rgb(59, 130, 246)' },
+            meta: { bg: 'rgba(99, 102, 241, 0.8)', border: 'rgb(99, 102, 241)' },
+            tiktok: { bg: 'rgba(236, 72, 153, 0.8)', border: 'rgb(236, 72, 153)' }
+        };
+        let adsData = [];
+        let adsChart = null;
+
+        function initAdsMonthSelector() {
+            const select = document.getElementById('ads-month');
+            if (!select || select.options.length > 0) return;
+
+            const today = new Date();
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+                select.appendChild(opt);
+            }
+        }
+
+        async function loadAdsData() {
+            initAdsMonthSelector();
+            const monthStr = document.getElementById('ads-month').value;
+            if (!monthStr) return;
+
+            const [year, month] = monthStr.split('-').map(Number);
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+
+            const { data, error } = await supabaseClient
+                .from('ad_expenses')
+                .select('*')
+                .gte('date', startDate)
+                .lte('date', endDate)
+                .order('date');
+
+            if (error) {
+                console.error('Error loading ads data:', error);
+                return;
+            }
+
+            adsData = data || [];
+            renderAdsStats();
+            renderAdsGrid(year, month);
+            renderAdsChart(year, month);
+        }
+
+        function renderAdsStats() {
+            let total = 0, google = 0, meta = 0, tiktok = 0;
+            for (const row of adsData) {
+                const amt = parseFloat(row.amount) || 0;
+                total += amt;
+                if (row.source === 'google') google += amt;
+                if (row.source === 'meta') meta += amt;
+                if (row.source === 'tiktok') tiktok += amt;
+            }
+            document.getElementById('ads-total').textContent = formatMoney(total);
+            document.getElementById('ads-google').textContent = formatMoney(google);
+            document.getElementById('ads-meta').textContent = formatMoney(meta);
+            document.getElementById('ads-tiktok').textContent = formatMoney(tiktok);
+        }
+
+        function renderAdsGrid(year, month) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const grid = document.getElementById('ads-grid');
+
+            // Create lookup map
+            const dataMap = {};
+            for (const row of adsData) {
+                const key = `${row.date}_${row.source}`;
+                dataMap[key] = row.amount;
+            }
+
+            let html = '';
+            let totals = { google: 0, meta: 0, tiktok: 0 };
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayName = new Date(dateStr).toLocaleDateString('pl-PL', { weekday: 'short' });
+                const isWeekend = [0, 6].includes(new Date(dateStr).getDay());
+
+                let rowSum = 0;
+                let cells = '';
+                for (const src of AD_SOURCES) {
+                    const val = parseFloat(dataMap[`${dateStr}_${src}`]) || 0;
+                    rowSum += val;
+                    totals[src] += val;
+                    cells += `
+                        <td class="py-1 px-2 text-center">
+                            <input type="number" step="0.01" min="0"
+                                class="w-full bg-transparent border border-transparent hover:border-white/10 focus:border-teal-500/50 focus:bg-zinc-900 rounded px-2 py-1.5 text-center font-mono text-sm outline-none transition-all"
+                                value="${val || ''}"
+                                data-date="${dateStr}"
+                                data-source="${src}"
+                                onchange="saveAdExpense(this)"
+                                onkeydown="handleAdInputKey(event, this)"
+                                placeholder="0">
+                        </td>
+                    `;
+                }
+
+                html += `
+                    <tr class="${isWeekend ? 'bg-zinc-900/30' : ''} border-b border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-1.5 px-4">
+                            <span class="font-mono text-zinc-400">${String(day).padStart(2, '0')}</span>
+                            <span class="text-zinc-600 text-xs ml-1">${dayName}</span>
+                        </td>
+                        ${cells}
+                        <td class="py-1.5 px-4 text-right font-mono text-zinc-400">${rowSum > 0 ? formatMoney(rowSum) : '-'}</td>
+                    </tr>
+                `;
+            }
+
+            grid.innerHTML = html;
+
+            // Update totals
+            document.getElementById('grid-total-google').textContent = formatMoney(totals.google);
+            document.getElementById('grid-total-meta').textContent = formatMoney(totals.meta);
+            document.getElementById('grid-total-tiktok').textContent = formatMoney(totals.tiktok);
+            document.getElementById('grid-total-all').textContent = formatMoney(totals.google + totals.meta + totals.tiktok);
+        }
+
+        async function saveAdExpense(input) {
+            const date = input.dataset.date;
+            const source = input.dataset.source;
+            const amount = parseFloat(input.value) || 0;
+
+            // Upsert
+            const { error } = await supabaseClient
+                .from('ad_expenses')
+                .upsert({
+                    date,
+                    source,
+                    amount,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'date,source' });
+
+            if (error) {
+                console.error('Error saving ad expense:', error);
+                input.classList.add('border-red-500');
+                setTimeout(() => input.classList.remove('border-red-500'), 1000);
+            } else {
+                input.classList.add('border-emerald-500');
+                setTimeout(() => input.classList.remove('border-emerald-500'), 500);
+
+                // Update local data and stats
+                const idx = adsData.findIndex(r => r.date === date && r.source === source);
+                if (idx >= 0) {
+                    adsData[idx].amount = amount;
+                } else {
+                    adsData.push({ date, source, amount });
+                }
+                renderAdsStats();
+                updateAdsChart();
+                updateGridTotals();
+            }
+        }
+
+        function handleAdInputKey(e, input) {
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                // Move to next input
+                const inputs = Array.from(document.querySelectorAll('#ads-grid input[type="number"]'));
+                const idx = inputs.indexOf(input);
+                if (idx >= 0 && idx < inputs.length - 1) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        inputs[idx + 1].focus();
+                        inputs[idx + 1].select();
+                    }
+                }
+            }
+        }
+
+        function updateGridTotals() {
+            const inputs = document.querySelectorAll('#ads-grid input[type="number"]');
+            let totals = { google: 0, meta: 0, tiktok: 0 };
+
+            inputs.forEach(input => {
+                const val = parseFloat(input.value) || 0;
+                totals[input.dataset.source] += val;
+            });
+
+            document.getElementById('grid-total-google').textContent = formatMoney(totals.google);
+            document.getElementById('grid-total-meta').textContent = formatMoney(totals.meta);
+            document.getElementById('grid-total-tiktok').textContent = formatMoney(totals.tiktok);
+            document.getElementById('grid-total-all').textContent = formatMoney(totals.google + totals.meta + totals.tiktok);
+        }
+
+        function renderAdsChart(year, month) {
+            const ctx = document.getElementById('ads-chart');
+            if (!ctx) return;
+
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const labels = [];
+            const datasets = {};
+
+            // Init datasets
+            for (const src of AD_SOURCES) {
+                datasets[src] = [];
+            }
+
+            // Create lookup
+            const dataMap = {};
+            for (const row of adsData) {
+                dataMap[`${row.date}_${row.source}`] = parseFloat(row.amount) || 0;
+            }
+
+            // Fill data
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                labels.push(day);
+                for (const src of AD_SOURCES) {
+                    datasets[src].push(dataMap[`${dateStr}_${src}`] || 0);
+                }
+            }
+
+            // Destroy existing chart
+            if (adsChart) {
+                adsChart.destroy();
+            }
+
+            adsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Google',
+                            data: datasets.google,
+                            backgroundColor: AD_COLORS.google.bg,
+                            borderColor: AD_COLORS.google.border,
+                            borderWidth: 1,
+                            hidden: !document.getElementById('toggle-google').checked
+                        },
+                        {
+                            label: 'Meta',
+                            data: datasets.meta,
+                            backgroundColor: AD_COLORS.meta.bg,
+                            borderColor: AD_COLORS.meta.border,
+                            borderWidth: 1,
+                            hidden: !document.getElementById('toggle-meta').checked
+                        },
+                        {
+                            label: 'TikTok',
+                            data: datasets.tiktok,
+                            backgroundColor: AD_COLORS.tiktok.bg,
+                            borderColor: AD_COLORS.tiktok.border,
+                            borderWidth: 1,
+                            hidden: !document.getElementById('toggle-tiktok').checked
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#71717a' }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#71717a' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAdsChart() {
+            if (!adsChart) return;
+            adsChart.data.datasets[0].hidden = !document.getElementById('toggle-google').checked;
+            adsChart.data.datasets[1].hidden = !document.getElementById('toggle-meta').checked;
+            adsChart.data.datasets[2].hidden = !document.getElementById('toggle-tiktok').checked;
+            adsChart.update();
         }
 
         // ============================================
