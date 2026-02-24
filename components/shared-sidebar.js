@@ -493,8 +493,16 @@ function renderSidebar(config = {}) {
             countHtml = `<span id="nav-${item.id}-count" class="ml-auto text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono border border-white/5">0</span>`;
         }
 
+        // Build correct href based on app
+        let href = `/${item.id}`;
+        if (_currentAppId === 'biznes') {
+            href = `/tn-biznes/${item.id}.html`;
+        } else if (_currentAppId === 'workflow') {
+            href = `/tn-workflow/${item.id}.html`;
+        }
+
         return `
-            <a href="/${item.id}" data-page="${item.id}" ${itemId} class="flex items-center gap-3 px-3 py-2.5 ${activeClasses} mb-1${hiddenClass}">
+            <a href="${href}" data-page="${item.id}" ${itemId} class="flex items-center gap-3 px-3 py-2.5 ${activeClasses} mb-1${hiddenClass}">
                 <i class="ph ${item.icon} text-xl"></i>
                 <span class="font-medium">${item.label}</span>
                 ${countHtml}
