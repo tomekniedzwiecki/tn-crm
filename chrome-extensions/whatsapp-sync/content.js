@@ -57,6 +57,15 @@
     });
   }
 
+  // Pobierz ID bieżącej karty
+  async function getTabId() {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: 'GET_TAB_ID' }, (response) => {
+        resolve(response?.tabId || null);
+      });
+    });
+  }
+
   // Normalizacja numeru telefonu
   function normalizePhoneNumber(phone) {
     if (!phone) return null;
@@ -703,91 +712,45 @@
       try {
         console.log(`WhatsApp Sync: Clicking chat ${i+1}/${maxChats}`, chatEl);
 
-        // Debug: pokaż strukturę
-        const firstChild = chatEl.firstElementChild;
-        console.log('WhatsApp Sync: First child:', firstChild?.tagName, firstChild?.getAttribute('role'));
+        // Pobierz pozycję elementu
+        const rect = chatEl.getBoundingClientRect();
+        const centerX = Math.round(rect.left + rect.width / 2);
+        const centerY = Math.round(rect.top + rect.height / 2);
 
-        // Znajdź element z avatarem/zdjęciem - to jest klikalny obszar
-        const avatar = chatEl.querySelector('img, [data-testid="default-user"]');
-        const avatarParent = avatar?.closest('div[tabindex], div[role]');
+        console.log('WhatsApp Sync: Real click at', centerX, centerY);
 
-        // Lista celów do kliknięcia (od najbardziej prawdopodobnego)
-        const targets = [
-          avatarParent,
-          chatEl.querySelector('[role="listitem"]'),
-          chatEl.querySelector('[role="row"]'),
-          chatEl.querySelector('[role="gridcell"]'),
-          chatEl.querySelector('[role="option"]'),
-          firstChild,
-          chatEl
-        ].filter(Boolean);
-
-        console.log('WhatsApp Sync: Found', targets.length, 'potential targets');
-
-        let chatOpened = false;
-
-        // Pobierz aktualny tytuł czatu (jeśli jest otwarty)
+        // Pobierz aktualny tytuł czatu
         const currentTitle = document.querySelector('#main header span[title]')?.getAttribute('title');
 
-        for (const target of targets) {
-          if (chatOpened) break;
+        // Wyślij prawdziwe kliknięcie przez debugger API
+        const tabId = await getTabId();
+        const clickResult = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({
+            type: 'REAL_CLICK',
+            x: centerX,
+            y: centerY,
+            tabId: tabId
+          }, (response) => {
+            resolve(response || { success: false, error: 'No response' });
+          });
+        });
 
-          const rect = target.getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) continue;
-
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-
-          console.log('WhatsApp Sync: Clicking at', centerX, centerY, 'on', target.tagName);
-
-          // Użyj PointerEvent (nowsze API)
-          const pointerOpts = {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-            clientX: centerX,
-            clientY: centerY,
-            screenX: centerX + window.screenX,
-            screenY: centerY + window.screenY,
-            pointerId: 1,
-            pointerType: 'mouse',
-            isPrimary: true,
-            button: 0,
-            buttons: 1,
-            width: 1,
-            height: 1,
-            pressure: 0.5
-          };
-
-          target.dispatchEvent(new PointerEvent('pointerover', pointerOpts));
-          target.dispatchEvent(new PointerEvent('pointerenter', pointerOpts));
-          target.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
-          await new Promise(r => setTimeout(r, 100));
-          target.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
-
-          // Też MouseEvent dla kompatybilności
-          const mouseOpts = { ...pointerOpts };
-          delete mouseOpts.pointerId;
-          delete mouseOpts.pointerType;
-          delete mouseOpts.isPrimary;
-          target.dispatchEvent(new MouseEvent('click', mouseOpts));
-
-          await new Promise(r => setTimeout(r, 1000));
-
-          // Sprawdź czy zmienił się tytuł czatu
-          const newTitle = document.querySelector('#main header span[title]')?.getAttribute('title');
-          if (newTitle && newTitle !== currentTitle) {
-            console.log('WhatsApp Sync: Chat changed to:', newTitle);
-            chatOpened = true;
-          }
+        if (!clickResult.success) {
+          console.error('WhatsApp Sync: Click failed:', clickResult.error);
         }
 
-        if (!chatOpened) {
-          console.log('WhatsApp Sync: Could not open chat', i+1);
-        }
+        // Poczekaj na załadowanie czatu
+        await new Promise(r => setTimeout(r, 2000));
 
-        // Poczekaj
-        await new Promise(r => setTimeout(r, 1500));
+        // Sprawdź czy czat się otworzył
+        const newTitle = document.querySelector('#main header span[title]')?.getAttribute('title');
+        const chatOpened = newTitle && newTitle !== currentTitle;
+
+        if (chatOpened) {
+          console.log('WhatsApp Sync: Chat opened:', newTitle);
+        } else {
+          console.log('WhatsApp Sync: Chat did not change');
+        }
 
         // Sync
         const phone = getCurrentChatPhone();
