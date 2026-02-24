@@ -72,6 +72,7 @@ const NAV_ITEMS_BIZNES = [
     { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
     { id: 'costs', icon: 'ph-wallet', label: 'Koszty' },
     { id: 'revenues', icon: 'ph-money', label: 'Przychody' },
+    { id: 'employees', icon: 'ph-users', label: 'Pracownicy' },
     { id: 'plans', icon: 'ph-target', label: 'Plany' },
 ];
 

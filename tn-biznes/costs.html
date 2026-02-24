@@ -163,6 +163,10 @@
                                 <i class="ph ph-magic-wand"></i>
                                 <span class="hidden md:inline">Generuj z szablonu</span>
                             </button>
+                            <button onclick="generateEmployeeCosts()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors">
+                                <i class="ph ph-users"></i>
+                                <span class="hidden md:inline">Oblicz pracownikow</span>
+                            </button>
                         </div>
                         <button onclick="openOneTimeModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
                             <i class="ph ph-plus"></i>
@@ -806,6 +810,234 @@
             if (!error) {
                 await loadMonthlyCosts();
             }
+        }
+
+        // ============================================
+        // EMPLOYEE COSTS
+        // ============================================
+        function toNetto(brutto) {
+            return brutto / 1.23;
+        }
+
+        function calcCommission(sales, tiers) {
+            let commission = 0;
+            const sortedTiers = [...tiers].sort((a, b) => a.min - b.min);
+
+            for (const tier of sortedTiers) {
+                if (sales > tier.min) {
+                    const amt = Math.min(sales, tier.max) - tier.min;
+                    commission += amt * tier.rate;
+                }
+            }
+
+            // Handle sales above max tier
+            if (sortedTiers.length > 0) {
+                const maxTier = sortedTiers[sortedTiers.length - 1];
+                if (sales > maxTier.max) {
+                    commission += (sales - maxTier.max) * maxTier.rate;
+                }
+            }
+
+            return commission;
+        }
+
+        function calcMonthlyBonus(sales, threshold, amount) {
+            if (!threshold || !amount) return 0;
+            return sales >= threshold ? amount : 0;
+        }
+
+        async function getEmployeeSales(teamMemberId, monthStart, monthEnd) {
+            // Get paid orders in date range
+            const { data: orders } = await supabaseClient
+                .from('orders')
+                .select('id, amount, lead_id, paid_at, customer_email')
+                .eq('status', 'paid')
+                .gte('paid_at', monthStart)
+                .lte('paid_at', monthEnd);
+
+            if (!orders || orders.length === 0) {
+                return { totalSales: 0, orderCount: 0 };
+            }
+
+            // Get leads to find assigned_to
+            const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
+            let leadsMap = {};
+
+            if (leadIds.length > 0) {
+                const { data: leads } = await supabaseClient
+                    .from('leads')
+                    .select('id, assigned_to')
+                    .in('id', leadIds);
+                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l.assigned_to]));
+            }
+
+            // For orders without lead_id, try to find lead by email
+            const ordersWithoutLead = orders.filter(o => !o.lead_id && o.customer_email);
+            if (ordersWithoutLead.length > 0) {
+                const emails = [...new Set(ordersWithoutLead.map(o => o.customer_email))];
+                const { data: leadsByEmail } = await supabaseClient
+                    .from('leads')
+                    .select('id, email, assigned_to')
+                    .in('email', emails);
+
+                if (leadsByEmail) {
+                    const emailToLead = Object.fromEntries(leadsByEmail.map(l => [l.email, l]));
+                    for (const order of ordersWithoutLead) {
+                        const lead = emailToLead[order.customer_email];
+                        if (lead) {
+                            leadsMap[order.id] = lead.assigned_to;
+                        }
+                    }
+                }
+            }
+
+            // Sum orders for this team member (convert to NETTO)
+            let totalSales = 0;
+            let orderCount = 0;
+
+            for (const order of orders) {
+                const assignedTo = order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id];
+                if (assignedTo === teamMemberId) {
+                    totalSales += toNetto(parseFloat(order.amount));
+                    orderCount++;
+                }
+            }
+
+            return { totalSales, orderCount };
+        }
+
+        async function generateEmployeeCosts() {
+            const month = document.getElementById('filter-month').value;
+            if (!month) {
+                alert('Wybierz miesiac');
+                return;
+            }
+
+            const monthStart = month + '-01';
+            const monthEnd = new Date(new Date(monthStart).setMonth(new Date(monthStart).getMonth() + 1) - 1)
+                .toISOString().split('T')[0] + 'T23:59:59';
+
+            // Get active contracts with team member info
+            const { data: contracts, error: contractsError } = await supabaseClient
+                .from('employee_contracts')
+                .select('*, team_members!inner(id, name)')
+                .lte('effective_from', monthStart)
+                .or(`effective_to.is.null,effective_to.gte.${monthStart}`);
+
+            if (contractsError) {
+                alert('Blad pobierania umow: ' + contractsError.message);
+                return;
+            }
+
+            if (!contracts || contracts.length === 0) {
+                alert('Brak aktywnych umow pracownikow');
+                return;
+            }
+
+            let processed = 0;
+
+            for (const contract of contracts) {
+                // Calculate sales for this employee
+                const { totalSales, orderCount } = await getEmployeeSales(
+                    contract.team_member_id,
+                    monthStart,
+                    monthEnd
+                );
+
+                // Calculate costs
+                const tiers = contract.commission_tiers || [];
+                const commission = calcCommission(totalSales, tiers);
+                const monthlyBonus = calcMonthlyBonus(
+                    totalSales,
+                    contract.monthly_bonus_threshold,
+                    contract.monthly_bonus_amount
+                );
+
+                const baseSalary = parseFloat(contract.base_salary) || 0;
+                const totalCost = baseSalary + commission + monthlyBonus;
+
+                // Upsert employee_monthly_costs
+                const { data: empCost, error: empError } = await supabaseClient
+                    .from('employee_monthly_costs')
+                    .upsert({
+                        team_member_id: contract.team_member_id,
+                        month: monthStart,
+                        base_salary: baseSalary,
+                        commission: commission,
+                        monthly_bonus: monthlyBonus,
+                        quarterly_bonus: 0,
+                        total_cost: totalCost,
+                        total_sales_netto: totalSales,
+                        orders_count: orderCount,
+                        contract_snapshot: contract,
+                        calculated_at: new Date().toISOString()
+                    }, { onConflict: 'team_member_id,month' })
+                    .select()
+                    .single();
+
+                if (empError) {
+                    console.error('Blad zapisu employee_monthly_costs:', empError);
+                    continue;
+                }
+
+                // Create/update biznes_costs entry
+                const costName = `Wynagrodzenie: ${contract.team_members.name}`;
+                const costDescription = `Sprzedaz netto: ${formatMoney(totalSales)} | Prowizja: ${formatMoney(commission)}${monthlyBonus > 0 ? ` | Bonus: ${formatMoney(monthlyBonus)}` : ''}`;
+
+                // Check if cost already exists
+                const { data: existingCost } = await supabaseClient
+                    .from('biznes_costs')
+                    .select('id')
+                    .eq('name', costName)
+                    .eq('month', monthStart)
+                    .eq('category', 'pracownik')
+                    .maybeSingle();
+
+                if (existingCost) {
+                    // Update existing
+                    await supabaseClient
+                        .from('biznes_costs')
+                        .update({
+                            amount: totalCost,
+                            description: costDescription
+                        })
+                        .eq('id', existingCost.id);
+
+                    // Link to employee_monthly_costs
+                    await supabaseClient
+                        .from('employee_monthly_costs')
+                        .update({ biznes_cost_id: existingCost.id })
+                        .eq('id', empCost.id);
+                } else {
+                    // Insert new
+                    const { data: newCost } = await supabaseClient
+                        .from('biznes_costs')
+                        .insert({
+                            name: costName,
+                            description: costDescription,
+                            category: 'pracownik',
+                            amount: totalCost,
+                            cost_type: 'one_time',
+                            month: monthStart,
+                            is_paid: false
+                        })
+                        .select()
+                        .single();
+
+                    if (newCost) {
+                        await supabaseClient
+                            .from('employee_monthly_costs')
+                            .update({ biznes_cost_id: newCost.id })
+                            .eq('id', empCost.id);
+                    }
+                }
+
+                processed++;
+            }
+
+            // Reload costs
+            await loadMonthlyCosts();
+            alert(`Obliczono koszty dla ${processed} pracownikow`);
         }
 
         // ============================================
