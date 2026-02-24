@@ -39,7 +39,7 @@ const NAV_ITEMS_CRM = [
     { id: 'dashboard', icon: 'ph-house', label: 'Overview' },
     { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
-    { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp' },
+    { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp', href: '/whatsapp/logs' },
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz' },
     { id: 'offers', icon: 'ph-package', label: 'Oferty' },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia' },
@@ -503,11 +503,13 @@ function renderSidebar(config = {}) {
         }
 
         // Build correct href based on app (bez .html - Vercel ma rewrites)
-        let href = `/${item.id}`;
-        if (_currentAppId === 'biznes') {
-            href = `/tn-biznes/${item.id}`;
-        } else if (_currentAppId === 'workflow') {
-            href = `/tn-workflow/${item.id}`;
+        let href = item.href || `/${item.id}`;
+        if (!item.href) {
+            if (_currentAppId === 'biznes') {
+                href = `/tn-biznes/${item.id}`;
+            } else if (_currentAppId === 'workflow') {
+                href = `/tn-workflow/${item.id}`;
+            }
         }
 
         return `
