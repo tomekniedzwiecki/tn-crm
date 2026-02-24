@@ -121,11 +121,12 @@ const CostsService = {
             return [];
         }
 
-        // Pobierz bonusy dla okresu
+        // Pobierz bonusy dla calego okresu (wszystkie miesiace)
         const { data: bonuses } = await supabaseClient
             .from('employee_bonuses')
             .select('*')
-            .eq('month', startDate);
+            .gte('month', startDate)
+            .lte('month', endDate);
 
         const employeeCosts = [];
 
