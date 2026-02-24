@@ -2210,8 +2210,8 @@
                 // Check for unique synced_by values
                 const uniqueUsers = [...new Set(messages.map(m => m.synced_by).filter(Boolean))];
 
-                // Show toggle if both users have messages
-                if (uniqueUsers.length > 1 || (uniqueUsers.length === 1 && uniqueUsers[0])) {
+                // Show toggle only if BOTH users have messages
+                if (uniqueUsers.length > 1) {
                     userToggle.classList.remove('hidden');
                 } else {
                     userToggle.classList.add('hidden');
@@ -2282,14 +2282,11 @@
                     hour: '2-digit',
                     minute: '2-digit'
                 });
-                const userBadge = msg.synced_by ? `<span class="text-[9px] px-1 py-0.5 rounded ${msg.synced_by === 'tomek' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400'}">${msg.synced_by}</span>` : '';
-
                 return `
                     <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'}">
                         <div class="max-w-[75%] ${isOutbound ? 'bg-green-900/40 border-green-700/30' : 'bg-zinc-800 border-zinc-700/30'} border rounded-lg px-3 py-2">
                             <div class="text-sm text-white whitespace-pre-wrap">${safeText(msg.message_text)}</div>
-                            <div class="flex items-center justify-end gap-2 mt-1">
-                                ${userBadge}
+                            <div class="flex items-center justify-end mt-1">
                                 <span class="text-[10px] ${isOutbound ? 'text-green-500' : 'text-zinc-500'} font-mono">${time}</span>
                             </div>
                         </div>
