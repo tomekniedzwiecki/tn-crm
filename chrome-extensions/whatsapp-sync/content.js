@@ -19,17 +19,41 @@
   let autoSyncEnabled = false;
   let lastSyncedHashes = new Set();
 
+  // Sprawdź czy kontekst rozszerzenia jest aktywny
+  function isExtensionContextValid() {
+    try {
+      return chrome.runtime && chrome.runtime.id;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Ładowanie konfiguracji
   async function loadConfig() {
+    if (!isExtensionContextValid()) {
+      console.warn('WhatsApp Sync: Extension context invalidated - please refresh the page');
+      return;
+    }
+
     return new Promise((resolve) => {
-      chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync'], (result) => {
-        if (result.supabaseUrl) CONFIG.SUPABASE_URL = result.supabaseUrl;
-        if (result.supabaseKey) CONFIG.SUPABASE_KEY = result.supabaseKey;
-        if (result.syncApiKey) CONFIG.SYNC_API_KEY = result.syncApiKey;
-        if (result.syncUser) CONFIG.SYNC_USER = result.syncUser;
-        autoSyncEnabled = result.autoSync || false;
+      try {
+        chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync'], (result) => {
+          if (chrome.runtime.lastError) {
+            console.warn('WhatsApp Sync: Storage error -', chrome.runtime.lastError);
+            resolve();
+            return;
+          }
+          if (result.supabaseUrl) CONFIG.SUPABASE_URL = result.supabaseUrl;
+          if (result.supabaseKey) CONFIG.SUPABASE_KEY = result.supabaseKey;
+          if (result.syncApiKey) CONFIG.SYNC_API_KEY = result.syncApiKey;
+          if (result.syncUser) CONFIG.SYNC_USER = result.syncUser;
+          autoSyncEnabled = result.autoSync || false;
+          resolve();
+        });
+      } catch (e) {
+        console.warn('WhatsApp Sync: Extension context invalidated - please refresh the page');
         resolve();
-      });
+      }
     });
   }
 
@@ -568,33 +592,40 @@
   }
 
   // Nasłuchuj na wiadomości z popup
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'MANUAL_SYNC') {
-      performSync().then(() => {
-        sendResponse({ success: true });
-      });
-      return true; // async response
-    }
+  if (isExtensionContextValid()) {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (!isExtensionContextValid()) {
+        sendResponse({ success: false, error: 'Extension context invalidated - refresh page' });
+        return true;
+      }
 
-    if (message.type === 'DEEP_SYNC') {
-      performDeepSync().then(sendResponse);
-      return true;
-    }
+      if (message.type === 'MANUAL_SYNC') {
+        performSync().then(() => {
+          sendResponse({ success: true });
+        });
+        return true; // async response
+      }
 
-    if (message.type === 'GET_CURRENT_CHAT') {
-      sendResponse({
-        phone: getCurrentChatPhone(),
-        name: getCurrentChatName(),
-        messageCount: getMessagesFromChat().length
-      });
-      return true;
-    }
+      if (message.type === 'DEEP_SYNC') {
+        performDeepSync().then(sendResponse);
+        return true;
+      }
 
-    if (message.type === 'SYNC_ALL_CHATS') {
-      syncAllChats().then(sendResponse);
-      return true;
-    }
-  });
+      if (message.type === 'GET_CURRENT_CHAT') {
+        sendResponse({
+          phone: getCurrentChatPhone(),
+          name: getCurrentChatName(),
+          messageCount: getMessagesFromChat().length
+        });
+        return true;
+      }
+
+      if (message.type === 'SYNC_ALL_CHATS') {
+        syncAllChats().then(sendResponse);
+        return true;
+      }
+    });
+  }
 
   // Sync wszystkich czatów (iteruje po liście)
   async function syncAllChats() {
