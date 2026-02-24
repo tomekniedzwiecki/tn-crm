@@ -39,6 +39,7 @@ const NAV_ITEMS_CRM = [
     { id: 'dashboard', icon: 'ph-house', label: 'Overview' },
     { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
+    { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp' },
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz' },
     { id: 'offers', icon: 'ph-package', label: 'Oferty' },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia' },
@@ -206,6 +207,14 @@ const SIDEBAR_CSS = `
         100% { transform: rotate(0deg); }
     }
     nav a:hover .ph-megaphone { animation: megaphoneShake 0.5s ease-out; }
+
+    @keyframes whatsappPop {
+        0% { transform: scale(1); }
+        30% { transform: scale(1.2) rotate(-10deg); }
+        60% { transform: scale(1.1) rotate(5deg); }
+        100% { transform: scale(1) rotate(0deg); }
+    }
+    nav a:hover .ph-whatsapp-logo { animation: whatsappPop 0.5s ease-out; }
 
     @keyframes gearSpin {
         0% { transform: rotate(0deg); }
