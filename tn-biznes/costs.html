@@ -132,6 +132,9 @@
                     <button onclick="switchTab('monthly')" data-tab="monthly" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
                         <i class="ph ph-calendar mr-1.5"></i>Koszty miesieczne
                     </button>
+                    <button onclick="switchTab('leasing')" data-tab="leasing" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
+                        <i class="ph ph-car mr-1.5"></i>Leasing
+                    </button>
                 </div>
 
                 <!-- ==================== RECURRING COSTS TAB ==================== -->
@@ -209,6 +212,199 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ==================== LEASING TAB ==================== -->
+                <div id="leasing-tab" class="hidden">
+                    <div id="leasing-loading" class="text-center py-12 text-zinc-600">
+                        <i class="ph ph-circle-notch animate-spin text-2xl"></i>
+                    </div>
+
+                    <div id="leasing-content" class="hidden">
+                        <!-- Vehicle Info -->
+                        <div class="bg-gradient-to-br from-zinc-900/50 to-zinc-950/50 border border-white/5 rounded-2xl p-6 mb-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
+                                        <i class="ph ph-car text-xl text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-semibold text-white" id="lease-vehicle-name">-</h2>
+                                        <div class="text-zinc-500 text-sm" id="lease-vehicle-details">-</div>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400">Aktywny</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <div class="text-zinc-500 text-xs mb-1">Nr umowy</div>
+                                    <div class="font-mono text-white" id="lease-contract-nr">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-zinc-500 text-xs mb-1">Leasingodawca</div>
+                                    <div class="text-white" id="lease-lessor">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-zinc-500 text-xs mb-1">Rejestracja</div>
+                                    <div class="font-mono text-white" id="lease-reg">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-zinc-500 text-xs mb-1">Okres</div>
+                                    <div class="text-white" id="lease-period">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                                <div class="text-xs text-zinc-500 mb-1">Wartosc auta netto</div>
+                                <div class="text-xl font-semibold text-white font-mono" id="lease-value">-</div>
+                            </div>
+                            <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                                <div class="text-xs text-zinc-500 mb-1">Rata brutto</div>
+                                <div class="text-xl font-semibold text-amber-400 font-mono" id="lease-rate">-</div>
+                            </div>
+                            <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                                <div class="text-xs text-zinc-500 mb-1">Pozostalo rat</div>
+                                <div class="text-xl font-semibold text-blue-400 font-mono" id="lease-remaining">-</div>
+                            </div>
+                            <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                                <div class="text-xs text-zinc-500 mb-1">Wykup</div>
+                                <div class="text-xl font-semibold text-violet-400 font-mono" id="lease-residual">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress -->
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4 mb-6">
+                            <div class="flex justify-between text-xs mb-2">
+                                <span class="text-zinc-500">Postep splaty</span>
+                                <span class="text-white font-mono"><span id="lease-progress">0</span>%</span>
+                            </div>
+                            <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" id="lease-progress-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Two Column: Tax Deductions + Real Cost -->
+                        <div class="grid lg:grid-cols-2 gap-6 mb-6">
+                            <!-- Tax Deductions -->
+                            <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-5">
+                                <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                                    <i class="ph ph-receipt text-emerald-400"></i>
+                                    Odliczenia podatkowe (2026)
+                                </h3>
+
+                                <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                                    <div class="flex items-center gap-2 text-amber-400 text-xs font-medium">
+                                        <i class="ph ph-warning"></i>
+                                        Limit: 100 000 zl | Proporcja: <span id="lease-proportion" class="font-mono">-</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between py-2 border-b border-white/5">
+                                        <span class="text-zinc-400">VAT od raty</span>
+                                        <span class="font-mono text-white" id="lease-vat">-</span>
+                                    </div>
+                                    <div class="flex justify-between py-2 border-b border-white/5">
+                                        <span class="text-zinc-400">Odliczenie VAT (50%)</span>
+                                        <span class="font-mono text-emerald-400" id="lease-vat-deduct">-</span>
+                                    </div>
+                                    <div class="flex justify-between py-2 border-b border-white/5">
+                                        <span class="text-zinc-400">Koszt kapitalowy (po proporcji)</span>
+                                        <span class="font-mono text-emerald-400" id="lease-capital-cost">-</span>
+                                    </div>
+                                    <div class="flex justify-between py-2 border-b border-white/5">
+                                        <span class="text-zinc-400">Koszt odsetkowy (100%)</span>
+                                        <span class="font-mono text-emerald-400" id="lease-interest-cost">-</span>
+                                    </div>
+                                    <div class="flex justify-between py-2 pt-2 border-t border-white/10">
+                                        <span class="text-white font-medium">Koszt podatkowy lacznie</span>
+                                        <span class="font-mono text-emerald-400 font-semibold" id="lease-tax-cost">-</span>
+                                    </div>
+                                    <div class="flex justify-between py-2">
+                                        <span class="text-zinc-400">Oszczednosc PIT (19%)</span>
+                                        <span class="font-mono text-emerald-400" id="lease-pit-save">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Real Cost -->
+                            <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-5">
+                                <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                                    <i class="ph ph-wallet text-blue-400"></i>
+                                    Realny koszt miesiecznie
+                                </h3>
+
+                                <div class="space-y-3 text-sm">
+                                    <div class="flex justify-between items-center py-3 border-b border-white/5">
+                                        <span class="text-zinc-400">Placisz (brutto)</span>
+                                        <span class="text-lg font-mono text-white" id="lease-pay">-</span>
+                                    </div>
+                                    <div class="flex justify-between items-center py-2">
+                                        <span class="text-zinc-400">- Odliczenie VAT</span>
+                                        <span class="font-mono text-emerald-400" id="lease-real-vat">-</span>
+                                    </div>
+                                    <div class="flex justify-between items-center py-2">
+                                        <span class="text-zinc-400">- Oszczednosc PIT</span>
+                                        <span class="font-mono text-emerald-400" id="lease-real-pit">-</span>
+                                    </div>
+                                    <div class="flex justify-between items-center py-3 border-t border-white/10 mt-2">
+                                        <span class="text-white font-medium">= Realny koszt</span>
+                                        <span class="text-xl font-bold font-mono text-blue-400" id="lease-real-cost">-</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
+                                    <div class="text-xs text-blue-400 mb-1">Oszczedzasz miesiecznie</div>
+                                    <div class="text-xl font-bold text-blue-400 font-mono" id="lease-savings">-</div>
+                                </div>
+
+                                <div class="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <div class="text-xs text-zinc-600">Suma wplat (caly leasing)</div>
+                                        <div class="font-mono text-white" id="lease-total-paid">-</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-zinc-600">Suma oszczednosci</div>
+                                        <div class="font-mono text-emerald-400" id="lease-total-savings">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Schedule -->
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl overflow-hidden">
+                            <div class="p-4 border-b border-white/5">
+                                <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                                    <i class="ph ph-calendar-check text-violet-400"></i>
+                                    Harmonogram splat
+                                </h3>
+                            </div>
+                            <div class="overflow-x-auto max-h-96">
+                                <table class="w-full text-sm">
+                                    <thead class="sticky top-0 bg-zinc-900">
+                                        <tr class="text-zinc-500 text-xs border-b border-white/5">
+                                            <th class="text-left py-3 px-4">Nr</th>
+                                            <th class="text-left py-3 px-4">Termin</th>
+                                            <th class="text-right py-3 px-4">Rata</th>
+                                            <th class="text-right py-3 px-4">Kapital</th>
+                                            <th class="text-right py-3 px-4">Odsetki</th>
+                                            <th class="text-center py-3 px-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lease-schedule"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="leasing-empty" class="hidden text-center py-12">
+                        <i class="ph ph-car text-4xl text-zinc-700 mb-3"></i>
+                        <div class="text-zinc-500">Brak aktywnych umow leasingowych</div>
+                        <div class="text-xs text-zinc-600 mt-1">Uruchom migracje SQL aby dodac dane</div>
                     </div>
                 </div>
 
@@ -700,20 +896,27 @@
 
             document.getElementById('recurring-tab').classList.toggle('hidden', tab !== 'recurring');
             document.getElementById('monthly-tab').classList.toggle('hidden', tab !== 'monthly');
+            document.getElementById('leasing-tab').classList.toggle('hidden', tab !== 'leasing');
 
             // Update add button
             const addBtn = document.getElementById('add-btn');
             const addBtnText = document.getElementById('add-btn-text');
             if (tab === 'recurring') {
+                addBtn.classList.remove('hidden');
                 addBtn.onclick = () => openRecurringModal();
                 addBtnText.textContent = 'Dodaj koszt staly';
-            } else {
+            } else if (tab === 'monthly') {
+                addBtn.classList.remove('hidden');
                 addBtn.onclick = () => openOneTimeModal();
                 addBtnText.textContent = 'Dodaj jednorazowy';
+            } else if (tab === 'leasing') {
+                addBtn.classList.add('hidden'); // Ukryj przycisk dodawania dla leasingu
             }
 
             if (tab === 'monthly') {
                 loadMonthlyCosts();
+            } else if (tab === 'leasing') {
+                loadLeasingData();
             }
         }
 
@@ -1033,6 +1236,132 @@
             }
 
             return { totalSales, orderCount };
+        }
+
+        // ============================================
+        // LEASING
+        // ============================================
+        const LEASING_LIMITS = { combustion: 100000, phev: 150000, electric: 225000 };
+        let leasingData = null;
+
+        async function loadLeasingData() {
+            const loadingEl = document.getElementById('leasing-loading');
+            const contentEl = document.getElementById('leasing-content');
+            const emptyEl = document.getElementById('leasing-empty');
+
+            loadingEl.classList.remove('hidden');
+            contentEl.classList.add('hidden');
+            emptyEl.classList.add('hidden');
+
+            const { data: contract, error } = await supabaseClient
+                .from('leasing_contracts')
+                .select('*')
+                .eq('is_active', true)
+                .limit(1)
+                .maybeSingle();
+
+            loadingEl.classList.add('hidden');
+
+            if (error || !contract) {
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            leasingData = contract;
+            renderLeasingData();
+            contentEl.classList.remove('hidden');
+        }
+
+        function renderLeasingData() {
+            const c = leasingData;
+            const schedule = c.payment_schedule || [];
+            const limit = LEASING_LIMITS[c.vehicle_type] || 100000;
+            const proportion = Math.min(1, limit / c.vehicle_value_netto);
+
+            // Calculate averages
+            const avgCapital = schedule.reduce((s, p) => s + p.capital, 0) / schedule.length;
+            const avgInterest = schedule.reduce((s, p) => s + p.interest, 0) / schedule.length;
+            const monthlyNetto = parseFloat(c.monthly_installment_netto);
+            const monthlyBrutto = monthlyNetto * 1.23;
+            const vatTotal = monthlyNetto * 0.23;
+            const vatDeduction = vatTotal * 0.5; // 50% for mixed use
+
+            const capitalDeduction = avgCapital * proportion;
+            const interestDeduction = avgInterest;
+            const totalTaxCost = capitalDeduction + interestDeduction;
+            const pitSavings = totalTaxCost * 0.19;
+
+            const realCost = monthlyBrutto - vatDeduction - pitSavings;
+            const monthlySavings = vatDeduction + pitSavings;
+            const totalPaid = monthlyBrutto * c.installments_count;
+            const totalSavings = monthlySavings * c.installments_count;
+
+            // Remaining installments
+            const today = new Date();
+            const remaining = schedule.filter(p => new Date(p.date) >= today).length;
+            const paid = c.installments_count - remaining;
+            const progressPct = Math.round((paid / c.installments_count) * 100);
+
+            // Vehicle info
+            document.getElementById('lease-vehicle-name').textContent = c.vehicle_name;
+            document.getElementById('lease-vehicle-details').textContent =
+                `${c.vehicle_type === 'combustion' ? 'Spalinowy' : c.vehicle_type === 'phev' ? 'Hybryda PHEV' : 'Elektryczny'} | ${c.usage_type === 'mixed' ? 'Uzytek mieszany' : 'Tylko firmowy'}`;
+            document.getElementById('lease-contract-nr').textContent = c.contract_number;
+            document.getElementById('lease-lessor').textContent = c.lessor_name;
+            document.getElementById('lease-reg').textContent = c.registration_number || '-';
+            document.getElementById('lease-period').textContent = `${formatDateShort(c.start_date)} - ${formatDateShort(c.end_date)}`;
+
+            // Stats
+            document.getElementById('lease-value').textContent = formatMoney(c.vehicle_value_netto);
+            document.getElementById('lease-rate').textContent = formatMoney(monthlyBrutto);
+            document.getElementById('lease-remaining').textContent = `${remaining} / ${c.installments_count}`;
+            document.getElementById('lease-residual').textContent = formatMoney(c.residual_value);
+
+            // Progress
+            document.getElementById('lease-progress').textContent = progressPct;
+            document.getElementById('lease-progress-bar').style.width = progressPct + '%';
+
+            // Tax deductions
+            document.getElementById('lease-proportion').textContent = (proportion * 100).toFixed(1) + '%';
+            document.getElementById('lease-vat').textContent = formatMoney(vatTotal);
+            document.getElementById('lease-vat-deduct').textContent = '- ' + formatMoney(vatDeduction);
+            document.getElementById('lease-capital-cost').textContent = formatMoney(capitalDeduction);
+            document.getElementById('lease-interest-cost').textContent = formatMoney(interestDeduction);
+            document.getElementById('lease-tax-cost').textContent = formatMoney(totalTaxCost);
+            document.getElementById('lease-pit-save').textContent = formatMoney(pitSavings);
+
+            // Real cost
+            document.getElementById('lease-pay').textContent = formatMoney(monthlyBrutto);
+            document.getElementById('lease-real-vat').textContent = '- ' + formatMoney(vatDeduction);
+            document.getElementById('lease-real-pit').textContent = '- ' + formatMoney(pitSavings);
+            document.getElementById('lease-real-cost').textContent = formatMoney(realCost);
+            document.getElementById('lease-savings').textContent = formatMoney(monthlySavings);
+            document.getElementById('lease-total-paid').textContent = formatMoney(totalPaid);
+            document.getElementById('lease-total-savings').textContent = formatMoney(totalSavings);
+
+            // Schedule
+            document.getElementById('lease-schedule').innerHTML = schedule.map(p => {
+                const isPaid = new Date(p.date) < today;
+                const isUpcoming = !isPaid && new Date(p.date) < new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+                return `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-2.5 px-4 font-mono text-zinc-500">${p.nr}</td>
+                        <td class="py-2.5 px-4">${formatDateShort(p.date)}</td>
+                        <td class="py-2.5 px-4 text-right font-mono">${formatMoney(p.total)}</td>
+                        <td class="py-2.5 px-4 text-right font-mono text-emerald-400">${formatMoney(p.capital)}</td>
+                        <td class="py-2.5 px-4 text-right font-mono text-amber-400">${formatMoney(p.interest)}</td>
+                        <td class="py-2.5 px-4 text-center">
+                            ${isPaid ? '<span class="px-2 py-0.5 rounded-full text-xs bg-blue-500/15 text-blue-400">Zaplacona</span>' :
+                              isUpcoming ? '<span class="px-2 py-0.5 rounded-full text-xs bg-amber-500/15 text-amber-400">Wkrotce</span>' : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function formatDateShort(dateStr) {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
         // ============================================
