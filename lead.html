@@ -477,6 +477,11 @@
                         E-mail
                         <span class="tab-badge" id="email-tab-count">0</span>
                     </button>
+                    <button class="tab-btn" data-tab="whatsapp" onclick="switchTab('whatsapp')">
+                        <i class="ph ph-whatsapp-logo text-green-500"></i>
+                        WhatsApp
+                        <span class="tab-badge" id="whatsapp-tab-count">0</span>
+                    </button>
                 </div>
 
                 <!-- Tab: Informacje podstawowe -->
@@ -1073,6 +1078,37 @@
                     </div>
                 </div><!-- /tab-email -->
 
+                <!-- Tab: WhatsApp -->
+                <div id="tab-whatsapp" class="tab-content">
+                    <div class="bg-gradient-to-br from-green-950/20 to-zinc-900/40 rounded-lg border border-green-500/20 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                <i class="ph ph-whatsapp-logo text-green-500"></i>
+                                Historia wiadomości WhatsApp
+                            </h3>
+                            <button onclick="refreshWhatsAppMessages()" class="text-green-500 hover:text-green-400 text-xs flex items-center gap-1">
+                                <i class="ph ph-arrows-clockwise"></i>
+                                Odśwież
+                            </button>
+                        </div>
+
+                        <div id="whatsapp-empty" class="text-center py-12 hidden">
+                            <i class="ph ph-whatsapp-logo text-4xl text-green-500/30 mb-3"></i>
+                            <p class="text-zinc-500 text-sm">Brak wiadomości WhatsApp</p>
+                            <p class="text-zinc-600 text-xs mt-1">Zsynchronizuj wiadomości przez rozszerzenie Chrome</p>
+                        </div>
+
+                        <div id="whatsapp-loading" class="text-center py-12">
+                            <div class="w-5 h-5 mx-auto mb-3 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin"></div>
+                            <p class="text-zinc-500 text-xs">Ładowanie wiadomości...</p>
+                        </div>
+
+                        <div id="whatsapp-messages-container" class="space-y-3 max-h-[500px] overflow-y-auto hidden">
+                            <!-- Messages will be loaded here -->
+                        </div>
+                    </div>
+                </div><!-- /tab-whatsapp -->
+
             </div>
         </div>
     </main>
@@ -1595,6 +1631,7 @@
 
             renderLead();
             await loadActivities();
+            loadWhatsAppMessages();
         }
 
         function renderLead() {
@@ -2096,6 +2133,102 @@
             if (status === 'abandoned') return 'Porzucony';
             const stage = pipelineStages.find(s => s.id === status);
             return stage?.name || status;
+        }
+
+        // WhatsApp Messages
+        async function loadWhatsAppMessages() {
+            const container = document.getElementById('whatsapp-messages-container');
+            const emptyState = document.getElementById('whatsapp-empty');
+            const loadingState = document.getElementById('whatsapp-loading');
+            const tabCountEl = document.getElementById('whatsapp-tab-count');
+
+            if (!lead?.phone) {
+                loadingState.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+                if (tabCountEl) tabCountEl.textContent = '0';
+                return;
+            }
+
+            // Normalize phone for query
+            const phone = lead.phone.replace(/[^0-9]/g, '').replace(/^00/, '');
+            const phoneVariants = [
+                phone,
+                phone.length === 9 ? '48' + phone : phone,
+                phone.startsWith('48') ? phone.substring(2) : phone
+            ];
+
+            try {
+                const { data: messages, error } = await supabaseClient
+                    .from('whatsapp_messages')
+                    .select('*')
+                    .or(phoneVariants.map(p => `phone_number.eq.${p}`).join(','))
+                    .order('message_timestamp', { ascending: true })
+                    .limit(200);
+
+                loadingState.classList.add('hidden');
+
+                if (error) {
+                    console.error('Error loading WhatsApp messages:', error);
+                    emptyState.classList.remove('hidden');
+                    container.classList.add('hidden');
+                    return;
+                }
+
+                if (!messages || messages.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    container.classList.add('hidden');
+                    if (tabCountEl) tabCountEl.textContent = '0';
+                    return;
+                }
+
+                // Update tab badge
+                if (tabCountEl) tabCountEl.textContent = messages.length;
+
+                emptyState.classList.add('hidden');
+                container.classList.remove('hidden');
+
+                // Render messages
+                container.innerHTML = messages.map(msg => {
+                    const isOutbound = msg.direction === 'outbound';
+                    const time = new Date(msg.message_timestamp).toLocaleString('pl-PL', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'}">
+                            <div class="max-w-[75%] ${isOutbound ? 'bg-green-900/40 border-green-700/30' : 'bg-zinc-800 border-zinc-700/30'} border rounded-lg px-3 py-2">
+                                <div class="text-sm text-white whitespace-pre-wrap">${safeText(msg.message_text)}</div>
+                                <div class="text-[10px] ${isOutbound ? 'text-green-500' : 'text-zinc-500'} mt-1 text-right font-mono">${time}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+
+            } catch (err) {
+                console.error('Error loading WhatsApp messages:', err);
+                loadingState.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+            }
+        }
+
+        function refreshWhatsAppMessages() {
+            const loadingState = document.getElementById('whatsapp-loading');
+            const container = document.getElementById('whatsapp-messages-container');
+            const emptyState = document.getElementById('whatsapp-empty');
+
+            loadingState.classList.remove('hidden');
+            container.classList.add('hidden');
+            emptyState.classList.add('hidden');
+
+            loadWhatsAppMessages();
         }
 
         // Pipeline stages - loaded dynamically from settings
