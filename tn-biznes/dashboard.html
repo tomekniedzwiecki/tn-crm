@@ -341,6 +341,17 @@
                     </div>
                 </div>
 
+                <!-- Daily sales chart -->
+                <div class="chart-container rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-white">Sprzedaż dzienna (bieżący miesiąc)</h3>
+                        <div id="daily-sales-total" class="text-sm font-mono text-emerald-400"></div>
+                    </div>
+                    <div class="h-[200px]">
+                        <canvas id="dailySalesChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Bottom sections -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                     <!-- Recent revenues -->
@@ -389,6 +400,7 @@
         let currentDate = new Date();
         let mainChart = null;
         let costsChart = null;
+        let dailySalesChart = null;
 
         // ============================================
         // AUTH CHECK
@@ -1064,6 +1076,106 @@
         }
 
         // ============================================
+        // DAILY SALES CHART
+        // ============================================
+        async function loadDailySalesChart() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = now.getDate();
+
+            // Month boundaries
+            const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+            const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}T23:59:59`;
+
+            // Fetch orders for current month
+            const { data: orders } = await supabaseClient
+                .from('orders')
+                .select('amount, paid_at')
+                .eq('status', 'paid')
+                .gte('paid_at', monthStart)
+                .lte('paid_at', monthEnd);
+
+            // Group by day
+            const dailyTotals = {};
+            for (let d = 1; d <= daysInMonth; d++) {
+                dailyTotals[d] = 0;
+            }
+
+            let monthTotal = 0;
+            if (orders) {
+                for (const order of orders) {
+                    const day = new Date(order.paid_at).getDate();
+                    const netto = toNetto(parseFloat(order.amount));
+                    dailyTotals[day] += netto;
+                    monthTotal += netto;
+                }
+            }
+
+            // Update total
+            document.getElementById('daily-sales-total').textContent = `Razem: ${formatMoney(monthTotal)}`;
+
+            // Prepare chart data
+            const labels = [];
+            const values = [];
+            const colors = [];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                labels.push(d);
+                values.push(dailyTotals[d]);
+                colors.push(d <= today ? 'rgba(16, 185, 129, 0.8)' : 'rgba(63, 63, 70, 0.4)');
+            }
+
+            // Render chart
+            const ctx = document.getElementById('dailySalesChart').getContext('2d');
+            if (dailySalesChart) dailySalesChart.destroy();
+
+            dailySalesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 4,
+                        maxBarThickness: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `${items[0].label} ${new Date().toLocaleDateString('pl-PL', { month: 'long' })}`,
+                                label: (item) => formatMoney(item.raw)
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#71717a',
+                                font: { size: 10 },
+                                callback: (v, i) => (i + 1) % 5 === 0 || i === 0 ? i + 1 : ''
+                            }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: {
+                                color: '#71717a',
+                                callback: v => v > 0 ? formatMoney(v) : ''
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================
         // INIT
         // ============================================
         async function loadDashboard() {
@@ -1080,6 +1192,7 @@
                 updateUpcomingCosts(data);
                 initCharts(chartData);
                 updateCostsChart(data);
+                loadDailySalesChart();
             } catch (err) {
                 console.error('Error loading dashboard:', err);
             }
