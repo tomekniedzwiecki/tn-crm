@@ -160,30 +160,37 @@
 
                 <!-- Daniny do zapłaty -->
                 <div class="warning-card rounded-xl p-4 md:p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-4">
-                        <i class="ph ph-warning text-amber-400 text-xl"></i>
-                        <h3 class="text-base font-semibold text-white">Daniny do zapłaty w tym okresie</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-warning text-amber-400 text-xl"></i>
+                            <h3 class="text-base font-semibold text-white">Daniny do zapłaty</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-zinc-500">ZUS społ.</span>
+                            <input type="number" id="zus-base-input" class="input-field w-20 rounded px-2 py-1 text-xs text-white text-right" value="1600" onchange="recalculate()">
+                            <span class="text-xs text-zinc-500">zł/mies</span>
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <div class="text-xs text-zinc-500 mb-1">VAT</div>
+                            <div class="text-xs text-zinc-500 mb-1">VAT do zapłaty</div>
                             <div class="text-xl font-mono text-amber-400" id="due-vat">0 zł</div>
-                            <div class="text-[10px] text-zinc-600">do 25. następnego miesiąca</div>
+                            <div class="text-[10px] text-zinc-600">należny <span id="vat-output-mini">0</span> - naliczony <span id="vat-input-mini">0</span></div>
                         </div>
                         <div>
                             <div class="text-xs text-zinc-500 mb-1">ZUS społeczny</div>
                             <div class="text-xl font-mono text-amber-400" id="due-zus-spoleczny">0 zł</div>
-                            <div class="text-[10px] text-zinc-600">do 20. każdego miesiąca</div>
+                            <div class="text-[10px] text-zinc-600">stała składka</div>
                         </div>
                         <div>
                             <div class="text-xs text-zinc-500 mb-1">ZUS zdrowotny</div>
                             <div class="text-xl font-mono text-amber-400" id="due-zus-zdrowotny">0 zł</div>
-                            <div class="text-[10px] text-zinc-600">do 20. każdego miesiąca</div>
+                            <div class="text-[10px] text-zinc-600">9% od dochodu</div>
                         </div>
                         <div>
-                            <div class="text-xs text-zinc-500 mb-1">PIT</div>
+                            <div class="text-xs text-zinc-500 mb-1">PIT 19%</div>
                             <div class="text-xl font-mono text-amber-400" id="due-pit">0 zł</div>
-                            <div class="text-[10px] text-zinc-600">do 20. następnego miesiąca</div>
+                            <div class="text-[10px] text-zinc-600">od podstawy <span id="pit-podstawa-mini">0</span></div>
                         </div>
                     </div>
                     <div class="mt-4 pt-4 border-t border-amber-500/20 flex items-center justify-between">
@@ -192,240 +199,29 @@
                     </div>
                 </div>
 
-                <!-- VAT Section -->
-                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
-                            <i class="ph ph-receipt text-zinc-500"></i>
-                            Rozliczenie VAT
-                        </h3>
-                        <span class="text-xs text-zinc-500">Stawka 23%</span>
-                    </div>
-
-                    <!-- VAT należny -->
-                    <div class="mb-4">
-                        <div class="text-xs text-zinc-500 uppercase mb-2">VAT należny (od sprzedaży)</div>
-                        <div class="bg-zinc-900/50 rounded-lg p-3">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-zinc-400">Przychód brutto</span>
-                                <span class="font-mono text-zinc-300" id="vat-revenue-brutto">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-zinc-400">Przychód netto</span>
-                                <span class="font-mono text-zinc-300" id="vat-revenue-netto">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
-                                <span class="text-white font-medium">VAT należny (23%)</span>
-                                <span class="font-mono text-emerald-400 font-medium" id="vat-output">0 zł</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- VAT naliczony -->
-                    <div class="mb-4">
-                        <div class="text-xs text-zinc-500 uppercase mb-2">VAT naliczony (od zakupów)</div>
-                        <div class="bg-zinc-900/50 rounded-lg p-3">
-                            <div id="vat-costs-list" class="space-y-1.5 mb-2">
-                                <!-- Lista kosztów z VAT -->
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
-                                <span class="text-white font-medium">VAT naliczony łącznie</span>
-                                <span class="font-mono text-red-400 font-medium" id="vat-input">0 zł</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- VAT do zapłaty -->
-                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <div class="text-white font-medium">VAT do zapłaty</div>
-                                <div class="text-xs text-zinc-500">VAT należny - VAT naliczony</div>
-                            </div>
-                            <span class="text-2xl font-mono text-amber-400 font-semibold" id="vat-due">0 zł</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ZUS Section -->
-                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
-                            <i class="ph ph-shield-check text-zinc-500"></i>
-                            Składki ZUS
-                        </h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-zinc-500">Duży ZUS</span>
-                            <input type="number" id="zus-base-input" class="input-field w-24 rounded px-2 py-1 text-xs text-white text-right" value="1600" onchange="recalculate()">
-                            <span class="text-xs text-zinc-500">zł/mies</span>
-                        </div>
-                    </div>
-
-                    <!-- ZUS społeczny -->
-                    <div class="mb-4">
-                        <div class="text-xs text-zinc-500 uppercase mb-2">Składki społeczne (stałe)</div>
-                        <div class="bg-zinc-900/50 rounded-lg p-3 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Emerytalna (19.52%)</span>
-                                <span class="font-mono text-zinc-300" id="zus-emerytalna">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Rentowa (8%)</span>
-                                <span class="font-mono text-zinc-300" id="zus-rentowa">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Chorobowa (2.45%)</span>
-                                <span class="font-mono text-zinc-300" id="zus-chorobowa">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Wypadkowa (~1.67%)</span>
-                                <span class="font-mono text-zinc-300" id="zus-wypadkowa">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Fundusz Pracy (2.45%)</span>
-                                <span class="font-mono text-zinc-300" id="zus-fp">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
-                                <span class="text-white font-medium">Razem społeczne</span>
-                                <span class="font-mono text-zinc-300 font-medium" id="zus-spoleczny-total">0 zł</span>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-xs text-zinc-600">
-                            <i class="ph ph-info mr-1"></i>
-                            Składki społeczne są kosztem uzyskania przychodu (pomniejszają podstawę PIT)
-                        </div>
-                    </div>
-
-                    <!-- ZUS zdrowotny -->
-                    <div class="mb-4">
-                        <div class="text-xs text-zinc-500 uppercase mb-2">Składka zdrowotna (9% od dochodu)</div>
-                        <div class="bg-zinc-900/50 rounded-lg p-3 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Dochód (przychód - koszty)</span>
-                                <span class="font-mono text-zinc-300" id="zus-dochod">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Minus składki społeczne</span>
-                                <span class="font-mono text-zinc-300" id="zus-minus-spoleczny">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-zinc-400">Podstawa zdrowotnej</span>
-                                <span class="font-mono text-zinc-300" id="zus-podstawa-zdrowotna">0 zł</span>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-white/10">
-                                <span class="text-white font-medium">Składka zdrowotna (9%)</span>
-                                <span class="font-mono text-zinc-300 font-medium" id="zus-zdrowotny-total">0 zł</span>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-xs text-zinc-600">
-                            <i class="ph ph-info mr-1"></i>
-                            Na podatku liniowym składka zdrowotna jest kosztem do limitu <span id="zus-zdrowotny-limit">967</span> zł/mies
-                        </div>
-                    </div>
-
-                    <!-- ZUS łącznie -->
-                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <div class="text-white font-medium">Składki ZUS łącznie</div>
-                                <div class="text-xs text-zinc-500">Społeczne + zdrowotna</div>
-                            </div>
-                            <span class="text-2xl font-mono text-amber-400 font-semibold" id="zus-total">0 zł</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PIT Section -->
-                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
-                            <i class="ph ph-calculator text-zinc-500"></i>
-                            Podatek dochodowy PIT
-                        </h3>
-                        <span class="text-xs text-zinc-500">Stawka liniowa 19%</span>
-                    </div>
-
-                    <div class="bg-zinc-900/50 rounded-lg p-3 space-y-2 mb-4">
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Przychód netto</span>
-                            <span class="font-mono text-emerald-400" id="pit-przychod">0 zł</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Koszty uzyskania przychodu</span>
-                            <span class="font-mono text-red-400" id="pit-koszty">0 zł</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Składki ZUS społeczne (koszt)</span>
-                            <span class="font-mono text-red-400" id="pit-zus-spoleczny">0 zł</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Składka zdrowotna (koszt do limitu)</span>
-                            <span class="font-mono text-red-400" id="pit-zus-zdrowotny">0 zł</span>
-                        </div>
-                        <div class="flex justify-between items-center pt-2 border-t border-white/10">
-                            <span class="text-white font-medium">Podstawa opodatkowania</span>
-                            <span class="font-mono text-white font-medium" id="pit-podstawa">0 zł</span>
-                        </div>
-                    </div>
-
-                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <div class="text-white font-medium">Podatek PIT do zapłaty</div>
-                                <div class="text-xs text-zinc-500">Podstawa × 19%</div>
-                            </div>
-                            <span class="text-2xl font-mono text-amber-400 font-semibold" id="pit-due">0 zł</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Koszty breakdown -->
-                <div class="tax-card rounded-xl p-4 md:p-6 mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
-                            <i class="ph ph-list-bullets text-zinc-500"></i>
-                            Struktura kosztów
-                        </h3>
-                    </div>
-
-                    <div class="space-y-3" id="costs-breakdown">
-                        <!-- Koszty będą renderowane tutaj -->
-                    </div>
-
-                    <div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
-                        <span class="text-white font-medium">Koszty łącznie (netto)</span>
-                        <span class="font-mono text-red-400 font-medium" id="costs-total">0 zł</span>
-                    </div>
-                </div>
-
-                <!-- Podsumowanie końcowe -->
+                <!-- Podsumowanie -->
                 <div class="summary-card rounded-xl p-4 md:p-6">
-                    <h3 class="text-base font-semibold text-white mb-4">Podsumowanie</h3>
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Przychód netto</span>
-                            <span class="font-mono text-emerald-400" id="final-revenue">0 zł</span>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">Przychód netto</div>
+                            <div class="font-mono text-emerald-400" id="final-revenue">0 zł</div>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Koszty działalności (netto)</span>
-                            <span class="font-mono text-red-400" id="final-costs">0 zł</span>
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">Koszty netto</div>
+                            <div class="font-mono text-red-400" id="final-costs">0 zł</div>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Składki ZUS</span>
-                            <span class="font-mono text-red-400" id="final-zus">0 zł</span>
+                        <div>
+                            <div class="text-xs text-zinc-500 mb-1">ZUS + PIT</div>
+                            <div class="font-mono text-red-400" id="final-zus-pit">0 zł</div>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-zinc-400">Podatek PIT</span>
-                            <span class="font-mono text-red-400" id="final-pit">0 zł</span>
-                        </div>
-                        <div class="flex justify-between items-center pt-3 border-t border-teal-500/30">
-                            <span class="text-white font-semibold text-lg">Zostaje na rękę</span>
-                            <span class="font-mono text-teal-400 font-bold text-2xl" id="final-profit">0 zł</span>
+                        <div>
+                            <div class="text-xs text-teal-400 mb-1">Zostaje na rękę</div>
+                            <div class="font-mono text-teal-400 font-bold text-xl" id="final-profit">0 zł</div>
                         </div>
                     </div>
-                    <div class="mt-4 pt-4 border-t border-teal-500/20 text-xs text-zinc-500">
+                    <div class="text-xs text-zinc-600">
                         <i class="ph ph-info mr-1"></i>
-                        VAT nie jest wliczany do zysku - to podatek przechodni (dostajesz od klienta i oddajesz do US)
+                        VAT przechodni (od klienta do US) | ZUS społ. i zdr. do limitu to koszt PIT
                     </div>
                 </div>
 
@@ -446,14 +242,6 @@
         // ============================================
         const LIMIT_ZDROWOTNY_ROCZNY = 11600; // Limit odliczenia zdrowotnej jako koszt
 
-        // Proporcje składek ZUS (przybliżone)
-        const ZUS_RATES = {
-            emerytalna: 0.1952,
-            rentowa: 0.08,
-            chorobowa: 0.0245,
-            wypadkowa: 0.0167,
-            fp: 0.0245
-        };
 
         // ============================================
         // STATE
@@ -742,7 +530,6 @@
             let costsWithVatBrutto = 0;
             let costsWithVatNetto = 0;
             let costsWithoutVat = 0;
-            const costItems = [];
 
             for (const cost of data.costs) {
                 const amount = cost.amount;
@@ -750,27 +537,10 @@
 
                 if (vatRate > 0) {
                     const netto = amount / (1 + vatRate);
-                    const vat = amount - netto;
                     costsWithVatBrutto += amount;
                     costsWithVatNetto += netto;
-                    costItems.push({
-                        name: cost.name,
-                        brutto: amount,
-                        netto: netto,
-                        vat: vat,
-                        vatRate: vatRate,
-                        category: cost.category
-                    });
                 } else {
                     costsWithoutVat += amount;
-                    costItems.push({
-                        name: cost.name,
-                        brutto: amount,
-                        netto: amount,
-                        vat: 0,
-                        vatRate: 0,
-                        category: cost.category
-                    });
                 }
             }
 
@@ -783,14 +553,6 @@
 
             // ZUS społeczny
             const zusSpoleczny = zusBase * monthsInPeriod;
-
-            // Rozbicie ZUS społecznego (przybliżone)
-            const totalRate = ZUS_RATES.emerytalna + ZUS_RATES.rentowa + ZUS_RATES.chorobowa + ZUS_RATES.wypadkowa + ZUS_RATES.fp;
-            const zusEmerytalna = (ZUS_RATES.emerytalna / totalRate) * zusSpoleczny;
-            const zusRentowa = (ZUS_RATES.rentowa / totalRate) * zusSpoleczny;
-            const zusChorobowa = (ZUS_RATES.chorobowa / totalRate) * zusSpoleczny;
-            const zusWypadkowa = (ZUS_RATES.wypadkowa / totalRate) * zusSpoleczny;
-            const zusFP = (ZUS_RATES.fp / totalRate) * zusSpoleczny;
 
             // ZUS zdrowotny
             const podstawaZdrowotna = Math.max(dochod - zusSpoleczny, 3500 * monthsInPeriod);
@@ -814,19 +576,11 @@
             return {
                 revenue: { brutto: revenueBrutto, netto: revenueNetto },
                 vat: { output: vatOutput, input: vatInput, due: vatDue },
-                costs: { items: costItems, netto: costsNetto },
+                costs: { netto: costsNetto },
                 dochod,
                 zus: {
                     spoleczny: zusSpoleczny,
-                    emerytalna: zusEmerytalna,
-                    rentowa: zusRentowa,
-                    chorobowa: zusChorobowa,
-                    wypadkowa: zusWypadkowa,
-                    fp: zusFP,
                     zdrowotny: zusZdrowotny,
-                    podstawaZdrowotna,
-                    limitZdrowotny,
-                    zdrowotnyJakoKoszt,
                     total: zusTotal
                 },
                 pit: { podstawa: podstawaPit, due: pit },
@@ -840,7 +594,7 @@
         // UI UPDATES
         // ============================================
         function updateUI(calc) {
-            // Summary
+            // Summary cards
             document.getElementById('summary-revenue').textContent = formatMoney(calc.revenue.netto);
             document.getElementById('summary-costs').textContent = formatMoney(calc.costs.netto);
             document.getElementById('summary-income').textContent = formatMoney(calc.dochod);
@@ -853,82 +607,15 @@
             document.getElementById('due-pit').textContent = formatMoney(calc.pit.due);
             document.getElementById('due-total').textContent = formatMoney(calc.totalDaniny);
 
-            // VAT
-            document.getElementById('vat-revenue-brutto').textContent = formatMoney(calc.revenue.brutto);
-            document.getElementById('vat-revenue-netto').textContent = formatMoney(calc.revenue.netto);
-            document.getElementById('vat-output').textContent = formatMoney(calc.vat.output);
-            document.getElementById('vat-input').textContent = formatMoney(calc.vat.input);
-            document.getElementById('vat-due').textContent = formatMoney(calc.vat.due);
-
-            // VAT costs list
-            const vatCostsList = document.getElementById('vat-costs-list');
-            const costsWithVat = calc.costs.items.filter(c => c.vat > 0);
-            if (costsWithVat.length > 0) {
-                vatCostsList.innerHTML = costsWithVat.map(c => `
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-zinc-400">${c.name}</span>
-                        <span class="font-mono text-zinc-300">${formatMoney(c.vat)}</span>
-                    </div>
-                `).join('');
-            } else {
-                vatCostsList.innerHTML = '<div class="text-zinc-500 text-sm">Brak kosztów z VAT</div>';
-            }
-
-            // ZUS
-            document.getElementById('zus-emerytalna').textContent = formatMoney(calc.zus.emerytalna);
-            document.getElementById('zus-rentowa').textContent = formatMoney(calc.zus.rentowa);
-            document.getElementById('zus-chorobowa').textContent = formatMoney(calc.zus.chorobowa);
-            document.getElementById('zus-wypadkowa').textContent = formatMoney(calc.zus.wypadkowa);
-            document.getElementById('zus-fp').textContent = formatMoney(calc.zus.fp);
-            document.getElementById('zus-spoleczny-total').textContent = formatMoney(calc.zus.spoleczny);
-
-            document.getElementById('zus-dochod').textContent = formatMoney(calc.dochod);
-            document.getElementById('zus-minus-spoleczny').textContent = '-' + formatMoney(calc.zus.spoleczny);
-            document.getElementById('zus-podstawa-zdrowotna').textContent = formatMoney(calc.zus.podstawaZdrowotna);
-            document.getElementById('zus-zdrowotny-total').textContent = formatMoney(calc.zus.zdrowotny);
-            document.getElementById('zus-zdrowotny-limit').textContent = Math.round(calc.zus.limitZdrowotny / calc.monthsInPeriod);
-            document.getElementById('zus-total').textContent = formatMoney(calc.zus.total);
-
-            // PIT
-            document.getElementById('pit-przychod').textContent = formatMoney(calc.revenue.netto);
-            document.getElementById('pit-koszty').textContent = '-' + formatMoney(calc.costs.netto);
-            document.getElementById('pit-zus-spoleczny').textContent = '-' + formatMoney(calc.zus.spoleczny);
-            document.getElementById('pit-zus-zdrowotny').textContent = '-' + formatMoney(calc.zus.zdrowotnyJakoKoszt);
-            document.getElementById('pit-podstawa').textContent = formatMoney(calc.pit.podstawa);
-            document.getElementById('pit-due').textContent = formatMoney(calc.pit.due);
-
-            // Costs breakdown
-            const costsBreakdown = document.getElementById('costs-breakdown');
-            const categoryLabels = {
-                'infrastructure': 'Infrastruktura',
-                'tools': 'Narzędzia',
-                'marketing': 'Marketing',
-                'office': 'Biuro',
-                'services': 'Usługi',
-                'pracownik': 'Pracownik',
-                'other': 'Inne'
-            };
-
-            costsBreakdown.innerHTML = calc.costs.items.map(c => `
-                <div class="flex items-center justify-between bg-zinc-900/30 rounded-lg p-3">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">${categoryLabels[c.category] || c.category}</span>
-                        <span class="text-zinc-300">${c.name}</span>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-mono text-zinc-300">${formatMoney(c.netto)}</div>
-                        ${c.vat > 0 ? `<div class="text-xs text-zinc-500">VAT: ${formatMoney(c.vat)}</div>` : '<div class="text-xs text-zinc-600">bez VAT</div>'}
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('costs-total').textContent = formatMoney(calc.costs.netto);
+            // Mini hints
+            document.getElementById('vat-output-mini').textContent = formatMoney(calc.vat.output);
+            document.getElementById('vat-input-mini').textContent = formatMoney(calc.vat.input);
+            document.getElementById('pit-podstawa-mini').textContent = formatMoney(calc.pit.podstawa);
 
             // Final summary
             document.getElementById('final-revenue').textContent = formatMoney(calc.revenue.netto);
-            document.getElementById('final-costs').textContent = '-' + formatMoney(calc.costs.netto);
-            document.getElementById('final-zus').textContent = '-' + formatMoney(calc.zus.total);
-            document.getElementById('final-pit').textContent = '-' + formatMoney(calc.pit.due);
+            document.getElementById('final-costs').textContent = formatMoney(calc.costs.netto);
+            document.getElementById('final-zus-pit').textContent = formatMoney(calc.zus.total + calc.pit.due);
             document.getElementById('final-profit').textContent = formatMoney(calc.zyskNetto);
         }
 
