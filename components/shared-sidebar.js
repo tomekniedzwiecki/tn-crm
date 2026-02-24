@@ -414,6 +414,14 @@ function getLoginPath() {
 
 function getCurrentPage() {
     const path = location.pathname;
+
+    // Handle sub-paths like /whatsapp/logs, /whatsapp/settings
+    // Return the parent path (whatsapp) for sidebar highlighting
+    const subPathMatch = path.match(/^\/([^\/]+)\/[^\/]+$/);
+    if (subPathMatch) {
+        return subPathMatch[1]; // e.g., "whatsapp" from "/whatsapp/logs"
+    }
+
     const match = path.match(/\/([^\/]+)\.html$/) || path.match(/\/([^\/]+)$/);
     if (match) {
         const page = match[1];
