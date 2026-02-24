@@ -1120,11 +1120,21 @@
             const labels = [];
             const values = [];
             const colors = [];
+            const cumulative = [];
+            let runningTotal = 0;
 
             for (let d = 1; d <= daysInMonth; d++) {
                 labels.push(d);
                 values.push(dailyTotals[d]);
                 colors.push(d <= today ? 'rgba(16, 185, 129, 0.8)' : 'rgba(63, 63, 70, 0.4)');
+
+                // Cumulative only for past days
+                if (d <= today) {
+                    runningTotal += dailyTotals[d];
+                    cumulative.push(runningTotal);
+                } else {
+                    cumulative.push(null);
+                }
             }
 
             // Render chart
@@ -1135,12 +1145,27 @@
                 type: 'bar',
                 data: {
                     labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: colors,
-                        borderRadius: 4,
-                        maxBarThickness: 20
-                    }]
+                    datasets: [
+                        {
+                            type: 'bar',
+                            data: values,
+                            backgroundColor: colors,
+                            borderRadius: 4,
+                            maxBarThickness: 20,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            data: cumulative,
+                            borderColor: '#14b8a6',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            yAxisID: 'y1'
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -1150,7 +1175,10 @@
                         tooltip: {
                             callbacks: {
                                 title: (items) => `${items[0].label} ${new Date().toLocaleDateString('pl-PL', { month: 'long' })}`,
-                                label: (item) => formatMoney(item.raw)
+                                label: (item) => {
+                                    if (item.datasetIndex === 0) return `Dzień: ${formatMoney(item.raw)}`;
+                                    return `Narastająco: ${formatMoney(item.raw)}`;
+                                }
                             }
                         }
                     },
@@ -1164,9 +1192,18 @@
                             }
                         },
                         y: {
+                            position: 'left',
                             grid: { color: 'rgba(255,255,255,0.05)' },
                             ticks: {
                                 color: '#71717a',
+                                callback: v => v > 0 ? formatMoney(v) : ''
+                            }
+                        },
+                        y1: {
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: {
+                                color: '#14b8a6',
                                 callback: v => v > 0 ? formatMoney(v) : ''
                             }
                         }
