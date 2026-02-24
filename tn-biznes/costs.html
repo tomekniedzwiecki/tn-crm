@@ -253,8 +253,16 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota miesieczna (zl)</label>
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota miesieczna (zl brutto)</label>
                         <input type="number" id="recurring-amount" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="0.00">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="recurring-has-vat" checked class="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-teal-500 focus:ring-teal-500">
+                            <span class="text-sm text-zinc-400">Odliczenie VAT 23%</span>
+                        </label>
+                        <p class="text-xs text-zinc-600 mt-1 ml-7">Odznacz dla kosztow bez VAT (np. wynagrodzenia)</p>
                     </div>
 
                     <div class="mb-4">
@@ -315,8 +323,16 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota (zl)</label>
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Kwota (zl brutto)</label>
                         <input type="number" id="cost-amount" required step="0.01" min="0" class="input-field w-full rounded-lg px-3 py-2.5 text-white" placeholder="0.00">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cost-has-vat" checked class="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-teal-500 focus:ring-teal-500">
+                            <span class="text-sm text-zinc-400">Odliczenie VAT 23%</span>
+                        </label>
+                        <p class="text-xs text-zinc-600 mt-1 ml-7">Odznacz dla kosztow bez VAT (np. wynagrodzenia)</p>
                     </div>
 
                     <div class="mb-6">
@@ -617,6 +633,7 @@
             document.getElementById('recurring-form').reset();
             document.getElementById('recurring-id').value = '';
             document.getElementById('recurring-modal-title').textContent = 'Dodaj koszt staly';
+            document.getElementById('recurring-has-vat').checked = true; // Default: VAT 23%
             // Ustaw domyślną wartość effective_from na bieżący miesiąc
             document.getElementById('recurring-effective-from').value = getCurrentMonth();
             modal.classList.remove('hidden');
@@ -633,6 +650,7 @@
             document.getElementById('cost-form').reset();
             document.getElementById('cost-id').value = '';
             document.getElementById('cost-type').value = 'one_time';
+            document.getElementById('cost-has-vat').checked = true; // Default: VAT 23%
             document.getElementById('cost-modal-title').textContent = 'Dodaj koszt jednorazowy';
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -655,7 +673,8 @@
                 category: document.getElementById('recurring-category').value,
                 amount: parseFloat(document.getElementById('recurring-amount').value),
                 description: document.getElementById('recurring-description').value || null,
-                effective_from: effectiveFromMonth ? effectiveFromMonth + '-01' : null
+                effective_from: effectiveFromMonth ? effectiveFromMonth + '-01' : null,
+                vat_rate: document.getElementById('recurring-has-vat').checked ? 0.23 : 0
             };
 
             let result;
@@ -682,6 +701,7 @@
             document.getElementById('recurring-category').value = cost.category;
             document.getElementById('recurring-amount').value = cost.amount;
             document.getElementById('recurring-description').value = cost.description || '';
+            document.getElementById('recurring-has-vat').checked = (cost.vat_rate || 0.23) > 0;
             // Ustaw effective_from (format YYYY-MM)
             const effectiveFrom = cost.effective_from || cost.created_at?.split('T')[0];
             document.getElementById('recurring-effective-from').value = effectiveFrom ? effectiveFrom.substring(0, 7) : getCurrentMonth();
@@ -730,7 +750,8 @@
                 amount: rc.amount,
                 cost_type: 'recurring',
                 month: monthStart,
-                is_paid: false
+                is_paid: false,
+                vat_rate: rc.vat_rate ?? 0.23
             }));
 
             if (newCosts.length === 0) {
@@ -758,7 +779,8 @@
                 amount: parseFloat(document.getElementById('cost-amount').value),
                 description: document.getElementById('cost-description').value || null,
                 cost_type: document.getElementById('cost-type').value,
-                month: month
+                month: month,
+                vat_rate: document.getElementById('cost-has-vat').checked ? 0.23 : 0
             };
 
             let result;
@@ -786,6 +808,7 @@
             document.getElementById('cost-amount').value = cost.amount;
             document.getElementById('cost-description').value = cost.description || '';
             document.getElementById('cost-type').value = cost.cost_type;
+            document.getElementById('cost-has-vat').checked = (cost.vat_rate || 0) > 0;
             document.getElementById('cost-modal-title').textContent = 'Edytuj koszt';
 
             document.getElementById('cost-modal').classList.remove('hidden');
