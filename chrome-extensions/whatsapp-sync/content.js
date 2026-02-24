@@ -701,16 +701,58 @@
       const chatEl = chatItems[i];
 
       try {
-        console.log(`WhatsApp Sync: Clicking chat ${i+1}/${maxChats}`);
+        console.log(`WhatsApp Sync: Clicking chat ${i+1}/${maxChats}`, chatEl);
 
-        // Symuluj kliknięcie
-        chatEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-        await new Promise(r => setTimeout(r, 100));
-        chatEl.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-        chatEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        // Znajdź klikalny element wewnątrz - szukamy diva z role lub tytułem
+        let clickTarget = chatEl.querySelector('[role="gridcell"]') ||
+                          chatEl.querySelector('[role="row"]') ||
+                          chatEl.querySelector('[data-testid="cell-frame-container"]') ||
+                          chatEl.querySelector('div[style*="cursor"]') ||
+                          chatEl;
+
+        // Spróbuj kilku metod kliknięcia
+        // Metoda 1: Native click
+        clickTarget.click();
+        await new Promise(r => setTimeout(r, 500));
+
+        // Sprawdź czy czat się otworzył
+        let headerFound = document.querySelector('#main header, [data-testid="conversation-panel-header"]');
+
+        // Metoda 2: Jeśli nie zadziałało, spróbuj focus + Enter
+        if (!headerFound) {
+          console.log('WhatsApp Sync: Native click failed, trying focus+enter');
+          chatEl.focus();
+          await new Promise(r => setTimeout(r, 200));
+          chatEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+          await new Promise(r => setTimeout(r, 500));
+        }
+
+        // Metoda 3: Spróbuj pełnej symulacji myszy na środku elementu
+        headerFound = document.querySelector('#main header, [data-testid="conversation-panel-header"]');
+        if (!headerFound) {
+          console.log('WhatsApp Sync: Focus+enter failed, trying mouse simulation');
+          const rect = chatEl.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          const mouseOpts = {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: centerX,
+            clientY: centerY
+          };
+
+          chatEl.dispatchEvent(new MouseEvent('mouseenter', mouseOpts));
+          chatEl.dispatchEvent(new MouseEvent('mouseover', mouseOpts));
+          chatEl.dispatchEvent(new MouseEvent('mousedown', { ...mouseOpts, button: 0 }));
+          await new Promise(r => setTimeout(r, 50));
+          chatEl.dispatchEvent(new MouseEvent('mouseup', { ...mouseOpts, button: 0 }));
+          chatEl.dispatchEvent(new MouseEvent('click', { ...mouseOpts, button: 0 }));
+        }
 
         // Poczekaj na załadowanie czatu
-        await new Promise(r => setTimeout(r, 2500));
+        await new Promise(r => setTimeout(r, 2000));
 
         // Sync
         const phone = getCurrentChatPhone();
