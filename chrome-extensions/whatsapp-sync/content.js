@@ -9,6 +9,7 @@
     SUPABASE_URL: '', // Ustaw w popup
     SUPABASE_KEY: '', // Ustaw w popup
     SYNC_API_KEY: '', // Klucz API do whatsapp-sync
+    SYNC_USER: 'tomek', // tomek lub maciek
     AUTO_SYNC_INTERVAL: 30000, // 30 sekund
     SYNC_ON_CHAT_CHANGE: true
   };
@@ -21,10 +22,11 @@
   // Ładowanie konfiguracji
   async function loadConfig() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'autoSync'], (result) => {
+      chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync'], (result) => {
         if (result.supabaseUrl) CONFIG.SUPABASE_URL = result.supabaseUrl;
         if (result.supabaseKey) CONFIG.SUPABASE_KEY = result.supabaseKey;
         if (result.syncApiKey) CONFIG.SYNC_API_KEY = result.syncApiKey;
+        if (result.syncUser) CONFIG.SYNC_USER = result.syncUser;
         autoSyncEnabled = result.autoSync || false;
         resolve();
       });
@@ -323,11 +325,12 @@
       return { success: true, inserted: 0, skipped: 0 };
     }
 
-    // Dodaj phone_number i contact_name do każdej wiadomości
+    // Dodaj phone_number, contact_name i synced_by do każdej wiadomości
     const messagesWithPhone = messages.map(msg => ({
       ...msg,
       phone_number: phoneNumber,
-      contact_name: contactName
+      contact_name: contactName,
+      synced_by: CONFIG.SYNC_USER
     }));
 
     // Filtruj już zsynchronizowane
@@ -434,6 +437,136 @@
     }, CONFIG.AUTO_SYNC_INTERVAL);
   }
 
+  // Deep sync - scrolluje w górę i pobiera starsze wiadomości
+  async function performDeepSync() {
+    if (issyncing) return { success: false, error: 'Sync w trakcie' };
+    issyncing = true;
+
+    await loadConfig();
+    const phoneNumber = getCurrentChatPhone();
+    const contactName = getCurrentChatName();
+
+    if (!phoneNumber) {
+      issyncing = false;
+      return { success: false, error: 'Brak numeru telefonu' };
+    }
+
+    // Znajdź kontener wiadomości do scrollowania
+    const messageContainerSelectors = [
+      '[data-testid="conversation-panel-messages"]',
+      '#main [role="application"]',
+      '#main .copyable-area',
+      '#main > div > div > div._akbu'
+    ];
+
+    let messageContainer = null;
+    for (const sel of messageContainerSelectors) {
+      messageContainer = document.querySelector(sel);
+      if (messageContainer && messageContainer.scrollHeight > messageContainer.clientHeight) {
+        break;
+      }
+    }
+
+    if (!messageContainer) {
+      // Fallback - szukaj scrollowalnego elementu w #main
+      const mainEl = document.querySelector('#main');
+      if (mainEl) {
+        messageContainer = Array.from(mainEl.querySelectorAll('div')).find(
+          el => el.scrollHeight > el.clientHeight + 100 && el.clientHeight > 200
+        );
+      }
+    }
+
+    if (!messageContainer) {
+      console.log('WhatsApp Sync: Could not find scrollable container');
+      // Wykonaj zwykły sync
+      const messages = getMessagesFromChat();
+      const result = await syncMessages(messages, phoneNumber, contactName);
+      issyncing = false;
+      return result;
+    }
+
+    console.log('WhatsApp Sync: Starting deep sync with scroll');
+
+    let totalInserted = 0;
+    let totalSkipped = 0;
+    let previousMessageCount = 0;
+    let noNewMessagesCount = 0;
+    let scrollAttempts = 0;
+    const maxScrollAttempts = 50; // Max 50 scrolli (około 30 dni wstecz)
+
+    // Najpierw sync bieżących
+    let messages = getMessagesFromChat();
+    let result = await syncMessages(messages, phoneNumber, contactName);
+    totalInserted += result.inserted || 0;
+    totalSkipped += result.skipped || 0;
+
+    // Scrolluj w górę i syncuj
+    while (scrollAttempts < maxScrollAttempts) {
+      scrollAttempts++;
+
+      // Scroll to top
+      const previousScrollTop = messageContainer.scrollTop;
+      messageContainer.scrollTop = 0;
+
+      // Poczekaj na załadowanie
+      await new Promise(r => setTimeout(r, 800));
+
+      // Sprawdź czy załadowały się nowe wiadomości
+      messages = getMessagesFromChat();
+
+      if (messages.length === previousMessageCount) {
+        noNewMessagesCount++;
+        if (noNewMessagesCount >= 3) {
+          console.log('WhatsApp Sync: No more messages to load');
+          break;
+        }
+      } else {
+        noNewMessagesCount = 0;
+      }
+
+      previousMessageCount = messages.length;
+
+      // Sprawdź czy wszystkie widoczne wiadomości są już zsyncowane
+      const newHashes = messages.filter(m => !lastSyncedHashes.has(m.message_hash));
+      if (newHashes.length === 0 && scrollAttempts > 3) {
+        console.log('WhatsApp Sync: All visible messages already synced, stopping');
+        break;
+      }
+
+      // Sync nowe wiadomości
+      result = await syncMessages(messages, phoneNumber, contactName);
+      totalInserted += result.inserted || 0;
+
+      // Wyślij progress do popup
+      chrome.runtime.sendMessage({
+        type: 'SYNC_PROGRESS',
+        data: {
+          phone: phoneNumber,
+          scroll: scrollAttempts,
+          messages: messages.length,
+          inserted: totalInserted
+        }
+      });
+
+      console.log(`WhatsApp Sync: Scroll ${scrollAttempts}, messages: ${messages.length}, new: ${result.inserted || 0}`);
+
+      // Jeśli scroll się nie zmienił (dotarliśmy do góry)
+      if (messageContainer.scrollTop === previousScrollTop && previousScrollTop === 0) {
+        noNewMessagesCount++;
+      }
+    }
+
+    issyncing = false;
+
+    return {
+      success: true,
+      inserted: totalInserted,
+      skipped: totalSkipped,
+      scrolls: scrollAttempts
+    };
+  }
+
   // Nasłuchuj na wiadomości z popup
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'MANUAL_SYNC') {
@@ -441,6 +574,11 @@
         sendResponse({ success: true });
       });
       return true; // async response
+    }
+
+    if (message.type === 'DEEP_SYNC') {
+      performDeepSync().then(sendResponse);
+      return true;
     }
 
     if (message.type === 'GET_CURRENT_CHAT') {

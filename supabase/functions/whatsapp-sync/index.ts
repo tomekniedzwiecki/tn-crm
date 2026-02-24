@@ -17,6 +17,7 @@ interface WhatsAppMessage {
   message_timestamp: string // ISO timestamp
   direction: 'inbound' | 'outbound'
   message_hash: string      // MD5 hash do deduplikacji
+  synced_by?: string        // Kto synchronizował (tomek/maciek)
 }
 
 interface SyncRequest {
@@ -103,7 +104,8 @@ Deno.serve(async (req) => {
             message_text: msg.message_text,
             message_timestamp: msg.message_timestamp,
             direction: msg.direction,
-            message_hash: hash
+            message_hash: hash,
+            synced_by: msg.synced_by || null
           })
 
         if (error) {

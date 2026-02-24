@@ -1092,6 +1092,21 @@
                             </button>
                         </div>
 
+                        <!-- User toggle (shown when both users have messages) -->
+                        <div id="whatsapp-user-toggle" class="hidden mb-4">
+                            <div class="inline-flex rounded-lg bg-zinc-800 p-1 border border-zinc-700">
+                                <button onclick="filterWhatsAppByUser('all')" id="whatsapp-user-all" class="px-3 py-1.5 text-xs rounded-md transition-all bg-green-600 text-white">
+                                    Wszyscy
+                                </button>
+                                <button onclick="filterWhatsAppByUser('tomek')" id="whatsapp-user-tomek" class="px-3 py-1.5 text-xs rounded-md transition-all text-zinc-400 hover:text-white">
+                                    Tomek
+                                </button>
+                                <button onclick="filterWhatsAppByUser('maciek')" id="whatsapp-user-maciek" class="px-3 py-1.5 text-xs rounded-md transition-all text-zinc-400 hover:text-white">
+                                    Maciek
+                                </button>
+                            </div>
+                        </div>
+
                         <div id="whatsapp-empty" class="text-center py-12 hidden">
                             <i class="ph ph-whatsapp-logo text-4xl text-green-500/30 mb-3"></i>
                             <p class="text-zinc-500 text-sm">Brak wiadomości WhatsApp</p>
@@ -2136,16 +2151,21 @@
         }
 
         // WhatsApp Messages
+        let allWhatsAppMessages = [];
+        let currentWhatsAppUserFilter = 'all';
+
         async function loadWhatsAppMessages() {
             const container = document.getElementById('whatsapp-messages-container');
             const emptyState = document.getElementById('whatsapp-empty');
             const loadingState = document.getElementById('whatsapp-loading');
             const tabCountEl = document.getElementById('whatsapp-tab-count');
+            const userToggle = document.getElementById('whatsapp-user-toggle');
 
             if (!lead?.phone) {
                 loadingState.classList.add('hidden');
                 emptyState.classList.remove('hidden');
                 container.classList.add('hidden');
+                userToggle.classList.add('hidden');
                 if (tabCountEl) tabCountEl.textContent = '0';
                 return;
             }
@@ -2164,7 +2184,7 @@
                     .select('*')
                     .or(phoneVariants.map(p => `phone_number.eq.${p}`).join(','))
                     .order('message_timestamp', { ascending: true })
-                    .limit(200);
+                    .limit(500);
 
                 loadingState.classList.add('hidden');
 
@@ -2172,51 +2192,113 @@
                     console.error('Error loading WhatsApp messages:', error);
                     emptyState.classList.remove('hidden');
                     container.classList.add('hidden');
+                    userToggle.classList.add('hidden');
                     return;
                 }
 
                 if (!messages || messages.length === 0) {
                     emptyState.classList.remove('hidden');
                     container.classList.add('hidden');
+                    userToggle.classList.add('hidden');
                     if (tabCountEl) tabCountEl.textContent = '0';
                     return;
                 }
 
-                // Update tab badge
-                if (tabCountEl) tabCountEl.textContent = messages.length;
+                // Store messages for filtering
+                allWhatsAppMessages = messages;
 
-                emptyState.classList.add('hidden');
-                container.classList.remove('hidden');
+                // Check for unique synced_by values
+                const uniqueUsers = [...new Set(messages.map(m => m.synced_by).filter(Boolean))];
 
-                // Render messages
-                container.innerHTML = messages.map(msg => {
-                    const isOutbound = msg.direction === 'outbound';
-                    const time = new Date(msg.message_timestamp).toLocaleString('pl-PL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                // Show toggle if both users have messages
+                if (uniqueUsers.length > 1 || (uniqueUsers.length === 1 && uniqueUsers[0])) {
+                    userToggle.classList.remove('hidden');
+                } else {
+                    userToggle.classList.add('hidden');
+                }
 
-                    return `
-                        <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'}">
-                            <div class="max-w-[75%] ${isOutbound ? 'bg-green-900/40 border-green-700/30' : 'bg-zinc-800 border-zinc-700/30'} border rounded-lg px-3 py-2">
-                                <div class="text-sm text-white whitespace-pre-wrap">${safeText(msg.message_text)}</div>
-                                <div class="text-[10px] ${isOutbound ? 'text-green-500' : 'text-zinc-500'} mt-1 text-right font-mono">${time}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                // Scroll to bottom
-                container.scrollTop = container.scrollHeight;
+                // Render with current filter
+                renderWhatsAppMessages();
 
             } catch (err) {
                 console.error('Error loading WhatsApp messages:', err);
                 loadingState.classList.add('hidden');
                 emptyState.classList.remove('hidden');
                 container.classList.add('hidden');
+                userToggle.classList.add('hidden');
             }
+        }
+
+        function filterWhatsAppByUser(user) {
+            currentWhatsAppUserFilter = user;
+
+            // Update toggle buttons
+            ['all', 'tomek', 'maciek'].forEach(u => {
+                const btn = document.getElementById(`whatsapp-user-${u}`);
+                if (btn) {
+                    if (u === user) {
+                        btn.classList.add('bg-green-600', 'text-white');
+                        btn.classList.remove('text-zinc-400', 'hover:text-white');
+                    } else {
+                        btn.classList.remove('bg-green-600', 'text-white');
+                        btn.classList.add('text-zinc-400', 'hover:text-white');
+                    }
+                }
+            });
+
+            renderWhatsAppMessages();
+        }
+
+        function renderWhatsAppMessages() {
+            const container = document.getElementById('whatsapp-messages-container');
+            const emptyState = document.getElementById('whatsapp-empty');
+            const tabCountEl = document.getElementById('whatsapp-tab-count');
+
+            // Filter messages
+            let messages = allWhatsAppMessages;
+            if (currentWhatsAppUserFilter !== 'all') {
+                messages = messages.filter(m => m.synced_by === currentWhatsAppUserFilter);
+            }
+
+            if (messages.length === 0) {
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+                if (tabCountEl) tabCountEl.textContent = '0';
+                return;
+            }
+
+            // Update tab badge
+            if (tabCountEl) tabCountEl.textContent = messages.length;
+
+            emptyState.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            // Render messages
+            container.innerHTML = messages.map(msg => {
+                const isOutbound = msg.direction === 'outbound';
+                const time = new Date(msg.message_timestamp).toLocaleString('pl-PL', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const userBadge = msg.synced_by ? `<span class="text-[9px] px-1 py-0.5 rounded ${msg.synced_by === 'tomek' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400'}">${msg.synced_by}</span>` : '';
+
+                return `
+                    <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-[75%] ${isOutbound ? 'bg-green-900/40 border-green-700/30' : 'bg-zinc-800 border-zinc-700/30'} border rounded-lg px-3 py-2">
+                            <div class="text-sm text-white whitespace-pre-wrap">${safeText(msg.message_text)}</div>
+                            <div class="flex items-center justify-end gap-2 mt-1">
+                                ${userBadge}
+                                <span class="text-[10px] ${isOutbound ? 'text-green-500' : 'text-zinc-500'} font-mono">${time}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
         }
 
         function refreshWhatsAppMessages() {

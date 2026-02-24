@@ -7,11 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chatPhone = document.getElementById('chat-phone');
   const messageCount = document.getElementById('message-count');
   const btnSync = document.getElementById('btn-sync');
+  const btnDeepSync = document.getElementById('btn-deep-sync');
   const btnSyncAll = document.getElementById('btn-sync-all');
   const btnSave = document.getElementById('btn-save');
   const supabaseUrl = document.getElementById('supabase-url');
   const supabaseKey = document.getElementById('supabase-key');
   const syncApiKey = document.getElementById('sync-api-key');
+  const syncUser = document.getElementById('sync-user');
   const autoSync = document.getElementById('auto-sync');
   const syncOnChange = document.getElementById('sync-on-change');
   const logContainer = document.getElementById('log');
@@ -29,10 +31,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Load saved settings
-  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'autoSync', 'syncOnChange'], (result) => {
+  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange'], (result) => {
     if (result.supabaseUrl) supabaseUrl.value = result.supabaseUrl;
     if (result.supabaseKey) supabaseKey.value = result.supabaseKey;
     if (result.syncApiKey) syncApiKey.value = result.syncApiKey;
+    if (result.syncUser) syncUser.value = result.syncUser;
     autoSync.checked = result.autoSync || false;
     syncOnChange.checked = result.syncOnChange !== false;
   });
@@ -43,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       supabaseUrl: supabaseUrl.value.trim(),
       supabaseKey: supabaseKey.value.trim(),
       syncApiKey: syncApiKey.value.trim(),
+      syncUser: syncUser.value,
       autoSync: autoSync.checked,
       syncOnChange: syncOnChange.checked
     }, () => {
@@ -116,6 +120,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       btnSync.disabled = false;
       btnSync.textContent = 'Synchronizuj ten czat';
+      updateCurrentChat();
+    }
+  });
+
+  // Deep sync - scrolluje w górę i pobiera starsze wiadomości
+  btnDeepSync.addEventListener('click', async () => {
+    btnDeepSync.disabled = true;
+    btnDeepSync.textContent = 'Pobieranie starszych...';
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    try {
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'DEEP_SYNC' });
+
+      if (response.success) {
+        addLog(`Deep sync: +${response.inserted} nowych, ${response.skipped} pominięte`, 'success');
+        if (response.scrollsPerformed) {
+          addLog(`Wykonano ${response.scrollsPerformed} scrolli`, 'success');
+        }
+      } else {
+        addLog(`Błąd: ${response.error}`, 'error');
+      }
+    } catch (e) {
+      addLog(`Błąd: ${e.message}`, 'error');
+    } finally {
+      btnDeepSync.disabled = false;
+      btnDeepSync.textContent = 'Deep Sync (pobierz starsze)';
       updateCurrentChat();
     }
   });
