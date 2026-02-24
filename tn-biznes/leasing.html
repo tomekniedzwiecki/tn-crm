@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Leasing</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .table-row:hover { background: rgba(255,255,255,0.02); }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .badge-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-paid { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #71717a; }
+        .info-value { color: #e5e5e5; font-family: 'JetBrains Mono', monospace; }
+
+        .highlight-green { color: #34d399; }
+        .highlight-amber { color: #fbbf24; }
+        .highlight-red { color: #f87171; }
+        .highlight-blue { color: #60a5fa; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">leasing</span>
+                </div>
+            </div>
+            <div class="text-xs text-zinc-500">
+                Przepisy 2026 | Limit: <span class="text-amber-400">100 000 zl</span> (spalinowe)
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-6xl mx-auto animate-enter">
+
+                <!-- Loading -->
+                <div id="loading" class="text-center py-12 text-zinc-600">
+                    <i class="ph ph-circle-notch animate-spin text-2xl"></i>
+                </div>
+
+                <!-- Content (hidden until loaded) -->
+                <div id="content" class="hidden">
+
+                    <!-- Vehicle Info Card -->
+                    <div class="card rounded-2xl p-6 mb-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
+                                    <i class="ph ph-car text-2xl text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-semibold text-white" id="vehicle-name">-</h2>
+                                    <div class="text-zinc-500 text-sm" id="vehicle-details">-</div>
+                                </div>
+                            </div>
+                            <span class="badge badge-active" id="contract-status">Aktywny</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <div class="text-zinc-500 text-xs mb-1">Nr umowy</div>
+                                <div class="font-mono text-white" id="contract-number">-</div>
+                            </div>
+                            <div>
+                                <div class="text-zinc-500 text-xs mb-1">Leasingodawca</div>
+                                <div class="text-white" id="lessor-name">-</div>
+                            </div>
+                            <div>
+                                <div class="text-zinc-500 text-xs mb-1">VIN</div>
+                                <div class="font-mono text-white text-xs" id="vin">-</div>
+                            </div>
+                            <div>
+                                <div class="text-zinc-500 text-xs mb-1">Nr rejestracyjny</div>
+                                <div class="font-mono text-white" id="registration">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Stats Grid -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="text-xs text-zinc-500 mb-1">Wartosc auta netto</div>
+                            <div class="text-xl font-semibold text-white font-mono" id="stat-vehicle-value">-</div>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="text-xs text-zinc-500 mb-1">Rata miesiecznie</div>
+                            <div class="text-xl font-semibold text-amber-400 font-mono" id="stat-monthly">-</div>
+                            <div class="text-xs text-zinc-600 mt-1">brutto: <span id="stat-monthly-brutto">-</span></div>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="text-xs text-zinc-500 mb-1">Pozostalo rat</div>
+                            <div class="text-xl font-semibold text-blue-400 font-mono" id="stat-remaining">-</div>
+                            <div class="text-xs text-zinc-600 mt-1">z <span id="stat-total-installments">-</span></div>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="text-xs text-zinc-500 mb-1">Wartosc wykupu</div>
+                            <div class="text-xl font-semibold text-violet-400 font-mono" id="stat-residual">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="card rounded-xl p-4 mb-6">
+                        <div class="flex justify-between text-xs mb-2">
+                            <span class="text-zinc-500">Postep splaty</span>
+                            <span class="text-white font-mono"><span id="progress-percent">0</span>%</span>
+                        </div>
+                        <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full rounded-full" id="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs mt-2 text-zinc-600">
+                            <span>Start: <span id="start-date">-</span></span>
+                            <span>Koniec: <span id="end-date">-</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Two Column Layout -->
+                    <div class="grid lg:grid-cols-2 gap-6 mb-6">
+
+                        <!-- Tax Deductions Card -->
+                        <div class="card rounded-2xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-receipt text-emerald-400"></i>
+                                Odliczenia podatkowe
+                            </h3>
+
+                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                                <div class="flex items-center gap-2 text-amber-400 text-xs font-medium mb-1">
+                                    <i class="ph ph-warning"></i>
+                                    Limit kosztow 2026
+                                </div>
+                                <div class="text-white">
+                                    Proporcja: <span class="font-mono highlight-amber" id="tax-proportion">-</span>
+                                    <span class="text-zinc-500">(100 000 / <span id="tax-vehicle-value">-</span>)</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1">
+                                <div class="info-row">
+                                    <span class="info-label">Rata netto</span>
+                                    <span class="info-value" id="tax-rate-netto">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Rata brutto (z VAT 23%)</span>
+                                    <span class="info-value" id="tax-rate-brutto">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">VAT od raty</span>
+                                    <span class="info-value" id="tax-vat-total">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Odliczenie VAT (50%)</span>
+                                    <span class="info-value highlight-green" id="tax-vat-deduction">-</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-white/5 mt-4 pt-4 space-y-1">
+                                <div class="info-row">
+                                    <span class="info-label">Czesc kapitalowa (sr.)</span>
+                                    <span class="info-value" id="tax-capital">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Koszt podatkowy kapitalu</span>
+                                    <span class="info-value highlight-green" id="tax-capital-deduction">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Czesc odsetkowa (sr.)</span>
+                                    <span class="info-value" id="tax-interest">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Koszt podatkowy odsetek</span>
+                                    <span class="info-value highlight-green" id="tax-interest-deduction">-</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 mt-4">
+                                <div class="text-xs text-emerald-400 mb-2">Laczny koszt podatkowy miesiecznie</div>
+                                <div class="text-2xl font-bold text-emerald-400 font-mono" id="tax-total-deduction">-</div>
+                                <div class="text-xs text-zinc-500 mt-1">Oszczednosc PIT 19%: <span class="text-emerald-400" id="tax-pit-savings">-</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Real Cost Card -->
+                        <div class="card rounded-2xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-wallet text-blue-400"></i>
+                                Realny koszt miesiecznie
+                            </h3>
+
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center py-3 border-b border-white/5">
+                                    <span class="text-zinc-400">Placisz (brutto)</span>
+                                    <span class="text-xl font-mono text-white" id="real-pay">-</span>
+                                </div>
+                                <div class="flex justify-between items-center py-2">
+                                    <span class="text-zinc-400">- Odliczenie VAT</span>
+                                    <span class="font-mono highlight-green" id="real-vat">-</span>
+                                </div>
+                                <div class="flex justify-between items-center py-2">
+                                    <span class="text-zinc-400">- Oszczednosc PIT</span>
+                                    <span class="font-mono highlight-green" id="real-pit">-</span>
+                                </div>
+                                <div class="flex justify-between items-center py-3 border-t border-white/5 mt-2">
+                                    <span class="text-white font-medium">= Realny koszt</span>
+                                    <span class="text-2xl font-bold font-mono highlight-blue" id="real-cost">-</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-6">
+                                <div class="text-xs text-blue-400 mb-2">Oszczedzasz miesiecznie</div>
+                                <div class="text-2xl font-bold text-blue-400 font-mono" id="real-savings">-</div>
+                                <div class="text-xs text-zinc-500 mt-1">vs placenie bez odliczen</div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-white/5">
+                                <div class="text-xs text-zinc-500 mb-3">Podsumowanie calego leasingu</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-xs text-zinc-600">Suma wplat</div>
+                                        <div class="font-mono text-white" id="summary-total-paid">-</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-zinc-600">Suma oszczednosci</div>
+                                        <div class="font-mono highlight-green" id="summary-total-savings">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Payment Schedule -->
+                    <div class="card rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-calendar-check text-violet-400"></i>
+                            Harmonogram splat
+                        </h3>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-zinc-500 text-xs border-b border-white/5">
+                                        <th class="text-left py-3 px-2">Nr</th>
+                                        <th class="text-left py-3 px-2">Termin</th>
+                                        <th class="text-right py-3 px-2">Rata netto</th>
+                                        <th class="text-right py-3 px-2">Kapitalowa</th>
+                                        <th class="text-right py-3 px-2">Odsetkowa</th>
+                                        <th class="text-right py-3 px-2">Pozostalo</th>
+                                        <th class="text-center py-3 px-2">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schedule-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // CONFIG
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDcyNjQsImV4cCI6MjA1MTgyMzI2NH0.SE6z8Z9xIZAo3PiQpO14gNxPwYmZTpzEm80XPYXNAUE';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Tax limits 2026
+        const LIMITS = {
+            combustion: 100000,
+            phev: 150000,
+            electric: 225000
+        };
+        const VAT_RATE = 0.23;
+        const PIT_RATE = 0.19;
+
+        let leasingData = null;
+
+        // ============================================
+        // AUTH
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = '/login';
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('pl-PL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(Math.round(amount)) + ' zl';
+        }
+
+        function formatMoneyDecimal(amount) {
+            return new Intl.NumberFormat('pl-PL', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount) + ' zl';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function getVehicleTypeLabel(type) {
+            const labels = {
+                combustion: 'Spalinowy',
+                phev: 'Hybryda plug-in',
+                electric: 'Elektryczny'
+            };
+            return labels[type] || type;
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadLeasingData() {
+            const { data: contracts, error } = await supabaseClient
+                .from('leasing_contracts')
+                .select('*')
+                .eq('is_active', true)
+                .limit(1)
+                .single();
+
+            if (error) {
+                console.error('Error loading leasing data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-red-400">
+                        <i class="ph ph-warning text-2xl mb-2"></i>
+                        <div>Brak danych leasingowych</div>
+                        <div class="text-xs text-zinc-600 mt-1">Uruchom migracje SQL aby dodac dane</div>
+                    </div>
+                `;
+                return;
+            }
+
+            leasingData = contracts;
+            renderLeasingData();
+        }
+
+        // ============================================
+        // CALCULATIONS
+        // ============================================
+        function calculateTaxDeductions(contract) {
+            const limit = LIMITS[contract.vehicle_type] || LIMITS.combustion;
+            const vehicleValue = parseFloat(contract.vehicle_value_netto);
+            const proportion = Math.min(1, limit / vehicleValue);
+
+            const schedule = contract.payment_schedule || [];
+            const avgCapital = schedule.reduce((sum, p) => sum + p.capital, 0) / schedule.length;
+            const avgInterest = schedule.reduce((sum, p) => sum + p.interest, 0) / schedule.length;
+            const monthlyNetto = parseFloat(contract.monthly_installment_netto);
+            const monthlyBrutto = monthlyNetto * (1 + VAT_RATE);
+            const vatTotal = monthlyNetto * VAT_RATE;
+
+            // VAT deduction (50% for mixed use, 100% for business only)
+            const vatDeductionRate = contract.usage_type === 'business_only' ? 1 : 0.5;
+            const vatDeduction = vatTotal * vatDeductionRate;
+
+            // Capital deduction (limited by proportion)
+            const capitalDeduction = avgCapital * proportion;
+
+            // Interest deduction (100% - no limit)
+            const interestDeduction = avgInterest;
+
+            // Total tax cost
+            const totalTaxCost = capitalDeduction + interestDeduction;
+
+            // PIT savings
+            const pitSavings = totalTaxCost * PIT_RATE;
+
+            // Real cost
+            const realCost = monthlyBrutto - vatDeduction - pitSavings;
+            const monthlySavings = vatDeduction + pitSavings;
+
+            // Total over lease period
+            const totalPaid = monthlyBrutto * contract.installments_count;
+            const totalSavings = monthlySavings * contract.installments_count;
+
+            return {
+                limit,
+                proportion,
+                monthlyNetto,
+                monthlyBrutto,
+                vatTotal,
+                vatDeduction,
+                avgCapital,
+                avgInterest,
+                capitalDeduction,
+                interestDeduction,
+                totalTaxCost,
+                pitSavings,
+                realCost,
+                monthlySavings,
+                totalPaid,
+                totalSavings
+            };
+        }
+
+        function getPaymentStatus(paymentDate) {
+            const today = new Date();
+            const pDate = new Date(paymentDate);
+
+            if (pDate < today) {
+                return { label: 'Zaplacona', class: 'badge-paid' };
+            } else {
+                const daysUntil = Math.ceil((pDate - today) / (1000 * 60 * 60 * 24));
+                if (daysUntil <= 7) {
+                    return { label: 'Wkrotce', class: 'badge-pending' };
+                }
+                return { label: 'Oczekuje', class: '' };
+            }
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderLeasingData() {
+            const contract = leasingData;
+            const calc = calculateTaxDeductions(contract);
+            const schedule = contract.payment_schedule || [];
+
+            // Vehicle info
+            document.getElementById('vehicle-name').textContent = contract.vehicle_name;
+            document.getElementById('vehicle-details').textContent =
+                `${getVehicleTypeLabel(contract.vehicle_type)} | ${contract.usage_type === 'mixed' ? 'Uzytek mieszany' : 'Tylko firmowy'}`;
+            document.getElementById('contract-number').textContent = contract.contract_number;
+            document.getElementById('lessor-name').textContent = contract.lessor_name;
+            document.getElementById('vin').textContent = contract.vin || '-';
+            document.getElementById('registration').textContent = contract.registration_number || '-';
+
+            // Stats
+            document.getElementById('stat-vehicle-value').textContent = formatMoney(contract.vehicle_value_netto);
+            document.getElementById('stat-monthly').textContent = formatMoney(contract.monthly_installment_netto);
+            document.getElementById('stat-monthly-brutto').textContent = formatMoney(calc.monthlyBrutto);
+
+            // Calculate remaining installments
+            const today = new Date();
+            const remainingPayments = schedule.filter(p => new Date(p.date) >= today).length;
+            document.getElementById('stat-remaining').textContent = remainingPayments;
+            document.getElementById('stat-total-installments').textContent = contract.installments_count;
+
+            document.getElementById('stat-residual').textContent = formatMoney(contract.residual_value);
+
+            // Progress
+            const paidCount = contract.installments_count - remainingPayments;
+            const progressPercent = Math.round((paidCount / contract.installments_count) * 100);
+            document.getElementById('progress-percent').textContent = progressPercent;
+            document.getElementById('progress-bar').style.width = progressPercent + '%';
+            document.getElementById('start-date').textContent = formatDate(contract.start_date);
+            document.getElementById('end-date').textContent = formatDate(contract.end_date);
+
+            // Tax deductions
+            document.getElementById('tax-proportion').textContent = (calc.proportion * 100).toFixed(2) + '%';
+            document.getElementById('tax-vehicle-value').textContent = formatMoney(contract.vehicle_value_netto);
+            document.getElementById('tax-rate-netto').textContent = formatMoneyDecimal(calc.monthlyNetto);
+            document.getElementById('tax-rate-brutto').textContent = formatMoneyDecimal(calc.monthlyBrutto);
+            document.getElementById('tax-vat-total').textContent = formatMoneyDecimal(calc.vatTotal);
+            document.getElementById('tax-vat-deduction').textContent = '- ' + formatMoneyDecimal(calc.vatDeduction);
+            document.getElementById('tax-capital').textContent = formatMoneyDecimal(calc.avgCapital);
+            document.getElementById('tax-capital-deduction').textContent = formatMoneyDecimal(calc.capitalDeduction);
+            document.getElementById('tax-interest').textContent = formatMoneyDecimal(calc.avgInterest);
+            document.getElementById('tax-interest-deduction').textContent = formatMoneyDecimal(calc.interestDeduction);
+            document.getElementById('tax-total-deduction').textContent = formatMoney(calc.totalTaxCost);
+            document.getElementById('tax-pit-savings').textContent = formatMoney(calc.pitSavings);
+
+            // Real cost
+            document.getElementById('real-pay').textContent = formatMoney(calc.monthlyBrutto);
+            document.getElementById('real-vat').textContent = '- ' + formatMoney(calc.vatDeduction);
+            document.getElementById('real-pit').textContent = '- ' + formatMoney(calc.pitSavings);
+            document.getElementById('real-cost').textContent = formatMoney(calc.realCost);
+            document.getElementById('real-savings').textContent = formatMoney(calc.monthlySavings);
+            document.getElementById('summary-total-paid').textContent = formatMoney(calc.totalPaid);
+            document.getElementById('summary-total-savings').textContent = formatMoney(calc.totalSavings);
+
+            // Payment schedule
+            const scheduleBody = document.getElementById('schedule-body');
+            scheduleBody.innerHTML = schedule.map(payment => {
+                const status = getPaymentStatus(payment.date);
+                return `
+                    <tr class="table-row border-b border-white/5">
+                        <td class="py-3 px-2 font-mono text-zinc-400">${payment.nr}</td>
+                        <td class="py-3 px-2">${formatDate(payment.date)}</td>
+                        <td class="py-3 px-2 text-right font-mono">${formatMoneyDecimal(payment.total)}</td>
+                        <td class="py-3 px-2 text-right font-mono text-emerald-400">${formatMoneyDecimal(payment.capital)}</td>
+                        <td class="py-3 px-2 text-right font-mono text-amber-400">${formatMoneyDecimal(payment.interest)}</td>
+                        <td class="py-3 px-2 text-right font-mono text-zinc-500">${formatMoney(payment.remaining)}</td>
+                        <td class="py-3 px-2 text-center">
+                            ${status.label ? `<span class="badge ${status.class}">${status.label}</span>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Show content
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            // Init sidebar
+            Sidebar.init(document.getElementById('sidebar'), {
+                app: 'biznes',
+                currentPage: 'leasing'
+            });
+
+            await loadLeasingData();
+        }
+
+        init();
+    </script>
+
+</body>
+</html>
