@@ -154,8 +154,20 @@ const CostsService = {
             const memberBonuses = (bonuses || []).filter(b => b.team_member_id === contract.team_member_id);
             const manualBonusTotal = memberBonuses.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
 
-            // Podstawa * liczba miesiecy (dla kwartalow/roku)
-            const baseSalary = parseFloat(contract.base_salary || 0) * monthsInPeriod;
+            // Oblicz ile miesiecy faktycznie minelo (nie wiecej niz monthsInPeriod)
+            const today = new Date();
+            const periodEnd = new Date(endDate);
+            const effectiveEnd = today < periodEnd ? today : periodEnd;
+            const start = new Date(startDate);
+            // Liczba pelnych miesiecy od startu do effectiveEnd (wlacznie z biezacym)
+            const actualMonths = Math.min(
+                monthsInPeriod,
+                (effectiveEnd.getFullYear() - start.getFullYear()) * 12 +
+                (effectiveEnd.getMonth() - start.getMonth()) + 1
+            );
+
+            // Podstawa * faktyczna liczba miesiecy
+            const baseSalary = parseFloat(contract.base_salary || 0) * actualMonths;
 
             // Calkowity koszt (minimum 0 - nie moze byc ujemny)
             const totalCost = Math.max(0, baseSalary + commission + monthlyBonus + manualBonusTotal);
