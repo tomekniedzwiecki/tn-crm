@@ -160,16 +160,9 @@
 
                 <!-- Daniny do zapłaty -->
                 <div class="warning-card rounded-xl p-4 md:p-6 mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2">
-                            <i class="ph ph-warning text-amber-400 text-xl"></i>
-                            <h3 class="text-base font-semibold text-white">Daniny do zapłaty</h3>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-zinc-500">ZUS społ.</span>
-                            <input type="number" id="zus-base-input" class="input-field w-20 rounded px-2 py-1 text-xs text-white text-right" value="1600" onchange="recalculate()">
-                            <span class="text-xs text-zinc-500">zł/mies</span>
-                        </div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph ph-warning text-amber-400 text-xl"></i>
+                        <h3 class="text-base font-semibold text-white">Daniny do zapłaty</h3>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
@@ -219,10 +212,6 @@
                             <div class="font-mono text-teal-400 font-bold text-xl" id="final-profit">0 zł</div>
                         </div>
                     </div>
-                    <div class="text-xs text-zinc-600">
-                        <i class="ph ph-info mr-1"></i>
-                        VAT przechodni (od klienta do US) | ZUS społ. i zdr. do limitu to koszt PIT
-                    </div>
                 </div>
 
             </div>
@@ -241,6 +230,7 @@
         // CONSTANTS
         // ============================================
         const LIMIT_ZDROWOTNY_ROCZNY = 11600; // Limit odliczenia zdrowotnej jako koszt
+        const ZUS_SPOLECZNY_MIESIAC = 1600; // Stała składka ZUS społeczny
 
 
         // ============================================
@@ -516,7 +506,7 @@
         // CALCULATIONS
         // ============================================
         function calculateTaxes(data) {
-            const zusBase = parseFloat(document.getElementById('zus-base-input').value) || 1600;
+            const zusBase = ZUS_SPOLECZNY_MIESIAC;
             const monthsInPeriod = data.monthsInPeriod;
 
             // Przychody
