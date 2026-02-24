@@ -631,46 +631,86 @@
   async function syncAllChats() {
     await loadConfig();
 
-    // Różne selektory dla elementów czatów na liście
-    const chatSelectors = [
-      '[data-testid="cell-frame-container"]',
-      '[data-testid="list-item-cell"]',
-      '#pane-side > div > div > div > div',
-      '[aria-label*="Chat"] [role="listitem"]',
-      '[role="listitem"][tabindex]'
-    ];
+    // Znajdź panel boczny z czatami
+    const sidePanel = document.querySelector('#pane-side');
+    if (!sidePanel) {
+      console.error('WhatsApp Sync: Side panel not found');
+      return { success: false, error: 'Nie znaleziono panelu bocznego' };
+    }
 
-    let chatList = [];
-    for (const selector of chatSelectors) {
-      const items = document.querySelectorAll(selector);
-      if (items.length > 0) {
-        chatList = Array.from(items);
-        console.log('WhatsApp Sync: Found chats with selector:', selector, 'count:', items.length);
-        break;
+    console.log('WhatsApp Sync: Found side panel');
+
+    // Znajdź elementy czatów - szukamy elementów z aria-label zawierającym czas (np. "12:30")
+    // lub elementów które wyglądają jak wiersz czatu
+    let chatItems = [];
+
+    // Metoda 1: Szukaj divów które mają role="listitem" lub są klikalne
+    const allDivs = sidePanel.querySelectorAll('div[tabindex="-1"]');
+    console.log('WhatsApp Sync: Found divs with tabindex:', allDivs.length);
+
+    // Metoda 2: Szukaj przez strukturę - każdy czat ma span z czasem
+    const timeSpans = sidePanel.querySelectorAll('span[dir="auto"]');
+    const chatContainers = new Set();
+
+    timeSpans.forEach(span => {
+      // Szukaj rodzica który jest "wierszem" czatu (ma onClick)
+      let parent = span.parentElement;
+      for (let i = 0; i < 10 && parent; i++) {
+        if (parent.getAttribute('tabindex') === '-1' && parent.querySelector('[data-icon]')) {
+          chatContainers.add(parent);
+          break;
+        }
+        parent = parent.parentElement;
+      }
+    });
+
+    chatItems = Array.from(chatContainers);
+    console.log('WhatsApp Sync: Found chat containers:', chatItems.length);
+
+    // Metoda 3: Fallback - szukaj przez data-testid
+    if (chatItems.length === 0) {
+      chatItems = Array.from(sidePanel.querySelectorAll('[data-testid="cell-frame-container"]'));
+      console.log('WhatsApp Sync: Fallback - cell-frame-container:', chatItems.length);
+    }
+
+    // Metoda 4: Jeszcze bardziej ogólna - wszystkie klikalne divy w panelu
+    if (chatItems.length === 0) {
+      const scrollContainer = sidePanel.querySelector('[role="application"]') || sidePanel.firstElementChild;
+      if (scrollContainer) {
+        // Szukamy bezpośrednich dzieci które wyglądają jak czaty
+        chatItems = Array.from(scrollContainer.querySelectorAll(':scope > div > div > div[tabindex]'));
+        console.log('WhatsApp Sync: Deep fallback:', chatItems.length);
       }
     }
 
-    if (chatList.length === 0) {
-      console.error('WhatsApp Sync: No chat elements found');
-      return { success: false, error: 'Nie znaleziono czatów na liście' };
+    if (chatItems.length === 0) {
+      // Debug: pokaż strukturę panelu
+      console.log('WhatsApp Sync: Panel structure:', sidePanel.innerHTML.substring(0, 500));
+      return { success: false, error: 'Nie znaleziono czatów - sprawdź konsolę' };
     }
 
     const results = [];
     let totalInserted = 0;
     let totalSkipped = 0;
 
-    // Limit do 20 czatów żeby nie trwało za długo
-    const maxChats = Math.min(chatList.length, 20);
+    // Limit do 15 czatów
+    const maxChats = Math.min(chatItems.length, 15);
+    console.log(`WhatsApp Sync: Will process ${maxChats} chats`);
 
     for (let i = 0; i < maxChats; i++) {
-      const chatEl = chatList[i];
+      const chatEl = chatItems[i];
 
       try {
-        // Kliknij czat
-        chatEl.click();
+        console.log(`WhatsApp Sync: Clicking chat ${i+1}/${maxChats}`);
 
-        // Poczekaj na załadowanie
-        await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+        // Symuluj kliknięcie
+        chatEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 100));
+        chatEl.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        chatEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        // Poczekaj na załadowanie czatu
+        await new Promise(r => setTimeout(r, 2500));
 
         // Sync
         const phone = getCurrentChatPhone();
@@ -686,14 +726,16 @@
           totalSkipped += result.skipped || 0;
 
           // Powiadom popup o postępie
-          chrome.runtime.sendMessage({
-            type: 'SYNC_PROGRESS',
-            data: { current: i + 1, total: maxChats, name: name || phone }
-          }).catch(() => {});
+          if (isExtensionContextValid()) {
+            chrome.runtime.sendMessage({
+              type: 'SYNC_PROGRESS',
+              data: { current: i + 1, total: maxChats, name: name || phone }
+            }).catch(() => {});
+          }
         }
 
-        // Losowa przerwa między czatami
-        await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
+        // Przerwa między czatami
+        await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
 
       } catch (err) {
         console.error('WhatsApp Sync: Error processing chat', i, err);
