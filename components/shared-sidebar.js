@@ -40,6 +40,7 @@ const NAV_ITEMS_CRM = [
     { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
     { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp' },
+    { id: 'knowledge-base', icon: 'ph-brain', label: 'AI Knowledge' },
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz' },
     { id: 'offers', icon: 'ph-package', label: 'Oferty' },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia' },
@@ -247,6 +248,14 @@ const SIDEBAR_CSS = `
     nav a:hover .ph-list-bullets { animation: listBulletSlide 0.4s ease-out; }
 
     nav a:hover .ph-list-checks { animation: listBulletSlide 0.4s ease-out; }
+
+    @keyframes brainPulse {
+        0% { transform: scale(1); }
+        30% { transform: scale(1.15); }
+        60% { transform: scale(0.95); }
+        100% { transform: scale(1); }
+    }
+    nav a:hover .ph-brain { animation: brainPulse 0.5s ease-out; }
 
     /* Todo animations */
     @keyframes userBounce {

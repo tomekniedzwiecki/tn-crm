@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base - TN CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0a0a0a; }
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #1a1a1a; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-[#222] bg-[#0d0d0d] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-arrow-left text-lg"></i>
+                </a>
+                <h1 class="text-base font-medium">Knowledge Base</h1>
+                <span class="text-xs text-zinc-500" id="stats-count">Ładowanie...</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="showAddModal()" class="h-9 px-4 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-plus"></i>
+                    Dodaj wpis
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto px-6 py-6">
+        <!-- Filters -->
+        <div class="flex items-center gap-4 mb-6">
+            <div class="flex gap-2">
+                <button onclick="filterByCategory(null)" class="category-btn active px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-300 hover:bg-[#222] transition-colors" data-category="all">
+                    Wszystkie
+                </button>
+                <button onclick="filterByCategory('company')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="company">
+                    Firma
+                </button>
+                <button onclick="filterByCategory('product')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="product">
+                    Produkty
+                </button>
+                <button onclick="filterByCategory('objection')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="objection">
+                    Obiekcje
+                </button>
+                <button onclick="filterByCategory('process')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="process">
+                    Procesy
+                </button>
+                <button onclick="filterByCategory('contract')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="contract">
+                    Umowa
+                </button>
+                <button onclick="filterByCategory('tone')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="tone">
+                    Styl
+                </button>
+                <button onclick="filterByCategory('script')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="script">
+                    Skrypty
+                </button>
+            </div>
+            <input type="text" id="search-input" oninput="searchEntries(this.value)" placeholder="Szukaj..."
+                class="ml-auto h-9 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 w-64">
+        </div>
+
+        <!-- Knowledge entries -->
+        <div id="entries-container" class="space-y-3">
+            <!-- Entries will be loaded here -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden py-16 text-center">
+            <i class="ph ph-database text-4xl text-zinc-700 mb-3"></i>
+            <p class="text-zinc-500">Brak wpisów w bazie wiedzy</p>
+            <button onclick="showAddModal()" class="mt-4 text-violet-400 hover:text-violet-300 text-sm">
+                Dodaj pierwszy wpis
+            </button>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="entry-modal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
+        <div class="bg-[#111] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-[#222] flex items-center justify-between">
+                <h2 id="modal-title" class="font-medium">Dodaj wpis</h2>
+                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <form id="entry-form" class="p-4 space-y-4 overflow-y-auto scrollbar-thin">
+                <input type="hidden" id="entry-id">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1.5">Kategoria</label>
+                        <select id="entry-category" required class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                            <option value="company">Firma</option>
+                            <option value="product">Produkty</option>
+                            <option value="objection">Obiekcje</option>
+                            <option value="process">Procesy</option>
+                            <option value="contract">Umowa</option>
+                            <option value="tone">Styl komunikacji</option>
+                            <option value="script">Skrypty</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1.5">Podkategoria</label>
+                        <input type="text" id="entry-subcategory" placeholder="np. pricing, timeline..."
+                            class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1.5">Tytuł</label>
+                    <input type="text" id="entry-title" required placeholder="Krótki tytuł wpisu"
+                        class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1.5">Treść</label>
+                    <textarea id="entry-content" required rows="6" placeholder="Pełna treść wiedzy..."
+                        class="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1.5">Słowa kluczowe (rozdzielone przecinkami)</label>
+                    <input type="text" id="entry-keywords" placeholder="cena, koszt, ile, drogo"
+                        class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1.5">Priorytet (0-100)</label>
+                        <input type="number" id="entry-priority" value="50" min="0" max="100"
+                            class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1.5">Dla użytkownika</label>
+                        <select id="entry-for-user" class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                            <option value="">Wszyscy</option>
+                            <option value="tomek">Tomek</option>
+                            <option value="maciek">Maciek</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="entry-active" checked class="w-4 h-4 rounded bg-[#1a1a1a] border-[#333] text-violet-500 focus:ring-violet-500">
+                    <label for="entry-active" class="text-sm text-zinc-300">Aktywny</label>
+                </div>
+            </form>
+            <div class="p-4 border-t border-[#222] flex justify-end gap-3">
+                <button onclick="closeModal()" class="h-10 px-4 text-zinc-400 text-sm hover:text-white transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="saveEntry()" class="h-10 px-6 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors">
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 bg-zinc-800 text-white text-sm rounded-lg shadow-lg transform translate-y-4 opacity-0 invisible transition-all duration-300">
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.7TlGz6F3JNx0SSjAhRf3yyVRYvrsYDQQRqJRXTqDwxU';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allEntries = [];
+        let currentFilter = null;
+        let searchQuery = '';
+
+        // Category colors
+        const categoryColors = {
+            company: 'bg-blue-900/30 text-blue-300 border-blue-800/50',
+            product: 'bg-green-900/30 text-green-300 border-green-800/50',
+            objection: 'bg-red-900/30 text-red-300 border-red-800/50',
+            process: 'bg-yellow-900/30 text-yellow-300 border-yellow-800/50',
+            contract: 'bg-purple-900/30 text-purple-300 border-purple-800/50',
+            tone: 'bg-pink-900/30 text-pink-300 border-pink-800/50',
+            script: 'bg-cyan-900/30 text-cyan-300 border-cyan-800/50'
+        };
+
+        const categoryNames = {
+            company: 'Firma',
+            product: 'Produkty',
+            objection: 'Obiekcje',
+            process: 'Procesy',
+            contract: 'Umowa',
+            tone: 'Styl',
+            script: 'Skrypty'
+        };
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        async function loadEntries() {
+            const { data, error } = await supabaseClient
+                .from('ai_knowledge_base')
+                .select('*')
+                .order('category')
+                .order('priority', { ascending: false });
+
+            if (error) {
+                console.error('Error loading entries:', error);
+                showToast('Błąd ładowania danych: ' + error.message);
+                return;
+            }
+
+            allEntries = data || [];
+            document.getElementById('stats-count').textContent = `${allEntries.length} wpisów`;
+            renderEntries();
+        }
+
+        function renderEntries() {
+            const container = document.getElementById('entries-container');
+            const emptyState = document.getElementById('empty-state');
+
+            let filtered = allEntries;
+
+            // Apply category filter
+            if (currentFilter) {
+                filtered = filtered.filter(e => e.category === currentFilter);
+            }
+
+            // Apply search
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filtered = filtered.filter(e =>
+                    e.title.toLowerCase().includes(q) ||
+                    e.content.toLowerCase().includes(q) ||
+                    (e.trigger_keywords && e.trigger_keywords.some(k => k.toLowerCase().includes(q)))
+                );
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filtered.map(entry => `
+                <div class="bg-[#111] border border-[#222] rounded-lg p-4 hover:border-[#333] transition-colors">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 text-[10px] font-medium rounded border ${categoryColors[entry.category] || 'bg-zinc-800 text-zinc-400'}">
+                                    ${categoryNames[entry.category] || entry.category}
+                                </span>
+                                ${entry.subcategory ? `<span class="text-[10px] text-zinc-500">${entry.subcategory}</span>` : ''}
+                                ${entry.for_user ? `<span class="px-1.5 py-0.5 text-[10px] bg-zinc-800 text-zinc-400 rounded">${entry.for_user}</span>` : ''}
+                                <span class="text-[10px] text-zinc-600">p:${entry.priority}</span>
+                                ${!entry.is_active ? '<span class="px-1.5 py-0.5 text-[10px] bg-red-900/30 text-red-400 rounded">nieaktywny</span>' : ''}
+                            </div>
+                            <h3 class="font-medium text-sm text-zinc-200 mb-1">${entry.title}</h3>
+                            <p class="text-xs text-zinc-400 line-clamp-2">${entry.content}</p>
+                            ${entry.trigger_keywords && entry.trigger_keywords.length > 0 ? `
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    ${entry.trigger_keywords.slice(0, 5).map(k => `<span class="px-1.5 py-0.5 text-[10px] bg-[#1a1a1a] text-zinc-500 rounded">${k}</span>`).join('')}
+                                    ${entry.trigger_keywords.length > 5 ? `<span class="text-[10px] text-zinc-600">+${entry.trigger_keywords.length - 5}</span>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="editEntry('${entry.id}')" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md transition-colors">
+                                <i class="ph ph-pencil-simple text-sm"></i>
+                            </button>
+                            <button onclick="deleteEntry('${entry.id}')" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterByCategory(category) {
+            currentFilter = category;
+
+            // Update button states
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                const btnCategory = btn.dataset.category;
+                if ((category === null && btnCategory === 'all') || btnCategory === category) {
+                    btn.classList.add('active', 'text-zinc-300');
+                    btn.classList.remove('text-zinc-500');
+                } else {
+                    btn.classList.remove('active', 'text-zinc-300');
+                    btn.classList.add('text-zinc-500');
+                }
+            });
+
+            renderEntries();
+        }
+
+        function searchEntries(query) {
+            searchQuery = query;
+            renderEntries();
+        }
+
+        function showAddModal() {
+            document.getElementById('modal-title').textContent = 'Dodaj wpis';
+            document.getElementById('entry-id').value = '';
+            document.getElementById('entry-form').reset();
+            document.getElementById('entry-active').checked = true;
+            document.getElementById('entry-priority').value = 50;
+
+            const modal = document.getElementById('entry-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function editEntry(id) {
+            const entry = allEntries.find(e => e.id === id);
+            if (!entry) return;
+
+            document.getElementById('modal-title').textContent = 'Edytuj wpis';
+            document.getElementById('entry-id').value = entry.id;
+            document.getElementById('entry-category').value = entry.category;
+            document.getElementById('entry-subcategory').value = entry.subcategory || '';
+            document.getElementById('entry-title').value = entry.title;
+            document.getElementById('entry-content').value = entry.content;
+            document.getElementById('entry-keywords').value = (entry.trigger_keywords || []).join(', ');
+            document.getElementById('entry-priority').value = entry.priority || 50;
+            document.getElementById('entry-for-user').value = entry.for_user || '';
+            document.getElementById('entry-active').checked = entry.is_active !== false;
+
+            const modal = document.getElementById('entry-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('entry-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function saveEntry() {
+            const id = document.getElementById('entry-id').value;
+            const keywords = document.getElementById('entry-keywords').value
+                .split(',')
+                .map(k => k.trim())
+                .filter(k => k);
+
+            const data = {
+                category: document.getElementById('entry-category').value,
+                subcategory: document.getElementById('entry-subcategory').value || null,
+                title: document.getElementById('entry-title').value,
+                content: document.getElementById('entry-content').value,
+                trigger_keywords: keywords.length > 0 ? keywords : null,
+                priority: parseInt(document.getElementById('entry-priority').value) || 50,
+                for_user: document.getElementById('entry-for-user').value || null,
+                is_active: document.getElementById('entry-active').checked
+            };
+
+            let result;
+            if (id) {
+                result = await supabaseClient
+                    .from('ai_knowledge_base')
+                    .update(data)
+                    .eq('id', id);
+            } else {
+                result = await supabaseClient
+                    .from('ai_knowledge_base')
+                    .insert(data);
+            }
+
+            if (result.error) {
+                showToast('Błąd: ' + result.error.message);
+                return;
+            }
+
+            closeModal();
+            showToast(id ? 'Wpis zaktualizowany' : 'Wpis dodany');
+            loadEntries();
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Na pewno usunąć ten wpis?')) return;
+
+            const { error } = await supabaseClient
+                .from('ai_knowledge_base')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                showToast('Błąd: ' + error.message);
+                return;
+            }
+
+            showToast('Wpis usunięty');
+            loadEntries();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            toastText.textContent = message;
+            toast.classList.remove('opacity-0', 'invisible', 'translate-y-4');
+            toast.classList.add('opacity-100', 'visible', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'invisible', 'translate-y-4');
+                toast.classList.remove('opacity-100', 'visible', 'translate-y-0');
+            }, 3000);
+        }
+
+        // Init
+        checkAuth().then(ok => {
+            if (ok) loadEntries();
+        });
+    </script>
+</body>
+</html>
