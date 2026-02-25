@@ -740,6 +740,48 @@
         syncAllChats().then(sendResponse);
         return true;
       }
+
+      // AI - pobierz wiadomości w formacie dla AI
+      if (message.type === 'GET_MESSAGES_FOR_AI') {
+        const messages = getMessagesFromChat();
+        const formattedMessages = messages.map(m => ({
+          direction: m.direction,
+          message_text: m.message_text,
+          message_timestamp: m.message_timestamp
+        }));
+        sendResponse({
+          messages: formattedMessages,
+          contact_name: getCurrentChatName(),
+          phone_number: getCurrentChatPhone()
+        });
+        return true;
+      }
+
+      // AI - wklej odpowiedź do czatu
+      if (message.type === 'PASTE_AI_REPLY') {
+        const inputSelectors = [
+          '[data-testid="conversation-compose-box-input"]',
+          'div[contenteditable="true"][data-tab="10"]',
+          '#main footer div[contenteditable="true"]',
+          'div[contenteditable="true"][role="textbox"]'
+        ];
+
+        let inputEl = null;
+        for (const sel of inputSelectors) {
+          inputEl = document.querySelector(sel);
+          if (inputEl) break;
+        }
+
+        if (inputEl) {
+          inputEl.focus();
+          // Użyj document.execCommand dla kompatybilności z contenteditable
+          document.execCommand('insertText', false, message.text);
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false, error: 'Nie znaleziono pola wiadomości' });
+        }
+        return true;
+      }
     });
   }
 
