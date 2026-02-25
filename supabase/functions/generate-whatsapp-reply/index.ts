@@ -77,6 +77,113 @@ interface KnowledgeEntry {
   priority: number
 }
 
+interface Scenario {
+  id: string
+  name: string
+  description: string
+  conditions: any
+  instructions: string
+  priority: number
+}
+
+interface ConversationAnalysis {
+  lastMessageDirection: 'inbound' | 'outbound'
+  daysSinceLastMessage: number
+  hasClientOffer: boolean
+  hasOrders: boolean
+  hasPaidOrders: boolean
+  leadStatus: string | null
+  lastMessageText: string
+  offerValidUntil: Date | null
+  daysUntilOfferExpires: number | null
+}
+
+// Analizuje konwersację i zwraca parametry do dopasowania scenariuszy
+function analyzeConversation(messages: Message[], context: any): ConversationAnalysis {
+  const lastMessage = messages[messages.length - 1]
+  const now = new Date()
+
+  // Oblicz dni od ostatniej wiadomości
+  let daysSinceLastMessage = 0
+  if (lastMessage?.message_timestamp) {
+    const lastMsgDate = new Date(lastMessage.message_timestamp)
+    daysSinceLastMessage = Math.floor((now.getTime() - lastMsgDate.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  // Oblicz dni do wygaśnięcia oferty
+  let offerValidUntil: Date | null = null
+  let daysUntilOfferExpires: number | null = null
+  if (context.clientOffer?.valid_until) {
+    offerValidUntil = new Date(context.clientOffer.valid_until)
+    daysUntilOfferExpires = Math.ceil((offerValidUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  return {
+    lastMessageDirection: lastMessage?.direction || 'inbound',
+    daysSinceLastMessage,
+    hasClientOffer: !!context.clientOffer,
+    hasOrders: context.orders.length > 0,
+    hasPaidOrders: context.orders.some((o: Order) => o.status === 'paid'),
+    leadStatus: context.lead?.status || null,
+    lastMessageText: lastMessage?.message_text || '',
+    offerValidUntil,
+    daysUntilOfferExpires
+  }
+}
+
+// Sprawdza czy scenariusz pasuje do analizy konwersacji
+function matchScenario(scenario: Scenario, analysis: ConversationAnalysis): boolean {
+  const conditions = scenario.conditions
+  if (!conditions || Object.keys(conditions).length === 0) return false
+
+  for (const [key, value] of Object.entries(conditions)) {
+    switch (key) {
+      case 'last_message_direction':
+        if (analysis.lastMessageDirection !== value) return false
+        break
+      case 'days_since_last_message_min':
+        if (analysis.daysSinceLastMessage < (value as number)) return false
+        break
+      case 'days_since_last_message_max':
+        if (analysis.daysSinceLastMessage > (value as number)) return false
+        break
+      case 'has_client_offer':
+        if (analysis.hasClientOffer !== value) return false
+        break
+      case 'has_orders':
+        if (analysis.hasOrders !== value) return false
+        break
+      case 'has_paid_orders':
+        if (analysis.hasPaidOrders !== value) return false
+        break
+      case 'lead_status':
+        if (Array.isArray(value)) {
+          if (!value.includes(analysis.leadStatus)) return false
+        } else {
+          if (analysis.leadStatus !== value) return false
+        }
+        break
+      case 'days_until_offer_expires_max':
+        if (analysis.daysUntilOfferExpires === null || analysis.daysUntilOfferExpires > (value as number)) return false
+        break
+      case 'message_contains':
+        const keywords = Array.isArray(value) ? value : [value]
+        const msgLower = analysis.lastMessageText.toLowerCase()
+        if (!keywords.some((kw: string) => msgLower.includes(kw.toLowerCase()))) return false
+        break
+    }
+  }
+  return true
+}
+
+// Znajduje najlepiej pasujący scenariusz
+function findMatchingScenario(scenarios: Scenario[], analysis: ConversationAnalysis): Scenario | null {
+  const matching = scenarios.filter(s => matchScenario(s, analysis))
+  if (matching.length === 0) return null
+  // Zwróć scenariusz z najwyższym priorytetem
+  return matching.sort((a, b) => b.priority - a.priority)[0]
+}
+
 // Context builder - pobiera wszystkie dane potrzebne do kontekstu
 async function buildContext(supabase: any, phoneNumber: string, syncedBy: string) {
   const context: {
@@ -86,13 +193,15 @@ async function buildContext(supabase: any, phoneNumber: string, syncedBy: string
     discountCodes: DiscountCode[]
     orders: Order[]
     knowledge: KnowledgeEntry[]
+    scenarios: Scenario[]
   } = {
     lead: null,
     offer: null,
     clientOffer: null,
     discountCodes: [],
     orders: [],
-    knowledge: []
+    knowledge: [],
+    scenarios: []
   }
 
   // 1. Znajdź leada po numerze telefonu
@@ -151,11 +260,19 @@ async function buildContext(supabase: any, phoneNumber: string, syncedBy: string
     .order('priority', { ascending: false })
   context.knowledge = knowledge || []
 
+  // 7. Pobierz scenariusze AI
+  const { data: scenarios } = await supabase
+    .from('ai_scenarios')
+    .select('id, name, description, conditions, instructions, priority')
+    .eq('is_active', true)
+    .order('priority', { ascending: false })
+  context.scenarios = scenarios || []
+
   return context
 }
 
 // Buduje system prompt z pełnym kontekstem
-function buildSystemPrompt(context: any, syncedBy: string, customInstruction?: string): string {
+function buildSystemPrompt(context: any, syncedBy: string, matchedScenario: Scenario | null, customInstruction?: string): string {
   const parts: string[] = []
 
   // Nagłówek
@@ -294,6 +411,15 @@ Piszesz w imieniu: ${syncedBy === 'tomek' ? 'Tomka' : 'Maćka'}.`)
 7. Nie obiecuj rzeczy których nie wiesz
 8. Wykorzystaj informacje o kliencie do personalizacji`)
 
+  // Dopasowany scenariusz - najważniejsze instrukcje dla tej sytuacji
+  if (matchedScenario) {
+    parts.push(`\n## AKTUALNY SCENARIUSZ: ${matchedScenario.name}`)
+    if (matchedScenario.description) {
+      parts.push(`Opis: ${matchedScenario.description}`)
+    }
+    parts.push(`\nINSTRUKCJE DLA TEGO SCENARIUSZA:\n${matchedScenario.instructions}`)
+  }
+
   // Dodatkowe instrukcje
   if (customInstruction) {
     parts.push(`\n## DODATKOWE INSTRUKCJE\n${customInstruction}`)
@@ -333,6 +459,12 @@ serve(async (req) => {
     // Zbuduj kontekst
     const context = await buildContext(supabase, phone_number || '', synced_by || 'tomek')
 
+    // Analizuj konwersację
+    const analysis = analyzeConversation(messages, context)
+
+    // Znajdź pasujący scenariusz
+    const matchedScenario = findMatchingScenario(context.scenarios, analysis)
+
     // Przygotuj historię konwersacji dla Claude
     const conversationHistory = messages
       .slice(-20) // Ostatnie 20 wiadomości
@@ -342,17 +474,25 @@ serve(async (req) => {
       })
       .join('\n')
 
-    // Zbuduj system prompt z pełnym kontekstem
-    const systemPrompt = buildSystemPrompt(context, synced_by || 'tomek', custom_instruction)
+    // Zbuduj system prompt z pełnym kontekstem i scenariuszem
+    const systemPrompt = buildSystemPrompt(context, synced_by || 'tomek', matchedScenario, custom_instruction)
 
-    // Log dla debugowania (można usunąć)
+    // Log dla debugowania
     console.log('Context built:', {
       hasLead: !!context.lead,
       hasOffer: !!context.offer,
       hasClientOffer: !!context.clientOffer,
       discountCodesCount: context.discountCodes.length,
       ordersCount: context.orders.length,
-      knowledgeCount: context.knowledge.length
+      knowledgeCount: context.knowledge.length,
+      scenariosCount: context.scenarios.length,
+      matchedScenario: matchedScenario?.name || null,
+      analysis: {
+        lastMessageDirection: analysis.lastMessageDirection,
+        daysSinceLastMessage: analysis.daysSinceLastMessage,
+        hasClientOffer: analysis.hasClientOffer,
+        leadStatus: analysis.leadStatus
+      }
     })
 
     // Wywołaj Claude API
@@ -390,6 +530,15 @@ serve(async (req) => {
         success: true,
         reply: generatedReply.trim(),
         tokens_used: result.usage?.output_tokens || 0,
+        matched_scenario: matchedScenario ? {
+          id: matchedScenario.id,
+          name: matchedScenario.name
+        } : null,
+        analysis: {
+          last_message_direction: analysis.lastMessageDirection,
+          days_since_last_message: analysis.daysSinceLastMessage,
+          days_until_offer_expires: analysis.daysUntilOfferExpires
+        },
         context_summary: {
           lead_name: context.lead?.name || null,
           lead_status: context.lead?.status || null,

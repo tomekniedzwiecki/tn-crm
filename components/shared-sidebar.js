@@ -83,6 +83,7 @@ const NAV_ITEMS_BIZNES = [
 
 const NAV_ITEMS_BOT = [
     { id: 'knowledge', icon: 'ph-brain', label: 'Knowledge Base' },
+    { id: 'scenarios', icon: 'ph-tree-structure', label: 'Scenariusze' },
     { id: 'conversations', icon: 'ph-chats', label: 'Konwersacje' },
     { id: 'prompts', icon: 'ph-magic-wand', label: 'Prompty' },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia' },

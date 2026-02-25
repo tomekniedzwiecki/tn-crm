@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Bot - Scenariusze</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="/components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #ededed; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <header class="h-12 px-4 md:px-6 flex items-center justify-between flex-shrink-0 border-b border-[#1a1a1a] bg-black">
+            <div class="flex items-center gap-3">
+                <span class="text-white text-sm font-medium">Scenariusze AI</span>
+                <span class="text-zinc-600 text-[11px] font-mono" id="stats-count">-</span>
+            </div>
+            <button onclick="showAddModal()" class="h-8 px-3 bg-fuchsia-600 text-white text-xs rounded-md hover:bg-fuchsia-700 transition-colors flex items-center gap-2">
+                <i class="ph ph-plus"></i>
+                Nowy scenariusz
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-6">
+            <div class="mb-4 p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+                <p class="text-xs text-zinc-400">
+                    <i class="ph ph-info mr-1"></i>
+                    Scenariusze definiują jak AI ma odpowiadać w różnych sytuacjach.
+                    Gdy warunki scenariusza są spełnione, jego instrukcje są dodawane do kontekstu AI.
+                    Przy konflikcie - wygrywa scenariusz z wyższym priorytetem.
+                </p>
+            </div>
+
+            <div id="scenarios-container" class="space-y-3">
+                <!-- Scenarios will be loaded here -->
+            </div>
+
+            <div id="empty-state" class="hidden py-16 text-center">
+                <i class="ph ph-flow-arrow text-4xl text-zinc-700 mb-3"></i>
+                <p class="text-zinc-500 text-sm">Brak scenariuszy</p>
+                <button onclick="showAddModal()" class="mt-4 text-fuchsia-400 hover:text-fuchsia-300 text-xs">
+                    Dodaj pierwszy scenariusz
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="scenario-modal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-3xl my-8 overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <h2 id="modal-title" class="font-medium text-white">Nowy scenariusz</h2>
+                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <form id="scenario-form" class="p-4 space-y-4 overflow-y-auto max-h-[70vh]">
+                <input type="hidden" id="scenario-id">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1.5">Nazwa scenariusza</label>
+                        <input type="text" id="scenario-name" required placeholder="np. Follow-up brak odpowiedzi"
+                            class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fuchsia-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1.5">Priorytet (0-100)</label>
+                        <input type="number" id="scenario-priority" value="50" min="0" max="100"
+                            class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white focus:outline-none focus:border-fuchsia-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] text-zinc-400 mb-1.5">Opis (opcjonalny)</label>
+                    <input type="text" id="scenario-description" placeholder="Krótki opis kiedy ten scenariusz się aktywuje"
+                        class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fuchsia-500">
+                </div>
+
+                <!-- Conditions -->
+                <div class="border border-zinc-700 rounded-lg p-4 bg-zinc-800/50">
+                    <h3 class="text-xs font-medium text-zinc-300 mb-3 flex items-center gap-2">
+                        <i class="ph ph-funnel"></i>
+                        Warunki aktywacji
+                        <span class="text-zinc-500 font-normal">(wszystkie muszą być spełnione)</span>
+                    </h3>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Kto napisał ostatni</label>
+                            <select id="cond-last-direction" class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                                <option value="">-- dowolnie --</option>
+                                <option value="outbound">My (outbound)</option>
+                                <option value="inbound">Klient (inbound)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Status leada</label>
+                            <select id="cond-lead-status" multiple class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                                <option value="new">new</option>
+                                <option value="contacted">contacted</option>
+                                <option value="qualified">qualified</option>
+                                <option value="proposal">proposal</option>
+                                <option value="won">won</option>
+                                <option value="lost">lost</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Min dni od ostatniej wiadomości</label>
+                            <input type="number" id="cond-days-min" placeholder="np. 2"
+                                class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Max dni od ostatniej wiadomości</label>
+                            <input type="number" id="cond-days-max" placeholder="np. 7"
+                                class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Ma ofertę klienta</label>
+                            <select id="cond-has-offer" class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                                <option value="">-- dowolnie --</option>
+                                <option value="true">Tak</option>
+                                <option value="false">Nie</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Ma zamówienia</label>
+                            <select id="cond-has-orders" class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                                <option value="">-- dowolnie --</option>
+                                <option value="true">Tak</option>
+                                <option value="false">Nie</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Ma datę zamknięcia</label>
+                            <select id="cond-has-closing" class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                                <option value="">-- dowolnie --</option>
+                                <option value="true">Tak</option>
+                                <option value="false">Nie</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Closing date w ciągu X dni</label>
+                            <input type="number" id="cond-closing-within" placeholder="np. 3"
+                                class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] text-zinc-500 mb-1">Ostatnia wiadomość zawiera (przecinki)</label>
+                            <input type="text" id="cond-message-contains" placeholder="cena, koszt, ile, drogo"
+                                class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 mb-1">Max wiadomości w konwersacji</label>
+                            <input type="number" id="cond-max-messages" placeholder="np. 3"
+                                class="w-full h-8 px-2 bg-zinc-900 border border-zinc-700 rounded text-xs text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div>
+                    <label class="block text-[11px] text-zinc-400 mb-1.5">Instrukcje dla AI</label>
+                    <textarea id="scenario-instructions" required rows="6" placeholder="Opisz jak AI ma się zachować w tym scenariuszu..."
+                        class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fuchsia-500 resize-none font-mono"></textarea>
+                </div>
+
+                <!-- Example responses -->
+                <div>
+                    <label class="block text-[11px] text-zinc-400 mb-1.5">Przykładowe odpowiedzi (opcjonalne, każda w nowej linii)</label>
+                    <textarea id="scenario-examples" rows="3" placeholder="Hej, widziałeś moją poprzednią wiadomość?&#10;Cześć, udało Ci się przemyśleć?"
+                        class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fuchsia-500 resize-none"></textarea>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="scenario-active" checked class="w-4 h-4 rounded bg-zinc-800 border-zinc-700 text-fuchsia-500">
+                    <label for="scenario-active" class="text-xs text-zinc-300">Aktywny</label>
+                </div>
+            </form>
+
+            <div class="p-4 border-t border-zinc-800 flex justify-end gap-3">
+                <button onclick="closeModal()" class="h-9 px-4 text-zinc-400 text-xs hover:text-white">Anuluj</button>
+                <button onclick="saveScenario()" class="h-9 px-5 bg-fuchsia-600 text-white text-xs font-medium rounded-md hover:bg-fuchsia-700">Zapisz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 bg-zinc-800 text-white text-xs rounded-lg shadow-lg transform translate-y-4 opacity-0 invisible transition-all duration-300 z-50">
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allScenarios = [];
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+
+        async function loadScenarios() {
+            const { data, error } = await supabaseClient
+                .from('ai_scenarios')
+                .select('*')
+                .order('priority', { ascending: false });
+
+            if (error) {
+                console.error('Error:', error);
+                showToast('Błąd ładowania: ' + error.message);
+                return;
+            }
+
+            allScenarios = data || [];
+            document.getElementById('stats-count').textContent = `${allScenarios.length} scenariuszy`;
+            renderScenarios();
+        }
+
+        function renderScenarios() {
+            const container = document.getElementById('scenarios-container');
+            const emptyState = document.getElementById('empty-state');
+
+            if (allScenarios.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = allScenarios.map(s => {
+                const conditions = s.conditions || {};
+                const condBadges = [];
+
+                if (conditions.last_message_direction) {
+                    condBadges.push(conditions.last_message_direction === 'outbound' ? 'Ostatni: my' : 'Ostatni: klient');
+                }
+                if (conditions.days_since_last_message_min) {
+                    condBadges.push(`≥${conditions.days_since_last_message_min} dni`);
+                }
+                if (conditions.has_client_offer === true) condBadges.push('Ma ofertę');
+                if (conditions.has_client_offer === false) condBadges.push('Brak oferty');
+                if (conditions.has_orders === false) condBadges.push('Brak zamówień');
+                if (conditions.message_contains?.length) condBadges.push(`Zawiera: ${conditions.message_contains.slice(0,2).join(', ')}...`);
+                if (conditions.lead_status?.length) condBadges.push(`Status: ${conditions.lead_status.join(', ')}`);
+
+                return `
+                    <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 hover:border-zinc-700 transition-colors ${!s.is_active ? 'opacity-50' : ''}">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="px-2 py-0.5 text-[10px] font-mono bg-fuchsia-500/20 text-fuchsia-400 rounded">p:${s.priority}</span>
+                                    ${!s.is_active ? '<span class="px-2 py-0.5 text-[10px] bg-red-500/20 text-red-400 rounded">nieaktywny</span>' : ''}
+                                    <h3 class="font-medium text-sm text-white">${s.name}</h3>
+                                </div>
+                                ${s.description ? `<p class="text-xs text-zinc-500 mb-2">${s.description}</p>` : ''}
+                                <div class="flex flex-wrap gap-1 mb-2">
+                                    ${condBadges.map(b => `<span class="px-1.5 py-0.5 text-[10px] bg-zinc-800 text-zinc-400 rounded">${b}</span>`).join('')}
+                                </div>
+                                <p class="text-[11px] text-zinc-600 line-clamp-2 font-mono">${s.instructions.substring(0, 150)}...</p>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button onclick="editScenario('${s.id}')" class="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-white hover:bg-zinc-800 rounded">
+                                    <i class="ph ph-pencil-simple"></i>
+                                </button>
+                                <button onclick="deleteScenario('${s.id}')" class="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded">
+                                    <i class="ph ph-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showAddModal() {
+            document.getElementById('modal-title').textContent = 'Nowy scenariusz';
+            document.getElementById('scenario-id').value = '';
+            document.getElementById('scenario-form').reset();
+            document.getElementById('scenario-active').checked = true;
+            document.getElementById('scenario-priority').value = 50;
+            clearConditions();
+
+            const modal = document.getElementById('scenario-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function editScenario(id) {
+            const s = allScenarios.find(x => x.id === id);
+            if (!s) return;
+
+            document.getElementById('modal-title').textContent = 'Edytuj scenariusz';
+            document.getElementById('scenario-id').value = s.id;
+            document.getElementById('scenario-name').value = s.name;
+            document.getElementById('scenario-description').value = s.description || '';
+            document.getElementById('scenario-priority').value = s.priority;
+            document.getElementById('scenario-instructions').value = s.instructions;
+            document.getElementById('scenario-examples').value = (s.example_responses || []).join('\n');
+            document.getElementById('scenario-active').checked = s.is_active;
+
+            // Load conditions
+            const c = s.conditions || {};
+            document.getElementById('cond-last-direction').value = c.last_message_direction || '';
+            document.getElementById('cond-days-min').value = c.days_since_last_message_min || '';
+            document.getElementById('cond-days-max').value = c.days_since_last_message_max || '';
+            document.getElementById('cond-has-offer').value = c.has_client_offer === true ? 'true' : c.has_client_offer === false ? 'false' : '';
+            document.getElementById('cond-has-orders').value = c.has_orders === true ? 'true' : c.has_orders === false ? 'false' : '';
+            document.getElementById('cond-has-closing').value = c.has_closing_date === true ? 'true' : c.has_closing_date === false ? 'false' : '';
+            document.getElementById('cond-closing-within').value = c.closing_date_within_days || '';
+            document.getElementById('cond-message-contains').value = (c.message_contains || []).join(', ');
+            document.getElementById('cond-max-messages').value = c.max_messages || '';
+
+            // Lead status multi-select
+            const statusSelect = document.getElementById('cond-lead-status');
+            Array.from(statusSelect.options).forEach(opt => {
+                opt.selected = (c.lead_status || []).includes(opt.value);
+            });
+
+            const modal = document.getElementById('scenario-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function clearConditions() {
+            document.getElementById('cond-last-direction').value = '';
+            document.getElementById('cond-days-min').value = '';
+            document.getElementById('cond-days-max').value = '';
+            document.getElementById('cond-has-offer').value = '';
+            document.getElementById('cond-has-orders').value = '';
+            document.getElementById('cond-has-closing').value = '';
+            document.getElementById('cond-closing-within').value = '';
+            document.getElementById('cond-message-contains').value = '';
+            document.getElementById('cond-max-messages').value = '';
+            Array.from(document.getElementById('cond-lead-status').options).forEach(opt => opt.selected = false);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('scenario-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function saveScenario() {
+            const id = document.getElementById('scenario-id').value;
+
+            // Build conditions object
+            const conditions = {};
+
+            const lastDir = document.getElementById('cond-last-direction').value;
+            if (lastDir) conditions.last_message_direction = lastDir;
+
+            const daysMin = document.getElementById('cond-days-min').value;
+            if (daysMin) conditions.days_since_last_message_min = parseInt(daysMin);
+
+            const daysMax = document.getElementById('cond-days-max').value;
+            if (daysMax) conditions.days_since_last_message_max = parseInt(daysMax);
+
+            const hasOffer = document.getElementById('cond-has-offer').value;
+            if (hasOffer) conditions.has_client_offer = hasOffer === 'true';
+
+            const hasOrders = document.getElementById('cond-has-orders').value;
+            if (hasOrders) conditions.has_orders = hasOrders === 'true';
+
+            const hasClosing = document.getElementById('cond-has-closing').value;
+            if (hasClosing) conditions.has_closing_date = hasClosing === 'true';
+
+            const closingWithin = document.getElementById('cond-closing-within').value;
+            if (closingWithin) conditions.closing_date_within_days = parseInt(closingWithin);
+
+            const msgContains = document.getElementById('cond-message-contains').value;
+            if (msgContains) conditions.message_contains = msgContains.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+
+            const maxMsgs = document.getElementById('cond-max-messages').value;
+            if (maxMsgs) conditions.max_messages = parseInt(maxMsgs);
+
+            const leadStatuses = Array.from(document.getElementById('cond-lead-status').selectedOptions).map(o => o.value);
+            if (leadStatuses.length) conditions.lead_status = leadStatuses;
+
+            // Build examples array
+            const examplesText = document.getElementById('scenario-examples').value;
+            const examples = examplesText ? examplesText.split('\n').map(s => s.trim()).filter(s => s) : null;
+
+            const data = {
+                name: document.getElementById('scenario-name').value,
+                description: document.getElementById('scenario-description').value || null,
+                priority: parseInt(document.getElementById('scenario-priority').value) || 50,
+                conditions: conditions,
+                instructions: document.getElementById('scenario-instructions').value,
+                example_responses: examples,
+                is_active: document.getElementById('scenario-active').checked
+            };
+
+            let result;
+            if (id) {
+                result = await supabaseClient.from('ai_scenarios').update(data).eq('id', id);
+            } else {
+                result = await supabaseClient.from('ai_scenarios').insert(data);
+            }
+
+            if (result.error) {
+                showToast('Błąd: ' + result.error.message);
+                return;
+            }
+
+            closeModal();
+            showToast(id ? 'Scenariusz zaktualizowany' : 'Scenariusz dodany');
+            loadScenarios();
+        }
+
+        async function deleteScenario(id) {
+            if (!confirm('Na pewno usunąć ten scenariusz?')) return;
+
+            const { error } = await supabaseClient.from('ai_scenarios').delete().eq('id', id);
+
+            if (error) {
+                showToast('Błąd: ' + error.message);
+                return;
+            }
+
+            showToast('Scenariusz usunięty');
+            loadScenarios();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').textContent = message;
+            toast.classList.remove('opacity-0', 'invisible', 'translate-y-4');
+            toast.classList.add('opacity-100', 'visible', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'invisible', 'translate-y-4');
+                toast.classList.remove('opacity-100', 'visible', 'translate-y-0');
+            }, 3000);
+        }
+
+        // Init
+        Sidebar.render({ appId: 'bot' });
+        checkAuth().then(ok => {
+            if (ok) loadScenarios();
+        });
+    </script>
+</body>
+</html>
