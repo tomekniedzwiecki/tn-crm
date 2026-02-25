@@ -39,7 +39,7 @@ const NAV_ITEMS_CRM = [
     { id: 'dashboard', icon: 'ph-house', label: 'Overview' },
     { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
-    { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp', href: '/whatsapp/logs' },
+    { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp' },
     { id: 'calendar', icon: 'ph-calendar', label: 'Kalendarz' },
     { id: 'offers', icon: 'ph-package', label: 'Oferty' },
     { id: 'orders', icon: 'ph-shopping-cart', label: 'Zamówienia' },

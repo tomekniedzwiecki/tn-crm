@@ -3,9 +3,18 @@
 const SCHEDULED_SYNC_ALARM = 'whatsapp-scheduled-sync';
 const HEARTBEAT_ALARM = 'whatsapp-heartbeat';
 const CHECK_CRM_SETTINGS_ALARM = 'whatsapp-check-crm-settings';
+const CHECK_UPDATE_ALARM = 'whatsapp-check-update';
 const SYNC_INTERVAL_HOURS = 5;
 const HEARTBEAT_INTERVAL_MINUTES = 2;
 const CHECK_CRM_INTERVAL_MINUTES = 5;
+const CHECK_UPDATE_INTERVAL_HOURS = 6;
+
+// Current extension version
+const CURRENT_VERSION = chrome.runtime.getManifest().version;
+const VERSION_CHECK_URL = 'https://crm.tomekniedzwiecki.pl/whatsapp-extension-version.json';
+
+// Cache for update info
+let updateAvailable = null;
 
 // Cache dla ustawień
 let cachedSettings = null;
@@ -52,6 +61,15 @@ chrome.alarms.create(CHECK_CRM_SETTINGS_ALARM, {
   periodInMinutes: CHECK_CRM_INTERVAL_MINUTES
 });
 
+// Ustaw alarm sprawdzania aktualizacji
+chrome.alarms.create(CHECK_UPDATE_ALARM, {
+  delayInMinutes: 1, // Sprawdź po minucie od startu
+  periodInMinutes: CHECK_UPDATE_INTERVAL_HOURS * 60
+});
+
+// Sprawdź aktualizacje na starcie
+checkForUpdate();
+
 // Pobierz ustawienia
 async function getSettings() {
   if (cachedSettings) return cachedSettings;
@@ -67,6 +85,56 @@ async function getSettings() {
 // Wyczyść cache ustawień
 function clearSettingsCache() {
   cachedSettings = null;
+}
+
+// Sprawdź dostępność aktualizacji
+async function checkForUpdate() {
+  try {
+    const response = await fetch(VERSION_CHECK_URL + '?t=' + Date.now(), {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      console.log('WhatsApp Sync: Version check failed', response.status);
+      return;
+    }
+
+    const data = await response.json();
+    const latestVersion = data.version;
+
+    console.log('WhatsApp Sync: Current version:', CURRENT_VERSION, 'Latest:', latestVersion);
+
+    if (compareVersions(latestVersion, CURRENT_VERSION) > 0) {
+      updateAvailable = {
+        version: latestVersion,
+        downloadUrl: data.downloadUrl,
+        changelog: data.changelog
+      };
+      console.log('WhatsApp Sync: Update available!', updateAvailable);
+
+      // Pokaż badge z powiadomieniem
+      chrome.action.setBadgeText({ text: '!' });
+      chrome.action.setBadgeBackgroundColor({ color: '#ff9800' });
+    } else {
+      updateAvailable = null;
+    }
+  } catch (err) {
+    console.error('WhatsApp Sync: Version check error', err);
+  }
+}
+
+// Porównaj wersje (1.0.0 vs 1.0.1)
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+  return 0;
 }
 
 // Wyślij heartbeat do CRM
@@ -184,6 +252,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   if (alarm.name === CHECK_CRM_SETTINGS_ALARM) {
     await checkCrmSettings();
+  }
+
+  if (alarm.name === CHECK_UPDATE_ALARM) {
+    await checkForUpdate();
   }
 });
 
@@ -318,6 +390,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Wyczyść cache ustawień (po zmianie w popup)
   if (message.type === 'SETTINGS_CHANGED') {
     clearSettingsCache();
+    sendResponse({ success: true });
+    return true;
+  }
+
+  // Sprawdź czy jest dostępna aktualizacja
+  if (message.type === 'GET_UPDATE_INFO') {
+    sendResponse({
+      currentVersion: CURRENT_VERSION,
+      updateAvailable: updateAvailable
+    });
+    return true;
+  }
+
+  // Odśwież sprawdzanie aktualizacji
+  if (message.type === 'CHECK_UPDATE') {
+    checkForUpdate().then(() => {
+      sendResponse({
+        currentVersion: CURRENT_VERSION,
+        updateAvailable: updateAvailable
+      });
+    });
+    return true;
+  }
+
+  // Zignoruj powiadomienie o aktualizacji
+  if (message.type === 'DISMISS_UPDATE') {
+    chrome.action.setBadgeText({ text: '' });
     sendResponse({ success: true });
     return true;
   }

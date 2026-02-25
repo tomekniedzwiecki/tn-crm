@@ -1,6 +1,9 @@
 // WhatsApp CRM Sync - Popup Script
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Sprawdź aktualizacje
+  checkForUpdates();
+
   // Elements
   const chatAvatar = document.getElementById('chat-avatar');
   const chatName = document.getElementById('chat-name');
@@ -37,14 +40,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  const syncAllLimit = document.getElementById('sync-all-limit');
+
   // Load saved settings
-  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange'], (result) => {
+  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange', 'syncAllLimit'], (result) => {
     if (result.supabaseUrl) supabaseUrl.value = result.supabaseUrl;
     if (result.supabaseKey) supabaseKey.value = result.supabaseKey;
     if (result.syncApiKey) syncApiKey.value = result.syncApiKey;
     if (result.syncUser) syncUser.value = result.syncUser;
     autoSync.checked = result.autoSync || false;
     syncOnChange.checked = result.syncOnChange !== false;
+    syncAllLimit.value = result.syncAllLimit || 0;
 
     // Sprawdź status scheduled sync z CRM
     checkScheduledSyncStatus(result);
@@ -58,7 +64,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       syncApiKey: syncApiKey.value.trim(),
       syncUser: syncUser.value,
       autoSync: autoSync.checked,
-      syncOnChange: syncOnChange.checked
+      syncOnChange: syncOnChange.checked,
+      syncAllLimit: parseInt(syncAllLimit.value) || 0
     };
 
     chrome.storage.sync.set(settings, () => {
@@ -304,22 +311,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       );
 
+      if (!response.ok) {
+        // Nie znaleziono lub błąd - otwórz wyszukiwanie
+        addLog('Szukam w CRM...', 'info');
+        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/leads?search=${phone}` });
+        return;
+      }
+
       const leads = await response.json();
 
       if (leads && leads.length > 0) {
         const lead = leads[0];
-        // Otwórz lead w nowej karcie
-        const crmUrl = settings.supabaseUrl.replace('.supabase.co', '').replace('https://', '');
-        // Zakładamy że CRM jest na tej samej domenie co projekt
-        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/lead.html?id=${lead.id}` });
+        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/lead?id=${lead.id}` });
         addLog(`Otwieram: ${lead.name || lead.phone}`, 'success');
       } else {
-        addLog('Nie znaleziono leada', 'error');
-        // Otwórz listę leadów z wyszukiwaniem
-        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/leads.html?search=${phone}` });
+        addLog('Nie znaleziono - otwieram wyszukiwanie', 'info');
+        chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/leads?search=${phone}` });
       }
     } catch (err) {
       addLog(`Błąd: ${err.message}`, 'error');
+      // Fallback - otwórz wyszukiwanie
+      chrome.tabs.create({ url: `https://crm.tomekniedzwiecki.pl/leads?search=${phone}` });
     }
   });
 
@@ -361,4 +373,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Refresh every 2 seconds
   setInterval(updateCurrentChat, 2000);
+
+  // Sprawdź aktualizacje
+  function checkForUpdates() {
+    chrome.runtime.sendMessage({ type: 'GET_UPDATE_INFO' }, (response) => {
+      // Pokaż aktualną wersję
+      if (response && response.currentVersion) {
+        document.getElementById('current-version').textContent = response.currentVersion;
+      }
+
+      if (response && response.updateAvailable) {
+        const update = response.updateAvailable;
+        const updateBanner = document.getElementById('update-banner');
+        const updateVersion = document.getElementById('update-version');
+
+        updateVersion.textContent = `v${response.currentVersion} → v${update.version}`;
+        updateBanner.classList.remove('hidden');
+
+        // Kliknięcie na banner otwiera stronę pobierania
+        updateBanner.addEventListener('click', (e) => {
+          if (e.target.id !== 'btn-dismiss-update') {
+            chrome.tabs.create({ url: update.downloadUrl });
+          }
+        });
+
+        // Zamknięcie banera
+        document.getElementById('btn-dismiss-update').addEventListener('click', (e) => {
+          e.stopPropagation();
+          updateBanner.classList.add('hidden');
+          chrome.runtime.sendMessage({ type: 'DISMISS_UPDATE' });
+        });
+      }
+    });
+  }
 });

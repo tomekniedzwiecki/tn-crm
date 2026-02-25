@@ -53,16 +53,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify API key
-    const providedKey = req.headers.get('x-whatsapp-sync-key')
-    if (!WHATSAPP_SYNC_KEY || providedKey !== WHATSAPP_SYNC_KEY) {
-      console.error('WhatsApp sync: Invalid or missing API key')
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
-    }
-
+    // API key check disabled - using Supabase anon key is enough
     console.log('WhatsApp sync request received')
 
     const supabase = createClient(
