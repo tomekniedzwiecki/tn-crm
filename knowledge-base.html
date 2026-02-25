@@ -3,102 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Knowledge Base - TN CRM</title>
+    <title>TN CRM - Knowledge Base</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="/components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { background: #0a0a0a; }
-        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-        .scrollbar-thin::-webkit-scrollbar-track { background: #1a1a1a; }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        body { background: #000; color: #ededed; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        ::selection { background: #fff; color: #000; }
     </style>
 </head>
-<body class="text-white min-h-screen">
-    <!-- Header -->
-    <header class="border-b border-[#222] bg-[#0d0d0d] sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="index.html" class="text-zinc-500 hover:text-white transition-colors">
-                    <i class="ph ph-arrow-left text-lg"></i>
-                </a>
-                <h1 class="text-base font-medium">Knowledge Base</h1>
-                <span class="text-xs text-zinc-500" id="stats-count">Ładowanie...</span>
+<body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <!-- Header -->
+        <header class="h-12 px-4 md:px-6 flex items-center justify-between flex-shrink-0 border-b border-[#1a1a1a] bg-black">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-8 h-8 rounded-md hover:bg-[#1a1a1a] text-zinc-500">
+                    <i class="ph ph-list text-lg"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="text-white text-sm font-medium">Knowledge Base</span>
+                    <span class="text-zinc-600 text-[11px] font-mono" id="stats-count">-</span>
+                </div>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="showAddModal()" class="h-9 px-4 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-2">
+                <button onclick="showAddModal()" class="h-8 px-3 bg-violet-600 text-white text-xs rounded-md hover:bg-violet-700 transition-colors flex items-center gap-2">
                     <i class="ph ph-plus"></i>
                     Dodaj wpis
                 </button>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- Main content -->
-    <main class="max-w-7xl mx-auto px-6 py-6">
         <!-- Filters -->
-        <div class="flex items-center gap-4 mb-6">
-            <div class="flex gap-2">
-                <button onclick="filterByCategory(null)" class="category-btn active px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-300 hover:bg-[#222] transition-colors" data-category="all">
+        <div class="px-4 md:px-6 py-3 border-b border-[#1a1a1a] flex items-center gap-3 flex-wrap">
+            <div class="flex gap-1.5 flex-wrap">
+                <button onclick="filterByCategory(null)" class="category-btn active px-2.5 py-1 text-[11px] rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors" data-category="all">
                     Wszystkie
                 </button>
-                <button onclick="filterByCategory('company')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="company">
+                <button onclick="filterByCategory('company')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="company">
                     Firma
                 </button>
-                <button onclick="filterByCategory('product')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="product">
+                <button onclick="filterByCategory('product')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="product">
                     Produkty
                 </button>
-                <button onclick="filterByCategory('objection')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="objection">
+                <button onclick="filterByCategory('objection')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="objection">
                     Obiekcje
                 </button>
-                <button onclick="filterByCategory('process')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="process">
+                <button onclick="filterByCategory('process')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="process">
                     Procesy
                 </button>
-                <button onclick="filterByCategory('contract')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="contract">
+                <button onclick="filterByCategory('contract')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="contract">
                     Umowa
                 </button>
-                <button onclick="filterByCategory('tone')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="tone">
+                <button onclick="filterByCategory('tone')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="tone">
                     Styl
                 </button>
-                <button onclick="filterByCategory('script')" class="category-btn px-3 py-1.5 text-xs rounded-md bg-[#1a1a1a] text-zinc-500 hover:bg-[#222] transition-colors" data-category="script">
+                <button onclick="filterByCategory('script')" class="category-btn px-2.5 py-1 text-[11px] rounded-md bg-zinc-900 text-zinc-500 hover:bg-zinc-800 transition-colors" data-category="script">
                     Skrypty
                 </button>
             </div>
             <input type="text" id="search-input" oninput="searchEntries(this.value)" placeholder="Szukaj..."
-                class="ml-auto h-9 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 w-64">
+                class="ml-auto h-8 px-3 bg-zinc-900 border border-zinc-800 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600 w-48">
         </div>
 
         <!-- Knowledge entries -->
-        <div id="entries-container" class="space-y-3">
-            <!-- Entries will be loaded here -->
-        </div>
+        <div class="flex-1 overflow-y-auto p-4 md:p-6">
+            <div id="entries-container" class="space-y-2">
+                <!-- Entries will be loaded here -->
+            </div>
 
-        <!-- Empty state -->
-        <div id="empty-state" class="hidden py-16 text-center">
-            <i class="ph ph-database text-4xl text-zinc-700 mb-3"></i>
-            <p class="text-zinc-500">Brak wpisów w bazie wiedzy</p>
-            <button onclick="showAddModal()" class="mt-4 text-violet-400 hover:text-violet-300 text-sm">
-                Dodaj pierwszy wpis
-            </button>
+            <!-- Empty state -->
+            <div id="empty-state" class="hidden py-16 text-center">
+                <i class="ph ph-database text-4xl text-zinc-700 mb-3"></i>
+                <p class="text-zinc-500 text-sm">Brak wpisów w bazie wiedzy</p>
+                <button onclick="showAddModal()" class="mt-4 text-violet-400 hover:text-violet-300 text-xs">
+                    Dodaj pierwszy wpis
+                </button>
+            </div>
         </div>
     </main>
 
     <!-- Add/Edit Modal -->
     <div id="entry-modal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
-        <div class="bg-[#111] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="p-4 border-b border-[#222] flex items-center justify-between">
-                <h2 id="modal-title" class="font-medium">Dodaj wpis</h2>
-                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <h2 id="modal-title" class="font-medium text-white">Dodaj wpis</h2>
+                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-            <form id="entry-form" class="p-4 space-y-4 overflow-y-auto scrollbar-thin">
+            <form id="entry-form" class="p-4 space-y-4 overflow-y-auto">
                 <input type="hidden" id="entry-id">
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Kategoria</label>
-                        <select id="entry-category" required class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                        <label class="block text-[11px] text-zinc-400 mb-1.5">Kategoria</label>
+                        <select id="entry-category" required class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white focus:outline-none focus:border-zinc-500">
                             <option value="company">Firma</option>
                             <option value="product">Produkty</option>
                             <option value="objection">Obiekcje</option>
@@ -109,39 +134,39 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Podkategoria</label>
+                        <label class="block text-[11px] text-zinc-400 mb-1.5">Podkategoria</label>
                         <input type="text" id="entry-subcategory" placeholder="np. pricing, timeline..."
-                            class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500">
+                            class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs text-zinc-400 mb-1.5">Tytuł</label>
+                    <label class="block text-[11px] text-zinc-400 mb-1.5">Tytuł</label>
                     <input type="text" id="entry-title" required placeholder="Krótki tytuł wpisu"
-                        class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500">
+                        class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500">
                 </div>
 
                 <div>
-                    <label class="block text-xs text-zinc-400 mb-1.5">Treść</label>
+                    <label class="block text-[11px] text-zinc-400 mb-1.5">Treść</label>
                     <textarea id="entry-content" required rows="6" placeholder="Pełna treść wiedzy..."
-                        class="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 resize-none"></textarea>
+                        class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"></textarea>
                 </div>
 
                 <div>
-                    <label class="block text-xs text-zinc-400 mb-1.5">Słowa kluczowe (rozdzielone przecinkami)</label>
+                    <label class="block text-[11px] text-zinc-400 mb-1.5">Słowa kluczowe (rozdzielone przecinkami)</label>
                     <input type="text" id="entry-keywords" placeholder="cena, koszt, ile, drogo"
-                        class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500">
+                        class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Priorytet (0-100)</label>
+                        <label class="block text-[11px] text-zinc-400 mb-1.5">Priorytet (0-100)</label>
                         <input type="number" id="entry-priority" value="50" min="0" max="100"
-                            class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                            class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white focus:outline-none focus:border-zinc-500">
                     </div>
                     <div>
-                        <label class="block text-xs text-zinc-400 mb-1.5">Dla użytkownika</label>
-                        <select id="entry-for-user" class="w-full h-10 px-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                        <label class="block text-[11px] text-zinc-400 mb-1.5">Dla użytkownika</label>
+                        <select id="entry-for-user" class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-white focus:outline-none focus:border-zinc-500">
                             <option value="">Wszyscy</option>
                             <option value="tomek">Tomek</option>
                             <option value="maciek">Maciek</option>
@@ -150,15 +175,15 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <input type="checkbox" id="entry-active" checked class="w-4 h-4 rounded bg-[#1a1a1a] border-[#333] text-violet-500 focus:ring-violet-500">
-                    <label for="entry-active" class="text-sm text-zinc-300">Aktywny</label>
+                    <input type="checkbox" id="entry-active" checked class="w-4 h-4 rounded bg-zinc-800 border-zinc-700 text-violet-500 focus:ring-violet-500">
+                    <label for="entry-active" class="text-xs text-zinc-300">Aktywny</label>
                 </div>
             </form>
-            <div class="p-4 border-t border-[#222] flex justify-end gap-3">
-                <button onclick="closeModal()" class="h-10 px-4 text-zinc-400 text-sm hover:text-white transition-colors">
+            <div class="p-4 border-t border-zinc-800 flex justify-end gap-3">
+                <button onclick="closeModal()" class="h-9 px-4 text-zinc-400 text-xs hover:text-white transition-colors">
                     Anuluj
                 </button>
-                <button onclick="saveEntry()" class="h-10 px-6 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors">
+                <button onclick="saveEntry()" class="h-9 px-5 bg-violet-600 text-white text-xs font-medium rounded-md hover:bg-violet-700 transition-colors">
                     Zapisz
                 </button>
             </div>
@@ -166,7 +191,7 @@
     </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 bg-zinc-800 text-white text-sm rounded-lg shadow-lg transform translate-y-4 opacity-0 invisible transition-all duration-300">
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 bg-zinc-800 text-white text-xs rounded-lg shadow-lg transform translate-y-4 opacity-0 invisible transition-all duration-300 z-50">
         <span id="toast-text"></span>
     </div>
 
@@ -182,13 +207,13 @@
 
         // Category colors
         const categoryColors = {
-            company: 'bg-blue-900/30 text-blue-300 border-blue-800/50',
-            product: 'bg-green-900/30 text-green-300 border-green-800/50',
-            objection: 'bg-red-900/30 text-red-300 border-red-800/50',
-            process: 'bg-yellow-900/30 text-yellow-300 border-yellow-800/50',
-            contract: 'bg-purple-900/30 text-purple-300 border-purple-800/50',
-            tone: 'bg-pink-900/30 text-pink-300 border-pink-800/50',
-            script: 'bg-cyan-900/30 text-cyan-300 border-cyan-800/50'
+            company: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+            product: 'bg-green-500/10 text-green-400 border-green-500/20',
+            objection: 'bg-red-500/10 text-red-400 border-red-500/20',
+            process: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+            contract: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+            tone: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
+            script: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
         };
 
         const categoryNames = {
@@ -258,32 +283,32 @@
             emptyState.classList.add('hidden');
 
             container.innerHTML = filtered.map(entry => `
-                <div class="bg-[#111] border border-[#222] rounded-lg p-4 hover:border-[#333] transition-colors">
-                    <div class="flex items-start justify-between gap-4">
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 hover:border-zinc-700 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="px-2 py-0.5 text-[10px] font-medium rounded border ${categoryColors[entry.category] || 'bg-zinc-800 text-zinc-400'}">
+                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span class="px-1.5 py-0.5 text-[10px] font-medium rounded border ${categoryColors[entry.category] || 'bg-zinc-800 text-zinc-400'}">
                                     ${categoryNames[entry.category] || entry.category}
                                 </span>
-                                ${entry.subcategory ? `<span class="text-[10px] text-zinc-500">${entry.subcategory}</span>` : ''}
-                                ${entry.for_user ? `<span class="px-1.5 py-0.5 text-[10px] bg-zinc-800 text-zinc-400 rounded">${entry.for_user}</span>` : ''}
-                                <span class="text-[10px] text-zinc-600">p:${entry.priority}</span>
-                                ${!entry.is_active ? '<span class="px-1.5 py-0.5 text-[10px] bg-red-900/30 text-red-400 rounded">nieaktywny</span>' : ''}
+                                ${entry.subcategory ? `<span class="text-[10px] text-zinc-600">${entry.subcategory}</span>` : ''}
+                                ${entry.for_user ? `<span class="px-1.5 py-0.5 text-[10px] bg-zinc-800 text-zinc-500 rounded">${entry.for_user}</span>` : ''}
+                                <span class="text-[10px] text-zinc-700">p:${entry.priority}</span>
+                                ${!entry.is_active ? '<span class="px-1.5 py-0.5 text-[10px] bg-red-500/10 text-red-400 rounded">nieaktywny</span>' : ''}
                             </div>
-                            <h3 class="font-medium text-sm text-zinc-200 mb-1">${entry.title}</h3>
-                            <p class="text-xs text-zinc-400 line-clamp-2">${entry.content}</p>
+                            <h3 class="font-medium text-xs text-zinc-200 mb-1">${entry.title}</h3>
+                            <p class="text-[11px] text-zinc-500 line-clamp-2">${entry.content}</p>
                             ${entry.trigger_keywords && entry.trigger_keywords.length > 0 ? `
                                 <div class="mt-2 flex flex-wrap gap-1">
-                                    ${entry.trigger_keywords.slice(0, 5).map(k => `<span class="px-1.5 py-0.5 text-[10px] bg-[#1a1a1a] text-zinc-500 rounded">${k}</span>`).join('')}
-                                    ${entry.trigger_keywords.length > 5 ? `<span class="text-[10px] text-zinc-600">+${entry.trigger_keywords.length - 5}</span>` : ''}
+                                    ${entry.trigger_keywords.slice(0, 5).map(k => `<span class="px-1.5 py-0.5 text-[10px] bg-zinc-800/50 text-zinc-600 rounded">${k}</span>`).join('')}
+                                    ${entry.trigger_keywords.length > 5 ? `<span class="text-[10px] text-zinc-700">+${entry.trigger_keywords.length - 5}</span>` : ''}
                                 </div>
                             ` : ''}
                         </div>
-                        <div class="flex items-center gap-1">
-                            <button onclick="editEntry('${entry.id}')" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md transition-colors">
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button onclick="editEntry('${entry.id}')" class="w-7 h-7 flex items-center justify-center text-zinc-600 hover:text-white hover:bg-zinc-800 rounded transition-colors">
                                 <i class="ph ph-pencil-simple text-sm"></i>
                             </button>
-                            <button onclick="deleteEntry('${entry.id}')" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors">
+                            <button onclick="deleteEntry('${entry.id}')" class="w-7 h-7 flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors">
                                 <i class="ph ph-trash text-sm"></i>
                             </button>
                         </div>
@@ -299,11 +324,11 @@
             document.querySelectorAll('.category-btn').forEach(btn => {
                 const btnCategory = btn.dataset.category;
                 if ((category === null && btnCategory === 'all') || btnCategory === category) {
-                    btn.classList.add('active', 'text-zinc-300');
-                    btn.classList.remove('text-zinc-500');
+                    btn.classList.add('active', 'bg-zinc-800', 'text-zinc-300');
+                    btn.classList.remove('bg-zinc-900', 'text-zinc-500');
                 } else {
-                    btn.classList.remove('active', 'text-zinc-300');
-                    btn.classList.add('text-zinc-500');
+                    btn.classList.remove('active', 'bg-zinc-800', 'text-zinc-300');
+                    btn.classList.add('bg-zinc-900', 'text-zinc-500');
                 }
             });
 
