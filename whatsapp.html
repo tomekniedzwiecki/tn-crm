@@ -145,6 +145,47 @@
         <span id="toast-text"></span>
     </div>
 
+    <!-- AI Reply Modal -->
+    <div id="ai-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl w-full max-w-lg mx-4 overflow-hidden">
+            <div class="px-4 py-3 border-b border-[#222] flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="ph ph-sparkle text-violet-400"></i>
+                    <span class="text-sm font-medium">Sugerowana odpowiedz</span>
+                </div>
+                <button onclick="closeAIModal()" class="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md">
+                    <i class="ph ph-x text-sm"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <div id="ai-loading" class="py-8 text-center hidden">
+                    <div class="w-6 h-6 mx-auto mb-3 border-2 border-zinc-800 border-t-violet-400 rounded-full animate-spin"></div>
+                    <p class="text-zinc-500 text-sm">Generowanie odpowiedzi...</p>
+                </div>
+                <div id="ai-result" class="hidden">
+                    <div id="ai-reply-text" class="bg-[#1a1a1a] rounded-lg p-4 text-[13px] text-zinc-200 whitespace-pre-wrap leading-relaxed"></div>
+                    <div class="mt-4 flex gap-2">
+                        <button onclick="copyReply()" class="flex-1 h-10 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-copy"></i>
+                            Kopiuj
+                        </button>
+                        <button onclick="regenerateReply()" class="h-10 px-4 bg-transparent text-zinc-400 text-sm rounded-lg hover:bg-[#1a1a1a] hover:text-white transition-colors border border-[#333] flex items-center justify-center gap-2">
+                            <i class="ph ph-arrows-clockwise"></i>
+                            Ponow
+                        </button>
+                    </div>
+                </div>
+                <div id="ai-error" class="hidden py-8 text-center">
+                    <i class="ph ph-warning-circle text-3xl text-red-400 mb-2"></i>
+                    <p class="text-red-400 text-sm" id="ai-error-text">Blad generowania</p>
+                    <button onclick="regenerateReply()" class="mt-3 px-4 py-2 bg-[#1a1a1a] text-zinc-300 text-sm rounded-lg hover:bg-[#222]">
+                        Sprobuj ponownie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -388,6 +429,10 @@
                                 Utworz Lead
                             </button>
                         `}
+                        <button onclick="generateAIReply()" class="h-8 px-3 bg-violet-600 text-white text-xs rounded-md hover:bg-violet-700 transition-colors flex items-center gap-1.5 font-medium">
+                            <i class="ph ph-sparkle text-sm"></i>
+                            AI
+                        </button>
                         <a href="${whatsappLink}" target="_blank" class="h-8 px-3 bg-white text-black text-xs rounded-md hover:bg-zinc-200 transition-colors flex items-center gap-1.5 font-medium">
                             <i class="ph ph-arrow-square-out text-sm"></i>
                             WhatsApp
@@ -592,6 +637,87 @@
                 toast.classList.remove('opacity-100', 'visible', 'translate-y-0');
             }, 3000);
         }
+
+        // ============================================
+        // AI REPLY
+        // ============================================
+        let currentMessages = [];
+        let currentConv = null;
+
+        async function generateAIReply() {
+            if (!selectedPhone || !selectedSyncedBy) {
+                showToast('Wybierz najpierw konwersacje');
+                return;
+            }
+
+            currentConv = conversations.find(c => c.phone_number === selectedPhone && c.synced_by === selectedSyncedBy);
+            if (!currentConv) return;
+
+            // Pobierz wiadomości
+            currentMessages = await loadMessagesForPhone(selectedPhone, selectedSyncedBy);
+
+            // Pokaż modal
+            const modal = document.getElementById('ai-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            document.getElementById('ai-loading').classList.remove('hidden');
+            document.getElementById('ai-result').classList.add('hidden');
+            document.getElementById('ai-error').classList.add('hidden');
+
+            try {
+                const response = await supabaseClient.functions.invoke('generate-whatsapp-reply', {
+                    body: {
+                        messages: currentMessages.map(m => ({
+                            direction: m.direction,
+                            message_text: m.message_text,
+                            message_timestamp: m.message_timestamp
+                        })),
+                        contact_name: currentConv.contact_name || 'Klient',
+                        lead_info: currentConv.lead_id ? {
+                            name: currentConv.lead_name,
+                            email: currentConv.lead_email,
+                            status: currentConv.lead_status
+                        } : null
+                    }
+                });
+
+                if (response.error) throw response.error;
+                if (!response.data.success) throw new Error(response.data.error);
+
+                document.getElementById('ai-reply-text').textContent = response.data.reply;
+                document.getElementById('ai-loading').classList.add('hidden');
+                document.getElementById('ai-result').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('AI error:', error);
+                document.getElementById('ai-error-text').textContent = error.message || 'Blad generowania odpowiedzi';
+                document.getElementById('ai-loading').classList.add('hidden');
+                document.getElementById('ai-error').classList.remove('hidden');
+            }
+        }
+
+        function regenerateReply() {
+            generateAIReply();
+        }
+
+        function copyReply() {
+            const text = document.getElementById('ai-reply-text').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Skopiowano do schowka');
+            });
+        }
+
+        function closeAIModal() {
+            const modal = document.getElementById('ai-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Zamknij modal klawiszem Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAIModal();
+        });
 
         // ============================================
         // SEARCH
