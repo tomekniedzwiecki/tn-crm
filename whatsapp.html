@@ -25,67 +25,41 @@
         }
     </script>
     <style>
-        body { background: #050505; color: #e5e5e5; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        body { background: #000; color: #ededed; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
-        ::selection { background: white; color: black; }
+        ::selection { background: #fff; color: #000; }
 
         .glass-header {
-            background: rgba(5, 5, 5, 0.85);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid #1a1a1a;
         }
 
         .conversation-row {
-            transition: all 0.15s ease;
+            transition: background 0.1s ease;
         }
         .conversation-row:hover {
-            background: rgba(255,255,255,0.04);
+            background: #111;
         }
         .conversation-row.selected {
-            background: rgba(37, 211, 102, 0.1);
-            border-left: 2px solid #25D366;
-        }
-
-        .message-bubble {
-            max-width: 70%;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
-        .message-inbound {
-            background: #202c33;
-            border-radius: 8px 8px 8px 0;
-        }
-        .message-outbound {
-            background: #005c4b;
-            border-radius: 8px 8px 0 8px;
-        }
-
-        .chat-bg {
-            background-color: #0b141a;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            background: #111;
         }
 
         .stat-pill {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: transparent;
+            border: 1px solid #222;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+        .msg-in {
+            background: #1a1a1a;
         }
-        .animate-in { animation: fadeIn 0.15s ease-out; }
-
-        .empty-state {
-            background: radial-gradient(ellipse at center, rgba(37, 211, 102, 0.05) 0%, transparent 70%);
+        .msg-out {
+            background: #0a0a0a;
+            border: 1px solid #222;
         }
-
-        /* Custom scrollbar for messages */
-        #messages-container::-webkit-scrollbar { width: 5px; }
-        #messages-container::-webkit-scrollbar-track { background: transparent; }
-        #messages-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm antialiased">
@@ -96,76 +70,64 @@
     <!-- Main Content -->
     <main class="flex-1 flex flex-col min-w-0 h-screen">
         <!-- Header -->
-        <header class="h-14 glass-header flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-10">
+        <header class="h-12 px-4 md:px-6 flex items-center justify-between flex-shrink-0 border-b border-[#1a1a1a] bg-black">
             <div class="flex items-center gap-3">
-                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400">
-                    <i class="ph ph-list text-xl"></i>
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-8 h-8 rounded-md hover:bg-[#1a1a1a] text-zinc-500">
+                    <i class="ph ph-list text-lg"></i>
                 </button>
                 <div class="flex items-center gap-2">
-                    <i class="ph ph-whatsapp-logo text-[#25D366] text-xl"></i>
-                    <span class="text-white font-semibold">WhatsApp</span>
-                    <span class="text-zinc-600 text-xs font-mono" id="total-count">-</span>
+                    <span class="text-white text-sm font-medium">WhatsApp</span>
+                    <span class="text-zinc-600 text-[11px] font-mono" id="total-count">-</span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <div class="relative">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                    <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 text-sm"></i>
                     <input type="text" id="search-input" placeholder="Szukaj..."
-                        class="w-48 bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:border-zinc-700 placeholder:text-zinc-600">
+                        class="h-8 w-44 bg-[#0a0a0a] border border-[#222] rounded-md pl-8 pr-3 text-[13px] focus:outline-none focus:border-[#333] placeholder:text-zinc-700">
                 </div>
-                <button onclick="loadData()" class="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" title="Odswiez">
-                    <i class="ph ph-arrows-clockwise"></i>
+                <button onclick="loadData()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md transition-colors" title="Odswiez">
+                    <i class="ph ph-arrows-clockwise text-sm"></i>
                 </button>
             </div>
         </header>
 
         <!-- Stats Bar -->
-        <div class="px-4 md:px-6 py-2 border-b border-white/5 flex items-center gap-3 overflow-x-auto flex-shrink-0 bg-zinc-950/50">
-            <div class="stat-pill px-3 py-1 rounded-md flex items-center gap-2 text-xs whitespace-nowrap">
-                <span class="text-zinc-500">Konwersacji:</span>
-                <span class="text-white font-semibold font-mono" id="stat-conversations">-</span>
-            </div>
-            <div class="stat-pill px-3 py-1 rounded-md flex items-center gap-2 text-xs whitespace-nowrap">
-                <span class="text-zinc-500">Wiadomosci:</span>
-                <span class="text-[#25D366] font-semibold font-mono" id="stat-messages">-</span>
-            </div>
-            <div class="stat-pill px-3 py-1 rounded-md flex items-center gap-2 text-xs whitespace-nowrap">
-                <span class="text-zinc-500">Z leadem:</span>
-                <span class="text-emerald-400 font-semibold font-mono" id="stat-with-lead">-</span>
-            </div>
-            <div class="stat-pill px-3 py-1 rounded-md flex items-center gap-2 text-xs whitespace-nowrap">
-                <span class="text-zinc-500">Bez leada:</span>
-                <span class="text-amber-400 font-semibold font-mono" id="stat-without-lead">-</span>
+        <div class="h-10 px-4 md:px-6 border-b border-[#1a1a1a] flex items-center gap-4 flex-shrink-0 bg-black">
+            <div class="flex items-center gap-4 text-[11px]">
+                <span class="text-zinc-500">Konwersacji: <span class="text-white font-mono" id="stat-conversations">-</span></span>
+                <span class="text-zinc-600">|</span>
+                <span class="text-zinc-500">Z leadem: <span class="text-zinc-300 font-mono" id="stat-with-lead">-</span></span>
+                <span class="text-zinc-500">Bez leada: <span class="text-zinc-500 font-mono" id="stat-without-lead">-</span></span>
             </div>
             <div class="ml-auto flex items-center gap-1">
-                <button onclick="filterBy('all')" class="filter-btn px-2.5 py-1 text-xs rounded-md transition-colors text-zinc-400 hover:text-white hover:bg-white/5" data-filter="all">Wszystkie</button>
-                <button onclick="filterBy('with-lead')" class="filter-btn px-2.5 py-1 text-xs rounded-md transition-colors text-zinc-400 hover:text-white hover:bg-white/5" data-filter="with-lead">Z leadem</button>
-                <button onclick="filterBy('no-lead')" class="filter-btn px-2.5 py-1 text-xs rounded-md transition-colors text-zinc-400 hover:text-white hover:bg-white/5" data-filter="no-lead">Bez leada</button>
+                <button onclick="filterBy('all')" class="filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-filter="all">Wszystkie</button>
+                <button onclick="filterBy('with-lead')" class="filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-filter="with-lead">Z leadem</button>
+                <button onclick="filterBy('no-lead')" class="filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-filter="no-lead">Bez leada</button>
             </div>
         </div>
 
         <!-- Two Column Layout -->
         <div class="flex-1 flex min-h-0">
             <!-- Conversations List -->
-            <div class="w-[340px] border-r border-white/5 flex flex-col min-h-0 flex-shrink-0 bg-zinc-950">
+            <div class="w-[320px] border-r border-[#1a1a1a] flex flex-col min-h-0 flex-shrink-0 bg-black">
                 <div id="conversations-list" class="flex-1 overflow-y-auto">
                     <!-- Loading -->
                     <div id="loading-state" class="flex items-center justify-center h-full">
                         <div class="text-center">
-                            <div class="w-8 h-8 mx-auto mb-3 border-2 border-zinc-700 border-t-[#25D366] rounded-full animate-spin"></div>
-                            <p class="text-zinc-500 text-sm">Laduje konwersacje...</p>
+                            <div class="w-5 h-5 mx-auto mb-2 border-2 border-zinc-800 border-t-zinc-400 rounded-full animate-spin"></div>
+                            <p class="text-zinc-600 text-[11px]">Ladowanie...</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Chat Detail -->
-            <div id="chat-detail" class="flex-1 flex flex-col min-h-0 chat-bg">
+            <div id="chat-detail" class="flex-1 flex flex-col min-h-0 bg-black">
                 <div class="flex-1 flex items-center justify-center">
-                    <div class="text-center empty-state p-16 rounded-2xl">
-                        <i class="ph ph-chats-circle text-6xl text-zinc-700 mb-4"></i>
-                        <p class="text-zinc-400 text-base">Wybierz konwersacje</p>
-                        <p class="text-zinc-600 text-xs mt-2">aby zobaczyc historie wiadomosci</p>
+                    <div class="text-center">
+                        <i class="ph ph-chats-circle text-5xl text-zinc-800 mb-3"></i>
+                        <p class="text-zinc-500">Wybierz konwersacje</p>
                     </div>
                 </div>
             </div>
@@ -309,11 +271,7 @@
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="flex items-center justify-center h-full">
-                        <div class="text-center p-8">
-                            <i class="ph ph-chats-circle text-4xl text-zinc-700 mb-3"></i>
-                            <p class="text-zinc-500">Brak konwersacji</p>
-                            <p class="text-zinc-600 text-xs mt-1">Uruchom rozszerzenie Chrome aby synchronizowac</p>
-                        </div>
+                        <p class="text-zinc-600 text-[11px]">Brak konwersacji</p>
                     </div>
                 `;
                 return;
@@ -323,39 +281,31 @@
                 const isSelected = selectedPhone === conv.phone_number;
                 const hasLead = !!conv.lead_id;
                 const lastMsg = getLastMessage(conv.phone_number);
-                const lastMsgPreview = lastMsg ? truncate(lastMsg.message_text, 40) : '';
+                const lastMsgPreview = lastMsg ? truncate(lastMsg.message_text, 35) : '';
                 const lastMsgTime = conv.last_message_at ? formatTimeAgo(new Date(conv.last_message_at)) : '';
-                const isOutbound = lastMsg?.direction === 'outbound';
 
                 return `
-                    <div class="conversation-row p-3 cursor-pointer border-b border-white/[0.03] ${isSelected ? 'selected' : ''}"
+                    <div class="conversation-row px-3 py-2.5 cursor-pointer border-b border-[#111] ${isSelected ? 'selected' : ''}"
                          onclick="selectConversation('${conv.phone_number}')">
-                        <div class="flex items-start gap-3">
-                            <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#25D366]/20 to-[#128C7E]/20 flex items-center justify-center text-[#25D366] font-semibold flex-shrink-0 text-base">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center text-zinc-500 text-xs font-medium flex-shrink-0">
                                 ${(conv.contact_name || conv.phone_number || '?').charAt(0).toUpperCase()}
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="text-white font-medium truncate">${conv.contact_name || 'Nieznany'}</span>
-                                    <span class="text-[10px] text-zinc-500 flex-shrink-0">${lastMsgTime}</span>
+                                    <span class="text-[13px] text-zinc-200 truncate">${conv.contact_name || 'Nieznany'}</span>
+                                    <span class="text-[10px] text-zinc-600 flex-shrink-0">${lastMsgTime}</span>
                                 </div>
                                 <div class="flex items-center gap-2 mt-0.5">
                                     ${hasLead ? `
-                                        <span class="text-[10px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-400 rounded">
-                                            ${conv.lead_name || 'Lead'}
-                                        </span>
+                                        <span class="text-[10px] text-zinc-500">${conv.lead_name || 'Lead'}</span>
                                     ` : `
-                                        <span class="text-[10px] px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded">
-                                            Brak leada
-                                        </span>
+                                        <span class="text-[10px] text-zinc-700">Brak leada</span>
                                     `}
-                                    <span class="text-[10px] text-zinc-600">${conv.message_count} wiad.</span>
+                                    <span class="text-[10px] text-zinc-700">${conv.message_count}</span>
                                 </div>
                                 ${lastMsgPreview ? `
-                                    <div class="text-xs text-zinc-500 mt-1.5 truncate flex items-center gap-1">
-                                        ${isOutbound ? '<i class="ph ph-arrow-bend-up-right text-[10px] text-zinc-600"></i>' : ''}
-                                        ${escapeHtml(lastMsgPreview)}
-                                    </div>
+                                    <div class="text-[11px] text-zinc-600 mt-1 truncate">${escapeHtml(lastMsgPreview)}</div>
                                 ` : ''}
                             </div>
                         </div>
@@ -375,11 +325,8 @@
 
             // Pokaż loading
             container.innerHTML = `
-                <div class="flex-1 flex items-center justify-center">
-                    <div class="text-center">
-                        <div class="w-8 h-8 mx-auto mb-3 border-2 border-zinc-700 border-t-[#25D366] rounded-full animate-spin"></div>
-                        <p class="text-zinc-500 text-sm">Laduje wiadomosci...</p>
-                    </div>
+                <div class="flex-1 flex items-center justify-center bg-black">
+                    <div class="w-5 h-5 border-2 border-zinc-800 border-t-zinc-400 rounded-full animate-spin"></div>
                 </div>
             `;
 
@@ -399,51 +346,48 @@
 
             container.innerHTML = `
                 <!-- Chat Header -->
-                <div class="p-3 border-b border-white/5 flex items-center justify-between flex-shrink-0 bg-zinc-950/80 backdrop-blur-sm">
+                <div class="h-14 px-4 border-b border-[#1a1a1a] flex items-center justify-between flex-shrink-0 bg-black">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#25D366]/20 to-[#128C7E]/20 flex items-center justify-center text-[#25D366] font-semibold">
+                        <div class="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center text-zinc-400 text-sm font-medium">
                             ${(conv.contact_name || '?').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <div class="text-white font-medium">${conv.contact_name || 'Nieznany'}</div>
-                            <div class="text-xs text-zinc-500 font-mono">${phoneNumber}</div>
+                            <div class="text-white text-sm font-medium">${conv.contact_name || 'Nieznany'}</div>
+                            <div class="text-[11px] text-zinc-600 font-mono">${phoneNumber}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         ${hasLead ? `
-                            <a href="/lead?id=${conv.lead_id}" class="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs rounded-lg hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 border border-emerald-500/20">
-                                <i class="ph ph-user"></i>
-                                Otworz Lead
+                            <a href="/lead?id=${conv.lead_id}" class="h-8 px-3 bg-transparent text-zinc-400 text-xs rounded-md hover:bg-[#1a1a1a] hover:text-white transition-colors flex items-center gap-1.5 border border-[#333]">
+                                <i class="ph ph-user text-sm"></i>
+                                Lead
                             </a>
                         ` : `
                             <button onclick="createLead('${phoneNumber}', '${(conv.contact_name || '').replace(/'/g, "\\'")}', '${conv.lead_email || ''}')"
-                                class="px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1.5 border border-amber-500/20">
-                                <i class="ph ph-user-plus"></i>
+                                class="h-8 px-3 bg-transparent text-zinc-400 text-xs rounded-md hover:bg-[#1a1a1a] hover:text-white transition-colors flex items-center gap-1.5 border border-[#333]">
+                                <i class="ph ph-user-plus text-sm"></i>
                                 Utworz Lead
                             </button>
                         `}
-                        <a href="${whatsappLink}" target="_blank" class="px-3 py-1.5 bg-[#25D366]/10 text-[#25D366] text-xs rounded-lg hover:bg-[#25D366]/20 transition-colors flex items-center gap-1.5 border border-[#25D366]/20">
-                            <i class="ph ph-whatsapp-logo"></i>
-                            Otworz WhatsApp
+                        <a href="${whatsappLink}" target="_blank" class="h-8 px-3 bg-white text-black text-xs rounded-md hover:bg-zinc-200 transition-colors flex items-center gap-1.5 font-medium">
+                            <i class="ph ph-arrow-square-out text-sm"></i>
+                            WhatsApp
                         </a>
                     </div>
                 </div>
 
                 <!-- Messages Container -->
-                <div class="flex-1 overflow-y-auto p-4 min-h-0" id="messages-container">
+                <div class="flex-1 overflow-y-auto px-4 py-6 min-h-0 bg-black" id="messages-container">
                     ${messages.length === 0 ? `
                         <div class="flex items-center justify-center h-full">
-                            <div class="text-center">
-                                <i class="ph ph-chat-circle-dots text-4xl text-zinc-700 mb-2"></i>
-                                <p class="text-zinc-500">Brak wiadomosci</p>
-                            </div>
+                            <p class="text-zinc-600 text-sm">Brak wiadomosci</p>
                         </div>
                     ` : Object.entries(groupedMessages).map(([date, msgs]) => `
-                        <div class="mb-4">
-                            <div class="flex justify-center mb-3">
-                                <span class="text-[10px] text-zinc-500 bg-zinc-900/80 px-3 py-1 rounded-full">${date}</span>
+                        <div class="mb-6">
+                            <div class="flex justify-center mb-4">
+                                <span class="text-[11px] text-zinc-600 font-medium">${date}</span>
                             </div>
-                            <div class="space-y-2">
+                            <div class="space-y-3">
                                 ${msgs.map(msg => {
                                     const isOutbound = msg.direction === 'outbound';
                                     const time = new Date(msg.message_timestamp).toLocaleTimeString('pl-PL', {
@@ -451,13 +395,10 @@
                                     });
 
                                     return `
-                                        <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'} animate-in">
-                                            <div class="message-bubble ${isOutbound ? 'message-outbound' : 'message-inbound'} px-3 py-2">
-                                                <div class="text-[13px] text-white whitespace-pre-wrap break-words leading-relaxed">${escapeHtml(msg.message_text)}</div>
-                                                <div class="text-[10px] ${isOutbound ? 'text-emerald-400/50' : 'text-zinc-500'} mt-1 text-right flex items-center justify-end gap-1">
-                                                    ${time}
-                                                    ${isOutbound ? '<i class="ph ph-checks text-[#53bdeb]"></i>' : ''}
-                                                </div>
+                                        <div class="flex ${isOutbound ? 'justify-end' : 'justify-start'}">
+                                            <div class="max-w-[75%] ${isOutbound ? 'msg-out' : 'msg-in'} rounded-lg px-3 py-2">
+                                                <div class="text-[13px] text-zinc-100 whitespace-pre-wrap break-words leading-relaxed">${escapeHtml(msg.message_text)}</div>
+                                                <div class="text-[10px] text-zinc-600 mt-1.5 text-right">${time}</div>
                                             </div>
                                         </div>
                                     `;
@@ -468,14 +409,14 @@
                 </div>
 
                 <!-- Footer Info -->
-                <div class="p-2.5 border-t border-white/5 text-xs text-zinc-500 flex items-center justify-between flex-shrink-0 bg-zinc-950/80">
+                <div class="h-10 px-4 border-t border-[#1a1a1a] text-[11px] text-zinc-600 flex items-center justify-between flex-shrink-0 bg-black">
                     <div class="flex items-center gap-4">
-                        <span class="flex items-center gap-1"><i class="ph ph-arrow-down text-blue-400"></i> ${conv.inbound_count || 0}</span>
-                        <span class="flex items-center gap-1"><i class="ph ph-arrow-up text-emerald-400"></i> ${conv.outbound_count || 0}</span>
-                        <span class="text-zinc-600">Razem: ${conv.message_count || 0}</span>
+                        <span class="flex items-center gap-1"><i class="ph ph-arrow-down"></i> ${conv.inbound_count || 0}</span>
+                        <span class="flex items-center gap-1"><i class="ph ph-arrow-up"></i> ${conv.outbound_count || 0}</span>
+                        <span>Razem: ${conv.message_count || 0}</span>
                     </div>
                     <div>
-                        ${conv.lead_status ? `<span class="px-2 py-0.5 rounded text-[10px] ${getStatusColor(conv.lead_status)}">${conv.lead_status}</span>` : ''}
+                        ${conv.lead_status ? `<span class="text-zinc-500">${conv.lead_status}</span>` : ''}
                     </div>
                 </div>
             `;
@@ -535,11 +476,11 @@
 
             // Update button styles
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('bg-white/10', 'text-white');
-                btn.classList.add('text-zinc-400');
+                btn.classList.remove('bg-[#1a1a1a]', 'text-white');
+                btn.classList.add('text-zinc-500');
             });
-            document.querySelector(`[data-filter="${filter}"]`)?.classList.add('bg-white/10', 'text-white');
-            document.querySelector(`[data-filter="${filter}"]`)?.classList.remove('text-zinc-400');
+            document.querySelector(`[data-filter="${filter}"]`)?.classList.add('bg-[#1a1a1a]', 'text-white');
+            document.querySelector(`[data-filter="${filter}"]`)?.classList.remove('text-zinc-500');
 
             renderConversations();
         }
@@ -555,11 +496,9 @@
             const total = conversations.length;
             const withLead = conversations.filter(c => c.lead_id).length;
             const withoutLead = total - withLead;
-            const totalMessages = allMessages.length;
 
             document.getElementById('total-count').textContent = `(${total})`;
             document.getElementById('stat-conversations').textContent = total;
-            document.getElementById('stat-messages').textContent = totalMessages;
             document.getElementById('stat-with-lead').textContent = withLead;
             document.getElementById('stat-without-lead').textContent = withoutLead;
         }
