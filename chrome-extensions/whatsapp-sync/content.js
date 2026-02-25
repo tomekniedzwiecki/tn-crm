@@ -329,6 +329,26 @@
       }
     });
 
+    // Dodaj milisekundy do wiadomości z tym samym timestampem (zachowaj kolejność DOM)
+    const timestampCounts = {};
+    messages.forEach((msg, index) => {
+      const baseTs = msg.message_timestamp;
+      if (!timestampCounts[baseTs]) {
+        timestampCounts[baseTs] = 0;
+      }
+      const offset = timestampCounts[baseTs];
+      timestampCounts[baseTs]++;
+
+      // Jeśli są duplikaty, dodaj milisekundy bazując na kolejności
+      if (offset > 0 || messages.filter(m => m.message_timestamp === baseTs).length > 1) {
+        const date = new Date(baseTs);
+        date.setMilliseconds(offset * 100); // 0, 100, 200, ... ms
+        msg.message_timestamp = date.toISOString();
+        // Przelicz hash z nowym timestampem
+        msg.message_hash = simpleHash(`${msg.message_timestamp}|${msg.direction}|${msg.message_text}`);
+      }
+    });
+
     console.log('WhatsApp Sync: Parsed', messages.length, 'messages');
     return messages;
   }

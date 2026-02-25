@@ -101,6 +101,11 @@
                 <span class="text-zinc-500">Bez leada: <span class="text-zinc-500 font-mono" id="stat-without-lead">-</span></span>
             </div>
             <div class="ml-auto flex items-center gap-1">
+                <div class="flex items-center gap-1 mr-3 border-r border-[#222] pr-3">
+                    <button onclick="filterByUser('all')" class="user-filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors bg-[#1a1a1a] text-white" data-user="all">Wszyscy</button>
+                    <button onclick="filterByUser('tomek')" class="user-filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-user="tomek">Tomek</button>
+                    <button onclick="filterByUser('maciek')" class="user-filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-user="maciek">Maciek</button>
+                </div>
                 <button onclick="filterBy('all')" class="filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-filter="all">Wszystkie</button>
                 <button onclick="filterBy('with-lead')" class="filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-filter="with-lead">Z leadem</button>
                 <button onclick="filterBy('no-lead')" class="filter-btn h-7 px-2.5 text-[11px] rounded-md transition-colors text-zinc-500 hover:text-white hover:bg-[#1a1a1a]" data-filter="no-lead">Bez leada</button>
@@ -148,8 +153,10 @@
         let conversations = [];
         let allMessages = [];
         let currentFilter = 'all';
+        let currentUserFilter = 'all'; // all, tomek, maciek
         let searchQuery = '';
         let selectedPhone = null;
+        let selectedSyncedBy = null;
 
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
@@ -191,8 +198,8 @@
             updateStats();
 
             // Re-render selected chat if any
-            if (selectedPhone) {
-                await renderChatDetail(selectedPhone);
+            if (selectedPhone && selectedSyncedBy) {
+                await renderChatDetail(selectedPhone, selectedSyncedBy);
             }
         }
 
@@ -227,12 +234,17 @@
         }
 
         // Ładuj wiadomości dla konkretnej konwersacji (bez limitu)
-        async function loadMessagesForPhone(phoneNumber) {
-            const { data, error } = await supabaseClient
+        async function loadMessagesForPhone(phoneNumber, syncedBy) {
+            let query = supabaseClient
                 .from('whatsapp_messages')
                 .select('*')
-                .eq('phone_number', phoneNumber)
-                .order('message_timestamp', { ascending: true });
+                .eq('phone_number', phoneNumber);
+
+            if (syncedBy) {
+                query = query.eq('synced_by', syncedBy);
+            }
+
+            const { data, error } = await query.order('message_timestamp', { ascending: true });
 
             if (error) {
                 console.error('Error loading messages for phone:', error);
@@ -251,7 +263,12 @@
 
             let filtered = conversations;
 
-            // Apply filter
+            // Apply user filter
+            if (currentUserFilter !== 'all') {
+                filtered = filtered.filter(c => c.synced_by === currentUserFilter);
+            }
+
+            // Apply lead filter
             if (currentFilter === 'with-lead') {
                 filtered = filtered.filter(c => c.lead_id);
             } else if (currentFilter === 'no-lead') {
@@ -278,18 +295,20 @@
             }
 
             container.innerHTML = filtered.map(conv => {
-                const isSelected = selectedPhone === conv.phone_number;
+                const isSelected = selectedPhone === conv.phone_number && selectedSyncedBy === conv.synced_by;
                 const hasLead = !!conv.lead_id;
-                const lastMsg = getLastMessage(conv.phone_number);
+                const lastMsg = getLastMessage(conv.phone_number, conv.synced_by);
                 const lastMsgPreview = lastMsg ? truncate(lastMsg.message_text, 35) : '';
                 const lastMsgTime = conv.last_message_at ? formatTimeAgo(new Date(conv.last_message_at)) : '';
+                const syncedByLabel = conv.synced_by ? (conv.synced_by === 'tomek' ? 'T' : 'M') : '';
 
                 return `
                     <div class="conversation-row px-3 py-2.5 cursor-pointer border-b border-[#111] ${isSelected ? 'selected' : ''}"
-                         onclick="selectConversation('${conv.phone_number}')">
+                         onclick="selectConversation('${conv.phone_number}', '${conv.synced_by || ''}')">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center text-zinc-500 text-xs font-medium flex-shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center text-zinc-500 text-xs font-medium flex-shrink-0 relative">
                                 ${(conv.contact_name || conv.phone_number || '?').charAt(0).toUpperCase()}
+                                ${syncedByLabel ? `<span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-zinc-800 text-[9px] flex items-center justify-center text-zinc-400 border border-zinc-700">${syncedByLabel}</span>` : ''}
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2">
@@ -314,9 +333,9 @@
             }).join('');
         }
 
-        async function renderChatDetail(phoneNumber) {
+        async function renderChatDetail(phoneNumber, syncedBy) {
             const container = document.getElementById('chat-detail');
-            const conv = conversations.find(c => c.phone_number === phoneNumber);
+            const conv = conversations.find(c => c.phone_number === phoneNumber && c.synced_by === syncedBy);
 
             if (!conv) {
                 container.innerHTML = `<div class="flex-1 flex items-center justify-center text-zinc-500">Nie znaleziono konwersacji</div>`;
@@ -331,7 +350,7 @@
             `;
 
             // Pobierz wiadomości dla tej konwersacji (bez limitu)
-            const messages = await loadMessagesForPhone(phoneNumber);
+            const messages = await loadMessagesForPhone(phoneNumber, syncedBy);
 
             const hasLead = !!conv.lead_id;
             const whatsappLink = `https://web.whatsapp.com/send?phone=${phoneNumber}`;
@@ -430,10 +449,11 @@
             });
         }
 
-        async function selectConversation(phoneNumber) {
+        async function selectConversation(phoneNumber, syncedBy) {
             selectedPhone = phoneNumber;
+            selectedSyncedBy = syncedBy || null;
             renderConversations();
-            await renderChatDetail(phoneNumber);
+            await renderChatDetail(phoneNumber, syncedBy);
         }
 
         // ============================================
@@ -488,13 +508,35 @@
         // ============================================
         // HELPERS
         // ============================================
-        function getLastMessage(phoneNumber) {
-            return allMessages.find(m => m.phone_number === phoneNumber);
+        function getLastMessage(phoneNumber, syncedBy) {
+            return allMessages.find(m => m.phone_number === phoneNumber && (!syncedBy || m.synced_by === syncedBy));
+        }
+
+        function filterByUser(user) {
+            currentUserFilter = user;
+
+            // Update button styles
+            document.querySelectorAll('.user-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-[#1a1a1a]', 'text-white');
+                btn.classList.add('text-zinc-500');
+            });
+            document.querySelector(`[data-user="${user}"]`)?.classList.add('bg-[#1a1a1a]', 'text-white');
+            document.querySelector(`[data-user="${user}"]`)?.classList.remove('text-zinc-500');
+
+            renderConversations();
+            updateStats();
         }
 
         function updateStats() {
-            const total = conversations.length;
-            const withLead = conversations.filter(c => c.lead_id).length;
+            let filtered = conversations;
+
+            // Apply user filter to stats
+            if (currentUserFilter !== 'all') {
+                filtered = filtered.filter(c => c.synced_by === currentUserFilter);
+            }
+
+            const total = filtered.length;
+            const withLead = filtered.filter(c => c.lead_id).length;
             const withoutLead = total - withLead;
 
             document.getElementById('total-count').textContent = `(${total})`;
