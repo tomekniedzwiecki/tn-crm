@@ -352,7 +352,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // AI Reply Generation
+  console.log('btnAiSuggest element:', btnAiSuggest);
+  if (!btnAiSuggest) {
+    console.error('btnAiSuggest not found!');
+  }
   btnAiSuggest.addEventListener('click', async () => {
+    console.log('AI button clicked!', { currentPhoneNumber, currentContactName });
     if (!currentPhoneNumber) {
       aiError.textContent = 'Brak aktywnego czatu';
       aiError.classList.remove('hidden');
