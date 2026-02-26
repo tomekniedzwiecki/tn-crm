@@ -10,7 +10,7 @@
     SUPABASE_KEY: '', // Ustaw w popup
     SYNC_API_KEY: '', // Klucz API do whatsapp-sync
     SYNC_USER: 'tomek', // tomek lub maciek
-    AUTO_SYNC_INTERVAL: 30000, // 30 sekund
+    AUTO_SYNC_INTERVAL: 10000, // 10 sekund - szybszy auto-sync
     SYNC_ON_CHAT_CHANGE: true
   };
 
@@ -18,6 +18,7 @@
   let issyncing = false;
   let autoSyncEnabled = false;
   let lastSyncedHashes = new Set();
+  let lastAutoSyncPhone = null; // Track który czat był ostatnio syncowany
 
   // Sprawdź czy kontekst rozszerzenia jest aktywny
   function isExtensionContextValid() {
@@ -554,8 +555,18 @@
   function startAutoSync() {
     setInterval(async () => {
       await loadConfig();
-      if (autoSyncEnabled) {
-        performSync();
+      if (!autoSyncEnabled) return;
+
+      const currentPhone = getCurrentChatPhone();
+      if (!currentPhone) return; // Brak otwartego czatu
+
+      // Sync tylko widoczne wiadomości (bez scrollowania)
+      performSync();
+
+      // Log jeśli zmienił się czat
+      if (lastAutoSyncPhone !== currentPhone) {
+        console.log('WhatsApp Auto-Sync: Nowy czat -', currentPhone);
+        lastAutoSyncPhone = currentPhone;
       }
     }, CONFIG.AUTO_SYNC_INTERVAL);
   }
