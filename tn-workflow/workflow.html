@@ -919,6 +919,18 @@
 
                     <!-- TAB: Branding -->
                     <div id="tab-branding" class="workflow-panel hidden">
+                        <!-- AI Prompt Box -->
+                        <div class="mb-4 bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-sm text-violet-300">
+                                <i class="ph ph-robot"></i>
+                                <span>Prompt AI do brandingu</span>
+                            </div>
+                            <button onclick="copyPrompt('branding')" class="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-violet-500/10 transition-colors">
+                                <i class="ph ph-copy"></i>
+                                Kopiuj
+                            </button>
+                        </div>
+
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-lg font-semibold text-white flex items-center gap-2">
                                 <i class="ph ph-paint-brush text-pink-400"></i>
@@ -1100,6 +1112,18 @@
 
                     <!-- TAB: Strona (Sales Page) -->
                     <div id="tab-strona" class="workflow-panel hidden">
+                        <!-- AI Prompt Box -->
+                        <div class="mb-4 bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-sm text-violet-300">
+                                <i class="ph ph-robot"></i>
+                                <span>Prompt AI do landing page</span>
+                            </div>
+                            <button onclick="copyPrompt('landing')" class="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-violet-500/10 transition-colors">
+                                <i class="ph ph-copy"></i>
+                                Kopiuj
+                            </button>
+                        </div>
+
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-lg font-semibold text-white flex items-center gap-2">
                                 <i class="ph ph-globe text-blue-400"></i>
@@ -1183,6 +1207,18 @@
 
                     <!-- TAB: Raporty (Reports) -->
                     <div id="tab-raporty" class="workflow-panel hidden">
+                        <!-- AI Prompt Box -->
+                        <div class="mb-4 bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-sm text-violet-300">
+                                <i class="ph ph-robot"></i>
+                                <span>Prompt AI do raportu</span>
+                            </div>
+                            <button onclick="copyPrompt('report')" class="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-violet-500/10 transition-colors">
+                                <i class="ph ph-copy"></i>
+                                Kopiuj
+                            </button>
+                        </div>
+
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-lg font-semibold text-white flex items-center gap-2">
                                 <i class="ph ph-chart-bar text-green-400"></i>
@@ -1209,6 +1245,18 @@
 
                     <!-- TAB: Video (Etap 2) -->
                     <div id="tab-video" class="workflow-panel hidden">
+                        <!-- AI Prompt Box -->
+                        <div class="mb-4 bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-sm text-violet-300">
+                                <i class="ph ph-robot"></i>
+                                <span>Prompt AI do scenariuszy video</span>
+                            </div>
+                            <button onclick="copyPrompt('video')" class="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-violet-500/10 transition-colors">
+                                <i class="ph ph-copy"></i>
+                                Kopiuj
+                            </button>
+                        </div>
+
                         <!-- Header -->
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-lg font-semibold text-white flex items-center gap-2">
@@ -2680,14 +2728,50 @@
             }
         }
 
-        function showToast(message) {
+        async function copyPrompt(templateKey) {
+            if (!workflow) return;
+
+            // Fetch template from database
+            const { data: template, error } = await supabaseClient
+                .from('ai_prompt_templates')
+                .select('content')
+                .eq('template_key', templateKey)
+                .single();
+
+            if (error || !template) {
+                showToast('Nie znaleziono szablonu', 'error');
+                return;
+            }
+
+            // Replace variables
+            let content = template.content;
+            content = content.replace(/\{\{customer_name\}\}/g, workflow.customer_name || workflow.customer_company || 'Klient');
+            content = content.replace(/\{\{workflow_id\}\}/g, workflow.id);
+            content = content.replace(/\{\{product_name\}\}/g, workflow.offer_name || 'Produkt');
+
+            try {
+                await navigator.clipboard.writeText(content);
+                showToast('Prompt skopiowany');
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = content;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Prompt skopiowany');
+            }
+        }
+
+        function showToast(message, type = 'success') {
             const existing = document.getElementById('toast-notification');
             if (existing) existing.remove();
 
+            const icons = { success: 'ph-check-circle text-emerald-400', error: 'ph-x-circle text-red-400', warning: 'ph-warning text-amber-400' };
             const toast = document.createElement('div');
             toast.id = 'toast-notification';
             toast.className = 'fixed bottom-6 right-6 bg-zinc-800 border border-white/10 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-enter';
-            toast.innerHTML = `<i class="ph ph-check-circle text-emerald-400"></i> ${message}`;
+            toast.innerHTML = `<i class="ph ${icons[type] || icons.success}"></i> ${message}`;
             document.body.appendChild(toast);
 
             setTimeout(() => {

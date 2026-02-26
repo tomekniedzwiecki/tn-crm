@@ -99,6 +99,9 @@
                 <button onclick="switchSettingsTab('legal')" data-tab="legal" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
                     <i class="ph ph-scales"></i> Prawne
                 </button>
+                <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-robot"></i> Prompty AI
+                </button>
             </div>
 
             <div class="flex flex-col md:flex-row h-full">
@@ -133,6 +136,10 @@
                             <button onclick="switchSettingsTab('legal')" data-tab="legal" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
                                 <i class="ph ph-scales text-lg"></i>
                                 <span class="text-sm font-medium">Dokumenty prawne</span>
+                            </button>
+                            <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i class="ph ph-robot text-lg"></i>
+                                <span class="text-sm font-medium">Prompty AI</span>
                             </button>
                         </div>
                     </div>
@@ -574,6 +581,29 @@
                                 <!-- Disclaimer -->
                             </div>
 
+                            <!-- TAB: Prompty AI -->
+                            <div id="tab-prompts" class="settings-panel hidden space-y-6">
+                                <div>
+                                    <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Prompty AI</h1>
+                                    <p class="text-zinc-500 text-sm">Szablony promptów do generowania treści dla projektów</p>
+                                </div>
+
+                                <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
+                                    <i class="ph ph-info text-amber-400 text-lg mt-0.5"></i>
+                                    <div class="text-sm">
+                                        <p class="text-amber-200 font-medium mb-1">Dostępne zmienne</p>
+                                        <p class="text-zinc-400"><code class="bg-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono">{{customer_name}}</code> - imię i nazwisko klienta</p>
+                                        <p class="text-zinc-400"><code class="bg-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono">{{workflow_id}}</code> - UUID projektu</p>
+                                        <p class="text-zinc-400"><code class="bg-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono">{{product_name}}</code> - nazwa produktu</p>
+                                    </div>
+                                </div>
+
+                                <div id="prompts-list" class="space-y-4">
+                                    <!-- Templates loaded dynamically -->
+                                    <div class="text-zinc-500 text-sm text-center py-8">Ładowanie szablonów...</div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -913,9 +943,17 @@
             showToast('Ustawienie zapisane');
         });
 
-        function showToast(message) {
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type = 'success') {
+            const colors = { success: 'bg-emerald-500', error: 'bg-red-500', warning: 'bg-amber-500' };
             const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 right-4 bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg z-50 animate-enter';
+            toast.className = `fixed bottom-4 right-4 ${colors[type] || colors.success} text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg z-50 animate-enter`;
             toast.textContent = message;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
@@ -1873,6 +1911,7 @@
                     loadFakturowniaSettings();
                     loadTpaySettings();
                     loadLegalCompanyData();
+                    loadPromptTemplates();
                 }
 
                 // Check for tab URL parameter
@@ -1888,6 +1927,103 @@
             }
         }
         init();
+
+        // =============================================
+        // AI PROMPT TEMPLATES
+        // =============================================
+
+        let promptTemplates = [];
+
+        async function loadPromptTemplates() {
+            const container = document.getElementById('prompts-list');
+            if (!container) return;
+
+            const { data, error } = await supabaseClient
+                .from('ai_prompt_templates')
+                .select('*')
+                .order('sort_order');
+
+            if (error) {
+                console.error('Error loading templates:', error);
+                container.innerHTML = '<div class="text-red-400 text-sm text-center py-8">Błąd ładowania szablonów</div>';
+                return;
+            }
+
+            promptTemplates = data || [];
+            renderPromptTemplates();
+        }
+
+        function renderPromptTemplates() {
+            const container = document.getElementById('prompts-list');
+            if (!container || !promptTemplates.length) {
+                container.innerHTML = '<div class="text-zinc-500 text-sm text-center py-8">Brak szablonów</div>';
+                return;
+            }
+
+            const icons = {
+                report: 'ph-chart-bar',
+                branding: 'ph-paint-brush',
+                landing: 'ph-browser',
+                video: 'ph-video-camera'
+            };
+
+            container.innerHTML = promptTemplates.map(t => `
+                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                <i class="ph ${icons[t.template_key] || 'ph-file-text'} text-violet-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-medium">${escapeHtml(t.name)}</h3>
+                                <p class="text-zinc-500 text-xs">${escapeHtml(t.description || '')}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-mono text-zinc-600 bg-zinc-800 px-2 py-1 rounded">${t.template_key}</span>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Treść szablonu</label>
+                        <textarea id="prompt-${t.template_key}" rows="8"
+                            class="w-full text-sm text-white bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg outline-none focus:border-zinc-600 font-mono resize-y"
+                            placeholder="Treść prompta...">${escapeHtml(t.content)}</textarea>
+                    </div>
+                    <div class="flex justify-end mt-3">
+                        <button onclick="savePromptTemplate('${t.template_key}')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                            <i class="ph ph-floppy-disk"></i>
+                            Zapisz
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function savePromptTemplate(key) {
+            const textarea = document.getElementById(`prompt-${key}`);
+            if (!textarea) return;
+
+            const content = textarea.value.trim();
+            if (!content) {
+                showToast('Treść szablonu nie może być pusta', 'error');
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('ai_prompt_templates')
+                .update({ content })
+                .eq('template_key', key);
+
+            if (error) {
+                console.error('Error saving template:', error);
+                showToast('Błąd zapisywania szablonu', 'error');
+                return;
+            }
+
+            showToast('Szablon zapisany');
+
+            // Update local cache
+            const template = promptTemplates.find(t => t.template_key === key);
+            if (template) template.content = content;
+        }
 
         // Register service worker
         if ('serviceWorker' in navigator) {
