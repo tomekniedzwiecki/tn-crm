@@ -349,6 +349,11 @@
                             Strona
                             <span id="nav-check-strona" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('podsumowanie')" data-tab="podsumowanie" class="workflow-sidebar-btn">
+                            <i class="ph ph-check-square"></i>
+                            Podsumowanie
+                            <span id="nav-check-podsumowanie" class="ml-auto hidden"><i id="nav-check-podsumowanie-icon" class="ph-fill ph-check-circle text-sm"></i></span>
+                        </button>
                     </div>
                 </div>
 
@@ -359,10 +364,20 @@
                         <i id="stage-2-chevron" class="ph ph-caret-down text-zinc-600 text-xs transition-transform"></i>
                     </button>
                     <div id="stage-2-content">
-                        <button onclick="switchTab('video')" data-tab="video" class="workflow-sidebar-btn">
-                            <i class="ph ph-video-camera"></i>
-                            Video
-                            <span id="nav-check-video" class="ml-auto hidden"><i id="nav-check-video-icon" class="ph-fill ph-check-circle text-sm"></i></span>
+                        <button onclick="switchTab('scenariusze')" data-tab="scenariusze" class="workflow-sidebar-btn">
+                            <i class="ph ph-film-script"></i>
+                            Scenariusze
+                            <span id="nav-check-scenariusze" class="ml-auto hidden"><i id="nav-check-scenariusze-icon" class="ph-fill ph-check-circle text-sm"></i></span>
+                        </button>
+                        <button onclick="switchTab('profile')" data-tab="profile" class="workflow-sidebar-btn">
+                            <i class="ph ph-user-circle"></i>
+                            Profile
+                            <span id="nav-check-profile" class="ml-auto hidden"><i id="nav-check-profile-icon" class="ph-fill ph-check-circle text-sm"></i></span>
+                        </button>
+                        <button onclick="switchTab('nagrania')" data-tab="nagrania" class="workflow-sidebar-btn">
+                            <i class="ph ph-video"></i>
+                            Nagrania
+                            <span id="nav-check-nagrania" class="ml-auto"><span id="nav-check-nagrania-count" class="text-[10px] text-zinc-500"></span></span>
                         </button>
                     </div>
                 </div>
@@ -1170,6 +1185,49 @@
                         </div>
                     </div><!-- /tab-strona -->
 
+                    <!-- TAB: Podsumowanie Etapu 1 -->
+                    <div id="tab-podsumowanie" class="workflow-panel hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-check-square text-emerald-400"></i>
+                                Podsumowanie Etapu 1
+                            </h3>
+                        </div>
+
+                        <!-- Status elementów etapu 1 -->
+                        <div class="mb-8">
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Status elementów</h4>
+                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
+                                <div id="podsumowanie-checklist" class="space-y-3">
+                                    <!-- Will be populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Akceptacja etapu -->
+                        <div class="mb-8">
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Akceptacja etapu</h4>
+                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
+                                <div id="podsumowanie-not-accepted" class="flex items-center gap-3 text-amber-400">
+                                    <i class="ph ph-hourglass text-lg"></i>
+                                    <div>
+                                        <div class="text-[13px] font-medium">Oczekuje na akceptację klienta</div>
+                                        <div class="text-[11px] text-[#666] mt-0.5">Klient musi zaakceptować etap 1 w swoim panelu</div>
+                                    </div>
+                                </div>
+                                <div id="podsumowanie-accepted" class="hidden">
+                                    <div class="flex items-center gap-3 text-emerald-400">
+                                        <i class="ph-fill ph-check-circle text-lg"></i>
+                                        <div>
+                                            <div class="text-[13px] font-medium">Etap 1 zaakceptowany</div>
+                                            <div class="text-[11px] text-[#666] mt-0.5">Data akceptacji: <span id="podsumowanie-accepted-date" class="text-emerald-400/80">-</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- /tab-podsumowanie -->
+
                     <!-- TAB: Produkty (Products & Deliveries) -->
                     <div id="tab-produkty" class="workflow-panel hidden">
                         <div class="flex items-center justify-between mb-6">
@@ -1218,29 +1276,21 @@
                         </div>
                     </div><!-- /tab-raporty -->
 
-                    <!-- TAB: Video (Etap 2) -->
-                    <div id="tab-video" class="workflow-panel hidden">
+                    <!-- TAB: Scenariusze (Etap 2) -->
+                    <div id="tab-scenariusze" class="workflow-panel hidden">
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-lg font-semibold text-white flex items-center gap-2">
-                                <i class="ph ph-video-camera text-cyan-400"></i>
-                                Video
+                                <i class="ph ph-film-script text-cyan-400"></i>
+                                Scenariusze
                             </h3>
-                            <div class="flex items-center gap-3">
-                                <button onclick="copyAIPrompt('video')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt AI">
-                                    <i class="ph ph-robot"></i> Prompt
-                                </button>
-                                <span id="video-delivered-badge" class="hidden text-xs text-amber-400 flex items-center gap-1">
-                                    <i class="ph ph-clock"></i> Oczekuje na klienta
-                                </span>
-                                <span id="video-completed-badge" class="hidden text-xs text-emerald-400 flex items-center gap-1">
-                                    <i class="ph ph-check-circle"></i> Materiały otrzymane
-                                </span>
-                            </div>
+                            <button onclick="copyAIPrompt('video')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt AI">
+                                <i class="ph ph-robot"></i> Prompt
+                            </button>
                         </div>
 
-                        <!-- 1. Widoczność dla klienta -->
+                        <!-- Widoczność dla klienta -->
                         <div class="mb-8">
-                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Udostępnienie</h4>
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Udostępnienie etapu 2</h4>
                             <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
                                 <div class="flex items-center justify-between">
                                     <div>
@@ -1258,43 +1308,7 @@
                             </div>
                         </div>
 
-                        <!-- 2. Status klienta -->
-                        <div class="mb-8">
-                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Status klienta</h4>
-                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
-                                <div id="video-client-status" class="flex items-center gap-2 mb-3">
-                                    <span class="w-2 h-2 rounded-full bg-[#666]" id="video-status-dot"></span>
-                                    <span class="text-[13px] text-[#888]" id="video-status-text">Oczekuje na aktywację</span>
-                                </div>
-                                <div id="video-accepted-info" class="hidden text-[12px] text-[#666]">
-                                    <i class="ph ph-check-circle mr-1 text-emerald-400"></i> Etap zaakceptowany: <span id="video-accepted-date" class="text-[#888]">-</span>
-                                </div>
-
-                                <!-- Postęp kroków (widoczny po akceptacji) -->
-                                <div id="video-steps-progress" class="hidden mt-4 pt-4 border-t border-[#222]">
-                                    <div class="text-[12px] text-[#666] mb-3">Postęp kroków</div>
-                                    <div class="space-y-2">
-                                        <div class="flex items-center gap-2">
-                                            <i id="video-step-intro-icon" class="ph-fill ph-check-circle text-emerald-400 text-sm"></i>
-                                            <span class="text-[12px] text-[#888]">Wprowadzenie</span>
-                                            <span class="text-[11px] text-emerald-400/60 ml-auto">Obejrzane</span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <i id="video-step-profiles-icon" class="ph ph-circle text-[#444] text-sm"></i>
-                                            <span class="text-[12px] text-[#888]">Profile</span>
-                                            <span id="video-step-profiles-status" class="text-[11px] text-[#555] ml-auto">0/3</span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <i id="video-step-recordings-icon" class="ph ph-circle text-[#444] text-sm"></i>
-                                            <span class="text-[12px] text-[#888]">Nagrania</span>
-                                            <span id="video-step-recordings-status" class="text-[11px] text-[#555] ml-auto">Brak</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 3. Scenariusze video -->
+                        <!-- Scenariusze video -->
                         <div class="mb-8">
                             <button onclick="toggleVideoScenarios()" class="flex items-center justify-between w-full mb-4 group cursor-pointer">
                                 <div class="flex items-center gap-2">
@@ -1312,10 +1326,20 @@
                                 <p class="text-zinc-600 text-xs mt-1">Wygeneruj scenariusze przez Claude</p>
                             </div>
                         </div>
+                    </div><!-- /tab-scenariusze -->
 
-                        <!-- 4. Profile społecznościowe klienta -->
+                    <!-- TAB: Profile (Etap 2) -->
+                    <div id="tab-profile" class="workflow-panel hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-user-circle text-cyan-400"></i>
+                                Profile społecznościowe
+                            </h3>
+                        </div>
+
+                        <!-- Profile społecznościowe klienta -->
                         <div class="mb-8">
-                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Profile społecznościowe klienta</h4>
+                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Profile klienta</h4>
                             <div id="video-client-profiles" class="grid grid-cols-3 gap-3">
                                 <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4 text-center">
                                     <i class="ph ph-tiktok-logo text-2xl text-[#444] mb-2"></i>
@@ -1331,10 +1355,27 @@
                                 </div>
                             </div>
                         </div>
+                    </div><!-- /tab-profile -->
 
-                        <!-- 5. Nagrania od klienta -->
+                    <!-- TAB: Nagrania (Etap 2) -->
+                    <div id="tab-nagrania" class="workflow-panel hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-video text-cyan-400"></i>
+                                Nagrania od klienta
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <span id="video-delivered-badge" class="hidden text-xs text-amber-400 flex items-center gap-1">
+                                    <i class="ph ph-clock"></i> Oczekuje na klienta
+                                </span>
+                                <span id="video-completed-badge" class="hidden text-xs text-emerald-400 flex items-center gap-1">
+                                    <i class="ph ph-check-circle"></i> Materiały otrzymane
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Nagrania od klienta -->
                         <div class="mb-8">
-                            <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Nagrania od klienta</h4>
                             <div id="video-client-links" class="space-y-2">
                                 <!-- Video links will be loaded here -->
                             </div>
@@ -1345,7 +1386,7 @@
                             </div>
                         </div>
 
-                        <!-- 6. Finalizacja -->
+                        <!-- Finalizacja -->
                         <div>
                             <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Finalizacja</h4>
                             <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
@@ -1362,8 +1403,7 @@
                                 </div>
                             </div>
                         </div>
-
-                    </div><!-- /tab-video -->
+                    </div><!-- /tab-nagrania -->
 
                     <!-- TAB: TakeDrop Account (Etap 3) -->
                     <div id="tab-takedrop" class="workflow-panel hidden">
@@ -2917,29 +2957,58 @@
                 toggle('nav-check-raporty', hasPublished);
                 toggle('nav-check-branding', !!workflow.branding_shared_at);
 
-                // Video check - yellow when active, green when client added links
-                const navCheckVideo = document.getElementById('nav-check-video');
-                const navCheckVideoIcon = document.getElementById('nav-check-video-icon');
+                // Store video data for auto-collapse
                 const videoData = videoRes.data;
-
-                // Store for auto-collapse
                 if (!videoAdminData && videoData) {
                     videoAdminData = videoData;
                 }
 
-                if (videoData) {
-                    const videoLinks = videoData.video_links || [];
-                    if (videoLinks.length > 0) {
-                        toggle('nav-check-video', true);
-                        if (navCheckVideoIcon) navCheckVideoIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
-                    } else if (videoData.is_active) {
-                        toggle('nav-check-video', true);
-                        if (navCheckVideoIcon) navCheckVideoIcon.className = 'ph-fill ph-check-circle text-amber-400 text-sm';
-                    } else {
-                        toggle('nav-check-video', false);
-                    }
+                // Podsumowanie check - green when stage accepted
+                const navCheckPodsumowanie = document.getElementById('nav-check-podsumowanie');
+                const navCheckPodsumowanieIcon = document.getElementById('nav-check-podsumowanie-icon');
+                if (videoData?.stage_accepted) {
+                    toggle('nav-check-podsumowanie', true);
+                    if (navCheckPodsumowanieIcon) navCheckPodsumowanieIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
                 } else {
-                    toggle('nav-check-video', false);
+                    toggle('nav-check-podsumowanie', false);
+                }
+
+                // Scenariusze check - green when scenarios exist
+                const scenarios = videoData?.video_scenarios || [];
+                const navCheckScenariusze = document.getElementById('nav-check-scenariusze');
+                const navCheckScenariuszeIcon = document.getElementById('nav-check-scenariusze-icon');
+                if (scenarios.length > 0) {
+                    toggle('nav-check-scenariusze', true);
+                    if (navCheckScenariuszeIcon) navCheckScenariuszeIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+                } else {
+                    toggle('nav-check-scenariusze', false);
+                }
+
+                // Profile check - green when all 3, amber when partial
+                const profiles = videoData?.social_profiles || {};
+                const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+                const navCheckProfile = document.getElementById('nav-check-profile');
+                const navCheckProfileIcon = document.getElementById('nav-check-profile-icon');
+                if (profileCount === 3) {
+                    toggle('nav-check-profile', true);
+                    if (navCheckProfileIcon) navCheckProfileIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+                } else if (profileCount > 0) {
+                    toggle('nav-check-profile', true);
+                    if (navCheckProfileIcon) navCheckProfileIcon.className = 'ph-fill ph-warning-circle text-amber-400 text-sm';
+                } else {
+                    toggle('nav-check-profile', false);
+                }
+
+                // Nagrania - show count instead of checkmark
+                const videoLinks = videoData?.video_links || [];
+                const navCheckNagraniaCount = document.getElementById('nav-check-nagrania-count');
+                if (navCheckNagraniaCount) {
+                    if (videoLinks.length > 0) {
+                        navCheckNagraniaCount.textContent = videoLinks.length;
+                        navCheckNagraniaCount.className = 'text-[10px] text-emerald-400 font-medium';
+                    } else {
+                        navCheckNagraniaCount.textContent = '';
+                    }
                 }
 
                 // Auto-collapse previous stages if later stages are active
@@ -3798,8 +3867,8 @@
         // =============================================
         function switchTab(tabName) {
             // Expand stage section if tab belongs to a collapsed stage
-            const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona'];
-            const stage2Tabs = ['video'];
+            const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona', 'podsumowanie'];
+            const stage2Tabs = ['scenariusze', 'profile', 'nagrania'];
             const stage3Tabs = ['takedrop'];
 
             if (stage1Tabs.includes(tabName)) {
@@ -3838,8 +3907,17 @@
                 case 'raporty':
                     loadReports();
                     break;
-                case 'video':
-                    loadVideoAdmin();
+                case 'podsumowanie':
+                    loadPodsumowanie();
+                    break;
+                case 'scenariusze':
+                    loadScenariusze();
+                    break;
+                case 'profile':
+                    loadProfile();
+                    break;
+                case 'nagrania':
+                    loadNagrania();
                     break;
                 case 'takedrop':
                     loadTakeDrop();
@@ -3908,9 +3986,313 @@
         }
 
         // =============================================
-        // VIDEO (ETAP 2)
+        // PODSUMOWANIE (ETAP 1)
         // =============================================
 
+        async function loadPodsumowanie() {
+            // Load video data to check stage acceptance
+            if (!videoAdminData) {
+                const { data } = await supabaseClient
+                    .from('workflow_video')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                videoAdminData = data;
+            }
+            renderPodsumowanie();
+        }
+
+        function renderPodsumowanie() {
+            const checklist = document.getElementById('podsumowanie-checklist');
+            const notAccepted = document.getElementById('podsumowanie-not-accepted');
+            const accepted = document.getElementById('podsumowanie-accepted');
+            const acceptedDate = document.getElementById('podsumowanie-accepted-date');
+            const navCheck = document.getElementById('nav-check-podsumowanie');
+            const navCheckIcon = document.getElementById('nav-check-podsumowanie-icon');
+
+            if (!checklist) return;
+
+            // Build checklist
+            const items = [];
+
+            // Contract (skip for Starter)
+            const isStarter = workflow.offer_name?.toLowerCase().includes('starter');
+            if (!isStarter) {
+                const done = workflow.contract_status === 'signed';
+                items.push({
+                    label: 'Umowa',
+                    done: done,
+                    icon: done ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-circle text-zinc-600'
+                });
+            }
+
+            // Product
+            const productDone = !!workflow.selected_product_id;
+            items.push({
+                label: 'Produkt',
+                done: productDone,
+                icon: productDone ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-circle text-zinc-600'
+            });
+
+            // Reports (check if any published)
+            const reportsDone = !!workflow.branding_shared_at; // Using branding as proxy for now
+            items.push({
+                label: 'Raporty',
+                done: reportsDone,
+                icon: reportsDone ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-circle text-zinc-600'
+            });
+
+            // Branding
+            const brandingDone = !!workflow.branding_shared_at;
+            items.push({
+                label: 'Branding',
+                done: brandingDone,
+                icon: brandingDone ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-circle text-zinc-600'
+            });
+
+            // Sales page
+            const stronaDone = !!workflow.sales_page_shared_at;
+            items.push({
+                label: 'Strona',
+                done: stronaDone,
+                icon: stronaDone ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-circle text-zinc-600'
+            });
+
+            checklist.innerHTML = items.map(item => `
+                <div class="flex items-center gap-3">
+                    <i class="${item.icon} text-sm"></i>
+                    <span class="text-[13px] ${item.done ? 'text-white' : 'text-zinc-500'}">${item.label}</span>
+                </div>
+            `).join('');
+
+            // Check stage acceptance
+            const isAccepted = videoAdminData?.stage_accepted;
+
+            if (isAccepted) {
+                notAccepted.classList.add('hidden');
+                accepted.classList.remove('hidden');
+                acceptedDate.textContent = videoAdminData.stage_accepted_at
+                    ? new Date(videoAdminData.stage_accepted_at).toLocaleDateString('pl-PL')
+                    : '-';
+
+                // Show green check in nav
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+            } else {
+                notAccepted.classList.remove('hidden');
+                accepted.classList.add('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+            }
+        }
+
+        // =============================================
+        // SCENARIUSZE, PROFILE, NAGRANIA (ETAP 2)
+        // =============================================
+
+        async function loadScenariusze() {
+            if (!videoAdminData) {
+                const { data } = await supabaseClient
+                    .from('workflow_video')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                videoAdminData = data;
+            }
+            renderScenariusze();
+        }
+
+        function renderScenariusze() {
+            const activeCheckbox = document.getElementById('video-active');
+            const activatedInfo = document.getElementById('video-activated-info');
+            const activatedDate = document.getElementById('video-activated-date');
+
+            if (!activeCheckbox) return;
+
+            if (videoAdminData) {
+                activeCheckbox.checked = videoAdminData.is_active || false;
+
+                // Show activated info
+                if (videoAdminData.is_active && videoAdminData.activated_at) {
+                    activatedInfo.classList.remove('hidden');
+                    activatedDate.textContent = new Date(videoAdminData.activated_at).toLocaleDateString('pl-PL');
+                } else {
+                    activatedInfo.classList.add('hidden');
+                }
+            }
+
+            // Render scenarios
+            renderVideoScenariosAdmin();
+
+            // Update nav check
+            updateScenariuszeNav();
+        }
+
+        function updateScenariuszeNav() {
+            const navCheck = document.getElementById('nav-check-scenariusze');
+            const navCheckIcon = document.getElementById('nav-check-scenariusze-icon');
+            const scenarios = videoAdminData?.video_scenarios || [];
+
+            if (scenarios.length > 0) {
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+            } else {
+                if (navCheck) navCheck.classList.add('hidden');
+            }
+        }
+
+        async function loadProfile() {
+            if (!videoAdminData) {
+                const { data } = await supabaseClient
+                    .from('workflow_video')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                videoAdminData = data;
+            }
+            renderProfile();
+        }
+
+        function renderProfile() {
+            const profiles = videoAdminData?.social_profiles || {};
+
+            const tiktok = document.getElementById('video-client-tiktok');
+            const youtube = document.getElementById('video-client-youtube');
+            const instagram = document.getElementById('video-client-instagram');
+
+            if (tiktok) {
+                if (profiles.tiktok) {
+                    tiktok.innerHTML = `<a href="${escapeHtml(profiles.tiktok)}" target="_blank" class="text-pink-400 hover:underline">${escapeHtml(profiles.tiktok.replace(/^https?:\/\//, '').slice(0, 20))}...</a>`;
+                } else {
+                    tiktok.textContent = 'Nie podano';
+                }
+            }
+            if (youtube) {
+                if (profiles.youtube) {
+                    youtube.innerHTML = `<a href="${escapeHtml(profiles.youtube)}" target="_blank" class="text-red-400 hover:underline">${escapeHtml(profiles.youtube.replace(/^https?:\/\//, '').slice(0, 20))}...</a>`;
+                } else {
+                    youtube.textContent = 'Nie podano';
+                }
+            }
+            if (instagram) {
+                if (profiles.instagram) {
+                    instagram.innerHTML = `<a href="${escapeHtml(profiles.instagram)}" target="_blank" class="text-purple-400 hover:underline">${escapeHtml(profiles.instagram.replace(/^https?:\/\//, '').slice(0, 20))}...</a>`;
+                } else {
+                    instagram.textContent = 'Nie podano';
+                }
+            }
+
+            // Update nav check
+            updateProfileNav();
+        }
+
+        function updateProfileNav() {
+            const navCheck = document.getElementById('nav-check-profile');
+            const navCheckIcon = document.getElementById('nav-check-profile-icon');
+            const profiles = videoAdminData?.social_profiles || {};
+            const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+
+            if (profileCount === 3) {
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
+            } else if (profileCount > 0) {
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-warning-circle text-amber-400 text-sm';
+            } else {
+                if (navCheck) navCheck.classList.add('hidden');
+            }
+        }
+
+        async function loadNagrania() {
+            if (!videoAdminData) {
+                const { data } = await supabaseClient
+                    .from('workflow_video')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                videoAdminData = data;
+            }
+            renderNagrania();
+        }
+
+        function renderNagrania() {
+            const links = videoAdminData?.video_links || [];
+            const linksContainer = document.getElementById('video-client-links');
+            const linksEmpty = document.getElementById('video-client-links-empty');
+            const deliveredBadge = document.getElementById('video-delivered-badge');
+            const completedBadge = document.getElementById('video-completed-badge');
+            const sharedCheckbox = document.getElementById('video-shared-checkbox');
+            const sharedInfo = document.getElementById('video-shared-info');
+            const sharedDate = document.getElementById('video-shared-date');
+
+            if (!linksContainer || !linksEmpty) return;
+
+            // Render links
+            if (links.length === 0) {
+                linksContainer.classList.add('hidden');
+                linksEmpty.classList.remove('hidden');
+            } else {
+                linksContainer.classList.remove('hidden');
+                linksEmpty.classList.add('hidden');
+
+                linksContainer.innerHTML = links.map(link => `
+                    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener"
+                        class="flex items-center gap-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 hover:border-emerald-500/30 transition-colors group">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <i class="ph ph-video text-emerald-400"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[13px] text-white truncate">${escapeHtml(link.title || 'Bez tytułu')}</div>
+                            <div class="text-[11px] text-[#555] truncate">${escapeHtml(link.url)}</div>
+                        </div>
+                        <i class="ph ph-arrow-square-out text-[#555] group-hover:text-emerald-400 transition-colors"></i>
+                    </a>
+                `).join('');
+            }
+
+            // Header badges
+            if (deliveredBadge && completedBadge) {
+                if (links.length > 0 || videoAdminData?.video_shared) {
+                    deliveredBadge.classList.add('hidden');
+                    completedBadge.classList.remove('hidden');
+                } else if (videoAdminData?.is_active) {
+                    deliveredBadge.classList.remove('hidden');
+                    completedBadge.classList.add('hidden');
+                } else {
+                    deliveredBadge.classList.add('hidden');
+                    completedBadge.classList.add('hidden');
+                }
+            }
+
+            // Video shared checkbox
+            if (sharedCheckbox && videoAdminData) {
+                sharedCheckbox.checked = videoAdminData.video_shared || false;
+                if (videoAdminData.video_shared && videoAdminData.video_shared_at) {
+                    sharedInfo.classList.remove('hidden');
+                    sharedDate.textContent = new Date(videoAdminData.video_shared_at).toLocaleDateString('pl-PL');
+                } else {
+                    sharedInfo.classList.add('hidden');
+                }
+            }
+
+            // Update nav - show count instead of checkmark
+            updateNagraniaNav();
+        }
+
+        function updateNagraniaNav() {
+            const navCount = document.getElementById('nav-check-nagrania-count');
+            const links = videoAdminData?.video_links || [];
+
+            if (navCount) {
+                if (links.length > 0) {
+                    navCount.textContent = links.length;
+                    navCount.className = 'text-[10px] text-emerald-400 font-medium';
+                } else {
+                    navCount.textContent = '';
+                }
+            }
+        }
+
+        // Keep old function for backwards compatibility
         async function loadVideoAdmin() {
             try {
                 const { data, error } = await supabaseClient
