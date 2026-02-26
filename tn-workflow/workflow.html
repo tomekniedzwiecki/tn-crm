@@ -1970,6 +1970,29 @@
         </button>
     </div>
 
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-sm">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div id="alert-modal-icon" class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <i class="ph ph-warning text-amber-400"></i>
+                    </div>
+                    <span id="alert-modal-title" class="font-medium text-white">Uwaga</span>
+                </div>
+                <button onclick="closeAlertModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-5">
+                <p id="alert-modal-message" class="text-zinc-300 text-sm"></p>
+            </div>
+            <div class="px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <button onclick="closeAlertModal()" class="w-full bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function openImageLightbox(url) {
             document.getElementById('lightbox-img').src = url;
@@ -3519,6 +3542,24 @@
             }, 3000);
         }
 
+        // Alert Modal
+        function showModal(title, message, type = 'warning') {
+            const iconEl = document.getElementById('alert-modal-icon');
+            const icons = { warning: 'ph-warning', error: 'ph-x-circle', info: 'ph-info', success: 'ph-check-circle' };
+            const colors = { warning: 'bg-amber-500/10 text-amber-400', error: 'bg-red-500/10 text-red-400', info: 'bg-blue-500/10 text-blue-400', success: 'bg-emerald-500/10 text-emerald-400' };
+
+            iconEl.className = `w-8 h-8 rounded-lg flex items-center justify-center ${colors[type] || colors.warning}`;
+            iconEl.innerHTML = `<i class="ph ${icons[type] || icons.warning}"></i>`;
+
+            document.getElementById('alert-modal-title').textContent = title;
+            document.getElementById('alert-modal-message').textContent = message;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
         // Edit Milestone Modal
         function openEditMilestoneModal(milestoneId) {
             const milestone = milestones.find(m => m.id === milestoneId);
@@ -4216,7 +4257,18 @@
         }
 
         async function toggleVideoActive() {
-            const isActive = document.getElementById('video-active').checked;
+            const checkbox = document.getElementById('video-active');
+            const isActive = checkbox.checked;
+
+            // Walidacja: nie można włączyć bez scenariuszy
+            if (isActive) {
+                const scenarios = videoAdminData?.video_scenarios || [];
+                if (scenarios.length === 0) {
+                    checkbox.checked = false;
+                    showModal('Brak scenariuszy', 'Dodaj najpierw scenariusze video, aby włączyć tę zakładkę dla klienta.', 'warning');
+                    return;
+                }
+            }
 
             // Store previous state BEFORE any updates
             const wasActive = videoAdminData?.is_active || false;
