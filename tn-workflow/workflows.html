@@ -214,6 +214,19 @@
                             class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
                             <i class="ph ph-video"></i> Nagrania
                         </button>
+                        <span class="text-zinc-700 mx-1">|</span>
+                        <button onclick="setOwnerFilter('all')" data-owner="all"
+                            class="owner-filter-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer bg-cyan-500/20 text-cyan-400 border-cyan-500/30 flex items-center gap-1">
+                            Wszystkie
+                        </button>
+                        <button onclick="setOwnerFilter('mine')" data-owner="mine"
+                            class="owner-filter-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-wrench"></i> Moje
+                        </button>
+                        <button onclick="setOwnerFilter('client')" data-owner="client"
+                            class="owner-filter-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-user"></i> Klienta
+                        </button>
                     </div>
                 </div>
 
@@ -330,6 +343,7 @@
         let stagesInitialized = false;
         let workflowLogos = {};
         let selectedStatusStages = new Set(); // For filtering by missing status stages
+        let ownerFilter = 'all'; // 'all', 'mine', 'client'
 
         let teamMembers = [];
         let currentMember = null;
@@ -714,7 +728,20 @@
                     statusStageMatch = selectedStatusStages.has(nextStep);
                 }
 
-                return searchMatch && statusMatch && offerMatch && stageMatch && statusStageMatch;
+                // Owner filter (mine = admin tasks, client = client tasks)
+                let ownerMatch = true;
+                if (ownerFilter !== 'all') {
+                    const adminTask = isAdminTask(w);
+                    if (adminTask === null) {
+                        ownerMatch = false; // all done, hide
+                    } else if (ownerFilter === 'mine') {
+                        ownerMatch = adminTask === true;
+                    } else if (ownerFilter === 'client') {
+                        ownerMatch = adminTask === false;
+                    }
+                }
+
+                return searchMatch && statusMatch && offerMatch && stageMatch && statusStageMatch && ownerMatch;
             });
 
             // Sort - starred first, then active projects, then waiting_for_client at end
@@ -825,6 +852,43 @@
                     btn.classList.add('text-zinc-600', 'border-zinc-800');
                 }
             });
+        }
+
+        function setOwnerFilter(owner) {
+            ownerFilter = owner;
+            renderOwnerFilter();
+            applyFilters();
+            renderWorkflows();
+        }
+
+        function renderOwnerFilter() {
+            const buttons = document.querySelectorAll('.owner-filter-btn');
+            buttons.forEach(btn => {
+                const owner = btn.dataset.owner;
+                const isActive = ownerFilter === owner;
+                if (isActive) {
+                    btn.classList.remove('text-zinc-600', 'border-zinc-800');
+                    btn.classList.add('bg-cyan-500/20', 'text-cyan-400', 'border-cyan-500/30');
+                } else {
+                    btn.classList.remove('bg-cyan-500/20', 'text-cyan-400', 'border-cyan-500/30');
+                    btn.classList.add('text-zinc-600', 'border-zinc-800');
+                }
+            });
+        }
+
+        // Returns true if next step is admin's task, false if client's task
+        function isAdminTask(w) {
+            const nextStep = getNextStep(w);
+            if (!nextStep) return null; // all done
+
+            // Admin tasks: contract, report, branding, salespage, scenario
+            // Client tasks: product (wybór), profile, nagrania
+            const adminTasks = ['contract', 'report', 'branding', 'salespage', 'scenario'];
+            const clientTasks = ['product', 'profile', 'nagrania'];
+
+            if (adminTasks.includes(nextStep)) return true;
+            if (clientTasks.includes(nextStep)) return false;
+            return null;
         }
 
         function hasStatusStage(w, stage) {
