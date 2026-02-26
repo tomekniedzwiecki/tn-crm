@@ -504,8 +504,92 @@
                         </div>
                     </div>
 
-                    <div id="prompts-list" class="space-y-4">
-                        <div class="text-[#555] text-[13px] text-center py-8">Ladowanie szablonow...</div>
+                    <!-- 1. Raport -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                                    <i class="ph ph-chart-bar text-green-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[14px] font-medium text-white">Raport strategiczny</h3>
+                                    <p class="text-[12px] text-[#666]">Prompt do generowania raportu dla produktu</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-mono text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">report</span>
+                        </div>
+                        <textarea id="prompt-report" rows="12" class="input-field font-mono text-[12px] leading-relaxed resize-y mb-3" placeholder="Wklej prompt do generowania raportu..."></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="savePromptTemplate('report')" class="btn-primary flex items-center gap-2">
+                                <i class="ph ph-floppy-disk"></i> Zapisz
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Branding -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center">
+                                    <i class="ph ph-paint-brush text-pink-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[14px] font-medium text-white">Branding</h3>
+                                    <p class="text-[12px] text-[#666]">Prompt do generowania brandingu</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-mono text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">branding</span>
+                        </div>
+                        <textarea id="prompt-branding" rows="6" class="input-field font-mono text-[12px] leading-relaxed resize-y mb-3" placeholder="Wklej prompt do generowania brandingu..."></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="savePromptTemplate('branding')" class="btn-primary flex items-center gap-2">
+                                <i class="ph ph-floppy-disk"></i> Zapisz
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3. Landing Page -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                    <i class="ph ph-browser text-blue-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[14px] font-medium text-white">Strona (Landing Page)</h3>
+                                    <p class="text-[12px] text-[#666]">Prompt do generowania landing page</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-mono text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">landing</span>
+                        </div>
+                        <textarea id="prompt-landing" rows="6" class="input-field font-mono text-[12px] leading-relaxed resize-y mb-3" placeholder="Wklej prompt do generowania landing page..."></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="savePromptTemplate('landing')" class="btn-primary flex items-center gap-2">
+                                <i class="ph ph-floppy-disk"></i> Zapisz
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 4. Video -->
+                    <div class="card p-5 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                                    <i class="ph ph-video-camera text-cyan-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[14px] font-medium text-white">Scenariusze Video</h3>
+                                    <p class="text-[12px] text-[#666]">Prompt do generowania scenariuszy video</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-mono text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">video</span>
+                        </div>
+                        <textarea id="prompt-video" rows="6" class="input-field font-mono text-[12px] leading-relaxed resize-y mb-3" placeholder="Wklej prompt do generowania scenariuszy video..."></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="savePromptTemplate('video')" class="btn-primary flex items-center gap-2">
+                                <i class="ph ph-floppy-disk"></i> Zapisz
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -905,83 +989,27 @@
         // ============================================
         // PROMPT TEMPLATES
         // ============================================
-        let promptTemplates = [];
-
         async function loadPromptTemplates() {
-            const container = document.getElementById('prompts-list');
-            if (!container) return;
-
             try {
                 const { data, error } = await sb
                     .from('ai_prompt_templates')
-                    .select('*')
-                    .order('sort_order');
+                    .select('template_key, content');
 
-                if (error) throw error;
+                if (error) {
+                    console.log('Templates table not found - run migration first');
+                    return;
+                }
 
-                promptTemplates = data || [];
-                renderPromptTemplates();
+                // Fill textareas with saved content
+                (data || []).forEach(t => {
+                    const textarea = document.getElementById(`prompt-${t.template_key}`);
+                    if (textarea && t.content) {
+                        textarea.value = t.content;
+                    }
+                });
             } catch (err) {
                 console.error('Error loading templates:', err);
-                container.innerHTML = '<div class="text-red-400 text-[13px] text-center py-8">Blad ladowania szablonow</div>';
             }
-        }
-
-        function renderPromptTemplates() {
-            const container = document.getElementById('prompts-list');
-            if (!container || !promptTemplates.length) {
-                container.innerHTML = '<div class="text-[#555] text-[13px] text-center py-8">Brak szablonow - uruchom migracje SQL</div>';
-                return;
-            }
-
-            const icons = {
-                report: 'ph-chart-bar',
-                branding: 'ph-paint-brush',
-                landing: 'ph-browser',
-                video: 'ph-video-camera'
-            };
-            const colors = {
-                report: 'bg-green-500/10 text-green-400',
-                branding: 'bg-pink-500/10 text-pink-400',
-                landing: 'bg-blue-500/10 text-blue-400',
-                video: 'bg-cyan-500/10 text-cyan-400'
-            };
-
-            container.innerHTML = promptTemplates.map(t => `
-                <div class="card p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg ${colors[t.template_key] || 'bg-violet-500/10 text-violet-400'} flex items-center justify-center">
-                                <i class="ph ${icons[t.template_key] || 'ph-file-text'} text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-[14px] font-medium text-white">${escapeHtml(t.name)}</h3>
-                                <p class="text-[12px] text-[#666]">${escapeHtml(t.description || '')}</p>
-                            </div>
-                        </div>
-                        <span class="text-[11px] font-mono text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">${t.template_key}</span>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] text-[#666] uppercase tracking-wider mb-2">Tresc szablonu</label>
-                        <textarea id="prompt-${t.template_key}" rows="10"
-                            class="input-field font-mono text-[12px] leading-relaxed resize-y"
-                            placeholder="Tresc prompta...">${escapeHtml(t.content)}</textarea>
-                    </div>
-                    <div class="flex justify-end mt-3">
-                        <button onclick="savePromptTemplate('${t.template_key}')" class="btn-primary flex items-center gap-2">
-                            <i class="ph ph-floppy-disk"></i>
-                            Zapisz
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
         }
 
         async function savePromptTemplate(key) {
@@ -994,20 +1022,28 @@
                 return;
             }
 
+            const names = {
+                report: 'Raport strategiczny',
+                branding: 'Branding',
+                landing: 'Strona (Landing Page)',
+                video: 'Scenariusze Video'
+            };
+
             try {
                 const { error } = await sb
                     .from('ai_prompt_templates')
-                    .update({ content })
-                    .eq('template_key', key);
+                    .upsert({
+                        template_key: key,
+                        name: names[key] || key,
+                        content: content,
+                        sort_order: ['report', 'branding', 'landing', 'video'].indexOf(key) + 1
+                    }, { onConflict: 'template_key' });
 
                 if (error) throw error;
                 showToast('Szablon zapisany', 'success');
-
-                const template = promptTemplates.find(t => t.template_key === key);
-                if (template) template.content = content;
             } catch (err) {
                 console.error('Error saving template:', err);
-                showToast('Blad zapisu', 'error');
+                showToast('Blad zapisu - sprawdz czy tabela istnieje', 'error');
             }
         }
 
