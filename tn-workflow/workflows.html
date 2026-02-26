@@ -767,9 +767,13 @@
                     case 'created_asc':
                         return new Date(a.started_at) - new Date(b.started_at);
                     case 'deadline_asc':
-                        if (!a.current_milestone_deadline) return 1;
-                        if (!b.current_milestone_deadline) return -1;
-                        return new Date(a.current_milestone_deadline) - new Date(b.current_milestone_deadline);
+                        const aStep = getNextStep(a);
+                        const bStep = getNextStep(b);
+                        const aDeadline = aStep ? getStepDeadlineInfo(a, aStep) : null;
+                        const bDeadline = bStep ? getStepDeadlineInfo(b, bStep) : null;
+                        if (!aDeadline) return 1;
+                        if (!bDeadline) return -1;
+                        return aDeadline.daysRemaining - bDeadline.daysRemaining;
                     case 'progress_desc':
                         return b.progress_percent - a.progress_percent;
                     case 'progress_asc':
@@ -1421,10 +1425,17 @@
                 // Check if waiting for client (video shared but no client links)
                 const isWaitingForClient = w.waiting_for_client === true;
 
-                // Deadline info - don't show warning when waiting for client
+                // Deadline info - use step-based deadline
                 let deadlineHtml = '';
-                if (w.current_milestone_deadline && !isWaitingForClient) {
-                    deadlineHtml = `<span class="flex items-center gap-1"><i class="ph ph-clock text-zinc-600"></i>${formatDeadline(w.current_milestone_deadline)}</span>`;
+                const nextStep = getNextStep(w);
+                if (nextStep && !isWaitingForClient) {
+                    const deadlineInfo = getStepDeadlineInfo(w, nextStep);
+                    if (deadlineInfo) {
+                        const { daysRemaining, isOverdue } = deadlineInfo;
+                        const color = isOverdue ? 'text-red-400' : (daysRemaining <= 1 ? 'text-amber-400' : (daysRemaining <= 3 ? 'text-amber-400/70' : 'text-zinc-500'));
+                        const text = isOverdue ? `${Math.abs(daysRemaining)}d po terminie` : `za ${daysRemaining}d`;
+                        deadlineHtml = `<span class="flex items-center gap-1 ${color}"><i class="ph ph-clock"></i>${text}</span>`;
+                    }
                 }
 
                 // Days since last admin update - use last_admin_activity if available, fallback to updated_at
