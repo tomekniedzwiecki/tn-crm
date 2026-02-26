@@ -1083,23 +1083,46 @@
                     </div>
                 `;
             } else if (stage === 2) {
-                // Video
+                // Etap 2: Scenariusz → Profile → Nagrania
                 const v = w.video_stage;
                 const isShared = v?.video_shared || false;
+
+                // Check what's the current step
+                const scenarios = v?.video_scenarios || [];
+                const hasScenarios = scenarios.length > 0;
+                const profiles = v?.social_profiles || {};
+                const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+                const hasAllProfiles = profileCount === 3;
+                const videoLinks = v?.video_links || [];
+                const hasVideoLinks = videoLinks.length > 0;
+
+                let stepName = 'Etap 2';
                 let status = 'W trakcie';
-                let icon = 'ph ph-video-camera text-amber-400';
-                if (isShared) {
-                    status = 'Udostępnione klientowi';
-                    icon = 'ph-fill ph-check-circle text-emerald-400';
-                } else if (v?.stage_accepted) {
-                    status = 'Oczekuje na video';
-                    icon = 'ph ph-hourglass text-amber-400';
+                let icon = 'ph ph-hourglass text-amber-400';
+
+                if (isShared || hasVideoLinks) {
+                    stepName = 'Nagrania';
+                    status = hasVideoLinks ? `${videoLinks.length} nagrań` : 'Oczekuje';
+                    icon = hasVideoLinks ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-hourglass text-amber-400';
+                } else if (hasAllProfiles) {
+                    stepName = 'Nagrania';
+                    status = 'Oczekuje na nagrania';
+                    icon = 'ph ph-video text-amber-400';
+                } else if (hasScenarios) {
+                    stepName = 'Profile';
+                    status = profileCount > 0 ? `${profileCount}/3 profili` : 'Oczekuje na profile';
+                    icon = 'ph ph-user-circle text-amber-400';
+                } else {
+                    stepName = 'Scenariusz';
+                    status = 'Brak scenariuszy';
+                    icon = 'ph ph-film-script text-amber-400';
                 }
+
                 return `
                     <div class="py-2">
                         <div class="flex items-center gap-2 text-[11px]">
                             <i class="${icon}"></i>
-                            <span class="text-white font-medium">Video</span>
+                            <span class="text-white font-medium">${stepName}</span>
                             <span class="text-zinc-500">·</span>
                             <span class="text-zinc-400">${status}</span>
                         </div>
