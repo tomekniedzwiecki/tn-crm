@@ -16,7 +16,7 @@
 
   let currentChatPhone = null;
   let issyncing = false;
-  let autoSyncEnabled = false;
+  let autoSyncEnabled = true; // Zawsze włączone - sync automatyczny
   let lastSyncedHashes = new Set();
   let lastAutoSyncPhone = null; // Track który czat był ostatnio syncowany
 
@@ -48,7 +48,7 @@
           if (result.supabaseKey) CONFIG.SUPABASE_KEY = result.supabaseKey;
           if (result.syncApiKey) CONFIG.SYNC_API_KEY = result.syncApiKey;
           if (result.syncUser) CONFIG.SYNC_USER = result.syncUser;
-          autoSyncEnabled = result.autoSync || false;
+          // autoSyncEnabled zawsze true - nie czytamy z ustawień
           resolve();
         });
       } catch (e) {

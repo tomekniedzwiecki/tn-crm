@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const supabaseKey = document.getElementById('supabase-key');
   const syncApiKey = document.getElementById('sync-api-key');
   const syncUser = document.getElementById('sync-user');
-  const autoSync = document.getElementById('auto-sync');
   const syncOnChange = document.getElementById('sync-on-change');
   const scheduledSyncIndicator = document.getElementById('scheduled-sync-indicator');
   const scheduledSyncText = document.getElementById('scheduled-sync-text');
@@ -53,12 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const syncAllLimit = document.getElementById('sync-all-limit');
 
   // Load saved settings
-  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync', 'syncOnChange', 'syncAllLimit'], (result) => {
+  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'syncOnChange', 'syncAllLimit'], (result) => {
     if (result.supabaseUrl) supabaseUrl.value = result.supabaseUrl;
     if (result.supabaseKey) supabaseKey.value = result.supabaseKey;
     if (result.syncApiKey) syncApiKey.value = result.syncApiKey;
     if (result.syncUser) syncUser.value = result.syncUser;
-    autoSync.checked = result.autoSync || false;
     syncOnChange.checked = result.syncOnChange !== false;
     syncAllLimit.value = result.syncAllLimit || 0;
 
@@ -73,7 +71,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       supabaseKey: supabaseKey.value.trim(),
       syncApiKey: syncApiKey.value.trim(),
       syncUser: syncUser.value,
-      autoSync: autoSync.checked,
       syncOnChange: syncOnChange.checked,
       syncAllLimit: parseInt(syncAllLimit.value) || 0
     };
@@ -86,11 +83,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Sprawdz status scheduled sync z nowymi ustawieniami
       checkScheduledSyncStatus(settings);
     });
-  });
-
-  // Auto-sync toggle
-  autoSync.addEventListener('change', () => {
-    chrome.storage.sync.set({ autoSync: autoSync.checked });
   });
 
   syncOnChange.addEventListener('change', () => {
