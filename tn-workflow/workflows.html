@@ -344,6 +344,7 @@
         let workflowLogos = {};
         let selectedStatusStages = new Set(); // For filtering by missing status stages
         let ownerFilter = 'all'; // 'all', 'mine', 'client'
+        let deadlineSettings = {}; // deadline per step from settings
 
         let teamMembers = [];
         let currentMember = null;
@@ -1127,6 +1128,64 @@
             `;
         }
 
+        // Calculate deadline info for current step
+        function getStepDeadlineInfo(w, stepKey) {
+            const deadlineDays = deadlineSettings[stepKey];
+            if (!deadlineDays) return null; // no deadline set
+
+            // Determine start date based on step
+            let startDate = null;
+            switch (stepKey) {
+                case 'contract':
+                    startDate = w.started_at;
+                    break;
+                case 'product':
+                    startDate = w.products_shared_at || w.started_at;
+                    break;
+                case 'report':
+                    startDate = w.started_at; // simplified
+                    break;
+                case 'branding':
+                    startDate = w.started_at; // simplified
+                    break;
+                case 'salespage':
+                    startDate = w.branding_shared_at || w.started_at;
+                    break;
+                case 'scenario':
+                    startDate = w.sales_page_shared_at;
+                    break;
+            }
+
+            if (!startDate) return null;
+
+            const start = new Date(startDate);
+            const now = new Date();
+            const daysPassed = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+            const daysRemaining = deadlineDays - daysPassed;
+
+            return {
+                deadlineDays,
+                daysPassed,
+                daysRemaining,
+                isOverdue: daysRemaining < 0
+            };
+        }
+
+        function renderDeadlineBadge(deadlineInfo) {
+            if (!deadlineInfo) return '';
+
+            const { daysRemaining, isOverdue } = deadlineInfo;
+
+            if (isOverdue) {
+                return `<span class="text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded ml-auto">${Math.abs(daysRemaining)}d po terminie</span>`;
+            } else if (daysRemaining <= 1) {
+                return `<span class="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded ml-auto">${daysRemaining}d</span>`;
+            } else if (daysRemaining <= 3) {
+                return `<span class="text-[10px] text-amber-400/70 bg-amber-500/5 px-1.5 py-0.5 rounded ml-auto">${daysRemaining}d</span>`;
+            }
+            return `<span class="text-[10px] text-zinc-500 ml-auto">${daysRemaining}d</span>`;
+        }
+
         function renderCurrentWork(w) {
             const stage = getWorkflowStage(w);
             const progressPercent = w.progress_percent || 0;
@@ -1161,34 +1220,52 @@
                 const hasVideoLinks = videoLinks.length > 0;
 
                 let stepName = 'Etap 2';
+                let stepKey = null;
                 let status = 'W trakcie';
                 let icon = 'ph ph-hourglass text-amber-400';
+                let isClientTask = false;
 
                 if (isShared || hasVideoLinks) {
                     stepName = 'Nagrania';
+                    stepKey = null; // no deadline
                     status = hasVideoLinks ? `${videoLinks.length} nagrań` : 'Oczekuje';
                     icon = hasVideoLinks ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-hourglass text-amber-400';
+                    isClientTask = true;
                 } else if (hasAllProfiles) {
                     stepName = 'Nagrania';
+                    stepKey = null; // no deadline
                     status = 'Oczekuje na nagrania';
                     icon = 'ph ph-video text-amber-400';
+                    isClientTask = true;
                 } else if (hasScenarios) {
                     stepName = 'Profile';
+                    stepKey = null; // no deadline
                     status = profileCount > 0 ? `${profileCount}/3 profili` : 'Oczekuje na profile';
                     icon = 'ph ph-user-circle text-amber-400';
+                    isClientTask = true;
                 } else {
                     stepName = 'Scenariusz';
+                    stepKey = 'scenario';
                     status = 'Brak scenariuszy';
                     icon = 'ph ph-film-script text-amber-400';
+                    isClientTask = false;
                 }
+
+                const deadlineInfo = stepKey ? getStepDeadlineInfo(w, stepKey) : null;
+                const deadlineBadge = renderDeadlineBadge(deadlineInfo);
+                const ownerBadge = isClientTask
+                    ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                    : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
 
                 return `
                     <div class="py-2">
                         <div class="flex items-center gap-2 text-[11px]">
                             <i class="${icon}"></i>
                             <span class="text-white font-medium">${stepName}</span>
+                            ${ownerBadge}
                             <span class="text-zinc-500">·</span>
                             <span class="text-zinc-400">${status}</span>
+                            ${deadlineBadge}
                         </div>
                     </div>
                 `;
@@ -1264,16 +1341,27 @@
                 const statusColor = nextItem.inProgress ? 'text-amber-400' : 'text-zinc-400';
                 const iconColor = nextItem.inProgress ? 'text-amber-400' : 'text-zinc-500';
 
+                // Map step name to deadline key
+                const stepKeyMap = { 'Umowa': 'contract', 'Produkt': 'product', 'Raport': 'report', 'Branding': 'branding', 'Strona': 'salespage' };
+                const stepKey = stepKeyMap[nextItem.name];
+                const deadlineInfo = getStepDeadlineInfo(w, stepKey);
+                const deadlineBadge = renderDeadlineBadge(deadlineInfo);
+
+                // Owner badge
+                const isClientTask = nextItem.name === 'Produkt';
+                const ownerBadge = isClientTask
+                    ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                    : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
                 return `
                     <div class="py-2">
-                        <div class="flex items-center justify-between text-[11px]">
-                            <div class="flex items-center gap-2">
-                                <i class="ph ${nextItem.icon} ${iconColor}"></i>
-                                <span class="text-white font-medium">${nextItem.name}</span>
-                                <span class="text-zinc-600">·</span>
-                                <span class="${statusColor}">${statusText}</span>
-                            </div>
-                            <span class="text-zinc-500 font-mono">${completedCount}/${totalCount}</span>
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <i class="ph ${nextItem.icon} ${iconColor}"></i>
+                            <span class="text-white font-medium">${nextItem.name}</span>
+                            ${ownerBadge}
+                            <span class="text-zinc-600">·</span>
+                            <span class="${statusColor}">${statusText}</span>
+                            ${deadlineBadge}
                         </div>
                     </div>
                 `;
@@ -2056,7 +2144,24 @@
         async function init() {
             const session = await checkAuth();
             if (session) {
-                await Promise.all([loadWorkflows(), loadRecentActivities()]);
+                await Promise.all([loadWorkflows(), loadRecentActivities(), loadDeadlineSettings()]);
+            }
+        }
+
+        async function loadDeadlineSettings() {
+            try {
+                const { data } = await supabaseClient
+                    .from('settings')
+                    .select('key, value')
+                    .in('key', ['deadline_contract', 'deadline_product', 'deadline_report', 'deadline_branding', 'deadline_salespage', 'deadline_scenario']);
+
+                deadlineSettings = {};
+                (data || []).forEach(s => {
+                    const step = s.key.replace('deadline_', '');
+                    deadlineSettings[step] = parseInt(s.value) || null;
+                });
+            } catch (err) {
+                console.error('Error loading deadline settings:', err);
             }
         }
         init();
