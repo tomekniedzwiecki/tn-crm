@@ -602,8 +602,8 @@
                         </div>
                     </div>
 
-                    <!-- Bottom Row: Activities + Messages -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <!-- Bottom Row: Activities + Messages + Comments -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
                         <!-- Recent Activities -->
                         <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
@@ -630,6 +630,20 @@
                             </div>
                             <div id="recent-emails" class="space-y-1">
                                 <div class="text-[#444] text-[13px] py-2">Brak wysłanych wiadomości</div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Comments -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-5">
+                                <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider">Ostatnie komentarze</span>
+                                <button onclick="switchTab('komentarze')" class="text-[12px] text-[#555] hover:text-[#999] transition-colors flex items-center gap-1">
+                                    Wszystkie
+                                    <i class="ph ph-arrow-right text-[10px]"></i>
+                                </button>
+                            </div>
+                            <div id="recent-comments" class="space-y-2">
+                                <div class="text-[#444] text-[13px] py-2">Brak komentarzy</div>
                             </div>
                         </div>
                     </div>
@@ -2357,6 +2371,40 @@
                         <div class="flex-1 min-w-0 pt-0.5">
                             <div class="text-[#ccc] text-[13px] truncate">${escapeHtml(email.subject || 'Bez tematu')}</div>
                             <div class="text-[#555] text-[11px] mt-1">${timeAgo}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRecentComments() {
+            const container = document.getElementById('recent-comments');
+            if (!container) return;
+
+            if (comments.length === 0) {
+                container.innerHTML = '<div class="text-[#444] text-[13px] py-2">Brak komentarzy</div>';
+                return;
+            }
+
+            // Show only 3 most recent
+            const recentComments = comments.slice(0, 3);
+
+            container.innerHTML = recentComments.map(c => {
+                const isClient = c.author_type === 'client';
+                const timeAgo = formatTimeAgo(new Date(c.created_at));
+                const icon = isClient ? 'ph-user' : 'ph-user-circle-gear';
+                const bgColor = isClient ? 'bg-amber-500/10' : 'bg-cyan-500/10';
+                const iconColor = isClient ? 'text-amber-400' : 'text-cyan-400';
+                const truncatedContent = c.content.length > 60 ? c.content.substring(0, 60) + '...' : c.content;
+
+                return `
+                    <div class="flex items-start gap-3 py-2 border-b border-[#1a1a1a] last:border-0">
+                        <div class="w-6 h-6 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="ph ${icon} text-[11px] ${iconColor}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[#ccc] text-[12px] leading-relaxed">${escapeHtml(truncatedContent)}</div>
+                            <div class="text-[#555] text-[10px] mt-1">${timeAgo}</div>
                         </div>
                     </div>
                 `;
@@ -7285,6 +7333,7 @@
 
             comments = data || [];
             renderComments();
+            renderRecentComments();
             updateCommentsBadge();
         }
 
@@ -7396,6 +7445,7 @@
 
                 comments.push(data);
                 renderComments();
+                renderRecentComments();
                 document.getElementById('new-comment').value = '';
                 showToast('Komentarz dodany', 'success');
             }
