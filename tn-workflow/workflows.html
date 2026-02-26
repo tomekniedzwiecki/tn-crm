@@ -204,7 +204,15 @@
                         </button>
                         <button onclick="toggleStatusStage('scenario')" data-stage="scenario"
                             class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
-                            <i class="ph ph-video-camera"></i> Scenariusz
+                            <i class="ph ph-film-script"></i> Scenariusz
+                        </button>
+                        <button onclick="toggleStatusStage('profile')" data-stage="profile"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-user-circle"></i> Profile
+                        </button>
+                        <button onclick="toggleStatusStage('nagrania')" data-stage="nagrania"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-video"></i> Nagrania
                         </button>
                     </div>
                 </div>
@@ -594,7 +602,7 @@
             if (workflowIds.length === 0) return;
 
             const [videoRes, takedropRes] = await Promise.all([
-                supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios').in('workflow_id', workflowIds),
+                supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted').in('workflow_id', workflowIds)
             ]);
 
@@ -835,27 +843,41 @@
                 case 'scenario':
                     const scenarios = w.video_stage?.video_scenarios;
                     return scenarios && Array.isArray(scenarios) && scenarios.length > 0;
+                case 'profile':
+                    const profiles = w.video_stage?.social_profiles || {};
+                    const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+                    return profileCount === 3;
+                case 'nagrania':
+                    const videoLinks = w.video_stage?.video_links || [];
+                    return videoLinks.length > 0;
                 default:
                     return false;
             }
         }
 
-        // Returns next step to do: 'contract', 'product', 'report', 'branding', 'salespage', 'scenario', or null if all done
+        // Returns next step to do: 'contract', 'product', 'report', 'branding', 'salespage', 'scenario', 'profile', 'nagrania', or null if all done
         function getNextStep(w) {
             const isStarter = w.offer_name?.toLowerCase().includes('starter');
             const rc = reportCounts[w.workflow_id];
 
-            // Order: Umowa → Produkt → Raport → Branding → Strona → Scenariusz
+            // Etap 1: Umowa → Produkt → Raport → Branding → Strona
             if (!isStarter && w.contract_status !== 'signed') return 'contract';
             if (!w.selected_product_id) return 'product';
             if (!(rc && rc.published > 0)) return 'report';
             if (!w.branding_shared_at) return 'branding';
             if (!w.sales_page_shared_at) return 'salespage';
 
-            // Scenariusz - etap 1 ukończony, ale brak scenariuszy video
+            // Etap 2: Scenariusz → Profile → Nagrania
             const scenarios = w.video_stage?.video_scenarios;
             const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
             if (!hasScenarios) return 'scenario';
+
+            const profiles = w.video_stage?.social_profiles || {};
+            const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+            if (profileCount < 3) return 'profile';
+
+            const videoLinks = w.video_stage?.video_links || [];
+            if (videoLinks.length === 0) return 'nagrania';
 
             return null; // all done
         }
