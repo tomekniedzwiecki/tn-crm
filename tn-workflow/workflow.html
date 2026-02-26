@@ -2779,16 +2779,25 @@
             if (!workflow) return;
 
             // For report template - also download product PDF if available
-            if (templateKey === 'report' && workflow.selected_product_id) {
-                const { data: product } = await supabaseClient
-                    .from('workflow_products')
-                    .select('report_screenshot_url')
-                    .eq('id', workflow.selected_product_id)
-                    .maybeSingle();
+            let pdfDownloaded = false;
+            if (templateKey === 'report') {
+                if (!workflow.selected_product_id) {
+                    console.log('Brak wybranego produktu (selected_product_id)');
+                } else {
+                    const { data: product, error: prodErr } = await supabaseClient
+                        .from('workflow_products')
+                        .select('report_screenshot_url')
+                        .eq('id', workflow.selected_product_id)
+                        .maybeSingle();
 
-                if (product?.report_screenshot_url) {
-                    // Open PDF in new tab (will trigger download for PDF)
-                    window.open(product.report_screenshot_url, '_blank');
+                    console.log('Produkt:', product, 'Error:', prodErr);
+
+                    if (product?.report_screenshot_url) {
+                        window.open(product.report_screenshot_url, '_blank');
+                        pdfDownloaded = true;
+                    } else {
+                        console.log('Produkt nie ma report_screenshot_url');
+                    }
                 }
             }
 
@@ -2812,7 +2821,11 @@
 
             try {
                 await navigator.clipboard.writeText(content);
-                showToast('Prompt skopiowany' + (templateKey === 'report' ? ' + PDF produktu' : ''));
+                if (templateKey === 'report') {
+                    showToast(pdfDownloaded ? 'Prompt + PDF produktu' : 'Prompt skopiowany (brak PDF)', pdfDownloaded ? 'success' : 'warning');
+                } else {
+                    showToast('Prompt skopiowany');
+                }
             } catch (err) {
                 const textArea = document.createElement('textarea');
                 textArea.value = content;
@@ -2820,7 +2833,11 @@
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showToast('Prompt skopiowany' + (templateKey === 'report' ? ' + PDF produktu' : ''));
+                if (templateKey === 'report') {
+                    showToast(pdfDownloaded ? 'Prompt + PDF produktu' : 'Prompt skopiowany (brak PDF)', pdfDownloaded ? 'success' : 'warning');
+                } else {
+                    showToast('Prompt skopiowany');
+                }
             }
         }
 
