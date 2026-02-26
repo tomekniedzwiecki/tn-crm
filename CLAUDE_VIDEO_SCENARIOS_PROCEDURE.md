@@ -293,6 +293,14 @@ VALUES ('152f445f-b318-4e97-ba13-b9d901814ee8', $$[
 ON CONFLICT (workflow_id) DO UPDATE SET video_scenarios = EXCLUDED.video_scenarios;
 ```
 
+### Jak wykonać SQL
+
+**Wykonaj ręcznie przez Supabase SQL Editor** — curl/REST API nie działa dobrze z polskimi znakami i cudzysłowami w JSON.
+
+1. Otwórz: https://supabase.com/dashboard/project/yxmavwkwnfuphjqbelws/sql/new
+2. Wklej wygenerowany SQL
+3. Kliknij "Run"
+
 ---
 
 ## Przykładowe scenariusze (VibeStrike - maszyna bokserska)
