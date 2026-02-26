@@ -54,36 +54,56 @@ Przeczytaj nazwe, opis produktu i raporty. Ustal:
 
 **ZAWSZE ZAPYTAJ UZYTKOWNIKA** o finalna nazwe marki i domene przed generowaniem SQL!
 
-**OBOWIAZKOWO SPRAWDZ DOSTEPNOSC DOMEN** przed zaproponowaniem nazw!
+#### Flow wyboru nazwy (ZOPTYMALIZOWANY):
 
-Uzyj komendy DNS lookup do weryfikacji:
+**KROK 2.1 — Pobierz nazwy zajete w systemie (NAJPIERW!):**
 ```bash
-for domain in nazwa1.pl nazwa2.pl nazwa3.pl; do
-  result=$(nslookup $domain 2>&1)
-  if echo "$result" | grep -q "can't find\|NXDOMAIN\|Non-existent"; then
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?type=eq.brand_info&select=title" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]"
+```
+Zapisz liste zajetych nazw — NIE proponuj zadnej z nich!
+
+**KROK 2.2 — Wygeneruj 25-30 kandydatow (w glowie, NIE pokazuj uzytkownikowi):**
+- ~10 nazw angielskich (premium, DTC style)
+- ~10 nazw polskich (bezposrednie, fachowe)
+- ~5-10 nazw mieszanych/kreatywnych
+
+**KROK 2.3 — Sprawdz WSZYSTKIE domeny JEDNYM BATCHEM:**
+```bash
+for domain in nazwa1.pl nazwa2.pl nazwa3.pl [... wszystkie 25-30 ...]; do
+  result=$(nslookup $domain 8.8.8.8 2>&1)
+  if echo "$result" | grep -qi "can't find\|NXDOMAIN\|Non-existent\|server can't find"; then
     echo "$domain - WOLNA"
+  else
+    echo "$domain - ZAJETA"
   fi
 done
 ```
 
-**Zaproponuj 10 propozycji nazw** — mix polskich i angielskich, dopasowanych do kategorii produktu:
-- Minimum 4 nazwy polskie (dla produktow skierowanych do polskich fachowcow/konsumentow)
-- Minimum 4 nazwy angielskie (dla produktow z potencjalem miedzynarodowym)
-- Pozostale 2 — dowolne lub mieszane (np. TechOko, LupaTech)
+**KROK 2.4 — Filtruj i wybierz TOP 10:**
+Z kandydatow ktore PRZECHODZA oba filtry (domena wolna + nie ma w systemie), wybierz 10 najlepszych:
+- Min 4 polskie
+- Min 4 angielskie
+- 2 dowolne
 
-Prezentuj w tabeli:
+**KROK 2.5 — Prezentuj uzytkownikowi TYLKO GOTOWE propozycje:**
+
+Na poczatku wymien nazwy zajete w systemie dla TEJ KATEGORII produktu (przekreslone).
+
+Potem tabela z 10 propozycjami (WSZYSTKIE z wolna domena!):
 | # | Nazwa | Domena | Styl | Uzasadnienie |
 |---|-------|--------|------|--------------|
 | 1 | **Nazwa** | nazwa.pl ✅ | PL/EN | Krotkie uzasadnienie |
 
-Na koncu dodaj **Top 3** z rekomendacja.
+Na koncu **Top 3** z rekomendacja.
 
-Zasady dla nazw:
+#### Zasady dla nazw:
 - Krotka (1-2 slowa, max 12 znakow)
 - Latwa do wymowienia (polskie dla PL, angielskie dla EN)
 - Sugeruje emocje/kategorie produktu
 - Unikalna, nie koliduje z istniejacymi markami
-- **TYLKO NAZWY Z WOLNA DOMENA .pl** — nie proponuj zajetych!
+- **TYLKO NAZWY Z WOLNA DOMENA .pl** — uzytkownik NIGDY nie widzi zajetych!
 - Styl polski: bezposredni, fachowy (np. Wglad, Fachownik, Szperacz)
 - Styl angielski: nowoczesne DTC brandy (np. VisiCore, DualEye, LensGo)
 
@@ -256,11 +276,25 @@ FORMAT: 1024x1024px (ZAWSZE KWADRAT), PNG z przezroczystym tłem gdzie to możli
 5. **Combo mark poziomy** — ikona + wordmark w jednej linii, do nagłówków
 6. **Animacja (storyboard)** — 4-6 klatek pokazujących jak logo się "buduje"
 
+> **ZASADA UKŁADU LOGO:**
+> Sygnet (ikona/symbol) zawsze po LEWEJ stronie, na równi z nazwą marki w tej samej linii.
+> Układ: `[SYGNET] [NAZWA MARKI]` — nigdy odwrotnie, nigdy sygnet nad tekstem.
+> Wyjątek: favicon/ikona (wariant 4) — sam sygnet bez tekstu.
+
 ---
 
 ### PROMPTY MOCKUPÓW — Gadżety brandingowe z logo
 
 > **WAŻNE**: Mockupy w sekcji branding to **gadżety reklamowe z logo marki**. Pokazują identyfikację wizualną na fizycznych produktach promocyjnych.
+
+> **KRYTYCZNA ZASADA DLA GENEROWANIA GRAFIK:**
+> Każdy prompt MUSI zawierać na samym początku instrukcję dla modelu AI (np. Gemini):
+> ```
+> INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone/wgrane w tej rozmowie.
+> NIE projektuj nowego logo. NIE wymyślaj własnego designu.
+> Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+> ```
+> Ta instrukcja zapobiega sytuacji gdy AI ignoruje istniejący design i tworzy własne logo.
 
 #### Filozofia mockupów brandingowych
 
@@ -322,6 +356,10 @@ Mockupy to **standardowe gadżety promocyjne** z logo marki — ale pokazane w *
 #### Struktura każdego promptu mockupowego:
 
 ```
+⚠️ INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone w tej rozmowie.
+NIE projektuj nowego logo. NIE wymyślaj własnego designu.
+Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+
 GADŻET: [nazwa gadżetu, np. "Koszulka bawełniana"]
 ELEMENT BRANDINGU: [co jest na gadżecie: logo, nazwa marki, tagline, ikona]
 UMIEJSCOWIENIE: [gdzie na gadżecie: na piersi, na plecach, na froncie, haft w rogu]
@@ -371,6 +409,10 @@ FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
 
 **Kubek z logo:**
 ```
+⚠️ INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone w tej rozmowie.
+NIE projektuj nowego logo. NIE wymyślaj własnego designu.
+Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+
 GADŻET: Kubek ceramiczny matowy
 ELEMENT BRANDINGU: Logo PanoView (ikona + wordmark) + tagline "Czysta panorama, bez wysiłku"
 UMIEJSCOWIENIE: Logo na froncie kubka, tagline mniejszy pod spodem
@@ -397,6 +439,10 @@ FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
 
 **Koszulka z logo:**
 ```
+⚠️ INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone w tej rozmowie.
+NIE projektuj nowego logo. NIE wymyślaj własnego designu.
+Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+
 GADŻET: Koszulka bawełniana premium
 ELEMENT BRANDINGU: Logo PanoView (ikona + wordmark)
 UMIEJSCOWIENIE: Na piersi po lewej stronie, rozmiar ok. 8cm
