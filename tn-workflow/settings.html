@@ -191,6 +191,10 @@
                     <i class="ph ph-microphone"></i>
                     <span>Nagrania glosowe</span>
                 </button>
+                <button onclick="switchSettingsTab('prompts')" data-settings-tab="prompts" class="settings-nav-btn">
+                    <i class="ph ph-robot"></i>
+                    <span>Prompty AI</span>
+                </button>
             </nav>
         </aside>
 
@@ -479,6 +483,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Prompts Tab -->
+                <div id="tab-prompts" class="settings-tab hidden animate-fade-in">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white mb-1">Prompty AI</h2>
+                        <p class="text-[13px] text-[#888]">Szablony promptow do generowania tresci dla projektow.</p>
+                    </div>
+
+                    <!-- Variables info -->
+                    <div class="card p-4 mb-6 border-amber-500/20 bg-amber-500/5">
+                        <div class="flex items-start gap-3">
+                            <i class="ph ph-info text-amber-400 text-lg mt-0.5"></i>
+                            <div class="text-[13px]">
+                                <p class="text-amber-200 font-medium mb-1">Dostepne zmienne</p>
+                                <p class="text-[#888]"><code class="bg-[#1a1a1a] px-1.5 py-0.5 rounded text-[11px] font-mono">{{customer_name}}</code> - imie i nazwisko klienta</p>
+                                <p class="text-[#888]"><code class="bg-[#1a1a1a] px-1.5 py-0.5 rounded text-[11px] font-mono">{{workflow_id}}</code> - UUID projektu</p>
+                                <p class="text-[#888]"><code class="bg-[#1a1a1a] px-1.5 py-0.5 rounded text-[11px] font-mono">{{product_name}}</code> - nazwa produktu</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="prompts-list" class="space-y-4">
+                        <div class="text-[#555] text-[13px] text-center py-8">Ladowanie szablonow...</div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -532,6 +561,7 @@
 
             // Load settings
             await loadSettings();
+            await loadPromptTemplates();
 
             // Setup audio previews
             setupAudioPreview();
@@ -869,6 +899,115 @@
                 productsAudioElement.play();
                 isProductsPlaying = true;
                 document.getElementById('products-voice-play-icon').className = 'ph-fill ph-pause text-white text-lg';
+            }
+        }
+
+        // ============================================
+        // PROMPT TEMPLATES
+        // ============================================
+        let promptTemplates = [];
+
+        async function loadPromptTemplates() {
+            const container = document.getElementById('prompts-list');
+            if (!container) return;
+
+            try {
+                const { data, error } = await sb
+                    .from('ai_prompt_templates')
+                    .select('*')
+                    .order('sort_order');
+
+                if (error) throw error;
+
+                promptTemplates = data || [];
+                renderPromptTemplates();
+            } catch (err) {
+                console.error('Error loading templates:', err);
+                container.innerHTML = '<div class="text-red-400 text-[13px] text-center py-8">Blad ladowania szablonow</div>';
+            }
+        }
+
+        function renderPromptTemplates() {
+            const container = document.getElementById('prompts-list');
+            if (!container || !promptTemplates.length) {
+                container.innerHTML = '<div class="text-[#555] text-[13px] text-center py-8">Brak szablonow - uruchom migracje SQL</div>';
+                return;
+            }
+
+            const icons = {
+                report: 'ph-chart-bar',
+                branding: 'ph-paint-brush',
+                landing: 'ph-browser',
+                video: 'ph-video-camera'
+            };
+            const colors = {
+                report: 'bg-green-500/10 text-green-400',
+                branding: 'bg-pink-500/10 text-pink-400',
+                landing: 'bg-blue-500/10 text-blue-400',
+                video: 'bg-cyan-500/10 text-cyan-400'
+            };
+
+            container.innerHTML = promptTemplates.map(t => `
+                <div class="card p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg ${colors[t.template_key] || 'bg-violet-500/10 text-violet-400'} flex items-center justify-center">
+                                <i class="ph ${icons[t.template_key] || 'ph-file-text'} text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-[14px] font-medium text-white">${escapeHtml(t.name)}</h3>
+                                <p class="text-[12px] text-[#666]">${escapeHtml(t.description || '')}</p>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-mono text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">${t.template_key}</span>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-[#666] uppercase tracking-wider mb-2">Tresc szablonu</label>
+                        <textarea id="prompt-${t.template_key}" rows="10"
+                            class="input-field font-mono text-[12px] leading-relaxed resize-y"
+                            placeholder="Tresc prompta...">${escapeHtml(t.content)}</textarea>
+                    </div>
+                    <div class="flex justify-end mt-3">
+                        <button onclick="savePromptTemplate('${t.template_key}')" class="btn-primary flex items-center gap-2">
+                            <i class="ph ph-floppy-disk"></i>
+                            Zapisz
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function savePromptTemplate(key) {
+            const textarea = document.getElementById(`prompt-${key}`);
+            if (!textarea) return;
+
+            const content = textarea.value.trim();
+            if (!content) {
+                showToast('Tresc nie moze byc pusta', 'error');
+                return;
+            }
+
+            try {
+                const { error } = await sb
+                    .from('ai_prompt_templates')
+                    .update({ content })
+                    .eq('template_key', key);
+
+                if (error) throw error;
+                showToast('Szablon zapisany', 'success');
+
+                const template = promptTemplates.find(t => t.template_key === key);
+                if (template) template.content = content;
+            } catch (err) {
+                console.error('Error saving template:', err);
+                showToast('Blad zapisu', 'error');
             }
         }
 
