@@ -2778,6 +2778,20 @@
         async function copyAIPrompt(templateKey) {
             if (!workflow) return;
 
+            // For report template - also download product PDF if available
+            if (templateKey === 'report' && workflow.selected_product_id) {
+                const { data: product } = await supabaseClient
+                    .from('workflow_products')
+                    .select('report_screenshot_url')
+                    .eq('id', workflow.selected_product_id)
+                    .maybeSingle();
+
+                if (product?.report_screenshot_url) {
+                    // Open PDF in new tab (will trigger download for PDF)
+                    window.open(product.report_screenshot_url, '_blank');
+                }
+            }
+
             // Fetch template from database
             const { data: template, error } = await supabaseClient
                 .from('ai_prompt_templates')
@@ -2798,7 +2812,7 @@
 
             try {
                 await navigator.clipboard.writeText(content);
-                showToast('Prompt skopiowany');
+                showToast('Prompt skopiowany' + (templateKey === 'report' ? ' + PDF produktu' : ''));
             } catch (err) {
                 const textArea = document.createElement('textarea');
                 textArea.value = content;
@@ -2806,7 +2820,7 @@
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showToast('Prompt skopiowany');
+                showToast('Prompt skopiowany' + (templateKey === 'report' ? ' + PDF produktu' : ''));
             }
         }
 
