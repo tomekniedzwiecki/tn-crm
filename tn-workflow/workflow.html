@@ -1221,23 +1221,45 @@
                                 <button onclick="copyAIPrompt('report')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt AI">
                                     <i class="ph ph-copy"></i> Prompt
                                 </button>
-                                <button onclick="openReportModal()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                    <i class="ph ph-plus"></i>
-                                    Dodaj raport
+                                <button id="publish-all-reports-btn" onclick="publishAllReports()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-checks"></i> Udostępnij wszystkie
                                 </button>
                             </div>
                         </div>
 
-                        <div id="reports-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Drag & Drop Zone -->
+                        <div id="reports-dropzone"
+                             class="relative border-2 border-dashed border-zinc-700 hover:border-green-500/50 rounded-xl p-8 mb-6 transition-all cursor-pointer group"
+                             ondragover="handleReportDragOver(event)"
+                             ondragleave="handleReportDragLeave(event)"
+                             ondrop="handleReportDrop(event)"
+                             onclick="document.getElementById('reports-dropzone-input').click()">
+                            <input type="file" id="reports-dropzone-input" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.mp4,.mov,.webm" onchange="handleReportFileSelect(event)" multiple>
+                            <div class="flex flex-col items-center justify-center text-center">
+                                <div class="w-12 h-12 rounded-full bg-zinc-800 group-hover:bg-green-500/10 flex items-center justify-center mb-3 transition-colors">
+                                    <i class="ph ph-cloud-arrow-up text-2xl text-zinc-500 group-hover:text-green-400 transition-colors"></i>
+                                </div>
+                                <p class="text-zinc-400 text-sm group-hover:text-white transition-colors">Przeciągnij pliki lub kliknij</p>
+                                <p class="text-zinc-600 text-xs mt-1">PDF, obrazy (PNG, JPG), wideo (MP4, MOV)</p>
+                            </div>
+                            <div id="reports-dropzone-active" class="hidden absolute inset-0 bg-green-500/10 border-2 border-green-500 rounded-xl flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="ph ph-cloud-arrow-up text-4xl text-green-400 mb-2"></i>
+                                    <p class="text-green-400 font-medium">Upuść pliki tutaj</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Progress -->
+                        <div id="reports-upload-queue" class="hidden mb-6 space-y-2"></div>
+
+                        <!-- Reports List -->
+                        <div id="reports-list" class="space-y-2">
                             <!-- Reports rendered here -->
                         </div>
 
-                        <div id="reports-empty" class="text-center py-16">
-                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                                <i class="ph ph-chart-bar text-2xl text-zinc-600"></i>
-                            </div>
-                            <p class="text-zinc-500 text-sm">Brak raportow</p>
-                            <p class="text-zinc-600 text-xs mt-1">Dodaj raporty i analizy dla klienta</p>
+                        <div id="reports-empty" class="hidden text-center py-8">
+                            <p class="text-zinc-600 text-sm">Brak raportów - przeciągnij pliki powyżej</p>
                         </div>
                     </div><!-- /tab-raporty -->
 
@@ -1700,6 +1722,27 @@
                 <button onclick="uploadReport()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                     <i class="ph ph-upload-simple mr-1"></i> Zapisz
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Type Selection Modal (mini) -->
+    <div id="pdf-type-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-xl w-full max-w-sm shadow-2xl">
+            <div class="p-5">
+                <h3 class="text-white font-medium mb-1">Jaki to typ pliku PDF?</h3>
+                <p class="text-zinc-500 text-xs mb-4" id="pdf-type-filename"></p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="confirmPdfType('report_pdf')" class="flex flex-col items-center gap-2 p-4 rounded-lg bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/30 transition-all group">
+                        <i class="ph ph-file-pdf text-2xl text-zinc-500 group-hover:text-red-400"></i>
+                        <span class="text-sm text-zinc-400 group-hover:text-white">Raport</span>
+                    </button>
+                    <button onclick="confirmPdfType('report_presentation')" class="flex flex-col items-center gap-2 p-4 rounded-lg bg-zinc-900 hover:bg-blue-500/10 border border-zinc-800 hover:border-blue-500/30 transition-all group">
+                        <i class="ph ph-presentation-chart text-2xl text-zinc-500 group-hover:text-blue-400"></i>
+                        <span class="text-sm text-zinc-400 group-hover:text-white">Prezentacja</span>
+                    </button>
+                </div>
+                <button onclick="closePdfTypeModal()" class="w-full mt-3 text-zinc-500 hover:text-white text-xs py-2 transition-colors">Anuluj</button>
             </div>
         </div>
     </div>
@@ -7205,6 +7248,18 @@
         function renderReports() {
             const container = document.getElementById('reports-list');
             const empty = document.getElementById('reports-empty');
+            const publishAllBtn = document.getElementById('publish-all-reports-btn');
+
+            // Check for unpublished reports
+            const unpublishedCount = reports.filter(r => !r.visible_to_client).length;
+            if (publishAllBtn) {
+                if (unpublishedCount > 0) {
+                    publishAllBtn.classList.remove('hidden');
+                    publishAllBtn.innerHTML = `<i class="ph ph-checks"></i> Udostępnij wszystkie (${unpublishedCount})`;
+                } else {
+                    publishAllBtn.classList.add('hidden');
+                }
+            }
 
             if (reports.length === 0) {
                 container.innerHTML = '';
@@ -7215,48 +7270,31 @@
             empty.classList.add('hidden');
             container.innerHTML = reports.map(r => {
                 const config = REPORT_TYPE_CONFIG[r.type] || { icon: 'ph-file', label: r.type, color: 'bg-zinc-800 text-zinc-400' };
-                const statusBadge = r.visible_to_client
-                    ? '<span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">Udostępniony</span>'
-                    : '<span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full">Szkic</span>';
-
-                const approveBtn = !r.visible_to_client
-                    ? `<button onclick="approveAndPublishReport('${r.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                           <i class="ph ph-check"></i> Udostępnij
-                       </button>`
-                    : '';
-
-                const fileInfo = r.content?.file_name
-                    ? `<span class="text-zinc-600 text-[10px]">${escapeHtml(r.content.file_name)} · ${formatFileSize(r.content.file_size)}</span>`
-                    : '';
 
                 return `
-                    <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg ${config.color} flex items-center justify-center">
-                                    <i class="ph ${config.icon} text-lg"></i>
-                                </div>
-                                <div>
-                                    <h4 class="text-white font-medium">${escapeHtml(r.title)}</h4>
-                                    <div class="flex items-center gap-2 mt-1 flex-wrap">
-                                        ${statusBadge}
-                                        <span class="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">${config.label}</span>
-                                        ${fileInfo}
-                                        <span class="text-zinc-600 text-[10px]">${formatDate(r.created_at)}</span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="flex items-center gap-4 p-3 bg-zinc-900/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors group">
+                        <div class="w-10 h-10 rounded-lg ${config.color} flex items-center justify-center shrink-0">
+                            <i class="ph ${config.icon} text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2">
-                                ${approveBtn}
-                                <button onclick="toggleReportVisibility('${r.id}')" class="${r.visible_to_client ? 'text-emerald-400' : 'text-zinc-600'}" title="${r.visible_to_client ? 'Widoczny' : 'Ukryty'}">
-                                    <i class="ph ph-eye${r.visible_to_client ? '' : '-slash'}"></i>
-                                </button>
+                                <span class="text-white font-medium text-sm truncate">${escapeHtml(r.title)}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded ${r.visible_to_client ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}">${r.visible_to_client ? 'Udostępniony' : 'Szkic'}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mt-0.5">
+                                <span>${config.label}</span>
+                                ${r.content?.file_name ? `<span>·</span><span class="truncate max-w-[150px]">${escapeHtml(r.content.file_name)}</span>` : ''}
+                                <span>·</span>
+                                <span>${formatDate(r.created_at)}</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 mt-2">
-                            ${r.file_url ? `<a href="${r.file_url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1"><i class="ph ph-arrow-square-out"></i> Otwórz</a>` : ''}
-                            <button onclick="deleteReport('${r.id}')" class="text-zinc-500 hover:text-red-400 text-xs flex items-center gap-1">
-                                <i class="ph ph-trash"></i> Usuń
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            ${r.file_url ? `<a href="${r.file_url}" target="_blank" class="p-2 text-zinc-500 hover:text-cyan-400 transition-colors" title="Otwórz"><i class="ph ph-arrow-square-out"></i></a>` : ''}
+                            <button onclick="toggleReportVisibility('${r.id}')" class="p-2 ${r.visible_to_client ? 'text-emerald-400 hover:text-emerald-300' : 'text-zinc-500 hover:text-white'} transition-colors" title="${r.visible_to_client ? 'Ukryj' : 'Udostępnij'}">
+                                <i class="ph ph-eye${r.visible_to_client ? '' : '-slash'}"></i>
+                            </button>
+                            <button onclick="deleteReport('${r.id}')" class="p-2 text-zinc-500 hover:text-red-400 transition-colors" title="Usuń">
+                                <i class="ph ph-trash"></i>
                             </button>
                         </div>
                     </div>
@@ -7477,6 +7515,214 @@
         window.uploadReport = uploadReport;
         window.toggleReportVisibility = toggleReportVisibility;
         window.deleteReport = deleteReport;
+
+        // =============================================
+        // DRAG & DROP REPORTS
+        // =============================================
+        let pendingPdfFile = null;
+
+        function handleReportDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('reports-dropzone-active').classList.remove('hidden');
+        }
+        window.handleReportDragOver = handleReportDragOver;
+
+        function handleReportDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!e.currentTarget.contains(e.relatedTarget)) {
+                document.getElementById('reports-dropzone-active').classList.add('hidden');
+            }
+        }
+        window.handleReportDragLeave = handleReportDragLeave;
+
+        function handleReportDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('reports-dropzone-active').classList.add('hidden');
+            const files = Array.from(e.dataTransfer.files);
+            processReportFiles(files);
+        }
+        window.handleReportDrop = handleReportDrop;
+
+        function handleReportFileSelect(e) {
+            const files = Array.from(e.target.files);
+            processReportFiles(files);
+            e.target.value = '';
+        }
+        window.handleReportFileSelect = handleReportFileSelect;
+
+        function getReportTypeFromFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'pdf') return 'ask_pdf'; // needs user choice
+            if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) return 'report_infographic';
+            if (['mp4', 'mov', 'webm'].includes(ext)) return 'report_video';
+            return null;
+        }
+
+        async function processReportFiles(files) {
+            for (const file of files) {
+                const type = getReportTypeFromFile(file);
+                if (!type) {
+                    showToast(`Nieobsługiwany format: ${file.name}`, 'warning');
+                    continue;
+                }
+
+                if (type === 'ask_pdf') {
+                    // Show modal to ask for PDF type
+                    pendingPdfFile = file;
+                    document.getElementById('pdf-type-filename').textContent = file.name;
+                    document.getElementById('pdf-type-modal').classList.remove('hidden');
+                } else {
+                    await uploadReportFile(file, type);
+                }
+            }
+        }
+
+        function closePdfTypeModal() {
+            document.getElementById('pdf-type-modal').classList.add('hidden');
+            pendingPdfFile = null;
+        }
+        window.closePdfTypeModal = closePdfTypeModal;
+
+        async function confirmPdfType(type) {
+            if (!pendingPdfFile) return;
+            const file = pendingPdfFile;
+            closePdfTypeModal();
+            await uploadReportFile(file, type);
+        }
+        window.confirmPdfType = confirmPdfType;
+
+        async function uploadReportFile(file, type) {
+            const title = REPORT_TITLES[type] || type;
+            const queueContainer = document.getElementById('reports-upload-queue');
+
+            // Show upload item
+            const uploadId = 'upload-' + Date.now();
+            queueContainer.classList.remove('hidden');
+            queueContainer.insertAdjacentHTML('beforeend', `
+                <div id="${uploadId}" class="flex items-center gap-3 p-3 bg-zinc-900/60 border border-white/5 rounded-lg">
+                    <i class="ph ph-spinner animate-spin text-green-400"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white text-sm truncate">${escapeHtml(file.name)}</p>
+                        <p class="text-zinc-500 text-xs">Przesyłanie...</p>
+                    </div>
+                </div>
+            `);
+
+            try {
+                const fileExt = file.name.split('.').pop();
+                const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u0142/g, 'l').replace(/\u0141/g, 'L').replace(/[^a-zA-Z0-9._-]/g, '_');
+                const fileName = `reports/${workflow.id}/${Date.now()}_${safeName}`;
+
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('attachments')
+                    .upload(fileName, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: urlData } = supabaseClient.storage
+                    .from('attachments')
+                    .getPublicUrl(fileName);
+
+                const { error } = await supabaseClient
+                    .from('workflow_reports')
+                    .insert({
+                        workflow_id: workflow.id,
+                        title,
+                        type,
+                        file_url: urlData.publicUrl,
+                        content: { file_name: file.name, file_size: file.size, mime_type: file.type },
+                        visible_to_client: false
+                    });
+
+                if (error) throw error;
+
+                logActivity('report_uploaded', `Przesłano raport: ${title}`, { report_type: type, file_name: file.name });
+
+                // Update upload item to success
+                const uploadItem = document.getElementById(uploadId);
+                if (uploadItem) {
+                    uploadItem.innerHTML = `
+                        <i class="ph ph-check-circle text-emerald-400"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white text-sm truncate">${escapeHtml(file.name)}</p>
+                            <p class="text-emerald-400 text-xs">Dodano</p>
+                        </div>
+                    `;
+                    setTimeout(() => uploadItem.remove(), 2000);
+                }
+
+                await loadReports();
+            } catch (err) {
+                console.error('Error uploading report:', err);
+                const uploadItem = document.getElementById(uploadId);
+                if (uploadItem) {
+                    uploadItem.innerHTML = `
+                        <i class="ph ph-x-circle text-red-400"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white text-sm truncate">${escapeHtml(file.name)}</p>
+                            <p class="text-red-400 text-xs">Błąd: ${err.message}</p>
+                        </div>
+                    `;
+                    setTimeout(() => uploadItem.remove(), 5000);
+                }
+            }
+
+            // Hide queue if empty
+            if (queueContainer.children.length === 0) {
+                queueContainer.classList.add('hidden');
+            }
+        }
+
+        // =============================================
+        // PUBLISH ALL REPORTS
+        // =============================================
+        async function publishAllReports() {
+            const unpublished = reports.filter(r => !r.visible_to_client);
+            if (unpublished.length === 0) return;
+
+            if (!confirm(`Udostępnić ${unpublished.length} raportów klientowi?`)) return;
+
+            try {
+                const ids = unpublished.map(r => r.id);
+                const { error } = await supabaseClient
+                    .from('workflow_reports')
+                    .update({ visible_to_client: true })
+                    .in('id', ids);
+
+                if (error) throw error;
+
+                // Update local state
+                unpublished.forEach(r => r.visible_to_client = true);
+                renderReports();
+
+                logActivity('reports_published_bulk', `Udostępniono ${unpublished.length} raportów`, { count: unpublished.length });
+                showToast(`Udostępniono ${unpublished.length} raportów`, 'success');
+
+                // Send email notification
+                const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#raporty`;
+
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'report_published',
+                        entity_type: 'workflow',
+                        entity_id: workflow.id,
+                        data: {
+                            clientName,
+                            reportTitle: `${unpublished.length} raportów`,
+                            projectUrl
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Error publishing all reports:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.publishAllReports = publishAllReports;
 
         // =============================================
         // COMMENTS MANAGEMENT
