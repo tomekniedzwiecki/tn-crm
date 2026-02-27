@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlassMax - Lśniące okna bez drabiny i ryzyka</title>
+  <meta name="description" content="Robot do mycia okien z siłą ssania 5600 Pa i podwójnym bezpieczeństwem. Maksimum czystości, zero wysiłku.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="GlassMax - Lśniące okna bez drabiny i ryzyka">
+  <meta property="og:description" content="Robot do mycia okien z siłą ssania 5600 Pa i podwójnym bezpieczeństwem.">
+  <meta property="og:type" content="website">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== CSS RESET ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ===== CSS VARIABLES ===== */
+    :root {
+      /* Brand Colors */
+      --primary: #00D4FF;
+      --primary-rgb: 0, 212, 255;
+      --secondary: #0A1628;
+      --secondary-rgb: 10, 22, 40;
+      --accent: #FF6B35;
+      --accent-rgb: 255, 107, 53;
+      --neutral-dark: #0D1B2A;
+      --neutral-mid: #4A5568;
+      --neutral-light: #F7FAFC;
+
+      /* Derived */
+      --primary-soft: rgba(0, 212, 255, 0.08);
+      --primary-glow: rgba(0, 212, 255, 0.25);
+      --bg-white: #FFFFFF;
+      --bg-alt: #F8FAFC;
+      --text-dark: #111827;
+      --text-secondary: #6B7280;
+      --border-light: #E5E7EB;
+
+      /* Typography */
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-accent: 'JetBrains Mono', monospace;
+
+      /* Spacing */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+    }
+
+    /* ===== BASE STYLES ===== */
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-dark);
+      background: var(--bg-white);
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; height: auto; display: block; }
+
+    /* ===== UTILITIES ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-label {
+      font-family: var(--font-accent);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 40px;
+      margin-bottom: 20px;
+      color: var(--text-dark);
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 600px;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 32px;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--neutral-dark);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px var(--primary-glow);
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-dark);
+      border: 2px solid var(--border-light);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* ===== IMAGE PLACEHOLDERS ===== */
+    .img-placeholder {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1a2332 0%, #0d1b2a 100%);
+      border: 1px solid rgba(0, 212, 255, 0.1);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ph-icon {
+      width: 48px;
+      height: 48px;
+      color: rgba(0, 212, 255, 0.4);
+    }
+
+    .ph-label {
+      font-family: var(--font-accent);
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .ph-size {
+      font-family: var(--font-accent);
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(0, 212, 255, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo img {
+      height: 40px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+    }
+
+    .header-cta {
+      padding: 12px 24px;
+      font-size: 14px;
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .hamburger span {
+      width: 24px;
+      height: 2px;
+      background: var(--text-dark);
+      transition: all 0.3s ease;
+    }
+
+    .hamburger.active span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .hamburger.active span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* ===== MOBILE MENU ===== */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-white);
+      z-index: 99;
+      padding: 100px 24px 40px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .mobile-menu.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .mobile-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .mobile-link {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .mobile-cta {
+      margin-top: 32px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      padding: 160px 0 100px;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.03) 0%, #FFF 50%, rgba(10, 22, 40, 0.03) 100%);
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      animation: glow-pulse 4s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .hero-glow-2 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 107, 53, 0.08) 0%, transparent 70%);
+      bottom: -100px;
+      left: -100px;
+      animation: glow-pulse 5s ease-in-out infinite alternate-reverse;
+      pointer-events: none;
+    }
+
+    @keyframes glow-pulse {
+      0% { transform: scale(1); opacity: 0.5; }
+      100% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    /* Hero Background Animation - Cleaning/Window effect */
+    .hero-bg-animation {
+      position: absolute;
+      top: 50%;
+      right: 10%;
+      transform: translateY(-50%);
+      width: 500px;
+      height: 500px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .clean-wave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 212, 255, 0.1);
+      animation: clean-pulse 4s ease-out infinite;
+    }
+
+    .clean-wave-1 { width: 150px; height: 150px; }
+    .clean-wave-2 { width: 250px; height: 250px; animation-delay: 1s; }
+    .clean-wave-3 { width: 350px; height: 350px; animation-delay: 2s; }
+
+    @keyframes clean-pulse {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.4; }
+      100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+    }
+
+    .sparkle-particles span {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(0, 212, 255, 0.4);
+      border-radius: 50%;
+      animation: sparkle-float 5s ease-in-out infinite;
+    }
+
+    .sparkle-particles span:nth-child(1) { top: 20%; left: 30%; animation-delay: 0s; }
+    .sparkle-particles span:nth-child(2) { top: 40%; left: 60%; animation-delay: 1s; }
+    .sparkle-particles span:nth-child(3) { top: 60%; left: 40%; animation-delay: 2s; }
+    .sparkle-particles span:nth-child(4) { top: 30%; left: 70%; animation-delay: 0.5s; }
+    .sparkle-particles span:nth-child(5) { top: 70%; left: 50%; animation-delay: 1.5s; }
+
+    @keyframes sparkle-float {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+      50% { transform: translateY(-15px) scale(1.5); opacity: 0.7; }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--primary-soft);
+      border-radius: 100px;
+      font-family: var(--font-accent);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    .hero-badge svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .hero-title {
+      font-size: 56px;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      color: var(--text-dark);
+    }
+
+    .hero-title span {
+      color: var(--primary);
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero-visual {
+      position: relative;
+    }
+
+    .hero-image {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== TRUST BAR ===== */
+    .trust-bar {
+      padding: 40px 0;
+      background: linear-gradient(90deg, rgba(0, 212, 255, 0.04) 0%, rgba(10, 22, 40, 0.04) 100%);
+      border-top: 1px solid rgba(0, 212, 255, 0.1);
+      border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+    }
+
+    .trust-items {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: nowrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--bg-white);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .trust-item:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.15);
+    }
+
+    .trust-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-soft);
+      border-radius: var(--radius-sm);
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .trust-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .trust-text {
+      white-space: nowrap;
+    }
+
+    .trust-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .trust-text span {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* ===== PROBLEM SECTION ===== */
+    .problem {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%);
+    }
+
+    .problem-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .problem-title {
+      font-size: 36px;
+      margin-bottom: 24px;
+    }
+
+    .problem-text {
+      font-size: 18px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.8;
+    }
+
+    .problem-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .stat-item {
+      padding: 24px;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-number {
+      font-family: var(--font-heading);
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .problem-visual {
+      position: relative;
+    }
+
+    /* ===== SOLUTION / BENTO ===== */
+    .solution {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, rgba(10, 22, 40, 0.03) 100%);
+    }
+
+    .solution-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .bento-card {
+      position: relative;
+      padding: 32px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-light);
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .bento-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 12px 24px rgba(0, 212, 255, 0.15);
+      transform: translateY(-4px);
+    }
+
+    .bento-card:nth-child(2):hover { border-color: var(--secondary); }
+    .bento-card:nth-child(3):hover { border-color: var(--accent); }
+    .bento-card:nth-child(4):hover { border-color: var(--primary); }
+
+    .bento-card .spotlight {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s;
+      transform: translate(-50%, -50%);
+    }
+
+    .bento-card:hover .spotlight { opacity: 1; }
+
+    .bento-card:nth-child(2) .spotlight { background: radial-gradient(circle, rgba(10, 22, 40, 0.08) 0%, transparent 70%); }
+    .bento-card:nth-child(3) .spotlight { background: radial-gradient(circle, rgba(255, 107, 53, 0.08) 0%, transparent 70%); }
+
+    .bento-image {
+      margin-bottom: 20px;
+    }
+
+    .bento-icon {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-soft);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      color: var(--primary);
+    }
+
+    .bento-card:nth-child(2) .bento-icon { background: rgba(10, 22, 40, 0.08); color: var(--secondary); }
+    .bento-card:nth-child(3) .bento-icon { background: rgba(255, 107, 53, 0.08); color: var(--accent); }
+    .bento-card:nth-child(4) .bento-icon { background: var(--primary-soft); color: var(--primary); }
+
+    .bento-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .bento-title {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    .bento-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .how-it-works {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFFDF7 0%, #FFF8E7 100%);
+    }
+
+    .how-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .how-step {
+      text-align: center;
+      padding: 32px;
+    }
+
+    .how-step-image {
+      margin-bottom: 24px;
+    }
+
+    .how-step-number {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      background: var(--primary);
+      border-radius: 50%;
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+    }
+
+    .how-step:nth-child(2) .how-step-number { background: var(--secondary); color: #FFF; }
+    .how-step:nth-child(3) .how-step-number { background: #10B981; color: #FFF; }
+
+    .how-step-title {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    .how-step-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ===== COMPARISON ===== */
+    .comparison {
+      padding: 100px 0;
+      background: linear-gradient(180deg, rgba(10, 22, 40, 0.03) 0%, #FFF 100%);
+    }
+
+    .comparison-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .comparison-card {
+      padding: 40px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-white);
+      box-shadow: var(--shadow-md);
+    }
+
+    .comparison-card.highlight {
+      border: 2px solid var(--primary);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .comparison-card h3 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: var(--text-dark);
+    }
+
+    .comparison-card.highlight h3 {
+      color: var(--primary);
+    }
+
+    .comparison-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .comparison-card ul {
+      list-style: none;
+    }
+
+    .comparison-card li {
+      padding: 12px 0;
+      font-size: 15px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .comparison-card li:last-child {
+      border-bottom: none;
+    }
+
+    .comparison-card.highlight li {
+      color: var(--text-dark);
+    }
+
+    /* ===== TESTIMONIALS ===== */
+    .testimonials {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, rgba(0, 212, 255, 0.03) 100%);
+      overflow: hidden;
+    }
+
+    .testimonials-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .testimonial-card {
+      padding: 32px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .testimonial-stars {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+
+    .testimonial-stars svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .testimonial-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .author-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .author-info strong {
+      display: block;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .author-info span {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ===== FAQ ===== */
+    .faq {
+      padding: 100px 0;
+      background: linear-gradient(180deg, rgba(10, 22, 40, 0.03) 0%, #FFF 100%);
+    }
+
+    .faq-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .faq-list {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      margin-bottom: 16px;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-light);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-dark);
+      text-align: left;
+    }
+
+    .faq-question svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-question svg {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+    }
+
+    .faq-answer-inner {
+      padding: 0 24px 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ===== OFFER ===== */
+    .offer {
+      padding: 100px 0;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, #FFF 50%, rgba(10, 22, 40, 0.05) 100%);
+    }
+
+    .offer-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .offer-box {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 48px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      border: 2px solid var(--border-light);
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .offer-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+      animation: border-beam 3s linear infinite;
+      background-size: 200% 100%;
+    }
+
+    @keyframes border-beam {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    .offer-badge {
+      display: inline-block;
+      padding: 8px 20px;
+      background: var(--accent);
+      color: #FFF;
+      font-family: var(--font-accent);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+
+    .offer-image {
+      margin: 24px 0;
+    }
+
+    .offer-title {
+      font-size: 32px;
+      margin-bottom: 16px;
+      color: var(--text-dark);
+    }
+
+    .offer-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .offer-price {
+      margin-bottom: 32px;
+    }
+
+    .price-old {
+      font-size: 18px;
+      color: var(--text-secondary);
+      text-decoration: line-through;
+      margin-right: 12px;
+    }
+
+    .price-current {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .price-currency {
+      font-size: 24px;
+    }
+
+    .offer-savings {
+      display: inline-block;
+      padding: 8px 16px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10B981;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+    }
+
+    .offer-includes {
+      margin: 32px 0;
+      text-align: left;
+    }
+
+    .offer-includes h4 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .offer-list {
+      list-style: none;
+    }
+
+    .offer-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      font-size: 15px;
+      color: var(--text-dark);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .offer-list li:last-child {
+      border-bottom: none;
+    }
+
+    .offer-list svg {
+      width: 20px;
+      height: 20px;
+      color: #10B981;
+      flex-shrink: 0;
+    }
+
+    .offer-cta {
+      width: 100%;
+      padding: 20px 40px;
+      font-size: 18px;
+      margin-top: 24px;
+    }
+
+    .offer-guarantee {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .offer-guarantee svg {
+      width: 18px;
+      height: 18px;
+      color: #10B981;
+    }
+
+    /* ===== CTA BANNER ===== */
+    .cta-banner {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      text-align: center;
+    }
+
+    .cta-title {
+      font-size: 36px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .cta-subtitle {
+      font-size: 18px;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 32px;
+    }
+
+    .cta-banner .btn-primary {
+      background: #FFFFFF;
+      color: var(--primary);
+    }
+
+    .cta-banner .btn-primary:hover {
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      padding: 60px 0 30px;
+      background: #FAFAFA;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 60px;
+      margin-bottom: 40px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 16px;
+      line-height: 1.7;
+    }
+
+    .footer-links h4, .footer-contact h4 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-dark);
+      margin-bottom: 20px;
+    }
+
+    .footer-links ul {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: 12px;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+    }
+
+    .footer-contact p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .footer-bottom {
+      padding-top: 30px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-bottom p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .footer-legal {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-legal a {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .footer-legal a:hover {
+      color: var(--primary);
+    }
+
+    /* ===== COOKIE BANNER ===== */
+    .cookie-banner {
+      position: fixed;
+      bottom: -200px;
+      left: 24px;
+      right: 24px;
+      max-width: 500px;
+      padding: 24px;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      z-index: 200;
+      transition: bottom 0.5s ease;
+    }
+
+    .cookie-banner.show {
+      bottom: 24px;
+    }
+
+    .cookie-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .cookie-btn {
+      width: 100%;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .hero-content { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { order: -1; }
+      .hero-title { font-size: 44px; }
+      .problem-content { grid-template-columns: 1fr; }
+      .problem-visual { order: -1; }
+      .bento-grid { grid-template-columns: 1fr; }
+      .how-steps { grid-template-columns: 1fr; gap: 40px; }
+      .comparison-grid { grid-template-columns: 1fr; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; gap: 40px; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .header-cta { display: none; }
+      .hamburger { display: flex; }
+      .mobile-menu { display: block; }
+
+      .hero { padding: 120px 0 60px; }
+      .hero-title { font-size: 36px; }
+      .hero-subtitle { font-size: 17px; }
+      .hero-cta { flex-direction: column; }
+      .hero-cta .btn { width: 100%; }
+      .hero-bg-animation { width: 300px; height: 300px; opacity: 0.5; right: 5%; }
+
+      .trust-items { flex-wrap: wrap; gap: 16px; justify-content: center; }
+
+      .section-title { font-size: 32px; }
+
+      .problem-stats { grid-template-columns: 1fr; }
+
+      .offer-box { padding: 32px 24px; }
+      .price-current { font-size: 40px; }
+
+      .cta-title { font-size: 28px; }
+
+      .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+      .footer-legal { justify-content: center; }
+
+      .cookie-banner { left: 16px; right: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title { font-size: 30px; }
+      .hero-badges { gap: 8px; }
+      .hero-badge { padding: 6px 12px; font-size: 11px; }
+
+      .section-title { font-size: 28px; }
+
+      .bento-card { padding: 24px; }
+
+      .how-step { padding: 24px 16px; }
+
+      .testimonial-card { padding: 24px; }
+
+      .offer-title { font-size: 26px; }
+      .price-current { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="#" class="logo">
+          <img src="/landing-pages/glassmax/logo.jpg" alt="GlassMax">
+        </a>
+
+        <nav class="nav-links">
+          <a href="#features" class="nav-link">Funkcje</a>
+          <a href="#how-it-works" class="nav-link">Jak działa</a>
+          <a href="#testimonials" class="nav-link">Opinie</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+        </nav>
+
+        <a href="#offer" class="btn btn-primary header-cta">Zamów teraz</a>
+
+        <div class="hamburger" id="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <nav class="mobile-nav">
+      <a href="#features" class="mobile-link">Funkcje</a>
+      <a href="#how-it-works" class="mobile-link">Jak działa</a>
+      <a href="#testimonials" class="mobile-link">Opinie</a>
+      <a href="#faq" class="mobile-link">FAQ</a>
+      <a href="#offer" class="btn btn-primary mobile-cta">Zamów teraz</a>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-glow-2"></div>
+
+    <!-- Background Animation - Window cleaning effect -->
+    <div class="hero-bg-animation">
+      <div class="clean-wave clean-wave-1"></div>
+      <div class="clean-wave clean-wave-2"></div>
+      <div class="clean-wave clean-wave-3"></div>
+      <div class="sparkle-particles">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text fade-in">
+          <div class="hero-badges">
+            <span class="hero-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Podwójne bezpieczeństwo
+            </span>
+            <span class="hero-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              5600 Pa ssania
+            </span>
+          </div>
+
+          <h1 class="hero-title">Lśniące okna <span>bez drabiny</span> i ryzyka</h1>
+
+          <p class="hero-subtitle">Robot GlassMax z technologią Dual Spinning Mop i siłą ssania 5600 Pa myje nawet najtrudniej dostępne szyby. Ty odpoczywasz, on pracuje.</p>
+
+          <div class="hero-cta">
+            <a href="#offer" class="btn btn-primary">Zamów z gwarancją zwrotu</a>
+            <a href="#how-it-works" class="btn btn-secondary">Zobacz jak działa</a>
+          </div>
+        </div>
+
+        <div class="hero-visual fade-in">
+          <div class="hero-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Hero Product</span>
+              <span class="ph-size">1200×900px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST BAR -->
+  <section class="trust-bar">
+    <div class="container">
+      <div class="trust-items">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Podwójne bezpieczeństwo</strong>
+            <span>UPS + lina asekuracyjna</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>5600 Pa ssania</strong>
+            <span>Maksymalna moc</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Darmowa dostawa</strong>
+            <span>Na terenie Polski</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>30 dni na zwrot</strong>
+            <span>Bez pytań</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <div class="container">
+      <div class="problem-content">
+        <div class="problem-text-content fade-in">
+          <span class="section-label">Problem</span>
+          <h2 class="problem-title">Czy mycie okien to dla Ciebie koszmar?</h2>
+          <p class="problem-text">Wchodzenie na drabinę, wychylanie się przez parapet, godziny spędzone na polerowanie... A efekt? Smugi i zacieki, które widać już po kilku dniach. Dla właścicieli domów z dużymi przeszkleniami to prawdziwa udręka.</p>
+
+          <div class="problem-stats">
+            <div class="stat-item">
+              <div class="stat-number">67%</div>
+              <div class="stat-label">Polaków odkłada mycie okien z powodu strachu przed wysokością</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">4h</div>
+              <div class="stat-label">Średni czas potrzebny na umycie okien w domu jednorodzinnym</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">2800+</div>
+              <div class="stat-label">Wypadków rocznie przy myciu okien w Polsce</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">89%</div>
+              <div class="stat-label">Użytkowników robotów nie wraca do ręcznego mycia</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="problem-visual fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+              </svg>
+            </div>
+            <span class="ph-label">Problem Visual</span>
+            <span class="ph-size">800×600px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLUTION / BENTO -->
+  <section class="solution" id="features">
+    <div class="container">
+      <div class="solution-header fade-in">
+        <span class="section-label">Rozwiązanie</span>
+        <h2 class="section-title">Poznaj GlassMax — Twój osobisty asystent do okien</h2>
+        <p class="section-subtitle">Technologia, która zmienia zasady gry. Bez wysiłku, bez ryzyka, bez smug.</p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Feature 1 -->
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Feature 1</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+          </div>
+          <h3 class="bento-title">Dual Spinning Mop</h3>
+          <p class="bento-text">Dwie obrotowe głowice symulują ludzki ruch polerowania. Efekt? Krystalicznie czyste szyby bez smug i zacieków.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Feature 2</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <h3 class="bento-title">Siła ssania 5600 Pa</h3>
+          <p class="bento-text">Najpotężniejsze ssanie w swojej klasie gwarantuje pewne przyleganie do szyby. Nawet na pionowych i pochyłych powierzchniach.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Feature 3</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3 class="bento-title">Podwójne bezpieczeństwo</h3>
+          <p class="bento-text">Bateria UPS zapewnia 20 minut pracy przy zaniku prądu, a lina asekuracyjna o wytrzymałości 50 kg daje 100% spokoju ducha.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Feature 4</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+          </div>
+          <h3 class="bento-title">Sterowanie aplikacją</h3>
+          <p class="bento-text">Kontroluj robota z kanapy przez intuicyjną aplikację mobilną. Pilot w zestawie dla tych, którzy wolą klasykę.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="how-header fade-in">
+        <span class="section-label">Jak to działa</span>
+        <h2 class="section-title">3 proste kroki do lśniących okien</h2>
+        <p class="section-subtitle">Żadnego skomplikowanego montażu. Żadnych specjalnych umiejętności. Po prostu przyklej i włącz.</p>
+      </div>
+
+      <div class="how-steps">
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3; border-radius: 12px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Krok 1</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-number">1</div>
+          <h3 class="how-step-title">Przyklej do okna</h3>
+          <p class="how-step-text">Przyłóż robota do szyby i włącz. Potężne ssanie natychmiast przytrzyma go w miejscu. Podepnij linę asekuracyjną.</p>
+        </div>
+
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3; border-radius: 12px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Krok 2</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-number">2</div>
+          <h3 class="how-step-title">Wybierz tryb</h3>
+          <p class="how-step-text">Naciśnij przycisk lub użyj aplikacji. Robot sam wykryje krawędzie okna i zaplanuje optymalną trasę czyszczenia.</p>
+        </div>
+
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3; border-radius: 12px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Krok 3</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-number">3</div>
+          <h3 class="how-step-title">Ciesz się efektem</h3>
+          <p class="how-step-text">Usiądź wygodnie i patrz, jak GlassMax robi robotę za Ciebie. Krystalicznie czyste okna w kilka minut!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="comparison">
+    <div class="container">
+      <div class="comparison-header fade-in">
+        <span class="section-label">Porównanie</span>
+        <h2 class="section-title">Dlaczego GlassMax wygrywa?</h2>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="comparison-card fade-in">
+          <h3>Tradycyjne metody</h3>
+          <p class="comparison-desc">Ręczne mycie okien to czasochłonne i niebezpieczne zajęcie, które wymaga wysiłku fizycznego i specjalnego sprzętu.</p>
+          <ul>
+            <li>Ryzyko upadku z drabiny lub parapetu</li>
+            <li>Godziny spędzone na jednym oknie</li>
+            <li>Smugi i zacieki po wyschnięciu</li>
+            <li>Ból pleców i ramion po pracy</li>
+            <li>Konieczność częstego powtarzania</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card highlight fade-in">
+          <h3>GlassMax</h3>
+          <p class="comparison-desc">Automatyczne czyszczenie z technologią Dual Spinning Mop zapewnia perfekcyjny efekt bez Twojego udziału.</p>
+          <ul>
+            <li>Pełne bezpieczeństwo — robot pracuje za Ciebie</li>
+            <li>Jedno okno w kilka minut</li>
+            <li>Technologia antysmugowa</li>
+            <li>Zero wysiłku — sterowanie z kanapy</li>
+            <li>Efekt utrzymuje się dłużej</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials" id="testimonials">
+    <div class="container">
+      <div class="testimonials-header fade-in">
+        <span class="section-label">Opinie</span>
+        <h2 class="section-title">Co mówią nasi klienci?</h2>
+      </div>
+
+      <div class="testimonials-grid">
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Mam panoramiczne okna w salonie i do tej pory mycie ich było koszmarem. GlassMax robi to sam w 15 minut! Najlepsza inwestycja w dom od lat."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">AK</div>
+            <div class="author-info">
+              <strong>Anna K.</strong>
+              <span>Właścicielka domu z przeszkleniami</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Mieszkam na 12. piętrze i mycie okien z zewnątrz było niemożliwe. Teraz GlassMax robi to bezpiecznie. Lina asekuracyjna daje 100% spokoju."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">MN</div>
+            <div class="author-info">
+              <strong>Marek N.</strong>
+              <span>Mieszkaniec apartamentowca</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Kupiłam dla mamy na urodziny. Ma 68 lat i teraz sama utrzymuje okna w czystości bez proszenia o pomoc. Robot jest bardzo prosty w obsłudze."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">KW</div>
+            <div class="author-info">
+              <strong>Katarzyna W.</strong>
+              <span>Córka zadowolonej użytkowniczki</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="faq-header fade-in">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Często zadawane pytania</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Czy robot jest bezpieczny? Co jeśli odpadnie od szyby?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              GlassMax ma podwójny system bezpieczeństwa. Po pierwsze, siła ssania 5600 Pa zapewnia pewne przyleganie do szyby. Po drugie, wbudowana bateria UPS utrzymuje robota przez 20 minut przy zaniku prądu. Po trzecie, lina asekuracyjna o wytrzymałości 50 kg zabezpiecza przed upadkiem. Nawet w najgorszym scenariuszu robot po prostu zawiśnie na linie.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Na jakich powierzchniach działa robot?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              GlassMax działa na wszystkich gładkich powierzchniach: szybach okiennych (również podwójnych i potrójnych), lustrach, szklanych drzwiach, kabinach prysznicowych, a nawet kafelkach. Minimalna grubość szyby to 3mm. Robot świetnie radzi sobie z oknami pionowymi, pochyłymi (np. dachowymi) oraz poziomymi.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Czy robot zostawia smugi?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Technologia Dual Spinning Mop z dwiema obrotowymi głowicami symuluje ruch ludzkiej ręki podczas polerowania. Dzięki temu szyby są idealnie czyste bez smug i zacieków. Dla najlepszego efektu zalecamy używanie dedykowanego płynu do okien i czystych ściereczek z mikrofibry (w zestawie).
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Jak długo trwa mycie jednego okna?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Standardowe okno (około 1m²) robot myje w 3-5 minut. Duże przeszklenie tarasowe zajmuje około 10-15 minut. Robot sam wykrywa krawędzie i planuje optymalną trasę, więc nie musisz go nadzorować — możesz w tym czasie zająć się czymś innym.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Co znajduje się w zestawie?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              W zestawie GlassMax otrzymujesz: robota do mycia okien, zasilacz z kablem 5m, pilota zdalnego sterowania, linę asekuracyjną 50kg, 4 komplety ściereczek z mikrofibry, butelkę z rozpylaczem, próbkę płynu do okien oraz szczegółową instrukcję obsługi w języku polskim.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Jaka jest gwarancja i polityka zwrotów?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Oferujemy 24-miesięczną gwarancję producenta oraz 30-dniową gwarancję satysfakcji. Jeśli z jakiegokolwiek powodu nie będziesz zadowolony, możesz zwrócić produkt w ciągu 30 dni od zakupu i otrzymać pełny zwrot pieniędzy — bez zbędnych pytań.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFER -->
+  <section class="offer" id="offer">
+    <div class="container">
+      <div class="offer-header fade-in">
+        <span class="section-label">Oferta</span>
+        <h2 class="section-title">Odbierz swojego GlassMax</h2>
+      </div>
+
+      <div class="offer-box fade-in">
+        <div style="text-align: center;">
+          <span class="offer-badge">Bestseller</span>
+
+          <div class="offer-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9; border-radius: 16px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Zestaw produktu</span>
+              <span class="ph-size">800×450px</span>
+            </div>
+          </div>
+
+          <h3 class="offer-title">GlassMax Pro — Kompletny Zestaw</h3>
+          <p class="offer-subtitle">Wszystko, czego potrzebujesz do krystalicznie czystych okien</p>
+
+          <div class="offer-price">
+            <span class="price-old">1499 PLN</span>
+            <span class="price-current"><span class="price-currency">PLN </span>999</span>
+            <div class="offer-savings">Oszczędzasz 500 PLN</div>
+          </div>
+        </div>
+
+        <div class="offer-includes">
+          <h4>W zestawie otrzymujesz:</h4>
+          <ul class="offer-list">
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Robot GlassMax Pro z technologią Dual Spinning Mop
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Pilot zdalnego sterowania + aplikacja mobilna
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Lina asekuracyjna 50kg + bateria UPS
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              4 komplety ściereczek z mikrofibry
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Butelka z rozpylaczem + próbka płynu
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              24-miesięczna gwarancja + darmowa dostawa
+            </li>
+          </ul>
+        </div>
+
+        <a href="#" class="btn btn-primary offer-cta">Zamów teraz z gwarancją zwrotu</a>
+
+        <div class="offer-guarantee">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          30 dni na testy. Zwrot bez pytań.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <section class="cta-banner">
+    <div class="container">
+      <h2 class="cta-title fade-in">Gotowy na lśniące okna bez wysiłku?</h2>
+      <p class="cta-subtitle fade-in">Dołącz do tysięcy zadowolonych użytkowników GlassMax</p>
+      <a href="#offer" class="btn btn-primary fade-in">Zamów teraz</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="logo">
+            <img src="/landing-pages/glassmax/logo.jpg" alt="GlassMax">
+          </a>
+          <p>GlassMax to polska marka robotów do automatycznego mycia okien. Maksimum czystości, zero wysiłku.</p>
+        </div>
+
+        <div class="footer-links">
+          <h4>Nawigacja</h4>
+          <ul>
+            <li><a href="#features">Funkcje</a></li>
+            <li><a href="#how-it-works">Jak działa</a></li>
+            <li><a href="#testimonials">Opinie</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="#offer">Zamów</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-contact">
+          <h4>Kontakt</h4>
+          <p>kontakt@glassmax.pl</p>
+          <p>+48 123 456 789</p>
+          <p>Pn-Pt: 9:00 - 17:00</p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 GlassMax. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-legal">
+          <a href="#">Polityka prywatności</a>
+          <a href="#">Regulamin</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- COOKIE BANNER -->
+  <div class="cookie-banner" id="cookieBanner">
+    <p class="cookie-text">Ta strona używa plików cookies, aby zapewnić najlepsze doświadczenia. Kontynuując przeglądanie, zgadzasz się na ich użycie.</p>
+    <button class="btn btn-primary cookie-btn" id="cookieAccept">Rozumiem</button>
+  </div>
+
+  <!-- CONVERSION TOOLKIT -->
+  <script src="/landing-pages/shared/conversion-toolkit.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Intersection Observer for fade-in
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+      // Hamburger menu
+      const hamburger = document.getElementById('hamburger');
+      const mobileMenu = document.getElementById('mobileMenu');
+      hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        mobileMenu.classList.toggle('open');
+      });
+
+      // Close mobile menu on link click
+      document.querySelectorAll('.mobile-link').forEach(link => {
+        link.addEventListener('click', () => {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('open');
+        });
+      });
+
+      // Spotlight effect for bento cards
+      document.querySelectorAll('.bento-card').forEach(card => {
+        const spotlight = card.querySelector('.spotlight');
+        if (spotlight) {
+          card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            spotlight.style.left = (e.clientX - rect.left) + 'px';
+            spotlight.style.top = (e.clientY - rect.top) + 'px';
+          });
+        }
+      });
+
+      // FAQ accordion
+      document.querySelectorAll('.faq-question').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = btn.parentElement;
+          item.classList.toggle('open');
+        });
+      });
+
+      // Cookie banner
+      const cookieBanner = document.getElementById('cookieBanner');
+      const cookieBtn = document.getElementById('cookieAccept');
+      if (!localStorage.getItem('cookiesAccepted')) {
+        setTimeout(() => cookieBanner.classList.add('show'), 2000);
+      }
+      cookieBtn.addEventListener('click', () => {
+        localStorage.setItem('cookiesAccepted', 'true');
+        cookieBanner.classList.remove('show');
+      });
+
+      // Conversion Toolkit
+      if (typeof ConversionToolkit !== 'undefined') {
+        ConversionToolkit.init({
+          brand: {
+            primary: '#FF6B35',
+            secondary: '#00D4FF',
+            name: 'GlassMax',
+            ctaUrl: '#offer'
+          },
+          exitPopup: {
+            enabled: true,
+            headline: 'Czekaj! Nie przegap tej okazji',
+            subheadline: 'Zamów teraz i otrzymaj 500 PLN zniżki + darmową dostawę',
+            ctaText: 'Odbierz ofertę',
+            dismissText: 'Nie, dziękuję'
+          },
+          urgency: {
+            enabled: true,
+            countdown: { enabled: true, position: 'both', text: 'Oferta wygasa za:' },
+            stock: { enabled: true, initial: 17, min: 3 }
+          },
+          socialProof: {
+            enabled: true,
+            liveVisitors: { enabled: true },
+            recentPurchases: { enabled: true }
+          },
+          scrollCTA: { enabled: true, text: 'Zamów teraz', pulse: true },
+          progressBar: { enabled: true },
+          extraCTAs: { enabled: true }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
