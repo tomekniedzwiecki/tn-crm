@@ -7705,18 +7705,23 @@
                 const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                 const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#raporty`;
 
-                await supabaseClient.functions.invoke('automation-trigger', {
-                    body: {
-                        trigger_type: 'report_published',
-                        entity_type: 'workflow',
-                        entity_id: workflow.id,
-                        data: {
-                            clientName,
-                            reportTitle: `${unpublished.length} raportów`,
-                            projectUrl
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'report_published',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                email: workflow.customer_email,
+                                clientName,
+                                reportTitle: `${unpublished.length} raportów`,
+                                projectUrl
+                            }
                         }
-                    }
-                });
+                    });
+                } catch (e) {
+                    console.error('Automation trigger error:', e);
+                }
             } catch (err) {
                 console.error('Error publishing all reports:', err);
                 showToast('Błąd: ' + err.message, 'error');
