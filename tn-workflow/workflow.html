@@ -2613,24 +2613,41 @@
         async function loadClientEngagement() {
             if (!workflow) return;
 
-            // Load access log
-            const { data: accessLogs, count } = await supabaseClient
+            // Load all visits to count unique sessions (visits separated by 30+ min)
+            const { data: accessLogs } = await supabaseClient
                 .from('workflow_access_log')
-                .select('accessed_at', { count: 'exact' })
+                .select('accessed_at')
                 .eq('workflow_id', workflow.id)
-                .order('accessed_at', { ascending: false })
-                .limit(1);
+                .order('accessed_at', { ascending: false });
 
-            // Update visit count
-            document.getElementById('access-count').textContent = count || 0;
+            // Count unique sessions (visits separated by at least 30 minutes)
+            let sessionCount = 0;
+            let lastVisitTime = null;
+            const SESSION_GAP_MS = 30 * 60 * 1000; // 30 minutes
 
-            // Update last visit
             if (accessLogs && accessLogs.length > 0) {
+                // Sort ascending for session counting
+                const sortedLogs = [...accessLogs].sort((a, b) =>
+                    new Date(a.accessed_at) - new Date(b.accessed_at)
+                );
+
+                sortedLogs.forEach(log => {
+                    const visitTime = new Date(log.accessed_at).getTime();
+                    if (!lastVisitTime || (visitTime - lastVisitTime) > SESSION_GAP_MS) {
+                        sessionCount++;
+                    }
+                    lastVisitTime = visitTime;
+                });
+
+                // Last visit display (most recent)
                 const lastVisit = formatTimeAgo(new Date(accessLogs[0].accessed_at));
                 document.getElementById('last-visit').textContent = lastVisit;
             } else {
                 document.getElementById('last-visit').textContent = 'Brak wizyt';
             }
+
+            // Update visit count (unique sessions)
+            document.getElementById('access-count').textContent = sessionCount;
 
             // Load client messages count
             const { count: msgCount } = await supabaseClient
@@ -2653,37 +2670,86 @@
                 .select('*')
                 .eq('workflow_id', workflow.id)
                 .order('accessed_at', { ascending: false })
-                .limit(100);
+                .limit(500);
 
             if (error || !visits || visits.length === 0) {
                 document.getElementById('visits-modal-content').innerHTML = '<div class="text-zinc-500 text-sm text-center py-8">Brak wizyt klienta</div>';
                 return;
             }
 
-            // Group visits by day
-            const visitsByDay = {};
-            visits.forEach(v => {
-                const date = new Date(v.accessed_at);
-                const dayKey = date.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                if (!visitsByDay[dayKey]) visitsByDay[dayKey] = [];
-                visitsByDay[dayKey].push(v);
+            // Group visits into sessions (30 min gap = new session)
+            const SESSION_GAP_MS = 30 * 60 * 1000;
+            const sessions = [];
+            let currentSession = null;
+
+            // Sort chronologically for session detection
+            const sortedVisits = [...visits].sort((a, b) =>
+                new Date(a.accessed_at) - new Date(b.accessed_at)
+            );
+
+            sortedVisits.forEach(v => {
+                const visitTime = new Date(v.accessed_at).getTime();
+                if (!currentSession || (visitTime - currentSession.endTime) > SESSION_GAP_MS) {
+                    currentSession = {
+                        startTime: visitTime,
+                        endTime: visitTime,
+                        visits: [v],
+                        userAgent: v.user_agent
+                    };
+                    sessions.push(currentSession);
+                } else {
+                    currentSession.endTime = visitTime;
+                    currentSession.visits.push(v);
+                }
             });
 
-            let html = '';
-            for (const [day, dayVisits] of Object.entries(visitsByDay)) {
+            // Reverse to show most recent first
+            sessions.reverse();
+
+            // Group sessions by day
+            const sessionsByDay = {};
+            sessions.forEach(s => {
+                const date = new Date(s.startTime);
+                const dayKey = date.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                if (!sessionsByDay[dayKey]) sessionsByDay[dayKey] = [];
+                sessionsByDay[dayKey].push(s);
+            });
+
+            let html = `<div class="text-xs text-zinc-400 mb-4">Łącznie ${sessions.length} sesji (${visits.length} odsłon)</div>`;
+
+            for (const [day, daySessions] of Object.entries(sessionsByDay)) {
                 html += `<div class="mb-4">
                     <div class="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2">${day}</div>
-                    <div class="space-y-1">`;
-                dayVisits.forEach(v => {
-                    const time = new Date(v.accessed_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-                    const device = v.user_agent?.includes('Mobile') ? 'ph-device-mobile' : 'ph-desktop';
-                    const browser = v.user_agent?.includes('Chrome') ? 'Chrome' : v.user_agent?.includes('Safari') ? 'Safari' : v.user_agent?.includes('Firefox') ? 'Firefox' : 'Przeglądarka';
-                    html += `<div class="flex items-center gap-3 py-2 px-3 bg-zinc-800/50 rounded-lg">
-                        <i class="ph ${device} text-zinc-500"></i>
-                        <span class="text-white text-sm">${time}</span>
-                        <span class="text-zinc-500 text-xs">${browser}</span>
+                    <div class="space-y-2">`;
+
+                daySessions.forEach(s => {
+                    const startTime = new Date(s.startTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                    const endTime = new Date(s.endTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                    const duration = Math.round((s.endTime - s.startTime) / 60000);
+                    const durationText = duration > 0 ? `${duration} min` : '<1 min';
+                    const pageViews = s.visits.length;
+
+                    const device = s.userAgent?.includes('Mobile') ? 'ph-device-mobile' : 'ph-desktop';
+                    const isMobile = s.userAgent?.includes('Mobile');
+                    const browser = s.userAgent?.includes('Samsung') ? 'Samsung Browser' :
+                                   s.userAgent?.includes('Chrome') ? 'Chrome' :
+                                   s.userAgent?.includes('Safari') ? 'Safari' :
+                                   s.userAgent?.includes('Firefox') ? 'Firefox' : 'Przeglądarka';
+
+                    html += `<div class="flex items-center gap-3 py-2.5 px-3 bg-zinc-800/50 rounded-lg">
+                        <div class="w-8 h-8 rounded-full ${isMobile ? 'bg-cyan-500/10' : 'bg-violet-500/10'} flex items-center justify-center">
+                            <i class="ph ${device} ${isMobile ? 'text-cyan-400' : 'text-violet-400'}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-white text-sm font-medium">${startTime}${duration > 0 ? ` - ${endTime}` : ''}</span>
+                                <span class="text-zinc-600 text-xs">${durationText}</span>
+                            </div>
+                            <div class="text-zinc-500 text-xs">${browser} · ${pageViews} odsłon</div>
+                        </div>
                     </div>`;
                 });
+
                 html += `</div></div>`;
             }
 
