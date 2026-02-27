@@ -1,0 +1,2318 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SzyBot - Lśniące okna bez drabiny i ryzyka | Robot do mycia okien</title>
+  <meta name="description" content="SzyBot - inteligentny robot do mycia okien z siłą ssania 5600 Pa i potrójnym systemem bezpieczeństwa. Szyby lśnią, Ty odpoczywasz.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="SzyBot - Lśniące okna bez drabiny i ryzyka">
+  <meta property="og:description" content="Robot do mycia okien z siłą ssania 5600 Pa i potrójnym systemem bezpieczeństwa. Polska marka w przystępnej cenie.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://crm.tomekniedzwiecki.pl/szybot">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== CSS VARIABLES ===== */
+    :root {
+      /* Brand Colors */
+      --primary: #0066CC;
+      --primary-rgb: 0, 102, 204;
+      --secondary: #00B4D8;
+      --secondary-rgb: 0, 180, 216;
+      --accent: #FF6B35;
+      --accent-rgb: 255, 107, 53;
+      --neutral-dark: #0D1B2A;
+      --neutral-mid: #64748B;
+      --neutral-light: #F8FAFC;
+
+      /* Derived */
+      --primary-soft: rgba(0, 102, 204, 0.08);
+      --primary-glow: rgba(0, 102, 204, 0.25);
+      --secondary-soft: rgba(0, 180, 216, 0.08);
+
+      /* Typography */
+      --font-heading: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-accent: 'JetBrains Mono', monospace;
+
+      /* Spacing */
+      --section-padding: 100px 0;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+      --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+
+      /* Backgrounds */
+      --bg-white: #FFFFFF;
+      --bg-light: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --border-color: #E5E7EB;
+    }
+
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--bg-white);
+      overflow-x: hidden;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    /* ===== UTILITIES ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-label {
+      font-family: var(--font-accent);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--neutral-dark);
+      margin-bottom: 20px;
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 600px;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 32px;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 102, 204, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--neutral-dark);
+      border: 2px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-shimmer::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(0, 102, 204, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo img {
+      height: 44px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .nav-desktop {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.3s;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+    }
+
+    .header-cta {
+      padding: 12px 24px;
+      font-size: 14px;
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 8px;
+      z-index: 110;
+    }
+
+    .hamburger span {
+      width: 24px;
+      height: 2px;
+      background: var(--neutral-dark);
+      transition: all 0.3s;
+    }
+
+    .hamburger.active span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .hamburger.active span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    @media (max-width: 768px) {
+      .nav-desktop {
+        display: none;
+      }
+
+      .header-cta {
+        display: none;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+    }
+
+    /* ===== MOBILE MENU ===== */
+    .mobile-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-white);
+      z-index: 105;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .mobile-menu.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-link {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+    }
+
+    .mobile-cta {
+      margin-top: 24px;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      padding: 160px 0 100px;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(0, 102, 204, 0.03) 0%, #FFF 50%, rgba(0, 180, 216, 0.03) 100%);
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 102, 204, 0.15) 0%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      animation: glow-pulse 4s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .hero-glow-2 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 180, 216, 0.1) 0%, transparent 70%);
+      bottom: -100px;
+      left: -100px;
+      animation: glow-pulse 5s ease-in-out infinite alternate-reverse;
+      pointer-events: none;
+    }
+
+    @keyframes glow-pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* Hero Background Animation - Pulsujące fale (robot okienny) */
+    .hero-bg-animation {
+      position: absolute;
+      top: 50%;
+      right: 5%;
+      transform: translateY(-50%);
+      width: 500px;
+      height: 500px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .vibration-wave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px solid rgba(0, 102, 204, 0.1);
+      animation: vibration-pulse 4s ease-out infinite;
+    }
+
+    .vibration-wave-1 { width: 200px; height: 200px; }
+    .vibration-wave-2 { width: 300px; height: 300px; animation-delay: 1s; }
+    .vibration-wave-3 { width: 400px; height: 400px; animation-delay: 2s; }
+
+    @keyframes vibration-pulse {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.4; }
+      100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+    }
+
+    .clean-particles span {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(0, 180, 216, 0.3);
+      border-radius: 50%;
+      animation: particle-float 6s ease-in-out infinite;
+    }
+
+    .clean-particles span:nth-child(1) { left: 20%; top: 30%; animation-delay: 0s; }
+    .clean-particles span:nth-child(2) { left: 70%; top: 20%; animation-delay: 1s; }
+    .clean-particles span:nth-child(3) { left: 40%; top: 60%; animation-delay: 2s; }
+    .clean-particles span:nth-child(4) { left: 80%; top: 50%; animation-delay: 3s; }
+    .clean-particles span:nth-child(5) { left: 30%; top: 80%; animation-delay: 4s; }
+
+    @keyframes particle-float {
+      0%, 100% { transform: translateY(0); opacity: 0.3; }
+      50% { transform: translateY(-20px); opacity: 0.6; }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero-text {
+      max-width: 560px;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--primary-soft);
+      border-radius: 50px;
+      font-family: var(--font-accent);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hero-badge svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--neutral-dark);
+      margin-bottom: 20px;
+    }
+
+    .hero-title span {
+      color: var(--primary);
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .hero-proof {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hero-stars {
+      display: flex;
+      gap: 2px;
+    }
+
+    .hero-stars svg {
+      width: 18px;
+      height: 18px;
+      fill: #FFC107;
+    }
+
+    .hero-proof-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .hero-proof-text strong {
+      color: var(--neutral-dark);
+    }
+
+    .hero-visual {
+      position: relative;
+    }
+
+    /* ===== IMAGE PLACEHOLDERS ===== */
+    .img-placeholder {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid rgba(0, 102, 204, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: var(--radius-lg);
+    }
+
+    .ph-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+
+    .ph-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: rgba(255,255,255,0.5);
+      fill: none;
+      stroke-width: 1.5;
+    }
+
+    .ph-label {
+      font-family: var(--font-accent);
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .ph-size {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    @media (max-width: 768px) {
+      .hero {
+        padding: 140px 0 60px;
+      }
+
+      .hero-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+      }
+
+      .hero-badges {
+        justify-content: center;
+      }
+
+      .hero-cta {
+        justify-content: center;
+      }
+
+      .hero-proof {
+        justify-content: center;
+      }
+
+      .hero-bg-animation {
+        width: 300px;
+        height: 300px;
+        opacity: 0.5;
+        right: -50px;
+      }
+    }
+
+    /* ===== TRUST BAR ===== */
+    .trust-bar {
+      padding: 40px 0;
+      background: linear-gradient(90deg, rgba(0, 102, 204, 0.04) 0%, rgba(0, 180, 216, 0.04) 100%);
+      border-top: 1px solid rgba(0, 102, 204, 0.1);
+      border-bottom: 1px solid rgba(0, 102, 204, 0.1);
+    }
+
+    .trust-items {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: nowrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--bg-white);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+
+    .trust-item:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
+    }
+
+    .trust-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-soft);
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+
+    .trust-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .trust-text {
+      white-space: nowrap;
+    }
+
+    .trust-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+    }
+
+    .trust-text span {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .trust-items {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .trust-item {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 150px;
+      }
+    }
+
+    /* ===== PROBLEM SECTION ===== */
+    .problem {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%);
+    }
+
+    .problem-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .problem-text h2 {
+      margin-bottom: 24px;
+    }
+
+    .problem-desc {
+      font-size: 17px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 32px;
+    }
+
+    .problem-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .stat-card {
+      padding: 24px;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-number {
+      font-family: var(--font-heading);
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .problem-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .problem-visual {
+        order: -1;
+      }
+    }
+
+    /* ===== SOLUTION / BENTO ===== */
+    .solution {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, #FFF 0%, rgba(0, 180, 216, 0.05) 100%);
+    }
+
+    .solution-header {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto 60px;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .bento-card {
+      position: relative;
+      padding: 32px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .bento-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 12px 24px rgba(0, 102, 204, 0.15);
+      transform: translateY(-4px);
+    }
+
+    .bento-card:nth-child(2):hover {
+      border-color: var(--secondary);
+      box-shadow: 0 12px 24px rgba(0, 180, 216, 0.15);
+    }
+
+    .bento-card:nth-child(3):hover {
+      border-color: var(--accent);
+      box-shadow: 0 12px 24px rgba(255, 107, 53, 0.15);
+    }
+
+    .bento-card:nth-child(4):hover {
+      border-color: #10B981;
+      box-shadow: 0 12px 24px rgba(16, 185, 129, 0.15);
+    }
+
+    .spotlight {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 102, 204, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s;
+      transform: translate(-50%, -50%);
+    }
+
+    .bento-card:hover .spotlight {
+      opacity: 1;
+    }
+
+    .bento-image {
+      margin-bottom: 20px;
+    }
+
+    .bento-icon {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-soft);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+    }
+
+    .bento-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .bento-card:nth-child(2) .bento-icon {
+      background: rgba(0, 180, 216, 0.1);
+    }
+
+    .bento-card:nth-child(2) .bento-icon svg {
+      stroke: var(--secondary);
+    }
+
+    .bento-card:nth-child(3) .bento-icon {
+      background: rgba(255, 107, 53, 0.1);
+    }
+
+    .bento-card:nth-child(3) .bento-icon svg {
+      stroke: var(--accent);
+    }
+
+    .bento-card:nth-child(4) .bento-icon {
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .bento-card:nth-child(4) .bento-icon svg {
+      stroke: #10B981;
+    }
+
+    .bento-title {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 12px;
+    }
+
+    .bento-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 768px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .how-it-works {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, #FFF8E7 0%, #FFFBF0 100%);
+    }
+
+    .how-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .how-step {
+      text-align: center;
+      padding: 32px 24px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+    }
+
+    .how-step-image {
+      margin-bottom: 24px;
+    }
+
+    .how-step-number {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      background: var(--primary);
+      color: white;
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 50%;
+    }
+
+    .how-step:nth-child(2) .how-step-number {
+      background: var(--secondary);
+    }
+
+    .how-step:nth-child(3) .how-step-number {
+      background: #10B981;
+    }
+
+    .how-step-title {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 12px;
+    }
+
+    .how-step-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 768px) {
+      .how-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== COMPARISON ===== */
+    .comparison {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, rgba(0, 180, 216, 0.05) 0%, #FFF 100%);
+    }
+
+    .comparison-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .comparison-card {
+      padding: 40px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-white);
+      border: 1px solid var(--border-color);
+    }
+
+    .comparison-card.highlight {
+      border: 2px solid var(--primary);
+      box-shadow: var(--shadow-lg);
+      background: rgba(0, 102, 204, 0.02);
+    }
+
+    .comparison-card h3 {
+      font-family: var(--font-heading);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 16px;
+    }
+
+    .comparison-card.highlight h3 {
+      color: var(--primary);
+    }
+
+    .comparison-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+
+    .comparison-card ul {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .comparison-card ul li {
+      font-size: 15px;
+      color: var(--text-secondary);
+      padding-left: 24px;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    .comparison-card ul li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--neutral-mid);
+    }
+
+    .comparison-card.highlight ul li::before {
+      color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== TESTIMONIALS ===== */
+    .testimonials {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, #FFF 0%, rgba(0, 102, 204, 0.03) 100%);
+      overflow: hidden;
+    }
+
+    .testimonials-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .testimonial-card {
+      padding: 32px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .testimonial-stars {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .testimonial-stars svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--accent);
+    }
+
+    .testimonial-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .testimonial-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 16px;
+    }
+
+    .testimonial-info strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+    }
+
+    .testimonial-info span {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .testimonials-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== FAQ ===== */
+    .faq {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, rgba(0, 180, 216, 0.05) 0%, #FFF 100%);
+    }
+
+    .faq-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .faq-list {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .faq-item {
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+      transition: all 0.3s;
+    }
+
+    .faq-question:hover {
+      color: var(--primary);
+    }
+
+    .faq-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s;
+    }
+
+    .faq-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .faq-item.open .faq-icon {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-answer-inner {
+      padding: 0 24px 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+    }
+
+    /* ===== OFFER ===== */
+    .offer {
+      padding: var(--section-padding);
+      background: linear-gradient(135deg, rgba(0, 102, 204, 0.05) 0%, #FFF 50%, rgba(0, 180, 216, 0.05) 100%);
+    }
+
+    .offer-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .offer-box {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 48px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .offer-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent), var(--primary));
+      background-size: 200% 100%;
+      animation: border-beam 3s linear infinite;
+    }
+
+    @keyframes border-beam {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+
+    .offer-badge {
+      display: inline-block;
+      padding: 8px 20px;
+      background: var(--accent);
+      color: white;
+      font-family: var(--font-accent);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-radius: 50px;
+      margin-bottom: 24px;
+    }
+
+    .offer-image {
+      margin: 24px 0;
+    }
+
+    .offer-title {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      margin-bottom: 16px;
+    }
+
+    .offer-price {
+      margin-bottom: 24px;
+    }
+
+    .price-current {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .price-currency {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .price-old {
+      font-size: 20px;
+      color: var(--text-secondary);
+      text-decoration: line-through;
+      margin-left: 12px;
+    }
+
+    .offer-savings {
+      display: inline-block;
+      padding: 8px 16px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10B981;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      margin-bottom: 24px;
+    }
+
+    .offer-includes {
+      text-align: left;
+      margin-bottom: 32px;
+    }
+
+    .offer-includes h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+      margin-bottom: 16px;
+    }
+
+    .offer-includes ul {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .offer-includes li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .offer-includes li svg {
+      width: 20px;
+      height: 20px;
+      stroke: #10B981;
+      fill: none;
+      stroke-width: 2;
+      flex-shrink: 0;
+    }
+
+    .offer-cta {
+      width: 100%;
+      padding: 20px 32px;
+      font-size: 18px;
+    }
+
+    .offer-guarantee {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .offer-guarantee svg {
+      width: 18px;
+      height: 18px;
+      stroke: #10B981;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* ===== CTA BANNER ===== */
+    .cta-banner {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      text-align: center;
+    }
+
+    .cta-title {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 800;
+      color: white;
+      margin-bottom: 16px;
+    }
+
+    .cta-subtitle {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 32px;
+    }
+
+    .cta-banner .btn-primary {
+      background: white;
+      color: var(--primary);
+    }
+
+    .cta-banner .btn-primary:hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      padding: 60px 0 30px;
+      background: #FAFAFA;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .footer::before {
+      content: '';
+      display: block;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      margin-bottom: 60px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 60px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-top: 16px;
+      max-width: 300px;
+    }
+
+    .footer-links h4,
+    .footer-contact h4 {
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .footer-links ul {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      transition: color 0.3s;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+    }
+
+    .footer-contact p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .footer-contact a {
+      color: var(--primary);
+    }
+
+    .footer-bottom {
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+      }
+
+      .footer-brand p {
+        max-width: none;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+    }
+
+    /* ===== COOKIE BANNER ===== */
+    .cookie-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 20px;
+      background: var(--neutral-dark);
+      color: white;
+      z-index: 1000;
+      transform: translateY(100%);
+      transition: transform 0.4s ease;
+    }
+
+    .cookie-banner.show {
+      transform: translateY(0);
+    }
+
+    .cookie-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .cookie-text {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .cookie-text a {
+      color: var(--secondary);
+      text-decoration: underline;
+    }
+
+    .cookie-btn {
+      padding: 12px 24px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.3s;
+    }
+
+    .cookie-btn:hover {
+      background: #0052a3;
+    }
+
+    @media (max-width: 768px) {
+      .cookie-content {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="#" class="logo">
+          <img src="/landing-pages/szybot/logo.png" alt="SzyBot">
+        </a>
+
+        <nav class="nav-desktop">
+          <a href="#features" class="nav-link">Funkcje</a>
+          <a href="#how-it-works" class="nav-link">Jak działa</a>
+          <a href="#testimonials" class="nav-link">Opinie</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+        </nav>
+
+        <a href="#offer" class="btn btn-primary header-cta">Zamów teraz</a>
+
+        <div class="hamburger" id="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#features" class="mobile-link">Funkcje</a>
+    <a href="#how-it-works" class="mobile-link">Jak działa</a>
+    <a href="#testimonials" class="mobile-link">Opinie</a>
+    <a href="#faq" class="mobile-link">FAQ</a>
+    <a href="#offer" class="btn btn-primary mobile-cta">Zamów teraz</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-glow-2"></div>
+
+    <!-- Background animation -->
+    <div class="hero-bg-animation">
+      <div class="vibration-wave vibration-wave-1"></div>
+      <div class="vibration-wave vibration-wave-2"></div>
+      <div class="vibration-wave vibration-wave-3"></div>
+      <div class="clean-particles">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text fade-in">
+          <div class="hero-badges">
+            <span class="hero-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Potrójne bezpieczeństwo
+            </span>
+            <span class="hero-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              5600 Pa ssania
+            </span>
+          </div>
+
+          <h1 class="hero-title">Lśniące okna <span>bez drabiny</span> i ryzyka</h1>
+
+          <p class="hero-subtitle">Robot SzyBot z siłą ssania 5600 Pa i potrójnym systemem bezpieczeństwa myje nawet najtrudniej dostępne szyby. Ty odpoczywasz, on pracuje.</p>
+
+          <div class="hero-cta">
+            <a href="#offer" class="btn btn-primary btn-shimmer">Zamów z rabatem</a>
+            <a href="#how-it-works" class="btn btn-secondary">Zobacz jak działa</a>
+          </div>
+
+          <div class="hero-proof">
+            <div class="hero-stars">
+              <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <span class="hero-proof-text"><strong>4.9/5</strong> na podstawie 1300+ opinii</span>
+          </div>
+        </div>
+
+        <div class="hero-visual fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <span class="ph-label">Hero Product</span>
+            <span class="ph-size">1200×900px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST BAR -->
+  <section class="trust-bar">
+    <div class="container">
+      <div class="trust-items">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>Potrójne zabezpieczenie</strong>
+            <span>UPS + lina + alarm</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>Darmowa dostawa</strong>
+            <span>W 2-3 dni robocze</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>Polska marka</strong>
+            <span>Polska obsługa klienta</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>30 dni na zwrot</strong>
+            <span>Pełna gwarancja</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <div class="container">
+      <div class="problem-content">
+        <div class="problem-text fade-in">
+          <span class="section-label">Problem</span>
+          <h2 class="section-title">Czy mycie okien to Twój<br>najgorszy obowiązek?</h2>
+          <p class="problem-desc">
+            Balansowanie na drabinie, smugi które nie chcą zniknąć, bolące ramiona po godzinach pracy... Mycie okien to jeden z najbardziej uciążliwych obowiązków domowych. A jeśli masz duże przeszklenia lub okna na wysokości — staje się wręcz niebezpieczne.
+          </p>
+
+          <div class="problem-stats">
+            <div class="stat-card">
+              <div class="stat-number">73%</div>
+              <div class="stat-label">Polaków uważa mycie okien za najgorszy obowiązek domowy</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">4h</div>
+              <div class="stat-label">średni czas mycia okien w domu jednorodzinnym</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">500+</div>
+              <div class="stat-label">złotych rocznie na usługi mycia okien</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">12k</div>
+              <div class="stat-label">wypadków rocznie przy myciu okien</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="problem-visual fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <span class="ph-label">Problem Visual</span>
+            <span class="ph-size">800×600px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLUTION / BENTO -->
+  <section class="solution" id="features">
+    <div class="container">
+      <div class="solution-header fade-in">
+        <span class="section-label">Rozwiązanie</span>
+        <h2 class="section-title">Poznaj SzyBot — Twój osobisty asystent do mycia okien</h2>
+        <p class="section-subtitle">Inteligentny robot, który wykonuje 95% pracy za Ciebie. Bezpiecznie, skutecznie i bez wysiłku.</p>
+      </div>
+
+      <div class="bento-grid">
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Feature 1</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <h3 class="bento-title">Siła ssania 5600 Pa</h3>
+          <p class="bento-text">Dwukrotnie więcej niż konkurencja. Robot trzyma się szyby potężnie jak imadło — masz gwarancję absolutnego bezpieczeństwa przed upadkiem nawet na pionowych powierzchniach.</p>
+        </div>
+
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Feature 2</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3 class="bento-title">Potrójny system bezpieczeństwa</h3>
+          <p class="bento-text">Awaryjny UPS (20 minut pracy przy zaniku prądu), lina asekuracyjna o nośności 50 kg oraz alarm dźwiękowy. Nie ma szans na wypadek.</p>
+        </div>
+
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Feature 3</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <h3 class="bento-title">Nawigacja AI</h3>
+          <p class="bento-text">Inteligentne algorytmy automatycznie wykrywają krawędzie okna i planują optymalną trasę. Robot sam wie, gdzie jeszcze nie był i gdzie wrócić.</p>
+        </div>
+
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Feature 4</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <h3 class="bento-title">Efekt bez smug</h3>
+          <p class="bento-text">Podwójnie wirujące pady z mikrofibry polerują szkło z optymalnym naciskiem. Rezultat? Lśniące, kryształowo czyste okna bez dodatkowej pracy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="how-header fade-in">
+        <span class="section-label">Jak to działa</span>
+        <h2 class="section-title">Czyste okna w 3 prostych krokach</h2>
+        <p class="section-subtitle">Bez aplikacji, bez skomplikowanej konfiguracji. Wystarczy pilot i jedno kliknięcie.</p>
+      </div>
+
+      <div class="how-steps">
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3; border-radius: 12px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Krok 1</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-number">1</div>
+          <h3 class="how-step-title">Przygotuj robota</h3>
+          <p class="how-step-text">Zwilż pady z mikrofibry płynem do szyb. Podłącz przewód zasilający i załóż linę asekuracyjną na uchwyt okna.</p>
+        </div>
+
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3; border-radius: 12px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Krok 2</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-number">2</div>
+          <h3 class="how-step-title">Przyłóż do szyby</h3>
+          <p class="how-step-text">Włącz robota przyciskiem na obudowie lub pilotem. Przyłóż do okna — robot automatycznie przyssie się z siłą 5600 Pa.</p>
+        </div>
+
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder" style="aspect-ratio: 4/3; border-radius: 12px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Krok 3</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-number">3</div>
+          <h3 class="how-step-title">Odpoczywaj</h3>
+          <p class="how-step-text">Robot sam wykrywa krawędzie i myje całą powierzchnię. Ty w tym czasie pijesz kawę. Po skończeniu wystarczy przetrzeć rogi.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="comparison">
+    <div class="container">
+      <div class="comparison-header fade-in">
+        <span class="section-label">Porównanie</span>
+        <h2 class="section-title">Dlaczego SzyBot?</h2>
+        <p class="section-subtitle">Zobacz, jak wygląda mycie okien z robotem vs tradycyjne metody.</p>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="comparison-card fade-in">
+          <h3>Tradycyjne mycie</h3>
+          <p class="comparison-desc">Czasochłonne, męczące i niebezpieczne — szczególnie na wysokości.</p>
+          <ul>
+            <li>Wymagasz drabiny lub podnośnika do wysokich okien</li>
+            <li>Smugi wymagają wielokrotnego polerowania</li>
+            <li>Bóle pleców i ramion po kilku godzinach</li>
+            <li>Ryzyko upadku z wysokości</li>
+            <li>Cała praca na Twoich barkach</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card highlight fade-in">
+          <h3>SzyBot</h3>
+          <p class="comparison-desc">Bezpieczne, automatyczne i przyjemne — robot robi 95% pracy.</p>
+          <ul>
+            <li>Robot dociera wszędzie — nawet na wysokie okna typu fix</li>
+            <li>Podwójne wirujące pady = zero smug</li>
+            <li>Ty odpoczywasz, robot pracuje</li>
+            <li>Potrójne zabezpieczenie eliminuje ryzyko</li>
+            <li>Wystarczy 5 minut przygotowania</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials" id="testimonials">
+    <div class="container">
+      <div class="testimonials-header fade-in">
+        <span class="section-label">Opinie</span>
+        <h2 class="section-title">Co mówią nasi klienci?</h2>
+        <p class="section-subtitle">Dołącz do tysięcy zadowolonych użytkowników SzyBot w całej Polsce.</p>
+      </div>
+
+      <div class="testimonials-grid">
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Kupiłam dla mamy na urodziny. Ma 68 lat i już nie musi prosić sąsiada o pomoc przy oknach. Robot jest prosty w obsłudze — mama używa tylko pilota i jest zachwycona!"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">AK</div>
+            <div class="testimonial-info">
+              <strong>Anna K.</strong>
+              <span>Kraków</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Mam dom z ogromnymi przeszkleniami — 30m2 szkła. Wcześniej płaciłem firmie 400 zł za jedno mycie. SzyBot zwrócił się po 2 miesiącach. Polecam każdemu właścicielowi nowoczesnego domu."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">MN</div>
+            <div class="testimonial-info">
+              <strong>Marcin N.</strong>
+              <span>Warszawa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Nie wierzyłam, że robot może umyć okna bez smug. Ale naprawdę działa! Teraz myję okna raz w tygodniu — bo mogę. Wcześniej odkładałam to miesiącami."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">KW</div>
+            <div class="testimonial-info">
+              <strong>Kasia W.</strong>
+              <span>Poznań</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="faq-header fade-in">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Najczęściej zadawane pytania</h2>
+        <p class="section-subtitle">Masz wątpliwości? Znajdź odpowiedzi poniżej.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Czy robot naprawdę nie spadnie z okna?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Robot SzyBot ma potrójny system bezpieczeństwa: siła ssania 5600 Pa (dwukrotnie więcej niż większość konkurencji), wbudowany UPS utrzymujący robota na szybie przez 20 minut po zaniku prądu oraz linę asekuracyjną o nośności 50 kg. Nawet jeśli wszystkie systemy zawiodą, lina zatrzyma robota. W praktyce nie ma możliwości upadku.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Czy robot myje okna bez smug?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Tak! Kluczem jest prawidłowe użytkowanie. Pady z mikrofibry należy jedynie delikatnie zwilżyć płynem do szyb (nie mocno nasączyć). Podwójnie wirujące pady polerują szkło z optymalnym naciskiem, usuwając smugi. Efekt końcowy to lśniące, kryształowo czyste okna.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Co z rogami okien?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Chcemy być z Tobą szczerzy: robot wykonuje 95% pracy, ale same kąty okien (gdzie okrągłe pady nie docierają fizycznie) wymagają kilku sekund ręcznego przetarcia. To uczciwa informacja — wolimy powiedzieć prawdę niż składać fałszywe obietnice perfekcji.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Czy potrzebuję aplikacji na telefon?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Nie! SzyBot został zaprojektowany z myślą o prostocie. Uruchamiasz go dużym przyciskiem na obudowie lub dołączonym pilotem z czytelnymi ikonami. Żadnych aplikacji, żadnej konfiguracji WiFi, żadnego konta. Idealny nawet dla seniorów.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Jak głośny jest robot podczas pracy?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Robot generuje dźwięk porównywalny z klasycznym odkurzaczem. To naturalna konsekwencja potężnego silnika 5600 Pa — ta sama moc, która gwarantuje bezpieczeństwo, wymaga energii. Ale pomyśl: wolisz 30 minut hałasu czy 4 godziny własnej pracy?
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Ile kosztuje dostawa i jaki jest czas realizacji?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Dostawa jest darmowa na terenie całej Polski. Wysyłamy z polskiego magazynu, więc paczka dociera w 2-3 dni robocze. Płatność przy odbiorze lub online — jak wolisz.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span>Co jeśli robot mi nie odpowiada?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Masz 30 dni na przetestowanie robota w swoim domu. Jeśli z jakiegokolwiek powodu nie będziesz zadowolony — zwracamy pełną kwotę, bez zbędnych pytań. Wystarczy kontakt z naszą obsługą klienta.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFER -->
+  <section class="offer" id="offer">
+    <div class="container">
+      <div class="offer-header fade-in">
+        <span class="section-label">Oferta</span>
+        <h2 class="section-title">Zamów SzyBot z rabatem</h2>
+        <p class="section-subtitle">Dołącz do tysięcy Polaków, którzy odzyskali swoje weekendy.</p>
+      </div>
+
+      <div class="offer-box fade-in">
+        <div style="text-align: center;">
+          <span class="offer-badge">Bestseller 2026</span>
+
+          <div class="offer-image">
+            <div class="img-placeholder" style="aspect-ratio: 16/9; border-radius: 16px;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <span class="ph-label">Zestaw produktu</span>
+              <span class="ph-size">800×450px</span>
+            </div>
+          </div>
+
+          <h3 class="offer-title">SzyBot Pro + Zestaw Startowy</h3>
+
+          <div class="offer-price">
+            <span class="price-current"><span class="price-currency">PLN </span>399</span>
+            <span class="price-old">549 PLN</span>
+          </div>
+
+          <div class="offer-savings">Oszczędzasz 150 PLN</div>
+
+          <div class="offer-includes">
+            <h4>W zestawie otrzymujesz:</h4>
+            <ul>
+              <li>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Robot SzyBot Pro z siłą ssania 5600 Pa
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Pilot zdalnego sterowania
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                4 pady z mikrofibry (2 zestawy)
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Lina asekuracyjna 50 kg
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Kabel zasilający 4m
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Instrukcja obsługi po polsku
+              </li>
+            </ul>
+          </div>
+
+          <a href="#" class="btn btn-primary btn-shimmer offer-cta">Zamów teraz z rabatem</a>
+
+          <div class="offer-guarantee">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>30 dni na zwrot. Darmowa dostawa. Gwarancja satysfakcji.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <section class="cta-banner">
+    <div class="container">
+      <h2 class="cta-title fade-in">Szyby lśnią, Ty odpoczywasz</h2>
+      <p class="cta-subtitle fade-in">Dołącz do ponad 1300 zadowolonych użytkowników SzyBot</p>
+      <a href="#offer" class="btn btn-primary btn-shimmer fade-in">Zamów teraz</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="logo">
+            <img src="/landing-pages/szybot/logo.png" alt="SzyBot">
+          </a>
+          <p>SzyBot — polska marka inteligentnych robotów do mycia okien. Bezpieczeństwo, prostota, oszczędność czasu.</p>
+        </div>
+
+        <div class="footer-links">
+          <h4>Nawigacja</h4>
+          <ul>
+            <li><a href="#features">Funkcje</a></li>
+            <li><a href="#how-it-works">Jak działa</a></li>
+            <li><a href="#testimonials">Opinie</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="#offer">Zamów</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-contact">
+          <h4>Kontakt</h4>
+          <p>Email: <a href="mailto:kontakt@szybot.pl">kontakt@szybot.pl</a></p>
+          <p>Telefon: <a href="tel:+48123456789">+48 123 456 789</a></p>
+          <p>Pon-Pt: 9:00 - 17:00</p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>&copy; 2026 SzyBot. Wszystkie prawa zastrzeżone.</span>
+        <span>
+          <a href="#">Polityka prywatności</a> · <a href="#">Regulamin</a>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- COOKIE BANNER -->
+  <div class="cookie-banner" id="cookieBanner">
+    <div class="cookie-content">
+      <p class="cookie-text">Ta strona używa plików cookies, aby zapewnić Ci najlepsze doświadczenia. Kontynuując przeglądanie, zgadzasz się na ich użycie. <a href="#">Dowiedz się więcej</a></p>
+      <button class="cookie-btn" id="cookieAccept">Akceptuję</button>
+    </div>
+  </div>
+
+  <!-- CONVERSION TOOLKIT -->
+  <script src="/landing-pages/shared/conversion-toolkit.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Conversion Toolkit
+      if (typeof ConversionToolkit !== 'undefined') {
+        ConversionToolkit.init({
+          brand: {
+            primary: '#FF6B35',
+            secondary: '#0066CC',
+            name: 'SzyBot',
+            ctaUrl: '#offer'
+          },
+          exitPopup: {
+            enabled: true,
+            headline: 'Czekaj! Nie przegap tej okazji',
+            subheadline: 'Zamów teraz i oszczędź 150 PLN na robocie SzyBot!',
+            ctaText: 'Odbierz rabat',
+            dismissText: 'Nie, dziękuję'
+          },
+          urgency: {
+            enabled: true,
+            countdown: { enabled: true, position: 'both', text: 'Oferta wygasa za:' },
+            stock: { enabled: true, initial: 23, min: 3 }
+          },
+          socialProof: {
+            enabled: true,
+            liveVisitors: { enabled: true },
+            recentPurchases: { enabled: true }
+          },
+          scrollCTA: { enabled: true, text: 'Zamów teraz', pulse: true },
+          progressBar: { enabled: true },
+          extraCTAs: { enabled: true }
+        });
+      }
+
+      // Intersection Observer for fade-in
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) e.target.classList.add('visible');
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+      // Hamburger menu
+      const hamburger = document.getElementById('hamburger');
+      const mobileMenu = document.getElementById('mobileMenu');
+      hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        mobileMenu.classList.toggle('open');
+      });
+
+      // Close mobile menu on link click
+      document.querySelectorAll('.mobile-link').forEach(link => {
+        link.addEventListener('click', () => {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('open');
+        });
+      });
+
+      // Spotlight effect for bento cards
+      document.querySelectorAll('.bento-card').forEach(card => {
+        const spotlight = card.querySelector('.spotlight');
+        if (spotlight) {
+          card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            spotlight.style.left = (e.clientX - rect.left) + 'px';
+            spotlight.style.top = (e.clientY - rect.top) + 'px';
+          });
+        }
+      });
+
+      // FAQ accordion
+      document.querySelectorAll('.faq-question').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = btn.parentElement;
+          const isOpen = item.classList.contains('open');
+
+          // Close all items
+          document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+
+          // Open clicked item if it wasn't open
+          if (!isOpen) {
+            item.classList.add('open');
+          }
+        });
+      });
+
+      // Cookie banner
+      const cookieBanner = document.getElementById('cookieBanner');
+      const cookieBtn = document.getElementById('cookieAccept');
+      if (!localStorage.getItem('cookiesAccepted')) {
+        setTimeout(() => cookieBanner.classList.add('show'), 2000);
+      }
+      cookieBtn.addEventListener('click', () => {
+        localStorage.setItem('cookiesAccepted', 'true');
+        cookieBanner.classList.remove('show');
+      });
+    });
+  </script>
+</body>
+</html>
