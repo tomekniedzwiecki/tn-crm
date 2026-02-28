@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026022804';
+        const APP_VERSION = '2026022805';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1429,10 +1429,12 @@
                         <div class="dash-nav-item" onclick="switchToDashTab('video-profiles')">
                             <i class="ph ph-share-network"></i>
                             <span>Profile</span>
+                            <i id="dash-nav-check-profiles" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                         <div class="dash-nav-item" onclick="switchToDashTab('video-recordings')">
                             <i class="ph ph-upload"></i>
                             <span>Nagrania</span>
+                            <i id="dash-nav-check-recordings" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                     </div>
 
@@ -1508,10 +1510,12 @@
                             <div class="dash-nav-item" onclick="switchToDashTab('video-profiles');toggleDashMobileMenu()">
                                 <i class="ph ph-share-network"></i>
                                 <span>Profile</span>
+                                <i id="dash-nav-check-profiles-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                             <div class="dash-nav-item" onclick="switchToDashTab('video-recordings');toggleDashMobileMenu()">
                                 <i class="ph ph-upload"></i>
                                 <span>Nagrania</span>
+                                <i id="dash-nav-check-recordings-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -1845,10 +1849,12 @@
                         <div class="dash-nav-item" data-tab="video-profiles" onclick="switchTab('video-profiles')">
                             <i class="ph ph-share-network"></i>
                             <span>Profile</span>
+                            <i id="nav-check-profiles" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                         <div class="dash-nav-item" data-tab="video-recordings" onclick="switchTab('video-recordings')">
                             <i class="ph ph-upload"></i>
                             <span>Nagrania</span>
+                            <i id="nav-check-recordings" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                     </div>
 
@@ -1929,10 +1935,12 @@
                             <div class="dash-nav-item" data-tab="video-profiles" onclick="switchTab('video-profiles');toggleMobileMenu()">
                                 <i class="ph ph-share-network"></i>
                                 <span>Profile</span>
+                                <i id="nav-check-profiles-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                             <div class="dash-nav-item" data-tab="video-recordings" onclick="switchTab('video-recordings');toggleMobileMenu()">
                                 <i class="ph ph-upload"></i>
                                 <span>Nagrania</span>
+                                <i id="nav-check-recordings-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -5565,20 +5573,24 @@
 
             // Update checkmarks (only show after stage accepted)
             if (isAccepted) {
-                // Wprowadzenie - always checked after acceptance
-                document.getElementById('video-intro-check-desktop')?.classList.remove('hidden');
-                document.getElementById('video-intro-check-mobile')?.classList.remove('hidden');
-
                 // Profile - check if all 3 filled
                 const profiles = videoData?.social_profiles || {};
                 const hasAllProfiles = profiles.tiktok && profiles.youtube && profiles.instagram;
-                document.getElementById('video-profiles-check-desktop')?.classList.toggle('hidden', !hasAllProfiles);
-                document.getElementById('video-profiles-check-mobile')?.classList.toggle('hidden', !hasAllProfiles);
+                // Dashboard sidebar
+                document.getElementById('dash-nav-check-profiles')?.classList.toggle('hidden', !hasAllProfiles);
+                document.getElementById('dash-nav-check-profiles-mobile')?.classList.toggle('hidden', !hasAllProfiles);
+                // Project sidebar
+                document.getElementById('nav-check-profiles')?.classList.toggle('hidden', !hasAllProfiles);
+                document.getElementById('nav-check-profiles-mobile')?.classList.toggle('hidden', !hasAllProfiles);
 
                 // Nagrania - check if at least 1 video
                 const hasVideos = (videoData?.video_links?.length || 0) > 0;
-                document.getElementById('video-recordings-check-desktop')?.classList.toggle('hidden', !hasVideos);
-                document.getElementById('video-recordings-check-mobile')?.classList.toggle('hidden', !hasVideos);
+                // Dashboard sidebar
+                document.getElementById('dash-nav-check-recordings')?.classList.toggle('hidden', !hasVideos);
+                document.getElementById('dash-nav-check-recordings-mobile')?.classList.toggle('hidden', !hasVideos);
+                // Project sidebar
+                document.getElementById('nav-check-recordings')?.classList.toggle('hidden', !hasVideos);
+                document.getElementById('nav-check-recordings-mobile')?.classList.toggle('hidden', !hasVideos);
             }
         }
         window.updateVideoNavigation = updateVideoNavigation;
