@@ -130,7 +130,7 @@ async function sendSlackPaidNotification(order: any, supabase?: any) {
 
 // Meta Conversions API configuration
 const META_PIXEL_ID = '1668188210820080'
-const META_API_VERSION = 'v23.0'
+const META_API_VERSION = 'v25.0'
 
 // SHA256 hash for Meta (they require lowercase hex)
 async function sha256Hash(value: string): Promise<string> {
@@ -184,9 +184,9 @@ async function sendMetaConversion(order: any, supabase: any) {
       }
     }
 
-    // Build user data with hashed PII
+    // Build user data with hashed PII (v25.0 requires all PII hashed)
     const userData: Record<string, any> = {
-      country: ['pl'], // Always Poland
+      country: [await sha256Hash('pl')], // Always Poland, hashed
     }
 
     if (order.customer_email) {
