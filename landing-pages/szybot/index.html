@@ -2223,8 +2223,24 @@
   <script src="/landing-pages/shared/conversion-toolkit.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Enable JS animations
+      // FIRST: Mark elements already in viewport as visible BEFORE hiding them
+      document.querySelectorAll('.fade-in').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          el.classList.add('visible');
+        }
+      });
+
+      // THEN: Enable JS animations (this hides non-visible elements)
       document.body.classList.add('js-enabled');
+
+      // Intersection Observer for scroll animations
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) e.target.classList.add('visible');
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
       // Initialize Conversion Toolkit
       if (typeof ConversionToolkit !== 'undefined') {
@@ -2257,21 +2273,6 @@
           extraCTAs: { enabled: true }
         });
       }
-
-      // Intersection Observer for fade-in
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(e => {
-          if (e.isIntersecting) e.target.classList.add('visible');
-        });
-      }, { threshold: 0.1 });
-      document.querySelectorAll('.fade-in').forEach(el => {
-        observer.observe(el);
-        // Check if already in viewport on load
-        const rect = el.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          el.classList.add('visible');
-        }
-      });
 
       // Hamburger menu
       const hamburger = document.getElementById('hamburger');
