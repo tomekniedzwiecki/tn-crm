@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026022807';
+        const APP_VERSION = '2026022808';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2764,32 +2764,54 @@
             <div id="tab-video-recordings" class="tab-panel hidden animate-enter">
                 <div class="max-w-2xl">
                     <!-- Header -->
+                    <div class="mb-6">
+                        <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Twoje nagrania</h2>
+                        <p class="text-[14px] text-[#666]">Wrzuć nagrania na social media i wklej tutaj linki</p>
+                    </div>
+
+                    <!-- Add Link Input -->
                     <div class="mb-8">
-                        <h2 class="text-[24px] font-semibold text-white tracking-tight mb-2">Twoje nagrania</h2>
-                        <p class="text-[14px] text-[#666]">Wrzuć nagrania na swoje social media i wklej tutaj linki</p>
+                        <div class="flex gap-3">
+                            <div class="flex-1 relative">
+                                <i class="ph ph-link absolute left-4 top-1/2 -translate-y-1/2 text-[#444]"></i>
+                                <input type="url" id="recording-url-input"
+                                    class="w-full bg-[#0a0a0a] border border-[#252525] rounded-xl pl-11 pr-4 py-3.5 text-[14px] text-white placeholder-[#555] focus:border-[#444] focus:outline-none transition-colors"
+                                    placeholder="Wklej link do nagrania (TikTok, YouTube, Instagram)"
+                                    onkeydown="if(event.key==='Enter') addRecordingFromInput()">
+                            </div>
+                            <button onclick="addRecordingFromInput()" class="bg-white hover:bg-[#e5e5e5] text-black text-[14px] font-medium px-5 rounded-xl transition-colors flex items-center gap-2">
+                                <i class="ph ph-plus-circle"></i>
+                                Dodaj
+                            </button>
+                        </div>
+                        <div id="recording-input-preview" class="hidden mt-3 flex items-center gap-2 text-[13px]">
+                            <span id="recording-input-platform-icon"></span>
+                            <span id="recording-input-platform-name" class="text-[#888]"></span>
+                        </div>
                     </div>
 
                     <!-- Recordings List -->
-                    <div id="recordings-links-list" class="space-y-3 mb-4">
-                        <!-- Video links will be loaded here -->
+                    <div id="recordings-links-list">
+                        <!-- Video links grouped by platform -->
                     </div>
 
-                    <!-- Add Recording Button -->
-                    <button onclick="addRecordingLink()" class="w-full group border border-dashed border-[#333] hover:border-[#555] rounded-xl p-4 transition-all duration-200 hover:bg-[#0a0a0a] flex items-center justify-center gap-2">
-                        <i class="ph ph-plus text-[#666] group-hover:text-white transition-colors"></i>
-                        <span class="text-[14px] text-[#666] group-hover:text-white transition-colors">Dodaj link</span>
-                    </button>
-
                     <!-- Empty state -->
-                    <div id="recordings-links-empty" class="hidden mt-8">
-                        <div class="text-center py-12 px-6 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl">
-                            <div class="flex items-center justify-center gap-3 mb-4">
-                                <i class="ph-fill ph-tiktok-logo text-2xl text-white"></i>
-                                <i class="ph-fill ph-youtube-logo text-2xl text-red-500"></i>
-                                <i class="ph-fill ph-instagram-logo text-2xl text-pink-500"></i>
+                    <div id="recordings-links-empty" class="hidden">
+                        <div class="text-center py-16 px-6">
+                            <div class="flex items-center justify-center gap-4 mb-5">
+                                <div class="w-12 h-12 rounded-xl bg-black flex items-center justify-center">
+                                    <i class="ph-fill ph-tiktok-logo text-xl text-white"></i>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center">
+                                    <i class="ph-fill ph-instagram-logo text-xl text-pink-500"></i>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                                    <i class="ph-fill ph-youtube-logo text-xl text-red-500"></i>
+                                </div>
                             </div>
-                            <p class="text-[14px] text-[#666]">
-                                Wrzuć nagrania na TikTok, YouTube lub Instagram i dodaj tutaj linki.
+                            <p class="text-[15px] text-[#888] mb-2">Brak nagrań</p>
+                            <p class="text-[13px] text-[#555]">
+                                Wrzuć nagrania na social media i wklej linki powyżej
                             </p>
                         </div>
                     </div>
@@ -5919,8 +5941,8 @@
 
             // Group links by platform
             const platforms = {
-                tiktok: { name: 'TikTok', icon: 'ph-fill ph-tiktok-logo', color: 'text-white', bg: 'bg-black', links: [] },
-                instagram: { name: 'Instagram', icon: 'ph-fill ph-instagram-logo', color: 'text-pink-500', bg: 'bg-pink-500/10', links: [] },
+                tiktok: { name: 'TikTok', icon: 'ph-fill ph-tiktok-logo', color: 'text-white', bg: 'bg-black border border-[#333]', links: [] },
+                instagram: { name: 'Instagram', icon: 'ph-fill ph-instagram-logo', color: 'text-pink-500', bg: 'bg-gradient-to-br from-pink-500/20 to-purple-500/20', links: [] },
                 youtube: { name: 'YouTube', icon: 'ph-fill ph-youtube-logo', color: 'text-red-500', bg: 'bg-red-500/10', links: [] },
                 other: { name: 'Inne', icon: 'ph ph-link', color: 'text-[#888]', bg: 'bg-[#1a1a1a]', links: [] }
             };
@@ -5934,38 +5956,40 @@
                 platforms[key].links.push({ ...link, originalIndex: i });
             });
 
-            const renderLink = (link, platform) => `
-                <div class="group flex items-center gap-3 py-3 px-4 bg-[#111] hover:bg-[#151515] rounded-lg transition-colors">
+            const renderLink = (link) => {
+                const shortUrl = link.url?.replace(/^https?:\/\/(www\.)?/, '').slice(0, 35) + (link.url?.length > 40 ? '...' : '');
+                return `
+                <div class="group flex items-center gap-3 py-2.5 px-3 hover:bg-[#111] rounded-lg transition-colors">
                     <div class="flex-1 min-w-0">
-                        <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Nazwa nagrania"
-                            class="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#444] focus:outline-none mb-1"
+                        <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Dodaj nazwę..."
+                            class="w-full bg-transparent text-[13px] text-white placeholder-[#444] focus:outline-none focus:placeholder-[#555]"
                             onchange="updateRecordingLink(${link.originalIndex}, 'title', this.value)">
-                        <div class="flex items-center gap-2 text-[12px] text-[#555]">
-                            <i class="ph ph-link"></i>
-                            <span class="truncate">${escapeHtml(link.url || '')}</span>
-                        </div>
+                        <a href="${escapeHtml(link.url)}" target="_blank" class="text-[11px] text-[#555] hover:text-[#888] transition-colors truncate block">${shortUrl}</a>
                     </div>
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${link.url ? `<a href="${escapeHtml(link.url)}" target="_blank" class="w-7 h-7 rounded-md hover:bg-[#222] flex items-center justify-center text-[#555] hover:text-cyan-400 transition-colors"><i class="ph ph-arrow-square-out text-sm"></i></a>` : ''}
-                        <button onclick="removeRecordingLink(${link.originalIndex})" class="w-7 h-7 rounded-md hover:bg-red-500/10 flex items-center justify-center text-[#555] hover:text-red-400 transition-colors">
+                    <div class="flex items-center gap-0.5">
+                        <a href="${escapeHtml(link.url)}" target="_blank" class="w-7 h-7 rounded-md hover:bg-[#1a1a1a] flex items-center justify-center text-[#444] hover:text-white transition-colors">
+                            <i class="ph ph-arrow-square-out text-sm"></i>
+                        </a>
+                        <button onclick="removeRecordingLink(${link.originalIndex})" class="w-7 h-7 rounded-md hover:bg-red-500/10 flex items-center justify-center text-[#444] hover:text-red-400 transition-colors">
                             <i class="ph ph-trash text-sm"></i>
                         </button>
                     </div>
                 </div>`;
+            };
 
             const renderPlatformSection = (key, data) => {
                 if (data.links.length === 0) return '';
                 return `
-                <div class="mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-8 h-8 rounded-lg ${data.bg} flex items-center justify-center">
-                            <i class="${data.icon} ${data.color}"></i>
+                <div class="mb-5">
+                    <div class="flex items-center gap-2.5 mb-2 px-1">
+                        <div class="w-7 h-7 rounded-lg ${data.bg} flex items-center justify-center">
+                            <i class="${data.icon} text-sm ${data.color}"></i>
                         </div>
-                        <span class="text-[13px] font-medium text-white">${data.name}</span>
-                        <span class="text-[11px] text-[#555]">${data.links.length}</span>
+                        <span class="text-[12px] font-medium text-[#888] uppercase tracking-wide">${data.name}</span>
+                        <span class="text-[11px] text-[#444] bg-[#1a1a1a] px-1.5 py-0.5 rounded">${data.links.length}</span>
                     </div>
-                    <div class="space-y-2 pl-10">
-                        ${data.links.map(link => renderLink(link, data)).join('')}
+                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden divide-y divide-[#1a1a1a]">
+                        ${data.links.map(link => renderLink(link)).join('')}
                     </div>
                 </div>`;
             };
@@ -5976,7 +6000,22 @@
         }
         window.renderVideoRecordings = renderVideoRecordings;
 
-        async function addRecordingLink() {
+        async function addRecordingFromInput() {
+            const input = document.getElementById('recording-url-input');
+            const url = input?.value?.trim();
+
+            if (!url) {
+                showToast('Wklej link do nagrania', 'error');
+                input?.focus();
+                return;
+            }
+
+            // Validate URL
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                showToast('Podaj poprawny link', 'error');
+                return;
+            }
+
             try {
                 // Jeśli nie ma videoData, najpierw utwórz rekord przez RPC
                 if (!videoData) {
@@ -5985,7 +6024,6 @@
                     });
                     if (createError || !videoId) throw createError || new Error('Failed to create video record');
 
-                    // Fetch the created record
                     const { data, error } = await supabaseClient
                         .from('workflow_video')
                         .select('*')
@@ -5996,7 +6034,12 @@
                 }
 
                 const links = videoData.video_links || [];
-                links.push({ title: '', url: '', uploaded_at: new Date().toISOString() });
+                const platform = detectVideoPlatform(url);
+                links.push({
+                    title: '',
+                    url: url,
+                    uploaded_at: new Date().toISOString()
+                });
 
                 const { error } = await supabaseClient
                     .from('workflow_video')
@@ -6006,14 +6049,16 @@
                 if (error) throw error;
 
                 videoData.video_links = links;
+                input.value = '';
                 renderVideoRecordings();
                 updateVideoNavigation();
+                showToast(`Dodano do ${platform.name}`, 'success');
             } catch (err) {
                 console.error('Error adding link:', err);
                 showToast('Błąd dodawania', 'error');
             }
         }
-        window.addRecordingLink = addRecordingLink;
+        window.addRecordingFromInput = addRecordingFromInput;
 
         async function updateRecordingLink(index, field, value) {
             const links = videoData?.video_links || [];
