@@ -4730,7 +4730,7 @@
                 }
             }
 
-            // Video links
+            // Video links - grouped by platform
             const linksContainer = document.getElementById('video-client-links');
             const linksEmpty = document.getElementById('video-client-links-empty');
 
@@ -4743,19 +4743,58 @@
                 linksContainer.classList.remove('hidden');
                 linksEmpty.classList.add('hidden');
 
-                linksContainer.innerHTML = links.map(link => `
+                // Detect platform from URL
+                const getPlatform = (url) => {
+                    if (!url) return 'other';
+                    if (url.includes('tiktok.com')) return 'tiktok';
+                    if (url.includes('instagram.com')) return 'instagram';
+                    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+                    return 'other';
+                };
+
+                // Group by platform
+                const platforms = {
+                    tiktok: { name: 'TikTok', icon: 'ph-fill ph-tiktok-logo', color: 'text-white', bg: 'bg-black', links: [] },
+                    instagram: { name: 'Instagram', icon: 'ph-fill ph-instagram-logo', color: 'text-pink-500', bg: 'bg-pink-500/10', links: [] },
+                    youtube: { name: 'YouTube', icon: 'ph-fill ph-youtube-logo', color: 'text-red-500', bg: 'bg-red-500/10', links: [] },
+                    other: { name: 'Inne', icon: 'ph ph-link', color: 'text-[#888]', bg: 'bg-[#1a1a1a]', links: [] }
+                };
+
+                links.forEach(link => {
+                    const key = getPlatform(link.url);
+                    platforms[key].links.push(link);
+                });
+
+                const renderLink = (link) => `
                     <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener"
-                        class="flex items-center gap-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 hover:border-emerald-500/30 transition-colors group">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                            <i class="ph ph-video text-emerald-400"></i>
-                        </div>
+                        class="flex items-center gap-3 py-2 px-3 bg-[#111] hover:bg-[#151515] rounded-lg transition-colors group">
                         <div class="flex-1 min-w-0">
                             <div class="text-[13px] text-white truncate">${escapeHtml(link.title || 'Bez tytułu')}</div>
                             <div class="text-[11px] text-[#555] truncate">${escapeHtml(link.url)}</div>
                         </div>
-                        <i class="ph ph-arrow-square-out text-[#555] group-hover:text-emerald-400 transition-colors"></i>
-                    </a>
-                `).join('');
+                        <i class="ph ph-arrow-square-out text-[#444] group-hover:text-emerald-400 transition-colors"></i>
+                    </a>`;
+
+                const renderPlatformSection = (key, data) => {
+                    if (data.links.length === 0) return '';
+                    return `
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-6 h-6 rounded-md ${data.bg} flex items-center justify-center">
+                                <i class="${data.icon} text-sm ${data.color}"></i>
+                            </div>
+                            <span class="text-[12px] font-medium text-[#888]">${data.name}</span>
+                            <span class="text-[10px] text-[#555]">${data.links.length}</span>
+                        </div>
+                        <div class="space-y-1.5 pl-8">
+                            ${data.links.map(renderLink).join('')}
+                        </div>
+                    </div>`;
+                };
+
+                linksContainer.innerHTML = ['tiktok', 'instagram', 'youtube', 'other']
+                    .map(key => renderPlatformSection(key, platforms[key]))
+                    .join('');
             }
         }
 

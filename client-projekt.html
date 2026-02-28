@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026022805';
+        const APP_VERSION = '2026022806';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5917,37 +5917,62 @@
 
             if (empty) empty.classList.add('hidden');
 
-            list.innerHTML = links.map((link, i) => {
+            // Group links by platform
+            const platforms = {
+                tiktok: { name: 'TikTok', icon: 'ph-fill ph-tiktok-logo', color: 'text-white', bg: 'bg-black', links: [] },
+                instagram: { name: 'Instagram', icon: 'ph-fill ph-instagram-logo', color: 'text-pink-500', bg: 'bg-pink-500/10', links: [] },
+                youtube: { name: 'YouTube', icon: 'ph-fill ph-youtube-logo', color: 'text-red-500', bg: 'bg-red-500/10', links: [] },
+                other: { name: 'Inne', icon: 'ph ph-link', color: 'text-[#888]', bg: 'bg-[#1a1a1a]', links: [] }
+            };
+
+            links.forEach((link, i) => {
                 const platform = detectVideoPlatform(link.url);
-                return `
-                <div class="group bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#333] rounded-xl p-5 transition-all duration-200">
-                    <div class="flex items-start gap-4">
-                        <div class="w-10 h-10 rounded-lg ${platform.bgClass} flex items-center justify-center flex-shrink-0">
-                            <i class="${platform.icon} text-lg ${platform.colorClass}"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-3">
-                                <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Nazwa nagrania (np. Scenariusz 1)"
-                                    class="flex-1 bg-transparent text-[15px] font-medium text-white placeholder-[#444] focus:outline-none"
-                                    onchange="updateRecordingLink(${i}, 'title', this.value)">
-                                <span class="text-[11px] text-[#555] bg-[#1a1a1a] px-2 py-0.5 rounded">${platform.name}</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <i class="ph ph-link text-[#444]"></i>
-                                <input type="url" value="${escapeHtml(link.url || '')}" placeholder="Wklej link do nagrania..."
-                                    class="flex-1 bg-transparent text-[13px] text-[#888] placeholder-[#444] focus:outline-none focus:text-white transition-colors"
-                                    onchange="updateRecordingLink(${i}, 'url', this.value)">
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            ${link.url ? `<a href="${escapeHtml(link.url)}" target="_blank" class="w-8 h-8 rounded-lg hover:bg-[#1a1a1a] flex items-center justify-center text-[#666] hover:text-cyan-400 transition-colors" title="Otwórz link"><i class="ph ph-arrow-square-out"></i></a>` : ''}
-                            <button onclick="removeRecordingLink(${i})" class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[#666] hover:text-red-400 transition-colors" title="Usuń">
-                                <i class="ph ph-trash"></i>
-                            </button>
+                const key = platform.name.toLowerCase() === 'tiktok' ? 'tiktok'
+                          : platform.name.toLowerCase() === 'instagram' ? 'instagram'
+                          : platform.name.toLowerCase() === 'youtube' ? 'youtube'
+                          : 'other';
+                platforms[key].links.push({ ...link, originalIndex: i });
+            });
+
+            const renderLink = (link, platform) => `
+                <div class="group flex items-center gap-3 py-3 px-4 bg-[#111] hover:bg-[#151515] rounded-lg transition-colors">
+                    <div class="flex-1 min-w-0">
+                        <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Nazwa nagrania"
+                            class="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#444] focus:outline-none mb-1"
+                            onchange="updateRecordingLink(${link.originalIndex}, 'title', this.value)">
+                        <div class="flex items-center gap-2 text-[12px] text-[#555]">
+                            <i class="ph ph-link"></i>
+                            <span class="truncate">${escapeHtml(link.url || '')}</span>
                         </div>
                     </div>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${link.url ? `<a href="${escapeHtml(link.url)}" target="_blank" class="w-7 h-7 rounded-md hover:bg-[#222] flex items-center justify-center text-[#555] hover:text-cyan-400 transition-colors"><i class="ph ph-arrow-square-out text-sm"></i></a>` : ''}
+                        <button onclick="removeRecordingLink(${link.originalIndex})" class="w-7 h-7 rounded-md hover:bg-red-500/10 flex items-center justify-center text-[#555] hover:text-red-400 transition-colors">
+                            <i class="ph ph-trash text-sm"></i>
+                        </button>
+                    </div>
                 </div>`;
-            }).join('');
+
+            const renderPlatformSection = (key, data) => {
+                if (data.links.length === 0) return '';
+                return `
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg ${data.bg} flex items-center justify-center">
+                            <i class="${data.icon} ${data.color}"></i>
+                        </div>
+                        <span class="text-[13px] font-medium text-white">${data.name}</span>
+                        <span class="text-[11px] text-[#555]">${data.links.length}</span>
+                    </div>
+                    <div class="space-y-2 pl-10">
+                        ${data.links.map(link => renderLink(link, data)).join('')}
+                    </div>
+                </div>`;
+            };
+
+            list.innerHTML = ['tiktok', 'instagram', 'youtube', 'other']
+                .map(key => renderPlatformSection(key, platforms[key]))
+                .join('');
         }
         window.renderVideoRecordings = renderVideoRecordings;
 
