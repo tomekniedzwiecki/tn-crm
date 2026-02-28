@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026022803';
+        const APP_VERSION = '2026022804';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1441,6 +1441,7 @@
                         <div class="dash-nav-item" onclick="switchToDashTab('takedrop')">
                             <i class="ph ph-storefront"></i>
                             <span>Konto</span>
+                            <i id="dash-nav-check-takedrop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                     </div>
                 </nav>
@@ -1519,6 +1520,7 @@
                             <div class="dash-nav-item" onclick="switchToDashTab('takedrop');toggleDashMobileMenu()">
                                 <i class="ph ph-storefront"></i>
                                 <span>Konto</span>
+                                <i id="dash-nav-check-takedrop-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -1855,6 +1857,7 @@
                         <div class="dash-nav-item" data-tab="takedrop" onclick="switchTab('takedrop')">
                             <i class="ph ph-storefront"></i>
                             <span>Konto</span>
+                            <i id="nav-check-takedrop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                     </div>
                 </nav>
@@ -1938,6 +1941,7 @@
                             <div class="dash-nav-item" data-tab="takedrop" onclick="switchTab('takedrop');toggleMobileMenu()">
                                 <i class="ph ph-storefront"></i>
                                 <span>Konto</span>
+                                <i id="nav-check-takedrop-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -4169,6 +4173,13 @@
             document.getElementById('nav-check-strona-mobile')?.classList.toggle('hidden', !hasStrona);
             document.getElementById('nav-check-video')?.classList.toggle('hidden', !isVideoActive);
             document.getElementById('nav-check-video-mobile')?.classList.toggle('hidden', !isVideoActive);
+
+            // Update sidebar checkmark for TakeDrop (green when account_created)
+            const hasTakeDrop = takeDropData && takeDropData.account_created;
+            document.getElementById('dash-nav-check-takedrop')?.classList.toggle('hidden', !hasTakeDrop);
+            document.getElementById('dash-nav-check-takedrop-mobile')?.classList.toggle('hidden', !hasTakeDrop);
+            document.getElementById('nav-check-takedrop')?.classList.toggle('hidden', !hasTakeDrop);
+            document.getElementById('nav-check-takedrop-mobile')?.classList.toggle('hidden', !hasTakeDrop);
         }
 
         async function loadProject() {
@@ -6047,6 +6058,7 @@
                 }
 
                 renderTakeDrop();
+                updateDashSidebarCheckmarks();
             } catch (err) {
                 console.error('Error loading TakeDrop:', err);
             }
@@ -6116,6 +6128,7 @@
                     account_created_at: takeDropData?.account_created_at || new Date().toISOString()
                 };
                 renderTakeDrop();
+                updateDashSidebarCheckmarks();
                 showToast(isUpdate ? 'Dane zaktualizowane' : 'Dziękujemy za potwierdzenie!', 'success');
 
             } catch (err) {
