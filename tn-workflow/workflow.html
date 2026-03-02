@@ -478,6 +478,13 @@
                                         <i class="ph ph-link"></i>
                                         Kopiuj link
                                     </button>
+                                    <div class="relative" id="status-actions-container">
+                                        <button onclick="toggleStatusMenu()" class="h-8 px-3 bg-transparent hover:bg-[#1a1a1a] border border-[#262626] text-[#666] hover:text-white text-[12px] font-medium rounded-lg transition-all duration-200 flex items-center gap-1" title="Zmień status projektu">
+                                            <i class="ph ph-dots-three-vertical"></i>
+                                        </button>
+                                        <div id="status-actions-menu" class="hidden absolute right-0 top-10 bg-[#111] border border-[#1a1a1a] rounded-lg shadow-xl z-50 min-w-[180px] py-1">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -3310,6 +3317,7 @@
             const statusBadge = document.getElementById('status-badge');
             statusBadge.className = `px-3 py-1 rounded-lg text-xs font-medium ${statusInfo.style}`;
             statusBadge.textContent = statusInfo.label;
+            renderStatusActions();
 
             // Password status
             const hasPassword = !!workflow.client_password_hash;
@@ -3620,6 +3628,85 @@
 
         // No-op for backwards compatibility
         function closeActionsMenu() {}
+
+        // Status dropdown menu
+        function toggleStatusMenu() {
+            const menu = document.getElementById('status-actions-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function renderStatusActions() {
+            if (!workflow) return;
+            const menu = document.getElementById('status-actions-menu');
+            const items = [];
+
+            if (workflow.status === 'active') {
+                items.push(`<button onclick="changeStatus('paused'); document.getElementById('status-actions-menu').classList.add('hidden')" class="w-full text-left px-3 py-2 text-[12px] text-amber-400 hover:bg-[#1a1a1a] flex items-center gap-2">
+                    <i class="ph ph-pause"></i> Wstrzymaj projekt
+                </button>`);
+            }
+            if (workflow.status === 'paused') {
+                items.push(`<button onclick="changeStatus('active'); document.getElementById('status-actions-menu').classList.add('hidden')" class="w-full text-left px-3 py-2 text-[12px] text-emerald-400 hover:bg-[#1a1a1a] flex items-center gap-2">
+                    <i class="ph ph-play"></i> Wznów projekt
+                </button>`);
+            }
+            if (workflow.status !== 'cancelled') {
+                if (items.length > 0) {
+                    items.push(`<div class="border-t border-[#1a1a1a] my-1"></div>`);
+                }
+                items.push(`<button onclick="changeStatus('cancelled'); document.getElementById('status-actions-menu').classList.add('hidden')" class="w-full text-left px-3 py-2 text-[12px] text-red-400 hover:bg-[#1a1a1a] flex items-center gap-2">
+                    <i class="ph ph-x-circle"></i> Anuluj projekt
+                </button>`);
+            }
+            if (items.length > 0) {
+                items.push(`<div class="border-t border-[#1a1a1a] my-1"></div>`);
+            }
+            items.push(`<button onclick="openDeleteWorkflowModal(); document.getElementById('status-actions-menu').classList.add('hidden')" class="w-full text-left px-3 py-2 text-[12px] text-red-500 hover:bg-[#1a1a1a] flex items-center gap-2">
+                <i class="ph ph-trash"></i> Usuń projekt
+            </button>`);
+
+            menu.innerHTML = items.join('');
+        }
+
+        // Close status menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('status-actions-container');
+            const menu = document.getElementById('status-actions-menu');
+            if (container && menu && !container.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Delete workflow modal
+        function openDeleteWorkflowModal() {
+            document.getElementById('delete-workflow-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteWorkflowModal() {
+            document.getElementById('delete-workflow-modal').classList.add('hidden');
+        }
+
+        async function confirmDeleteWorkflow() {
+            if (!workflow) return;
+            const btn = document.getElementById('confirm-delete-workflow-btn');
+            btn.disabled = true;
+            btn.textContent = 'Usuwanie...';
+
+            try {
+                await supabaseClient.from('workflow_tasks').delete().eq('workflow_id', workflow.id);
+                await supabaseClient.from('workflow_milestones').delete().eq('workflow_id', workflow.id);
+                await supabaseClient.from('workflow_access_log').delete().eq('workflow_id', workflow.id);
+                const { error } = await supabaseClient.from('workflows').delete().eq('id', workflow.id);
+                if (error) throw error;
+                showToast('Projekt usunięty', 'success');
+                setTimeout(() => { window.location.href = 'workflows.html'; }, 800);
+            } catch (err) {
+                console.error('Delete error:', err);
+                showToast('Błąd usuwania projektu', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Tak, usuń projekt';
+            }
+        }
 
         // Password Modal
         function openPasswordModal() {
@@ -8062,6 +8149,11 @@
             updateCommentsBadge();
         }
 
+        window.toggleStatusMenu = toggleStatusMenu;
+        window.openDeleteWorkflowModal = openDeleteWorkflowModal;
+        window.closeDeleteWorkflowModal = closeDeleteWorkflowModal;
+        window.confirmDeleteWorkflow = confirmDeleteWorkflow;
+
         init();
 
         // Register service worker
@@ -8069,5 +8161,31 @@
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     </script>
+
+    <!-- Delete Workflow Modal -->
+    <div id="delete-workflow-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+        <div class="bg-[#0d0d0d] border border-red-500/30 rounded-2xl p-6 max-w-sm w-full">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center">
+                    <i class="ph ph-warning text-red-400 text-xl"></i>
+                </div>
+                <h3 class="text-white font-semibold text-[15px]">Usuń projekt</h3>
+            </div>
+            <p class="text-[#888] text-[13px] mb-2">Ta operacja jest <span class="text-red-400 font-medium">nieodwracalna</span>. Wszystkie dane projektu zostaną trwale usunięte:</p>
+            <ul class="text-[#666] text-[12px] mb-5 space-y-1 ml-4 list-disc">
+                <li>Kamienie milowe i zadania</li>
+                <li>Logi aktywności</li>
+                <li>Wszystkie ustawienia projektu</li>
+            </ul>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteWorkflowModal()" class="flex-1 h-9 bg-transparent border border-[#262626] text-[#888] hover:text-white text-[13px] rounded-lg transition-colors">
+                    Anuluj
+                </button>
+                <button id="confirm-delete-workflow-btn" onclick="confirmDeleteWorkflow()" class="flex-1 h-9 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 text-[13px] font-medium rounded-lg transition-colors">
+                    Tak, usuń projekt
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

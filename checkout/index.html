@@ -1298,6 +1298,12 @@
                         .single();
 
                     if (existingOrder) {
+                        // Preserve custom payment flag from original order
+                        if (existingOrder.skip_workflow === true) {
+                            isCustomPayment = true;
+                            customPaymentLeadId = existingOrder.lead_id || null;
+                        }
+
                         const { data: offer } = await supabaseClient
                             .from('offers')
                             .select('*')
