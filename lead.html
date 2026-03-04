@@ -1538,11 +1538,29 @@
 
         function getSource(trackingData) {
             if (!trackingData) return { name: 'Organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
-            if (trackingData.gclid || trackingData.gbraid || trackingData.wbraid) return { name: 'Google Ads', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+
+            // Google Ads - rozroznienie typow kampanii
+            if (trackingData.gclid || trackingData.gbraid || trackingData.wbraid) {
+                // Sprawdz network type (v=video/YouTube, d=display, g/s=search)
+                if (trackingData.network === 'v' || trackingData.utm_medium === 'youtube' || trackingData.utm_medium === 'video') {
+                    return { name: 'YouTube Ads', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+                }
+                if (trackingData.network === 'd') {
+                    return { name: 'Google Display', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+                }
+                if (trackingData.network === 'g' || trackingData.network === 's') {
+                    return { name: 'Google Search', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+                }
+                // Default Google Ads
+                return { name: 'Google Ads', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+            }
+
             if (trackingData.fbclid) return { name: 'Meta Ads', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
             if (trackingData.ttclid) return { name: 'TikTok Ads', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+
             if (trackingData.utm_source) {
                 const src = trackingData.utm_source.toLowerCase();
+                if (src.includes('youtube')) return { name: 'YouTube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
                 if (src.includes('google')) return { name: 'Google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
                 if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
                 if (src.includes('tiktok')) return { name: 'TikTok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };

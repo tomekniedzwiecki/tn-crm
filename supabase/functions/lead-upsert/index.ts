@@ -7,6 +7,38 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+interface TrackingData {
+  // Google Ads
+  gclid?: string
+  gbraid?: string
+  wbraid?: string
+  gad_source?: string
+  network?: string      // g=search, d=display, v=video/YouTube
+  campaignid?: string
+  adgroupid?: string
+  creative?: string
+  placement?: string
+  device?: string
+  keyword?: string
+  // Meta
+  fbclid?: string
+  fbp?: string
+  // TikTok
+  ttclid?: string
+  // UTM
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_content?: string
+  utm_term?: string
+  utm_id?: string
+  // Context
+  landing_page?: string
+  referrer?: string
+  user_agent?: string
+  ip?: string
+}
+
 interface LeadData {
   email: string
   name?: string
@@ -22,6 +54,8 @@ interface LeadData {
   experience?: string
   open_question?: string
   lead_source?: 'website' | 'outreach' | 'manual'
+  // Tracking data
+  tracking?: TrackingData
 }
 
 Deno.serve(async (req) => {
@@ -138,6 +172,29 @@ Deno.serve(async (req) => {
       leadId = newLead.id
       isNewLead = true
       console.log(`Created new lead: ${email} (id: ${leadId})`)
+
+      // Save tracking data if provided
+      if (data.tracking && Object.keys(data.tracking).length > 0) {
+        try {
+          const trackingRecord: Record<string, any> = {
+            lead_id: leadId,
+            ...data.tracking
+          }
+
+          const { error: trackingError } = await supabase
+            .from('lead_tracking')
+            .insert([trackingRecord])
+
+          if (trackingError) {
+            console.error('Failed to save tracking data:', trackingError)
+          } else {
+            console.log(`Saved tracking data for lead ${leadId}`)
+          }
+        } catch (trackingErr) {
+          console.error('Error saving tracking data:', trackingErr)
+          // Don't fail the request - lead is created, tracking is secondary
+        }
+      }
 
       // Trigger lead_created automation
       try {

@@ -949,16 +949,29 @@
         }
 
         function getMarketingSource(lead) {
-            if (lead.gclid || lead.gbraid || lead.wbraid) return { name: 'Google Ads', color: 'text-yellow-400', bgColor: 'bg-yellow-500', icon: 'ph-google-logo' };
+            // Google Ads - rozroznienie typow kampanii
+            if (lead.gclid || lead.gbraid || lead.wbraid) {
+                // Sprawdz network type (v=video/YouTube, d=display, g/s=search)
+                if (lead.network === 'v' || lead.utm_medium === 'youtube' || lead.utm_medium === 'video') {
+                    return { name: 'YouTube Ads', color: 'text-red-400', bgColor: 'bg-red-500', icon: 'ph-youtube-logo' };
+                }
+                if (lead.network === 'd') {
+                    return { name: 'Google Display', color: 'text-blue-400', bgColor: 'bg-blue-500', icon: 'ph-google-logo' };
+                }
+                if (lead.network === 'g' || lead.network === 's') {
+                    return { name: 'Google Search', color: 'text-yellow-400', bgColor: 'bg-yellow-500', icon: 'ph-google-logo' };
+                }
+                return { name: 'Google Ads', color: 'text-yellow-400', bgColor: 'bg-yellow-500', icon: 'ph-google-logo' };
+            }
             if (lead.fbclid) return { name: 'Meta Ads', color: 'text-blue-400', bgColor: 'bg-blue-500', icon: 'ph-meta-logo' };
             if (lead.ttclid) return { name: 'TikTok', color: 'text-pink-400', bgColor: 'bg-pink-500', icon: 'ph-tiktok-logo' };
             if (lead.utm_source) {
                 const src = lead.utm_source.toLowerCase();
+                if (src.includes('youtube') || src.includes('yt')) return { name: 'YouTube', color: 'text-red-400', bgColor: 'bg-red-500', icon: 'ph-youtube-logo' };
                 if (src.includes('google')) return { name: 'Google Ads', color: 'text-yellow-400', bgColor: 'bg-yellow-500', icon: 'ph-google-logo' };
                 if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta Ads', color: 'text-blue-400', bgColor: 'bg-blue-500', icon: 'ph-meta-logo' };
                 if (src.includes('tiktok')) return { name: 'TikTok', color: 'text-pink-400', bgColor: 'bg-pink-500', icon: 'ph-tiktok-logo' };
                 if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', color: 'text-purple-400', bgColor: 'bg-purple-500', icon: 'ph-envelope' };
-                if (src.includes('youtube') || src.includes('yt')) return { name: 'YouTube', color: 'text-red-400', bgColor: 'bg-red-500', icon: 'ph-youtube-logo' };
             }
             if (lead.utm_medium === 'email') return { name: 'Email', color: 'text-purple-400', bgColor: 'bg-purple-500', icon: 'ph-envelope' };
             if (lead.lead_source === 'outreach') return { name: 'Outreach', color: 'text-cyan-400', bgColor: 'bg-cyan-500', icon: 'ph-paper-plane-tilt' };

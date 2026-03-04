@@ -2306,6 +2306,9 @@
     });
   </script>
 
+  <!-- Lead Tracking - zbieranie UTM parametrow -->
+  <script src="/landing-pages/shared/tracking.js"></script>
+
   <!-- Conversion Toolkit -->
   <script src="/landing-pages/shared/conversion-toolkit.js"></script>
   <script>
@@ -2337,6 +2340,29 @@
         scrollCTA: { enabled: true, text: 'Zamów teraz', pulse: true },
         progressBar: { enabled: true },
         extraCTAs: { enabled: true }
+      });
+
+      // Dolacz parametry tracking do linkow checkout
+      // Przyklad: /checkout?offer=XXX -> /checkout?offer=XXX&utm_source=google&gclid=...
+      document.querySelectorAll('a[href*="checkout"], a.offer-cta').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          if (window.LeadTracking) {
+            const tracking = LeadTracking.getData();
+            const params = new URLSearchParams();
+
+            // Przekaz wszystkie zebrane parametry
+            Object.keys(tracking).forEach(function(key) {
+              if (tracking[key]) params.set(key, tracking[key]);
+            });
+
+            // Dodaj parametry do URL
+            const href = link.getAttribute('href');
+            if (href && href !== '#') {
+              const separator = href.includes('?') ? '&' : '?';
+              link.href = href + separator + params.toString();
+            }
+          }
+        });
       });
     });
   </script>

@@ -704,20 +704,35 @@
             return { name: 'Strona', key: 'website', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', icon: 'ph-globe' };
         }
 
-        // Marketing Source - skąd lead trafił na stronę (atrybucja marketingowa)
+        // Marketing Source - skad lead trafil na strone (atrybucja marketingowa)
         // Note: tracking data jest w tabeli lead_tracking, nie w leads
-        // Dla listy pokazujemy dane z tracking jeśli są załadowane
+        // Dla listy pokazujemy dane z tracking jesli sa zaladowane
         function getMarketingSource(lead) {
             const tracking = lead.tracking || {};
 
-            // Ad platform click IDs
-            if (tracking.gclid || tracking.gbraid || tracking.wbraid) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+            // Google Ads - rozroznienie typow kampanii
+            if (tracking.gclid || tracking.gbraid || tracking.wbraid) {
+                // Sprawdz network type (v=video/YouTube, d=display, g/s=search)
+                if (tracking.network === 'v' || tracking.utm_medium === 'youtube' || tracking.utm_medium === 'video') {
+                    return { name: 'YouTube', key: 'youtube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+                }
+                if (tracking.network === 'd') {
+                    return { name: 'Display', key: 'google_display', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+                }
+                if (tracking.network === 'g' || tracking.network === 's') {
+                    return { name: 'Search', key: 'google_search', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+                }
+                // Default Google Ads
+                return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+            }
+
             if (tracking.fbclid) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
             if (tracking.ttclid) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
 
             // UTM source detection
             if (tracking.utm_source) {
                 const src = tracking.utm_source.toLowerCase();
+                if (src.includes('youtube')) return { name: 'YouTube', key: 'youtube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
                 if (src.includes('google')) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
                 if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
                 if (src.includes('tiktok')) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
@@ -834,7 +849,7 @@
             }
 
             // Load tracking data for marketing source attribution
-            const { data: trackingData } = await supabaseClient.from('lead_tracking').select('lead_id, gclid, gbraid, wbraid, fbclid, ttclid, utm_source, utm_medium, utm_campaign');
+            const { data: trackingData } = await supabaseClient.from('lead_tracking').select('lead_id, gclid, gbraid, wbraid, fbclid, ttclid, utm_source, utm_medium, utm_campaign, network, campaignid, adgroupid, creative, placement');
             if (trackingData) {
                 const trackingMap = {};
                 trackingData.forEach(t => {
