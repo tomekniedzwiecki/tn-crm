@@ -621,7 +621,7 @@
             if (workflowIds.length === 0) return;
 
             const [videoRes, takedropRes] = await Promise.all([
-                supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links').in('workflow_id', workflowIds),
+                supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created').in('workflow_id', workflowIds)
             ]);
 
@@ -645,9 +645,10 @@
 
         function getWorkflowStage(w) {
             // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop
-            // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony)
+            // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony) LUB etap 2 pominięty
             const videoLinks = w.video_stage?.video_links || [];
-            if (w.takedrop_stage?.is_active || videoLinks.length >= 4) return 3;
+            const isVideoSkipped = w.video_stage?.skipped || false;
+            if (w.takedrop_stage?.is_active || videoLinks.length >= 4 || isVideoSkipped) return 3;
             if (w.video_stage?.is_active) return 2;
             return 1;
         }
@@ -941,6 +942,7 @@
         function getNextStep(w) {
             const isStarter = w.offer_name?.toLowerCase().includes('starter');
             const rc = reportCounts[w.workflow_id];
+            const isVideoSkipped = w.video_stage?.skipped || false;
 
             // Etap 1: Umowa → Produkt → Raport → Branding → Strona
             if (!isStarter && w.contract_status !== 'signed') return 'contract';
@@ -949,19 +951,21 @@
             if (!w.branding_shared_at) return 'branding';
             if (!w.sales_page_shared_at) return 'salespage';
 
-            // Etap 2: Scenariusz → Profile → Nagrania
-            const scenarios = w.video_stage?.video_scenarios;
-            const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
-            if (!hasScenarios) return 'scenario';
+            // Etap 2: Scenariusz → Profile → Nagrania (pomiń jeśli video skipped)
+            if (!isVideoSkipped) {
+                const scenarios = w.video_stage?.video_scenarios;
+                const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
+                if (!hasScenarios) return 'scenario';
 
-            const profiles = w.video_stage?.social_profiles || {};
-            const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
-            if (profileCount < 3) return 'profile';
+                const profiles = w.video_stage?.social_profiles || {};
+                const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+                if (profileCount < 3) return 'profile';
 
-            const videoLinks = w.video_stage?.video_links || [];
-            if (videoLinks.length < 4) return 'nagrania';
+                const videoLinks = w.video_stage?.video_links || [];
+                if (videoLinks.length < 4) return 'nagrania';
+            }
 
-            // Etap 3: TakeDrop (minimum 4 nagrania = etap 2 ukończony)
+            // Etap 3: TakeDrop (minimum 4 nagrania LUB video pominięte = etap 2 ukończony)
             // Jeśli TakeDrop nie aktywny - admin musi włączyć
             // Jeśli TakeDrop aktywny ale konto nie założone - klient musi założyć
             if (!w.takedrop_stage?.is_active) return 'takedrop';
@@ -1039,17 +1043,23 @@
             }
 
             // Scenariusz - tylko gdy etap 1 ukończony (strona udostępniona)
+            const isVideoSkipped = w.video_stage?.skipped || false;
             if (w.sales_page_shared_at) {
-                const scenarios = w.video_stage?.video_scenarios;
-                const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
-                if (hasScenarios) {
-                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Scenariusz</span>`);
+                if (isVideoSkipped) {
+                    // Pominięty - czerwony X
+                    items.push(`<span class="flex items-center gap-1 text-red-400"><i class="ph-fill ph-x-circle text-[10px]"></i>Video</span>`);
+                } else {
+                    const scenarios = w.video_stage?.video_scenarios;
+                    const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
+                    if (hasScenarios) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Scenariusz</span>`);
+                    }
                 }
             }
 
-            // TakeDrop - pokazuj gdy etap 3 (4+ nagrań)
+            // TakeDrop - pokazuj gdy etap 3 (4+ nagrań LUB video pominięte)
             const videoLinks = w.video_stage?.video_links || [];
-            if (videoLinks.length >= 4) {
+            if (videoLinks.length >= 4 || isVideoSkipped) {
                 if (w.takedrop_stage?.account_created) {
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
                 } else if (w.takedrop_stage?.is_active) {
@@ -1126,7 +1136,11 @@
             let s2Class = 'bg-zinc-700';
             let s2Label = 'Etap 2';
             const hasVideo = w.video_stage?.is_active;
-            if (currentStage === 2) {
+            const isVideoSkipped = w.video_stage?.skipped || false;
+            if (isVideoSkipped) {
+                // Pominięty - czerwony
+                s2Class = 'bg-red-500';
+            } else if (currentStage === 2) {
                 s2Class = 'bg-amber-500';
             } else if (currentStage === 3 || (hasVideo && w.video_stage?.video_shared)) {
                 s2Class = 'bg-emerald-500';

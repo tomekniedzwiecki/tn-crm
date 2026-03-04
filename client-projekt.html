@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026022808';
+        const APP_VERSION = '2026030401';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4188,9 +4188,34 @@
             document.getElementById('dash-nav-check-strona')?.classList.toggle('hidden', !hasStrona);
             document.getElementById('dash-nav-check-strona-mobile')?.classList.toggle('hidden', !hasStrona);
 
-            // Update sidebar checkmark for Video (yellow when is_active - udostępnione)
-            document.getElementById('dash-nav-check-video')?.classList.toggle('hidden', !isVideoActive);
-            document.getElementById('dash-nav-check-video-mobile')?.classList.toggle('hidden', !isVideoActive);
+            // Update sidebar checkmark for Video (yellow when is_active, red X when skipped)
+            const isVideoSkipped = videoData && videoData.skipped;
+            const videoCheckEl = document.getElementById('dash-nav-check-video');
+            const videoCheckMobileEl = document.getElementById('dash-nav-check-video-mobile');
+
+            if (isVideoSkipped) {
+                // Pominięty - czerwony X
+                if (videoCheckEl) {
+                    videoCheckEl.classList.remove('hidden', 'ph-check-circle', 'text-amber-400', 'text-emerald-400');
+                    videoCheckEl.classList.add('ph-x-circle', 'text-red-400');
+                }
+                if (videoCheckMobileEl) {
+                    videoCheckMobileEl.classList.remove('hidden', 'ph-check-circle', 'text-amber-400', 'text-emerald-400');
+                    videoCheckMobileEl.classList.add('ph-x-circle', 'text-red-400');
+                }
+            } else if (isVideoActive) {
+                if (videoCheckEl) {
+                    videoCheckEl.classList.remove('hidden', 'ph-x-circle', 'text-red-400');
+                    videoCheckEl.classList.add('ph-check-circle', 'text-amber-400');
+                }
+                if (videoCheckMobileEl) {
+                    videoCheckMobileEl.classList.remove('hidden', 'ph-x-circle', 'text-red-400');
+                    videoCheckMobileEl.classList.add('ph-check-circle', 'text-amber-400');
+                }
+            } else {
+                videoCheckEl?.classList.add('hidden');
+                videoCheckMobileEl?.classList.add('hidden');
+            }
 
             // Also update project-screen sidebar checkmarks (nav-check-*)
             document.getElementById('nav-check-produkty')?.classList.toggle('hidden', !hasProdukty);
@@ -5575,6 +5600,7 @@
         function updateVideoNavigation() {
             const isActive = videoData?.is_active;
             const isAccepted = videoData?.stage_accepted;
+            const isSkipped = videoData?.skipped;
 
             // Show/hide entire Video section based on is_active
             const videoDesktop = document.getElementById('video-stage-desktop');
@@ -5582,15 +5608,42 @@
             if (videoDesktop) videoDesktop.classList.toggle('hidden', !isActive);
             if (videoMobile) videoMobile.classList.toggle('hidden', !isActive);
 
-            // Celebration modal - show if active but not accepted
+            // Helper to set icon state (checkmark, X, or hidden)
+            function setIconState(elId, state) {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                el.classList.remove('hidden', 'ph-check-circle', 'ph-x-circle', 'text-emerald-400', 'text-amber-400', 'text-red-400');
+                if (state === 'skipped') {
+                    el.classList.add('ph-x-circle', 'text-red-400');
+                } else if (state === 'done') {
+                    el.classList.add('ph-check-circle', 'text-emerald-400');
+                } else {
+                    el.classList.add('hidden');
+                }
+            }
+
+            // Celebration modal - show if active but not accepted (and not skipped)
             const celebrationModal = document.getElementById('video-intro-celebration');
             if (celebrationModal) {
-                celebrationModal.classList.toggle('hidden', !isActive || isAccepted);
+                celebrationModal.classList.toggle('hidden', !isActive || isAccepted || isSkipped);
                 // Set client name in celebration title
                 const celebrationTitle = document.getElementById('video-intro-celebration-title');
-                if (celebrationTitle && workflow?.client_name && !isAccepted) {
+                if (celebrationTitle && workflow?.client_name && !isAccepted && !isSkipped) {
                     celebrationTitle.textContent = `Gratulacje, ${workflow.client_name.split(' ')[0]}!`;
                 }
+            }
+
+            // If skipped - show red X on all video nav items
+            if (isSkipped) {
+                setIconState('dash-nav-check-profiles', 'skipped');
+                setIconState('dash-nav-check-profiles-mobile', 'skipped');
+                setIconState('nav-check-profiles', 'skipped');
+                setIconState('nav-check-profiles-mobile', 'skipped');
+                setIconState('dash-nav-check-recordings', 'skipped');
+                setIconState('dash-nav-check-recordings-mobile', 'skipped');
+                setIconState('nav-check-recordings', 'skipped');
+                setIconState('nav-check-recordings-mobile', 'skipped');
+                return;
             }
 
             // Update checkmarks (only show after stage accepted)
@@ -5598,21 +5651,17 @@
                 // Profile - check if all 3 filled
                 const profiles = videoData?.social_profiles || {};
                 const hasAllProfiles = profiles.tiktok && profiles.youtube && profiles.instagram;
-                // Dashboard sidebar
-                document.getElementById('dash-nav-check-profiles')?.classList.toggle('hidden', !hasAllProfiles);
-                document.getElementById('dash-nav-check-profiles-mobile')?.classList.toggle('hidden', !hasAllProfiles);
-                // Project sidebar
-                document.getElementById('nav-check-profiles')?.classList.toggle('hidden', !hasAllProfiles);
-                document.getElementById('nav-check-profiles-mobile')?.classList.toggle('hidden', !hasAllProfiles);
+                setIconState('dash-nav-check-profiles', hasAllProfiles ? 'done' : 'hidden');
+                setIconState('dash-nav-check-profiles-mobile', hasAllProfiles ? 'done' : 'hidden');
+                setIconState('nav-check-profiles', hasAllProfiles ? 'done' : 'hidden');
+                setIconState('nav-check-profiles-mobile', hasAllProfiles ? 'done' : 'hidden');
 
                 // Nagrania - check if at least 1 video
                 const hasVideos = (videoData?.video_links?.length || 0) > 0;
-                // Dashboard sidebar
-                document.getElementById('dash-nav-check-recordings')?.classList.toggle('hidden', !hasVideos);
-                document.getElementById('dash-nav-check-recordings-mobile')?.classList.toggle('hidden', !hasVideos);
-                // Project sidebar
-                document.getElementById('nav-check-recordings')?.classList.toggle('hidden', !hasVideos);
-                document.getElementById('nav-check-recordings-mobile')?.classList.toggle('hidden', !hasVideos);
+                setIconState('dash-nav-check-recordings', hasVideos ? 'done' : 'hidden');
+                setIconState('dash-nav-check-recordings-mobile', hasVideos ? 'done' : 'hidden');
+                setIconState('nav-check-recordings', hasVideos ? 'done' : 'hidden');
+                setIconState('nav-check-recordings-mobile', hasVideos ? 'done' : 'hidden');
             }
         }
         window.updateVideoNavigation = updateVideoNavigation;

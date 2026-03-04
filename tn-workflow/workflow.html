@@ -1299,6 +1299,23 @@
                                 <div id="video-activated-info" class="hidden mt-3 pt-3 border-t border-[#222] text-[12px] text-[#666]">
                                     <i class="ph ph-calendar-check mr-1"></i> Aktywowano: <span id="video-activated-date" class="text-[#888]">-</span>
                                 </div>
+
+                                <!-- Pominięcie etapu -->
+                                <div id="video-skip-section" class="mt-3 pt-3 border-t border-[#222]">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <div class="text-[13px] text-zinc-400">Pomiń etap video</div>
+                                            <div class="text-[12px] text-[#555] mt-0.5">Klient nie chce nagrywać video</div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="video-skipped" class="sr-only peer" onchange="toggleVideoSkipped()">
+                                            <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                                        </label>
+                                    </div>
+                                    <div id="video-skipped-info" class="hidden mt-2 text-[12px] text-red-400">
+                                        <i class="ph ph-x-circle mr-1"></i> Pominięto: <span id="video-skipped-date" class="text-red-300">-</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -4325,11 +4342,15 @@
             const activeCheckbox = document.getElementById('video-active');
             const activatedInfo = document.getElementById('video-activated-info');
             const activatedDate = document.getElementById('video-activated-date');
+            const skippedCheckbox = document.getElementById('video-skipped');
+            const skippedInfo = document.getElementById('video-skipped-info');
+            const skippedDate = document.getElementById('video-skipped-date');
 
             if (!activeCheckbox) return;
 
             if (videoAdminData) {
                 activeCheckbox.checked = videoAdminData.is_active || false;
+                if (skippedCheckbox) skippedCheckbox.checked = videoAdminData.skipped || false;
 
                 // Show activated info
                 if (videoAdminData.is_active && videoAdminData.activated_at) {
@@ -4337,6 +4358,14 @@
                     activatedDate.textContent = new Date(videoAdminData.activated_at).toLocaleDateString('pl-PL');
                 } else {
                     activatedInfo.classList.add('hidden');
+                }
+
+                // Show skipped info
+                if (skippedInfo && videoAdminData.skipped && videoAdminData.skipped_at) {
+                    skippedInfo.classList.remove('hidden');
+                    skippedDate.textContent = new Date(videoAdminData.skipped_at).toLocaleDateString('pl-PL');
+                } else if (skippedInfo) {
+                    skippedInfo.classList.add('hidden');
                 }
             }
 
@@ -4351,8 +4380,13 @@
             const navCheck = document.getElementById('nav-check-scenariusze');
             const navCheckIcon = document.getElementById('nav-check-scenariusze-icon');
             const scenarios = videoAdminData?.video_scenarios || [];
+            const isSkipped = videoAdminData?.skipped || false;
 
-            if (scenarios.length > 0) {
+            if (isSkipped) {
+                // Pominięty - czerwony X
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-x-circle text-red-400 text-sm';
+            } else if (scenarios.length > 0) {
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
             } else {
@@ -4410,8 +4444,13 @@
             const navCheckIcon = document.getElementById('nav-check-profile-icon');
             const profiles = videoAdminData?.social_profiles || {};
             const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+            const isSkipped = videoAdminData?.skipped || false;
 
-            if (profileCount === 3) {
+            if (isSkipped) {
+                // Pominięty - czerwony X
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-x-circle text-red-400 text-sm';
+            } else if (profileCount === 3) {
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (navCheckIcon) navCheckIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
             } else if (profileCount > 0) {
@@ -4501,13 +4540,19 @@
         function updateNagraniaNav() {
             const navCount = document.getElementById('nav-check-nagrania-count');
             const links = videoAdminData?.video_links || [];
+            const isSkipped = videoAdminData?.skipped || false;
 
             if (navCount) {
-                if (links.length > 0) {
+                if (isSkipped) {
+                    // Pominięty - czerwony X
+                    navCount.innerHTML = '<i class="ph-fill ph-x-circle text-red-400 text-sm"></i>';
+                    navCount.className = '';
+                } else if (links.length > 0) {
                     navCount.textContent = links.length;
                     navCount.className = 'text-[10px] text-emerald-400 font-medium';
                 } else {
                     navCount.textContent = '';
+                    navCount.className = '';
                 }
             }
         }
@@ -5153,8 +5198,52 @@
             }
         }
 
+        async function toggleVideoSkipped() {
+            const checkbox = document.getElementById('video-skipped');
+            const isSkipped = checkbox.checked;
+
+            try {
+                const updateData = {
+                    skipped: isSkipped,
+                    skipped_at: isSkipped ? new Date().toISOString() : null
+                };
+
+                if (videoAdminData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .update(updateData)
+                        .eq('workflow_id', workflow.id);
+
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabaseClient
+                        .from('workflow_video')
+                        .insert({
+                            workflow_id: workflow.id,
+                            ...updateData
+                        });
+
+                    if (error) throw error;
+                }
+
+                loadVideoAdmin();
+
+                if (isSkipped) {
+                    showToast('Etap video pominięty', 'warning');
+                    logActivity('video_skipped', 'Pominięto etap video na życzenie klienta', {});
+                } else {
+                    showToast('Pominięcie etapu video anulowane', 'success');
+                    logActivity('video_skip_cancelled', 'Anulowano pominięcie etapu video', {});
+                }
+            } catch (err) {
+                console.error('Error toggling video skip:', err);
+                showToast('Błąd zapisu', 'error');
+            }
+        }
+
         window.loadVideoAdmin = loadVideoAdmin;
         window.toggleVideoActive = toggleVideoActive;
+        window.toggleVideoSkipped = toggleVideoSkipped;
         window.addVideoScenario = addVideoScenario;
         window.updateVideoScenario = updateVideoScenario;
         window.removeVideoScenario = removeVideoScenario;
