@@ -58,6 +58,22 @@
         .video-item:hover {
             background: rgba(255,255,255,0.03);
         }
+
+        .tab-btn {
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+
+        .shorts-badge {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -89,10 +105,10 @@
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto">
-            <div class="p-4 md:p-6 lg:p-10 max-w-6xl mx-auto animate-enter">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
 
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                <!-- Main Stats Cards - Row 1 -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
                     <div class="stat-card rounded-xl p-4">
                         <div class="flex items-center gap-3 mb-2">
                             <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
@@ -125,32 +141,146 @@
 
                     <div class="stat-card rounded-xl p-4">
                         <div class="flex items-center gap-3 mb-2">
-                            <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                <i class="ph ph-thumbs-up text-amber-400 text-xl"></i>
+                            <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                <i class="ph ph-heart text-violet-400 text-xl"></i>
                             </div>
                         </div>
-                        <div class="text-2xl font-semibold text-white font-mono" id="stat-total-likes">-</div>
-                        <div class="text-xs text-zinc-500">Łącznie polubień</div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-engagement">-</div>
+                        <div class="text-xs text-zinc-500">Engagement Rate</div>
                     </div>
                 </div>
 
-                <!-- Chart -->
+                <!-- Advanced Stats - Row 2 -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-zinc-500">Długie filmy</span>
+                            <i class="ph ph-film-strip text-blue-400"></i>
+                        </div>
+                        <div class="text-xl font-semibold text-white font-mono" id="stat-long-count">-</div>
+                        <div class="text-xs text-zinc-600">śr. <span id="stat-long-avg">-</span> wyśw.</div>
+                    </div>
+
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-zinc-500">Shorts</span>
+                            <i class="ph ph-lightning text-orange-400"></i>
+                        </div>
+                        <div class="text-xl font-semibold text-white font-mono" id="stat-shorts-count">-</div>
+                        <div class="text-xs text-zinc-600">śr. <span id="stat-shorts-avg">-</span> wyśw.</div>
+                    </div>
+
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-zinc-500">Najlepszy film</span>
+                            <i class="ph ph-trophy text-amber-400"></i>
+                        </div>
+                        <div class="text-xl font-semibold text-white font-mono" id="stat-best-views">-</div>
+                        <div class="text-xs text-zinc-600 truncate" id="stat-best-title">-</div>
+                    </div>
+
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-zinc-500">Wyśw./dzień (śr.)</span>
+                            <i class="ph ph-calendar text-teal-400"></i>
+                        </div>
+                        <div class="text-xl font-semibold text-white font-mono" id="stat-views-per-day">-</div>
+                        <div class="text-xs text-zinc-600">od publikacji</div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                    <!-- Views Trend Chart -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-white">Trend wyświetleń</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                                <span class="text-xs text-zinc-500">Długie</span>
+                                <span class="w-3 h-3 rounded-full bg-orange-500 ml-2"></span>
+                                <span class="text-xs text-zinc-500">Shorts</span>
+                            </div>
+                        </div>
+                        <div class="h-56">
+                            <canvas id="views-trend-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Engagement Chart -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-white">Engagement Rate</h3>
+                            <span class="text-xs text-zinc-500">(likes + comments) / views</span>
+                        </div>
+                        <div class="h-56">
+                            <canvas id="engagement-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Chart -->
                 <div class="stat-card rounded-xl p-4 mb-6">
-                    <h3 class="font-semibold text-white mb-4">Wyświetlenia w czasie</h3>
-                    <div class="h-64">
-                        <canvas id="views-chart"></canvas>
+                    <h3 class="font-semibold text-white mb-4">Porównanie: Długie vs Shorts</h3>
+                    <div class="h-48">
+                        <canvas id="comparison-chart"></canvas>
                     </div>
                 </div>
 
-                <!-- Videos List -->
+                <!-- Top Performers -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                    <!-- Best Performing -->
+                    <div class="stat-card rounded-xl p-4">
+                        <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-trophy text-amber-400"></i>
+                            Top 5 filmów
+                        </h3>
+                        <div id="top-videos" class="space-y-2">
+                            <!-- Loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Performance -->
+                    <div class="stat-card rounded-xl p-4">
+                        <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-clock text-teal-400"></i>
+                            Ostatnie 5 filmów
+                        </h3>
+                        <div id="recent-videos" class="space-y-2">
+                            <!-- Loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Videos List with Tabs -->
                 <div class="stat-card rounded-xl overflow-hidden">
-                    <div class="p-4 border-b border-white/5">
+                    <div class="p-4 border-b border-white/5 flex items-center justify-between">
                         <h3 class="font-semibold text-white flex items-center gap-2">
                             <i class="ph ph-list text-red-400"></i>
                             Wszystkie filmy
                         </h3>
+                        <div class="flex items-center gap-1">
+                            <button onclick="filterVideos('all')" data-filter="all" class="tab-btn active px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent">
+                                Wszystkie
+                            </button>
+                            <button onclick="filterVideos('long')" data-filter="long" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent text-zinc-400">
+                                Długie
+                            </button>
+                            <button onclick="filterVideos('shorts')" data-filter="shorts" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent text-zinc-400">
+                                Shorts
+                            </button>
+                        </div>
                     </div>
-                    <div id="videos-list" class="divide-y divide-white/5">
+                    <div class="p-2 border-b border-white/5 bg-zinc-900/50">
+                        <div class="grid grid-cols-12 gap-2 text-xs text-zinc-500 px-2">
+                            <div class="col-span-5">Tytuł</div>
+                            <div class="col-span-2 text-right">Wyświetlenia</div>
+                            <div class="col-span-2 text-right">Engagement</div>
+                            <div class="col-span-2 text-right">Wyśw./dzień</div>
+                            <div class="col-span-1 text-right">Data</div>
+                        </div>
+                    </div>
+                    <div id="videos-list" class="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
                         <!-- Videos loaded here -->
                     </div>
                 </div>
@@ -160,25 +290,6 @@
                     <i class="ph ph-youtube-logo text-5xl mb-4"></i>
                     <p class="text-lg mb-2">Brak danych YouTube</p>
                     <button onclick="syncYouTube()" class="text-red-400 hover:underline">Synchronizuj teraz</button>
-                </div>
-
-                <!-- API Key Setup -->
-                <div id="api-setup" class="stat-card rounded-xl p-6 mt-6 hidden">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                            <i class="ph ph-key text-amber-400 text-2xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-white mb-2">Konfiguracja YouTube API</h3>
-                            <p class="text-sm text-zinc-400 mb-4">Aby pobierać dane z YouTube, musisz skonfigurować klucz API.</p>
-                            <ol class="text-sm text-zinc-500 space-y-2 mb-4">
-                                <li>1. Wejdź na <a href="https://console.cloud.google.com/" target="_blank" class="text-red-400 hover:underline">Google Cloud Console</a></li>
-                                <li>2. Utwórz projekt i włącz YouTube Data API v3</li>
-                                <li>3. Utwórz klucz API (Credentials → Create Credentials → API Key)</li>
-                                <li>4. Dodaj klucz do Supabase Secrets jako <code class="bg-white/5 px-1 rounded">YOUTUBE_API_KEY</code></li>
-                            </ol>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -190,7 +301,11 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const YOUTUBE_CHANNEL_ID = 'UCoIeVtbxQMxmjaXT_v4IJrQ';
-        let viewsChart = null;
+        const SHORTS_MAX_DURATION = 60; // seconds
+
+        let allVideos = [];
+        let currentFilter = 'all';
+        let charts = {};
 
         async function init() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -225,91 +340,255 @@
                 .select('*')
                 .order('published_at', { ascending: false });
 
-            const container = document.getElementById('videos-list');
             const emptyState = document.getElementById('empty-state');
 
             if (!videos || videos.length === 0) {
-                container.innerHTML = '';
                 emptyState.classList.remove('hidden');
-                document.getElementById('api-setup').classList.remove('hidden');
                 return;
             }
 
             emptyState.classList.add('hidden');
-            document.getElementById('api-setup').classList.add('hidden');
+            allVideos = videos.map(v => ({
+                ...v,
+                isShort: (v.duration_seconds || 0) <= SHORTS_MAX_DURATION,
+                engagement: v.views > 0 ? ((v.likes || 0) + (v.comments || 0)) / v.views * 100 : 0,
+                daysOld: Math.max(1, Math.floor((Date.now() - new Date(v.published_at).getTime()) / (1000 * 60 * 60 * 24))),
+                viewsPerDay: function() { return Math.round((this.views || 0) / this.daysOld); }
+            }));
 
             // Calculate stats
-            const totalViews = videos.reduce((sum, v) => sum + (v.views || 0), 0);
-            const totalLikes = videos.reduce((sum, v) => sum + (v.likes || 0), 0);
-            const avgViews = Math.round(totalViews / videos.length);
-
-            document.getElementById('stat-total-videos').textContent = videos.length;
-            document.getElementById('stat-total-views').textContent = formatNumber(totalViews);
-            document.getElementById('stat-avg-views').textContent = formatNumber(avgViews);
-            document.getElementById('stat-total-likes').textContent = formatNumber(totalLikes);
-
-            // Render videos list
-            container.innerHTML = videos.map(video => `
-                <a href="https://youtube.com/watch?v=${video.youtube_id}" target="_blank" class="video-item flex items-center gap-4 p-4">
-                    <img src="${video.thumbnail_url || ''}" alt="" class="w-32 h-18 object-cover rounded-lg bg-zinc-800">
-                    <div class="flex-1 min-w-0">
-                        <div class="font-medium text-white truncate">${escapeHtml(video.title)}</div>
-                        <div class="flex items-center gap-4 mt-1 text-xs text-zinc-500">
-                            <span>${formatDate(video.published_at)}</span>
-                            <span class="flex items-center gap-1"><i class="ph ph-eye"></i> ${formatNumber(video.views || 0)}</span>
-                            <span class="flex items-center gap-1"><i class="ph ph-thumbs-up"></i> ${formatNumber(video.likes || 0)}</span>
-                            <span class="flex items-center gap-1"><i class="ph ph-chat"></i> ${formatNumber(video.comments || 0)}</span>
-                        </div>
-                    </div>
-                    <i class="ph ph-arrow-square-out text-zinc-600"></i>
-                </a>
-            `).join('');
-
-            // Render chart
-            renderChart(videos);
+            calculateStats();
+            renderCharts();
+            renderTopVideos();
+            renderVideosList();
         }
 
-        function renderChart(videos) {
-            const ctx = document.getElementById('views-chart').getContext('2d');
+        function calculateStats() {
+            const longVideos = allVideos.filter(v => !v.isShort);
+            const shorts = allVideos.filter(v => v.isShort);
 
-            // Sort by date and take last 20
-            const chartData = videos
-                .slice(0, 20)
-                .reverse();
+            const totalViews = allVideos.reduce((sum, v) => sum + (v.views || 0), 0);
+            const totalLikes = allVideos.reduce((sum, v) => sum + (v.likes || 0), 0);
+            const totalComments = allVideos.reduce((sum, v) => sum + (v.comments || 0), 0);
+            const avgViews = Math.round(totalViews / allVideos.length);
+            const avgEngagement = totalViews > 0 ? ((totalLikes + totalComments) / totalViews * 100).toFixed(2) : 0;
 
-            if (viewsChart) {
-                viewsChart.destroy();
-            }
+            const longAvg = longVideos.length > 0 ? Math.round(longVideos.reduce((s, v) => s + (v.views || 0), 0) / longVideos.length) : 0;
+            const shortsAvg = shorts.length > 0 ? Math.round(shorts.reduce((s, v) => s + (v.views || 0), 0) / shorts.length) : 0;
 
-            viewsChart = new Chart(ctx, {
+            const bestVideo = [...allVideos].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
+            const avgViewsPerDay = Math.round(allVideos.reduce((s, v) => s + v.viewsPerDay(), 0) / allVideos.length);
+
+            // Update DOM
+            document.getElementById('stat-total-videos').textContent = allVideos.length;
+            document.getElementById('stat-total-views').textContent = formatNumber(totalViews);
+            document.getElementById('stat-avg-views').textContent = formatNumber(avgViews);
+            document.getElementById('stat-engagement').textContent = avgEngagement + '%';
+
+            document.getElementById('stat-long-count').textContent = longVideos.length;
+            document.getElementById('stat-long-avg').textContent = formatNumber(longAvg);
+            document.getElementById('stat-shorts-count').textContent = shorts.length;
+            document.getElementById('stat-shorts-avg').textContent = formatNumber(shortsAvg);
+
+            document.getElementById('stat-best-views').textContent = formatNumber(bestVideo?.views || 0);
+            document.getElementById('stat-best-title').textContent = bestVideo?.title?.substring(0, 30) + '...' || '-';
+
+            document.getElementById('stat-views-per-day').textContent = formatNumber(avgViewsPerDay);
+        }
+
+        function renderCharts() {
+            const longVideos = allVideos.filter(v => !v.isShort).slice(0, 15).reverse();
+            const shorts = allVideos.filter(v => v.isShort).slice(0, 15).reverse();
+
+            // Views Trend Chart
+            const trendCtx = document.getElementById('views-trend-chart').getContext('2d');
+            if (charts.trend) charts.trend.destroy();
+
+            charts.trend = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: longVideos.map((_, i) => i + 1),
+                    datasets: [
+                        {
+                            label: 'Długie',
+                            data: longVideos.map(v => v.views || 0),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Shorts',
+                            data: shorts.map(v => v.views || 0),
+                            borderColor: '#f97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { ticks: { color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+
+            // Engagement Chart
+            const engageCtx = document.getElementById('engagement-chart').getContext('2d');
+            if (charts.engagement) charts.engagement.destroy();
+
+            const recentVideos = allVideos.slice(0, 15).reverse();
+            charts.engagement = new Chart(engageCtx, {
                 type: 'bar',
                 data: {
-                    labels: chartData.map(v => v.title.substring(0, 20) + '...'),
+                    labels: recentVideos.map(v => v.title.substring(0, 15) + '...'),
                     datasets: [{
-                        label: 'Wyświetlenia',
-                        data: chartData.map(v => v.views || 0),
-                        backgroundColor: 'rgba(239, 68, 68, 0.5)',
-                        borderColor: 'rgba(239, 68, 68, 1)',
+                        label: 'Engagement %',
+                        data: recentVideos.map(v => v.engagement.toFixed(2)),
+                        backgroundColor: recentVideos.map(v => v.isShort ? 'rgba(249, 115, 22, 0.6)' : 'rgba(139, 92, 246, 0.6)'),
+                        borderColor: recentVideos.map(v => v.isShort ? '#f97316' : '#8b5cf6'),
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: {
-                            display: false
-                        },
-                        y: {
-                            ticks: { color: '#71717a' },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        }
+                        x: { display: false },
+                        y: { ticks: { color: '#71717a', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } }
                     }
                 }
             });
+
+            // Comparison Chart
+            const compCtx = document.getElementById('comparison-chart').getContext('2d');
+            if (charts.comparison) charts.comparison.destroy();
+
+            const longStats = {
+                avgViews: allVideos.filter(v => !v.isShort).reduce((s, v) => s + (v.views || 0), 0) / Math.max(1, allVideos.filter(v => !v.isShort).length),
+                avgEngagement: allVideos.filter(v => !v.isShort).reduce((s, v) => s + v.engagement, 0) / Math.max(1, allVideos.filter(v => !v.isShort).length),
+                avgViewsPerDay: allVideos.filter(v => !v.isShort).reduce((s, v) => s + v.viewsPerDay(), 0) / Math.max(1, allVideos.filter(v => !v.isShort).length)
+            };
+            const shortsStats = {
+                avgViews: allVideos.filter(v => v.isShort).reduce((s, v) => s + (v.views || 0), 0) / Math.max(1, allVideos.filter(v => v.isShort).length),
+                avgEngagement: allVideos.filter(v => v.isShort).reduce((s, v) => s + v.engagement, 0) / Math.max(1, allVideos.filter(v => v.isShort).length),
+                avgViewsPerDay: allVideos.filter(v => v.isShort).reduce((s, v) => s + v.viewsPerDay(), 0) / Math.max(1, allVideos.filter(v => v.isShort).length)
+            };
+
+            charts.comparison = new Chart(compCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Śr. wyświetleń', 'Śr. engagement (%)', 'Śr. wyśw./dzień'],
+                    datasets: [
+                        {
+                            label: 'Długie',
+                            data: [longStats.avgViews, longStats.avgEngagement, longStats.avgViewsPerDay],
+                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Shorts',
+                            data: [shortsStats.avgViews, shortsStats.avgEngagement, shortsStats.avgViewsPerDay],
+                            backgroundColor: 'rgba(249, 115, 22, 0.6)',
+                            borderColor: '#f97316',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#a1a1aa', boxWidth: 12, padding: 15 }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#71717a' }, grid: { display: false } },
+                        y: { ticks: { color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        function renderTopVideos() {
+            const top5 = [...allVideos].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+            const recent5 = allVideos.slice(0, 5);
+
+            document.getElementById('top-videos').innerHTML = top5.map((v, i) => `
+                <a href="https://youtube.com/watch?v=${v.youtube_id}" target="_blank" class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <span class="w-6 h-6 rounded-full ${i === 0 ? 'bg-amber-500' : 'bg-zinc-700'} flex items-center justify-center text-xs font-bold text-white">${i + 1}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-white truncate">${escapeHtml(v.title)}</div>
+                        <div class="text-xs text-zinc-500">${formatNumber(v.views)} wyśw. · ${v.engagement.toFixed(1)}% eng.</div>
+                    </div>
+                    ${v.isShort ? '<span class="shorts-badge text-[10px] px-1.5 py-0.5 rounded text-white font-medium">SHORT</span>' : ''}
+                </a>
+            `).join('');
+
+            document.getElementById('recent-videos').innerHTML = recent5.map(v => `
+                <a href="https://youtube.com/watch?v=${v.youtube_id}" target="_blank" class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <img src="${v.thumbnail_url || ''}" class="w-16 h-9 object-cover rounded bg-zinc-800">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-white truncate">${escapeHtml(v.title)}</div>
+                        <div class="text-xs text-zinc-500">${formatNumber(v.views)} wyśw. · ${v.viewsPerDay()}/dzień</div>
+                    </div>
+                    ${v.isShort ? '<span class="shorts-badge text-[10px] px-1.5 py-0.5 rounded text-white font-medium">SHORT</span>' : ''}
+                </a>
+            `).join('');
+        }
+
+        function renderVideosList() {
+            let filtered = allVideos;
+            if (currentFilter === 'long') filtered = allVideos.filter(v => !v.isShort);
+            if (currentFilter === 'shorts') filtered = allVideos.filter(v => v.isShort);
+
+            document.getElementById('videos-list').innerHTML = filtered.map(v => `
+                <a href="https://youtube.com/watch?v=${v.youtube_id}" target="_blank" class="video-item grid grid-cols-12 gap-2 p-3 items-center">
+                    <div class="col-span-5 flex items-center gap-3 min-w-0">
+                        <img src="${v.thumbnail_url || ''}" class="w-20 h-11 object-cover rounded bg-zinc-800 shrink-0">
+                        <div class="min-w-0">
+                            <div class="text-sm text-white truncate">${escapeHtml(v.title)}</div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                ${v.isShort ? '<span class="shorts-badge text-[9px] px-1 py-0.5 rounded text-white">SHORT</span>' : '<span class="text-[9px] text-zinc-600">' + formatDuration(v.duration_seconds) + '</span>'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-2 text-right">
+                        <div class="text-sm font-mono text-white">${formatNumber(v.views || 0)}</div>
+                        <div class="text-xs text-zinc-600">${formatNumber(v.likes || 0)} <i class="ph ph-thumbs-up"></i></div>
+                    </div>
+                    <div class="col-span-2 text-right">
+                        <div class="text-sm font-mono ${v.engagement > 5 ? 'text-emerald-400' : v.engagement > 2 ? 'text-amber-400' : 'text-zinc-400'}">${v.engagement.toFixed(2)}%</div>
+                        <div class="text-xs text-zinc-600">${formatNumber(v.comments || 0)} <i class="ph ph-chat"></i></div>
+                    </div>
+                    <div class="col-span-2 text-right">
+                        <div class="text-sm font-mono text-teal-400">${formatNumber(v.viewsPerDay())}</div>
+                        <div class="text-xs text-zinc-600">${v.daysOld}d temu</div>
+                    </div>
+                    <div class="col-span-1 text-right text-xs text-zinc-500">
+                        ${formatDate(v.published_at)}
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        function filterVideos(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+                btn.classList.toggle('text-zinc-400', btn.dataset.filter !== filter);
+            });
+            renderVideosList();
         }
 
         async function syncYouTube() {
@@ -352,10 +631,17 @@
             return num.toString();
         }
 
+        function formatDuration(seconds) {
+            if (!seconds) return '-';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return mins + ':' + secs.toString().padStart(2, '0');
+        }
+
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             const date = new Date(dateStr);
-            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
         }
 
         function escapeHtml(str) {
