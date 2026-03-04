@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Content - YouTube</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-content/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #e11d48; color: white; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .video-item {
+            transition: all 0.15s ease;
+        }
+        .video-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-content</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">youtube</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="syncYouTube()" id="sync-btn" class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm font-medium">
+                    <i class="ph ph-arrows-clockwise"></i>
+                    <span class="hidden sm:inline">Synchronizuj</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-6xl mx-auto animate-enter">
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                                <i class="ph ph-video text-red-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-total-videos">-</div>
+                        <div class="text-xs text-zinc-500">Wszystkich filmów</div>
+                    </div>
+
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <i class="ph ph-eye text-blue-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-total-views">-</div>
+                        <div class="text-xs text-zinc-500">Łączne wyświetlenia</div>
+                    </div>
+
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <i class="ph ph-chart-line-up text-emerald-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-avg-views">-</div>
+                        <div class="text-xs text-zinc-500">Średnio wyświetleń</div>
+                    </div>
+
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                <i class="ph ph-thumbs-up text-amber-400 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-total-likes">-</div>
+                        <div class="text-xs text-zinc-500">Łącznie polubień</div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="stat-card rounded-xl p-4 mb-6">
+                    <h3 class="font-semibold text-white mb-4">Wyświetlenia w czasie</h3>
+                    <div class="h-64">
+                        <canvas id="views-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Videos List -->
+                <div class="stat-card rounded-xl overflow-hidden">
+                    <div class="p-4 border-b border-white/5">
+                        <h3 class="font-semibold text-white flex items-center gap-2">
+                            <i class="ph ph-list text-red-400"></i>
+                            Wszystkie filmy
+                        </h3>
+                    </div>
+                    <div id="videos-list" class="divide-y divide-white/5">
+                        <!-- Videos loaded here -->
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div id="empty-state" class="text-center py-20 text-zinc-600 hidden">
+                    <i class="ph ph-youtube-logo text-5xl mb-4"></i>
+                    <p class="text-lg mb-2">Brak danych YouTube</p>
+                    <button onclick="syncYouTube()" class="text-red-400 hover:underline">Synchronizuj teraz</button>
+                </div>
+
+                <!-- API Key Setup -->
+                <div id="api-setup" class="stat-card rounded-xl p-6 mt-6 hidden">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                            <i class="ph ph-key text-amber-400 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-white mb-2">Konfiguracja YouTube API</h3>
+                            <p class="text-sm text-zinc-400 mb-4">Aby pobierać dane z YouTube, musisz skonfigurować klucz API.</p>
+                            <ol class="text-sm text-zinc-500 space-y-2 mb-4">
+                                <li>1. Wejdź na <a href="https://console.cloud.google.com/" target="_blank" class="text-red-400 hover:underline">Google Cloud Console</a></li>
+                                <li>2. Utwórz projekt i włącz YouTube Data API v3</li>
+                                <li>3. Utwórz klucz API (Credentials → Create Credentials → API Key)</li>
+                                <li>4. Dodaj klucz do Supabase Secrets jako <code class="bg-white/5 px-1 rounded">YOUTUBE_API_KEY</code></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const YOUTUBE_CHANNEL_ID = 'UCoIeVtbxQMxmjaXT_v4IJrQ';
+        let viewsChart = null;
+
+        async function init() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (!session || session.user.email !== 'tomekniedzwiecki@gmail.com') {
+                window.location.href = '/';
+                return;
+            }
+
+            Sidebar.render({ appId: 'content', userEmail: session.user.email });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('name, color')
+                .eq('email', session.user.email)
+                .single();
+
+            if (teamMember) {
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+            }
+
+            await loadVideos();
+        }
+
+        async function loadVideos() {
+            const { data: videos } = await supabaseClient
+                .from('content_youtube_videos')
+                .select('*')
+                .order('published_at', { ascending: false });
+
+            const container = document.getElementById('videos-list');
+            const emptyState = document.getElementById('empty-state');
+
+            if (!videos || videos.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('api-setup').classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            document.getElementById('api-setup').classList.add('hidden');
+
+            // Calculate stats
+            const totalViews = videos.reduce((sum, v) => sum + (v.views || 0), 0);
+            const totalLikes = videos.reduce((sum, v) => sum + (v.likes || 0), 0);
+            const avgViews = Math.round(totalViews / videos.length);
+
+            document.getElementById('stat-total-videos').textContent = videos.length;
+            document.getElementById('stat-total-views').textContent = formatNumber(totalViews);
+            document.getElementById('stat-avg-views').textContent = formatNumber(avgViews);
+            document.getElementById('stat-total-likes').textContent = formatNumber(totalLikes);
+
+            // Render videos list
+            container.innerHTML = videos.map(video => `
+                <a href="https://youtube.com/watch?v=${video.youtube_id}" target="_blank" class="video-item flex items-center gap-4 p-4">
+                    <img src="${video.thumbnail_url || ''}" alt="" class="w-32 h-18 object-cover rounded-lg bg-zinc-800">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-white truncate">${escapeHtml(video.title)}</div>
+                        <div class="flex items-center gap-4 mt-1 text-xs text-zinc-500">
+                            <span>${formatDate(video.published_at)}</span>
+                            <span class="flex items-center gap-1"><i class="ph ph-eye"></i> ${formatNumber(video.views || 0)}</span>
+                            <span class="flex items-center gap-1"><i class="ph ph-thumbs-up"></i> ${formatNumber(video.likes || 0)}</span>
+                            <span class="flex items-center gap-1"><i class="ph ph-chat"></i> ${formatNumber(video.comments || 0)}</span>
+                        </div>
+                    </div>
+                    <i class="ph ph-arrow-square-out text-zinc-600"></i>
+                </a>
+            `).join('');
+
+            // Render chart
+            renderChart(videos);
+        }
+
+        function renderChart(videos) {
+            const ctx = document.getElementById('views-chart').getContext('2d');
+
+            // Sort by date and take last 20
+            const chartData = videos
+                .slice(0, 20)
+                .reverse();
+
+            if (viewsChart) {
+                viewsChart.destroy();
+            }
+
+            viewsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(v => v.title.substring(0, 20) + '...'),
+                    datasets: [{
+                        label: 'Wyświetlenia',
+                        data: chartData.map(v => v.views || 0),
+                        backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            ticks: { color: '#71717a' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function syncYouTube() {
+            const btn = document.getElementById('sync-btn');
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Synchronizuję...';
+            btn.disabled = true;
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/youtube-sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ channelId: YOUTUBE_CHANNEL_ID })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    await loadVideos();
+                } else {
+                    console.error('Sync error:', result);
+                    alert('Błąd synchronizacji: ' + (result.error || 'Nieznany błąd'));
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                alert('Błąd połączenia');
+            }
+
+            btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> <span class="hidden sm:inline">Synchronizuj</span>';
+            btn.disabled = false;
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        init();
+    </script>
+
+</body>
+</html>

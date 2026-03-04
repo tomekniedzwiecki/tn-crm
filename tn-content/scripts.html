@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Content - Skrypty</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-content/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #e11d48; color: white; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .input-field {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: #e11d48;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.1);
+        }
+
+        .section-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .section-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+        .section-card.active {
+            border-color: #e11d48;
+            background: rgba(225, 29, 72, 0.05);
+        }
+
+        .script-textarea {
+            background: transparent;
+            resize: none;
+            line-height: 1.8;
+        }
+        .script-textarea:focus {
+            outline: none;
+        }
+
+        .status-draft { background: rgba(161, 161, 170, 0.2); color: #a1a1aa; }
+        .status-ready { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .status-recorded { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .status-published { background: rgba(225, 29, 72, 0.2); color: #e11d48; }
+        .status-idea { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+
+        .script-item {
+            transition: all 0.15s ease;
+        }
+        .script-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+        .script-item.active {
+            background: rgba(225, 29, 72, 0.1);
+            border-color: rgba(225, 29, 72, 0.3);
+        }
+
+        /* Prompter view */
+        .prompter-mode {
+            font-size: 2rem;
+            line-height: 2;
+            letter-spacing: 0.02em;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-content</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">skrypty</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="togglePrompterMode()" id="prompter-btn" class="flex items-center gap-2 px-3 py-2 border border-white/10 hover:border-white/20 text-zinc-400 hover:text-white rounded-lg transition-colors text-sm">
+                    <i class="ph ph-presentation-chart"></i>
+                    <span class="hidden sm:inline">Prompter</span>
+                </button>
+                <button onclick="saveScript()" id="save-btn" class="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-colors text-sm font-medium">
+                    <i class="ph ph-floppy-disk"></i>
+                    <span class="hidden sm:inline">Zapisz</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Scripts list (left panel) -->
+            <div class="w-72 border-r border-white/5 flex flex-col bg-zinc-950/50">
+                <div class="p-4 border-b border-white/5">
+                    <button onclick="createNewScript()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg transition-colors text-sm font-medium border border-rose-500/20">
+                        <i class="ph ph-plus"></i>
+                        Nowy skrypt
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-2" id="scripts-list">
+                    <!-- Scripts loaded here -->
+                </div>
+            </div>
+
+            <!-- Editor (right panel) -->
+            <div class="flex-1 overflow-y-auto" id="editor-panel">
+                <div class="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-enter">
+
+                    <!-- Empty state -->
+                    <div id="empty-state" class="text-center py-20 text-zinc-600">
+                        <i class="ph ph-scroll text-5xl mb-4"></i>
+                        <p class="text-lg mb-2">Wybierz skrypt lub utwórz nowy</p>
+                        <button onclick="createNewScript()" class="text-rose-400 hover:underline">Utwórz nowy skrypt</button>
+                    </div>
+
+                    <!-- Editor form -->
+                    <div id="editor-form" class="hidden space-y-6">
+                        <!-- Title & Meta -->
+                        <div class="space-y-4">
+                            <input type="text" id="script-title" placeholder="Tytuł odcinka..." class="input-field w-full px-4 py-3 rounded-lg text-xl font-semibold text-white placeholder:text-zinc-600">
+
+                            <div class="flex flex-wrap gap-3">
+                                <select id="script-status" class="input-field px-3 py-2 rounded-lg text-sm">
+                                    <option value="idea">Pomysł</option>
+                                    <option value="draft">Szkic</option>
+                                    <option value="ready">Gotowy</option>
+                                    <option value="recorded">Nagrany</option>
+                                    <option value="published">Opublikowany</option>
+                                </select>
+                                <input type="date" id="script-date" class="input-field px-3 py-2 rounded-lg text-sm">
+                                <input type="number" id="script-duration" placeholder="Czas (min)" class="input-field px-3 py-2 rounded-lg text-sm w-28">
+                            </div>
+                        </div>
+
+                        <!-- Script Sections -->
+                        <div class="space-y-4">
+                            <h3 class="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <i class="ph ph-list-numbers"></i>
+                                Sekcje skryptu
+                            </h3>
+
+                            <!-- HOOK -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-red-500/20 text-red-400 flex items-center justify-center text-xs font-bold">1</span>
+                                        <span class="font-medium text-white">HOOK</span>
+                                        <span class="text-xs text-zinc-500">0-5 sek</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Zatrzymaj uwagę</span>
+                                </div>
+                                <textarea id="section-hook" rows="2" placeholder="Kontrowersyjne stwierdzenie / pytanie / fragment z dalszej części..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+
+                            <!-- PROMISE -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">2</span>
+                                        <span class="font-medium text-white">PROMISE</span>
+                                        <span class="text-xs text-zinc-500">5-30 sek</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Obietnica wartości</span>
+                                </div>
+                                <textarea id="section-promise" rows="2" placeholder="Co widz dostanie z tego odcinka - konkretna obietnica..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+
+                            <!-- INTRO -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">3</span>
+                                        <span class="font-medium text-white">INTRO</span>
+                                        <span class="text-xs text-zinc-500">30-60 sek</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Kim jestem</span>
+                                </div>
+                                <textarea id="section-intro" rows="2" placeholder="Cześć, jestem Tomek i od X lat pomagam ludziom budować sklepy internetowe..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+
+                            <!-- PROBLEM -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold">4</span>
+                                        <span class="font-medium text-white">PROBLEM</span>
+                                        <span class="text-xs text-zinc-500">1-3 min</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Ból widza</span>
+                                </div>
+                                <textarea id="section-problem" rows="4" placeholder="Opisz ból widza - niech poczuje że go rozumiesz. Co ich frustruje? Jakie błędy popełniają?..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+
+                            <!-- SOLUTION -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">5</span>
+                                        <span class="font-medium text-white">ROZWIĄZANIE</span>
+                                        <span class="text-xs text-zinc-500">3-10 min</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Główna wartość</span>
+                                </div>
+                                <textarea id="section-solution" rows="8" placeholder="Główna wartość - dawaj KONKRETY. Krok 1... Krok 2... Krok 3..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+
+                            <!-- CASE STUDY -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-violet-500/20 text-violet-400 flex items-center justify-center text-xs font-bold">6</span>
+                                        <span class="font-medium text-white">CASE STUDY</span>
+                                        <span class="text-xs text-zinc-500">10-12 min</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Historia</span>
+                                </div>
+                                <textarea id="section-case_study" rows="4" placeholder="Historia - Twoja lub klienta. Sytuacja wyjściowa, co zrobiliście, wynik (liczby!)..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+
+                            <!-- CTA -->
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">7</span>
+                                        <span class="font-medium text-white">CTA</span>
+                                        <span class="text-xs text-zinc-500">12-12:30</span>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-600 uppercase">Wezwanie do działania</span>
+                                </div>
+                                <textarea id="section-cta" rows="2" placeholder="Jeśli czujesz że to jest coś dla ciebie i chcesz żebym ci w tym pomógł - link w opisie..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Full Script (for prompter) -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                    <i class="ph ph-text-align-left"></i>
+                                    Pełny skrypt (do promptera)
+                                </h3>
+                                <button onclick="generateFullScript()" class="text-xs text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1">
+                                    <i class="ph ph-magic-wand"></i>
+                                    Generuj z sekcji
+                                </button>
+                            </div>
+                            <div class="section-card rounded-xl p-4">
+                                <textarea id="full-script" rows="15" placeholder="Pełny tekst do promptera. Enter = nowa myśl..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700 font-mono text-sm leading-relaxed"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Thumbnail -->
+                        <div class="space-y-3">
+                            <h3 class="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <i class="ph ph-image"></i>
+                                Miniaturka
+                            </h3>
+                            <div class="section-card rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm text-zinc-400">Prompt do Nano Banana</span>
+                                    <button onclick="generateThumbnailPrompt()" class="text-xs text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1">
+                                        <i class="ph ph-magic-wand"></i>
+                                        Generuj prompt
+                                    </button>
+                                </div>
+                                <textarea id="thumbnail-prompt" rows="5" placeholder="Prompt do wygenerowania miniaturki..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700 text-sm"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="space-y-3">
+                            <h3 class="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <i class="ph ph-note"></i>
+                                Notatki
+                            </h3>
+                            <div class="section-card rounded-xl p-4">
+                                <textarea id="script-notes" rows="3" placeholder="Dodatkowe notatki, przypomnienia..." class="script-textarea w-full text-zinc-300 placeholder:text-zinc-700 text-sm"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Delete -->
+                        <div class="pt-6 border-t border-white/5">
+                            <button onclick="deleteScript()" id="delete-btn" class="text-red-400 hover:text-red-300 text-sm flex items-center gap-1">
+                                <i class="ph ph-trash"></i>
+                                Usuń skrypt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Prompter Modal -->
+    <div id="prompter-modal" class="fixed inset-0 bg-black z-50 hidden">
+        <div class="absolute top-4 right-4 flex items-center gap-2">
+            <button onclick="adjustFontSize(-1)" class="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center">
+                <i class="ph ph-minus"></i>
+            </button>
+            <button onclick="adjustFontSize(1)" class="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center">
+                <i class="ph ph-plus"></i>
+            </button>
+            <button onclick="togglePrompterMode()" class="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+        <div id="prompter-content" class="prompter-mode p-12 pt-20 text-white max-w-5xl mx-auto overflow-y-auto h-full">
+            <!-- Full script displayed here -->
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentScriptId = null;
+        let prompterFontSize = 2; // rem
+
+        // ============================================
+        // AUTH & INIT
+        // ============================================
+        async function init() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (!session || session.user.email !== 'tomekniedzwiecki@gmail.com') {
+                window.location.href = '/';
+                return;
+            }
+
+            Sidebar.render({ appId: 'content', userEmail: session.user.email });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('name, color')
+                .eq('email', session.user.email)
+                .single();
+
+            if (teamMember) {
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+            }
+
+            await loadScripts();
+
+            // Check URL params
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('new') === '1') {
+                createNewScript();
+            } else if (params.get('id')) {
+                loadScript(params.get('id'));
+            }
+        }
+
+        // ============================================
+        // SCRIPTS LIST
+        // ============================================
+        async function loadScripts() {
+            const { data: scripts } = await supabaseClient
+                .from('content_scripts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            const container = document.getElementById('scripts-list');
+
+            if (!scripts || scripts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-zinc-600">
+                        <p class="text-sm">Brak skryptów</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = scripts.map(script => `
+                <div onclick="loadScript('${script.id}')" class="script-item cursor-pointer p-3 rounded-lg border border-transparent mb-1 ${currentScriptId === script.id ? 'active' : ''}" data-script-id="${script.id}">
+                    <div class="font-medium text-white truncate text-sm">${escapeHtml(script.title || 'Bez tytułu')}</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="status-${script.status} text-[10px] px-1.5 py-0.5 rounded capitalize">${getStatusLabel(script.status)}</span>
+                        <span class="text-[10px] text-zinc-600">${script.planned_publish_date ? formatDate(script.planned_publish_date) : ''}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // LOAD SCRIPT
+        // ============================================
+        async function loadScript(id) {
+            currentScriptId = id;
+
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.set('id', id);
+            window.history.pushState({}, '', url);
+
+            // Highlight in list
+            document.querySelectorAll('.script-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.scriptId === id);
+            });
+
+            const { data: script } = await supabaseClient
+                .from('content_scripts')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (!script) return;
+
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('editor-form').classList.remove('hidden');
+
+            document.getElementById('script-title').value = script.title || '';
+            document.getElementById('script-status').value = script.status || 'draft';
+            document.getElementById('script-date').value = script.planned_publish_date || '';
+            document.getElementById('script-duration').value = script.target_duration_minutes || '';
+
+            document.getElementById('section-hook').value = script.hook || '';
+            document.getElementById('section-promise').value = script.promise || '';
+            document.getElementById('section-intro').value = script.intro || '';
+            document.getElementById('section-problem').value = script.problem || '';
+            document.getElementById('section-solution').value = script.solution || '';
+            document.getElementById('section-case_study').value = script.case_study || '';
+            document.getElementById('section-cta').value = script.cta || '';
+
+            document.getElementById('full-script').value = script.full_script || '';
+            document.getElementById('thumbnail-prompt').value = script.thumbnail_prompt || '';
+            document.getElementById('script-notes').value = script.notes || '';
+        }
+
+        // ============================================
+        // CREATE NEW SCRIPT
+        // ============================================
+        async function createNewScript() {
+            const { data: script, error } = await supabaseClient
+                .from('content_scripts')
+                .insert({
+                    title: 'Nowy skrypt',
+                    status: 'idea'
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error creating script:', error);
+                return;
+            }
+
+            await loadScripts();
+            loadScript(script.id);
+        }
+
+        // ============================================
+        // SAVE SCRIPT
+        // ============================================
+        async function saveScript() {
+            if (!currentScriptId) return;
+
+            const btn = document.getElementById('save-btn');
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
+            btn.disabled = true;
+
+            const data = {
+                title: document.getElementById('script-title').value,
+                status: document.getElementById('script-status').value,
+                planned_publish_date: document.getElementById('script-date').value || null,
+                target_duration_minutes: parseInt(document.getElementById('script-duration').value) || null,
+                hook: document.getElementById('section-hook').value,
+                promise: document.getElementById('section-promise').value,
+                intro: document.getElementById('section-intro').value,
+                problem: document.getElementById('section-problem').value,
+                solution: document.getElementById('section-solution').value,
+                case_study: document.getElementById('section-case_study').value,
+                cta: document.getElementById('section-cta').value,
+                full_script: document.getElementById('full-script').value,
+                thumbnail_prompt: document.getElementById('thumbnail-prompt').value,
+                notes: document.getElementById('script-notes').value
+            };
+
+            await supabaseClient
+                .from('content_scripts')
+                .update(data)
+                .eq('id', currentScriptId);
+
+            await loadScripts();
+
+            btn.innerHTML = '<i class="ph ph-check"></i>';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="ph ph-floppy-disk"></i> <span class="hidden sm:inline">Zapisz</span>';
+                btn.disabled = false;
+            }, 1000);
+        }
+
+        // ============================================
+        // DELETE SCRIPT
+        // ============================================
+        async function deleteScript() {
+            if (!currentScriptId) return;
+            if (!confirm('Czy na pewno chcesz usunąć ten skrypt?')) return;
+
+            await supabaseClient
+                .from('content_scripts')
+                .delete()
+                .eq('id', currentScriptId);
+
+            currentScriptId = null;
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('editor-form').classList.add('hidden');
+
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.delete('id');
+            window.history.pushState({}, '', url);
+
+            await loadScripts();
+        }
+
+        // ============================================
+        // GENERATE FULL SCRIPT
+        // ============================================
+        function generateFullScript() {
+            const sections = [
+                document.getElementById('section-hook').value,
+                document.getElementById('section-promise').value,
+                document.getElementById('section-intro').value,
+                document.getElementById('section-problem').value,
+                document.getElementById('section-solution').value,
+                document.getElementById('section-case_study').value,
+                document.getElementById('section-cta').value
+            ].filter(s => s.trim());
+
+            document.getElementById('full-script').value = sections.join('\n\n');
+        }
+
+        // ============================================
+        // GENERATE THUMBNAIL PROMPT
+        // ============================================
+        function generateThumbnailPrompt() {
+            const title = document.getElementById('script-title').value;
+            const hook = document.getElementById('section-hook').value;
+
+            // Extract key words from title
+            const keywords = title.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s]/g, '').split(' ').slice(0, 3).join(' ');
+
+            const prompt = `Stwórz profesjonalną miniaturkę YouTube w stylu biznesowym.
+
+KOMPOZYCJA:
+- Zdjęcie mężczyzny (Tomek Niedzwiecki) po prawej stronie
+- Wyraz twarzy: zaskoczenie/podekscytowanie
+- Tło: gradient pomarańczowo-czarny
+
+TEKST NA MINIATURCE:
+- Maksymalnie 3 słowa: "${keywords.toUpperCase()}"
+- Font: gruby, sans-serif, biały z czarnym obrysem
+- Pozycja: lewa strona
+
+ELEMENTY DODATKOWE:
+- Strzałka wskazująca / ikona pieniędzy
+- Kolory dominujące: pomarańczowy, czarny, biały
+
+TEMAT ODCINKA: ${title}
+
+Styl inspirowany: Alex Hormozi, Iman Gadzhi - wysokojakościowy, profesjonalny, przyciągający uwagę.`;
+
+            document.getElementById('thumbnail-prompt').value = prompt;
+        }
+
+        // ============================================
+        // PROMPTER MODE
+        // ============================================
+        function togglePrompterMode() {
+            const modal = document.getElementById('prompter-modal');
+            const content = document.getElementById('prompter-content');
+
+            if (modal.classList.contains('hidden')) {
+                const script = document.getElementById('full-script').value;
+                if (!script.trim()) {
+                    alert('Najpierw wpisz pełny skrypt');
+                    return;
+                }
+
+                // Format for prompter - each paragraph as separate block
+                content.innerHTML = script.split('\n\n').map(p =>
+                    `<p class="mb-8">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`
+                ).join('');
+
+                content.style.fontSize = prompterFontSize + 'rem';
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            } else {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function adjustFontSize(delta) {
+            prompterFontSize = Math.max(1, Math.min(5, prompterFontSize + delta * 0.25));
+            document.getElementById('prompter-content').style.fontSize = prompterFontSize + 'rem';
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('prompter-modal');
+                if (!modal.classList.contains('hidden')) {
+                    togglePrompterMode();
+                }
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveScript();
+            }
+        });
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function getStatusLabel(status) {
+            const labels = {
+                idea: 'Pomysł',
+                draft: 'Szkic',
+                ready: 'Gotowy',
+                recorded: 'Nagrany',
+                published: 'Opublikowany'
+            };
+            return labels[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // START
+        // ============================================
+        init();
+    </script>
+
+</body>
+</html>

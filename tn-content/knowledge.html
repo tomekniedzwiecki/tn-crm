@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Content - Baza wiedzy</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-content/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #e11d48; color: white; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .input-field {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: #8b5cf6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+        }
+
+        .knowledge-item {
+            transition: all 0.15s ease;
+        }
+        .knowledge-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .type-style { border-left: 3px solid #ec4899; }
+        .type-offer { border-left: 3px solid #10b981; }
+        .type-philosophy { border-left: 3px solid #8b5cf6; }
+        .type-checklist { border-left: 3px solid #f59e0b; }
+        .type-script_template { border-left: 3px solid #3b82f6; }
+        .type-thumbnail_template { border-left: 3px solid #ef4444; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-content</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">baza wiedzy</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="showNewItemModal()" class="flex items-center gap-2 px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg transition-colors text-sm font-medium">
+                    <i class="ph ph-plus"></i>
+                    <span class="hidden sm:inline">Dodaj</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-5xl mx-auto animate-enter">
+
+                <!-- Categories -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                    <button onclick="filterByType('all')" class="type-btn active stat-card rounded-lg p-3 text-center hover:border-violet-500/30" data-type="all">
+                        <i class="ph ph-squares-four text-xl text-violet-400 mb-1"></i>
+                        <div class="text-xs text-zinc-400">Wszystko</div>
+                    </button>
+                    <button onclick="filterByType('style')" class="type-btn stat-card rounded-lg p-3 text-center hover:border-pink-500/30" data-type="style">
+                        <i class="ph ph-microphone-stage text-xl text-pink-400 mb-1"></i>
+                        <div class="text-xs text-zinc-400">Styl</div>
+                    </button>
+                    <button onclick="filterByType('offer')" class="type-btn stat-card rounded-lg p-3 text-center hover:border-emerald-500/30" data-type="offer">
+                        <i class="ph ph-package text-xl text-emerald-400 mb-1"></i>
+                        <div class="text-xs text-zinc-400">Oferta</div>
+                    </button>
+                    <button onclick="filterByType('philosophy')" class="type-btn stat-card rounded-lg p-3 text-center hover:border-violet-500/30" data-type="philosophy">
+                        <i class="ph ph-brain text-xl text-violet-400 mb-1"></i>
+                        <div class="text-xs text-zinc-400">Filozofia</div>
+                    </button>
+                    <button onclick="filterByType('checklist')" class="type-btn stat-card rounded-lg p-3 text-center hover:border-amber-500/30" data-type="checklist">
+                        <i class="ph ph-check-square text-xl text-amber-400 mb-1"></i>
+                        <div class="text-xs text-zinc-400">Checklisty</div>
+                    </button>
+                    <button onclick="filterByType('script_template')" class="type-btn stat-card rounded-lg p-3 text-center hover:border-blue-500/30" data-type="script_template">
+                        <i class="ph ph-file-text text-xl text-blue-400 mb-1"></i>
+                        <div class="text-xs text-zinc-400">Szablony</div>
+                    </button>
+                </div>
+
+                <!-- Knowledge Items -->
+                <div id="knowledge-list" class="space-y-3">
+                    <!-- Items loaded here -->
+                </div>
+
+                <!-- Empty state -->
+                <div id="empty-state" class="text-center py-20 text-zinc-600 hidden">
+                    <i class="ph ph-brain text-5xl mb-4"></i>
+                    <p class="text-lg mb-2">Baza wiedzy jest pusta</p>
+                    <button onclick="showNewItemModal()" class="text-violet-400 hover:underline">Dodaj pierwszy element</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New/Edit Modal -->
+    <div id="knowledge-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b border-white/5 sticky top-0 bg-zinc-900">
+                <h3 class="font-semibold text-white" id="modal-title">Nowy element</h3>
+                <button onclick="closeModal()" class="text-zinc-400 hover:text-white">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <form onsubmit="saveItem(event)" class="p-4 space-y-4">
+                <input type="hidden" id="item-id">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">Typ</label>
+                        <select id="item-type" required class="input-field w-full px-3 py-2 rounded-lg text-white">
+                            <option value="style">Styl komunikacji</option>
+                            <option value="offer">Oferta</option>
+                            <option value="philosophy">Filozofia / wartości</option>
+                            <option value="checklist">Checklista</option>
+                            <option value="script_template">Szablon skryptu</option>
+                            <option value="thumbnail_template">Szablon miniaturki</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">Tytuł</label>
+                        <input type="text" id="item-title" required placeholder="Nazwa elementu..." class="input-field w-full px-3 py-2 rounded-lg text-white placeholder:text-zinc-600">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">Treść (JSON lub tekst)</label>
+                    <textarea id="item-content" rows="15" placeholder="Wpisz treść lub JSON..." class="input-field w-full px-3 py-2 rounded-lg text-white placeholder:text-zinc-600 resize-none font-mono text-sm"></textarea>
+                    <p class="text-xs text-zinc-600 mt-1">Możesz wpisać zwykły tekst lub JSON z kluczami</p>
+                </div>
+
+                <div class="flex items-center gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-medium transition-colors">
+                        Zapisz
+                    </button>
+                    <button type="button" onclick="deleteItem()" id="delete-item-btn" class="px-4 py-2.5 text-red-400 hover:text-red-300 hidden">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="view-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b border-white/5 sticky top-0 bg-zinc-900">
+                <h3 class="font-semibold text-white" id="view-title">-</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="editFromView()" class="text-zinc-400 hover:text-white">
+                        <i class="ph ph-pencil text-xl"></i>
+                    </button>
+                    <button onclick="closeViewModal()" class="text-zinc-400 hover:text-white">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="view-content" class="p-4">
+                <!-- Content rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allItems = [];
+        let currentFilter = 'all';
+        let currentViewId = null;
+
+        async function init() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (!session || session.user.email !== 'tomekniedzwiecki@gmail.com') {
+                window.location.href = '/';
+                return;
+            }
+
+            Sidebar.render({ appId: 'content', userEmail: session.user.email });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('name, color')
+                .eq('email', session.user.email)
+                .single();
+
+            if (teamMember) {
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+            }
+
+            await loadItems();
+        }
+
+        async function loadItems() {
+            const { data: items } = await supabaseClient
+                .from('content_knowledge')
+                .select('*')
+                .eq('is_active', true)
+                .order('type')
+                .order('created_at', { ascending: false });
+
+            allItems = items || [];
+            renderItems();
+        }
+
+        function renderItems() {
+            const container = document.getElementById('knowledge-list');
+            const emptyState = document.getElementById('empty-state');
+
+            let filtered = allItems;
+            if (currentFilter !== 'all') {
+                filtered = allItems.filter(i => i.type === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filtered.map(item => `
+                <div onclick="viewItem('${item.id}')" class="knowledge-item stat-card rounded-lg p-4 cursor-pointer type-${item.type}">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg ${getTypeColor(item.type)} flex items-center justify-center shrink-0">
+                            <i class="ph ${getTypeIcon(item.type)} text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-white">${escapeHtml(item.title)}</div>
+                            <div class="text-xs text-zinc-500 mt-1">${getTypeLabel(item.type)}</div>
+                            ${getContentPreview(item.content)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterByType(type) {
+            currentFilter = type;
+
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+                btn.classList.toggle('border-violet-500/50', btn.dataset.type === type);
+            });
+
+            renderItems();
+        }
+
+        function getContentPreview(content) {
+            if (!content) return '';
+
+            if (typeof content === 'object') {
+                const keys = Object.keys(content).slice(0, 3);
+                return `<div class="text-xs text-zinc-600 mt-2">${keys.join(', ')}${Object.keys(content).length > 3 ? '...' : ''}</div>`;
+            }
+
+            const text = String(content).substring(0, 100);
+            return `<div class="text-xs text-zinc-600 mt-2 line-clamp-2">${escapeHtml(text)}</div>`;
+        }
+
+        function viewItem(id) {
+            const item = allItems.find(i => i.id === id);
+            if (!item) return;
+
+            currentViewId = id;
+            document.getElementById('view-title').textContent = item.title;
+
+            let contentHtml = '';
+            if (typeof item.content === 'object') {
+                contentHtml = renderJsonContent(item.content);
+            } else {
+                contentHtml = `<div class="whitespace-pre-wrap text-zinc-300">${escapeHtml(String(item.content))}</div>`;
+            }
+
+            document.getElementById('view-content').innerHTML = contentHtml;
+            document.getElementById('view-modal').classList.remove('hidden');
+        }
+
+        function renderJsonContent(obj, level = 0) {
+            let html = '';
+
+            for (const [key, value] of Object.entries(obj)) {
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    html += `
+                        <div class="mb-4 ${level > 0 ? 'ml-4' : ''}">
+                            <div class="text-xs text-violet-400 uppercase tracking-wider mb-2">${formatKey(key)}</div>
+                            ${renderJsonContent(value, level + 1)}
+                        </div>
+                    `;
+                } else if (Array.isArray(value)) {
+                    html += `
+                        <div class="mb-4 ${level > 0 ? 'ml-4' : ''}">
+                            <div class="text-xs text-violet-400 uppercase tracking-wider mb-2">${formatKey(key)}</div>
+                            <ul class="space-y-1">
+                                ${value.map(v => `<li class="text-zinc-300 flex items-start gap-2"><span class="text-violet-500">•</span> ${escapeHtml(String(v))}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="mb-3 ${level > 0 ? 'ml-4' : ''}">
+                            <div class="text-xs text-zinc-500 mb-1">${formatKey(key)}</div>
+                            <div class="text-zinc-300">${escapeHtml(String(value))}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
+        function formatKey(key) {
+            return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function editFromView() {
+            closeViewModal();
+            editItem(currentViewId);
+        }
+
+        function closeViewModal() {
+            document.getElementById('view-modal').classList.add('hidden');
+            currentViewId = null;
+        }
+
+        function showNewItemModal() {
+            document.getElementById('modal-title').textContent = 'Nowy element';
+            document.getElementById('item-id').value = '';
+            document.getElementById('item-type').value = 'style';
+            document.getElementById('item-title').value = '';
+            document.getElementById('item-content').value = '';
+            document.getElementById('delete-item-btn').classList.add('hidden');
+
+            document.getElementById('knowledge-modal').classList.remove('hidden');
+        }
+
+        function editItem(id) {
+            const item = allItems.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('modal-title').textContent = 'Edytuj element';
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('item-type').value = item.type;
+            document.getElementById('item-title').value = item.title;
+
+            // Format content
+            if (typeof item.content === 'object') {
+                document.getElementById('item-content').value = JSON.stringify(item.content, null, 2);
+            } else {
+                document.getElementById('item-content').value = item.content || '';
+            }
+
+            document.getElementById('delete-item-btn').classList.remove('hidden');
+            document.getElementById('knowledge-modal').classList.remove('hidden');
+        }
+
+        async function saveItem(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('item-id').value;
+            let content = document.getElementById('item-content').value;
+
+            // Try to parse as JSON
+            try {
+                content = JSON.parse(content);
+            } catch {
+                // Keep as string
+            }
+
+            const data = {
+                type: document.getElementById('item-type').value,
+                title: document.getElementById('item-title').value,
+                content: content
+            };
+
+            if (id) {
+                await supabaseClient.from('content_knowledge').update(data).eq('id', id);
+            } else {
+                await supabaseClient.from('content_knowledge').insert(data);
+            }
+
+            closeModal();
+            await loadItems();
+        }
+
+        async function deleteItem() {
+            const id = document.getElementById('item-id').value;
+            if (!id || !confirm('Usunąć ten element?')) return;
+
+            await supabaseClient.from('content_knowledge').update({ is_active: false }).eq('id', id);
+            closeModal();
+            await loadItems();
+        }
+
+        function closeModal() {
+            document.getElementById('knowledge-modal').classList.add('hidden');
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                style: 'Styl komunikacji',
+                offer: 'Oferta',
+                philosophy: 'Filozofia',
+                checklist: 'Checklista',
+                script_template: 'Szablon skryptu',
+                thumbnail_template: 'Szablon miniaturki'
+            };
+            return labels[type] || type;
+        }
+
+        function getTypeIcon(type) {
+            const icons = {
+                style: 'ph-microphone-stage',
+                offer: 'ph-package',
+                philosophy: 'ph-brain',
+                checklist: 'ph-check-square',
+                script_template: 'ph-file-text',
+                thumbnail_template: 'ph-image'
+            };
+            return icons[type] || 'ph-file';
+        }
+
+        function getTypeColor(type) {
+            const colors = {
+                style: 'bg-pink-500/10 text-pink-400',
+                offer: 'bg-emerald-500/10 text-emerald-400',
+                philosophy: 'bg-violet-500/10 text-violet-400',
+                checklist: 'bg-amber-500/10 text-amber-400',
+                script_template: 'bg-blue-500/10 text-blue-400',
+                thumbnail_template: 'bg-red-500/10 text-red-400'
+            };
+            return colors[type] || 'bg-zinc-500/10 text-zinc-400';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Close modals on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeViewModal();
+            }
+        });
+
+        init();
+    </script>
+
+    <style>
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+
+</body>
+</html>

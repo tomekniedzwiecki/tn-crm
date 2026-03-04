@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Content - Przegląd</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-content/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #e11d48; color: white; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            border-color: rgba(255,255,255,0.12);
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+
+        .script-item {
+            transition: all 0.15s ease;
+        }
+        .script-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .status-draft { background: rgba(161, 161, 170, 0.2); color: #a1a1aa; }
+        .status-ready { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .status-recorded { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .status-published { background: rgba(225, 29, 72, 0.2); color: #e11d48; }
+        .status-idea { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-content</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">przegląd</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="scripts.html?new=1" class="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-colors text-sm font-medium">
+                    <i class="ph ph-plus"></i>
+                    <span class="hidden sm:inline">Nowy skrypt</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- YouTube Stats -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                            <i class="ph ph-youtube-logo text-red-500"></i>
+                            YouTube Analytics
+                        </h2>
+                        <button onclick="refreshYouTubeStats()" id="refresh-btn" class="text-xs text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                            <i class="ph ph-arrows-clockwise"></i>
+                            Odśwież
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                                    <i class="ph ph-users text-red-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-subscribers">-</div>
+                            <div class="text-xs text-zinc-500">Subskrybenci</div>
+                        </div>
+
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                    <i class="ph ph-eye text-blue-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-views">-</div>
+                            <div class="text-xs text-zinc-500">Wyświetlenia (30d)</div>
+                        </div>
+
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                    <i class="ph ph-video text-emerald-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-videos">-</div>
+                            <div class="text-xs text-zinc-500">Filmów</div>
+                        </div>
+
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                    <i class="ph ph-chart-line-up text-amber-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-avg-views">-</div>
+                            <div class="text-xs text-zinc-500">Śr. wyświetleń</div>
+                        </div>
+
+                        <div class="stat-card rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                    <i class="ph ph-clock text-violet-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-semibold text-white font-mono" id="stat-last-upload">-</div>
+                            <div class="text-xs text-zinc-500">Ostatni upload</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two columns -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- Scripts -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-scroll text-rose-400"></i>
+                                Skrypty
+                            </h3>
+                            <a href="scripts.html" class="text-xs text-zinc-500 hover:text-rose-400 transition-colors">
+                                Wszystkie <i class="ph ph-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                        <div id="scripts-list" class="space-y-2">
+                            <div class="text-center py-8 text-zinc-600">
+                                <i class="ph ph-scroll text-3xl mb-2"></i>
+                                <p>Brak skryptów</p>
+                                <a href="scripts.html?new=1" class="text-rose-400 hover:underline text-sm">Utwórz pierwszy</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ideas -->
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-lightbulb text-amber-400"></i>
+                                Pomysły na odcinki
+                            </h3>
+                            <a href="ideas.html" class="text-xs text-zinc-500 hover:text-amber-400 transition-colors">
+                                Wszystkie <i class="ph ph-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                        <div id="ideas-list" class="space-y-2">
+                            <div class="text-center py-8 text-zinc-600">
+                                <i class="ph ph-lightbulb text-3xl mb-2"></i>
+                                <p>Brak pomysłów</p>
+                                <a href="ideas.html?new=1" class="text-amber-400 hover:underline text-sm">Dodaj pierwszy</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-6">
+                    <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                        <i class="ph ph-lightning text-rose-400"></i>
+                        Szybkie akcje
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <a href="scripts.html?new=1" class="stat-card rounded-xl p-4 hover:border-rose-500/30 transition-colors group text-center">
+                            <i class="ph ph-plus-circle text-2xl text-rose-400 mb-2"></i>
+                            <div class="text-sm text-zinc-300 group-hover:text-white">Nowy skrypt</div>
+                        </a>
+                        <a href="ideas.html?new=1" class="stat-card rounded-xl p-4 hover:border-amber-500/30 transition-colors group text-center">
+                            <i class="ph ph-lightbulb text-2xl text-amber-400 mb-2"></i>
+                            <div class="text-sm text-zinc-300 group-hover:text-white">Nowy pomysł</div>
+                        </a>
+                        <a href="youtube.html" class="stat-card rounded-xl p-4 hover:border-red-500/30 transition-colors group text-center">
+                            <i class="ph ph-youtube-logo text-2xl text-red-400 mb-2"></i>
+                            <div class="text-sm text-zinc-300 group-hover:text-white">Analiza YT</div>
+                        </a>
+                        <a href="knowledge.html" class="stat-card rounded-xl p-4 hover:border-violet-500/30 transition-colors group text-center">
+                            <i class="ph ph-brain text-2xl text-violet-400 mb-2"></i>
+                            <div class="text-sm text-zinc-300 group-hover:text-white">Baza wiedzy</div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Next upload reminder -->
+                <div id="next-upload-card" class="mt-6 stat-card rounded-xl p-4 border-rose-500/20 hidden">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                            <i class="ph ph-calendar-check text-rose-400 text-2xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-zinc-500">Następny upload</div>
+                            <div class="text-lg font-semibold text-white" id="next-upload-date">Wtorek, 20:00</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-mono text-rose-400" id="next-upload-countdown">-</div>
+                            <div class="text-xs text-zinc-500">dni</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const YOUTUBE_CHANNEL_ID = 'UCoIeVtbxQMxmjaXT_v4IJrQ';
+
+        // ============================================
+        // AUTH & INIT
+        // ============================================
+        async function init() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (!session) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Check if user is admin
+            if (session.user.email !== 'tomekniedzwiecki@gmail.com') {
+                window.location.href = '/';
+                return;
+            }
+
+            // Render sidebar
+            Sidebar.render({ appId: 'content', userEmail: session.user.email });
+            Sidebar.setUserEmail(session.user.email);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            // Load user data
+            const { data: teamMember } = await supabaseClient
+                .from('team_members')
+                .select('name, color')
+                .eq('email', session.user.email)
+                .single();
+
+            if (teamMember) {
+                Sidebar.setUserName(teamMember.name);
+                Sidebar.setUserColor(teamMember.color);
+            }
+
+            // Load data
+            loadDashboard();
+            calculateNextUpload();
+        }
+
+        // ============================================
+        // DASHBOARD DATA
+        // ============================================
+        async function loadDashboard() {
+            await Promise.all([
+                loadYouTubeStats(),
+                loadScripts(),
+                loadIdeas()
+            ]);
+        }
+
+        async function loadYouTubeStats() {
+            // Load from database first
+            const { data: videos } = await supabaseClient
+                .from('content_youtube_videos')
+                .select('*')
+                .order('published_at', { ascending: false });
+
+            if (videos && videos.length > 0) {
+                const totalViews = videos.reduce((sum, v) => sum + (v.views || 0), 0);
+                const avgViews = Math.round(totalViews / videos.length);
+                const lastUpload = videos[0];
+
+                document.getElementById('stat-videos').textContent = videos.length;
+                document.getElementById('stat-avg-views').textContent = formatNumber(avgViews);
+                document.getElementById('stat-last-upload').textContent = formatDate(lastUpload.published_at);
+
+                // Calculate 30-day views
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const recentViews = videos
+                    .filter(v => new Date(v.published_at) > thirtyDaysAgo)
+                    .reduce((sum, v) => sum + (v.views || 0), 0);
+                document.getElementById('stat-views').textContent = formatNumber(recentViews);
+            }
+
+            // Subscribers need to be fetched via API (will implement edge function)
+            document.getElementById('stat-subscribers').textContent = '-';
+        }
+
+        async function loadScripts() {
+            const { data: scripts } = await supabaseClient
+                .from('content_scripts')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            const container = document.getElementById('scripts-list');
+
+            if (!scripts || scripts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-zinc-600">
+                        <i class="ph ph-scroll text-3xl mb-2"></i>
+                        <p>Brak skryptów</p>
+                        <a href="scripts.html?new=1" class="text-rose-400 hover:underline text-sm">Utwórz pierwszy</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = scripts.map(script => `
+                <a href="scripts.html?id=${script.id}" class="script-item flex items-center gap-3 p-3 rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-white truncate">${escapeHtml(script.title)}</div>
+                        <div class="text-xs text-zinc-500">${script.planned_publish_date ? formatDate(script.planned_publish_date) : 'Bez daty'}</div>
+                    </div>
+                    <span class="status-${script.status} text-xs px-2 py-0.5 rounded-full capitalize">${getStatusLabel(script.status)}</span>
+                </a>
+            `).join('');
+        }
+
+        async function loadIdeas() {
+            const { data: ideas } = await supabaseClient
+                .from('content_ideas')
+                .select('*')
+                .in('status', ['idea', 'researching'])
+                .order('priority', { ascending: false })
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            const container = document.getElementById('ideas-list');
+
+            if (!ideas || ideas.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-zinc-600">
+                        <i class="ph ph-lightbulb text-3xl mb-2"></i>
+                        <p>Brak pomysłów</p>
+                        <a href="ideas.html?new=1" class="text-amber-400 hover:underline text-sm">Dodaj pierwszy</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = ideas.map(idea => `
+                <a href="ideas.html?id=${idea.id}" class="script-item flex items-center gap-3 p-3 rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-white truncate">${escapeHtml(idea.title)}</div>
+                        <div class="text-xs text-zinc-500">${idea.category || 'Bez kategorii'}</div>
+                    </div>
+                    ${idea.priority > 0 ? `<i class="ph-fill ph-star text-amber-400"></i>` : ''}
+                </a>
+            `).join('');
+        }
+
+        // ============================================
+        // NEXT UPLOAD CALCULATOR
+        // ============================================
+        function calculateNextUpload() {
+            const now = new Date();
+            const targetDay = 2; // Tuesday (0 = Sunday)
+            const targetHour = 20;
+
+            let nextUpload = new Date(now);
+            nextUpload.setHours(targetHour, 0, 0, 0);
+
+            // Find next Tuesday
+            const daysUntilTuesday = (targetDay - now.getDay() + 7) % 7;
+            if (daysUntilTuesday === 0 && now.getHours() >= targetHour) {
+                // It's Tuesday but past 20:00, go to next week
+                nextUpload.setDate(nextUpload.getDate() + 7);
+            } else {
+                nextUpload.setDate(nextUpload.getDate() + daysUntilTuesday);
+            }
+
+            const diffMs = nextUpload - now;
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            const card = document.getElementById('next-upload-card');
+            card.classList.remove('hidden');
+
+            document.getElementById('next-upload-date').textContent = nextUpload.toLocaleDateString('pl-PL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long'
+            }) + ', 20:00';
+
+            document.getElementById('next-upload-countdown').textContent = diffDays;
+        }
+
+        // ============================================
+        // YOUTUBE REFRESH
+        // ============================================
+        async function refreshYouTubeStats() {
+            const btn = document.getElementById('refresh-btn');
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Odświeżam...';
+            btn.disabled = true;
+
+            try {
+                // Call edge function to fetch YouTube data
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/youtube-sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${(await supabaseClient.auth.getSession()).data.session.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ channelId: YOUTUBE_CHANNEL_ID })
+                });
+
+                if (response.ok) {
+                    await loadYouTubeStats();
+                }
+            } catch (error) {
+                console.error('YouTube sync error:', error);
+            }
+
+            btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Odśwież';
+            btn.disabled = false;
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) return 'Dziś';
+            if (diffDays === 1) return 'Wczoraj';
+            if (diffDays < 7) return `${diffDays} dni temu`;
+
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                idea: 'Pomysł',
+                draft: 'Szkic',
+                ready: 'Gotowy',
+                recorded: 'Nagrany',
+                published: 'Opublikowany'
+            };
+            return labels[status] || status;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // START
+        // ============================================
+        init();
+    </script>
+
+</body>
+</html>
