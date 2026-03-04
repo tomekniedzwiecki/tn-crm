@@ -3129,23 +3129,30 @@
                     toggle('nav-check-podsumowanie', false);
                 }
 
-                // Scenariusze check - green when scenarios exist
+                // Scenariusze check - red X when skipped, green when scenarios exist
                 const scenarios = videoData?.video_scenarios || [];
+                const isVideoSkipped = videoData?.skipped || false;
                 const navCheckScenariusze = document.getElementById('nav-check-scenariusze');
                 const navCheckScenariuszeIcon = document.getElementById('nav-check-scenariusze-icon');
-                if (scenarios.length > 0) {
+                if (isVideoSkipped) {
+                    toggle('nav-check-scenariusze', true);
+                    if (navCheckScenariuszeIcon) navCheckScenariuszeIcon.className = 'ph-fill ph-x-circle text-red-400 text-sm';
+                } else if (scenarios.length > 0) {
                     toggle('nav-check-scenariusze', true);
                     if (navCheckScenariuszeIcon) navCheckScenariuszeIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
                 } else {
                     toggle('nav-check-scenariusze', false);
                 }
 
-                // Profile check - green when all 3, amber when partial
+                // Profile check - red X when skipped, green when all 3, amber when partial
                 const profiles = videoData?.social_profiles || {};
                 const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
                 const navCheckProfile = document.getElementById('nav-check-profile');
                 const navCheckProfileIcon = document.getElementById('nav-check-profile-icon');
-                if (profileCount === 3) {
+                if (isVideoSkipped) {
+                    toggle('nav-check-profile', true);
+                    if (navCheckProfileIcon) navCheckProfileIcon.className = 'ph-fill ph-x-circle text-red-400 text-sm';
+                } else if (profileCount === 3) {
                     toggle('nav-check-profile', true);
                     if (navCheckProfileIcon) navCheckProfileIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-sm';
                 } else if (profileCount > 0) {
@@ -3155,15 +3162,19 @@
                     toggle('nav-check-profile', false);
                 }
 
-                // Nagrania - show count instead of checkmark
+                // Nagrania - red X when skipped, show count otherwise
                 const videoLinks = videoData?.video_links || [];
                 const navCheckNagraniaCount = document.getElementById('nav-check-nagrania-count');
                 if (navCheckNagraniaCount) {
-                    if (videoLinks.length > 0) {
+                    if (isVideoSkipped) {
+                        navCheckNagraniaCount.innerHTML = '<i class="ph-fill ph-x-circle text-red-400 text-sm"></i>';
+                        navCheckNagraniaCount.className = '';
+                    } else if (videoLinks.length > 0) {
                         navCheckNagraniaCount.textContent = videoLinks.length;
                         navCheckNagraniaCount.className = 'text-[10px] text-emerald-400 font-medium';
                     } else {
                         navCheckNagraniaCount.textContent = '';
+                        navCheckNagraniaCount.className = '';
                     }
                 }
 
