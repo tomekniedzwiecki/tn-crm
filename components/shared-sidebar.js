@@ -14,8 +14,7 @@ const APPS = [
     { id: 'bot', name: 'TN Bot', icon: 'ph-robot', color: 'bg-fuchsia-500 text-white', defaultPage: 'knowledge' },
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
     { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
-    { id: 'biznes', name: 'TN Biznes', icon: 'ph-chart-line-up', color: 'bg-teal-500 text-white', defaultPage: 'dashboard' },
-    { id: 'content', name: 'TN Content', icon: 'ph-video-camera', color: 'bg-rose-500 text-white', defaultPage: 'dashboard' }
+    { id: 'biznes', name: 'TN Biznes', icon: 'ph-chart-line-up', color: 'bg-teal-500 text-white', defaultPage: 'dashboard' }
 ];
 
 const APP_BASES = {
@@ -24,8 +23,7 @@ const APP_BASES = {
     bot: '/tn-bot',
     todo: '/tn-todo',
     stack: '/tn-stack',
-    biznes: '/tn-biznes',
-    content: '/tn-content'
+    biznes: '/tn-biznes'
 };
 
 const APP_AVATAR_COLORS = {
@@ -34,8 +32,7 @@ const APP_AVATAR_COLORS = {
     bot: 'from-fuchsia-600 to-fuchsia-700',
     todo: 'from-violet-600 to-violet-700',
     stack: 'from-amber-600 to-amber-700',
-    biznes: 'from-teal-600 to-teal-700',
-    content: 'from-rose-600 to-rose-700'
+    biznes: 'from-teal-600 to-teal-700'
 };
 
 // ============================================
@@ -92,14 +89,6 @@ const NAV_ITEMS_BOT = [
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia' },
 ];
 
-const NAV_ITEMS_CONTENT = [
-    { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
-    { id: 'scripts', icon: 'ph-scroll', label: 'Skrypty' },
-    { id: 'youtube', icon: 'ph-youtube-logo', label: 'YouTube' },
-    { id: 'ideas', icon: 'ph-lightbulb', label: 'Pomysły' },
-    { id: 'knowledge', icon: 'ph-brain', label: 'Baza wiedzy' },
-];
-
 function getNavItemsForApp(appId) {
     switch (appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
@@ -107,7 +96,6 @@ function getNavItemsForApp(appId) {
         case 'todo': return NAV_ITEMS_TODO;
         case 'stack': return NAV_ITEMS_STACK;
         case 'biznes': return NAV_ITEMS_BIZNES;
-        case 'content': return NAV_ITEMS_CONTENT;
         default: return NAV_ITEMS_CRM;
     }
 }
@@ -334,37 +322,6 @@ const SIDEBAR_CSS = `
     }
     nav a:hover .ph-chart-line-up { animation: chartLineUp 0.5s ease-out; }
 
-    /* Content animations */
-    @keyframes videoCameraPulse {
-        0% { transform: scale(1); }
-        30% { transform: scale(1.15) rotate(-5deg); }
-        60% { transform: scale(1.05) rotate(3deg); }
-        100% { transform: scale(1) rotate(0deg); }
-    }
-    nav a:hover .ph-video-camera { animation: videoCameraPulse 0.5s ease-out; }
-
-    @keyframes scrollWiggle {
-        0% { transform: rotate(0deg); }
-        25% { transform: rotate(-8deg); }
-        75% { transform: rotate(8deg); }
-        100% { transform: rotate(0deg); }
-    }
-    nav a:hover .ph-scroll { animation: scrollWiggle 0.4s ease-out; }
-
-    @keyframes youtubePlay {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
-    }
-    nav a:hover .ph-youtube-logo { animation: youtubePlay 0.4s ease-out; }
-
-    @keyframes lightbulbGlow {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.15); opacity: 0.8; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    nav a:hover .ph-lightbulb { animation: lightbulbGlow 0.5s ease-out; }
-
     /* App switcher dropdown */
     .app-switcher-dropdown {
         opacity: 0;
@@ -385,8 +342,7 @@ const SIDEBAR_CSS = `
 const APP_RESTRICTIONS = {
     // Apps that are only visible to specific users
     // Use full email format - the function will handle username-only input
-    biznes: ['tomekniedzwiecki@gmail.com'],
-    content: ['tomekniedzwiecki@gmail.com']
+    biznes: ['tomekniedzwiecki@gmail.com']
 };
 
 function canAccessApp(appId, userEmail) {
@@ -507,7 +463,6 @@ function detectCurrentApp() {
     if (path.includes('/tn-stack')) return 'stack';
     if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/tn-workflow')) return 'workflow';
-    if (path.includes('/tn-content')) return 'content';
     return 'crm';
 }
 
@@ -582,8 +537,6 @@ function renderSidebar(config = {}) {
                 href = `/tn-biznes/${item.id}`;
             } else if (_currentAppId === 'workflow') {
                 href = `/tn-workflow/${item.id}`;
-            } else if (_currentAppId === 'content') {
-                href = `/tn-content/${item.id}`;
             }
         }
 
