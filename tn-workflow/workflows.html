@@ -645,7 +645,9 @@
 
         function getWorkflowStage(w) {
             // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop
-            if (w.takedrop_stage?.is_active) return 3;
+            // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony)
+            const videoLinks = w.video_stage?.video_links || [];
+            if (w.takedrop_stage?.is_active || videoLinks.length >= 4) return 3;
             if (w.video_stage?.is_active) return 2;
             return 1;
         }
@@ -891,9 +893,14 @@
             if (!nextStep) return null; // all done
 
             // Admin tasks: contract, report, branding, salespage, scenario
-            // Client tasks: product (wybór), profile, nagrania, takedrop (założenie konta)
+            // Client tasks: product (wybór), profile, nagrania
             const adminTasks = ['contract', 'report', 'branding', 'salespage', 'scenario'];
-            const clientTasks = ['product', 'profile', 'nagrania', 'takedrop'];
+            const clientTasks = ['product', 'profile', 'nagrania'];
+
+            // TakeDrop: admin task jeśli nie aktywny, client task jeśli aktywny
+            if (nextStep === 'takedrop') {
+                return !w.takedrop_stage?.is_active; // true = admin musi aktywować, false = klient musi założyć konto
+            }
 
             if (adminTasks.includes(nextStep)) return true;
             if (clientTasks.includes(nextStep)) return false;
@@ -952,13 +959,13 @@
             if (profileCount < 3) return 'profile';
 
             const videoLinks = w.video_stage?.video_links || [];
-            if (videoLinks.length === 0) return 'nagrania';
+            if (videoLinks.length < 4) return 'nagrania';
 
-            // Etap 3: TakeDrop
-            // Jeśli etap 2 jest aktywny i ma nagrania, sprawdź TakeDrop
-            if (w.takedrop_stage?.is_active) {
-                if (!w.takedrop_stage?.account_created) return 'takedrop';
-            }
+            // Etap 3: TakeDrop (minimum 4 nagrania = etap 2 ukończony)
+            // Jeśli TakeDrop nie aktywny - admin musi włączyć
+            // Jeśli TakeDrop aktywny ale konto nie założone - klient musi założyć
+            if (!w.takedrop_stage?.is_active) return 'takedrop';
+            if (!w.takedrop_stage?.account_created) return 'takedrop';
 
             return null; // all done
         }
@@ -1040,12 +1047,16 @@
                 }
             }
 
-            // TakeDrop - tylko gdy etap 3 jest aktywny
-            if (w.takedrop_stage?.is_active) {
+            // TakeDrop - pokazuj gdy etap 3 (4+ nagrań)
+            const videoLinks = w.video_stage?.video_links || [];
+            if (videoLinks.length >= 4) {
                 if (w.takedrop_stage?.account_created) {
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
-                } else {
+                } else if (w.takedrop_stage?.is_active) {
                     items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>TakeDrop</span>`);
+                } else {
+                    // TakeDrop nie aktywny - admin musi włączyć
+                    items.push(`<span class="flex items-center gap-1 text-zinc-500"><i class="ph ph-storefront text-[10px]"></i>TakeDrop</span>`);
                 }
             }
 
@@ -1124,10 +1135,10 @@
             // Stage 3 status
             let s3Class = 'bg-zinc-700';
             let s3Label = 'Etap 3';
-            const hasTakedrop = w.takedrop_stage?.is_active;
             if (currentStage === 3) {
-                // TakeDrop aktywny - sprawdź czy konto założone
-                s3Class = hasTakedrop && w.takedrop_stage?.account_created ? 'bg-emerald-500' : 'bg-amber-500';
+                // Etap 3 = 4+ nagrań (etap 2 ukończony)
+                // Zielony gdy konto TakeDrop założone, amber w trakcie
+                s3Class = w.takedrop_stage?.account_created ? 'bg-emerald-500' : 'bg-amber-500';
             }
 
             // Line between stages
@@ -1219,26 +1230,36 @@
             if (stage === 3) {
                 // TakeDrop - Etap 3
                 const td = w.takedrop_stage;
+                const isActive = td?.is_active || false;
                 const accountCreated = td?.account_created || false;
                 const stageAccepted = td?.stage_accepted || false;
 
                 let stepName = 'TakeDrop';
                 let status = 'Oczekuje';
                 let icon = 'ph ph-storefront text-amber-400';
-                let isClientTask = true;
+                let isClientTask = false;
 
                 if (stageAccepted) {
                     stepName = 'TakeDrop';
                     status = 'Zaakceptowany';
                     icon = 'ph-fill ph-check-circle text-emerald-400';
+                    isClientTask = true;
                 } else if (accountCreated) {
                     stepName = 'TakeDrop';
                     status = 'Konto założone';
                     icon = 'ph-fill ph-check-circle text-emerald-400';
-                } else {
+                    isClientTask = true;
+                } else if (isActive) {
                     stepName = 'Założenie konta';
                     status = 'Oczekuje na klienta';
                     icon = 'ph ph-storefront text-amber-400';
+                    isClientTask = true;
+                } else {
+                    // TakeDrop nie aktywny - admin musi włączyć
+                    stepName = 'Aktywuj TakeDrop';
+                    status = 'Do włączenia';
+                    icon = 'ph ph-storefront text-cyan-400';
+                    isClientTask = false;
                 }
 
                 const ownerBadge = isClientTask
