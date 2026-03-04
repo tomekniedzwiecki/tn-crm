@@ -259,16 +259,23 @@
                             <i class="ph ph-list text-red-400"></i>
                             Wszystkie filmy
                         </h3>
-                        <div class="flex items-center gap-1">
-                            <button onclick="filterVideos('all')" data-filter="all" class="tab-btn active px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent">
-                                Wszystkie
-                            </button>
-                            <button onclick="filterVideos('long')" data-filter="long" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent text-zinc-400">
-                                Długie
-                            </button>
-                            <button onclick="filterVideos('shorts')" data-filter="shorts" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent text-zinc-400">
-                                Shorts
-                            </button>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="public-only" onchange="togglePublicOnly()" class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500 focus:ring-offset-0">
+                                <span class="text-xs text-zinc-400">Tylko publiczne</span>
+                            </label>
+                            <div class="w-px h-4 bg-zinc-700"></div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="filterVideos('all')" data-filter="all" class="tab-btn active px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent">
+                                    Wszystkie
+                                </button>
+                                <button onclick="filterVideos('long')" data-filter="long" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent text-zinc-400">
+                                    Długie
+                                </button>
+                                <button onclick="filterVideos('shorts')" data-filter="shorts" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent text-zinc-400">
+                                    Shorts
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="p-2 border-b border-white/5 bg-zinc-900/50">
@@ -305,6 +312,7 @@
 
         let allVideos = [];
         let currentFilter = 'all';
+        let publicOnly = false;
         let charts = {};
 
         async function init() {
@@ -364,23 +372,24 @@
         }
 
         function calculateStats() {
-            const longVideos = allVideos.filter(v => !v.isShort);
-            const shorts = allVideos.filter(v => v.isShort);
+            const videos = getFilteredVideos();
+            const longVideos = videos.filter(v => !v.isShort);
+            const shorts = videos.filter(v => v.isShort);
 
-            const totalViews = allVideos.reduce((sum, v) => sum + (v.views || 0), 0);
-            const totalLikes = allVideos.reduce((sum, v) => sum + (v.likes || 0), 0);
-            const totalComments = allVideos.reduce((sum, v) => sum + (v.comments || 0), 0);
-            const avgViews = Math.round(totalViews / allVideos.length);
+            const totalViews = videos.reduce((sum, v) => sum + (v.views || 0), 0);
+            const totalLikes = videos.reduce((sum, v) => sum + (v.likes || 0), 0);
+            const totalComments = videos.reduce((sum, v) => sum + (v.comments || 0), 0);
+            const avgViews = videos.length > 0 ? Math.round(totalViews / videos.length) : 0;
             const avgEngagement = totalViews > 0 ? ((totalLikes + totalComments) / totalViews * 100).toFixed(2) : 0;
 
             const longAvg = longVideos.length > 0 ? Math.round(longVideos.reduce((s, v) => s + (v.views || 0), 0) / longVideos.length) : 0;
             const shortsAvg = shorts.length > 0 ? Math.round(shorts.reduce((s, v) => s + (v.views || 0), 0) / shorts.length) : 0;
 
-            const bestVideo = [...allVideos].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
-            const avgViewsPerDay = Math.round(allVideos.reduce((s, v) => s + v.viewsPerDay(), 0) / allVideos.length);
+            const bestVideo = [...videos].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
+            const avgViewsPerDay = videos.length > 0 ? Math.round(videos.reduce((s, v) => s + v.viewsPerDay(), 0) / videos.length) : 0;
 
             // Update DOM
-            document.getElementById('stat-total-videos').textContent = allVideos.length;
+            document.getElementById('stat-total-videos').textContent = videos.length;
             document.getElementById('stat-total-views').textContent = formatNumber(totalViews);
             document.getElementById('stat-avg-views').textContent = formatNumber(avgViews);
             document.getElementById('stat-engagement').textContent = avgEngagement + '%';
@@ -397,8 +406,9 @@
         }
 
         function renderCharts() {
-            const longVideos = allVideos.filter(v => !v.isShort).slice(0, 15).reverse();
-            const shorts = allVideos.filter(v => v.isShort).slice(0, 15).reverse();
+            const videos = getFilteredVideos();
+            const longVideos = videos.filter(v => !v.isShort).slice(0, 15).reverse();
+            const shorts = videos.filter(v => v.isShort).slice(0, 15).reverse();
 
             // Views Trend Chart
             const trendCtx = document.getElementById('views-trend-chart').getContext('2d');
@@ -442,7 +452,7 @@
             const engageCtx = document.getElementById('engagement-chart').getContext('2d');
             if (charts.engagement) charts.engagement.destroy();
 
-            const recentVideos = allVideos.slice(0, 15).reverse();
+            const recentVideos = videos.slice(0, 15).reverse();
             charts.engagement = new Chart(engageCtx, {
                 type: 'bar',
                 data: {
@@ -471,14 +481,14 @@
             if (charts.comparison) charts.comparison.destroy();
 
             const longStats = {
-                avgViews: allVideos.filter(v => !v.isShort).reduce((s, v) => s + (v.views || 0), 0) / Math.max(1, allVideos.filter(v => !v.isShort).length),
-                avgEngagement: allVideos.filter(v => !v.isShort).reduce((s, v) => s + v.engagement, 0) / Math.max(1, allVideos.filter(v => !v.isShort).length),
-                avgViewsPerDay: allVideos.filter(v => !v.isShort).reduce((s, v) => s + v.viewsPerDay(), 0) / Math.max(1, allVideos.filter(v => !v.isShort).length)
+                avgViews: videos.filter(v => !v.isShort).reduce((s, v) => s + (v.views || 0), 0) / Math.max(1, videos.filter(v => !v.isShort).length),
+                avgEngagement: videos.filter(v => !v.isShort).reduce((s, v) => s + v.engagement, 0) / Math.max(1, videos.filter(v => !v.isShort).length),
+                avgViewsPerDay: videos.filter(v => !v.isShort).reduce((s, v) => s + v.viewsPerDay(), 0) / Math.max(1, videos.filter(v => !v.isShort).length)
             };
             const shortsStats = {
-                avgViews: allVideos.filter(v => v.isShort).reduce((s, v) => s + (v.views || 0), 0) / Math.max(1, allVideos.filter(v => v.isShort).length),
-                avgEngagement: allVideos.filter(v => v.isShort).reduce((s, v) => s + v.engagement, 0) / Math.max(1, allVideos.filter(v => v.isShort).length),
-                avgViewsPerDay: allVideos.filter(v => v.isShort).reduce((s, v) => s + v.viewsPerDay(), 0) / Math.max(1, allVideos.filter(v => v.isShort).length)
+                avgViews: videos.filter(v => v.isShort).reduce((s, v) => s + (v.views || 0), 0) / Math.max(1, videos.filter(v => v.isShort).length),
+                avgEngagement: videos.filter(v => v.isShort).reduce((s, v) => s + v.engagement, 0) / Math.max(1, videos.filter(v => v.isShort).length),
+                avgViewsPerDay: videos.filter(v => v.isShort).reduce((s, v) => s + v.viewsPerDay(), 0) / Math.max(1, videos.filter(v => v.isShort).length)
             };
 
             charts.comparison = new Chart(compCtx, {
@@ -521,8 +531,9 @@
         }
 
         function renderTopVideos() {
-            const top5 = [...allVideos].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
-            const recent5 = allVideos.slice(0, 5);
+            const videos = getFilteredVideos();
+            const top5 = [...videos].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+            const recent5 = videos.slice(0, 5);
 
             document.getElementById('top-videos').innerHTML = top5.map((v, i) => `
                 <a href="https://youtube.com/watch?v=${v.youtube_id}" target="_blank" class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
@@ -548,9 +559,9 @@
         }
 
         function renderVideosList() {
-            let filtered = allVideos;
-            if (currentFilter === 'long') filtered = allVideos.filter(v => !v.isShort);
-            if (currentFilter === 'shorts') filtered = allVideos.filter(v => v.isShort);
+            let filtered = getFilteredVideos();
+            if (currentFilter === 'long') filtered = filtered.filter(v => !v.isShort);
+            if (currentFilter === 'shorts') filtered = filtered.filter(v => v.isShort);
 
             document.getElementById('videos-list').innerHTML = filtered.map(v => `
                 <a href="https://youtube.com/watch?v=${v.youtube_id}" target="_blank" class="video-item grid grid-cols-12 gap-2 p-3 items-center">
@@ -560,6 +571,7 @@
                             <div class="text-sm text-white truncate">${escapeHtml(v.title)}</div>
                             <div class="flex items-center gap-2 mt-0.5">
                                 ${v.isShort ? '<span class="shorts-badge text-[9px] px-1 py-0.5 rounded text-white">SHORT</span>' : '<span class="text-[9px] text-zinc-600">' + formatDuration(v.duration_seconds) + '</span>'}
+                                ${v.privacy_status && v.privacy_status !== 'public' ? '<span class="text-[9px] px-1 py-0.5 rounded bg-zinc-700 text-zinc-400">' + v.privacy_status + '</span>' : ''}
                             </div>
                         </div>
                     </div>
@@ -589,6 +601,22 @@
                 btn.classList.toggle('text-zinc-400', btn.dataset.filter !== filter);
             });
             renderVideosList();
+        }
+
+        function togglePublicOnly() {
+            publicOnly = document.getElementById('public-only').checked;
+            calculateStats();
+            renderCharts();
+            renderTopVideos();
+            renderVideosList();
+        }
+
+        function getFilteredVideos() {
+            let videos = allVideos;
+            if (publicOnly) {
+                videos = videos.filter(v => v.is_active === true);
+            }
+            return videos;
         }
 
         async function syncYouTube() {

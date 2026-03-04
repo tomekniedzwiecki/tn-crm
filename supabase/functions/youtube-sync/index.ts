@@ -95,7 +95,7 @@ serve(async (req) => {
 
     for (let i = 0; i < videoIds.length; i += 50) {
       const batch = videoIds.slice(i, i + 50);
-      const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${batch.join(",")}&key=${YOUTUBE_API_KEY}`;
+      const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,status&id=${batch.join(",")}&key=${YOUTUBE_API_KEY}`;
 
       const statsResponse = await fetch(statsUrl);
       const statsData = await statsResponse.json();
@@ -120,6 +120,8 @@ serve(async (req) => {
               views: parseInt(videoStats.statistics.viewCount) || 0,
               likes: parseInt(videoStats.statistics.likeCount) || 0,
               comments: parseInt(videoStats.statistics.commentCount) || 0,
+              privacy_status: videoStats.status?.privacyStatus || 'public',
+              is_active: videoStats.status?.privacyStatus === 'public',
               stats_updated_at: new Date().toISOString(),
             });
           }
