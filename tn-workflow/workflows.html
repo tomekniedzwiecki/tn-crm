@@ -214,6 +214,10 @@
                             class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
                             <i class="ph ph-video"></i> Nagrania
                         </button>
+                        <button onclick="toggleStatusStage('takedrop')" data-stage="takedrop"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-storefront"></i> TakeDrop
+                        </button>
                         <span class="text-zinc-700 mx-1">|</span>
                         <button onclick="setOwnerFilter('all')" data-owner="all"
                             class="owner-filter-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer bg-cyan-500/20 text-cyan-400 border-cyan-500/30 flex items-center gap-1">
@@ -618,7 +622,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created').in('workflow_id', workflowIds)
             ]);
 
             videoStages = {};
@@ -887,9 +891,9 @@
             if (!nextStep) return null; // all done
 
             // Admin tasks: contract, report, branding, salespage, scenario
-            // Client tasks: product (wybór), profile, nagrania
+            // Client tasks: product (wybór), profile, nagrania, takedrop (założenie konta)
             const adminTasks = ['contract', 'report', 'branding', 'salespage', 'scenario'];
-            const clientTasks = ['product', 'profile', 'nagrania'];
+            const clientTasks = ['product', 'profile', 'nagrania', 'takedrop'];
 
             if (adminTasks.includes(nextStep)) return true;
             if (clientTasks.includes(nextStep)) return false;
@@ -919,6 +923,8 @@
                 case 'nagrania':
                     const videoLinks = w.video_stage?.video_links || [];
                     return videoLinks.length > 0;
+                case 'takedrop':
+                    return !!w.takedrop_stage?.account_created;
                 default:
                     return false;
             }
@@ -947,6 +953,12 @@
 
             const videoLinks = w.video_stage?.video_links || [];
             if (videoLinks.length === 0) return 'nagrania';
+
+            // Etap 3: TakeDrop
+            // Jeśli etap 2 jest aktywny i ma nagrania, sprawdź TakeDrop
+            if (w.takedrop_stage?.is_active) {
+                if (!w.takedrop_stage?.account_created) return 'takedrop';
+            }
 
             return null; // all done
         }
@@ -1028,6 +1040,15 @@
                 }
             }
 
+            // TakeDrop - tylko gdy etap 3 jest aktywny
+            if (w.takedrop_stage?.is_active) {
+                if (w.takedrop_stage?.account_created) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
+                } else {
+                    items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>TakeDrop</span>`);
+                }
+            }
+
             if (!items.length) return '';
             return `<div class="flex items-center gap-3 text-[10px] py-2 border-t border-white/5">${items.join('')}</div>`;
         }
@@ -1105,7 +1126,8 @@
             let s3Label = 'Etap 3';
             const hasTakedrop = w.takedrop_stage?.is_active;
             if (currentStage === 3) {
-                s3Class = hasTakedrop && w.takedrop_stage?.stage_accepted ? 'bg-emerald-500' : 'bg-amber-500';
+                // TakeDrop aktywny - sprawdź czy konto założone
+                s3Class = hasTakedrop && w.takedrop_stage?.account_created ? 'bg-emerald-500' : 'bg-amber-500';
             }
 
             // Line between stages
@@ -1195,15 +1217,40 @@
             const progressPercent = w.progress_percent || 0;
 
             if (stage === 3) {
-                // TakeDrop
+                // TakeDrop - Etap 3
                 const td = w.takedrop_stage;
-                const status = td?.stage_accepted ? 'Zaakceptowany' : 'Oczekuje na akceptację';
-                const icon = td?.stage_accepted ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-hourglass text-amber-400';
+                const accountCreated = td?.account_created || false;
+                const stageAccepted = td?.stage_accepted || false;
+
+                let stepName = 'TakeDrop';
+                let status = 'Oczekuje';
+                let icon = 'ph ph-storefront text-amber-400';
+                let isClientTask = true;
+
+                if (stageAccepted) {
+                    stepName = 'TakeDrop';
+                    status = 'Zaakceptowany';
+                    icon = 'ph-fill ph-check-circle text-emerald-400';
+                } else if (accountCreated) {
+                    stepName = 'TakeDrop';
+                    status = 'Konto założone';
+                    icon = 'ph-fill ph-check-circle text-emerald-400';
+                } else {
+                    stepName = 'Założenie konta';
+                    status = 'Oczekuje na klienta';
+                    icon = 'ph ph-storefront text-amber-400';
+                }
+
+                const ownerBadge = isClientTask
+                    ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                    : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
                 return `
                     <div class="py-2">
                         <div class="flex items-center gap-2 text-[11px]">
                             <i class="${icon}"></i>
-                            <span class="text-white font-medium">TakeDrop</span>
+                            <span class="text-white font-medium">${stepName}</span>
+                            ${ownerBadge}
                             <span class="text-zinc-500">·</span>
                             <span class="text-zinc-400">${status}</span>
                         </div>
