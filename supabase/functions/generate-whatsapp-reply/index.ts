@@ -401,14 +401,23 @@ serve(async (req) => {
     // Znajdź pasujący scenariusz
     const matchedScenario = findMatchingScenario(context.scenarios, analysis)
 
-    // Przygotuj historię konwersacji dla Claude
-    const conversationHistory = messages
-      .slice(-20) // Ostatnie 20 wiadomości
-      .map(m => {
-        const role = m.direction === 'outbound' ? `Ty (${synced_by || 'sprzedawca'})` : contact_name
-        return `${role}: ${m.message_text}`
+    // Przygotuj historię konwersacji dla Claude - z timestampami i lepszym formatowaniem
+    const recentMessages = messages.slice(-15)
+    const conversationHistory = recentMessages
+      .map((m, i) => {
+        const role = m.direction === 'outbound' ? `TY` : contact_name.toUpperCase()
+        const timestamp = m.message_timestamp
+          ? new Date(m.message_timestamp).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+          : ''
+        const isLast3 = i >= recentMessages.length - 3
+        const prefix = isLast3 ? '>>> ' : ''
+        return `${prefix}[${timestamp}] ${role}: ${m.message_text}`
       })
       .join('\n')
+
+    // Wyciągnij ostatnią wiadomość klienta dla lepszego kontekstu
+    const lastClientMessage = [...messages].reverse().find(m => m.direction === 'inbound')
+    const lastClientText = lastClientMessage?.message_text || ''
 
     // Zbuduj system prompt z pełnym kontekstem i scenariuszem
     const systemPrompt = buildSystemPrompt(context, synced_by || 'tomek', matchedScenario, custom_instruction)
@@ -446,7 +455,20 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: `Oto historia konwersacji na WhatsApp:\n\n${conversationHistory}\n\nNapisz odpowiedź na ostatnią wiadomość od ${contact_name}. Odpowiedz TYLKO tekstem wiadomości, bez żadnych wyjaśnień.`
+            content: `## ROZMOWA WHATSAPP
+(>>> oznacza ostatnie wiadomości - najważniejsze)
+
+${conversationHistory}
+
+## ZADANIE
+Ostatnia wiadomość klienta: "${lastClientText}"
+
+Napisz JEDNĄ krótką odpowiedź (1-3 zdania), która:
+1. Bezpośrednio nawiązuje do tego co klient napisał
+2. Popycha rozmowę do przodu
+3. Jest w stylu Tomka (krótko, bez korporacyjnego języka)
+
+Odpowiedz TYLKO tekstem wiadomości.`
           }
         ]
       })
