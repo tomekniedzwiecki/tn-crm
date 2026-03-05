@@ -3965,7 +3965,8 @@
           throw new Error(result.error || 'Nieznany błąd');
         }
       } catch (err) {
-        console.error('Error regenerating:', err);
+        console.error('WhatsApp Sync: Error regenerating:', err);
+        alert('❌ Błąd regeneracji: ' + err.message);
         btn.innerHTML = '❌ Błąd';
         setTimeout(() => {
           btn.innerHTML = '🔄 Regeneruj';
@@ -4280,13 +4281,21 @@
         btn.disabled = true;
 
         try {
-          // 1. Otwórz czat i zsynchronizuj
+          console.log('WhatsApp Sync: Regenerating followup', id, 'phone:', phone);
+
+          // 1. Otwórz czat
           const chatOpened = await openChatByPhone(phone);
-          if (chatOpened !== true) {
+          console.log('WhatsApp Sync: Chat opened result:', chatOpened);
+
+          if (chatOpened === 'no_whatsapp') {
+            throw new Error('Ta osoba nie ma WhatsApp');
+          }
+          if (!chatOpened) {
             throw new Error('Nie udało się otworzyć czatu');
           }
 
-          await new Promise(r => setTimeout(r, 500));
+          // Daj czas na załadowanie czatu
+          await new Promise(r => setTimeout(r, 1000));
 
           // 2. Sync wiadomości
           await loadConfig();
@@ -4294,14 +4303,20 @@
           const contactName = getCurrentChatName();
           const messages = getMessagesFromChat();
 
+          console.log('WhatsApp Sync: Got', messages.length, 'messages for', phoneNumber);
+
           if (phoneNumber && messages.length > 0) {
-            await syncMessages(messages, phoneNumber, contactName);
+            const syncResult = await syncMessages(messages, phoneNumber, contactName);
+            console.log('WhatsApp Sync: Sync result', syncResult);
           }
 
+          // Poczekaj na zapis do bazy
           await new Promise(r => setTimeout(r, 500));
 
           // 3. Regeneruj
+          console.log('WhatsApp Sync: Calling regenerateFollowup for', id);
           const result = await regenerateFollowup(id);
+          console.log('WhatsApp Sync: Regenerate result', result);
 
           if (result.success && result.message) {
             // Aktualizuj tekst w widgecie
@@ -4315,7 +4330,8 @@
             throw new Error(result.error || 'Błąd regeneracji');
           }
         } catch (err) {
-          console.error('Error regenerating in widget:', err);
+          console.error('WhatsApp Sync: Error regenerating in widget:', err);
+          alert('❌ ' + err.message);
           btn.innerHTML = '❌';
           setTimeout(() => {
             btn.innerHTML = '🔄';
