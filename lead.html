@@ -1145,10 +1145,39 @@
                                 <i class="ph ph-whatsapp-logo text-green-500"></i>
                                 Historia wiadomości WhatsApp
                             </h3>
-                            <button onclick="refreshWhatsAppMessages()" class="text-green-500 hover:text-green-400 text-xs flex items-center gap-1">
-                                <i class="ph ph-arrows-clockwise"></i>
-                                Odśwież
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="generateAIReply()" id="btn-ai-reply" class="bg-violet-600 hover:bg-violet-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
+                                    <i class="ph ph-sparkle"></i>
+                                    AI Follow-up
+                                </button>
+                                <button onclick="refreshWhatsAppMessages()" class="text-green-500 hover:text-green-400 text-xs flex items-center gap-1">
+                                    <i class="ph ph-arrows-clockwise"></i>
+                                    Odśwież
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- AI Response Container -->
+                        <div id="ai-reply-container" class="hidden mb-4">
+                            <div class="bg-violet-950/30 border border-violet-500/30 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-violet-400 flex items-center gap-1">
+                                        <i class="ph ph-sparkle"></i>
+                                        Sugerowana wiadomość
+                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="copyAIReply()" class="text-violet-400 hover:text-violet-300 text-xs flex items-center gap-1">
+                                            <i class="ph ph-copy"></i>
+                                            Kopiuj
+                                        </button>
+                                        <button onclick="hideAIReply()" class="text-zinc-500 hover:text-zinc-300 text-xs">
+                                            <i class="ph ph-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="ai-reply-text" class="text-white text-sm whitespace-pre-wrap"></div>
+                                <div id="ai-reply-meta" class="mt-2 text-xs text-zinc-500 hidden"></div>
+                            </div>
                         </div>
 
                         <!-- User toggle (shown when both users have messages) -->
@@ -2385,6 +2414,124 @@
             emptyState.classList.add('hidden');
 
             loadWhatsAppMessages();
+        }
+
+        // AI Reply Functions
+        let lastAIReply = '';
+
+        async function generateAIReply() {
+            if (!allWhatsAppMessages || allWhatsAppMessages.length === 0) {
+                showToast('Brak wiadomości do analizy', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-ai-reply');
+            const container = document.getElementById('ai-reply-container');
+            const textEl = document.getElementById('ai-reply-text');
+            const metaEl = document.getElementById('ai-reply-meta');
+
+            // Loading state
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generuję...';
+
+            try {
+                // Prepare messages for API
+                const messages = allWhatsAppMessages.map(m => ({
+                    direction: m.direction,
+                    message_text: m.message_text,
+                    message_timestamp: m.message_timestamp
+                }));
+
+                // Get contact name from lead or first message
+                const contactName = lead?.name || allWhatsAppMessages[0]?.contact_name || 'Klient';
+                const phoneNumber = lead?.phone?.replace(/[^0-9]/g, '') || '';
+
+                // Determine synced_by (default to tomek)
+                const syncedBy = 'tomek';
+
+                // Build custom instruction based on pipeline stage
+                let customInstruction = '';
+                if (lead?.status === 'contacted') {
+                    customInstruction = `Lead jest na etapie "Skontaktowany". Celem jest zakwalifikowanie go - dowiedz się czy:
+1. Ma czas na projekt (ile godzin tygodniowo)
+2. Ma budżet/możliwości finansowe
+3. Jest zdecydowany działać teraz
+
+Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwalifikowany".`;
+                } else if (lead?.status === 'new') {
+                    customInstruction = 'Lead jest nowy. Nawiąż kontakt i zacznij rozmowę.';
+                } else if (lead?.status === 'qualified') {
+                    customInstruction = 'Lead jest zakwalifikowany. Zachęć do zapoznania się z ofertą lub umów spotkanie.';
+                } else if (lead?.status === 'proposal') {
+                    customInstruction = 'Lead ma propozycję. Sprawdź czy przejrzał ofertę i czy ma pytania.';
+                }
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-whatsapp-reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        messages,
+                        contact_name: contactName,
+                        phone_number: phoneNumber,
+                        synced_by: syncedBy,
+                        custom_instruction: customInstruction
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Błąd generowania');
+                }
+
+                lastAIReply = result.reply;
+                textEl.textContent = result.reply;
+
+                // Show metadata
+                if (result.matched_scenario || result.context_summary) {
+                    const meta = [];
+                    if (result.matched_scenario?.name) {
+                        meta.push(`Scenariusz: ${result.matched_scenario.name}`);
+                    }
+                    if (result.context_summary?.lead_status) {
+                        meta.push(`Status: ${result.context_summary.lead_status}`);
+                    }
+                    if (result.analysis?.days_since_last_message > 0) {
+                        meta.push(`Ostatnia wiadomość: ${result.analysis.days_since_last_message} dni temu`);
+                    }
+                    if (meta.length > 0) {
+                        metaEl.textContent = meta.join(' • ');
+                        metaEl.classList.remove('hidden');
+                    }
+                }
+
+                container.classList.remove('hidden');
+                showToast('Wiadomość wygenerowana', 'success');
+
+            } catch (err) {
+                console.error('AI Reply error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-sparkle"></i> AI Follow-up';
+            }
+        }
+
+        function copyAIReply() {
+            if (!lastAIReply) return;
+
+            navigator.clipboard.writeText(lastAIReply).then(() => {
+                showToast('Skopiowano do schowka', 'success');
+            }).catch(() => {
+                showToast('Błąd kopiowania', 'error');
+            });
+        }
+
+        function hideAIReply() {
+            document.getElementById('ai-reply-container').classList.add('hidden');
         }
 
         // Pipeline stages - loaded dynamically from settings

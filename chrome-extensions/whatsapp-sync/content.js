@@ -9,16 +9,12 @@
     SUPABASE_URL: '', // Ustaw w popup
     SUPABASE_KEY: '', // Ustaw w popup
     SYNC_API_KEY: '', // Klucz API do whatsapp-sync
-    SYNC_USER: 'tomek', // tomek lub maciek
-    AUTO_SYNC_INTERVAL: 10000, // 10 sekund - szybszy auto-sync
-    SYNC_ON_CHAT_CHANGE: true
+    SYNC_USER: 'tomek' // tomek lub maciek
   };
 
   let currentChatPhone = null;
   let issyncing = false;
-  let autoSyncEnabled = true; // Zawsze włączone - sync automatyczny
   let lastSyncedHashes = new Set();
-  let lastAutoSyncPhone = null; // Track który czat był ostatnio syncowany
 
   // Sprawdź czy kontekst rozszerzenia jest aktywny
   function isExtensionContextValid() {
@@ -38,7 +34,7 @@
 
     return new Promise((resolve) => {
       try {
-        chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'autoSync'], (result) => {
+        chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser'], (result) => {
           if (chrome.runtime.lastError) {
             console.warn('WhatsApp Sync: Storage error -', chrome.runtime.lastError);
             resolve();
@@ -48,7 +44,6 @@
           if (result.supabaseKey) CONFIG.SUPABASE_KEY = result.supabaseKey;
           if (result.syncApiKey) CONFIG.SYNC_API_KEY = result.syncApiKey;
           if (result.syncUser) CONFIG.SYNC_USER = result.syncUser;
-          // autoSyncEnabled zawsze true - nie czytamy z ustawień
           resolve();
         });
       } catch (e) {
@@ -101,96 +96,33 @@
       return null;
     }
 
-    // Różne selektory headera - WhatsApp często je zmienia
-    const headerSelectors = [
-      '[data-testid="conversation-header"]',
-      'header',
-      '[role="banner"]',
-      '[data-testid="conversation-panel-header"]'
-    ];
-
-    let header = null;
-    for (const sel of headerSelectors) {
-      header = mainEl.querySelector(sel);
-      if (header) {
-        console.log('WhatsApp Sync: Found header with selector:', sel);
-        break;
-      }
-    }
-
-    if (!header) {
-      // Fallback - użyj pierwszego diva w main jako headera
-      const firstChild = mainEl.querySelector('div > div');
-      if (firstChild) {
-        header = firstChild;
-        console.log('WhatsApp Sync: Using fallback header');
-      } else {
-        console.log('WhatsApp Sync: Header not found in #main');
-        return null;
-      }
-    }
-
-    // Szukaj numeru telefonu w różnych miejscach
+    // Pobierz numer z headera (np. "+48 507 096 846")
     const phonePatterns = [
       /\+?48[\s\-]?\d{3}[\s\-]?\d{3}[\s\-]?\d{3}/,
       /\+?\d{10,15}/
     ];
 
-    // Różne selektory dla tytułu/podtytułu
-    const titleSelectors = [
+    const headerSelectors = [
       '[data-testid="conversation-info-header-chat-title"]',
-      'header span[dir="auto"]',
-      'header [title]',
-      '#main header span'
+      '#main header span[dir="auto"]',
+      '#main header [title]'
     ];
 
-    const subtitleSelectors = [
-      '[data-testid="conversation-info-header-subtitle"]',
-      'header span[title*="kliknij"]',
-      'header span:not([data-testid])'
-    ];
-
-    // Sprawdź title
-    for (const sel of titleSelectors) {
-      const el = header.querySelector(sel);
+    for (const sel of headerSelectors) {
+      const el = document.querySelector(sel);
       if (el) {
         const text = el.textContent || el.getAttribute('title') || '';
         for (const pattern of phonePatterns) {
           const match = text.match(pattern);
           if (match) {
-            console.log('WhatsApp Sync: Found phone in title:', match[0]);
+            console.log('WhatsApp Sync: Found phone in header:', match[0]);
             return normalizePhoneNumber(match[0]);
           }
         }
       }
     }
 
-    // Sprawdź subtitle
-    for (const sel of subtitleSelectors) {
-      const el = header.querySelector(sel);
-      if (el) {
-        const text = el.textContent || '';
-        for (const pattern of phonePatterns) {
-          const match = text.match(pattern);
-          if (match) {
-            console.log('WhatsApp Sync: Found phone in subtitle:', match[0]);
-            return normalizePhoneNumber(match[0]);
-          }
-        }
-      }
-    }
-
-    // Fallback: sprawdź cały header
-    const chatInfo = header.textContent || '';
-    for (const pattern of phonePatterns) {
-      const match = chatInfo.match(pattern);
-      if (match) {
-        console.log('WhatsApp Sync: Found phone in header text:', match[0]);
-        return normalizePhoneNumber(match[0]);
-      }
-    }
-
-    console.log('WhatsApp Sync: No phone found in header. Header text:', chatInfo.substring(0, 100));
+    console.log('WhatsApp Sync: No phone found in header');
     return null;
   }
 
@@ -220,99 +152,79 @@
   function getMessagesFromChat() {
     const messages = [];
 
-    // Różne selektory dla wiadomości
-    const messageSelectors = [
-      '[data-testid="msg-container"]',
-      '.message-in, .message-out',
-      '[data-id*="true_"], [data-id*="false_"]',
-      '#main [role="row"]'
-    ];
-
-    let messageRows = [];
-    for (const sel of messageSelectors) {
-      messageRows = document.querySelectorAll(sel);
-      if (messageRows.length > 0) {
-        console.log('WhatsApp Sync: Found messages with selector:', sel, 'count:', messageRows.length);
-        break;
-      }
-    }
+    // Szukaj wiadomości - .message-in i .message-out
+    const messageRows = document.querySelectorAll('.message-in, .message-out');
 
     if (messageRows.length === 0) {
       console.log('WhatsApp Sync: No messages found');
       return messages;
     }
 
-    messageRows.forEach((row) => {
+    console.log('WhatsApp Sync: Found', messageRows.length, 'message elements');
+
+    messageRows.forEach((row, index) => {
       try {
-        // Sprawdź kierunek (wiadomość wysłana vs otrzymana)
-        const isOutbound = row.classList.contains('message-out') ||
-                          row.querySelector('[data-testid="msg-check"], [data-testid="msg-dblcheck"]') !== null ||
-                          row.closest('[class*="message-out"]') !== null ||
-                          row.getAttribute('data-id')?.startsWith('true_');
+        // Kierunek: message-out = wysłana
+        const isOutbound = row.classList.contains('message-out');
 
-        // Pobierz tekst wiadomości - różne selektory
-        const textSelectors = [
-          '[data-testid="msg-text"]',
-          '.selectable-text',
-          'span.selectable-text',
-          '[dir="ltr"]'
-        ];
+        // Szukaj tekstu wiadomości
+        // Struktura WhatsApp: span z klasą zawierającą "copyable-text" ma tekst
+        // Ale pomijamy spany z ikonami i czasem
+        let messageText = '';
 
-        let textEl = null;
-        for (const sel of textSelectors) {
-          textEl = row.querySelector(sel);
-          if (textEl && textEl.textContent.trim()) break;
+        // Metoda 1: div.copyable-text z data-pre-plain-text zawiera span z tekstem
+        const copyableDiv = row.querySelector('div.copyable-text[data-pre-plain-text]');
+        if (copyableDiv) {
+          // Szukaj span[data-testid="selectable-text"] lub span z odpowiednią klasą
+          const textSpan = copyableDiv.querySelector('span[data-testid="selectable-text"]') ||
+                          copyableDiv.querySelector('span._ao3e');
+          if (textSpan) {
+            messageText = (textSpan.innerText || textSpan.textContent || '').trim();
+          }
         }
 
-        if (!textEl) return; // Pomijamy media bez tekstu
-
-        const messageText = textEl.textContent.trim();
-        if (!messageText) return;
-
-        // Pobierz timestamp
-        const timeSelectors = [
-          '[data-testid="msg-meta"] span',
-          '[data-testid="msg-time"]',
-          '.copyable-text[data-pre-plain-text]',
-          'span[dir="auto"]:last-child'
-        ];
-
-        let timestamp = null;
-
-        for (const sel of timeSelectors) {
-          const timeEl = row.querySelector(sel);
-          if (timeEl) {
-            // Sprawdź data-pre-plain-text (format: "[14:30, 24.02.2026] Nazwa:")
-            const prePlain = timeEl.getAttribute('data-pre-plain-text');
-            if (prePlain) {
-              const match = prePlain.match(/\[(\d{1,2}:\d{2}),\s*(\d{1,2}\.\d{1,2}\.\d{4})\]/);
-              if (match) {
-                const [_, time, date] = match;
-                const [day, month, year] = date.split('.');
-                timestamp = new Date(`${year}-${month}-${day}T${time}:00`).toISOString();
+        // Metoda 2: szukaj span.copyable-text bezpośrednio
+        if (!messageText) {
+          const spans = row.querySelectorAll('span');
+          for (const span of spans) {
+            // Szukaj spana z klasą zawierającą "copyable-text" ale NIE w elemencie z data-icon
+            if (span.className.includes('copyable-text') && !span.closest('[data-icon]')) {
+              const text = (span.innerText || span.textContent || '').trim();
+              // Filtruj: nie czas, nie ikona, nie nazwa pliku
+              if (text &&
+                  text.length > 0 &&
+                  !text.match(/^\d{1,2}:\d{2}$/) &&
+                  !text.match(/^(tail-in|tail-out|ic-\w+|document-\w+-icon)$/i) &&
+                  !text.match(/\.(docx?|pdf|xlsx?)$/i)) {
+                messageText = text;
                 break;
               }
             }
-
-            const timeText = timeEl.textContent.trim();
-            if (timeText && /\d{1,2}:\d{2}/.test(timeText)) {
-              timestamp = parseMessageTime(timeText);
-              if (timestamp) break;
-            }
           }
         }
 
-        if (!timestamp) {
-          // Fallback: użyj atrybutu data-timestamp jeśli istnieje
-          const dataTimestamp = row.getAttribute('data-timestamp') ||
-                               row.closest('[data-timestamp]')?.getAttribute('data-timestamp');
-          if (dataTimestamp) {
-            timestamp = new Date(parseInt(dataTimestamp)).toISOString();
+        // Pomiń jeśli brak tekstu
+        if (!messageText) {
+          return;
+        }
+
+        // Pobierz timestamp z data-pre-plain-text
+        // Format: "[10:14, 4.02.2026] Tomasz:"
+        let timestamp = null;
+        const prePlainEl = row.querySelector('[data-pre-plain-text]');
+        if (prePlainEl) {
+          const prePlain = prePlainEl.getAttribute('data-pre-plain-text');
+          const match = prePlain.match(/\[(\d{1,2}:\d{2}),\s*(\d{1,2}\.\d{1,2}\.\d{4})\]/);
+          if (match) {
+            const [_, time, date] = match;
+            const [day, month, year] = date.split('.');
+            const [hours, minutes] = time.split(':');
+            timestamp = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours.padStart(2, '0')}:${minutes}:00`).toISOString();
           }
         }
 
+        // Fallback: użyj obecnego czasu
         if (!timestamp) {
-          // Ostateczny fallback: obecny czas
           timestamp = new Date().toISOString();
         }
 
@@ -326,13 +238,13 @@
           message_hash: hash
         });
       } catch (e) {
-        console.error('Error parsing message:', e);
+        console.error('WhatsApp Sync: Error parsing message', index, e);
       }
     });
 
-    // Dodaj milisekundy do wiadomości z tym samym timestampem (zachowaj kolejność DOM)
+    // Dodaj milisekundy do wiadomości z tym samym timestampem
     const timestampCounts = {};
-    messages.forEach((msg, index) => {
+    messages.forEach((msg) => {
       const baseTs = msg.message_timestamp;
       if (!timestampCounts[baseTs]) {
         timestampCounts[baseTs] = 0;
@@ -340,17 +252,15 @@
       const offset = timestampCounts[baseTs];
       timestampCounts[baseTs]++;
 
-      // Jeśli są duplikaty, dodaj milisekundy bazując na kolejności
-      if (offset > 0 || messages.filter(m => m.message_timestamp === baseTs).length > 1) {
+      if (offset > 0) {
         const date = new Date(baseTs);
-        date.setMilliseconds(offset * 100); // 0, 100, 200, ... ms
+        date.setMilliseconds(offset * 100);
         msg.message_timestamp = date.toISOString();
-        // Przelicz hash z nowym timestampem
         msg.message_hash = simpleHash(`${msg.message_timestamp}|${msg.direction}|${msg.message_text}`);
       }
     });
 
-    console.log('WhatsApp Sync: Parsed', messages.length, 'messages');
+    console.log('WhatsApp Sync: Parsed', messages.length, 'text messages');
     return messages;
   }
 
@@ -509,10 +419,6 @@
           lastInjectedPhone = newPhone;
           injectSyncButton();
         }, 400);
-
-        if (autoSyncEnabled && CONFIG.SYNC_ON_CHAT_CHANGE) {
-          setTimeout(performSync, 1000);
-        }
       }
     });
 
@@ -549,26 +455,6 @@
         }
       }
     }, 2000);
-  }
-
-  // Auto-sync co X sekund
-  function startAutoSync() {
-    setInterval(async () => {
-      await loadConfig();
-      if (!autoSyncEnabled) return;
-
-      const currentPhone = getCurrentChatPhone();
-      if (!currentPhone) return; // Brak otwartego czatu
-
-      // Sync tylko widoczne wiadomości (bez scrollowania)
-      performSync();
-
-      // Log jeśli zmienił się czat
-      if (lastAutoSyncPhone !== currentPhone) {
-        console.log('WhatsApp Auto-Sync: Nowy czat -', currentPhone);
-        lastAutoSyncPhone = currentPhone;
-      }
-    }, CONFIG.AUTO_SYNC_INTERVAL);
   }
 
   // Deep sync - scrolluje w górę i pobiera starsze wiadomości
@@ -800,13 +686,6 @@
   async function syncAllChats() {
     await loadConfig();
 
-    // Pobierz limit z ustawień
-    const settings = await new Promise(resolve => {
-      chrome.storage.sync.get(['syncAllLimit'], resolve);
-    });
-    const syncAllLimit = settings.syncAllLimit || 0; // 0 = brak limitu
-    console.log('WhatsApp Sync: syncAllLimit =', syncAllLimit);
-
     const sidePanel = document.querySelector('#pane-side');
     if (!sidePanel) {
       return { success: false, error: 'Nie znaleziono panelu bocznego' };
@@ -831,10 +710,15 @@
       allSyncBtns.forEach(btn => {
         const phone = btn.dataset.phone;
         if (phone && !processedPhones.has(phone)) {
-          // Znajdź element czatu
-          let chatEl = btn.closest('[tabindex="-1"]') || btn.closest('[data-testid="cell-frame-container"]')?.parentElement;
+          // Znajdź element czatu - próbuj różne selektory
+          let chatEl = btn.closest('[tabindex="-1"]') ||
+                       btn.closest('[data-testid="cell-frame-container"]')?.parentElement ||
+                       btn.closest('[role="listitem"]') ||
+                       btn.closest('div[data-testid]')?.parentElement;
           if (chatEl) {
             unsyncedChats.push({ chatEl, phone });
+          } else {
+            console.log('WhatsApp Sync: Could not find chat element for phone:', phone);
           }
         }
       });
@@ -852,12 +736,6 @@
     let noMoreUnsyncedScrolls = 0;
 
     while (chatIndex < maxChats) {
-      // Sprawdź limit zapisanych wiadomości
-      if (syncAllLimit > 0 && totalInserted >= syncAllLimit) {
-        console.log(`WhatsApp Sync: Reached syncAllLimit (${syncAllLimit}), stopping`);
-        break;
-      }
-
       // Sprawdź czy 5 czatów z rzędu było zsynchronizowanych
       if (consecutiveSynced >= 5) {
         console.log('WhatsApp Sync: 5 consecutive synced chats, stopping');
@@ -866,6 +744,7 @@
 
       // Znajdź niezsynchronizowane czaty (z czerwonym przyciskiem Sync)
       let unsyncedChats = findUnsyncedChats();
+      console.log(`WhatsApp Sync: Loop iteration ${chatIndex}, found ${unsyncedChats.length} unsynced chats`);
 
       if (unsyncedChats.length === 0) {
         // Brak niezsynchronizowanych - scrolluj w dół
@@ -873,10 +752,11 @@
 
         const previousScrollTop = sidePanel.scrollTop;
         sidePanel.scrollTop = sidePanel.scrollTop + 500;
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 800));
 
-        // Poczekaj na wstrzyknięcie wskaźników
-        await new Promise(r => setTimeout(r, 1500));
+        // Wstrzyknij wskaźniki dla nowych czatów
+        await injectSyncIndicators();
+        await new Promise(r => setTimeout(r, 500));
 
         // Sprawdź ponownie
         unsyncedChats = findUnsyncedChats();
@@ -928,7 +808,7 @@
         console.log(`WhatsApp Sync: Clicking chat ${chatIndex} (${phone})`);
 
         // Kliknij przez debugger API
-        await new Promise((resolve) => {
+        const clickResult = await new Promise((resolve) => {
           chrome.runtime.sendMessage({
             type: 'REAL_CLICK',
             x: centerX,
@@ -937,12 +817,31 @@
           }, resolve);
         });
 
+        if (!clickResult?.success) {
+          console.log(`WhatsApp Sync: Click failed for chat ${chatIndex}, retrying with JS click`);
+          // Fallback: JavaScript click
+          chatEl.click();
+        }
+
         // Poczekaj na załadowanie czatu
         await new Promise(r => setTimeout(r, 2000));
 
+        // Sprawdź czy #main istnieje (czat się otworzył)
+        const mainEl = document.querySelector('#main');
+        if (!mainEl) {
+          console.log(`WhatsApp Sync: Chat ${chatIndex} did not open, skipping`);
+          continue;
+        }
+
         // Deep Sync - pobierz wszystkie wiadomości
-        const chatPhone = getCurrentChatPhone();
+        // Użyj numeru z headera lub znanego z przycisku sync jako fallback
+        const headerPhone = getCurrentChatPhone();
+        const chatPhone = headerPhone || phone;
         const name = getCurrentChatName();
+
+        if (!headerPhone && phone) {
+          console.log(`WhatsApp Sync: Using fallback phone from button: ${phone}`);
+        }
 
         if (chatPhone) {
           // Użyj deep sync zamiast zwykłego sync (skipLock = true bo już jesteśmy w pętli)
@@ -999,18 +898,16 @@
               }
             }).catch(() => {});
           }
-
-          // Sprawdź limit po każdym syncu
-          if (syncAllLimit > 0 && totalInserted >= syncAllLimit) {
-            console.log(`WhatsApp Sync: Reached syncAllLimit (${syncAllLimit}) after this chat`);
-            break;
-          }
         } else {
           console.log(`WhatsApp Sync: Chat ${chatIndex}: no phone, skipping`);
         }
 
         // Przerwa między czatami
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 500));
+
+        // Wstrzyknij wskaźniki ponownie (WhatsApp mógł przerender panel)
+        await injectSyncIndicators();
+        await new Promise(r => setTimeout(r, 500));
 
       } catch (err) {
         console.error('WhatsApp Sync: Error processing chat', chatIndex, err);
@@ -1028,9 +925,7 @@
     }
 
     let reason = 'Zakończono';
-    if (syncAllLimit > 0 && totalInserted >= syncAllLimit) {
-      reason = `Osiągnięto limit ${syncAllLimit} zapisanych`;
-    } else if (consecutiveSynced >= 5) {
+    if (consecutiveSynced >= 5) {
       reason = 'Dotarliśmy do zsynchronizowanych czatów';
     } else if (chatIndex >= maxChats) {
       reason = 'Osiągnięto max limit czatów';
@@ -3506,7 +3401,6 @@
           clearInterval(checkReady);
           console.log('WhatsApp CRM Sync: Ready (found:', selector, ')');
           observeChatChanges();
-          startAutoSync();
           // Wstrzyknij przycisk jeśli jest otwarty czat
           setTimeout(injectSyncButton, 1000);
           // Obserwuj listę czatów i dodaj wskaźniki sync
@@ -3519,7 +3413,6 @@
         clearInterval(checkReady);
         console.log('WhatsApp CRM Sync: Timeout waiting for WhatsApp. Starting anyway...');
         observeChatChanges();
-        startAutoSync();
         setTimeout(injectSyncButton, 1000);
         observeChatList();
       }

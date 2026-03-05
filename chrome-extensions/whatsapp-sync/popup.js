@@ -30,11 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const supabaseKey = document.getElementById('supabase-key');
   const syncApiKey = document.getElementById('sync-api-key');
   const syncUser = document.getElementById('sync-user');
-  const syncOnChange = document.getElementById('sync-on-change');
-  const scheduledSyncIndicator = document.getElementById('scheduled-sync-indicator');
-  const scheduledSyncText = document.getElementById('scheduled-sync-text');
-  const nextSyncInfo = document.getElementById('next-sync-info');
-  const nextSyncTime = document.getElementById('next-sync-time');
   const logContainer = document.getElementById('log');
 
   // Tab switching
@@ -49,19 +44,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  const syncAllLimit = document.getElementById('sync-all-limit');
-
   // Load saved settings
-  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser', 'syncOnChange', 'syncAllLimit'], (result) => {
+  chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'syncApiKey', 'syncUser'], (result) => {
     if (result.supabaseUrl) supabaseUrl.value = result.supabaseUrl;
     if (result.supabaseKey) supabaseKey.value = result.supabaseKey;
     if (result.syncApiKey) syncApiKey.value = result.syncApiKey;
     if (result.syncUser) syncUser.value = result.syncUser;
-    syncOnChange.checked = result.syncOnChange !== false;
-    syncAllLimit.value = result.syncAllLimit || 0;
-
-    // Sprawdź status scheduled sync z CRM
-    checkScheduledSyncStatus(result);
   });
 
   // Save settings
@@ -70,86 +58,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       supabaseUrl: supabaseUrl.value.trim(),
       supabaseKey: supabaseKey.value.trim(),
       syncApiKey: syncApiKey.value.trim(),
-      syncUser: syncUser.value,
-      syncOnChange: syncOnChange.checked,
-      syncAllLimit: parseInt(syncAllLimit.value) || 0
+      syncUser: syncUser.value
     };
 
     chrome.storage.sync.set(settings, () => {
       // Powiadom background script o zmianie ustawien
       chrome.runtime.sendMessage({ type: 'SETTINGS_CHANGED' });
       addLog('Ustawienia zapisane', 'success');
-
-      // Sprawdz status scheduled sync z nowymi ustawieniami
-      checkScheduledSyncStatus(settings);
     });
   });
-
-  syncOnChange.addEventListener('change', () => {
-    chrome.storage.sync.set({ syncOnChange: syncOnChange.checked });
-  });
-
-  // Sprawdź status scheduled sync z CRM
-  async function checkScheduledSyncStatus(settings) {
-    if (!settings || !settings.supabaseUrl || !settings.supabaseKey || !settings.syncUser) {
-      scheduledSyncText.textContent = 'Sync co 5h: brak konfiguracji';
-      scheduledSyncIndicator.style.background = '#555';
-      return;
-    }
-
-    const userName = settings.syncUser.charAt(0).toUpperCase() + settings.syncUser.slice(1).toLowerCase();
-
-    try {
-      const response = await fetch(
-        `${settings.supabaseUrl}/rest/v1/whatsapp_widget_status?user_name=eq.${userName}&select=scheduled_sync_enabled`,
-        {
-          headers: {
-            'apikey': settings.supabaseKey,
-            'Authorization': `Bearer ${settings.supabaseKey}`
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const enabled = data[0]?.scheduled_sync_enabled || false;
-
-        if (enabled) {
-          scheduledSyncText.textContent = `Sync co 5h: wlaczony (${userName})`;
-          scheduledSyncIndicator.style.background = '#25D366';
-          updateNextSyncTime();
-        } else {
-          scheduledSyncText.textContent = `Sync co 5h: wylaczony`;
-          scheduledSyncIndicator.style.background = '#555';
-          nextSyncInfo.classList.add('hidden');
-        }
-      } else {
-        scheduledSyncText.textContent = 'Sync co 5h: blad sprawdzenia';
-        scheduledSyncIndicator.style.background = '#ff5252';
-      }
-    } catch (err) {
-      scheduledSyncText.textContent = 'Sync co 5h: blad polaczenia';
-      scheduledSyncIndicator.style.background = '#ff5252';
-    }
-  }
-
-  // Pokaż czas następnego sync
-  function updateNextSyncTime() {
-    chrome.runtime.sendMessage({ type: 'GET_NEXT_SYNC' }, (response) => {
-      if (response && response.nextSync) {
-        const nextDate = new Date(response.nextSync);
-        nextSyncTime.textContent = nextDate.toLocaleString('pl-PL', {
-          hour: '2-digit',
-          minute: '2-digit',
-          day: '2-digit',
-          month: '2-digit'
-        });
-        nextSyncInfo.classList.remove('hidden');
-      } else {
-        nextSyncInfo.classList.add('hidden');
-      }
-    });
-  }
 
   // Get current tab and chat info
   async function updateCurrentChat() {
