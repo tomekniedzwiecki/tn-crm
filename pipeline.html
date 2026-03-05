@@ -829,7 +829,52 @@
             console.log('Followup counts - queue:', followupQueueCounts, 'pending:', followupPendingCounts);
         }
 
-        // Generate follow-ups for a specific stage
+        // Ręczne przetworzenie kolejki followupów
+        async function processFollowupsManually(stageId) {
+            const btn = document.querySelector(`[data-process-followups="${stageId}"]`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i>';
+            }
+
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/functions/v1/followups-cron`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        }
+                    }
+                );
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Odśwież liczniki
+                    await loadFollowupCounts();
+                    renderPipeline();
+
+                    const msg = result.enqueued > 0
+                        ? `Dodano ${result.enqueued} do kolejki, przetworzono ${result.processed}`
+                        : `Przetworzono ${result.processed} followupów`;
+                    alert(`✅ ${msg}\n\nPending do wysłania w rozszerzeniu WhatsApp.`);
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+            } catch (err) {
+                console.error('Error processing followups:', err);
+                alert('❌ Błąd: ' + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-play"></i>';
+                }
+            }
+        }
+
+        // Generate follow-ups for a specific stage (stara funkcja)
         async function generateFollowupsForStage(stageId) {
             console.log('generateFollowupsForStage called for:', stageId);
 
@@ -951,7 +996,7 @@
                                 <span class="font-medium text-white text-sm">${stage.name}</span>
                                 <span class="text-[10px] ${colors.text} ${colors.bg} px-1.5 py-0.5 rounded font-mono">${stageLeads.length}</span>
                             </div>
-                            ${canHaveFollowups && hasFollowupActivity ? `
+                            ${canHaveFollowups ? `
                                 <div class="flex items-center gap-1">
                                     ${queueCount > 0 ? `
                                         <span class="flex items-center gap-1 px-2 py-1 text-[10px] bg-zinc-500/10 text-zinc-400 rounded" title="W kolejce do wygenerowania">
@@ -965,6 +1010,13 @@
                                             <span>${pendingCount}</span>
                                         </span>
                                     ` : ''}
+                                    <button
+                                        data-process-followups="${stage.id}"
+                                        onclick="processFollowupsManually('${stage.id}')"
+                                        class="flex items-center gap-1 px-2 py-1 text-[10px] bg-violet-500/10 text-violet-400 rounded hover:bg-violet-500/20 transition-colors"
+                                        title="Przetwórz kolejkę (generuj 5 followupów)">
+                                        <i class="ph ph-play"></i>
+                                    </button>
                                 </div>
                             ` : ''}
                         </div>

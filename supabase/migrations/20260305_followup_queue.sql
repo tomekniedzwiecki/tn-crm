@@ -31,3 +31,6 @@ ALTER TABLE followup_queue ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Service role full access to followup_queue"
     ON followup_queue FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Authenticated can read followup_queue"
+    ON followup_queue FOR SELECT TO authenticated USING (true);
