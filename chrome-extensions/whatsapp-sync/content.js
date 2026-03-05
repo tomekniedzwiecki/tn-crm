@@ -3946,13 +3946,35 @@
       }
 
       if (clickTarget) {
-        clickTarget.click();
-        console.log('WhatsApp Sync: Clicked contact result');
-        await new Promise(r => setTimeout(r, 500));
+        // Użyj REAL_CLICK przez debugger API (tak jak przy sync wszystkich czatów)
+        const rect = clickTarget.getBoundingClientRect();
+        const centerX = Math.round(rect.left + rect.width / 2);
+        const centerY = Math.round(rect.top + rect.height / 2);
 
-        // Sprawdź czy otworzyło się okno czatu (czy jest #main)
+        const tabId = await getTabId();
+        if (tabId) {
+          await new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+              type: 'REAL_CLICK',
+              x: centerX,
+              y: centerY,
+              tabId: tabId
+            }, resolve);
+          });
+          console.log('WhatsApp Sync: Real click at', centerX, centerY);
+        } else {
+          // Fallback - zwykłe kliknięcie
+          clickTarget.click();
+          console.log('WhatsApp Sync: Fallback click');
+        }
+
+        await new Promise(r => setTimeout(r, 800));
+
+        // Sprawdź czy otworzyło się okno czatu (czy jest #main z headerem)
         const mainEl = document.querySelector('#main');
-        if (mainEl) {
+        const header = mainEl?.querySelector('header') ||
+                       mainEl?.querySelector('[data-testid="conversation-header"]');
+        if (header) {
           console.log('WhatsApp Sync: Chat opened successfully');
           return true;
         }
