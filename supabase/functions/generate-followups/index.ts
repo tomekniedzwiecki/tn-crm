@@ -120,6 +120,8 @@ ZAWSZE pisz po polsku, poprawnie gramatycznie. Napisz TYLKO tekst wiadomości.`
 }
 
 serve(async (req) => {
+  console.log('generate-followups: Request received', req.method)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -128,6 +130,8 @@ serve(async (req) => {
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    console.log('generate-followups: Env check - API key:', !!ANTHROPIC_API_KEY, 'URL:', !!SUPABASE_URL)
 
     if (!ANTHROPIC_API_KEY) {
       throw new Error('ANTHROPIC_API_KEY not configured')
@@ -140,6 +144,7 @@ serve(async (req) => {
 
     const body: RequestBody = await req.json()
     const { stage, generated_by } = body
+    console.log('generate-followups: Body parsed - stage:', stage, 'by:', generated_by)
 
     if (!stage) {
       throw new Error('Stage is required')
@@ -148,14 +153,16 @@ serve(async (req) => {
     const sellerName = generated_by === 'maciek' ? 'Maciek' : 'Tomek'
 
     // Get guidelines
+    console.log('generate-followups: Getting guidelines...')
     const guidelines = await getGuidelines(supabase)
+    console.log('generate-followups: Guidelines loaded, length:', guidelines.length)
 
     // Get leads in stage that need follow-up
-    // We need to calculate needs_followup server-side
     const FOLLOWUP_STAGES = ['contacted', 'qualified', 'proposal', 'negotiation', 'waiting']
     const FOLLOWUP_HOURS = 24
 
     if (!FOLLOWUP_STAGES.includes(stage)) {
+      console.log('generate-followups: Stage not eligible:', stage)
       return new Response(
         JSON.stringify({ success: true, generated: 0, message: 'Stage not eligible for follow-ups' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -163,13 +170,19 @@ serve(async (req) => {
     }
 
     // Get leads in this stage with phone numbers
+    console.log('generate-followups: Fetching leads for stage:', stage)
     const { data: leadsData, error: leadsError } = await supabase
       .from('leads')
       .select('id, name, phone, status, expected_close, weekly_hours, experience, target_income, open_question')
       .eq('status', stage)
       .not('phone', 'is', null)
 
-    if (leadsError) throw leadsError
+    if (leadsError) {
+      console.error('generate-followups: Leads error:', leadsError)
+      throw leadsError
+    }
+
+    console.log('generate-followups: Found leads:', leadsData?.length || 0)
 
     if (!leadsData || leadsData.length === 0) {
       return new Response(

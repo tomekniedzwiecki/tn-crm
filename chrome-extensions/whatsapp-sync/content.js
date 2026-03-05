@@ -3852,71 +3852,74 @@
     }
   }
 
-  // Otwórz czat z konkretnym numerem
+  // Otwórz czat z konkretnym numerem - przez przycisk "nowy czat"
   async function openChatByPhone(phoneNumber) {
     console.log('WhatsApp Sync: Opening chat for', phoneNumber);
 
-    // Najpierw spróbuj znaleźć na widocznej liście
-    const sidePanel = document.querySelector('#pane-side');
-    if (!sidePanel) {
-      console.log('WhatsApp Sync: No side panel found');
+    // Krok 1: Kliknij przycisk "Nowy czat" (ikona + w headerze)
+    const newChatBtn = document.querySelector('[data-testid="chat"]') ||
+                       document.querySelector('[data-icon="chat"]') ||
+                       document.querySelector('[data-testid="menu-bar-chat"]') ||
+                       document.querySelector('span[data-icon="new-chat"]')?.closest('button') ||
+                       document.querySelector('[aria-label="Nowy czat"]') ||
+                       document.querySelector('[title="Nowy czat"]');
+
+    if (!newChatBtn) {
+      console.log('WhatsApp Sync: New chat button not found, trying header buttons');
+      // Spróbuj znaleźć w headerze
+      const headerBtns = document.querySelectorAll('header button, header [role="button"]');
+      console.log('WhatsApp Sync: Found', headerBtns.length, 'header buttons');
       return false;
     }
 
-    // Funkcja do szukania czatu
-    const findAndClickChat = () => {
-      const chatItems = sidePanel.querySelectorAll('[data-testid="cell-frame-container"]');
-      for (const item of chatItems) {
-        const phone = getPhoneFromChatItem(item);
-        if (phone === phoneNumber) {
-          const clickTarget = item.closest('[tabindex="-1"]') || item;
-          clickTarget.click();
-          console.log('WhatsApp Sync: Found and clicked chat');
-          return true;
-        }
-      }
+    newChatBtn.click();
+    console.log('WhatsApp Sync: Clicked new chat button');
+    await new Promise(r => setTimeout(r, 600));
+
+    // Krok 2: Znajdź pole wyszukiwania kontaktów
+    const searchInput = document.querySelector('[data-testid="contact-search-input"]') ||
+                        document.querySelector('[data-testid="chat-list-search"]') ||
+                        document.querySelector('div[contenteditable="true"][data-tab="3"]') ||
+                        document.querySelector('#app div[contenteditable="true"][role="textbox"]');
+
+    if (!searchInput) {
+      console.log('WhatsApp Sync: Search input not found after clicking new chat');
+      const backBtn = document.querySelector('[data-testid="back"]') ||
+                      document.querySelector('[data-icon="back"]')?.closest('button');
+      if (backBtn) backBtn.click();
       return false;
-    };
-
-    // Spróbuj znaleźć na widocznej liście
-    if (findAndClickChat()) return true;
-
-    // Scrolluj listę i szukaj (max 10 scrolli)
-    for (let i = 0; i < 10; i++) {
-      sidePanel.scrollTop += 500;
-      await new Promise(r => setTimeout(r, 300));
-      if (findAndClickChat()) return true;
     }
 
-    // Fallback: użyj wa.me linku (otwiera czat bezpośrednio)
-    console.log('WhatsApp Sync: Using wa.me fallback');
-    const waLink = `https://wa.me/${phoneNumber}`;
+    // Krok 3: Wpisz numer telefonu
+    searchInput.focus();
+    searchInput.click();
+    await new Promise(r => setTimeout(r, 300));
 
-    // Użyj search bar do otwarcia czatu
-    const searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
-                      document.querySelector('[contenteditable="true"][data-tab="3"]');
-    if (searchBox) {
-      searchBox.focus();
-      searchBox.click();
-      await new Promise(r => setTimeout(r, 200));
+    // Wyczyść i wpisz numer (format: +48 xxx xxx xxx)
+    const formattedPhone = phoneNumber.startsWith('48') ? '+' + phoneNumber : phoneNumber;
+    searchInput.innerHTML = '';
+    document.execCommand('insertText', false, formattedPhone);
+    console.log('WhatsApp Sync: Entered phone:', formattedPhone);
+    await new Promise(r => setTimeout(r, 1000));
 
-      // Wklej numer
-      document.execCommand('insertText', false, phoneNumber);
+    // Krok 4: Znajdź i kliknij wynik z tym numerem
+    const contactResults = document.querySelectorAll('[data-testid="cell-frame-container"]');
+    console.log('WhatsApp Sync: Found', contactResults.length, 'results');
+
+    if (contactResults.length > 0) {
+      // Kliknij pierwszy wynik
+      const clickTarget = contactResults[0].closest('[tabindex="-1"]') || contactResults[0];
+      clickTarget.click();
+      console.log('WhatsApp Sync: Clicked contact result');
       await new Promise(r => setTimeout(r, 500));
-
-      // Sprawdź czy pojawił się wynik
-      const searchResult = document.querySelector('[data-testid="cell-frame-container"]');
-      if (searchResult) {
-        searchResult.click();
-
-        // Wyczyść search
-        await new Promise(r => setTimeout(r, 300));
-        const clearBtn = document.querySelector('[data-testid="x-alt"]');
-        if (clearBtn) clearBtn.click();
-
-        return true;
-      }
+      return true;
     }
+
+    // Nie znaleziono - zamknij panel nowego czatu
+    console.log('WhatsApp Sync: No results found');
+    const backBtn = document.querySelector('[data-testid="back"]') ||
+                    document.querySelector('[data-icon="back"]')?.closest('button');
+    if (backBtn) backBtn.click();
 
     return false;
   }
