@@ -461,11 +461,20 @@ serve(async (req) => {
     const result = await response.json()
     const generatedReply = result.content[0]?.text || ''
 
+    // Oblicz koszt (Claude Opus 4: $15/M input, $75/M output)
+    const inputTokens = result.usage?.input_tokens || 0
+    const outputTokens = result.usage?.output_tokens || 0
+    const costUSD = (inputTokens * 15 / 1_000_000) + (outputTokens * 75 / 1_000_000)
+
     return new Response(
       JSON.stringify({
         success: true,
         reply: generatedReply.trim(),
-        tokens_used: result.usage?.output_tokens || 0,
+        usage: {
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cost_usd: Math.round(costUSD * 10000) / 10000 // 4 decimal places
+        },
         matched_scenario: matchedScenario ? {
           id: matchedScenario.id,
           name: matchedScenario.name

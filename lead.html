@@ -2491,21 +2491,25 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 textEl.textContent = result.reply;
 
                 // Show metadata
-                if (result.matched_scenario || result.context_summary) {
-                    const meta = [];
-                    if (result.matched_scenario?.name) {
-                        meta.push(`Scenariusz: ${result.matched_scenario.name}`);
-                    }
-                    if (result.context_summary?.lead_status) {
-                        meta.push(`Status: ${result.context_summary.lead_status}`);
-                    }
-                    if (result.analysis?.days_since_last_message > 0) {
-                        meta.push(`Ostatnia wiadomość: ${result.analysis.days_since_last_message} dni temu`);
-                    }
-                    if (meta.length > 0) {
-                        metaEl.textContent = meta.join(' • ');
-                        metaEl.classList.remove('hidden');
-                    }
+                const meta = [];
+                if (result.matched_scenario?.name) {
+                    meta.push(`Scenariusz: ${result.matched_scenario.name}`);
+                }
+                if (result.context_summary?.lead_status) {
+                    meta.push(`Status: ${result.context_summary.lead_status}`);
+                }
+                if (result.analysis?.days_since_last_message > 0) {
+                    meta.push(`Ostatnia wiadomość: ${result.analysis.days_since_last_message} dni temu`);
+                }
+                // Koszt API
+                if (result.usage) {
+                    const tokens = result.usage.input_tokens + result.usage.output_tokens;
+                    const costPLN = (result.usage.cost_usd * 4.0).toFixed(2); // ~4 PLN/USD
+                    meta.push(`${tokens} tokenów (~${costPLN} zł)`);
+                }
+                if (meta.length > 0) {
+                    metaEl.textContent = meta.join(' • ');
+                    metaEl.classList.remove('hidden');
                 }
 
                 container.classList.remove('hidden');
