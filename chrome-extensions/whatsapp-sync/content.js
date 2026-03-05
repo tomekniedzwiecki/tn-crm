@@ -3856,6 +3856,10 @@
   async function openChatByPhone(phoneNumber) {
     console.log('WhatsApp Sync: Opening chat for', phoneNumber);
 
+    // Zamknij panel follow-upów żeby nie przeszkadzał
+    closeFollowupsPanel();
+    await new Promise(r => setTimeout(r, 300));
+
     // Krok 1: Kliknij przycisk "Nowy czat" (ikona + w headerze)
     const newChatBtn = document.querySelector('[data-testid="chat"]') ||
                        document.querySelector('[data-icon="chat"]') ||
@@ -3900,56 +3904,42 @@
     searchInput.innerHTML = '';
     document.execCommand('insertText', false, formattedPhone);
     console.log('WhatsApp Sync: Entered phone:', formattedPhone);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1500));
 
-    // Krok 4: Poczekaj na wyniki i kliknij
-    // Wyniki pojawiają się w sekcji "Spoza Twoich kontaktów"
+    // Krok 4: Znajdź wynik i kliknij używając REAL_CLICK
     for (let attempt = 0; attempt < 5; attempt++) {
       await new Promise(r => setTimeout(r, 500));
 
-      // Szukaj różnych typów wyników
-      const contactResults = document.querySelectorAll('[data-testid="cell-frame-container"]');
-      const listItems = document.querySelectorAll('[data-testid="contact-list-item"]');
-      const chatListItems = document.querySelectorAll('[data-testid="list-item"]');
+      // Szukaj elementu z aria-selected (wynik wyszukiwania)
+      const ariaSelected = document.querySelectorAll('div[aria-selected]');
+      console.log('WhatsApp Sync: Attempt', attempt + 1, '- aria-selected elements:', ariaSelected.length);
 
-      console.log('WhatsApp Sync: Attempt', attempt + 1, '- cell-frame:', contactResults.length, 'contact-list:', listItems.length, 'list-item:', chatListItems.length);
-
-      // Spróbuj różne selektory
+      // Znajdź element zawierający numer telefonu
       let clickTarget = null;
+      const phone9 = phoneNumber.slice(-9);
 
-      // Najpierw szukaj elementu z numerem telefonu w tekście
-      const allClickables = document.querySelectorAll('[tabindex="-1"], [role="listitem"], [role="option"]');
-      for (const el of allClickables) {
+      for (const el of ariaSelected) {
         const text = el.textContent || '';
-        // Sprawdź czy element zawiera numer (ostatnie 9 cyfr)
-        const phone9 = phoneNumber.slice(-9);
-        if (text.includes(phone9) || text.includes(formattedPhone)) {
+        if (text.includes(phone9)) {
           clickTarget = el;
-          console.log('WhatsApp Sync: Found element with phone number');
+          console.log('WhatsApp Sync: Found aria-selected with phone');
           break;
         }
       }
 
-      // Fallback na cell-frame-container
-      if (!clickTarget && contactResults.length > 0) {
-        clickTarget = contactResults[0].closest('[tabindex="-1"]') || contactResults[0];
-      }
-
-      // Fallback na contact-list-item
-      if (!clickTarget && listItems.length > 0) {
-        clickTarget = listItems[0];
-      }
-
-      // Fallback na list-item
-      if (!clickTarget && chatListItems.length > 0) {
-        clickTarget = chatListItems[0];
+      // Fallback - pierwszy aria-selected
+      if (!clickTarget && ariaSelected.length > 0) {
+        clickTarget = ariaSelected[0];
+        console.log('WhatsApp Sync: Using first aria-selected');
       }
 
       if (clickTarget) {
-        // Użyj REAL_CLICK przez debugger API (tak jak przy sync wszystkich czatów)
+        // Użyj REAL_CLICK przez debugger API
         const rect = clickTarget.getBoundingClientRect();
         const centerX = Math.round(rect.left + rect.width / 2);
         const centerY = Math.round(rect.top + rect.height / 2);
+
+        console.log('WhatsApp Sync: Element rect:', rect.left, rect.top, rect.width, rect.height);
 
         const tabId = await getTabId();
         if (tabId) {
@@ -3963,17 +3953,15 @@
           });
           console.log('WhatsApp Sync: Real click at', centerX, centerY);
         } else {
-          // Fallback - zwykłe kliknięcie
           clickTarget.click();
           console.log('WhatsApp Sync: Fallback click');
         }
 
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
 
-        // Sprawdź czy otworzyło się okno czatu (czy jest #main z headerem)
+        // Sprawdź czy otworzyło się okno czatu
         const mainEl = document.querySelector('#main');
-        const header = mainEl?.querySelector('header') ||
-                       mainEl?.querySelector('[data-testid="conversation-header"]');
+        const header = mainEl?.querySelector('header');
         if (header) {
           console.log('WhatsApp Sync: Chat opened successfully');
           return true;
@@ -3981,10 +3969,9 @@
       }
     }
 
-    // Nie znaleziono - zamknij panel nowego czatu
-    console.log('WhatsApp Sync: No results found after 5 attempts');
-    const backBtn = document.querySelector('[data-testid="back"]') ||
-                    document.querySelector('[data-icon="back"]')?.closest('button');
+    // Nie znaleziono - zamknij panel
+    console.log('WhatsApp Sync: Failed to open chat after 5 attempts');
+    const backBtn = document.querySelector('[data-testid="back"]');
     if (backBtn) backBtn.click();
 
     return false;
