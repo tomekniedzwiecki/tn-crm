@@ -3905,7 +3905,7 @@
     btn.onmouseout = () => btn.style.transform = 'scale(1)';
 
     btn.onclick = async () => {
-      btn.innerHTML = '⏳ Regeneruję...';
+      btn.innerHTML = '⏳ Sync...';
       btn.disabled = true;
 
       try {
@@ -3915,9 +3915,17 @@
         const contactName = getCurrentChatName();
         const messages = getMessagesFromChat();
 
+        console.log('WhatsApp Sync: Regenerating - found', messages.length, 'messages');
+
         if (phoneNumber && messages.length > 0) {
-          await syncMessages(messages, phoneNumber, contactName);
+          const syncResult = await syncMessages(messages, phoneNumber, contactName);
+          console.log('WhatsApp Sync: Sync result', syncResult);
         }
+
+        // Poczekaj chwilę żeby baza zdążyła zapisać
+        await new Promise(r => setTimeout(r, 500));
+
+        btn.innerHTML = '⏳ Generuję...';
 
         // 2. Wywołaj regenerację
         const result = await regenerateFollowup(currentFollowupId);
