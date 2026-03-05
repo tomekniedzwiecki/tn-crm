@@ -3374,6 +3374,694 @@
     }
   }
 
+  // =====================================================
+  // FOLLOW-UPS PANEL
+  // =====================================================
+
+  let followupsData = [];
+  let followupsFilter = 'all';
+  let followupsPanelVisible = false;
+
+  // Style dla panelu follow-upów
+  function injectFollowupsStyles() {
+    if (document.getElementById('crm-followups-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'crm-followups-styles';
+    style.textContent = `
+      #crm-followups-toggle {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        border: none;
+        border-radius: 0 8px 8px 0;
+        padding: 12px 8px;
+        cursor: pointer;
+        z-index: 10000;
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        font-size: 12px;
+        font-weight: 600;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+        transition: all 0.2s;
+      }
+      #crm-followups-toggle:hover {
+        padding-right: 12px;
+      }
+      #crm-followups-toggle .count-badge {
+        background: #fff;
+        color: #d97706;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 10px;
+        margin-top: 6px;
+        display: inline-block;
+      }
+      #crm-followups-panel {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 320px;
+        height: 100vh;
+        background: #1a1a1a;
+        border-right: 1px solid #333;
+        z-index: 10001;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      #crm-followups-panel.visible {
+        transform: translateX(0);
+      }
+      .followups-header {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .followups-header h2 {
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .followups-close {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 4px;
+        color: white;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        font-size: 18px;
+      }
+      .followups-filters {
+        padding: 12px;
+        border-bottom: 1px solid #333;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .followups-filter-btn {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 16px;
+        padding: 4px 10px;
+        font-size: 11px;
+        color: #888;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .followups-filter-btn:hover {
+        border-color: #666;
+        color: #fff;
+      }
+      .followups-filter-btn.active {
+        background: #f59e0b;
+        border-color: #f59e0b;
+        color: #000;
+      }
+      .followups-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+      .followup-card {
+        background: #2a2a2a;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 1px solid #333;
+      }
+      .followup-card:hover {
+        border-color: #444;
+      }
+      .followup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      .followup-contact {
+        font-size: 13px;
+        font-weight: 500;
+        color: #fff;
+      }
+      .followup-status {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #3f3f46;
+        color: #a1a1aa;
+      }
+      .followup-message {
+        background: #1a1a1a;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 13px;
+        color: #e5e5e5;
+        line-height: 1.4;
+        margin-bottom: 8px;
+        white-space: pre-wrap;
+      }
+      .followup-meta {
+        font-size: 10px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+      .followup-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .followup-btn {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .followup-btn-insert {
+        background: #25D366;
+        color: white;
+      }
+      .followup-btn-insert:hover {
+        background: #1da851;
+      }
+      .followup-btn-skip {
+        background: #3f3f46;
+        color: #a1a1aa;
+      }
+      .followup-btn-skip:hover {
+        background: #52525b;
+        color: #fff;
+      }
+      .followups-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+      }
+      .followups-empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+      .followups-actions-bar {
+        padding: 12px;
+        border-top: 1px solid #333;
+        background: #222;
+      }
+      .followups-generate-btn {
+        width: 100%;
+        padding: 10px;
+        background: linear-gradient(135deg, #8B5CF6, #6366F1);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .followups-generate-btn:hover {
+        filter: brightness(1.1);
+      }
+      .followups-generate-btn:disabled {
+        background: #555;
+        cursor: not-allowed;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Pobierz follow-upy z bazy
+  async function loadFollowups() {
+    await loadConfig();
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return [];
+
+    try {
+      const response = await fetch(
+        `${CONFIG.SUPABASE_URL}/rest/v1/whatsapp_followups?status=eq.pending&order=created_at.desc`,
+        {
+          headers: {
+            'apikey': CONFIG.SUPABASE_KEY,
+            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch followups');
+      return await response.json();
+    } catch (err) {
+      console.error('WhatsApp Sync: Error loading followups', err);
+      return [];
+    }
+  }
+
+  // Oznacz follow-up jako wysłany
+  async function markFollowupSent(followupId) {
+    await loadConfig();
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return false;
+
+    try {
+      const response = await fetch(
+        `${CONFIG.SUPABASE_URL}/rest/v1/whatsapp_followups?id=eq.${followupId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': CONFIG.SUPABASE_KEY,
+            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            status: 'sent',
+            sent_at: new Date().toISOString()
+          })
+        }
+      );
+
+      return response.ok;
+    } catch (err) {
+      console.error('WhatsApp Sync: Error marking followup sent', err);
+      return false;
+    }
+  }
+
+  // Oznacz follow-up jako pominięty
+  async function markFollowupSkipped(followupId) {
+    await loadConfig();
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return false;
+
+    try {
+      const response = await fetch(
+        `${CONFIG.SUPABASE_URL}/rest/v1/whatsapp_followups?id=eq.${followupId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': CONFIG.SUPABASE_KEY,
+            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            status: 'skipped'
+          })
+        }
+      );
+
+      return response.ok;
+    } catch (err) {
+      console.error('WhatsApp Sync: Error marking followup skipped', err);
+      return false;
+    }
+  }
+
+  // Wstaw wiadomość do czatu
+  function insertMessageToChat(text) {
+    const inputSelectors = [
+      '[data-testid="conversation-compose-box-input"]',
+      'div[contenteditable="true"][data-tab="10"]',
+      '#main footer div[contenteditable="true"]',
+      'div[contenteditable="true"][role="textbox"]'
+    ];
+
+    let inputEl = null;
+    for (const sel of inputSelectors) {
+      inputEl = document.querySelector(sel);
+      if (inputEl) break;
+    }
+
+    if (inputEl) {
+      inputEl.focus();
+      document.execCommand('insertText', false, text);
+      return true;
+    }
+
+    return false;
+  }
+
+  // Otwórz czat z konkretnym numerem
+  async function openChatByPhone(phoneNumber) {
+    // Znajdź czat na liście po numerze telefonu
+    const sidePanel = document.querySelector('#pane-side');
+    if (!sidePanel) return false;
+
+    const chatItems = sidePanel.querySelectorAll('[data-testid="cell-frame-container"]');
+
+    for (const item of chatItems) {
+      const phone = getPhoneFromChatItem(item);
+      if (phone === phoneNumber) {
+        // Kliknij w czat
+        const clickTarget = item.closest('[tabindex="-1"]') || item;
+        clickTarget.click();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Renderuj panel follow-upów
+  function renderFollowupsPanel() {
+    let panel = document.getElementById('crm-followups-panel');
+
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'crm-followups-panel';
+      document.body.appendChild(panel);
+    }
+
+    // Filtruj dane
+    const filteredData = followupsFilter === 'all'
+      ? followupsData
+      : followupsData.filter(f => f.lead_status === followupsFilter);
+
+    // Zbierz unikalne statusy
+    const statuses = [...new Set(followupsData.map(f => f.lead_status).filter(Boolean))];
+
+    panel.innerHTML = `
+      <div class="followups-header">
+        <h2>📋 Follow-upy (${followupsData.length})</h2>
+        <button class="followups-close" onclick="document.getElementById('crm-followups-panel').classList.remove('visible')">×</button>
+      </div>
+
+      <div class="followups-filters">
+        <button class="followups-filter-btn ${followupsFilter === 'all' ? 'active' : ''}" data-filter="all">Wszystkie</button>
+        ${statuses.map(s => `
+          <button class="followups-filter-btn ${followupsFilter === s ? 'active' : ''}" data-filter="${s}">${s}</button>
+        `).join('')}
+      </div>
+
+      <div class="followups-list">
+        ${filteredData.length === 0 ? `
+          <div class="followups-empty">
+            <div class="followups-empty-icon">✅</div>
+            <div>Brak zaplanowanych follow-upów</div>
+          </div>
+        ` : filteredData.map(f => `
+          <div class="followup-card" data-id="${f.id}" data-phone="${f.phone_number}">
+            <div class="followup-header">
+              <div class="followup-contact">${f.contact_name || f.phone_number}</div>
+              <div class="followup-status">${f.lead_status || '?'}</div>
+            </div>
+            <div class="followup-message">${f.message_text}</div>
+            <div class="followup-meta">
+              ${f.hours_since_contact ? `${f.hours_since_contact}h od kontaktu • ` : ''}
+              ${new Date(f.created_at).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div class="followup-actions">
+              <button class="followup-btn followup-btn-insert" data-action="insert">✉️ Wstaw do czatu</button>
+              <button class="followup-btn followup-btn-skip" data-action="skip">Pomiń</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="followups-actions-bar">
+        <button class="followups-generate-btn" id="btn-generate-followups">
+          🤖 Generuj nowe follow-upy
+        </button>
+      </div>
+    `;
+
+    // Obsługa filtrów
+    panel.querySelectorAll('.followups-filter-btn').forEach(btn => {
+      btn.onclick = () => {
+        followupsFilter = btn.dataset.filter;
+        renderFollowupsPanel();
+      };
+    });
+
+    // Obsługa akcji na kartach
+    panel.querySelectorAll('.followup-card').forEach(card => {
+      const id = card.dataset.id;
+      const phone = card.dataset.phone;
+      const message = card.querySelector('.followup-message').textContent;
+
+      card.querySelector('[data-action="insert"]').onclick = async () => {
+        // Najpierw otwórz czat z tym numerem
+        const chatOpened = await openChatByPhone(phone);
+
+        if (!chatOpened) {
+          alert('Nie znaleziono czatu z tym numerem. Otwórz go ręcznie.');
+          return;
+        }
+
+        // Poczekaj na otwarcie czatu
+        await new Promise(r => setTimeout(r, 500));
+
+        // Wstaw wiadomość
+        const inserted = insertMessageToChat(message);
+
+        if (inserted) {
+          // Oznacz jako wysłane
+          await markFollowupSent(id);
+
+          // Odśwież listę
+          followupsData = await loadFollowups();
+          renderFollowupsPanel();
+          updateToggleBadge();
+
+          // Auto-sync po 3 sekundach (daj czas na wysłanie)
+          setTimeout(async () => {
+            // Sprawdź czy wiadomość została wysłana
+            const msgs = getMessagesFromChat();
+            if (msgs.length > 0) {
+              const lastMsg = msgs[msgs.length - 1];
+              // Jeśli ostatnia wiadomość to nasza - sync
+              if (lastMsg.direction === 'outbound' &&
+                  lastMsg.text.includes(message.substring(0, 20))) {
+                await syncCurrentChat();
+              }
+            }
+          }, 3000);
+        } else {
+          alert('Nie udało się wstawić wiadomości. Spróbuj ponownie.');
+        }
+      };
+
+      card.querySelector('[data-action="skip"]').onclick = async () => {
+        await markFollowupSkipped(id);
+        followupsData = await loadFollowups();
+        renderFollowupsPanel();
+        updateToggleBadge();
+      };
+    });
+
+    // Obsługa generowania
+    panel.querySelector('#btn-generate-followups').onclick = () => {
+      showGenerateFollowupsModal();
+    };
+
+    if (followupsPanelVisible) {
+      panel.classList.add('visible');
+    }
+  }
+
+  // Aktualizuj badge na przycisku toggle
+  function updateToggleBadge() {
+    const toggle = document.getElementById('crm-followups-toggle');
+    if (toggle) {
+      const badge = toggle.querySelector('.count-badge');
+      if (badge) {
+        badge.textContent = followupsData.length;
+        badge.style.display = followupsData.length > 0 ? 'inline-block' : 'none';
+      }
+    }
+  }
+
+  // Modal do generowania follow-upów
+  function showGenerateFollowupsModal() {
+    // Użyj istniejących etapów pipeline
+    const stages = [
+      { id: 'contacted', name: 'Skontaktowany' },
+      { id: 'qualified', name: 'Zakwalifikowany' },
+      { id: 'proposal', name: 'Propozycja' },
+      { id: 'negotiation', name: 'Negocjacje' },
+      { id: 'waiting', name: 'Oczekiwanie' }
+    ];
+
+    const modal = document.createElement('div');
+    modal.id = 'crm-generate-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10002;
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        background: #1a1a1a;
+        border-radius: 12px;
+        padding: 24px;
+        width: 320px;
+        border: 1px solid #333;
+      ">
+        <h3 style="color: #fff; font-size: 16px; margin: 0 0 16px;">🤖 Generuj follow-upy</h3>
+
+        <p style="color: #888; font-size: 12px; margin-bottom: 16px;">
+          Wybierz etap pipeline dla którego chcesz wygenerować follow-upy AI.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+          ${stages.map((s, i) => `
+            <label style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding: 10px;
+              background: #2a2a2a;
+              border-radius: 8px;
+              cursor: pointer;
+              border: 1px solid #333;
+            ">
+              <input type="radio" name="generate-stage" value="${s.id}" ${i === 0 ? 'checked' : ''} style="accent-color: #f59e0b;">
+              <span style="color: #fff; font-size: 13px;">${s.name}</span>
+            </label>
+          `).join('')}
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-generate-cancel" style="
+            flex: 1;
+            padding: 10px;
+            background: #333;
+            border: none;
+            border-radius: 8px;
+            color: #888;
+            font-size: 13px;
+            cursor: pointer;
+          ">Anuluj</button>
+          <button id="btn-generate-confirm" style="
+            flex: 1;
+            padding: 10px;
+            background: linear-gradient(135deg, #8B5CF6, #6366F1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+          ">Generuj</button>
+        </div>
+
+        <div id="generate-status" style="margin-top: 12px; font-size: 12px; color: #888; text-align: center; display: none;"></div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btn-generate-cancel').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+    modal.querySelector('#btn-generate-confirm').onclick = async () => {
+      const stage = modal.querySelector('input[name="generate-stage"]:checked').value;
+      const statusEl = modal.querySelector('#generate-status');
+      const confirmBtn = modal.querySelector('#btn-generate-confirm');
+
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Generowanie...';
+      statusEl.style.color = '#888';
+      confirmBtn.disabled = true;
+
+      try {
+        const response = await fetch(
+          `${CONFIG.SUPABASE_URL}/functions/v1/generate-followups`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
+            },
+            body: JSON.stringify({
+              stage,
+              generated_by: CONFIG.SYNC_USER || 'tomek'
+            })
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+          statusEl.textContent = `✅ Wygenerowano ${result.generated} follow-upów`;
+          statusEl.style.color = '#25D366';
+
+          // Odśwież listę
+          followupsData = await loadFollowups();
+          renderFollowupsPanel();
+          updateToggleBadge();
+
+          setTimeout(() => modal.remove(), 1500);
+        } else {
+          throw new Error(result.error || 'Unknown error');
+        }
+      } catch (err) {
+        statusEl.textContent = `❌ Błąd: ${err.message}`;
+        statusEl.style.color = '#ff5252';
+        confirmBtn.disabled = false;
+      }
+    };
+  }
+
+  // Inicjalizacja panelu follow-upów
+  async function initFollowupsPanel() {
+    await loadConfig();
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return;
+
+    injectFollowupsStyles();
+
+    // Pobierz dane
+    followupsData = await loadFollowups();
+
+    // Stwórz przycisk toggle
+    let toggle = document.getElementById('crm-followups-toggle');
+    if (!toggle) {
+      toggle = document.createElement('button');
+      toggle.id = 'crm-followups-toggle';
+      toggle.innerHTML = `
+        📋 Follow-up
+        <span class="count-badge" style="${followupsData.length === 0 ? 'display:none' : ''}">${followupsData.length}</span>
+      `;
+      document.body.appendChild(toggle);
+
+      toggle.onclick = () => {
+        followupsPanelVisible = !followupsPanelVisible;
+        const panel = document.getElementById('crm-followups-panel');
+        if (panel) {
+          panel.classList.toggle('visible', followupsPanelVisible);
+        }
+      };
+    }
+
+    // Renderuj panel
+    renderFollowupsPanel();
+
+    // Odświeżaj co 30 sekund
+    setInterval(async () => {
+      followupsData = await loadFollowups();
+      renderFollowupsPanel();
+      updateToggleBadge();
+    }, 30000);
+  }
+
+  // =====================================================
+  // END FOLLOW-UPS PANEL
+  // =====================================================
+
   // Inicjalizacja
   async function init() {
     console.log('WhatsApp CRM Sync: Initializing...');
@@ -3405,6 +4093,8 @@
           setTimeout(injectSyncButton, 1000);
           // Obserwuj listę czatów i dodaj wskaźniki sync
           observeChatList();
+          // Panel follow-upów
+          setTimeout(initFollowupsPanel, 2000);
           return;
         }
       }
@@ -3415,6 +4105,7 @@
         observeChatChanges();
         setTimeout(injectSyncButton, 1000);
         observeChatList();
+        setTimeout(initFollowupsPanel, 2000);
       }
     }, 1000);
   }

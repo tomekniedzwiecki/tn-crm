@@ -719,8 +719,10 @@
         const FOLLOWUP_HOURS = 24; // Hours without activity = needs follow-up
 
         async function loadFollowupStatus() {
-            // Get lead IDs that are in follow-up stages
-            const relevantLeads = leads.filter(l => FOLLOWUP_STAGES.includes(l.status));
+            // Get lead IDs that are in follow-up stages OR waiting stage
+            const relevantLeads = leads.filter(l =>
+                FOLLOWUP_STAGES.includes(l.status) || l.status === 'waiting'
+            );
             if (relevantLeads.length === 0) return;
 
             // Fetch last message time for each lead
@@ -745,9 +747,38 @@
 
             // Calculate needs_followup for each lead
             const now = new Date();
-            const thresholdMs = FOLLOWUP_HOURS * 60 * 60 * 1000;
 
             leads.forEach(lead => {
+                // Special case: waiting stage
+                if (lead.status === 'waiting') {
+                    // Only show follow-up if expected_close has passed
+                    if (!lead.expected_close) {
+                        lead.needs_followup = false;
+                        return;
+                    }
+
+                    const expectedClose = new Date(lead.expected_close);
+                    if (expectedClose > now) {
+                        // Expected close not yet passed
+                        lead.needs_followup = false;
+                        return;
+                    }
+
+                    // Expected close passed - check if no contact in 24h
+                    const lastMessage = lastMessageMap[lead.id];
+                    if (!lastMessage) {
+                        lead.needs_followup = true;
+                        lead.hours_since_contact = null;
+                    } else {
+                        const lastMsgTime = new Date(lastMessage);
+                        const hoursSince = (now - lastMsgTime) / (1000 * 60 * 60);
+                        lead.needs_followup = hoursSince > FOLLOWUP_HOURS;
+                        lead.hours_since_contact = Math.floor(hoursSince);
+                    }
+                    return;
+                }
+
+                // Standard follow-up stages
                 if (!FOLLOWUP_STAGES.includes(lead.status)) {
                     lead.needs_followup = false;
                     return;
@@ -765,6 +796,51 @@
                     lead.hours_since_contact = Math.floor(hoursSince);
                 }
             });
+        }
+
+        // Generate follow-ups for a specific stage
+        async function generateFollowupsForStage(stageId) {
+            const btn = document.querySelector(`[data-generate-followups="${stageId}"]`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i>';
+            }
+
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                const syncUser = user?.email?.includes('maciek') ? 'maciek' : 'tomek';
+
+                const response = await fetch(
+                    `${SUPABASE_URL}/functions/v1/generate-followups`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        },
+                        body: JSON.stringify({
+                            stage: stageId,
+                            generated_by: syncUser
+                        })
+                    }
+                );
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`✅ Wygenerowano ${result.generated} follow-upów\n\nOtwórz rozszerzenie WhatsApp aby je wysłać.`);
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+            } catch (err) {
+                console.error('Error generating followups:', err);
+                alert('❌ Błąd generowania follow-upów: ' + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-robot"></i>';
+                }
+            }
         }
 
         function renderPipeline() {
@@ -819,6 +895,10 @@
                 };
                 const colors = colorClasses[stage.color] || colorClasses.zinc;
 
+                // Check if stage can have follow-ups
+                const canHaveFollowups = [...FOLLOWUP_STAGES, 'waiting'].includes(stage.id);
+                const needsFollowupCount = stageLeads.filter(l => l.needs_followup).length;
+
                 return `
                     <div class="pipeline-column flex flex-col" data-stage="${stage.id}">
                         <!-- Column Header -->
@@ -830,6 +910,16 @@
                                 <span class="font-medium text-white text-sm">${stage.name}</span>
                                 <span class="text-[10px] ${colors.text} ${colors.bg} px-1.5 py-0.5 rounded font-mono">${stageLeads.length}</span>
                             </div>
+                            ${canHaveFollowups && needsFollowupCount > 0 ? `
+                                <button
+                                    data-generate-followups="${stage.id}"
+                                    onclick="generateFollowupsForStage('${stage.id}')"
+                                    class="flex items-center gap-1 px-2 py-1 text-[10px] bg-amber-500/10 text-amber-400 rounded hover:bg-amber-500/20 transition-colors"
+                                    title="Generuj follow-upy AI dla ${needsFollowupCount} leadów">
+                                    <i class="ph ph-robot"></i>
+                                    <span>${needsFollowupCount}</span>
+                                </button>
+                            ` : ''}
                         </div>
                         <div class="text-[10px] text-zinc-500 font-mono mb-3 px-1">${formatCurrency(stageValue)}</div>
 
