@@ -440,7 +440,7 @@ serve(async (req) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
         system: systemPrompt,
         messages: [
@@ -461,10 +461,10 @@ serve(async (req) => {
     const result = await response.json()
     const generatedReply = result.content[0]?.text || ''
 
-    // Oblicz koszt (Claude Opus 4: $15/M input, $75/M output)
+    // Oblicz koszt (Claude Haiku 4.5: $0.80/M input, $4/M output)
     const inputTokens = result.usage?.input_tokens || 0
     const outputTokens = result.usage?.output_tokens || 0
-    const costUSD = (inputTokens * 15 / 1_000_000) + (outputTokens * 75 / 1_000_000)
+    const costUSD = (inputTokens * 0.80 / 1_000_000) + (outputTokens * 4 / 1_000_000)
 
     return new Response(
       JSON.stringify({
