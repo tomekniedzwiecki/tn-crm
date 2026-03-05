@@ -15,8 +15,7 @@ const corsHeaders = {
 
 const FOLLOWUP_STAGES = ['contacted', 'qualified', 'proposal', 'negotiation', 'waiting']
 const DEFAULT_FOLLOWUP_HOURS = 24
-const MAX_FOLLOWUPS_PER_RUN = 20
-const RATE_LIMIT_MS = 1500 // 1.5s między requestami do Claude
+const RATE_LIMIT_MS = 1000 // 1s między requestami do Claude (bez limitu ilości)
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 2000
 
@@ -248,11 +247,6 @@ serve(async (req) => {
 
     // Przetwórz każdy etap
     for (const stage of FOLLOWUP_STAGES) {
-      if (totalGenerated >= MAX_FOLLOWUPS_PER_RUN) {
-        console.log('followups-cron: Reached max followups per run, stopping')
-        break
-      }
-
       console.log(`followups-cron: Processing stage ${stage}...`)
 
       // Pobierz leady w tym etapie
@@ -325,8 +319,6 @@ serve(async (req) => {
 
       // Generuj follow-upy
       for (const lead of leadsNeedingFollowup) {
-        if (totalGenerated >= MAX_FOLLOWUPS_PER_RUN) break
-
         // Sprawdź czy już ma pending followup
         if (await hasSimilarPendingFollowup(supabase, lead.id)) {
           stageSkipped++
