@@ -3902,21 +3902,65 @@
     console.log('WhatsApp Sync: Entered phone:', formattedPhone);
     await new Promise(r => setTimeout(r, 1000));
 
-    // Krok 4: Znajdź i kliknij wynik z tym numerem
-    const contactResults = document.querySelectorAll('[data-testid="cell-frame-container"]');
-    console.log('WhatsApp Sync: Found', contactResults.length, 'results');
-
-    if (contactResults.length > 0) {
-      // Kliknij pierwszy wynik
-      const clickTarget = contactResults[0].closest('[tabindex="-1"]') || contactResults[0];
-      clickTarget.click();
-      console.log('WhatsApp Sync: Clicked contact result');
+    // Krok 4: Poczekaj na wyniki i kliknij
+    // Wyniki pojawiają się w sekcji "Spoza Twoich kontaktów"
+    for (let attempt = 0; attempt < 5; attempt++) {
       await new Promise(r => setTimeout(r, 500));
-      return true;
+
+      // Szukaj różnych typów wyników
+      const contactResults = document.querySelectorAll('[data-testid="cell-frame-container"]');
+      const listItems = document.querySelectorAll('[data-testid="contact-list-item"]');
+      const chatListItems = document.querySelectorAll('[data-testid="list-item"]');
+
+      console.log('WhatsApp Sync: Attempt', attempt + 1, '- cell-frame:', contactResults.length, 'contact-list:', listItems.length, 'list-item:', chatListItems.length);
+
+      // Spróbuj różne selektory
+      let clickTarget = null;
+
+      // Najpierw szukaj elementu z numerem telefonu w tekście
+      const allClickables = document.querySelectorAll('[tabindex="-1"], [role="listitem"], [role="option"]');
+      for (const el of allClickables) {
+        const text = el.textContent || '';
+        // Sprawdź czy element zawiera numer (ostatnie 9 cyfr)
+        const phone9 = phoneNumber.slice(-9);
+        if (text.includes(phone9) || text.includes(formattedPhone)) {
+          clickTarget = el;
+          console.log('WhatsApp Sync: Found element with phone number');
+          break;
+        }
+      }
+
+      // Fallback na cell-frame-container
+      if (!clickTarget && contactResults.length > 0) {
+        clickTarget = contactResults[0].closest('[tabindex="-1"]') || contactResults[0];
+      }
+
+      // Fallback na contact-list-item
+      if (!clickTarget && listItems.length > 0) {
+        clickTarget = listItems[0];
+      }
+
+      // Fallback na list-item
+      if (!clickTarget && chatListItems.length > 0) {
+        clickTarget = chatListItems[0];
+      }
+
+      if (clickTarget) {
+        clickTarget.click();
+        console.log('WhatsApp Sync: Clicked contact result');
+        await new Promise(r => setTimeout(r, 500));
+
+        // Sprawdź czy otworzyło się okno czatu (czy jest #main)
+        const mainEl = document.querySelector('#main');
+        if (mainEl) {
+          console.log('WhatsApp Sync: Chat opened successfully');
+          return true;
+        }
+      }
     }
 
     // Nie znaleziono - zamknij panel nowego czatu
-    console.log('WhatsApp Sync: No results found');
+    console.log('WhatsApp Sync: No results found after 5 attempts');
     const backBtn = document.querySelector('[data-testid="back"]') ||
                     document.querySelector('[data-icon="back"]')?.closest('button');
     if (backBtn) backBtn.click();
