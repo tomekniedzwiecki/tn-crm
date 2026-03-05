@@ -3895,8 +3895,22 @@
     console.log('WhatsApp Sync: Pressed Enter');
     await new Promise(r => setTimeout(r, 1000));
 
-    // Sprawdź czy czat się otworzył
+    // Sprawdź czy czat się otworzył LUB czy jest "brak wyników"
     for (let i = 0; i < 5; i++) {
+      // Sprawdź czy jest komunikat "brak wyników" / "no contacts found"
+      const noResultsIndicator = document.querySelector('[data-testid="no-results"]') ||
+                                  document.querySelector('._aj-q') || // "Nie znaleziono kontaktów"
+                                  Array.from(document.querySelectorAll('span')).find(el =>
+                                    el.textContent?.toLowerCase().includes('nie znaleziono') ||
+                                    el.textContent?.toLowerCase().includes('no contacts') ||
+                                    el.textContent?.toLowerCase().includes('brak wyników')
+                                  );
+
+      if (noResultsIndicator) {
+        console.log('WhatsApp Sync: No WhatsApp account for this number');
+        return 'no_whatsapp';
+      }
+
       const mainEl = document.querySelector('#main');
       const header = mainEl?.querySelector('header');
       if (header) {
@@ -3994,8 +4008,15 @@
         // Najpierw otwórz czat z tym numerem
         const chatOpened = await openChatByPhone(phone);
 
+        if (chatOpened === 'no_whatsapp') {
+          alert('❌ Ta osoba nie ma WhatsApp.\n\nNumer: ' + phone);
+          // Zamknij okno wyszukiwania (Escape)
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          return;
+        }
+
         if (!chatOpened) {
-          alert('Nie znaleziono czatu z tym numerem. Otwórz go ręcznie.');
+          alert('Nie udało się otworzyć czatu. Spróbuj ręcznie.');
           return;
         }
 
