@@ -271,7 +271,8 @@ async function buildContext(supabase: any, phoneNumber: string, syncedBy: string
   return context
 }
 
-// Buduje system prompt z pełnym kontekstem
+// Buduje system prompt - UPROSZCZONY
+// Przekazuje całą wiedzę i scenariusze do AI - niech sam wybierze co użyć
 function buildSystemPrompt(context: any, syncedBy: string, matchedScenario: Scenario | null, customInstruction?: string): string {
   const parts: string[] = []
 
@@ -280,169 +281,82 @@ function buildSystemPrompt(context: any, syncedBy: string, matchedScenario: Scen
 Pomagasz pisać odpowiedzi na wiadomości WhatsApp od potencjalnych klientów.
 Piszesz w imieniu: ${syncedBy === 'tomek' ? 'Tomka' : 'Maćka'}.`)
 
-  // Wiedza o firmie
-  const companyKnowledge = context.knowledge.filter((k: KnowledgeEntry) => k.category === 'company')
-  if (companyKnowledge.length > 0) {
-    parts.push('\n## O FIRMIE')
-    companyKnowledge.forEach((k: KnowledgeEntry) => {
-      parts.push(`${k.title}: ${k.content}`)
-    })
-  }
-
-  // Styl komunikacji
-  const toneKnowledge = context.knowledge.filter((k: KnowledgeEntry) => k.category === 'tone')
-  if (toneKnowledge.length > 0) {
-    parts.push('\n## STYL KOMUNIKACJI')
-    toneKnowledge.forEach((k: KnowledgeEntry) => {
+  // === BAZA WIEDZY (wszystko w jednym miejscu) ===
+  if (context.knowledge && context.knowledge.length > 0) {
+    parts.push('\n## BAZA WIEDZY')
+    parts.push('Użyj tej wiedzy gdy będzie potrzebna:\n')
+    context.knowledge.forEach((k: KnowledgeEntry) => {
+      parts.push(`### ${k.title}`)
       parts.push(k.content)
+      parts.push('')
     })
   }
 
-  // Informacje o ofercie
-  if (context.offer) {
-    parts.push('\n## AKTUALNA OFERTA')
-    parts.push(`Nazwa: ${context.offer.name}`)
-    parts.push(`Cena: ${context.offer.price} zł`)
-    if (context.offer.description) {
-      parts.push(`Opis: ${context.offer.description}`)
-    }
-    if (context.offer.milestones && context.offer.milestones.length > 0) {
-      parts.push('Etapy:')
-      context.offer.milestones.forEach((m: any, i: number) => {
-        parts.push(`  ${i + 1}. ${m.title}${m.duration_days ? ` (${m.duration_days} dni)` : ''}`)
-      })
-    }
+  // === SCENARIUSZE (AI wybiera odpowiedni) ===
+  if (context.scenarios && context.scenarios.length > 0) {
+    parts.push('\n## SCENARIUSZE')
+    parts.push('Wybierz scenariusz pasujący do sytuacji:\n')
+    context.scenarios.forEach((scenario: Scenario) => {
+      parts.push(`### ${scenario.name}`)
+      if (scenario.description) {
+        parts.push(`Kiedy: ${scenario.description}`)
+      }
+      parts.push(`Co robić: ${scenario.instructions}`)
+      parts.push('')
+    })
   }
 
-  // Informacje o kliencie (lead)
+  // === DANE O KLIENCIE (dynamiczne) ===
   if (context.lead) {
-    parts.push('\n## INFORMACJE O KLIENCIE')
+    parts.push('\n## KLIENT')
     parts.push(`Imię: ${context.lead.name || 'Nieznane'}`)
-    if (context.lead.email) parts.push(`Email: ${context.lead.email}`)
+    parts.push(`Status w pipeline: ${context.lead.status || 'new'}`)
     if (context.lead.company) parts.push(`Firma: ${context.lead.company}`)
-    parts.push(`Status: ${context.lead.status || 'new'}`)
-    if (context.lead.deal_value) parts.push(`Wartość dealu: ${context.lead.deal_value} zł`)
+    if (context.lead.weekly_hours) parts.push(`Dostępny czas: ${context.lead.weekly_hours}`)
+    if (context.lead.experience) parts.push(`Motywacja: ${context.lead.experience}`)
+    if (context.lead.target_income) parts.push(`Cel dochodu: ${context.lead.target_income}`)
+    if (context.lead.open_question) parts.push(`Z ankiety: ${context.lead.open_question}`)
 
-    // Kwalifikacja
-    if (context.lead.weekly_hours) parts.push(`Dostępny czas: ${context.lead.weekly_hours} godz/tydzień`)
-    if (context.lead.experience) parts.push(`Doświadczenie/motywacja: ${context.lead.experience}`)
-    if (context.lead.target_income) parts.push(`Oczekiwany dochód: ${context.lead.target_income}`)
-    if (context.lead.open_question) parts.push(`Odpowiedź z ankiety: ${context.lead.open_question}`)
-
-    // Notatki
     if (context.lead.notes_history && context.lead.notes_history.length > 0) {
       parts.push('Notatki:')
-      context.lead.notes_history.slice(-3).forEach((note: any) => {
-        parts.push(`  - ${note.note || note}`)
+      context.lead.notes_history.slice(-5).forEach((note: any) => {
+        const noteText = note.content || note.note || note
+        parts.push(`  - ${noteText}`)
       })
     }
   }
 
-  // Oferta klienta (link)
+  // === OFERTA ===
   if (context.clientOffer) {
     parts.push('\n## OFERTA DLA KLIENTA')
     parts.push(`Link: https://crm.tomekniedzwiecki.pl/p/${context.clientOffer.unique_token}`)
     if (context.clientOffer.valid_until) {
       parts.push(`Ważna do: ${new Date(context.clientOffer.valid_until).toLocaleDateString('pl-PL')}`)
     }
-    if (context.clientOffer.custom_price) {
-      parts.push(`Cena specjalna: ${context.clientOffer.custom_price} zł`)
-    }
     if (context.clientOffer.view_count > 0) {
-      parts.push(`Klient oglądał ofertę: ${context.clientOffer.view_count}x`)
+      parts.push(`Oglądał ofertę: ${context.clientOffer.view_count}x`)
     }
   }
 
-  // Kody rabatowe
-  if (context.discountCodes.length > 0) {
-    parts.push('\n## DOSTĘPNE KODY RABATOWE')
+  // === KODY RABATOWE ===
+  if (context.discountCodes && context.discountCodes.length > 0) {
+    parts.push('\n## KODY RABATOWE')
     context.discountCodes.forEach((dc: DiscountCode) => {
-      const discount = dc.discount_amount
-        ? `${dc.discount_amount} zł`
-        : `${dc.discount_percent}%`
-      parts.push(`- Kod: ${dc.code} (rabat: ${discount}, ważny do: ${new Date(dc.valid_until).toLocaleDateString('pl-PL')})`)
+      const discount = dc.discount_amount ? `${dc.discount_amount} zł` : `${dc.discount_percent}%`
+      parts.push(`- ${dc.code}: ${discount}`)
     })
   }
 
-  // Historia zamówień
-  if (context.orders.length > 0) {
-    parts.push('\n## HISTORIA ZAMÓWIEŃ')
+  // === ZAMÓWIENIA ===
+  if (context.orders && context.orders.length > 0) {
+    parts.push('\n## ZAMÓWIENIA')
     context.orders.forEach((o: Order) => {
-      const status = o.status === 'paid' ? 'OPŁACONE' : o.status === 'pending' ? 'Oczekuje' : o.status
-      parts.push(`- ${o.amount} zł - ${status}${o.paid_at ? ` (${new Date(o.paid_at).toLocaleDateString('pl-PL')})` : ''}`)
+      const status = o.status === 'paid' ? 'OPŁACONE' : o.status
+      parts.push(`- ${o.amount} zł - ${status}`)
     })
   }
 
-  // Wiedza o obiekcjach
-  const objectionKnowledge = context.knowledge.filter((k: KnowledgeEntry) => k.category === 'objection')
-  if (objectionKnowledge.length > 0) {
-    parts.push('\n## JAK ODPOWIADAĆ NA OBIEKCJE')
-    objectionKnowledge.forEach((k: KnowledgeEntry) => {
-      parts.push(`${k.title}: ${k.content}`)
-    })
-  }
-
-  // Wiedza o procesach
-  const processKnowledge = context.knowledge.filter((k: KnowledgeEntry) => k.category === 'process')
-  if (processKnowledge.length > 0) {
-    parts.push('\n## PROCESY')
-    processKnowledge.forEach((k: KnowledgeEntry) => {
-      parts.push(`${k.title}: ${k.content}`)
-    })
-  }
-
-  // Wiedza o umowach
-  const contractKnowledge = context.knowledge.filter((k: KnowledgeEntry) => k.category === 'contract')
-  if (contractKnowledge.length > 0) {
-    parts.push('\n## WARUNKI UMOWY')
-    contractKnowledge.forEach((k: KnowledgeEntry) => {
-      parts.push(`${k.title}: ${k.content}`)
-    })
-  }
-
-  // Zasady ogólne - STYL TOMKA
-  parts.push(`\n## STYL KOMUNIKACJI
-Piszesz jak Tomek - bezpośrednio, na luzie, czasem zaczepnie. NIGDY jak korporacja.
-
-ZAKAZANE (korporacyjne):
-- "Dziękuję za wiadomość" / "Dziękuję za zainteresowanie"
-- "Chętnie odpowiem na pytania"
-- "W razie pytań jestem do dyspozycji"
-- "Zachęcam do..." / "Proponuję..."
-- Zwroty grzecznościowe na siłę
-- Długie, rozbudowane zdania
-
-WYMAGANE (styl Tomka):
-- Krótko, konkretnie, 1-2 zdania max
-- Bezpośrednie pytania: "I co?", "Dasz radę?", "Kiedy startujesz?"
-- Lekka presja: "Nie ma co zwlekać", "Czas ucieka"
-- Pewność siebie: "To działa", "Zrobisz to"
-- Można być zaczepnym: "No i co Cię blokuje?", "Strach?"
-- Mów jak do kumpla, nie jak do klienta
-
-PRZYKŁADY dobrych odpowiedzi:
-- "I co, przemyślałeś?"
-- "Daj znać jak coś"
-- "No to kiedy zaczynamy?"
-- "Co Cię powstrzymuje?"
-- "Oferta ważna do piątku, potem ceny w górę"
-
-## ZASADY TECHNICZNE
-1. Max 1-3 zdania
-2. Nie używaj emoji (chyba że klient ich używa)
-3. Jeśli pyta o cenę - daj link do oferty
-4. Wykorzystaj info o kliencie do personalizacji`)
-
-  // Dopasowany scenariusz - najważniejsze instrukcje dla tej sytuacji
-  if (matchedScenario) {
-    parts.push(`\n## AKTUALNY SCENARIUSZ: ${matchedScenario.name}`)
-    if (matchedScenario.description) {
-      parts.push(`Opis: ${matchedScenario.description}`)
-    }
-    parts.push(`\nINSTRUKCJE DLA TEGO SCENARIUSZA:\n${matchedScenario.instructions}`)
-  }
-
-  // Dodatkowe instrukcje
+  // === DODATKOWE INSTRUKCJE ===
   if (customInstruction) {
     parts.push(`\n## DODATKOWE INSTRUKCJE\n${customInstruction}`)
   }
