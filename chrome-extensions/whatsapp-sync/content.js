@@ -3382,218 +3382,315 @@
   let followupsFilter = 'all';
   let followupsPanelVisible = false;
 
-  // Style dla panelu follow-upów
+  // Zamknij panel follow-upów
+  function closeFollowupsPanel() {
+    followupsPanelVisible = false;
+    const panel = document.getElementById('crm-followups-panel');
+    const overlay = document.getElementById('crm-followups-overlay');
+    if (panel) panel.classList.remove('visible');
+    if (overlay) overlay.classList.remove('visible');
+  }
+
+  // Style dla panelu follow-upów - Vercel style
   function injectFollowupsStyles() {
     if (document.getElementById('crm-followups-styles')) return;
 
     const style = document.createElement('style');
     style.id = 'crm-followups-styles';
     style.textContent = `
+      /* Toggle button - minimal Vercel style */
       #crm-followups-toggle {
         position: fixed;
         left: 0;
         top: 50%;
         transform: translateY(-50%);
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-        border: none;
-        border-radius: 0 8px 8px 0;
-        padding: 12px 8px;
+        background: #000;
+        color: #fafafa;
+        border: 1px solid #333;
+        border-left: none;
+        border-radius: 0 6px 6px 0;
+        padding: 16px 10px;
         cursor: pointer;
         z-index: 10000;
         writing-mode: vertical-rl;
         text-orientation: mixed;
-        font-size: 12px;
-        font-weight: 600;
-        box-shadow: 2px 0 8px rgba(0,0,0,0.3);
-        transition: all 0.2s;
+        font-size: 11px;
+        font-weight: 500;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        letter-spacing: 0.5px;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+        transition: all 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       #crm-followups-toggle:hover {
-        padding-right: 12px;
+        background: #171717;
+        border-color: #444;
       }
       #crm-followups-toggle .count-badge {
-        background: #fff;
-        color: #d97706;
-        border-radius: 10px;
-        padding: 2px 6px;
+        background: #fafafa;
+        color: #000;
+        border-radius: 4px;
+        padding: 3px 6px;
         font-size: 10px;
-        margin-top: 6px;
+        font-weight: 600;
         display: inline-block;
       }
+
+      /* Panel overlay */
+      #crm-followups-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 10000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s ease;
+      }
+      #crm-followups-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* Main panel - Vercel style */
       #crm-followups-panel {
         position: fixed;
         left: 0;
         top: 0;
-        width: 320px;
+        width: 380px;
         height: 100vh;
-        background: #1a1a1a;
-        border-right: 1px solid #333;
+        background: #0a0a0a;
+        border-right: 1px solid #262626;
         z-index: 10001;
         display: flex;
         flex-direction: column;
         transform: translateX(-100%);
-        transition: transform 0.3s ease;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
       #crm-followups-panel.visible {
         transform: translateX(0);
       }
+
+      /* Header */
       .followups-header {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        padding: 16px;
+        background: #0a0a0a;
+        padding: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        border-bottom: 1px solid #262626;
       }
       .followups-header h2 {
-        color: white;
+        color: #fafafa;
         font-size: 14px;
         font-weight: 600;
         margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .followups-header h2 .count {
+        background: #262626;
+        color: #a1a1aa;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 4px;
       }
       .followups-close {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        border-radius: 4px;
-        color: white;
-        width: 28px;
-        height: 28px;
+        background: transparent;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #888;
+        width: 32px;
+        height: 32px;
         cursor: pointer;
         font-size: 18px;
-      }
-      .followups-filters {
-        padding: 12px;
-        border-bottom: 1px solid #333;
         display: flex;
-        gap: 6px;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+      }
+      .followups-close:hover {
+        background: #171717;
+        border-color: #444;
+        color: #fff;
+      }
+
+      /* Filters */
+      .followups-filters {
+        padding: 16px 20px;
+        border-bottom: 1px solid #262626;
+        display: flex;
+        gap: 8px;
         flex-wrap: wrap;
       }
       .followups-filter-btn {
-        background: #2a2a2a;
-        border: 1px solid #444;
-        border-radius: 16px;
-        padding: 4px 10px;
-        font-size: 11px;
+        background: transparent;
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 12px;
         color: #888;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.15s;
+        font-weight: 500;
       }
       .followups-filter-btn:hover {
-        border-color: #666;
-        color: #fff;
+        border-color: #555;
+        color: #fafafa;
       }
       .followups-filter-btn.active {
-        background: #f59e0b;
-        border-color: #f59e0b;
+        background: #fafafa;
+        border-color: #fafafa;
         color: #000;
       }
+
+      /* List */
       .followups-list {
         flex: 1;
         overflow-y: auto;
-        padding: 8px;
+        padding: 16px;
       }
+      .followups-list::-webkit-scrollbar {
+        width: 6px;
+      }
+      .followups-list::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .followups-list::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 3px;
+      }
+
+      /* Card */
       .followup-card {
-        background: #2a2a2a;
+        background: #171717;
         border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 8px;
-        border: 1px solid #333;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #262626;
+        transition: all 0.15s;
       }
       .followup-card:hover {
-        border-color: #444;
+        border-color: #333;
+        background: #1c1c1c;
       }
       .followup-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
       .followup-contact {
         font-size: 13px;
-        font-weight: 500;
-        color: #fff;
+        font-weight: 600;
+        color: #fafafa;
       }
       .followup-status {
         font-size: 10px;
-        padding: 2px 6px;
+        padding: 3px 8px;
         border-radius: 4px;
-        background: #3f3f46;
-        color: #a1a1aa;
+        background: #262626;
+        color: #888;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
       }
       .followup-message {
-        background: #1a1a1a;
+        background: #0a0a0a;
+        border: 1px solid #262626;
         border-radius: 6px;
-        padding: 10px;
+        padding: 12px;
         font-size: 13px;
         color: #e5e5e5;
-        line-height: 1.4;
-        margin-bottom: 8px;
+        line-height: 1.5;
+        margin-bottom: 12px;
         white-space: pre-wrap;
       }
       .followup-meta {
-        font-size: 10px;
+        font-size: 11px;
         color: #666;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
       .followup-actions {
         display: flex;
-        gap: 6px;
+        gap: 8px;
       }
       .followup-btn {
         flex: 1;
-        padding: 8px;
+        padding: 10px 12px;
         border: none;
         border-radius: 6px;
         font-size: 12px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.15s;
       }
       .followup-btn-insert {
-        background: #25D366;
-        color: white;
+        background: #fafafa;
+        color: #000;
       }
       .followup-btn-insert:hover {
-        background: #1da851;
+        background: #e5e5e5;
       }
       .followup-btn-skip {
-        background: #3f3f46;
-        color: #a1a1aa;
+        background: transparent;
+        border: 1px solid #333;
+        color: #888;
       }
       .followup-btn-skip:hover {
-        background: #52525b;
-        color: #fff;
+        border-color: #555;
+        color: #fafafa;
       }
+
+      /* Empty state */
       .followups-empty {
         text-align: center;
-        padding: 40px 20px;
+        padding: 60px 20px;
         color: #666;
       }
       .followups-empty-icon {
         font-size: 48px;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
+        opacity: 0.5;
       }
+      .followups-empty-text {
+        font-size: 13px;
+        color: #666;
+      }
+
+      /* Bottom bar */
       .followups-actions-bar {
-        padding: 12px;
-        border-top: 1px solid #333;
-        background: #222;
+        padding: 16px 20px;
+        border-top: 1px solid #262626;
+        background: #0a0a0a;
       }
       .followups-generate-btn {
         width: 100%;
-        padding: 10px;
-        background: linear-gradient(135deg, #8B5CF6, #6366F1);
+        padding: 12px;
+        background: #fafafa;
         border: none;
-        border-radius: 8px;
-        color: white;
+        border-radius: 6px;
+        color: #000;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
       }
       .followups-generate-btn:hover {
-        filter: brightness(1.1);
+        background: #e5e5e5;
       }
       .followups-generate-btn:disabled {
-        background: #555;
+        background: #333;
+        color: #666;
         cursor: not-allowed;
       }
     `;
@@ -3746,10 +3843,19 @@
     // Zbierz unikalne statusy
     const statuses = [...new Set(followupsData.map(f => f.lead_status).filter(Boolean))];
 
+    // Create overlay if not exists
+    let overlay = document.getElementById('crm-followups-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'crm-followups-overlay';
+      document.body.appendChild(overlay);
+      overlay.onclick = closeFollowupsPanel;
+    }
+
     panel.innerHTML = `
       <div class="followups-header">
-        <h2>📋 Follow-upy (${followupsData.length})</h2>
-        <button class="followups-close" onclick="document.getElementById('crm-followups-panel').classList.remove('visible')">×</button>
+        <h2>Follow-upy <span class="count">${followupsData.length}</span></h2>
+        <button class="followups-close" id="followups-close-btn">×</button>
       </div>
 
       <div class="followups-filters">
@@ -3762,8 +3868,8 @@
       <div class="followups-list">
         ${filteredData.length === 0 ? `
           <div class="followups-empty">
-            <div class="followups-empty-icon">✅</div>
-            <div>Brak zaplanowanych follow-upów</div>
+            <div class="followups-empty-icon">📭</div>
+            <div class="followups-empty-text">Brak zaplanowanych follow-upów</div>
           </div>
         ` : filteredData.map(f => `
           <div class="followup-card" data-id="${f.id}" data-phone="${f.phone_number}">
@@ -3773,11 +3879,11 @@
             </div>
             <div class="followup-message">${f.message_text}</div>
             <div class="followup-meta">
-              ${f.hours_since_contact ? `${f.hours_since_contact}h od kontaktu • ` : ''}
+              ${f.hours_since_contact ? `${f.hours_since_contact}h od kontaktu · ` : ''}
               ${new Date(f.created_at).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </div>
             <div class="followup-actions">
-              <button class="followup-btn followup-btn-insert" data-action="insert">✉️ Wstaw do czatu</button>
+              <button class="followup-btn followup-btn-insert" data-action="insert">Wstaw do czatu</button>
               <button class="followup-btn followup-btn-skip" data-action="skip">Pomiń</button>
             </div>
           </div>
@@ -3786,10 +3892,13 @@
 
       <div class="followups-actions-bar">
         <button class="followups-generate-btn" id="btn-generate-followups">
-          🤖 Generuj nowe follow-upy
+          Generuj nowe follow-upy
         </button>
       </div>
     `;
+
+    // Close button handler
+    panel.querySelector('#followups-close-btn').onclick = closeFollowupsPanel;
 
     // Obsługa filtrów
     panel.querySelectorAll('.followups-filter-btn').forEach(btn => {
@@ -4041,8 +4150,12 @@
       toggle.onclick = () => {
         followupsPanelVisible = !followupsPanelVisible;
         const panel = document.getElementById('crm-followups-panel');
+        const overlay = document.getElementById('crm-followups-overlay');
         if (panel) {
           panel.classList.toggle('visible', followupsPanelVisible);
+        }
+        if (overlay) {
+          overlay.classList.toggle('visible', followupsPanelVisible);
         }
       };
     }
