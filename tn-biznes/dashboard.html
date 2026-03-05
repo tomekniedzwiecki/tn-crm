@@ -371,7 +371,7 @@
                 <!-- Daily sales chart -->
                 <div class="chart-container rounded-xl p-4 md:p-6 mb-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-semibold text-white">Sprzedaż dzienna (bieżący miesiąc)</h3>
+                        <h3 id="daily-sales-title" class="text-sm font-semibold text-white">Sprzedaż dzienna</h3>
                         <div id="daily-sales-total" class="text-sm font-mono text-emerald-400"></div>
                     </div>
                     <div class="h-[200px]">
@@ -892,8 +892,8 @@
                 // Prognoza przychodu na koniec okresu (na podstawie obecnego tempa)
                 const dailyRevenueRate = daysPassed > 0 ? actualRevenue / daysPassed : 0;
                 const forecastRevenue = dailyRevenueRate * totalDays;
-                // Prognozowany zysk = prognozowany przychód - koszty
-                const forecastProfit = forecastRevenue - targetCosts;
+                // Prognozowany zysk = prognozowany przychód - RZECZYWISTE koszty (nie planowane!)
+                const forecastProfit = forecastRevenue - data.costs.total;
 
                 document.getElementById('expected-progress').textContent = `${expectedPercent}%`;
                 document.getElementById('actual-progress').textContent = `${realization}%`;
@@ -1152,11 +1152,15 @@
         // DAILY SALES CHART
         // ============================================
         async function loadDailySalesChart() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
+            // Użyj wybranego okresu (currentDate) zamiast bieżącej daty
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const today = now.getDate();
+
+            // Sprawdź czy to bieżący miesiąc - jeśli tak, pokaż tylko do dzisiaj
+            const now = new Date();
+            const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth());
+            const lastActiveDay = isCurrentMonth ? now.getDate() : daysInMonth;
 
             // Month boundaries
             const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -1186,7 +1190,10 @@
                 }
             }
 
-            // Update total
+            // Update title and total
+            const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+                               'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+            document.getElementById('daily-sales-title').textContent = `Sprzedaż dzienna - ${monthNames[month]} ${year}`;
             document.getElementById('daily-sales-total').textContent = `Razem: ${formatMoney(monthTotal)}`;
 
             // Prepare chart data
@@ -1199,10 +1206,10 @@
             for (let d = 1; d <= daysInMonth; d++) {
                 labels.push(d);
                 values.push(dailyTotals[d]);
-                colors.push(d <= today ? 'rgba(16, 185, 129, 0.8)' : 'rgba(63, 63, 70, 0.4)');
+                colors.push(d <= lastActiveDay ? 'rgba(16, 185, 129, 0.8)' : 'rgba(63, 63, 70, 0.4)');
 
                 // Średnia krocząca - tylko dla minionych dni
-                if (d <= today) {
+                if (d <= lastActiveDay) {
                     // Oblicz średnią z ostatnich N dni (lub mniej jeśli początek miesiąca)
                     let sum = 0;
                     let count = 0;
@@ -1253,7 +1260,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                title: (items) => `${items[0].label} ${new Date().toLocaleDateString('pl-PL', { month: 'long' })}`,
+                                title: (items) => `${items[0].label} ${currentDate.toLocaleDateString('pl-PL', { month: 'long' })}`,
                                 label: (item) => {
                                     if (item.datasetIndex === 0) return `Dzień: ${formatMoney(item.raw)}`;
                                     return `Średnia 5-dni: ${formatMoney(item.raw)}`;
