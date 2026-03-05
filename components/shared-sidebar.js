@@ -11,7 +11,6 @@
 const APPS = [
     { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard' },
     { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white', defaultPage: 'workflows' },
-    { id: 'bot', name: 'TN Bot', icon: 'ph-robot', color: 'bg-fuchsia-500 text-white', defaultPage: 'knowledge' },
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
     { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
     { id: 'biznes', name: 'TN Biznes', icon: 'ph-chart-line-up', color: 'bg-teal-500 text-white', defaultPage: 'dashboard' }
@@ -20,7 +19,6 @@ const APPS = [
 const APP_BASES = {
     crm: '',
     workflow: '/tn-workflow',
-    bot: '/tn-bot',
     todo: '/tn-todo',
     stack: '/tn-stack',
     biznes: '/tn-biznes'
@@ -29,7 +27,6 @@ const APP_BASES = {
 const APP_AVATAR_COLORS = {
     crm: 'from-emerald-600 to-emerald-700',
     workflow: 'from-emerald-600 to-emerald-700',
-    bot: 'from-fuchsia-600 to-fuchsia-700',
     todo: 'from-violet-600 to-violet-700',
     stack: 'from-amber-600 to-amber-700',
     biznes: 'from-teal-600 to-teal-700'
@@ -81,18 +78,9 @@ const NAV_ITEMS_BIZNES = [
     { id: 'plans', icon: 'ph-target', label: 'Plany' },
 ];
 
-const NAV_ITEMS_BOT = [
-    { id: 'knowledge', icon: 'ph-brain', label: 'Knowledge Base' },
-    { id: 'scenarios', icon: 'ph-tree-structure', label: 'Scenariusze' },
-    { id: 'conversations', icon: 'ph-chats', label: 'Konwersacje' },
-    { id: 'prompts', icon: 'ph-magic-wand', label: 'Prompty' },
-    { id: 'settings', icon: 'ph-gear', label: 'Ustawienia' },
-];
-
 function getNavItemsForApp(appId) {
     switch (appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
-        case 'bot': return NAV_ITEMS_BOT;
         case 'todo': return NAV_ITEMS_TODO;
         case 'stack': return NAV_ITEMS_STACK;
         case 'biznes': return NAV_ITEMS_BIZNES;
