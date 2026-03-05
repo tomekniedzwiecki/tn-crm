@@ -183,7 +183,8 @@ async function enqueueLeads(supabase: any, config: Config): Promise<number> {
       .eq('status', stage)
       .not('phone', 'is', null)
 
-    if (!leadsData) continue
+    if (!leadsData || leadsData.length === 0) continue
+    console.log(`followups-cron: Stage ${stage}: ${leadsData.length} leads`)
 
     // Pobierz ostatnie wiadomości
     const leadIds = leadsData.map((l: any) => l.id)
@@ -222,7 +223,10 @@ async function enqueueLeads(supabase: any, config: Config): Promise<number> {
     const toEnqueue: any[] = []
 
     for (const lead of leadsData) {
-      if (hasFollowup.has(lead.id) || inQueue.has(lead.id)) continue
+      // Skip jeśli ma już pending followup
+      if (hasFollowup.has(lead.id)) continue
+      // Skip jeśli już w kolejce
+      if (inQueue.has(lead.id)) continue
 
       // Dla etapu 'waiting' - sprawdź expected_close
       if (stage === 'waiting') {
@@ -253,12 +257,17 @@ async function enqueueLeads(supabase: any, config: Config): Promise<number> {
 
     // Dodaj do kolejki
     if (toEnqueue.length > 0) {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('followup_queue')
-        .upsert(toEnqueue, { onConflict: 'lead_id,status', ignoreDuplicates: true })
+        .insert(toEnqueue)
+        .select()
 
-      if (!error) {
-        enqueued += toEnqueue.length
+      if (error) {
+        console.error(`followups-cron: Insert error for ${stage}:`, error.message)
+      } else {
+        const inserted = data?.length || 0
+        enqueued += inserted
+        console.log(`followups-cron: Stage ${stage}: enqueued ${inserted} leads`)
       }
     }
   }
@@ -330,10 +339,10 @@ async function processQueue(supabase: any, apiKey: string, config: Config): Prom
           generated_by: 'cron'
         })
 
-      // Oznacz jako done
+      // Usuń z kolejki (followup jest już w whatsapp_followups z status='pending')
       await supabase
         .from('followup_queue')
-        .update({ status: 'done', processed_at: new Date().toISOString() })
+        .delete()
         .eq('id', item.id)
 
       processed++

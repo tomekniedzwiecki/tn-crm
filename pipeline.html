@@ -709,6 +709,7 @@
 
             // Load follow-up status (last WhatsApp message time)
             await loadFollowupStatus();
+            await loadFollowupCounts();
 
             document.getElementById('nav-leads-count').textContent = leads.filter(l => l.status === 'new' || !l.status).length;
             applyFilters(); // This will call renderPipeline
@@ -796,6 +797,36 @@
                     lead.hours_since_contact = Math.floor(hoursSince);
                 }
             });
+        }
+
+        // Followup counts per stage
+        let followupQueueCounts = {}; // W kolejce do wygenerowania
+        let followupPendingCounts = {}; // Wygenerowane, czekają na wysłanie
+
+        async function loadFollowupCounts() {
+            // Pobierz liczby z kolejki (do wygenerowania)
+            const { data: queueData } = await supabaseClient
+                .from('followup_queue')
+                .select('lead_status')
+                .eq('status', 'queued');
+
+            followupQueueCounts = {};
+            queueData?.forEach(q => {
+                followupQueueCounts[q.lead_status] = (followupQueueCounts[q.lead_status] || 0) + 1;
+            });
+
+            // Pobierz pending followupy (do wysłania)
+            const { data: pendingData } = await supabaseClient
+                .from('whatsapp_followups')
+                .select('lead_status')
+                .eq('status', 'pending');
+
+            followupPendingCounts = {};
+            pendingData?.forEach(p => {
+                followupPendingCounts[p.lead_status] = (followupPendingCounts[p.lead_status] || 0) + 1;
+            });
+
+            console.log('Followup counts - queue:', followupQueueCounts, 'pending:', followupPendingCounts);
         }
 
         // Generate follow-ups for a specific stage
@@ -905,7 +936,9 @@
 
                 // Check if stage can have follow-ups
                 const canHaveFollowups = [...FOLLOWUP_STAGES, 'waiting'].includes(stage.id);
-                const needsFollowupCount = stageLeads.filter(l => l.needs_followup).length;
+                const queueCount = followupQueueCounts[stage.id] || 0;
+                const pendingCount = followupPendingCounts[stage.id] || 0;
+                const hasFollowupActivity = queueCount > 0 || pendingCount > 0;
 
                 return `
                     <div class="pipeline-column flex flex-col" data-stage="${stage.id}">
@@ -918,15 +951,21 @@
                                 <span class="font-medium text-white text-sm">${stage.name}</span>
                                 <span class="text-[10px] ${colors.text} ${colors.bg} px-1.5 py-0.5 rounded font-mono">${stageLeads.length}</span>
                             </div>
-                            ${canHaveFollowups && needsFollowupCount > 0 ? `
-                                <button
-                                    data-generate-followups="${stage.id}"
-                                    onclick="generateFollowupsForStage('${stage.id}')"
-                                    class="flex items-center gap-1 px-2 py-1 text-[10px] bg-amber-500/10 text-amber-400 rounded hover:bg-amber-500/20 transition-colors"
-                                    title="Generuj follow-upy AI dla ${needsFollowupCount} leadów">
-                                    <i class="ph ph-robot"></i>
-                                    <span>${needsFollowupCount}</span>
-                                </button>
+                            ${canHaveFollowups && hasFollowupActivity ? `
+                                <div class="flex items-center gap-1">
+                                    ${queueCount > 0 ? `
+                                        <span class="flex items-center gap-1 px-2 py-1 text-[10px] bg-zinc-500/10 text-zinc-400 rounded" title="W kolejce do wygenerowania">
+                                            <i class="ph ph-queue"></i>
+                                            <span>${queueCount}</span>
+                                        </span>
+                                    ` : ''}
+                                    ${pendingCount > 0 ? `
+                                        <span class="flex items-center gap-1 px-2 py-1 text-[10px] bg-amber-500/10 text-amber-400 rounded" title="Do wysłania">
+                                            <i class="ph ph-envelope"></i>
+                                            <span>${pendingCount}</span>
+                                        </span>
+                                    ` : ''}
+                                </div>
                             ` : ''}
                         </div>
                         <div class="text-[10px] text-zinc-500 font-mono mb-3 px-1">${formatCurrency(stageValue)}</div>
