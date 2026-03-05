@@ -707,8 +707,64 @@
             // Auto-assign status for leads with survey but no status
             await autoAssignStatusForSurveyLeads(leads);
 
+            // Load follow-up status (last WhatsApp message time)
+            await loadFollowupStatus();
+
             document.getElementById('nav-leads-count').textContent = leads.filter(l => l.status === 'new' || !l.status).length;
             applyFilters(); // This will call renderPipeline
+        }
+
+        // Stages that should show follow-up indicator
+        const FOLLOWUP_STAGES = ['contacted', 'qualified', 'proposal', 'negotiation'];
+        const FOLLOWUP_HOURS = 24; // Hours without activity = needs follow-up
+
+        async function loadFollowupStatus() {
+            // Get lead IDs that are in follow-up stages
+            const relevantLeads = leads.filter(l => FOLLOWUP_STAGES.includes(l.status));
+            if (relevantLeads.length === 0) return;
+
+            // Fetch last message time for each lead
+            const { data: messages, error } = await supabaseClient
+                .from('whatsapp_messages')
+                .select('lead_id, message_timestamp')
+                .in('lead_id', relevantLeads.map(l => l.id))
+                .order('message_timestamp', { ascending: false });
+
+            if (error) {
+                console.error('Error loading followup status:', error);
+                return;
+            }
+
+            // Build map of lead_id -> last_message_timestamp
+            const lastMessageMap = {};
+            messages?.forEach(m => {
+                if (!lastMessageMap[m.lead_id]) {
+                    lastMessageMap[m.lead_id] = m.message_timestamp;
+                }
+            });
+
+            // Calculate needs_followup for each lead
+            const now = new Date();
+            const thresholdMs = FOLLOWUP_HOURS * 60 * 60 * 1000;
+
+            leads.forEach(lead => {
+                if (!FOLLOWUP_STAGES.includes(lead.status)) {
+                    lead.needs_followup = false;
+                    return;
+                }
+
+                const lastMessage = lastMessageMap[lead.id];
+                if (!lastMessage) {
+                    // No messages at all - needs follow-up
+                    lead.needs_followup = true;
+                    lead.hours_since_contact = null;
+                } else {
+                    const lastMsgTime = new Date(lastMessage);
+                    const hoursSince = (now - lastMsgTime) / (1000 * 60 * 60);
+                    lead.needs_followup = hoursSince > FOLLOWUP_HOURS;
+                    lead.hours_since_contact = Math.floor(hoursSince);
+                }
+            });
         }
 
         function renderPipeline() {
@@ -856,13 +912,19 @@
             const memberColor = assignedMember ? getMemberColor(lead.assigned_to) : '';
             const daysInStatus = getDaysInStatus(lead);
 
+            // Follow-up indicator
+            const followupBadge = lead.needs_followup ? `
+                <div class="absolute -top-1 -left-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse" title="Wymaga follow-up${lead.hours_since_contact ? ` (${lead.hours_since_contact}h bez kontaktu)` : ' (brak kontaktu)'}"></div>
+            ` : '';
+
             return `
-                <div class="lead-card group bg-zinc-900/60 border border-white/5 rounded-lg p-4 hover:border-white/10 relative"
+                <div class="lead-card group bg-zinc-900/60 border ${lead.needs_followup ? 'border-orange-500/30' : 'border-white/5'} rounded-lg p-4 hover:border-white/10 relative"
                      draggable="true"
                      data-id="${lead.id}"
                      ondragstart="handleDragStart(event)"
                      ondragend="handleDragEnd(event)"
                      onclick="openLead('${lead.id}')">
+                    ${followupBadge}
                     <div class="flex items-start gap-3 mb-3">
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                             ${initial}
