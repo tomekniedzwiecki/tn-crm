@@ -417,9 +417,12 @@ serve(async (req) => {
       })
       .join('\n')
 
-    // Wyciągnij ostatnią wiadomość klienta dla lepszego kontekstu
+    // Sprawdź kto wysłał ostatnią wiadomość
+    const lastMessage = messages[messages.length - 1]
+    const isWaitingForClient = lastMessage?.direction === 'outbound'
     const lastClientMessage = [...messages].reverse().find(m => m.direction === 'inbound')
     const lastClientText = lastClientMessage?.message_text || ''
+    const lastSellerText = isWaitingForClient ? lastMessage?.message_text : ''
 
     // Zbuduj system prompt z pełnym kontekstem i scenariuszem
     const systemPrompt = buildSystemPrompt(context, synced_by || 'tomek', matchedScenario, custom_instruction)
@@ -464,10 +467,17 @@ serve(async (req) => {
 
 ${conversationHistory}
 
-## ZADANIE
-Ostatnia wiadomość KLIENTA: "${lastClientText}"
+## SYTUACJA
+${isWaitingForClient
+  ? `Ostatnia wiadomość jest OD CIEBIE (${sellerName}): "${lastSellerText}"
+Klient jeszcze NIE odpowiedział. Musisz napisać FOLLOW-UP / przypomnienie.
+NIE powtarzaj tego co już napisałeś. Napisz coś nowego - np. krótkie "I co?", "Dasz znać?" lub nawiąż do czegoś innego.`
+  : `Ostatnia wiadomość jest OD KLIENTA: "${lastClientText}"
+Odpowiedz bezpośrednio na to co klient napisał.`
+}
 
-Napisz odpowiedź jako ${sellerName}. Max 1-3 zdania. Bezpośrednio nawiązuj do tego co klient napisał.
+## ZADANIE
+Napisz JEDNĄ krótką wiadomość jako ${sellerName}. Max 1-3 zdania.
 
 Odpowiedz TYLKO tekstem wiadomości.`
           }
