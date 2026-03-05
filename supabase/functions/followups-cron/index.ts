@@ -7,15 +7,17 @@ const corsHeaders = {
 }
 
 // =====================================================
-// FOLLOW-UPS CRON - Profesjonalne generowanie follow-upów
+// FOLLOW-UPS CRON - System kolejkowy
 // =====================================================
-// Wywoływane przez Supabase cron co godzinę
-// Generuje AI follow-upy dla leadów bez kontaktu >24h
+// 1. Sprawdza czy są elementy w kolejce
+// 2. Jeśli nie - dodaje leady potrzebujące follow-up
+// 3. Przetwarza BATCH_SIZE elementów z kolejki
+// Wywoływane co 5 minut przez cron
 // =====================================================
 
 const FOLLOWUP_STAGES = ['contacted', 'qualified', 'proposal', 'negotiation', 'waiting']
 const DEFAULT_FOLLOWUP_HOURS = 24
-const RATE_LIMIT_MS = 1000 // 1s między requestami do Claude (bez limitu ilości)
+const BATCH_SIZE = 5 // Ile generować na jedno uruchomienie
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 2000
 
@@ -40,14 +42,12 @@ interface Config {
 
 // Pobierz konfigurację z bazy
 async function getConfig(supabase: any): Promise<Config> {
-  // Guidelines
   const { data: guidelinesData } = await supabase
     .from('ai_guidelines')
     .select('content')
     .limit(1)
     .single()
 
-  // Settings
   const { data: settingsData } = await supabase
     .from('app_settings')
     .select('key, value')
@@ -75,28 +75,21 @@ async function getLastMessages(supabase: any, leadId: string, limit = 10) {
   return (data || []).reverse()
 }
 
-// Sleep helper
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
-// Retry wrapper z exponential backoff
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = MAX_RETRIES,
-  baseDelay: number = RETRY_DELAY_MS
-): Promise<T> {
+// Retry wrapper
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = MAX_RETRIES): Promise<T> {
   let lastError: Error | null = null
-
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn()
     } catch (err) {
       lastError = err as Error
-      const delay = baseDelay * Math.pow(2, attempt)
-      console.log(`followups-cron: Retry ${attempt + 1}/${maxRetries} after ${delay}ms - ${err.message}`)
+      const delay = RETRY_DELAY_MS * Math.pow(2, attempt)
+      console.log(`followups-cron: Retry ${attempt + 1}/${maxRetries} after ${delay}ms`)
       await sleep(delay)
     }
   }
-
   throw lastError
 }
 
@@ -170,7 +163,6 @@ ZAWSZE pisz po polsku, poprawnie gramatycznie. Napisz TYLKO tekst wiadomości.`
   const result = await response.json()
   const text = result.content[0]?.text?.trim() || ''
 
-  // Walidacja - wiadomość musi mieć min 5 znaków
   if (text.length < 5) {
     throw new Error('Generated message too short')
   }
@@ -178,33 +170,196 @@ ZAWSZE pisz po polsku, poprawnie gramatycznie. Napisz TYLKO tekst wiadomości.`
   return text
 }
 
-// Sprawdź czy lead ma już podobny pending followup
-async function hasSimilarPendingFollowup(supabase: any, leadId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('whatsapp_followups')
-    .select('id')
-    .eq('lead_id', leadId)
-    .eq('status', 'pending')
-    .limit(1)
+// Dodaj leady do kolejki
+async function enqueueLeads(supabase: any, config: Config): Promise<number> {
+  const now = new Date()
+  let enqueued = 0
 
-  return (data?.length || 0) > 0
+  for (const stage of FOLLOWUP_STAGES) {
+    // Pobierz leady w tym etapie
+    const { data: leadsData } = await supabase
+      .from('leads')
+      .select('id, name, phone, status, expected_close')
+      .eq('status', stage)
+      .not('phone', 'is', null)
+
+    if (!leadsData) continue
+
+    // Pobierz ostatnie wiadomości
+    const leadIds = leadsData.map((l: any) => l.id)
+    const { data: messagesData } = await supabase
+      .from('whatsapp_messages')
+      .select('lead_id, message_timestamp')
+      .in('lead_id', leadIds)
+      .order('message_timestamp', { ascending: false })
+
+    const lastMessageMap: Record<string, string> = {}
+    messagesData?.forEach((m: any) => {
+      if (!lastMessageMap[m.lead_id]) {
+        lastMessageMap[m.lead_id] = m.message_timestamp
+      }
+    })
+
+    // Sprawdź które leady mają już pending followup
+    const { data: existingFollowups } = await supabase
+      .from('whatsapp_followups')
+      .select('lead_id')
+      .eq('status', 'pending')
+      .in('lead_id', leadIds)
+
+    const hasFollowup = new Set(existingFollowups?.map((f: any) => f.lead_id) || [])
+
+    // Sprawdź które leady są już w kolejce
+    const { data: existingQueue } = await supabase
+      .from('followup_queue')
+      .select('lead_id')
+      .in('status', ['queued', 'processing'])
+      .in('lead_id', leadIds)
+
+    const inQueue = new Set(existingQueue?.map((q: any) => q.lead_id) || [])
+
+    // Filtruj leady potrzebujące follow-up
+    const toEnqueue: any[] = []
+
+    for (const lead of leadsData) {
+      if (hasFollowup.has(lead.id) || inQueue.has(lead.id)) continue
+
+      // Dla etapu 'waiting' - sprawdź expected_close
+      if (stage === 'waiting') {
+        if (!lead.expected_close) continue
+        if (new Date(lead.expected_close) > now) continue
+      }
+
+      const lastMsg = lastMessageMap[lead.id]
+      let hoursSinceContact = 999
+
+      if (lastMsg) {
+        hoursSinceContact = (now.getTime() - new Date(lastMsg).getTime()) / (1000 * 60 * 60)
+        if (hoursSinceContact < config.followup_hours) continue
+      }
+
+      let phone = lead.phone.replace(/[^0-9]/g, '')
+      if (phone.length === 9) phone = '48' + phone
+
+      toEnqueue.push({
+        lead_id: lead.id,
+        phone_number: phone,
+        contact_name: lead.name,
+        lead_status: lead.status,
+        hours_since_contact: Math.floor(hoursSinceContact),
+        status: 'queued'
+      })
+    }
+
+    // Dodaj do kolejki
+    if (toEnqueue.length > 0) {
+      const { error } = await supabase
+        .from('followup_queue')
+        .upsert(toEnqueue, { onConflict: 'lead_id,status', ignoreDuplicates: true })
+
+      if (!error) {
+        enqueued += toEnqueue.length
+      }
+    }
+  }
+
+  return enqueued
 }
 
-// Zapisz log wykonania
-async function logExecution(supabase: any, results: any) {
-  try {
-    await supabase
-      .from('followup_execution_logs')
-      .insert({
-        executed_at: new Date().toISOString(),
-        total_generated: results.total_generated,
-        total_skipped: results.total_skipped,
-        total_errors: results.total_errors,
-        details: results
-      })
-  } catch (err) {
-    console.error('followups-cron: Failed to save execution log', err)
+// Przetwórz batch z kolejki
+async function processQueue(supabase: any, apiKey: string, config: Config): Promise<{ processed: number, errors: number }> {
+  // Pobierz BATCH_SIZE elementów z kolejki
+  const { data: queueItems, error } = await supabase
+    .from('followup_queue')
+    .select('*')
+    .eq('status', 'queued')
+    .order('hours_since_contact', { ascending: false }) // Najdłużej czekający pierwszy
+    .limit(BATCH_SIZE)
+
+  if (error || !queueItems || queueItems.length === 0) {
+    return { processed: 0, errors: 0 }
   }
+
+  // Oznacz jako processing
+  const ids = queueItems.map((q: any) => q.id)
+  await supabase
+    .from('followup_queue')
+    .update({ status: 'processing' })
+    .in('id', ids)
+
+  let processed = 0
+  let errors = 0
+
+  for (const item of queueItems) {
+    try {
+      // Pobierz dane leada
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('id, name, phone, status, weekly_hours, experience, target_income, open_question')
+        .eq('id', item.lead_id)
+        .single()
+
+      if (!leadData) {
+        throw new Error('Lead not found')
+      }
+
+      const lead: Lead = {
+        ...leadData,
+        hours_since_contact: item.hours_since_contact
+      }
+
+      // Pobierz wiadomości
+      const messages = await getLastMessages(supabase, item.lead_id)
+
+      // Generuj z retry
+      const followupText = await withRetry(() =>
+        generateFollowupMessage(apiKey, config, lead, messages)
+      )
+
+      // Zapisz follow-up
+      await supabase
+        .from('whatsapp_followups')
+        .insert({
+          lead_id: item.lead_id,
+          phone_number: item.phone_number,
+          contact_name: item.contact_name,
+          message_text: followupText,
+          status: 'pending',
+          lead_status: item.lead_status,
+          hours_since_contact: item.hours_since_contact,
+          generated_by: 'cron'
+        })
+
+      // Oznacz jako done
+      await supabase
+        .from('followup_queue')
+        .update({ status: 'done', processed_at: new Date().toISOString() })
+        .eq('id', item.id)
+
+      processed++
+      console.log(`followups-cron: Generated for ${item.contact_name || item.phone_number}`)
+
+    } catch (err: any) {
+      errors++
+      console.error(`followups-cron: Error for ${item.lead_id}:`, err.message)
+
+      // Oznacz jako failed lub wróć do queued (retry)
+      const attempts = (item.attempts || 0) + 1
+      if (attempts >= MAX_RETRIES) {
+        await supabase
+          .from('followup_queue')
+          .update({ status: 'failed', attempts, last_error: err.message })
+          .eq('id', item.id)
+      } else {
+        await supabase
+          .from('followup_queue')
+          .update({ status: 'queued', attempts, last_error: err.message })
+          .eq('id', item.id)
+      }
+    }
+  }
+
+  return { processed, errors }
 }
 
 serve(async (req) => {
@@ -213,15 +368,6 @@ serve(async (req) => {
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
-  }
-
-  const results: any = {
-    started_at: new Date().toISOString(),
-    stages: {},
-    total_generated: 0,
-    total_skipped: 0,
-    total_errors: 0,
-    leads_processed: []
   }
 
   try {
@@ -233,191 +379,57 @@ serve(async (req) => {
       throw new Error('ANTHROPIC_API_KEY not configured')
     }
 
-    const supabase = createClient(
-      SUPABASE_URL || '',
-      SUPABASE_SERVICE_ROLE_KEY || ''
-    )
-
-    // Pobierz konfigurację
+    const supabase = createClient(SUPABASE_URL || '', SUPABASE_SERVICE_ROLE_KEY || '')
     const config = await getConfig(supabase)
-    console.log('followups-cron: Config loaded - hours:', config.followup_hours, 'seller:', config.seller_name)
 
-    const now = new Date()
-    let totalGenerated = 0
+    // Sprawdź ile jest w kolejce
+    const { count: queueCount } = await supabase
+      .from('followup_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'queued')
 
-    // Przetwórz każdy etap
-    for (const stage of FOLLOWUP_STAGES) {
-      console.log(`followups-cron: Processing stage ${stage}...`)
+    console.log(`followups-cron: Queue has ${queueCount || 0} items`)
 
-      // Pobierz leady w tym etapie
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('id, name, phone, status, expected_close, weekly_hours, experience, target_income, open_question')
-        .eq('status', stage)
-        .not('phone', 'is', null)
-
-      if (leadsError || !leadsData) {
-        console.error(`followups-cron: Error fetching leads for ${stage}:`, leadsError)
-        results.stages[stage] = { error: leadsError?.message }
-        continue
-      }
-
-      // Pobierz ostatnie wiadomości dla wszystkich leadów
-      const leadIds = leadsData.map(l => l.id)
-      const { data: messagesData } = await supabase
-        .from('whatsapp_messages')
-        .select('lead_id, message_timestamp')
-        .in('lead_id', leadIds)
-        .order('message_timestamp', { ascending: false })
-
-      // Mapa: lead_id -> ostatnia wiadomość
-      const lastMessageMap: Record<string, string> = {}
-      messagesData?.forEach(m => {
-        if (!lastMessageMap[m.lead_id]) {
-          lastMessageMap[m.lead_id] = m.message_timestamp
-        }
-      })
-
-      // Filtruj leady potrzebujące follow-up
-      const leadsNeedingFollowup: Lead[] = []
-
-      for (const lead of leadsData) {
-        let needsFollowup = false
-        let hoursSinceContact = 0
-
-        // Dla etapu 'waiting' - sprawdź expected_close
-        if (stage === 'waiting') {
-          if (!lead.expected_close) continue
-          const expectedClose = new Date(lead.expected_close)
-          if (expectedClose > now) continue
-        }
-
-        const lastMsg = lastMessageMap[lead.id]
-        if (lastMsg) {
-          hoursSinceContact = (now.getTime() - new Date(lastMsg).getTime()) / (1000 * 60 * 60)
-          needsFollowup = hoursSinceContact >= config.followup_hours
-        } else {
-          // Brak wiadomości - potrzebuje follow-up
-          needsFollowup = true
-          hoursSinceContact = 999
-        }
-
-        if (needsFollowup) {
-          leadsNeedingFollowup.push({
-            ...lead,
-            hours_since_contact: Math.floor(hoursSinceContact)
-          })
-        }
-      }
-
-      // Sortuj po czasie od kontaktu (najdłużej czekający pierwszy)
-      leadsNeedingFollowup.sort((a, b) => (b.hours_since_contact || 0) - (a.hours_since_contact || 0))
-
-      let stageGenerated = 0
-      let stageSkipped = 0
-      let stageErrors = 0
-
-      // Generuj follow-upy
-      for (const lead of leadsNeedingFollowup) {
-        // Sprawdź czy już ma pending followup
-        if (await hasSimilarPendingFollowup(supabase, lead.id)) {
-          stageSkipped++
-          continue
-        }
-
-        try {
-          // Rate limiting
-          await sleep(RATE_LIMIT_MS)
-
-          // Pobierz wiadomości dla kontekstu
-          const leadMessages = await getLastMessages(supabase, lead.id)
-
-          // Generuj z retry
-          const followupText = await withRetry(() =>
-            generateFollowupMessage(ANTHROPIC_API_KEY, config, lead, leadMessages)
-          )
-
-          // Normalizuj numer telefonu
-          let phone = lead.phone.replace(/[^0-9]/g, '')
-          if (phone.length === 9) phone = '48' + phone
-
-          // Zapisz follow-up
-          const { error: insertError } = await supabase
-            .from('whatsapp_followups')
-            .insert({
-              lead_id: lead.id,
-              phone_number: phone,
-              contact_name: lead.name,
-              message_text: followupText,
-              status: 'pending',
-              lead_status: lead.status,
-              hours_since_contact: lead.hours_since_contact,
-              generated_by: 'cron'
-            })
-
-          if (insertError) {
-            throw insertError
-          }
-
-          stageGenerated++
-          totalGenerated++
-          results.leads_processed.push({
-            lead_id: lead.id,
-            name: lead.name,
-            status: 'generated',
-            hours: lead.hours_since_contact
-          })
-
-          console.log(`followups-cron: Generated for ${lead.name} (${lead.hours_since_contact}h)`)
-
-        } catch (err) {
-          stageErrors++
-          results.total_errors++
-          console.error(`followups-cron: Error for lead ${lead.id}:`, err.message)
-          results.leads_processed.push({
-            lead_id: lead.id,
-            name: lead.name,
-            status: 'error',
-            error: err.message
-          })
-        }
-      }
-
-      results.stages[stage] = {
-        total_leads: leadsData.length,
-        needs_followup: leadsNeedingFollowup.length,
-        generated: stageGenerated,
-        skipped: stageSkipped,
-        errors: stageErrors
-      }
-
-      results.total_generated += stageGenerated
-      results.total_skipped += stageSkipped
+    // Jeśli kolejka pusta - dodaj nowe leady
+    let enqueued = 0
+    if (!queueCount || queueCount === 0) {
+      console.log('followups-cron: Queue empty, enqueuing leads...')
+      enqueued = await enqueueLeads(supabase, config)
+      console.log(`followups-cron: Enqueued ${enqueued} leads`)
     }
 
-    results.completed_at = new Date().toISOString()
-    results.duration_ms = Date.now() - startTime
+    // Przetwórz batch
+    const { processed, errors } = await processQueue(supabase, ANTHROPIC_API_KEY, config)
 
-    console.log('followups-cron: Completed in', results.duration_ms, 'ms')
-    console.log('followups-cron: Generated:', results.total_generated, 'Skipped:', results.total_skipped, 'Errors:', results.total_errors)
+    const result = {
+      success: true,
+      queue_before: queueCount || 0,
+      enqueued,
+      processed,
+      errors,
+      duration_ms: Date.now() - startTime
+    }
 
-    // Zapisz log wykonania
-    await logExecution(supabase, results)
+    console.log('followups-cron: Completed', result)
+
+    // Zapisz log
+    await supabase.from('followup_execution_logs').insert({
+      executed_at: new Date().toISOString(),
+      total_generated: processed,
+      total_skipped: 0,
+      total_errors: errors,
+      details: result
+    })
 
     return new Response(
-      JSON.stringify({ success: true, ...results }),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
-    results.error = error.message
-    results.completed_at = new Date().toISOString()
-    results.duration_ms = Date.now() - startTime
-
+  } catch (error: any) {
     console.error('followups-cron: Fatal error', error)
-
     return new Response(
-      JSON.stringify({ success: false, ...results }),
+      JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
