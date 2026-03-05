@@ -403,9 +403,11 @@ serve(async (req) => {
 
     // Przygotuj historię konwersacji dla Claude - z timestampami i lepszym formatowaniem
     const recentMessages = messages.slice(-15)
+    const sellerName = synced_by === 'maciek' ? 'Maciek' : 'Tomek'
+    const clientName = contact_name || 'Klient'
     const conversationHistory = recentMessages
       .map((m, i) => {
-        const role = m.direction === 'outbound' ? `TY` : contact_name.toUpperCase()
+        const role = m.direction === 'outbound' ? `🔵 ${sellerName}` : `⚪ ${clientName}`
         const timestamp = m.message_timestamp
           ? new Date(m.message_timestamp).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
           : ''
@@ -456,17 +458,16 @@ serve(async (req) => {
           {
             role: 'user',
             content: `## ROZMOWA WHATSAPP
-(>>> oznacza ostatnie wiadomości - najważniejsze)
+🔵 = ${sellerName} (sprzedawca - to TY, piszesz w jego imieniu)
+⚪ = ${clientName} (potencjalny klient)
+>>> = ostatnie wiadomości (najważniejsze)
 
 ${conversationHistory}
 
 ## ZADANIE
-Ostatnia wiadomość klienta: "${lastClientText}"
+Ostatnia wiadomość KLIENTA: "${lastClientText}"
 
-Napisz JEDNĄ krótką odpowiedź (1-3 zdania), która:
-1. Bezpośrednio nawiązuje do tego co klient napisał
-2. Popycha rozmowę do przodu
-3. Jest w stylu Tomka (krótko, bez korporacyjnego języka)
+Napisz odpowiedź jako ${sellerName}. Max 1-3 zdania. Bezpośrednio nawiązuj do tego co klient napisał.
 
 Odpowiedz TYLKO tekstem wiadomości.`
           }
