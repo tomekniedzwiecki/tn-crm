@@ -3657,6 +3657,29 @@
         border-color: #555;
         color: #fafafa;
       }
+      .followup-btn-regen {
+        background: transparent;
+        border: 1px solid #8B5CF6;
+        color: #8B5CF6;
+        min-width: 32px;
+        padding: 6px 8px;
+      }
+      .followup-btn-regen:hover {
+        background: #8B5CF6;
+        color: #fff;
+      }
+      .followup-btn-regen:disabled {
+        opacity: 0.5;
+        cursor: wait;
+      }
+      .followup-btn-regen .spinner {
+        display: inline-block;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
 
       /* Empty state */
       .followups-empty {
@@ -4180,7 +4203,8 @@
               ${new Date(f.created_at).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </div>
             <div class="followup-actions">
-              <button class="followup-btn followup-btn-insert" data-action="insert">Wstaw do czatu</button>
+              <button class="followup-btn followup-btn-insert" data-action="insert">Wstaw</button>
+              <button class="followup-btn followup-btn-regen" data-action="regen" title="Regeneruj odpowiedź">🔄</button>
               <button class="followup-btn followup-btn-skip" data-action="skip">Pomiń</button>
             </div>
           </div>
@@ -4246,6 +4270,58 @@
         followupsData = await loadFollowups();
         renderFollowupsPanel();
         updateToggleBadge();
+      };
+
+      // Regeneracja w widgecie
+      card.querySelector('[data-action="regen"]').onclick = async () => {
+        const btn = card.querySelector('[data-action="regen"]');
+        const msgEl = card.querySelector('.followup-message');
+        btn.innerHTML = '<span class="spinner">⏳</span>';
+        btn.disabled = true;
+
+        try {
+          // 1. Otwórz czat i zsynchronizuj
+          const chatOpened = await openChatByPhone(phone);
+          if (chatOpened !== true) {
+            throw new Error('Nie udało się otworzyć czatu');
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+
+          // 2. Sync wiadomości
+          await loadConfig();
+          const phoneNumber = getCurrentChatPhone();
+          const contactName = getCurrentChatName();
+          const messages = getMessagesFromChat();
+
+          if (phoneNumber && messages.length > 0) {
+            await syncMessages(messages, phoneNumber, contactName);
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+
+          // 3. Regeneruj
+          const result = await regenerateFollowup(id);
+
+          if (result.success && result.message) {
+            // Aktualizuj tekst w widgecie
+            msgEl.textContent = result.message;
+            btn.innerHTML = '✅';
+            setTimeout(() => {
+              btn.innerHTML = '🔄';
+              btn.disabled = false;
+            }, 1500);
+          } else {
+            throw new Error(result.error || 'Błąd regeneracji');
+          }
+        } catch (err) {
+          console.error('Error regenerating in widget:', err);
+          btn.innerHTML = '❌';
+          setTimeout(() => {
+            btn.innerHTML = '🔄';
+            btn.disabled = false;
+          }, 1500);
+        }
       };
     });
 
