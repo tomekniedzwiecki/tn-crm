@@ -3657,17 +3657,6 @@
         border-color: #555;
         color: #fafafa;
       }
-      .followup-btn-regen {
-        background: transparent;
-        border: 1px solid #8B5CF6;
-        color: #8B5CF6;
-        min-width: 36px;
-        padding: 6px 8px;
-      }
-      .followup-btn-regen:hover {
-        background: #8B5CF6;
-        color: #fff;
-      }
 
       /* Empty state */
       .followups-empty {
@@ -3876,6 +3865,154 @@
     }
   }
 
+  // Zmienna do przechowywania aktualnego followup ID (do regeneracji)
+  let currentFollowupId = null;
+  let currentFollowupPhone = null;
+
+  // Pokaż przycisk regeneracji obok pola wiadomości
+  function showRegenButton(followupId, phone) {
+    currentFollowupId = followupId;
+    currentFollowupPhone = phone;
+
+    // Usuń istniejący przycisk
+    const existing = document.getElementById('crm-regen-btn');
+    if (existing) existing.remove();
+
+    // Znajdź footer z polem wiadomości
+    const footer = document.querySelector('#main footer');
+    if (!footer) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'crm-regen-btn';
+    btn.innerHTML = '🔄 Regeneruj';
+    btn.title = 'Zsynchronizuj wiadomości i wygeneruj nową odpowiedź';
+    btn.style.cssText = `
+      position: absolute;
+      bottom: 70px;
+      right: 20px;
+      background: linear-gradient(135deg, #8B5CF6, #6366F1);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
+      transition: all 0.2s;
+    `;
+    btn.onmouseover = () => btn.style.transform = 'scale(1.05)';
+    btn.onmouseout = () => btn.style.transform = 'scale(1)';
+
+    btn.onclick = async () => {
+      btn.innerHTML = '⏳ Regeneruję...';
+      btn.disabled = true;
+
+      try {
+        // 1. Zsynchronizuj wiadomości z bieżącego czatu
+        await loadConfig();
+        const phoneNumber = getCurrentChatPhone();
+        const contactName = getCurrentChatName();
+        const messages = getMessagesFromChat();
+
+        if (phoneNumber && messages.length > 0) {
+          await syncMessages(messages, phoneNumber, contactName);
+        }
+
+        // 2. Wywołaj regenerację
+        const result = await regenerateFollowup(currentFollowupId);
+
+        if (result.success && result.message) {
+          // 3. Wstaw nową wiadomość
+          insertMessageToChat(result.message);
+          btn.innerHTML = '✅ Gotowe!';
+          setTimeout(() => {
+            btn.innerHTML = '🔄 Regeneruj';
+            btn.disabled = false;
+          }, 2000);
+        } else {
+          throw new Error(result.error || 'Nieznany błąd');
+        }
+      } catch (err) {
+        console.error('Error regenerating:', err);
+        btn.innerHTML = '❌ Błąd';
+        setTimeout(() => {
+          btn.innerHTML = '🔄 Regeneruj';
+          btn.disabled = false;
+        }, 2000);
+      }
+    };
+
+    // Dodaj przycisk "Wyślij i zamknij"
+    const sendBtn = document.createElement('button');
+    sendBtn.id = 'crm-send-done-btn';
+    sendBtn.innerHTML = '✅ Wyślij i zamknij';
+    sendBtn.style.cssText = `
+      position: absolute;
+      bottom: 70px;
+      right: 140px;
+      background: #25D366;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(37, 211, 102, 0.3);
+      transition: all 0.2s;
+    `;
+    sendBtn.onmouseover = () => sendBtn.style.transform = 'scale(1.05)';
+    sendBtn.onmouseout = () => sendBtn.style.transform = 'scale(1)';
+
+    sendBtn.onclick = async () => {
+      // Kliknij przycisk wysyłania WhatsApp
+      const sendWhatsApp = document.querySelector('[data-testid="send"]') ||
+                           document.querySelector('button[aria-label="Wyślij"]') ||
+                           document.querySelector('span[data-icon="send"]')?.closest('button');
+
+      if (sendWhatsApp) {
+        sendWhatsApp.click();
+
+        // Oznacz jako wysłane
+        await markFollowupSent(currentFollowupId);
+
+        // Sync po wysłaniu
+        setTimeout(async () => {
+          await loadConfig();
+          const phoneNumber = getCurrentChatPhone();
+          const contactName = getCurrentChatName();
+          const messages = getMessagesFromChat();
+          if (phoneNumber && messages.length > 0) {
+            await syncMessages(messages, phoneNumber, contactName);
+          }
+        }, 1500);
+
+        // Odśwież listę followupów
+        followupsData = await loadFollowups();
+        renderFollowupsPanel();
+        updateToggleBadge();
+
+        // Ukryj przyciski
+        hideRegenButtons();
+      }
+    };
+
+    footer.style.position = 'relative';
+    footer.appendChild(btn);
+    footer.appendChild(sendBtn);
+  }
+
+  // Ukryj przyciski regeneracji
+  function hideRegenButtons() {
+    const regen = document.getElementById('crm-regen-btn');
+    const send = document.getElementById('crm-send-done-btn');
+    if (regen) regen.remove();
+    if (send) send.remove();
+    currentFollowupId = null;
+    currentFollowupPhone = null;
+  }
+
   // Otwórz czat z konkretnym numerem - przez przycisk "nowy czat" + Enter
   async function openChatByPhone(phoneNumber) {
     console.log('WhatsApp Sync: Opening chat for', phoneNumber);
@@ -4012,7 +4149,6 @@
             </div>
             <div class="followup-actions">
               <button class="followup-btn followup-btn-insert" data-action="insert">Wstaw do czatu</button>
-              <button class="followup-btn followup-btn-regen" data-action="regenerate" title="Pobierz najnowsze wiadomości i wygeneruj nową odpowiedź">🔄</button>
               <button class="followup-btn followup-btn-skip" data-action="skip">Pomiń</button>
             </div>
           </div>
@@ -4066,27 +4202,8 @@
         const inserted = insertMessageToChat(message);
 
         if (inserted) {
-          // Oznacz jako wysłane
-          await markFollowupSent(id);
-
-          // Odśwież listę
-          followupsData = await loadFollowups();
-          renderFollowupsPanel();
-          updateToggleBadge();
-
-          // Auto-sync po 3 sekundach (daj czas na wysłanie)
-          setTimeout(async () => {
-            // Sprawdź czy wiadomość została wysłana
-            const msgs = getMessagesFromChat();
-            if (msgs.length > 0) {
-              const lastMsg = msgs[msgs.length - 1];
-              // Jeśli ostatnia wiadomość to nasza - sync
-              if (lastMsg.direction === 'outbound' &&
-                  lastMsg.text.includes(message.substring(0, 20))) {
-                await syncCurrentChat();
-              }
-            }
-          }, 3000);
+          // Pokaż przycisk regeneracji obok pola wiadomości
+          showRegenButton(id, phone);
         } else {
           alert('Nie udało się wstawić wiadomości. Spróbuj ponownie.');
         }
@@ -4097,50 +4214,6 @@
         followupsData = await loadFollowups();
         renderFollowupsPanel();
         updateToggleBadge();
-      };
-
-      card.querySelector('[data-action="regenerate"]').onclick = async () => {
-        const btn = card.querySelector('[data-action="regenerate"]');
-        btn.innerHTML = '⏳';
-        btn.disabled = true;
-
-        try {
-          // 1. Otwórz czat żeby pobrać wiadomości
-          const chatOpened = await openChatByPhone(phone);
-
-          if (chatOpened === 'no_whatsapp') {
-            alert('❌ Ta osoba nie ma WhatsApp.');
-            return;
-          }
-
-          if (!chatOpened) {
-            alert('Nie udało się otworzyć czatu.');
-            return;
-          }
-
-          await new Promise(r => setTimeout(r, 500));
-
-          // 2. Zsynchronizuj wiadomości
-          await syncCurrentChat();
-
-          // 3. Wywołaj regenerację
-          const result = await regenerateFollowup(id);
-
-          if (result.success) {
-            // Odśwież listę
-            followupsData = await loadFollowups();
-            renderFollowupsPanel();
-            updateToggleBadge();
-          } else {
-            alert('❌ Błąd regeneracji: ' + (result.error || 'Nieznany błąd'));
-          }
-        } catch (err) {
-          console.error('Error regenerating followup:', err);
-          alert('❌ Błąd: ' + err.message);
-        } finally {
-          btn.innerHTML = '🔄';
-          btn.disabled = false;
-        }
       };
     });
 
