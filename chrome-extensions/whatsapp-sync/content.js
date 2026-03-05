@@ -4009,6 +4009,31 @@
     footer.style.position = 'relative';
     footer.appendChild(btn);
     footer.appendChild(sendBtn);
+
+    // Obserwuj wysłanie wiadomości (Enter lub klik Send)
+    const inputEl = document.querySelector('[data-testid="conversation-compose-box-input"]') ||
+                    document.querySelector('#main footer div[contenteditable="true"]');
+
+    if (inputEl) {
+      const checkIfSent = async () => {
+        // Jeśli pole jest puste, wiadomość została wysłana
+        if (inputEl.textContent.trim() === '') {
+          console.log('WhatsApp Sync: Message sent, marking followup as sent');
+          await markFollowupSent(currentFollowupId);
+          followupsData = await loadFollowups();
+          renderFollowupsPanel();
+          updateToggleBadge();
+          hideRegenButtons();
+        }
+      };
+
+      // Nasłuchuj Enter
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          setTimeout(checkIfSent, 500);
+        }
+      });
+    }
   }
 
   // Ukryj przyciski regeneracji
