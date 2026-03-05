@@ -3827,23 +3827,9 @@
     }
 
     try {
-      // Focus na input
       inputEl.focus();
-
-      // Wyczyść ewentualny istniejący tekst
       inputEl.innerHTML = '';
-
-      // Wstaw tekst używając execCommand
       document.execCommand('insertText', false, text);
-
-      // Dispatch input event żeby WhatsApp zarejestrował zmianę
-      inputEl.dispatchEvent(new InputEvent('input', {
-        bubbles: true,
-        cancelable: true,
-        inputType: 'insertText',
-        data: text
-      }));
-
       console.log('WhatsApp Sync: Message inserted successfully');
       return true;
     } catch (err) {
