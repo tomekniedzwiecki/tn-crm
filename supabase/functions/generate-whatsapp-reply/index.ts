@@ -139,8 +139,10 @@ ${guidelines}`
     if (context.lead) {
       systemPrompt += `\n\n## KLIENT: ${context.lead.name || clientName}`
       systemPrompt += `\nStatus: ${context.lead.status || 'new'}`
-      if (context.lead.weekly_hours) systemPrompt += `\nCzas: ${context.lead.weekly_hours}`
-      if (context.lead.target_income) systemPrompt += `\nCel: ${context.lead.target_income}`
+      if (context.lead.weekly_hours) systemPrompt += `\nCzas tygodniowo: ${context.lead.weekly_hours}`
+      if (context.lead.target_income) systemPrompt += `\nCel dochodu: ${context.lead.target_income}`
+      if (context.lead.experience) systemPrompt += `\nMotywacja/doświadczenie: ${context.lead.experience}`
+      if (context.lead.open_question) systemPrompt += `\nOdpowiedź otwarta: ${context.lead.open_question}`
     }
 
     if (context.clientOffer) {
