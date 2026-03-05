@@ -3657,6 +3657,17 @@
         border-color: #555;
         color: #fafafa;
       }
+      .followup-btn-regen {
+        background: transparent;
+        border: 1px solid #8B5CF6;
+        color: #8B5CF6;
+        min-width: 36px;
+        padding: 6px 8px;
+      }
+      .followup-btn-regen:hover {
+        background: #8B5CF6;
+        color: #fff;
+      }
 
       /* Empty state */
       .followups-empty {
@@ -3798,6 +3809,33 @@
     } catch (err) {
       console.error('WhatsApp Sync: Error marking followup skipped', err);
       return false;
+    }
+  }
+
+  // Regeneruj followup (po zsynchronizowaniu wiadomości)
+  async function regenerateFollowup(followupId) {
+    await loadConfig();
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SYNC_API_KEY) {
+      return { success: false, error: 'Brak konfiguracji' };
+    }
+
+    try {
+      const response = await fetch(
+        `${CONFIG.SUPABASE_URL}/functions/v1/regenerate-followup`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-sync-api-key': CONFIG.SYNC_API_KEY
+          },
+          body: JSON.stringify({ followup_id: followupId })
+        }
+      );
+
+      return await response.json();
+    } catch (err) {
+      console.error('WhatsApp Sync: Error regenerating followup', err);
+      return { success: false, error: err.message };
     }
   }
 
@@ -3974,6 +4012,7 @@
             </div>
             <div class="followup-actions">
               <button class="followup-btn followup-btn-insert" data-action="insert">Wstaw do czatu</button>
+              <button class="followup-btn followup-btn-regen" data-action="regenerate" title="Pobierz najnowsze wiadomości i wygeneruj nową odpowiedź">🔄</button>
               <button class="followup-btn followup-btn-skip" data-action="skip">Pomiń</button>
             </div>
           </div>
@@ -4058,6 +4097,50 @@
         followupsData = await loadFollowups();
         renderFollowupsPanel();
         updateToggleBadge();
+      };
+
+      card.querySelector('[data-action="regenerate"]').onclick = async () => {
+        const btn = card.querySelector('[data-action="regenerate"]');
+        btn.innerHTML = '⏳';
+        btn.disabled = true;
+
+        try {
+          // 1. Otwórz czat żeby pobrać wiadomości
+          const chatOpened = await openChatByPhone(phone);
+
+          if (chatOpened === 'no_whatsapp') {
+            alert('❌ Ta osoba nie ma WhatsApp.');
+            return;
+          }
+
+          if (!chatOpened) {
+            alert('Nie udało się otworzyć czatu.');
+            return;
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+
+          // 2. Zsynchronizuj wiadomości
+          await syncCurrentChat();
+
+          // 3. Wywołaj regenerację
+          const result = await regenerateFollowup(id);
+
+          if (result.success) {
+            // Odśwież listę
+            followupsData = await loadFollowups();
+            renderFollowupsPanel();
+            updateToggleBadge();
+          } else {
+            alert('❌ Błąd regeneracji: ' + (result.error || 'Nieznany błąd'));
+          }
+        } catch (err) {
+          console.error('Error regenerating followup:', err);
+          alert('❌ Błąd: ' + err.message);
+        } finally {
+          btn.innerHTML = '🔄';
+          btn.disabled = false;
+        }
       };
     });
 
