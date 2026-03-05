@@ -227,8 +227,7 @@ serve(async (req) => {
       .from('whatsapp_followups')
       .update({
         message_text: newMessage,
-        hours_since_contact: hoursSinceContact,
-        regenerated_at: new Date().toISOString()
+        hours_since_contact: hoursSinceContact
       })
       .eq('id', followup_id)
 
