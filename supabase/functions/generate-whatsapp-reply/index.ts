@@ -167,7 +167,7 @@ Napisz FOLLOW-UP. Nie powtarzaj się. Krótko: "I co?", "Dasz znać?" itp.`
 Odpowiedz na to co napisał.`
 }
 
-Napisz TYLKO tekst wiadomości (1-3 zdania).`
+ZAWSZE pisz po polsku. Napisz TYLKO tekst wiadomości (1-3 zdania).`
 
     // Wywołaj Claude
     const response = await fetch('https://api.anthropic.com/v1/messages', {
