@@ -56,7 +56,7 @@ async function getClientData(supabase: any, phoneNumber: string) {
     // Pobierz ofertę klienta
     const { data: clientOffer } = await supabase
       .from('client_offers')
-      .select('unique_token, valid_until, view_count')
+      .select('unique_token, valid_until, view_count, created_at, viewed_at')
       .eq('lead_id', lead.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -146,9 +146,27 @@ ${guidelines}`
     }
 
     if (context.clientOffer) {
-      systemPrompt += `\n\nLink do oferty: https://crm.tomekniedzwiecki.pl/p/${context.clientOffer.unique_token}`
-      if (context.clientOffer.view_count > 0) {
-        systemPrompt += ` (oglądał ${context.clientOffer.view_count}x)`
+      systemPrompt += `\n\n## OFERTA`
+      systemPrompt += `\nLink: https://crm.tomekniedzwiecki.pl/p/${context.clientOffer.unique_token}`
+      if (context.clientOffer.created_at) {
+        const createdDate = new Date(context.clientOffer.created_at).toLocaleDateString('pl-PL')
+        systemPrompt += `\nWysłana: ${createdDate}`
+      }
+      if (context.clientOffer.viewed_at) {
+        const viewedDate = new Date(context.clientOffer.viewed_at).toLocaleDateString('pl-PL')
+        systemPrompt += `\nOtworzył: ${viewedDate} (${context.clientOffer.view_count || 1}x)`
+      } else {
+        systemPrompt += `\nNIE OTWORZYŁ oferty`
+      }
+      if (context.clientOffer.valid_until) {
+        const validDate = new Date(context.clientOffer.valid_until)
+        const now = new Date()
+        const daysLeft = Math.ceil((validDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        if (daysLeft > 0) {
+          systemPrompt += `\nWażna jeszcze ${daysLeft} dni`
+        } else {
+          systemPrompt += `\nOFERTA WYGASŁA`
+        }
       }
     }
 
