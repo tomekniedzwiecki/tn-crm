@@ -3386,12 +3386,36 @@
   function closeFollowupsPanel() {
     followupsPanelVisible = false;
     const panel = document.getElementById('crm-followups-panel');
-    const overlay = document.getElementById('crm-followups-overlay');
     if (panel) panel.classList.remove('visible');
-    if (overlay) overlay.classList.remove('visible');
+    // Przywróć WhatsApp do pełnej szerokości
+    const appContainer = document.getElementById('app');
+    if (appContainer) {
+      appContainer.style.marginLeft = '0';
+      appContainer.style.width = '100%';
+    }
+    // Przesuń toggle button
+    const toggle = document.getElementById('crm-followups-toggle');
+    if (toggle) toggle.classList.remove('panel-open');
   }
 
-  // Style dla panelu follow-upów - Vercel style
+  // Otwórz panel follow-upów
+  function openFollowupsPanel() {
+    followupsPanelVisible = true;
+    const panel = document.getElementById('crm-followups-panel');
+    if (panel) panel.classList.add('visible');
+    // Przesuń WhatsApp w prawo
+    const appContainer = document.getElementById('app');
+    if (appContainer) {
+      appContainer.style.marginLeft = '380px';
+      appContainer.style.width = 'calc(100% - 380px)';
+      appContainer.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+    // Przesuń toggle button
+    const toggle = document.getElementById('crm-followups-toggle');
+    if (toggle) toggle.classList.add('panel-open');
+  }
+
+  // Style dla panelu follow-upów - Vercel style (sidebar, nie overlay)
   function injectFollowupsStyles() {
     if (document.getElementById('crm-followups-styles')) return;
 
@@ -3419,10 +3443,13 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         letter-spacing: 0.5px;
         box-shadow: 4px 0 24px rgba(0,0,0,0.4);
-        transition: all 0.15s ease;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+      #crm-followups-toggle.panel-open {
+        left: 380px;
       }
       #crm-followups-toggle:hover {
         background: #171717;
@@ -3438,23 +3465,7 @@
         display: inline-block;
       }
 
-      /* Panel overlay */
-      #crm-followups-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(4px);
-        z-index: 10000;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.2s ease;
-      }
-      #crm-followups-overlay.visible {
-        opacity: 1;
-        visibility: visible;
-      }
-
-      /* Main panel - Vercel style */
+      /* Main panel - Vercel style SIDEBAR (nie overlay!) */
       #crm-followups-panel {
         position: fixed;
         left: 0;
@@ -3463,7 +3474,7 @@
         height: 100vh;
         background: #0a0a0a;
         border-right: 1px solid #262626;
-        z-index: 10001;
+        z-index: 9999;
         display: flex;
         flex-direction: column;
         transform: translateX(-100%);
@@ -3697,83 +3708,93 @@
     document.head.appendChild(style);
   }
 
-  // Pobierz follow-upy z bazy
+  // Pobierz follow-upy z bazy (przez edge function z API key)
   async function loadFollowups() {
     await loadConfig();
-    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return [];
+
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SYNC_API_KEY) {
+      console.log('WhatsApp Sync: loadFollowups - missing config (SYNC_API_KEY)');
+      return [];
+    }
 
     try {
-      const response = await fetch(
-        `${CONFIG.SUPABASE_URL}/rest/v1/whatsapp_followups?status=eq.pending&order=created_at.desc`,
-        {
-          headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
-          }
-        }
-      );
+      const url = `${CONFIG.SUPABASE_URL}/functions/v1/get-followups`;
+      console.log('WhatsApp Sync: loadFollowups - fetching via edge function');
 
-      if (!response.ok) throw new Error('Failed to fetch followups');
-      return await response.json();
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'x-sync-api-key': CONFIG.SYNC_API_KEY
+        }
+      });
+
+      console.log('WhatsApp Sync: loadFollowups - response status:', response.status);
+
+      if (!response.ok) throw new Error('Failed to fetch followups: ' + response.status);
+      const result = await response.json();
+
+      if (!result.success) throw new Error(result.error || 'Unknown error');
+
+      console.log('WhatsApp Sync: loadFollowups - got', result.followups.length, 'followups');
+      return result.followups;
     } catch (err) {
       console.error('WhatsApp Sync: Error loading followups', err);
       return [];
     }
   }
 
-  // Oznacz follow-up jako wysłany
+  // Oznacz follow-up jako wysłany (przez edge function)
   async function markFollowupSent(followupId) {
     await loadConfig();
-    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return false;
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SYNC_API_KEY) return false;
 
     try {
       const response = await fetch(
-        `${CONFIG.SUPABASE_URL}/rest/v1/whatsapp_followups?id=eq.${followupId}`,
+        `${CONFIG.SUPABASE_URL}/functions/v1/update-followup`,
         {
-          method: 'PATCH',
+          method: 'POST',
           headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
+            'x-sync-api-key': CONFIG.SYNC_API_KEY
           },
           body: JSON.stringify({
-            status: 'sent',
-            sent_at: new Date().toISOString()
+            followup_id: followupId,
+            status: 'sent'
           })
         }
       );
 
-      return response.ok;
+      const result = await response.json();
+      return result.success;
     } catch (err) {
       console.error('WhatsApp Sync: Error marking followup sent', err);
       return false;
     }
   }
 
-  // Oznacz follow-up jako pominięty
+  // Oznacz follow-up jako pominięty (przez edge function)
   async function markFollowupSkipped(followupId) {
     await loadConfig();
-    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return false;
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SYNC_API_KEY) return false;
 
     try {
       const response = await fetch(
-        `${CONFIG.SUPABASE_URL}/rest/v1/whatsapp_followups?id=eq.${followupId}`,
+        `${CONFIG.SUPABASE_URL}/functions/v1/update-followup`,
         {
-          method: 'PATCH',
+          method: 'POST',
           headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
+            'x-sync-api-key': CONFIG.SYNC_API_KEY
           },
           body: JSON.stringify({
+            followup_id: followupId,
             status: 'skipped'
           })
         }
       );
 
-      return response.ok;
+      const result = await response.json();
+      return result.success;
     } catch (err) {
       console.error('WhatsApp Sync: Error marking followup skipped', err);
       return false;
@@ -3782,6 +3803,8 @@
 
   // Wstaw wiadomość do czatu
   function insertMessageToChat(text) {
+    console.log('WhatsApp Sync: Inserting message to chat');
+
     const inputSelectors = [
       '[data-testid="conversation-compose-box-input"]',
       'div[contenteditable="true"][data-tab="10"]',
@@ -3792,32 +3815,105 @@
     let inputEl = null;
     for (const sel of inputSelectors) {
       inputEl = document.querySelector(sel);
-      if (inputEl) break;
+      if (inputEl) {
+        console.log('WhatsApp Sync: Found input with selector:', sel);
+        break;
+      }
     }
 
-    if (inputEl) {
+    if (!inputEl) {
+      console.log('WhatsApp Sync: No input element found');
+      return false;
+    }
+
+    try {
+      // Focus na input
       inputEl.focus();
-      document.execCommand('insertText', false, text);
-      return true;
-    }
 
-    return false;
+      // Wyczyść ewentualny istniejący tekst
+      inputEl.innerHTML = '';
+
+      // Wstaw tekst używając execCommand
+      document.execCommand('insertText', false, text);
+
+      // Dispatch input event żeby WhatsApp zarejestrował zmianę
+      inputEl.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertText',
+        data: text
+      }));
+
+      console.log('WhatsApp Sync: Message inserted successfully');
+      return true;
+    } catch (err) {
+      console.error('WhatsApp Sync: Error inserting message', err);
+      return false;
+    }
   }
 
   // Otwórz czat z konkretnym numerem
   async function openChatByPhone(phoneNumber) {
-    // Znajdź czat na liście po numerze telefonu
+    console.log('WhatsApp Sync: Opening chat for', phoneNumber);
+
+    // Najpierw spróbuj znaleźć na widocznej liście
     const sidePanel = document.querySelector('#pane-side');
-    if (!sidePanel) return false;
+    if (!sidePanel) {
+      console.log('WhatsApp Sync: No side panel found');
+      return false;
+    }
 
-    const chatItems = sidePanel.querySelectorAll('[data-testid="cell-frame-container"]');
+    // Funkcja do szukania czatu
+    const findAndClickChat = () => {
+      const chatItems = sidePanel.querySelectorAll('[data-testid="cell-frame-container"]');
+      for (const item of chatItems) {
+        const phone = getPhoneFromChatItem(item);
+        if (phone === phoneNumber) {
+          const clickTarget = item.closest('[tabindex="-1"]') || item;
+          clickTarget.click();
+          console.log('WhatsApp Sync: Found and clicked chat');
+          return true;
+        }
+      }
+      return false;
+    };
 
-    for (const item of chatItems) {
-      const phone = getPhoneFromChatItem(item);
-      if (phone === phoneNumber) {
-        // Kliknij w czat
-        const clickTarget = item.closest('[tabindex="-1"]') || item;
-        clickTarget.click();
+    // Spróbuj znaleźć na widocznej liście
+    if (findAndClickChat()) return true;
+
+    // Scrolluj listę i szukaj (max 10 scrolli)
+    for (let i = 0; i < 10; i++) {
+      sidePanel.scrollTop += 500;
+      await new Promise(r => setTimeout(r, 300));
+      if (findAndClickChat()) return true;
+    }
+
+    // Fallback: użyj wa.me linku (otwiera czat bezpośrednio)
+    console.log('WhatsApp Sync: Using wa.me fallback');
+    const waLink = `https://wa.me/${phoneNumber}`;
+
+    // Użyj search bar do otwarcia czatu
+    const searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
+                      document.querySelector('[contenteditable="true"][data-tab="3"]');
+    if (searchBox) {
+      searchBox.focus();
+      searchBox.click();
+      await new Promise(r => setTimeout(r, 200));
+
+      // Wklej numer
+      document.execCommand('insertText', false, phoneNumber);
+      await new Promise(r => setTimeout(r, 500));
+
+      // Sprawdź czy pojawił się wynik
+      const searchResult = document.querySelector('[data-testid="cell-frame-container"]');
+      if (searchResult) {
+        searchResult.click();
+
+        // Wyczyść search
+        await new Promise(r => setTimeout(r, 300));
+        const clearBtn = document.querySelector('[data-testid="x-alt"]');
+        if (clearBtn) clearBtn.click();
+
         return true;
       }
     }
@@ -3842,15 +3938,6 @@
 
     // Zbierz unikalne statusy
     const statuses = [...new Set(followupsData.map(f => f.lead_status).filter(Boolean))];
-
-    // Create overlay if not exists
-    let overlay = document.getElementById('crm-followups-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'crm-followups-overlay';
-      document.body.appendChild(overlay);
-      overlay.onclick = closeFollowupsPanel;
-    }
 
     panel.innerHTML = `
       <div class="followups-header">
@@ -4148,15 +4235,12 @@
       document.body.appendChild(toggle);
 
       toggle.onclick = () => {
-        followupsPanelVisible = !followupsPanelVisible;
-        const panel = document.getElementById('crm-followups-panel');
-        const overlay = document.getElementById('crm-followups-overlay');
-        if (panel) {
-          panel.classList.toggle('visible', followupsPanelVisible);
+        if (followupsPanelVisible) {
+          closeFollowupsPanel();
+        } else {
+          openFollowupsPanel();
         }
-        if (overlay) {
-          overlay.classList.toggle('visible', followupsPanelVisible);
-        }
+        renderFollowupsPanel();
       };
     }
 
