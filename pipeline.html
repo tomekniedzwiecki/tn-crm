@@ -811,6 +811,7 @@
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 const syncUser = user?.email?.includes('maciek') ? 'maciek' : 'tomek';
+                console.log('Calling generate-followups for stage:', stageId, 'user:', syncUser);
 
                 const response = await fetch(
                     `${SUPABASE_URL}/functions/v1/generate-followups`,
@@ -827,7 +828,9 @@
                     }
                 );
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response body:', result);
 
                 if (result.success) {
                     alert(`✅ Wygenerowano ${result.generated} follow-upów\n\nOtwórz rozszerzenie WhatsApp aby je wysłać.`);
