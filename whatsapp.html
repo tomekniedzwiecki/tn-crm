@@ -89,6 +89,9 @@
                 <button onclick="loadData()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md transition-colors" title="Odswiez">
                     <i class="ph ph-arrows-clockwise text-sm"></i>
                 </button>
+                <button onclick="openAISettings()" class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md transition-colors" title="Ustawienia AI">
+                    <i class="ph ph-gear text-sm"></i>
+                </button>
             </div>
         </header>
 
@@ -187,6 +190,39 @@
                     <p class="text-red-400 text-sm" id="ai-error-text">Blad generowania</p>
                     <button onclick="regenerateReply()" class="mt-3 px-4 py-2 bg-[#1a1a1a] text-zinc-300 text-sm rounded-lg hover:bg-[#222]">
                         Sprobuj ponownie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Settings Modal -->
+    <div id="ai-settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="px-4 py-3 border-b border-[#222] flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="ph ph-robot text-violet-400"></i>
+                    <span class="text-sm font-medium">Ustawienia AI WhatsApp</span>
+                </div>
+                <button onclick="closeAISettings()" class="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-[#1a1a1a] rounded-md">
+                    <i class="ph ph-x text-sm"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1">
+                <div class="mb-4">
+                    <label class="block text-zinc-400 text-xs font-medium mb-2">Wytyczne dla AI</label>
+                    <p class="text-zinc-600 text-[11px] mb-3">Instrukcje dla AI generującego odpowiedzi na WhatsApp i follow-upy</p>
+                    <textarea
+                        id="ai-guidelines-content"
+                        class="w-full h-[400px] bg-[#111] border border-[#333] rounded-lg p-4 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:border-violet-500/50"
+                        placeholder="Wczytywanie wytycznych..."
+                    ></textarea>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span id="ai-guidelines-status" class="text-xs text-zinc-500"></span>
+                    <button onclick="saveAIGuidelines()" class="bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                        <i class="ph ph-floppy-disk"></i>
+                        Zapisz
                     </button>
                 </div>
             </div>
@@ -763,6 +799,107 @@
         document.getElementById('search-input').addEventListener('input', (e) => {
             searchQuery = e.target.value;
             renderConversations();
+        });
+
+        // ============================================
+        // AI SETTINGS
+        // ============================================
+        let aiGuidelinesId = null;
+        let aiGuidelinesTimeout = null;
+
+        function openAISettings() {
+            const modal = document.getElementById('ai-settings-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            loadAIGuidelines();
+        }
+
+        function closeAISettings() {
+            const modal = document.getElementById('ai-settings-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function loadAIGuidelines() {
+            const textarea = document.getElementById('ai-guidelines-content');
+            const status = document.getElementById('ai-guidelines-status');
+            if (!textarea) return;
+
+            textarea.value = 'Wczytywanie...';
+
+            const { data, error } = await supabaseClient
+                .from('ai_guidelines')
+                .select('id, content')
+                .limit(1)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Error loading guidelines:', error);
+                textarea.value = 'Błąd ładowania wytycznych';
+                return;
+            }
+
+            if (data) {
+                aiGuidelinesId = data.id;
+                textarea.value = data.content;
+            } else {
+                textarea.value = '';
+                textarea.placeholder = 'Wpisz wytyczne dla AI...';
+            }
+
+            // Auto-save on change
+            textarea.oninput = () => {
+                if (status) status.textContent = 'Niezapisane zmiany...';
+                clearTimeout(aiGuidelinesTimeout);
+                aiGuidelinesTimeout = setTimeout(() => saveAIGuidelines(), 2000);
+            };
+        }
+
+        async function saveAIGuidelines() {
+            const textarea = document.getElementById('ai-guidelines-content');
+            const status = document.getElementById('ai-guidelines-status');
+            if (!textarea) return;
+
+            const content = textarea.value.trim();
+            if (!content) {
+                showToast('Wytyczne nie mogą być puste', 'error');
+                return;
+            }
+
+            if (status) status.textContent = 'Zapisywanie...';
+
+            let error;
+            if (aiGuidelinesId) {
+                const result = await supabaseClient
+                    .from('ai_guidelines')
+                    .update({ content, updated_at: new Date().toISOString() })
+                    .eq('id', aiGuidelinesId);
+                error = result.error;
+            } else {
+                const result = await supabaseClient
+                    .from('ai_guidelines')
+                    .insert({ content })
+                    .select()
+                    .single();
+                error = result.error;
+                if (result.data) aiGuidelinesId = result.data.id;
+            }
+
+            if (error) {
+                console.error('Error saving guidelines:', error);
+                showToast('Błąd zapisywania wytycznych', 'error');
+                if (status) status.textContent = 'Błąd zapisu';
+                return;
+            }
+
+            showToast('Wytyczne zapisane');
+            if (status) status.textContent = 'Zapisano';
+            setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+        }
+
+        // Zamknij modal ustawień klawiszem Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAISettings();
         });
 
         // ============================================
