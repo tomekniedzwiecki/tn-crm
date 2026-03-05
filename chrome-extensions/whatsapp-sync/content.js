@@ -4025,9 +4025,8 @@
   async function openChatByPhone(phoneNumber) {
     console.log('WhatsApp Sync: Opening chat for', phoneNumber);
 
-    // Zamknij panel follow-upów żeby nie przeszkadzał
-    closeFollowupsPanel();
-    await new Promise(r => setTimeout(r, 300));
+    // Panel zostaje otwarty - użytkownik sam go zamknie
+    await new Promise(r => setTimeout(r, 100));
 
     // Krok 1: Kliknij przycisk "Nowy czat" (ikona + w headerze)
     const newChatBtn = document.querySelector('[data-testid="chat"]') ||
