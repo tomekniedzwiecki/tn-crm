@@ -102,6 +102,9 @@
                 <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
                     <i class="ph ph-robot"></i> Prompty AI
                 </button>
+                <button onclick="switchSettingsTab('ai-whatsapp')" data-tab="ai-whatsapp" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-whatsapp-logo"></i> AI WhatsApp
+                </button>
             </div>
 
             <div class="flex flex-col md:flex-row h-full">
@@ -140,6 +143,10 @@
                             <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
                                 <i class="ph ph-robot text-lg"></i>
                                 <span class="text-sm font-medium">Prompty AI</span>
+                            </button>
+                            <button onclick="switchSettingsTab('ai-whatsapp')" data-tab="ai-whatsapp" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i class="ph ph-whatsapp-logo text-lg"></i>
+                                <span class="text-sm font-medium">AI WhatsApp</span>
                             </button>
                         </div>
                     </div>
@@ -601,6 +608,32 @@
                                 <div id="prompts-list" class="space-y-4">
                                     <!-- Templates loaded dynamically -->
                                     <div class="text-zinc-500 text-sm text-center py-8">Ładowanie szablonów...</div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: AI WhatsApp -->
+                            <div id="tab-ai-whatsapp" class="settings-panel hidden space-y-6">
+                                <div>
+                                    <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Wytyczne AI WhatsApp</h1>
+                                    <p class="text-zinc-500 text-sm">Instrukcje dla AI generującego odpowiedzi na wiadomości WhatsApp</p>
+                                </div>
+
+                                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4">
+                                    <textarea
+                                        id="ai-guidelines-content"
+                                        class="w-full h-96 bg-zinc-900 border border-white/10 rounded-lg p-4 text-sm text-zinc-200 font-mono resize-y focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+                                        placeholder="Wczytywanie wytycznych..."
+                                    ></textarea>
+                                    <div class="flex items-center justify-between mt-4">
+                                        <p class="text-xs text-zinc-600">Zmiany zapisują się automatycznie po 2 sekundach od ostatniej edycji</p>
+                                        <div class="flex items-center gap-2">
+                                            <span id="ai-guidelines-status" class="text-xs text-zinc-500"></span>
+                                            <button onclick="saveAIGuidelines()" class="bg-violet-600 hover:bg-violet-500 text-white text-xs px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                                                <i class="ph ph-floppy-disk"></i>
+                                                Zapisz
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2024,6 +2057,99 @@
             const template = promptTemplates.find(t => t.template_key === key);
             if (template) template.content = content;
         }
+
+        // =============================================
+        // AI WHATSAPP GUIDELINES
+        // =============================================
+
+        let aiGuidelinesTimeout = null;
+        let aiGuidelinesId = null;
+
+        async function loadAIGuidelines() {
+            const textarea = document.getElementById('ai-guidelines-content');
+            const status = document.getElementById('ai-guidelines-status');
+            if (!textarea) return;
+
+            const { data, error } = await supabaseClient
+                .from('ai_guidelines')
+                .select('id, content')
+                .limit(1)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Error loading guidelines:', error);
+                textarea.value = 'Błąd ładowania wytycznych';
+                return;
+            }
+
+            if (data) {
+                aiGuidelinesId = data.id;
+                textarea.value = data.content;
+            } else {
+                textarea.value = '';
+                textarea.placeholder = 'Wpisz wytyczne dla AI...';
+            }
+
+            // Auto-save on change
+            textarea.addEventListener('input', () => {
+                if (status) status.textContent = 'Niezapisane zmiany...';
+                clearTimeout(aiGuidelinesTimeout);
+                aiGuidelinesTimeout = setTimeout(() => saveAIGuidelines(), 2000);
+            });
+        }
+
+        async function saveAIGuidelines() {
+            const textarea = document.getElementById('ai-guidelines-content');
+            const status = document.getElementById('ai-guidelines-status');
+            if (!textarea) return;
+
+            const content = textarea.value.trim();
+            if (!content) {
+                showToast('Wytyczne nie mogą być puste', 'error');
+                return;
+            }
+
+            if (status) status.textContent = 'Zapisywanie...';
+
+            let error;
+            if (aiGuidelinesId) {
+                // Update existing
+                const result = await supabaseClient
+                    .from('ai_guidelines')
+                    .update({ content, updated_at: new Date().toISOString() })
+                    .eq('id', aiGuidelinesId);
+                error = result.error;
+            } else {
+                // Insert new
+                const result = await supabaseClient
+                    .from('ai_guidelines')
+                    .insert({ content })
+                    .select()
+                    .single();
+                error = result.error;
+                if (result.data) aiGuidelinesId = result.data.id;
+            }
+
+            if (error) {
+                console.error('Error saving guidelines:', error);
+                showToast('Błąd zapisywania wytycznych', 'error');
+                if (status) status.textContent = 'Błąd zapisu';
+                return;
+            }
+
+            showToast('Wytyczne zapisane');
+            if (status) status.textContent = 'Zapisano';
+            setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+        }
+
+        // Load guidelines when tab is shown
+        const origSwitchSettingsTab = switchSettingsTab;
+        switchSettingsTab = function(tabName) {
+            origSwitchSettingsTab(tabName);
+            if (tabName === 'ai-whatsapp' && !aiGuidelinesId) {
+                loadAIGuidelines();
+            }
+        };
 
         // Register service worker
         if ('serviceWorker' in navigator) {
