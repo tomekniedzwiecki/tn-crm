@@ -50,10 +50,21 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Pobierz aktualny status leada (przed zmianą)
+    const { data: currentLead } = await supabase
+      .from('leads')
+      .select('id, name, status')
+      .eq('id', leadId)
+      .single()
+
+    const oldStatus = currentLead?.status
+
     // Przygotuj dane do aktualizacji
     const updateData: Record<string, any> = {}
     if (status !== undefined) {
       updateData.status = status
+      // Zawsze aktualizuj datę ostatniego kontaktu przy zmianie statusu
+      updateData.last_contacted_at = new Date().toISOString()
     }
     if (expected_close !== undefined) {
       updateData.expected_close = expected_close
@@ -71,7 +82,7 @@ Deno.serve(async (req) => {
       .from('leads')
       .update(updateData)
       .eq('id', leadId)
-      .select('id, name, phone, status, expected_close')
+      .select('id, name, phone, status, expected_close, last_contacted_at')
       .single()
 
     if (error) {
@@ -79,6 +90,31 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Dodaj notatkę o zmianie statusu (jeśli się zmienił)
+    if (status !== undefined && oldStatus && oldStatus !== status) {
+      const statusNames: Record<string, string> = {
+        'new': 'Nowy',
+        'contacted': 'Skontaktowany',
+        'qualified': 'Zakwalifikowany',
+        'proposal': 'Propozycja',
+        'negotiation': 'Negocjacje',
+        'waiting': 'Oczekiwanie',
+        'won': 'Wygrany',
+        'lost': 'Przegrany'
+      }
+
+      const oldName = statusNames[oldStatus] || oldStatus
+      const newName = statusNames[status] || status
+
+      await supabase
+        .from('lead_notes')
+        .insert({
+          lead_id: leadId,
+          content: `Zmiana statusu: ${oldName} → ${newName}`,
+          created_by: 'WhatsApp'
+        })
     }
 
     return new Response(
