@@ -2143,6 +2143,9 @@
       picker.remove();
 
       if (result) {
+        // Usuń kontener żeby wymusić odświeżenie UI
+        const container = document.getElementById('crm-buttons-container');
+        if (container) container.remove();
         injectSyncButton();
       }
     };
@@ -2153,6 +2156,9 @@
       picker.remove();
 
       if (result) {
+        // Usuń kontener żeby wymusić odświeżenie UI
+        const container = document.getElementById('crm-buttons-container');
+        if (container) container.remove();
         injectSyncButton();
       }
     };
@@ -2255,6 +2261,9 @@
         dropdown.remove();
 
         if (result) {
+          // Usuń kontener żeby wymusić odświeżenie UI
+          const container = document.getElementById('crm-buttons-container');
+          if (container) container.remove();
           injectSyncButton();
         } else {
           alert('Błąd przy zmianie statusu');
