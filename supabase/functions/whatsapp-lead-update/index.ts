@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Dodaj notatkę o zmianie statusu (jeśli się zmienił)
+    // Dodaj aktywność o zmianie statusu (jeśli się zmienił) - tak jak w CRM
     if (status !== undefined && oldStatus && oldStatus !== status) {
       const statusNames: Record<string, string> = {
         'new': 'Nowy',
@@ -102,19 +102,36 @@ Deno.serve(async (req) => {
         'negotiation': 'Negocjacje',
         'waiting': 'Oczekiwanie',
         'won': 'Wygrany',
-        'lost': 'Przegrany'
+        'lost': 'Przegrany',
+        'abandoned': 'Porzucony'
       }
 
       const oldName = statusNames[oldStatus] || oldStatus
       const newName = statusNames[status] || status
 
+      // Pobierz aktualne activities z leada
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('activities')
+        .eq('id', leadId)
+        .single()
+
+      const currentActivities = leadData?.activities || []
+
+      // Dodaj nową aktywność (format taki sam jak w CRM)
+      const newActivity = {
+        type: 'status_change',
+        content: `Status zmieniony: ${oldName} → ${newName}`,
+        created_at: new Date().toISOString(),
+        performed_by: null,
+        performed_by_name: 'WhatsApp'
+      }
+
+      // Zapisz zaktualizowane activities
       await supabase
-        .from('lead_notes')
-        .insert({
-          lead_id: leadId,
-          content: `Zmiana statusu: ${oldName} → ${newName}`,
-          created_by: 'WhatsApp'
-        })
+        .from('leads')
+        .update({ activities: [...currentActivities, newActivity] })
+        .eq('id', leadId)
     }
 
     return new Response(
