@@ -6082,6 +6082,9 @@
                 brandingProduct = prod;
             }
 
+            // Load used mockup prompts from DB
+            await loadUsedMockupPrompts();
+
             renderBranding();
         }
 
@@ -6587,6 +6590,55 @@
         // AI PROMPTS GENERATOR (reusable for any brand)
         // =============================================
 
+        // Helper: Detect product category from name/description
+        function detectProductCategory(productName, productDesc) {
+            const text = (productName + ' ' + productDesc).toLowerCase();
+            if (text.match(/robot|odkurzacz|mop|czyszcz|sprzątaj|okien/)) return 'smart_home';
+            if (text.match(/kuchni|gotow|ekspres|kawa|blender|mikser|grill/)) return 'kitchen';
+            if (text.match(/narzędz|wiertark|szlifier|malarski|spawar|warsztat/)) return 'tools';
+            if (text.match(/beauty|uroda|masaż|skóra|włos|depilat/)) return 'beauty';
+            if (text.match(/sport|fitness|siłowni|trening|rower/)) return 'sport';
+            if (text.match(/ogród|trawnik|rośliny|podlew/)) return 'garden';
+            if (text.match(/dziec|zabawk|baby|maluch/)) return 'kids';
+            if (text.match(/zdrowi|medycz|ciśnien|termometr/)) return 'health';
+            if (text.match(/biuro|laptop|komputer|drukark/)) return 'office';
+            return 'lifestyle';
+        }
+
+        // Helper: Get target audience based on category
+        function getTargetAudience(category) {
+            const audiences = {
+                smart_home: 'tech-savvy homeowners 30-50, value convenience and modern living',
+                kitchen: 'home cooks and food enthusiasts 25-55, appreciate quality appliances',
+                tools: 'DIY enthusiasts and professionals 25-60, value durability and precision',
+                beauty: 'beauty-conscious individuals 20-45, care about self-care and wellness',
+                sport: 'active lifestyle enthusiasts 20-45, fitness-focused and health-conscious',
+                garden: 'homeowners with gardens 35-65, enjoy outdoor activities and nature',
+                kids: 'parents 25-45, prioritize safety and quality for their children',
+                health: 'health-conscious individuals 30-60, proactive about wellness',
+                office: 'professionals and remote workers 25-50, value productivity',
+                lifestyle: 'modern consumers 25-50, appreciate quality and design'
+            };
+            return audiences[category] || audiences.lifestyle;
+        }
+
+        // Helper: Get setting context based on category
+        function getSettingContext(category) {
+            const settings = {
+                smart_home: 'modern minimalist apartment with clean lines, smart home aesthetic',
+                kitchen: 'bright contemporary kitchen, cooking in progress, warm and inviting',
+                tools: 'organized workshop or garage, DIY project in progress',
+                beauty: 'spa-like bathroom or vanity setup, soft lighting, self-care moment',
+                sport: 'gym, outdoor fitness area, or active lifestyle scene',
+                garden: 'beautiful garden, patio, or outdoor living space',
+                kids: 'family home, playroom, or child-friendly environment',
+                health: 'clean wellness space, home or medical office aesthetic',
+                office: 'modern home office or professional workspace',
+                lifestyle: 'contemporary living space, aspirational but relatable'
+            };
+            return settings[category] || settings.lifestyle;
+        }
+
         /**
          * Generates branding prompts based on current brand data.
          * Reusable for any product/brand — reads from brandingItems.
@@ -6675,39 +6727,135 @@
                 }
             ];
 
-            // --- MOCKUP PROMPTS ---
+            // --- MOCKUP PROMPTS (kategoryzowane) ---
+            // Kontekst dla promptów
+            const productCategory = productName ? detectProductCategory(productName, productDesc) : 'lifestyle';
+            const targetAudience = getTargetAudience(productCategory);
+            const settingContext = getSettingContext(productCategory);
+
+            const basePromptSuffix = `IMPORTANT: Use the exact "${name}" logo as provided. Do NOT create a new logo design. Place the existing logo on the mockup. Output: 1024x1024px square format, photorealistic, white or neutral background.`;
+
             const mockupPrompts = [
+                // === ODZIEŻ ===
                 {
-                    label: 'Koszulka z logo',
-                    prompt: `Professional product mockup: premium cotton t-shirt with the "${name}" logo printed on the chest. Logo in ${primaryHex} (${primaryName}) with subtle ${secondaryHex} (${secondaryName}) accent. The t-shirt color and setting should match the brand's aesthetic — ${description ? description.split('.').slice(0, 2).join('.') + '.' : ''}. Model or flat-lay in a lifestyle environment appropriate for the ${productName || 'brand'} category. Photography style: modern DTC brand campaign like Quip, Hims, or Glossier. Output: 1024x1024px square format, photorealistic.`
+                    category: 'odzież',
+                    label: 'Koszulka premium',
+                    prompt: `Professional product mockup: premium cotton t-shirt with the "${name}" logo printed on the chest (left side, ~8cm). T-shirt color: ${lightNeutral} or black depending on logo contrast. Setting: ${settingContext}. Target audience: ${targetAudience}. The person wearing it should look like a typical ${productName || 'brand'} customer — ${targetAudience}. Photography style: modern DTC brand (Quip, Hims, Glossier). Soft natural lighting, shallow depth of field. ${basePromptSuffix}`
                 },
                 {
-                    label: 'Czapka z logo',
-                    prompt: `Professional product mockup: structured cap with the "${name}" logo embroidered on the front in ${primaryHex} (${primaryName}). The distinctive brand icon on the side in ${secondaryHex} (${secondaryName}). Small ${accentHex} (${accentName}) accent stitching on the back strap. Clean, minimal design. Photographed on a styled surface with props that reference the ${productName || 'brand'} world — subtle, tasteful. Bright, premium feel. Output: 1024x1024px square format, photorealistic.`
+                    category: 'odzież',
+                    label: 'Bluza z kapturem',
+                    prompt: `Professional product mockup: premium hoodie with the "${name}" logo embroidered on the chest. Hoodie color matching brand palette — ${darkNeutral} base or ${lightNeutral}. Logo in ${primaryHex} (${primaryName}). Setting: ${settingContext}, casual lifestyle scene. Model: ${targetAudience}. Premium streetwear aesthetic, cozy and professional. ${basePromptSuffix}`
                 },
                 {
-                    label: 'Kubek / termos z logo',
-                    prompt: `Professional product mockup: premium drinkware (mug or travel thermos) with the "${name}" logo and tagline "${tagline}" printed in ${primaryHex} (${primaryName}) and ${darkNeutral}. Photographed on a clean, styled surface next to the ${productName || 'main product'} or in a lifestyle setting that matches the brand's world. Soft natural lighting, warm tones. The drinkware style (matte/glossy, color) should match the brand's palette — base color ${lightNeutral} or ${darkNeutral}. Output: 1024x1024px square format, photorealistic.`
+                    category: 'odzież',
+                    label: 'Polo firmowe',
+                    prompt: `Professional product mockup: business polo shirt with the "${name}" logo embroidered on the chest. Polo color: ${lightNeutral} (white/cream) or navy. Logo small and elegant in ${primaryHex}. Setting: professional environment matching ${productName || 'brand'} world — office, showroom, or professional setting. Person looks competent and trustworthy. ${basePromptSuffix}`
                 },
                 {
+                    category: 'odzież',
+                    label: 'Czapka z daszkiem',
+                    prompt: `Professional product mockup: structured baseball cap with the "${name}" logo embroidered on the front. Cap color: ${darkNeutral} or ${lightNeutral}. Logo in ${primaryHex} with ${secondaryHex} accent on the side. Small ${accentHex} detail on back strap. Setting: ${settingContext}, outdoor or casual lifestyle. Bright, premium feel. ${basePromptSuffix}`
+                },
+
+                // === AKCESORIA ===
+                {
+                    category: 'akcesoria',
+                    label: 'Torba shopperka',
+                    prompt: `Professional product mockup: premium canvas tote bag / shopper with the "${name}" logo printed large on one side. Bag color: natural canvas or ${lightNeutral}. Logo in ${primaryHex}. Tagline "${tagline}" smaller below. Setting: ${settingContext} — person carrying it in a lifestyle scene. Eco-friendly, premium DTC aesthetic. ${basePromptSuffix}`
+                },
+                {
+                    category: 'akcesoria',
+                    label: 'Plecak / worek',
+                    prompt: `Professional product mockup: minimalist drawstring bag or small backpack with the "${name}" logo. Bag material: quality fabric in ${darkNeutral} or ${lightNeutral}. Logo centered in ${primaryHex}. Setting: ${settingContext}, active lifestyle. Target: ${targetAudience}. Clean, sporty-casual aesthetic. ${basePromptSuffix}`
+                },
+                {
+                    category: 'akcesoria',
+                    label: 'Breloczek metalowy',
+                    prompt: `Professional product mockup: premium metal keychain with the "${name}" logo engraved or printed. Metal finish: brushed silver or matte black. Logo and brand icon visible. Photographed on a styled surface — ${settingContext} props in background. Premium feel, gift-worthy. ${basePromptSuffix}`
+                },
+                {
+                    category: 'akcesoria',
+                    label: 'Smycz na identyfikator',
+                    prompt: `Professional product mockup: branded lanyard with the "${name}" logo repeated along the strap. Lanyard color: ${primaryHex} or ${darkNeutral}. Logo in contrasting color. Metal clip in silver/gold. Shown with a professional ID badge holder. Setting: professional/corporate context. ${basePromptSuffix}`
+                },
+                {
+                    category: 'akcesoria',
+                    label: 'Etui na telefon',
+                    prompt: `Professional product mockup: premium phone case with the "${name}" logo. Case style: slim, minimal — matte ${darkNeutral} or clear with ${primaryHex} logo. Logo centered or in corner. Shown on latest iPhone model. Setting: ${settingContext}, lifestyle scene with phone being used. Modern, tech-savvy aesthetic. ${basePromptSuffix}`
+                },
+                {
+                    category: 'akcesoria',
+                    label: 'Kubek / termos',
+                    prompt: `Professional product mockup: premium ceramic mug or stainless steel thermos with the "${name}" logo and tagline "${tagline}". Colors: ${lightNeutral} base with ${primaryHex} logo, or ${darkNeutral} with white logo. Setting: ${settingContext} — on a desk, kitchen counter, or in use. Soft natural lighting, warm tones. ${basePromptSuffix}`
+                },
+
+                // === BIURO ===
+                {
+                    category: 'biuro',
+                    label: 'Notes firmowy',
+                    prompt: `Professional product mockup: premium hardcover notebook with the "${name}" logo on the cover. Cover: ${darkNeutral} or ${lightNeutral} with ${primaryHex} logo and ${accentHex} accent line. Inside pages visible with quality paper. Setting: professional desk setup, ${settingContext}. Includes a premium pen beside it. Moleskin/Leuchtturm quality aesthetic. ${basePromptSuffix}`
+                },
+                {
+                    category: 'biuro',
+                    label: 'Wizytówki',
+                    prompt: `Professional product mockup: premium business cards for "${name}" brand. Card design: ${lightNeutral} base, ${primaryHex} logo, contact details in ${darkNeutral} using ${bodyFontName} font. Finishing: soft-touch matte with spot UV on logo. Show stack of cards on elegant surface — marble, wood, or leather. Multiple cards at angles showing front and back. ${basePromptSuffix}`
+                },
+                {
+                    category: 'biuro',
+                    label: 'Długopis premium',
+                    prompt: `Professional product mockup: premium metal pen with the "${name}" logo engraved. Pen finish: brushed silver, matte black, or ${primaryHex} accent color. Logo subtle, elegant. Shown on a notebook or in a gift box with brand colors. Executive, premium aesthetic. ${basePromptSuffix}`
+                },
+                {
+                    category: 'biuro',
+                    label: 'Teczka na dokumenty',
+                    prompt: `Professional product mockup: professional document folder / portfolio with the "${name}" logo. Material: premium faux leather in ${darkNeutral} or ${lightNeutral}. Logo embossed or printed in ${primaryHex}. Shown closed and slightly open with documents visible. Setting: business meeting table, professional environment. ${basePromptSuffix}`
+                },
+
+                // === TECH ===
+                {
+                    category: 'tech',
+                    label: 'Powerbank',
+                    prompt: `Professional product mockup: slim powerbank with the "${name}" logo printed on the surface. Powerbank color: ${lightNeutral} (white/silver) or ${darkNeutral} (black). Logo in ${primaryHex}. Capacity indicator visible. Setting: ${settingContext}, shown charging a phone. Modern tech aesthetic, Apple-like minimalism. ${basePromptSuffix}`
+                },
+                {
+                    category: 'tech',
+                    label: 'Pendrive',
+                    prompt: `Professional product mockup: premium USB drive with the "${name}" logo engraved. Material: brushed metal in silver or ${darkNeutral}. Logo small and elegant. Shown with branded packaging box in ${lightNeutral} with ${primaryHex} accents. Gift-worthy, premium tech accessory aesthetic. ${basePromptSuffix}`
+                },
+
+                // === MARKETING ===
+                {
+                    category: 'marketing',
                     label: 'Opakowanie produktu',
-                    prompt: `Design a premium product packaging box for "${name}" brand's ${productName || 'flagship product'}. The box is predominantly ${lightNeutral} (${lightNeutralName}) with ${primaryHex} (${primaryName}) accent lines and patterns that reflect the product's function. "${name}" logo prominently displayed on front. Side panel shows product silhouette or photo with ${accentHex} (${accentName}) highlight details. Key features listed in ${bodyFontName} font. Subtitle in ${accentFontName}. Soft-touch matte finish with spot UV on the logo. Show 3/4 angle view. Premium unboxing feel — think Apple meets ${productName ? 'the ' + productName + ' category' : 'modern DTC'}. Output: 1024x1024px square format, photorealistic.`
+                    prompt: `Design a premium product packaging box for "${name}" brand's ${productName || 'flagship product'}. Box predominantly ${lightNeutral} with ${primaryHex} accent lines. "${name}" logo prominent on front. Side panel shows product benefits. Typography: ${headingFontName} for headlines, ${bodyFontName} for details. Soft-touch matte finish with spot UV on logo. Show 3/4 angle. Premium unboxing feel — Apple meets DTC. ${basePromptSuffix}`
                 },
                 {
-                    label: `${productName || 'Produkt'} z brandingiem`,
-                    prompt: `Professional product mockup: ${productName ? 'a ' + productName : 'the main product'} branded with the "${name}" logo in ${primaryHex} (${primaryName}), subtly applied on the product body. Premium finish — ${secondaryHex} (${secondaryName}) accent details on functional elements. Photographed in a lifestyle setting natural for this product — ${productName ? 'where someone would actually use a ' + productName : 'appropriate for the brand'}. Soft, professional lighting with subtle ${primaryHex} color cast. ${description ? description.split('.')[0] + '.' : ''} Output: 1024x1024px square format, photorealistic.`
-                },
-                {
-                    label: 'Social media avatar',
-                    prompt: `Design a social media profile picture for the "${name}" brand. Square format (1:1). The favicon/icon version of the logo (the distinctive brand symbol) centered on a ${lightNeutral} (${lightNeutralName}) background with a subtle radial ${primaryHex} (${primaryName}) glow behind it. Clean, bold, instantly recognizable at small sizes. The icon style should reflect the brand's personality — ${tagline || name}. Output: 1024x1024px square format, PNG.`
-                },
-                {
-                    label: 'Banner social media',
-                    prompt: `Design a social media cover/banner for "${name}". Wide format (16:9). Left side: the ${productName || 'product'} shown in use or a close-up detail shot with ${primaryHex} (${primaryName}) color tint. Right side: clean space with the "${name}" logo and tagline "${tagline}" in ${headingFontName} font. A flowing design element in ${primaryHex} and ${secondaryHex} connects both halves. Bottom accent in ${accentHex} (${accentName}). ${darkNeutral} or ${lightNeutral} base depending on brand mood. ${description ? description.split('.')[0] + '.' : ''} Output: 1024x1024px square format.`
-                },
-                {
+                    category: 'marketing',
                     label: 'Naklejki / stickery',
-                    prompt: `Design a set of 4 brand stickers for "${name}": 1) Logo die-cut sticker (${primaryHex} ${primaryName} on ${lightNeutral}). 2) Round sticker with the brand icon + "${name}" text. 3) Rectangular sticker with tagline "${tagline}" in ${secondaryHex} (${secondaryName}). 4) Holographic-style sticker with abstract pattern inspired by the ${productName || 'product'} and brand colors (${primaryHex}, ${secondaryHex}, ${accentHex}). All on one sheet, mockup style on a surface appropriate for the brand. Output: 1024x1024px square format, photorealistic.`
+                    prompt: `Design a set of 4-6 brand stickers for "${name}": 1) Logo die-cut sticker (${primaryHex} on ${lightNeutral}). 2) Round sticker with brand icon + "${name}". 3) Tagline sticker "${tagline}" in ${secondaryHex}. 4) Pattern sticker with abstract design in brand colors. 5) "Thank you" sticker with brand voice. All shown on one sheet or scattered on a surface matching ${productCategory} aesthetic. ${basePromptSuffix}`
+                },
+                {
+                    category: 'marketing',
+                    label: 'Rollup / banner',
+                    prompt: `Design a professional rollup banner for "${name}" brand. Dimensions: vertical standing banner. Top: large "${name}" logo. Center: ${productName || 'product'} hero image or benefit visualization. Bottom: tagline "${tagline}" and website/contact. Colors: ${primaryHex} dominant with ${secondaryHex} accents on ${lightNeutral} or ${darkNeutral} base. Typography: ${headingFontName}. Show in a trade show or office setting. ${basePromptSuffix}`
+                },
+                {
+                    category: 'marketing',
+                    label: 'Ulotka produktowa',
+                    prompt: `Design a product flyer/leaflet for "${name}". Format: A5 or trifold. Front: ${productName || 'product'} hero shot with "${name}" logo and tagline. Inside: key benefits (3-5 points with icons), product specs, call-to-action. Colors: ${primaryHex}, ${secondaryHex}, ${lightNeutral}. Typography: ${headingFontName} headlines, ${bodyFontName} body. Premium print feel with high-quality photography. Show mockup of printed flyer. ${basePromptSuffix}`
+                },
+
+                // === SOCIAL MEDIA ===
+                {
+                    category: 'social',
+                    label: 'Avatar social media',
+                    prompt: `Design a social media profile picture for "${name}" brand. Square format (1:1). The favicon/icon version of the logo centered on ${lightNeutral} background with subtle ${primaryHex} radial glow. Clean, bold, recognizable at 32x32px. Professional brand presence. ${basePromptSuffix}`
+                },
+                {
+                    category: 'social',
+                    label: 'Cover / banner',
+                    prompt: `Design a social media cover banner for "${name}". Format: 1024x1024 (will be cropped to various ratios). Left: ${productName || 'product'} in use or hero shot with ${primaryHex} tint. Right: clean space with "${name}" logo and tagline "${tagline}". Flowing design element in ${primaryHex} and ${secondaryHex} connects both halves. ${basePromptSuffix}`
                 }
             ];
 
@@ -6971,8 +7119,71 @@
         window.handleDirectMockupDrop = handleDirectMockupDrop;
         window.handleDirectMockupUpload = handleDirectMockupUpload;
 
-        // Mockup prompts inline (compact chips)
-        let copiedMockupPrompts = new Set();
+        // Mockup prompts inline (compact chips with categories)
+        let usedMockupPrompts = new Set(); // Loaded from DB on init
+
+        // Category labels and icons
+        const mockupCategoryInfo = {
+            'odzież': { icon: 'ph-t-shirt', label: 'Odzież' },
+            'akcesoria': { icon: 'ph-bag-simple', label: 'Akcesoria' },
+            'biuro': { icon: 'ph-notebook', label: 'Biuro' },
+            'tech': { icon: 'ph-device-mobile', label: 'Tech' },
+            'marketing': { icon: 'ph-megaphone', label: 'Marketing' },
+            'social': { icon: 'ph-instagram-logo', label: 'Social' }
+        };
+
+        // Load used prompts from database
+        async function loadUsedMockupPrompts() {
+            if (!workflow?.id) return;
+            const { data } = await supabaseClient
+                .from('workflow_branding')
+                .select('title, notes')
+                .eq('workflow_id', workflow.id)
+                .eq('type', 'ai_prompt');
+
+            if (data) {
+                data.forEach(item => {
+                    const notes = parseNotes(item.notes);
+                    if (notes.category === 'mockup' && notes.used) {
+                        usedMockupPrompts.add(item.title);
+                    }
+                });
+            }
+        }
+
+        // Save used prompt to database
+        async function markMockupPromptUsed(label) {
+            if (!workflow?.id || usedMockupPrompts.has(label)) return;
+
+            usedMockupPrompts.add(label);
+
+            // Check if already exists
+            const { data: existing } = await supabaseClient
+                .from('workflow_branding')
+                .select('id')
+                .eq('workflow_id', workflow.id)
+                .eq('type', 'ai_prompt')
+                .eq('title', label)
+                .maybeSingle();
+
+            if (existing) {
+                // Update existing
+                await supabaseClient
+                    .from('workflow_branding')
+                    .update({ notes: JSON.stringify({ category: 'mockup', used: true, usedAt: new Date().toISOString() }) })
+                    .eq('id', existing.id);
+            } else {
+                // Insert new
+                await supabaseClient
+                    .from('workflow_branding')
+                    .insert({
+                        workflow_id: workflow.id,
+                        type: 'ai_prompt',
+                        title: label,
+                        notes: JSON.stringify({ category: 'mockup', used: true, usedAt: new Date().toISOString() })
+                    });
+            }
+        }
 
         function renderMockupPromptsInline() {
             const container = document.getElementById('mockup-prompts-inline');
@@ -6986,28 +7197,62 @@
                 return;
             }
 
-            container.innerHTML = list.map((item, i) => {
-                const isCopied = copiedMockupPrompts.has(i);
-                const shortLabel = item.label.replace('z logo', '').replace('z brandingiem', '').trim();
-                return `
-                    <button onclick="copyMockupPromptInline(${i})"
-                        id="mockup-prompt-chip-${i}"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all ${isCopied ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700/50 border border-zinc-700/50'}"
-                        title="${item.label}">
-                        <i class="ph ${isCopied ? 'ph-check' : 'ph-magic-wand'} text-[10px]"></i>
-                        <span class="truncate max-w-[100px]">${shortLabel}</span>
-                    </button>
+            // Group by category
+            const grouped = {};
+            list.forEach((item, i) => {
+                const cat = item.category || 'other';
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push({ ...item, index: i });
+            });
+
+            // Render with category headers
+            const categoryOrder = ['odzież', 'akcesoria', 'biuro', 'tech', 'marketing', 'social'];
+            let html = '';
+
+            categoryOrder.forEach(cat => {
+                if (!grouped[cat] || grouped[cat].length === 0) return;
+                const info = mockupCategoryInfo[cat] || { icon: 'ph-folder', label: cat };
+
+                html += `
+                    <div class="w-full mt-3 first:mt-0">
+                        <div class="flex items-center gap-1.5 mb-2">
+                            <i class="ph ${info.icon} text-zinc-500 text-xs"></i>
+                            <span class="text-zinc-500 text-[10px] font-medium uppercase tracking-wider">${info.label}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
                 `;
-            }).join('');
+
+                grouped[cat].forEach(item => {
+                    const isUsed = usedMockupPrompts.has(item.label);
+                    const shortLabel = item.label.replace(' premium', '').replace(' firmowy', '').replace(' metalowy', '').trim();
+                    html += `
+                        <button onclick="copyMockupPromptInline(${item.index})"
+                            id="mockup-prompt-chip-${item.index}"
+                            data-label="${item.label}"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all ${isUsed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700/50 border border-zinc-700/50'}"
+                            title="${item.label}">
+                            <i class="ph ${isUsed ? 'ph-check' : 'ph-magic-wand'} text-[10px]"></i>
+                            <span class="truncate max-w-[120px]">${shortLabel}</span>
+                        </button>
+                    `;
+                });
+
+                html += '</div></div>';
+            });
+
+            container.innerHTML = html;
         }
 
-        function copyMockupPromptInline(index) {
+        async function copyMockupPromptInline(index) {
             const prompts = generateBrandingPrompts();
             const list = prompts.mockup || [];
             if (!list[index]) return;
 
-            navigator.clipboard.writeText(list[index].prompt);
-            copiedMockupPrompts.add(index);
+            const item = list[index];
+            navigator.clipboard.writeText(item.prompt);
+
+            // Mark as used in DB
+            await markMockupPromptUsed(item.label);
 
             // Update chip appearance
             const chip = document.getElementById(`mockup-prompt-chip-${index}`);
@@ -7019,6 +7264,7 @@
         }
         window.copyMockupPromptInline = copyMockupPromptInline;
         window.renderMockupPromptsInline = renderMockupPromptsInline;
+        window.loadUsedMockupPrompts = loadUsedMockupPrompts;
 
         // Branding delivery
         let lastBrandingEmailSentAt = 0;
