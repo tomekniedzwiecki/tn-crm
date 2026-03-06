@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     // Pobierz dane z body
     const body = await req.json()
     const { leadId, status, expected_close } = body
+    console.log('whatsapp-lead-update request:', { leadId, status, expected_close })
 
     if (!leadId) {
       return new Response(
@@ -63,8 +64,6 @@ Deno.serve(async (req) => {
     const updateData: Record<string, any> = {}
     if (status !== undefined) {
       updateData.status = status
-      // Zawsze aktualizuj datę ostatniego kontaktu przy zmianie statusu
-      updateData.last_contacted_at = new Date().toISOString()
     }
     if (expected_close !== undefined) {
       updateData.expected_close = expected_close
@@ -82,7 +81,7 @@ Deno.serve(async (req) => {
       .from('leads')
       .update(updateData)
       .eq('id', leadId)
-      .select('id, name, phone, status, expected_close, last_contacted_at')
+      .select('id, name, phone, status, expected_close, updated_at')
       .single()
 
     if (error) {
@@ -94,44 +93,49 @@ Deno.serve(async (req) => {
 
     // Dodaj aktywność o zmianie statusu (jeśli się zmienił) - tak jak w CRM
     if (status !== undefined && oldStatus && oldStatus !== status) {
-      const statusNames: Record<string, string> = {
-        'new': 'Nowy',
-        'contacted': 'Skontaktowany',
-        'qualified': 'Zakwalifikowany',
-        'proposal': 'Propozycja',
-        'negotiation': 'Negocjacje',
-        'waiting': 'Oczekiwanie',
-        'won': 'Wygrany',
-        'lost': 'Przegrany',
-        'abandoned': 'Porzucony'
+      try {
+        const statusNames: Record<string, string> = {
+          'new': 'Nowy',
+          'contacted': 'Skontaktowany',
+          'qualified': 'Zakwalifikowany',
+          'proposal': 'Propozycja',
+          'negotiation': 'Negocjacje',
+          'waiting': 'Oczekiwanie',
+          'won': 'Wygrany',
+          'lost': 'Przegrany',
+          'abandoned': 'Porzucony'
+        }
+
+        const oldName = statusNames[oldStatus] || oldStatus
+        const newName = statusNames[status] || status
+
+        // Pobierz aktualne activities z leada
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('activities')
+          .eq('id', leadId)
+          .single()
+
+        const currentActivities = Array.isArray(leadData?.activities) ? leadData.activities : []
+
+        // Dodaj nową aktywność (format taki sam jak w CRM)
+        const newActivity = {
+          type: 'status_change',
+          content: `Status zmieniony: ${oldName} → ${newName}`,
+          created_at: new Date().toISOString(),
+          performed_by: null,
+          performed_by_name: 'WhatsApp'
+        }
+
+        // Zapisz zaktualizowane activities
+        await supabase
+          .from('leads')
+          .update({ activities: [...currentActivities, newActivity] })
+          .eq('id', leadId)
+      } catch (activityError) {
+        console.error('Error adding activity:', activityError)
+        // Kontynuuj - główna aktualizacja statusu już się powiodła
       }
-
-      const oldName = statusNames[oldStatus] || oldStatus
-      const newName = statusNames[status] || status
-
-      // Pobierz aktualne activities z leada
-      const { data: leadData } = await supabase
-        .from('leads')
-        .select('activities')
-        .eq('id', leadId)
-        .single()
-
-      const currentActivities = leadData?.activities || []
-
-      // Dodaj nową aktywność (format taki sam jak w CRM)
-      const newActivity = {
-        type: 'status_change',
-        content: `Status zmieniony: ${oldName} → ${newName}`,
-        created_at: new Date().toISOString(),
-        performed_by: null,
-        performed_by_name: 'WhatsApp'
-      }
-
-      // Zapisz zaktualizowane activities
-      await supabase
-        .from('leads')
-        .update({ activities: [...currentActivities, newActivity] })
-        .eq('id', leadId)
     }
 
     return new Response(
@@ -140,8 +144,10 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('whatsapp-lead-update error:', errorMessage)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
