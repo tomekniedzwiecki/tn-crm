@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030907';
+        const APP_VERSION = '2026030908';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3134,6 +3134,27 @@
                 </button>
                 <button onclick="confirmProductSelection()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
                     Tak, wybieram
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal Data Confirm Modal -->
+    <div id="legal-confirm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl w-full max-w-md shadow-2xl">
+            <div class="p-6 text-center">
+                <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <i class="ph ph-warning text-amber-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white font-semibold text-lg mb-2">Potwierdź dane</h3>
+                <p class="text-[#888] text-sm leading-relaxed">Czy wszystkie dane są poprawne?<br><span class="text-amber-400">Po zapisaniu nie będzie możliwości edycji.</span></p>
+            </div>
+            <div class="flex gap-3 px-6 py-4 border-t border-[#222]">
+                <button onclick="closeLegalConfirmModal()" class="flex-1 text-[#888] hover:text-white border border-[#333] hover:border-[#555] py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    Sprawdzę jeszcze
+                </button>
+                <button onclick="confirmLegalDataSave()" class="flex-1 bg-white hover:bg-gray-100 text-black py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                    Tak, zapisz
                 </button>
             </div>
         </div>
@@ -6776,7 +6797,9 @@
             }
         }
 
-        async function saveLegalData() {
+        let pendingLegalData = null;
+
+        function saveLegalData() {
             const data = {
                 brand_name: document.getElementById('client-legal-brand')?.value.trim(),
                 company_name: document.getElementById('client-legal-company')?.value.trim(),
@@ -6814,9 +6837,22 @@
                 return;
             }
 
-            // Confirm before saving - no edit possible after
-            const confirmed = confirm('Czy wszystkie dane są poprawne?\n\nPo zapisaniu nie będzie możliwości edycji.');
-            if (!confirmed) return;
+            // Store data and show confirmation modal
+            pendingLegalData = data;
+            document.getElementById('legal-confirm-modal').classList.remove('hidden');
+        }
+        window.saveLegalData = saveLegalData;
+
+        function closeLegalConfirmModal() {
+            document.getElementById('legal-confirm-modal').classList.add('hidden');
+            pendingLegalData = null;
+        }
+        window.closeLegalConfirmModal = closeLegalConfirmModal;
+
+        async function confirmLegalDataSave() {
+            if (!pendingLegalData) return;
+
+            closeLegalConfirmModal();
 
             const token = getToken();
             if (!token) {
@@ -6828,7 +6864,7 @@
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
                     .update({
-                        legal_data: data,
+                        legal_data: pendingLegalData,
                         legal_documents_ready: true
                     })
                     .eq('workflow_id', workflow.id);
@@ -6837,9 +6873,10 @@
 
                 takeDropData = {
                     ...takeDropData,
-                    legal_data: data,
+                    legal_data: pendingLegalData,
                     legal_documents_ready: true
                 };
+                pendingLegalData = null;
 
                 // Show success state
                 document.getElementById('legal-docs-form').classList.add('hidden');
@@ -6859,7 +6896,7 @@
                 showToast('Błąd zapisu danych', 'error');
             }
         }
-        window.saveLegalData = saveLegalData;
+        window.confirmLegalDataSave = confirmLegalDataSave;
 
         async function confirmTakeDropAccount() {
             const emailInput = document.getElementById('takedrop-client-email');
