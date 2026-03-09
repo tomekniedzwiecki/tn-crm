@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030901';
+        const APP_VERSION = '2026030902';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1445,6 +1445,16 @@
                             <span>Konto</span>
                             <i id="dash-nav-check-takedrop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('landing')">
+                            <i class="ph ph-browser"></i>
+                            <span>Strona</span>
+                            <i id="dash-nav-check-landing" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('dokumenty')">
+                            <i class="ph ph-file-text"></i>
+                            <span>Dokumenty</span>
+                            <i id="dash-nav-check-dokumenty" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -1525,6 +1535,16 @@
                                 <i class="ph ph-storefront"></i>
                                 <span>Konto</span>
                                 <i id="dash-nav-check-takedrop-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('landing');toggleDashMobileMenu()">
+                                <i class="ph ph-browser"></i>
+                                <span>Strona</span>
+                                <i id="dash-nav-check-landing-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('dokumenty');toggleDashMobileMenu()">
+                                <i class="ph ph-file-text"></i>
+                                <span>Dokumenty</span>
+                                <i id="dash-nav-check-dokumenty-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -1662,8 +1682,22 @@
 
 
                 <!-- BOX: TakeDrop (Etap 3) - conditional -->
-                <div id="dash-box-takedrop" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all  hidden" onclick="switchToDashTab('takedrop')">
+                <div id="dash-box-takedrop" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hidden" onclick="switchToDashTab('takedrop')">
                     <div id="dash-takedrop-content" class="h-full">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- BOX: Landing Page (Etap 3) - conditional -->
+                <div id="dash-box-landing" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hidden" onclick="switchToDashTab('landing')">
+                    <div id="dash-landing-content" class="h-full">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- BOX: Dokumenty prawne (Etap 3) - conditional -->
+                <div id="dash-box-dokumenty" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hidden" onclick="switchToDashTab('dokumenty')">
+                    <div id="dash-dokumenty-content" class="h-full">
                         <!-- Rendered by JS -->
                     </div>
                 </div>
@@ -2918,6 +2952,75 @@
                 </div>
             </div>
 
+            <!-- TAB: Landing Page (Etap 3) -->
+            <div id="tab-landing" class="tab-panel hidden animate-enter">
+                <div class="max-w-2xl">
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Strona sprzedażowa</h2>
+                        <p class="text-[14px] text-[#666]">Status podłączenia Twojej strony do sklepu</p>
+                    </div>
+
+                    <!-- Status Card -->
+                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
+                        <div class="flex items-start gap-4">
+                            <div id="landing-status-icon-container" class="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+                                <i id="landing-status-icon" class="ph ph-clock text-[#555] text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 id="landing-status-title" class="text-[16px] font-medium text-white mb-2">Oczekuje na podłączenie</h3>
+                                <p id="landing-status-desc" class="text-[13px] text-[#666] mb-4">
+                                    Twoja strona sprzedażowa zostanie podłączona do platformy sklepowej. Otrzymasz powiadomienie gdy będzie gotowa.
+                                </p>
+                                <div id="landing-domain-info" class="hidden">
+                                    <div class="flex items-center gap-2 text-[13px] text-[#888]">
+                                        <i class="ph ph-globe"></i>
+                                        <span id="landing-domain-text">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Dokumenty prawne (Etap 3) -->
+            <div id="tab-dokumenty" class="tab-panel hidden animate-enter">
+                <div class="max-w-2xl">
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Dokumenty prawne</h2>
+                        <p class="text-[14px] text-[#666]">Regulamin, polityka prywatności i inne dokumenty Twojego sklepu</p>
+                    </div>
+
+                    <!-- Status Card -->
+                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
+                        <div class="flex items-start gap-4">
+                            <div id="dokumenty-status-icon-container" class="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+                                <i id="dokumenty-status-icon" class="ph ph-clock text-[#555] text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 id="dokumenty-status-title" class="text-[16px] font-medium text-white mb-2">W przygotowaniu</h3>
+                                <p id="dokumenty-status-desc" class="text-[13px] text-[#666] mb-4">
+                                    Dokumenty prawne Twojego sklepu są przygotowywane. Obejmują regulamin, politykę prywatności i politykę cookies.
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-[12px] text-[#666]">
+                                        <i class="ph ph-file-text mr-1"></i>Regulamin
+                                    </span>
+                                    <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-[12px] text-[#666]">
+                                        <i class="ph ph-shield-check mr-1"></i>Polityka prywatności
+                                    </span>
+                                    <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-[12px] text-[#666]">
+                                        <i class="ph ph-cookie mr-1"></i>Polityka cookies
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
         </div><!-- /flex -->
     </div>
@@ -4142,6 +4245,97 @@
                 takedropBox.classList.add('hidden');
                 takedropBox.classList.remove('bento-action');
             }
+
+            // === LANDING BOX ===
+            const landingContent = document.getElementById('dash-landing-content');
+            const landingBox = document.getElementById('dash-box-landing');
+
+            if (takeDropData && takeDropData.is_active) {
+                landingBox.classList.remove('hidden');
+
+                if (takeDropData.landing_page_connected) {
+                    landingContent.innerHTML = `
+                        <div class="h-full p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Strona</span>
+                                <span class="flex items-center gap-1 text-emerald-500 text-[10px]">
+                                    <i class="ph-fill ph-check-circle"></i>
+                                    Gotowe
+                                </span>
+                            </div>
+                            <p class="text-white text-sm font-medium">Podłączona</p>
+                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
+                                <i class="ph ph-browser"></i> ${takeDropData.domain || 'Strona sprzedażowa'}
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    landingContent.innerHTML = `
+                        <div class="h-full p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Strona</span>
+                                <span class="flex items-center gap-1 text-[#555] text-[10px]">
+                                    <i class="ph ph-clock"></i>
+                                    Oczekuje
+                                </span>
+                            </div>
+                            <p class="text-[#888] text-sm font-medium">W przygotowaniu</p>
+                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
+                                <i class="ph ph-browser"></i> Strona sprzedażowa
+                            </p>
+                        </div>
+                    `;
+                }
+            } else {
+                landingBox.classList.add('hidden');
+            }
+
+            // === DOKUMENTY BOX ===
+            const dokumentyContent = document.getElementById('dash-dokumenty-content');
+            const dokumentyBox = document.getElementById('dash-box-dokumenty');
+
+            if (takeDropData && takeDropData.is_active) {
+                dokumentyBox.classList.remove('hidden');
+
+                // For now, dokumenty status is based on landing_page_connected (can be extended later)
+                const dokumentyReady = takeDropData.landing_page_connected;
+
+                if (dokumentyReady) {
+                    dokumentyContent.innerHTML = `
+                        <div class="h-full p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Dokumenty</span>
+                                <span class="flex items-center gap-1 text-emerald-500 text-[10px]">
+                                    <i class="ph-fill ph-check-circle"></i>
+                                    Gotowe
+                                </span>
+                            </div>
+                            <p class="text-white text-sm font-medium">Przygotowane</p>
+                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
+                                <i class="ph ph-file-text"></i> Regulamin, Polityka prywatności
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    dokumentyContent.innerHTML = `
+                        <div class="h-full p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Dokumenty</span>
+                                <span class="flex items-center gap-1 text-[#555] text-[10px]">
+                                    <i class="ph ph-clock"></i>
+                                    Oczekuje
+                                </span>
+                            </div>
+                            <p class="text-[#888] text-sm font-medium">W przygotowaniu</p>
+                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
+                                <i class="ph ph-file-text"></i> Dokumenty prawne
+                            </p>
+                        </div>
+                    `;
+                }
+            } else {
+                dokumentyBox.classList.add('hidden');
+            }
         }
 
         function switchToDashTab(tabName) {
@@ -4257,6 +4451,76 @@
             document.getElementById('dash-nav-check-takedrop-mobile')?.classList.toggle('hidden', !hasTakeDrop);
             document.getElementById('nav-check-takedrop')?.classList.toggle('hidden', !hasTakeDrop);
             document.getElementById('nav-check-takedrop-mobile')?.classList.toggle('hidden', !hasTakeDrop);
+
+            // Update sidebar checkmark for Landing (green when landing_page_connected)
+            const hasLanding = takeDropData && takeDropData.landing_page_connected;
+            document.getElementById('dash-nav-check-landing')?.classList.toggle('hidden', !hasLanding);
+            document.getElementById('dash-nav-check-landing-mobile')?.classList.toggle('hidden', !hasLanding);
+
+            // Update sidebar checkmark for Dokumenty (green when landing_page_connected - same for now)
+            const hasDokumenty = takeDropData && takeDropData.landing_page_connected;
+            document.getElementById('dash-nav-check-dokumenty')?.classList.toggle('hidden', !hasDokumenty);
+            document.getElementById('dash-nav-check-dokumenty-mobile')?.classList.toggle('hidden', !hasDokumenty);
+
+            // Update landing tab status
+            updateLandingTabStatus();
+            updateDokumentyTabStatus();
+        }
+
+        function updateLandingTabStatus() {
+            const iconContainer = document.getElementById('landing-status-icon-container');
+            const icon = document.getElementById('landing-status-icon');
+            const title = document.getElementById('landing-status-title');
+            const desc = document.getElementById('landing-status-desc');
+            const domainInfo = document.getElementById('landing-domain-info');
+            const domainText = document.getElementById('landing-domain-text');
+
+            if (!iconContainer) return;
+
+            if (takeDropData && takeDropData.landing_page_connected) {
+                iconContainer.classList.remove('bg-[#1a1a1a]');
+                iconContainer.classList.add('bg-emerald-500/20');
+                icon.className = 'ph-fill ph-check-circle text-emerald-500 text-xl';
+                title.textContent = 'Strona podłączona';
+                desc.textContent = 'Twoja strona sprzedażowa została pomyślnie podłączona do platformy sklepowej.';
+
+                if (takeDropData.domain) {
+                    domainInfo.classList.remove('hidden');
+                    domainText.textContent = takeDropData.domain;
+                }
+            } else {
+                iconContainer.classList.add('bg-[#1a1a1a]');
+                iconContainer.classList.remove('bg-emerald-500/20');
+                icon.className = 'ph ph-clock text-[#555] text-xl';
+                title.textContent = 'Oczekuje na podłączenie';
+                desc.textContent = 'Twoja strona sprzedażowa zostanie podłączona do platformy sklepowej. Otrzymasz powiadomienie gdy będzie gotowa.';
+                domainInfo.classList.add('hidden');
+            }
+        }
+
+        function updateDokumentyTabStatus() {
+            const iconContainer = document.getElementById('dokumenty-status-icon-container');
+            const icon = document.getElementById('dokumenty-status-icon');
+            const title = document.getElementById('dokumenty-status-title');
+            const desc = document.getElementById('dokumenty-status-desc');
+
+            if (!iconContainer) return;
+
+            const isReady = takeDropData && takeDropData.landing_page_connected;
+
+            if (isReady) {
+                iconContainer.classList.remove('bg-[#1a1a1a]');
+                iconContainer.classList.add('bg-emerald-500/20');
+                icon.className = 'ph-fill ph-check-circle text-emerald-500 text-xl';
+                title.textContent = 'Dokumenty gotowe';
+                desc.textContent = 'Wszystkie dokumenty prawne Twojego sklepu zostały przygotowane i osadzone na stronie.';
+            } else {
+                iconContainer.classList.add('bg-[#1a1a1a]');
+                iconContainer.classList.remove('bg-emerald-500/20');
+                icon.className = 'ph ph-clock text-[#555] text-xl';
+                title.textContent = 'W przygotowaniu';
+                desc.textContent = 'Dokumenty prawne Twojego sklepu są przygotowywane. Obejmują regulamin, politykę prywatności i politykę cookies.';
+            }
         }
 
         async function loadProject() {
