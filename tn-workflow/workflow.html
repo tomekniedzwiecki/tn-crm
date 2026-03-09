@@ -1495,16 +1495,27 @@
                             </div>
                         </div>
 
-                        <!-- Checkout link -->
+                        <!-- Product ID -->
                         <div class="py-4 border-b border-[#222]">
-                            <div class="text-[12px] text-[#666] mb-4">Link do kasy TakeDrop</div>
-                            <div class="space-y-4">
-                                <input type="url" id="takedrop-checkout-link" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="https://app.takedrop.pl/pay/...">
-                                <button onclick="generateLandingPrompt()" class="bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors flex items-center gap-2">
-                                    <i class="ph ph-copy"></i>
-                                    Generuj prompt dla Claude
-                                </button>
+                            <div class="text-[12px] text-[#666] mb-4">Produkt w TakeDrop</div>
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div>
+                                    <label class="block text-[11px] text-[#555] mb-1.5">ID produktu *</label>
+                                    <input type="text" id="takedrop-product-id" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 12345" onchange="saveProductIds()">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-[#555] mb-1.5">ID wariantu (opcjonalne)</label>
+                                    <input type="text" id="takedrop-variant-id" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 67890" onchange="saveProductIds()">
+                                </div>
                             </div>
+                            <div id="takedrop-checkout-preview" class="hidden mb-4 p-3 bg-[#111] rounded-md">
+                                <div class="text-[11px] text-[#555] mb-1">Link do kasy:</div>
+                                <code id="takedrop-checkout-link" class="text-[12px] text-[#50e3c2] break-all"></code>
+                            </div>
+                            <button onclick="generateLandingPrompt()" class="bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors flex items-center gap-2">
+                                <i class="ph ph-copy"></i>
+                                Generuj prompt dla Claude
+                            </button>
                         </div>
 
                         <!-- Landing page status -->
@@ -5342,10 +5353,11 @@
             const landingCheckbox = document.getElementById('takedrop-landing-connected');
             const landingInfo = document.getElementById('takedrop-landing-info');
             const landingDate = document.getElementById('takedrop-landing-date');
-            const checkoutLinkInput = document.getElementById('takedrop-checkout-link');
             const domainInput = document.getElementById('takedrop-domain');
             const domainCheckbox = document.getElementById('takedrop-domain-connected');
             const domainInfo = document.getElementById('takedrop-domain-info');
+            const productIdInput = document.getElementById('takedrop-product-id');
+            const variantIdInput = document.getElementById('takedrop-variant-id');
             const domainDate = document.getElementById('takedrop-domain-date');
 
             if (takeDropData) {
@@ -5388,9 +5400,13 @@
                     domainInfo.classList.add('hidden');
                 }
 
+                // Product IDs
+                if (productIdInput) productIdInput.value = takeDropData.product_id || '';
+                if (variantIdInput) variantIdInput.value = takeDropData.variant_id || '';
+                updateCheckoutPreview();
+
                 // Landing page connected
                 if (landingCheckbox) landingCheckbox.checked = takeDropData.landing_page_connected || false;
-                if (checkoutLinkInput) checkoutLinkInput.value = takeDropData.checkout_link || '';
                 if (takeDropData.landing_page_connected && takeDropData.landing_page_connected_at && landingInfo) {
                     landingInfo.classList.remove('hidden');
                     landingDate.textContent = new Date(takeDropData.landing_page_connected_at).toLocaleString('pl-PL');
@@ -5411,10 +5427,12 @@
                 if (domainInput) domainInput.value = '';
                 if (domainCheckbox) domainCheckbox.checked = false;
                 if (domainInfo) domainInfo.classList.add('hidden');
+                if (productIdInput) productIdInput.value = '';
+                if (variantIdInput) variantIdInput.value = '';
                 if (landingCheckbox) landingCheckbox.checked = false;
                 if (landingInfo) landingInfo.classList.add('hidden');
-                if (checkoutLinkInput) checkoutLinkInput.value = '';
-                checkoutLinkInput.value = '';
+                const checkoutPreview = document.getElementById('takedrop-checkout-preview');
+                if (checkoutPreview) checkoutPreview.classList.add('hidden');
             }
         }
 
@@ -5604,10 +5622,72 @@
             }
         }
 
+        function buildCheckoutLink() {
+            const domain = document.getElementById('takedrop-domain')?.value.trim();
+            const productId = document.getElementById('takedrop-product-id')?.value.trim();
+            const variantId = document.getElementById('takedrop-variant-id')?.value.trim();
+
+            if (!domain || !productId) return null;
+
+            const productParam = variantId ? `${productId}-${variantId}` : productId;
+            return `https://${domain}/checkout?products=${productParam}`;
+        }
+
+        function updateCheckoutPreview() {
+            const link = buildCheckoutLink();
+            const preview = document.getElementById('takedrop-checkout-preview');
+            const linkEl = document.getElementById('takedrop-checkout-link');
+
+            if (link && preview && linkEl) {
+                linkEl.textContent = link;
+                preview.classList.remove('hidden');
+            } else if (preview) {
+                preview.classList.add('hidden');
+            }
+        }
+
+        async function saveProductIds() {
+            const productId = document.getElementById('takedrop-product-id').value.trim();
+            const variantId = document.getElementById('takedrop-variant-id').value.trim();
+
+            updateCheckoutPreview();
+
+            try {
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({
+                            product_id: productId || null,
+                            variant_id: variantId || null
+                        })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.product_id = productId || null;
+                    takeDropData.variant_id = variantId || null;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            product_id: productId || null,
+                            variant_id: variantId || null
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+            } catch (err) {
+                console.error('Error saving product IDs:', err);
+            }
+        }
+
         async function generateLandingPrompt() {
-            const link = document.getElementById('takedrop-checkout-link').value.trim();
+            const link = buildCheckoutLink();
             if (!link) {
-                showToast('Najpierw podaj link do kasy', 'error');
+                showToast('Podaj domenę i ID produktu', 'error');
                 return;
             }
 
@@ -5626,8 +5706,11 @@
                 return;
             }
 
-            // Save link automatically
-            saveCheckoutLink();
+            // Save checkout link
+            if (takeDropData) {
+                await supabaseClient.from('workflow_takedrop').update({ checkout_link: link }).eq('id', takeDropData.id);
+                takeDropData.checkout_link = link;
+            }
 
             const prompt = `Zmień wszystkie linki CTA (przyciski "Zamów", "Kup teraz", href="#offer" itp.) w pliku:
 landing-pages/${brandName}/index.html
@@ -5725,10 +5808,10 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         window.saveTakeDropCredentials = saveTakeDropCredentials;
         window.togglePasswordVisibility = togglePasswordVisibility;
         window.toggleLandingPageConnected = toggleLandingPageConnected;
-        window.saveCheckoutLink = saveCheckoutLink;
         window.generateLandingPrompt = generateLandingPrompt;
         window.saveDomain = saveDomain;
         window.toggleDomainConnected = toggleDomainConnected;
+        window.saveProductIds = saveProductIds;
 
         // =============================================
         // CONTRACT MANAGEMENT
