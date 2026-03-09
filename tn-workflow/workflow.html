@@ -5793,6 +5793,22 @@
 
                 renderTakeDrop();
                 showToast(isConnected ? 'Strona oznaczona jako podłączona' : 'Status usunięty', 'success');
+
+                // Fire automation trigger when landing page is connected
+                if (isConnected) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'landing_page_connected',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id
+                            }
+                        });
+                        console.log('Automation trigger fired: landing_page_connected');
+                    } catch (triggerErr) {
+                        console.error('Error firing automation trigger:', triggerErr);
+                    }
+                }
             } catch (err) {
                 console.error('Error toggling landing page:', err);
                 showToast('Błąd aktualizacji', 'error');
