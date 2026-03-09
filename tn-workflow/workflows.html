@@ -178,9 +178,9 @@
                     <div id="stage-filter" class="flex flex-wrap items-center gap-1.5"></div>
                 </div>
 
-                <!-- Status Stage Filter (next step) -->
+                <!-- Status Stage Filter (completed stages) -->
                 <div class="flex flex-wrap items-center gap-3 mb-6">
-                    <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Następny</span>
+                    <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Filtr</span>
                     <div id="status-stage-filter" class="flex flex-wrap items-center gap-1.5">
                         <button onclick="toggleStatusStage('contract')" data-stage="contract"
                             class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
@@ -737,11 +737,11 @@
                 const currentStage = getCurrentStage(w);
                 const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
 
-                // Status stage filter (show only where selected stage is NEXT step)
+                // Status stage filter (show only where selected stage is completed)
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
-                    const nextStep = getNextStep(w);
-                    statusStageMatch = selectedStatusStages.has(nextStep);
+                    // Show projects that have ALL selected stages completed
+                    statusStageMatch = Array.from(selectedStatusStages).every(stage => hasStatusStage(w, stage));
                 }
 
                 // Owner filter (mine = admin tasks, client = client tasks)
