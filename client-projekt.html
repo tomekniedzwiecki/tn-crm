@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030402';
+        const APP_VERSION = '2026030901';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2858,7 +2858,7 @@
                     </div>
 
                     <!-- Step 2: Confirm Account -->
-                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
+                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
                         <div class="flex items-start gap-4">
                             <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
                                 <span class="text-[13px] font-medium text-white">2</span>
@@ -2890,6 +2890,28 @@
                                         Potwierdź
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Landing Page Connected -->
+                    <div id="takedrop-landing-step" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 hidden">
+                        <div class="flex items-start gap-4">
+                            <div id="takedrop-landing-icon" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <span class="text-[13px] font-medium text-white">3</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h3 class="text-[15px] font-medium text-white">Strona sprzedażowa</h3>
+                                    <div id="takedrop-landing-status" class="flex items-center gap-2">
+                                        <i id="takedrop-landing-status-icon" class="ph ph-clock text-[#555]"></i>
+                                        <span id="takedrop-landing-status-text" class="text-[12px] text-[#555]">Oczekuje</span>
+                                        <span id="takedrop-landing-date" class="text-[11px] text-[#555]"></span>
+                                    </div>
+                                </div>
+                                <p id="takedrop-landing-desc" class="text-[13px] text-[#666]">
+                                    Twoja strona sprzedażowa zostanie przeniesiona do TakeDrop.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -6180,7 +6202,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('is_active, account_created, account_created_at, account_email, account_password')
+                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
@@ -6229,6 +6251,42 @@
                 successState.classList.add('hidden');
                 if (confirmBtn) confirmBtn.textContent = 'Potwierdź założenie konta';
             }
+
+            // Step 3: Landing page
+            const landingStep = document.getElementById('takedrop-landing-step');
+            const landingIcon = document.getElementById('takedrop-landing-icon');
+            const landingStatusIcon = document.getElementById('takedrop-landing-status-icon');
+            const landingStatusText = document.getElementById('takedrop-landing-status-text');
+            const landingDate = document.getElementById('takedrop-landing-date');
+            const landingDesc = document.getElementById('takedrop-landing-desc');
+
+            if (landingStep && takeDropData && takeDropData.account_created) {
+                landingStep.classList.remove('hidden');
+
+                if (takeDropData.landing_page_connected) {
+                    landingIcon.innerHTML = '<i class="ph-fill ph-check text-emerald-500 text-[14px]"></i>';
+                    landingIcon.classList.remove('bg-white/10');
+                    landingIcon.classList.add('bg-emerald-500/20');
+                    landingStatusIcon.className = 'ph-fill ph-check-circle text-emerald-500';
+                    landingStatusText.textContent = 'Gotowe';
+                    landingStatusText.className = 'text-[12px] text-emerald-500';
+                    landingDesc.textContent = 'Twoja strona sprzedażowa została podłączona do TakeDrop.';
+                    if (landingDate && takeDropData.landing_page_connected_at) {
+                        landingDate.textContent = new Date(takeDropData.landing_page_connected_at).toLocaleDateString('pl-PL');
+                    }
+                } else {
+                    landingIcon.innerHTML = '<span class="text-[13px] font-medium text-white">3</span>';
+                    landingIcon.classList.add('bg-white/10');
+                    landingIcon.classList.remove('bg-emerald-500/20');
+                    landingStatusIcon.className = 'ph ph-clock text-[#555]';
+                    landingStatusText.textContent = 'Oczekuje';
+                    landingStatusText.className = 'text-[12px] text-[#555]';
+                    landingDesc.textContent = 'Twoja strona sprzedażowa zostanie przeniesiona do TakeDrop.';
+                    if (landingDate) landingDate.textContent = '';
+                }
+            } else if (landingStep) {
+                landingStep.classList.add('hidden');
+            }
         }
 
         async function confirmTakeDropAccount() {
@@ -6252,15 +6310,22 @@
 
             const isUpdate = takeDropData && takeDropData.account_created;
 
+            const token = getToken();
+            if (!token) {
+                showToast('Błąd: nieprawidłowy link projektu', 'error');
+                return;
+            }
+
             try {
                 // Use secure RPC function instead of direct UPDATE
                 const { data, error } = await supabaseClient.rpc('confirm_workflow_takedrop_account', {
-                    p_token: getToken(),
+                    p_token: token,
                     p_account_email: email,
                     p_account_password: password
                 });
 
-                if (error || data === false) throw error || new Error('Failed to confirm account');
+                if (error) throw error;
+                if (data === false) throw new Error('Nie znaleziono konta TakeDrop dla tego projektu');
 
                 takeDropData = {
                     ...takeDropData,
@@ -6275,7 +6340,7 @@
 
             } catch (err) {
                 console.error('Error confirming TakeDrop:', err);
-                showToast('Błąd potwierdzenia', 'error');
+                showToast(err.message || 'Błąd potwierdzenia', 'error');
             }
         }
         window.confirmTakeDropAccount = confirmTakeDropAccount;

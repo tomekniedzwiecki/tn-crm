@@ -1468,6 +1468,23 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Landing page connected -->
+                        <div class="py-4 border-t border-[#222]">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-[13px] text-white">Strona sprzedażowa podłączona</div>
+                                    <div class="text-[12px] text-[#666] mt-0.5">Zaznacz gdy strona została przeniesiona do TakeDrop</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="takedrop-landing-connected" class="sr-only peer" onchange="toggleLandingPageConnected()">
+                                    <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                                </label>
+                            </div>
+                            <div id="takedrop-landing-info" class="hidden mt-3 text-[12px] text-[#666]">
+                                Podłączona: <span id="takedrop-landing-date" class="text-[#888]">-</span>
+                            </div>
+                        </div>
                     </div><!-- /tab-takedrop -->
 
                     <!-- TAB: Historia (Full Activity History) -->
@@ -5283,6 +5300,9 @@
             const createdInfo = document.getElementById('takedrop-created-info');
             const createdDate = document.getElementById('takedrop-created-date');
             const navCheck = document.getElementById('nav-check-takedrop');
+            const landingCheckbox = document.getElementById('takedrop-landing-connected');
+            const landingInfo = document.getElementById('takedrop-landing-info');
+            const landingDate = document.getElementById('takedrop-landing-date');
 
             if (takeDropData) {
                 emailInput.value = takeDropData.account_email || '';
@@ -5313,6 +5333,15 @@
                     createdInfo.classList.add('hidden');
                     navCheck.classList.add('hidden');
                 }
+
+                // Landing page connected
+                landingCheckbox.checked = takeDropData.landing_page_connected || false;
+                if (takeDropData.landing_page_connected && takeDropData.landing_page_connected_at) {
+                    landingInfo.classList.remove('hidden');
+                    landingDate.textContent = new Date(takeDropData.landing_page_connected_at).toLocaleString('pl-PL');
+                } else {
+                    landingInfo.classList.add('hidden');
+                }
             } else {
                 emailInput.value = '';
                 passwordInput.value = '';
@@ -5324,6 +5353,8 @@
                 statusText.className = 'text-[13px] text-[#888]';
                 createdInfo.classList.add('hidden');
                 navCheck.classList.add('hidden');
+                landingCheckbox.checked = false;
+                landingInfo.classList.add('hidden');
             }
         }
 
@@ -5441,10 +5472,50 @@
             }
         }
 
+        async function toggleLandingPageConnected() {
+            const isConnected = document.getElementById('takedrop-landing-connected').checked;
+
+            try {
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({
+                            landing_page_connected: isConnected,
+                            landing_page_connected_at: isConnected ? new Date().toISOString() : null
+                        })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.landing_page_connected = isConnected;
+                    takeDropData.landing_page_connected_at = isConnected ? new Date().toISOString() : null;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            landing_page_connected: isConnected,
+                            landing_page_connected_at: isConnected ? new Date().toISOString() : null
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+
+                renderTakeDrop();
+                showToast(isConnected ? 'Strona oznaczona jako podłączona' : 'Status usunięty', 'success');
+            } catch (err) {
+                console.error('Error toggling landing page:', err);
+                showToast('Błąd aktualizacji', 'error');
+            }
+        }
+
         window.loadTakeDrop = loadTakeDrop;
         window.toggleTakeDropActive = toggleTakeDropActive;
         window.saveTakeDropCredentials = saveTakeDropCredentials;
         window.togglePasswordVisibility = togglePasswordVisibility;
+        window.toggleLandingPageConnected = toggleLandingPageConnected;
 
         // =============================================
         // CONTRACT MANAGEMENT
