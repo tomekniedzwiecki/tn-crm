@@ -1541,8 +1541,23 @@
 
                     <!-- TAB: Dokumenty prawne (Etap 3) -->
                     <div id="tab-legal" class="workflow-panel hidden">
+                        <!-- Client data status -->
+                        <div id="legal-client-status" class="hidden mb-6">
+                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <i class="ph-fill ph-check-circle text-emerald-400 text-lg"></i>
+                                        <div>
+                                            <div class="text-[13px] text-emerald-400 font-medium">Dane wypełnione przez klienta</div>
+                                            <div class="text-[12px] text-emerald-400/60 mt-0.5">Formularz został uzupełniony. Możesz wygenerować dokumenty.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Info box -->
-                        <div class="bg-[#111] border border-[#222] rounded-lg p-4 mb-6">
+                        <div id="legal-info-box" class="bg-[#111] border border-[#222] rounded-lg p-4 mb-6">
                             <div class="flex items-start gap-3">
                                 <i class="ph ph-info text-violet-400 text-lg mt-0.5"></i>
                                 <div class="text-[13px] text-[#888]">
@@ -5555,6 +5570,9 @@
                 } else if (landingInfo) {
                     landingInfo.classList.add('hidden');
                 }
+
+                // Legal data from client
+                renderLegalClientData();
             } else {
                 emailInput.value = '';
                 passwordInput.value = '';
@@ -5575,6 +5593,39 @@
                 if (landingInfo) landingInfo.classList.add('hidden');
                 const checkoutPreview = document.getElementById('takedrop-checkout-preview');
                 if (checkoutPreview) checkoutPreview.classList.add('hidden');
+            }
+        }
+
+        function renderLegalClientData() {
+            const clientStatus = document.getElementById('legal-client-status');
+            const navCheck = document.getElementById('nav-check-legal');
+
+            if (takeDropData?.legal_documents_ready && takeDropData?.legal_data) {
+                const data = takeDropData.legal_data;
+
+                // Show status banner
+                if (clientStatus) clientStatus.classList.remove('hidden');
+
+                // Fill form with client data
+                const companyInput = document.getElementById('legal-company-name');
+                const nipInput = document.getElementById('legal-nip');
+                const regonInput = document.getElementById('legal-regon');
+                const addressInput = document.getElementById('legal-company-address');
+                const emailInput = document.getElementById('legal-email');
+                const phoneInput = document.getElementById('legal-phone');
+
+                if (companyInput) companyInput.value = data.company_name || '';
+                if (nipInput) nipInput.value = data.nip || '';
+                if (regonInput) regonInput.value = data.regon || '';
+                if (addressInput) addressInput.value = data.company_address || '';
+                if (emailInput) emailInput.value = data.email || '';
+                if (phoneInput) phoneInput.value = data.phone || '';
+
+                // Show nav checkmark
+                if (navCheck) navCheck.classList.remove('hidden');
+            } else {
+                if (clientStatus) clientStatus.classList.add('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
             }
         }
 

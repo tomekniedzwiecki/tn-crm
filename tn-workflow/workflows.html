@@ -216,7 +216,15 @@
                         </button>
                         <button onclick="toggleStatusStage('takedrop')" data-stage="takedrop"
                             class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
-                            <i class="ph ph-storefront"></i> TakeDrop
+                            <i class="ph ph-storefront"></i> Konto TD
+                        </button>
+                        <button onclick="toggleStatusStage('landing')" data-stage="landing"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-layout"></i> Strona TD
+                        </button>
+                        <button onclick="toggleStatusStage('legal')" data-stage="legal"
+                            class="status-stage-btn text-xs px-2.5 py-1 rounded-md border font-medium transition-all cursor-pointer text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-600 flex items-center gap-1">
+                            <i class="ph ph-file-text"></i> Dokumenty
                         </button>
                         <span class="text-zinc-700 mx-1">|</span>
                         <button onclick="setOwnerFilter('all')" data-owner="all"
@@ -622,7 +630,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created, landing_page_connected, legal_documents_ready').in('workflow_id', workflowIds)
             ]);
 
             videoStages = {};
@@ -893,10 +901,10 @@
             const nextStep = getNextStep(w);
             if (!nextStep) return null; // all done
 
-            // Admin tasks: contract, report, branding, salespage, scenario
-            // Client tasks: product (wybór), profile, nagrania
-            const adminTasks = ['contract', 'report', 'branding', 'salespage', 'scenario'];
-            const clientTasks = ['product', 'profile', 'nagrania'];
+            // Admin tasks: contract, report, branding, salespage, scenario, landing
+            // Client tasks: product (wybór), profile, nagrania, legal
+            const adminTasks = ['contract', 'report', 'branding', 'salespage', 'scenario', 'landing'];
+            const clientTasks = ['product', 'profile', 'nagrania', 'legal'];
 
             // TakeDrop: admin task jeśli nie aktywny, client task jeśli aktywny
             if (nextStep === 'takedrop') {
@@ -933,6 +941,10 @@
                     return videoLinks.length > 0;
                 case 'takedrop':
                     return !!w.takedrop_stage?.account_created;
+                case 'landing':
+                    return !!w.takedrop_stage?.landing_page_connected;
+                case 'legal':
+                    return !!w.takedrop_stage?.legal_documents_ready;
                 default:
                     return false;
             }
@@ -970,6 +982,12 @@
             // Jeśli TakeDrop aktywny ale konto nie założone - klient musi założyć
             if (!w.takedrop_stage?.is_active) return 'takedrop';
             if (!w.takedrop_stage?.account_created) return 'takedrop';
+
+            // Strona TD (wyświetlaj tylko jeśli konto TD założone)
+            if (!w.takedrop_stage?.landing_page_connected) return 'landing';
+
+            // Dokumenty prawne (wyświetlaj tylko jeśli strona TD gotowa)
+            if (!w.takedrop_stage?.legal_documents_ready) return 'legal';
 
             return null; // all done
         }
