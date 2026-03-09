@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030916';
+        const APP_VERSION = '2026030917';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1049,6 +1049,32 @@
             <p class="text-zinc-500 text-sm leading-relaxed">Link do projektu jest nieprawidłowy lub wygasł.<br>Skontaktuj się z zespołem.</p>
         </div>
     </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
+        <div class="fixed inset-0 bg-gradient-to-br from-amber-950/10 via-black to-black pointer-events-none"></div>
+        <div class="text-center animate-enter max-w-md relative z-10">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center">
+                <i class="ph ph-wifi-slash text-2xl text-amber-400"></i>
+            </div>
+            <h1 class="text-2xl font-semibold text-white mb-3 tracking-tight">Problem z połączeniem</h1>
+            <p class="text-zinc-500 text-sm leading-relaxed mb-6" id="error-message">Strona ładuje się zbyt długo. Sprawdź połączenie internetowe.</p>
+            <button onclick="forceReload()" class="inline-flex items-center gap-2 bg-white text-black font-medium text-sm px-6 py-3 rounded-xl hover:bg-zinc-200 transition-colors">
+                <i class="ph ph-arrow-clockwise"></i>
+                Spróbuj ponownie
+            </button>
+        </div>
+    </div>
+    <script>
+        function forceReload() {
+            // Clear local version cache to force fresh load
+            localStorage.removeItem('tn-client-version');
+            // Add cache-busting parameter
+            const url = new URL(window.location.href);
+            url.searchParams.set('_cb', Date.now());
+            window.location.href = url.toString();
+        }
+    </script>
 
     <!-- Set Password Screen (First Time) -->
     <div id="set-password-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-black">
@@ -3319,10 +3345,16 @@
         }
 
         function showScreen(screenName) {
-            ['loading', 'set-password', 'password', 'forgot-password', 'reset-password', 'not-found', 'contract-data', 'contract-signing', 'project', 'dashboard'].forEach(name => {
+            ['loading', 'set-password', 'password', 'forgot-password', 'reset-password', 'not-found', 'error', 'contract-data', 'contract-signing', 'project', 'dashboard'].forEach(name => {
                 const el = document.getElementById(`${name}-screen`);
                 if (el) el.classList.toggle('hidden', name !== screenName);
             });
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('error-message');
+            if (errorMsg && message) errorMsg.textContent = message;
+            showScreen('error');
         }
 
         function togglePasswordVisibility(inputId, button) {
@@ -7956,8 +7988,30 @@
         }
         window.postComment = postComment;
 
-        // Initialize
-        loadProject();
+        // Initialize with timeout and error handling
+        (async function init() {
+            const LOAD_TIMEOUT = 15000; // 15 seconds
+            let loadComplete = false;
+
+            // Timeout handler
+            const timeoutId = setTimeout(() => {
+                if (!loadComplete) {
+                    console.error('loadProject timeout after', LOAD_TIMEOUT, 'ms');
+                    showError('Strona ładuje się zbyt długo. Sprawdź połączenie i spróbuj ponownie.');
+                }
+            }, LOAD_TIMEOUT);
+
+            try {
+                await loadProject();
+                loadComplete = true;
+                clearTimeout(timeoutId);
+            } catch (err) {
+                loadComplete = true;
+                clearTimeout(timeoutId);
+                console.error('loadProject error:', err);
+                showError('Wystąpił błąd podczas ładowania. Odśwież stronę lub spróbuj później.');
+            }
+        })();
     </script>
 </body>
 </html>
