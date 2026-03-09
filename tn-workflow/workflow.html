@@ -5797,11 +5797,18 @@
                 // Fire automation trigger when landing page is connected
                 if (isConnected) {
                     try {
+                        const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
                         await supabaseClient.functions.invoke('automation-trigger', {
                             body: {
                                 trigger_type: 'landing_page_connected',
                                 entity_type: 'workflow',
-                                entity_id: workflow.id
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName: clientName,
+                                    landingDomain: takeDropData?.domain || '',
+                                    projectUrl: `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
+                                }
                             }
                         });
                         console.log('Automation trigger fired: landing_page_connected');
