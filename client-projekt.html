@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030912';
+        const APP_VERSION = '2026030913';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3002,11 +3002,17 @@
                                 <p id="landing-status-desc" class="text-[13px] text-[#666] mb-4">
                                     Twoja strona sprzedażowa zostanie podłączona do platformy sklepowej. Otrzymasz powiadomienie gdy będzie gotowa.
                                 </p>
-                                <div id="landing-domain-info" class="hidden">
-                                    <div class="flex items-center gap-2 text-[13px] text-[#888]">
-                                        <i class="ph ph-globe"></i>
-                                        <span id="landing-domain-text">-</span>
-                                    </div>
+                                <div id="landing-domain-info" class="hidden mt-4 pt-4 border-t border-[#1a1a1a]">
+                                    <a id="landing-domain-link" href="#" target="_blank" class="flex items-center gap-3 bg-[#111] hover:bg-[#1a1a1a] border border-[#222] hover:border-[#333] rounded-xl p-4 transition-all group">
+                                        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                            <i class="ph ph-storefront text-emerald-400 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-[13px] text-white font-medium group-hover:text-emerald-400 transition-colors truncate" id="landing-domain-text">-</div>
+                                            <div class="text-[11px] text-[#555]">Kliknij, aby otworzyć sklep</div>
+                                        </div>
+                                        <i class="ph ph-arrow-square-out text-[#555] group-hover:text-emerald-400 transition-colors"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -4705,6 +4711,11 @@
                 if (takeDropData.domain) {
                     domainInfo.classList.remove('hidden');
                     domainText.textContent = takeDropData.domain;
+                    const domainLink = document.getElementById('landing-domain-link');
+                    if (domainLink) {
+                        const url = takeDropData.domain.startsWith('http') ? takeDropData.domain : `https://${takeDropData.domain}`;
+                        domainLink.href = url;
+                    }
                 }
             } else {
                 iconContainer.classList.add('bg-[#1a1a1a]');
@@ -6690,7 +6701,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data')
+                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data, domain')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
