@@ -633,6 +633,14 @@
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created, landing_page_connected').in('workflow_id', workflowIds)
             ]);
 
+            // Error handling
+            if (videoRes.error) {
+                console.error('Error loading video stages:', videoRes.error);
+            }
+            if (takedropRes.error) {
+                console.error('Error loading takedrop stages:', takedropRes.error);
+            }
+
             videoStages = {};
             takedropStages = {};
 
@@ -643,6 +651,8 @@
             (takedropRes.data || []).forEach(t => {
                 takedropStages[t.workflow_id] = t;
             });
+
+            console.log('Loaded takedrop stages:', Object.keys(takedropStages).length, 'records');
 
             // Attach stage info to workflows
             for (const w of workflows) {
@@ -959,7 +969,7 @@
                 case 'landing':
                     return !!w.takedrop_stage?.landing_page_connected;
                 case 'legal':
-                    return !!w.takedrop_stage?.legal_documents_ready;
+                    return false; // tymczasowo - pole legal_documents_ready niedostępne w API
                 default:
                     return false;
             }
@@ -1001,10 +1011,10 @@
             // Strona TD (wyświetlaj tylko jeśli konto TD założone)
             if (!w.takedrop_stage?.landing_page_connected) return 'landing';
 
-            // Dokumenty prawne (wyświetlaj tylko jeśli strona TD gotowa)
-            if (!w.takedrop_stage?.legal_documents_ready) return 'legal';
+            // Dokumenty prawne - tymczasowo wyłączone (pole legal_documents_ready niedostępne w API)
+            // if (!w.takedrop_stage?.legal_documents_ready) return 'legal';
 
-            return null; // all done
+            return null; // all done (landing connected = etap 3 ukończony)
         }
 
         function getWorkflowPath(id) {
