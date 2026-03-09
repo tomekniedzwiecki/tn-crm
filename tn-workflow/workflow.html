@@ -1469,20 +1469,37 @@
                             </div>
                         </div>
 
-                        <!-- Landing page connected -->
+                        <!-- Landing page section -->
                         <div class="py-4 border-t border-[#222]">
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between mb-4">
                                 <div>
-                                    <div class="text-[13px] text-white">Strona sprzedażowa podłączona</div>
-                                    <div class="text-[12px] text-[#666] mt-0.5">Zaznacz gdy strona została przeniesiona do TakeDrop</div>
+                                    <div class="text-[13px] text-white">Strona sprzedażowa</div>
+                                    <div class="text-[12px] text-[#666] mt-0.5">Podłącz landing page do kasy TakeDrop</div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="takedrop-landing-connected" class="sr-only peer" onchange="toggleLandingPageConnected()">
                                     <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
                                 </label>
                             </div>
-                            <div id="takedrop-landing-info" class="hidden mt-3 text-[12px] text-[#666]">
+                            <div id="takedrop-landing-info" class="hidden mb-4 text-[12px] text-[#666]">
                                 Podłączona: <span id="takedrop-landing-date" class="text-[#888]">-</span>
+                            </div>
+
+                            <!-- Checkout link -->
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[12px] text-[#666] mb-1.5">Link do kasy TakeDrop</label>
+                                    <input type="url" id="takedrop-checkout-link" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="https://app.takedrop.pl/pay/...">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="saveCheckoutLink()" class="flex-1 bg-[#333] hover:bg-[#444] text-white text-[12px] font-medium px-3 py-2 rounded-md transition-colors">
+                                        Zapisz link
+                                    </button>
+                                    <button onclick="generateLandingPrompt()" class="flex-1 bg-violet-600 hover:bg-violet-500 text-white text-[12px] font-medium px-3 py-2 rounded-md transition-colors flex items-center justify-center gap-1.5">
+                                        <i class="ph ph-copy"></i>
+                                        Generuj prompt
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div><!-- /tab-takedrop -->
@@ -5303,6 +5320,7 @@
             const landingCheckbox = document.getElementById('takedrop-landing-connected');
             const landingInfo = document.getElementById('takedrop-landing-info');
             const landingDate = document.getElementById('takedrop-landing-date');
+            const checkoutLinkInput = document.getElementById('takedrop-checkout-link');
 
             if (takeDropData) {
                 emailInput.value = takeDropData.account_email || '';
@@ -5336,6 +5354,7 @@
 
                 // Landing page connected
                 landingCheckbox.checked = takeDropData.landing_page_connected || false;
+                checkoutLinkInput.value = takeDropData.checkout_link || '';
                 if (takeDropData.landing_page_connected && takeDropData.landing_page_connected_at) {
                     landingInfo.classList.remove('hidden');
                     landingDate.textContent = new Date(takeDropData.landing_page_connected_at).toLocaleString('pl-PL');
@@ -5355,6 +5374,7 @@
                 navCheck.classList.add('hidden');
                 landingCheckbox.checked = false;
                 landingInfo.classList.add('hidden');
+                checkoutLinkInput.value = '';
             }
         }
 
@@ -5511,11 +5531,90 @@
             }
         }
 
+        async function saveCheckoutLink() {
+            const link = document.getElementById('takedrop-checkout-link').value.trim();
+
+            try {
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({ checkout_link: link || null })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.checkout_link = link || null;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            checkout_link: link || null
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+
+                showToast('Link zapisany', 'success');
+            } catch (err) {
+                console.error('Error saving checkout link:', err);
+                showToast('Błąd zapisu', 'error');
+            }
+        }
+
+        function generateLandingPrompt() {
+            const link = document.getElementById('takedrop-checkout-link').value.trim();
+            if (!link) {
+                showToast('Najpierw podaj link do kasy', 'error');
+                return;
+            }
+
+            // Get brand name from branding data
+            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+            if (!brandInfo) {
+                showToast('Brak danych brandingu - najpierw uzupełnij sekcję Branding', 'error');
+                return;
+            }
+
+            const info = parseNotes(brandInfo.value);
+            const brandName = (info.name || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+
+            if (!brandName) {
+                showToast('Brak nazwy marki w brandingu', 'error');
+                return;
+            }
+
+            const prompt = `Zmień wszystkie linki CTA (przyciski "Zamów", "Kup teraz", href="#offer" itp.) w pliku:
+landing-pages/${brandName}/index.html
+
+Na ten link do kasy TakeDrop:
+${link}
+
+Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki prowadzące do zakupu/zamówienia.`;
+
+            navigator.clipboard.writeText(prompt).then(() => {
+                showToast('Prompt skopiowany do schowka', 'success');
+            }).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = prompt;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('Prompt skopiowany do schowka', 'success');
+            });
+        }
+
         window.loadTakeDrop = loadTakeDrop;
         window.toggleTakeDropActive = toggleTakeDropActive;
         window.saveTakeDropCredentials = saveTakeDropCredentials;
         window.togglePasswordVisibility = togglePasswordVisibility;
         window.toggleLandingPageConnected = toggleLandingPageConnected;
+        window.saveCheckoutLink = saveCheckoutLink;
+        window.generateLandingPrompt = generateLandingPrompt;
 
         // =============================================
         // CONTRACT MANAGEMENT
