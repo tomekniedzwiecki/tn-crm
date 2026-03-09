@@ -737,11 +737,22 @@
                 const currentStage = getCurrentStage(w);
                 const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
 
-                // Status stage filter (show only where selected stage is completed)
+                // Status stage filter (mixed logic depending on stage)
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
-                    // Show projects that have ALL selected stages completed
-                    statusStageMatch = Array.from(selectedStatusStages).every(stage => hasStatusStage(w, stage));
+                    const nextStep = getNextStep(w);
+                    statusStageMatch = Array.from(selectedStatusStages).every(stage => {
+                        // "landing" = next step (admin needs to create landing page)
+                        if (stage === 'landing') {
+                            return nextStep === 'landing';
+                        }
+                        // "legal" = client filled data (legal_documents_ready = true)
+                        if (stage === 'legal') {
+                            return w.takedrop_stage?.legal_documents_ready === true;
+                        }
+                        // Other stages = next step
+                        return nextStep === stage;
+                    });
                 }
 
                 // Owner filter (mine = admin tasks, client = client tasks)
