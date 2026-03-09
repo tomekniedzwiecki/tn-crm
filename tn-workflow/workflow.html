@@ -5686,25 +5686,15 @@
 
         async function generateLandingPrompt() {
             const link = buildCheckoutLink();
-            if (!link) {
+            const domain = document.getElementById('takedrop-domain')?.value.trim();
+
+            if (!link || !domain) {
                 showToast('Podaj domenę i ID produktu', 'error');
                 return;
             }
 
-            // Get brand name from branding data
-            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
-            if (!brandInfo) {
-                showToast('Brak danych brandingu - najpierw uzupełnij sekcję Branding', 'error');
-                return;
-            }
-
-            const info = parseNotes(brandInfo.value);
-            const brandName = (info.name || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-
-            if (!brandName) {
-                showToast('Brak nazwy marki w brandingu', 'error');
-                return;
-            }
+            // Get folder name from domain (remove extension like .pl, .com)
+            const folderName = domain.replace(/\.(pl|com|eu|net|org|shop|store|co)$/i, '').toLowerCase();
 
             // Save checkout link
             if (takeDropData) {
@@ -5713,7 +5703,7 @@
             }
 
             const prompt = `Zmień wszystkie linki CTA (przyciski "Zamów", "Kup teraz", href="#offer" itp.) w pliku:
-landing-pages/${brandName}/index.html
+landing-pages/${folderName}/index.html
 
 Na ten link do kasy TakeDrop:
 ${link}
