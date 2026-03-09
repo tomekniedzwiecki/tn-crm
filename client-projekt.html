@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030902';
+        const APP_VERSION = '2026030903';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1782,8 +1782,18 @@
                 </div>
 
                 <!-- Account Box -->
-                <div id="dash-etap3-box-account" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 12; min-height: 200px;" onclick="switchToDashTab('takedrop')">
+                <div id="dash-etap3-box-account" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('takedrop')">
                     <div id="dash-etap3-account-content" class="h-full"></div>
+                </div>
+
+                <!-- Landing/Strona Box -->
+                <div id="dash-etap3-box-landing" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('landing')">
+                    <div id="dash-etap3-landing-content" class="h-full"></div>
+                </div>
+
+                <!-- Dokumenty Box -->
+                <div id="dash-etap3-box-dokumenty" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('dokumenty')">
+                    <div id="dash-etap3-dokumenty-content" class="h-full"></div>
                 </div>
             </div><!-- /dash-bento-etap3 -->
 
@@ -1899,6 +1909,16 @@
                             <span>Konto</span>
                             <i id="nav-check-takedrop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div class="dash-nav-item" data-tab="landing" onclick="switchTab('landing')">
+                            <i class="ph ph-browser"></i>
+                            <span>Strona</span>
+                            <i id="nav-check-landing" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                        <div class="dash-nav-item" data-tab="dokumenty" onclick="switchTab('dokumenty')">
+                            <i class="ph ph-file-text"></i>
+                            <span>Dokumenty</span>
+                            <i id="nav-check-dokumenty" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -1984,6 +2004,16 @@
                                 <i class="ph ph-storefront"></i>
                                 <span>Konto</span>
                                 <i id="nav-check-takedrop-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div class="dash-nav-item" data-tab="landing" onclick="switchTab('landing');toggleMobileMenu()">
+                                <i class="ph ph-browser"></i>
+                                <span>Strona</span>
+                                <i id="nav-check-landing-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div class="dash-nav-item" data-tab="dokumenty" onclick="switchTab('dokumenty');toggleMobileMenu()">
+                                <i class="ph ph-file-text"></i>
+                                <span>Dokumenty</span>
+                                <i id="nav-check-dokumenty-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -3743,15 +3773,22 @@
         }
 
         function renderEtap3Dashboard() {
-            const isCompleted = takeDropData?.account_created;
-            const progressPercent = isCompleted ? 100 : 0;
+            // Etap 3 ma 3 elementy: Konto, Strona, Dokumenty
+            const accountDone = takeDropData?.account_created;
+            const landingDone = takeDropData?.landing_page_connected;
+            const dokumentyDone = takeDropData?.legal_documents_ready;
+
+            const completedSteps = [accountDone, landingDone, dokumentyDone].filter(Boolean).length;
+            const progressPercent = Math.round((completedSteps / 3) * 100);
 
             document.getElementById('dash-etap3-progress-label').textContent =
-                isCompleted ? 'Etap 3 ukończony' : 'Postęp realizacji: Etap 3';
+                completedSteps === 3 ? 'Etap 3 ukończony' : 'Postęp realizacji: Etap 3';
             document.getElementById('dash-etap3-progress-percent').textContent = progressPercent;
             document.getElementById('dash-etap3-progress-bar').style.width = progressPercent + '%';
 
             renderEtap3AccountBox();
+            renderEtap3LandingBox();
+            renderEtap3DokumentyBox();
         }
 
         function renderEtap3AccountBox() {
@@ -3792,6 +3829,94 @@
                             <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
                             <h3 class="text-white text-lg font-medium">Konto gotowe!</h3>
                             <p class="text-[#666] text-sm text-center mt-2">TakeDrop jest skonfigurowany</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEtap3LandingBox() {
+            const box = document.getElementById('dash-etap3-box-landing');
+            const content = document.getElementById('dash-etap3-landing-content');
+            if (!box || !content) return;
+
+            if (!takeDropData?.landing_page_connected) {
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Strona</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                W realizacji
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-browser text-5xl text-amber-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Strona sklepu</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Konfiguracja strony w toku</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Strona</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Gotowa
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Strona gotowa!</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Sklep jest online</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEtap3DokumentyBox() {
+            const box = document.getElementById('dash-etap3-box-dokumenty');
+            const content = document.getElementById('dash-etap3-dokumenty-content');
+            if (!box || !content) return;
+
+            if (!takeDropData?.legal_documents_ready) {
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                W realizacji
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-file-text text-5xl text-amber-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Dokumenty prawne</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Regulamin i polityki w przygotowaniu</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Gotowe
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Dokumenty gotowe!</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Regulamin i polityki są dostępne</p>
                         </div>
                     </div>
                 `;
@@ -4456,11 +4581,15 @@
             const hasLanding = takeDropData && takeDropData.landing_page_connected;
             document.getElementById('dash-nav-check-landing')?.classList.toggle('hidden', !hasLanding);
             document.getElementById('dash-nav-check-landing-mobile')?.classList.toggle('hidden', !hasLanding);
+            document.getElementById('nav-check-landing')?.classList.toggle('hidden', !hasLanding);
+            document.getElementById('nav-check-landing-mobile')?.classList.toggle('hidden', !hasLanding);
 
             // Update sidebar checkmark for Dokumenty (green when landing_page_connected - same for now)
             const hasDokumenty = takeDropData && takeDropData.landing_page_connected;
             document.getElementById('dash-nav-check-dokumenty')?.classList.toggle('hidden', !hasDokumenty);
             document.getElementById('dash-nav-check-dokumenty-mobile')?.classList.toggle('hidden', !hasDokumenty);
+            document.getElementById('nav-check-dokumenty')?.classList.toggle('hidden', !hasDokumenty);
+            document.getElementById('nav-check-dokumenty-mobile')?.classList.toggle('hidden', !hasDokumenty);
 
             // Update landing tab status
             updateLandingTabStatus();
