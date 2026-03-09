@@ -652,8 +652,6 @@
                 takedropStages[t.workflow_id] = t;
             });
 
-            console.log('Loaded takedrop stages:', Object.keys(takedropStages).length, 'records');
-
             // Attach stage info to workflows
             for (const w of workflows) {
                 w.video_stage = videoStages[w.workflow_id] || null;
@@ -1110,6 +1108,26 @@
                 } else {
                     // TakeDrop nie aktywny - admin musi włączyć
                     items.push(`<span class="flex items-center gap-1 text-zinc-500"><i class="ph ph-storefront text-[10px]"></i>TakeDrop</span>`);
+                }
+            }
+
+            // Strona TD - pokazuj gdy konto TD założone
+            if (w.takedrop_stage?.account_created) {
+                if (w.takedrop_stage?.landing_page_connected) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Strona TD</span>`);
+                } else {
+                    // Strona nie podłączona - admin ma zrobić
+                    items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Strona TD</span>`);
+                }
+            }
+
+            // Dokumenty - pokazuj gdy strona TD podłączona
+            if (w.takedrop_stage?.landing_page_connected) {
+                if (w.takedrop_stage?.legal_documents_ready) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Dokumenty</span>`);
+                } else {
+                    // Klient ma wypełnić dane
+                    items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Dokumenty</span>`);
                 }
             }
 
