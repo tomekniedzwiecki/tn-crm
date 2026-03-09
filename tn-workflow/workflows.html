@@ -630,7 +630,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created, landing_page_connected, legal_documents_ready').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created, landing_page_connected').in('workflow_id', workflowIds)
             ]);
 
             videoStages = {};
@@ -750,9 +750,9 @@
                         if (stage === 'landing') {
                             return w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected;
                         }
-                        // "legal" (Dokumenty) = strona zrobiona, klient ma wypełnić dane
+                        // "legal" (Dokumenty) = strona zrobiona (tymczasowo bez legal_documents_ready)
                         if (stage === 'legal') {
-                            return w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready;
+                            return w.takedrop_stage?.landing_page_connected === true;
                         }
                         // Other stages = next step
                         return nextStep === stage;
