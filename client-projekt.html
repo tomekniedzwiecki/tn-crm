@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030906';
+        const APP_VERSION = '2026030907';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3098,23 +3098,19 @@
                                 <i class="ph-fill ph-check-circle text-emerald-400 text-3xl"></i>
                             </div>
                             <h3 class="text-white font-medium text-lg mb-2">Dane zapisane!</h3>
-                            <p class="text-[#888] text-sm mb-4">Twoje dokumenty prawne zostaną przygotowane na podstawie podanych danych.</p>
+                            <p class="text-[#888] text-sm mb-6">Teraz po mojej stronie jest przygotowanie i dodanie dokumentów do Twojego sklepu. Poinformuję Cię, gdy będą gotowe.</p>
                             <div class="flex flex-wrap justify-center gap-2">
-                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
-                                    <i class="ph ph-file-text mr-1"></i>Regulamin
+                                <span class="px-3 py-1.5 bg-amber-500/20 rounded-full text-[12px] text-amber-400">
+                                    <i class="ph ph-clock mr-1"></i>Regulamin
                                 </span>
-                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
-                                    <i class="ph ph-shield-check mr-1"></i>Polityka prywatności
+                                <span class="px-3 py-1.5 bg-amber-500/20 rounded-full text-[12px] text-amber-400">
+                                    <i class="ph ph-clock mr-1"></i>Polityka prywatności
                                 </span>
-                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
-                                    <i class="ph ph-cookie mr-1"></i>Polityka cookies
+                                <span class="px-3 py-1.5 bg-amber-500/20 rounded-full text-[12px] text-amber-400">
+                                    <i class="ph ph-clock mr-1"></i>Polityka cookies
                                 </span>
                             </div>
                         </div>
-                        <button onclick="editLegalData()" class="w-full mt-4 bg-[#111] border border-[#222] text-white font-medium py-3 px-6 rounded-xl hover:bg-[#1a1a1a] transition-colors flex items-center justify-center gap-2">
-                            <i class="ph ph-pencil"></i>
-                            Edytuj dane
-                        </button>
                     </div>
                 </div>
             </div>
@@ -6818,6 +6814,10 @@
                 return;
             }
 
+            // Confirm before saving - no edit possible after
+            const confirmed = confirm('Czy wszystkie dane są poprawne?\n\nPo zapisaniu nie będzie możliwości edycji.');
+            if (!confirmed) return;
+
             const token = getToken();
             if (!token) {
                 showToast('Błąd: nieprawidłowy link projektu', 'error');
@@ -6860,12 +6860,6 @@
             }
         }
         window.saveLegalData = saveLegalData;
-
-        function editLegalData() {
-            document.getElementById('legal-docs-form').classList.remove('hidden');
-            document.getElementById('legal-docs-success').classList.add('hidden');
-        }
-        window.editLegalData = editLegalData;
 
         async function confirmTakeDropAccount() {
             const emailInput = document.getElementById('takedrop-client-email');
