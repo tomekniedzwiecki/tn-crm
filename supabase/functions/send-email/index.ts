@@ -41,6 +41,7 @@ const VALID_EMAIL_TYPES = [
   // Etap 3 - TakeDrop
   'takedrop_activated',
   'takedrop_welcome',
+  'landing_page_connected',
   'direct'
 ]
 
@@ -341,7 +342,9 @@ Deno.serve(async (req) => {
         projectUrl: data.projectUrl || '',
         contractUrl: data.contractUrl || '',
         // Sales page
-        salesPageUrl: data.salesPageUrl || ''
+        salesPageUrl: data.salesPageUrl || '',
+        // TakeDrop
+        landingDomain: data.landingDomain || ''
       }
 
       // Replace variables in subject and body

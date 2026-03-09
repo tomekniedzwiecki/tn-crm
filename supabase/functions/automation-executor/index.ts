@@ -385,7 +385,9 @@ async function processActionStep(
       description: context.description,
       pdfUrl: context.pdfUrl,
       viewUrl: context.viewUrl,
-      checkoutUrl: context.checkoutUrl
+      checkoutUrl: context.checkoutUrl,
+      // TakeDrop specific
+      landingDomain: context.landingDomain
     }
 
     // Call send-email function with retry logic

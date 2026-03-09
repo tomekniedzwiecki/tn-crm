@@ -195,145 +195,16 @@
 
     <script src="../components/shared-sidebar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="shared-email-types.js"></script>
 
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Template categories
-        const TEMPLATE_CATEGORIES = {
-            leady: {
-                label: 'Leady',
-                description: 'Maile dla nowych leadów',
-                templates: ['zapisy_confirmation', 'lead_intro_video']
-            },
-            oferty: {
-                label: 'Oferty',
-                description: 'Maile związane z ofertami',
-                templates: ['offer_created', 'offer_reminder_halfway', 'offer_expired']
-            },
-            platnosci: {
-                label: 'Płatności',
-                description: 'Maile związane z płatnościami i fakturami',
-                templates: ['contract_sent', 'proforma_generated', 'invoice_sent']
-            },
-            projektowe: {
-                label: 'Etap 1 - Marka',
-                description: 'Maile związane z realizacją projektów',
-                templates: ['workflow_created', 'products_shared', 'report_published', 'branding_delivered', 'sales_page_shared']
-            },
-            video: {
-                label: 'Etap 2 - Video',
-                description: 'Maile związane z nagraniami video',
-                templates: ['video_activated']
-            },
-            takedrop: {
-                label: 'Etap 3 - Konfiguracja sklepu',
-                description: 'Maile związane z konfiguracją TakeDrop',
-                templates: ['takedrop_activated', 'landing_page_connected']
-            }
-        };
-
-        // Template definitions
-        const TEMPLATE_DEFINITIONS = {
-            'zapisy_confirmation': {
-                name: 'Potwierdzenie zapisu',
-                description: 'Wysyłany po zapisaniu się przez formularz',
-                icon: 'ph-user-plus',
-                color: 'emerald'
-            },
-            'lead_intro_video': {
-                name: 'Video wprowadzające',
-                description: 'Wysyłany 7 minut po zapisie z linkiem do YT',
-                icon: 'ph-youtube-logo',
-                color: 'red'
-            },
-            'offer_created': {
-                name: 'Oferta utworzona',
-                description: 'Wysyłany gdy tworzona jest nowa oferta',
-                icon: 'ph-paper-plane-tilt',
-                color: 'emerald'
-            },
-            'offer_reminder_halfway': {
-                name: 'Przypomnienie o ofercie',
-                description: 'Wysyłany w połowie ważności oferty',
-                icon: 'ph-bell',
-                color: 'amber'
-            },
-            'offer_expired': {
-                name: 'Oferta wygasła',
-                description: 'Wysyłany gdy oferta traci ważność',
-                icon: 'ph-clock-countdown',
-                color: 'red'
-            },
-            'contract_sent': {
-                name: 'Umowa wysłana',
-                description: 'Wysyłany wraz z umową do podpisu',
-                icon: 'ph-file-text',
-                color: 'orange'
-            },
-            'proforma_generated': {
-                name: 'Faktura proforma',
-                description: 'Wysyłany wraz z fakturą proforma',
-                icon: 'ph-file-pdf',
-                color: 'orange'
-            },
-            'invoice_sent': {
-                name: 'Faktura wystawiona',
-                description: 'Wysyłany wraz z fakturą',
-                icon: 'ph-receipt',
-                color: 'pink'
-            },
-            'workflow_created': {
-                name: 'Projekt utworzony',
-                description: 'Wysyłany gdy tworzony jest nowy projekt',
-                icon: 'ph-path',
-                color: 'blue'
-            },
-            'products_shared': {
-                name: 'Produkty udostępnione',
-                description: 'Wysyłany gdy udostępniane są produkty',
-                icon: 'ph-package',
-                color: 'amber'
-            },
-            'report_published': {
-                name: 'Raport opublikowany',
-                description: 'Wysyłany gdy publikowany jest raport',
-                icon: 'ph-chart-bar',
-                color: 'pink'
-            },
-            'branding_delivered': {
-                name: 'Branding dostarczony',
-                description: 'Wysyłany gdy branding jest gotowy',
-                icon: 'ph-palette',
-                color: 'violet'
-            },
-            'sales_page_shared': {
-                name: 'Strona sprzedażowa',
-                description: 'Wysyłany gdy udostępniana jest strona',
-                icon: 'ph-globe',
-                color: 'cyan'
-            },
-            'video_activated': {
-                name: 'Aktywuj Video',
-                description: 'Wysyłany gdy admin aktywuje zakładkę Video',
-                icon: 'ph-video-camera',
-                color: 'cyan'
-            },
-            'takedrop_activated': {
-                name: 'Aktywuj TakeDrop',
-                description: 'Wysyłany gdy admin aktywuje zakładkę TakeDrop',
-                icon: 'ph-storefront',
-                color: 'sky'
-            },
-            'landing_page_connected': {
-                name: 'Strona podłączona',
-                description: 'Wysyłany gdy strona zostanie podłączona do TakeDrop',
-                icon: 'ph-link',
-                color: 'sky'
-            }
-        };
+        // Use shared email types (from shared-email-types.js)
+        const TEMPLATE_CATEGORIES = EMAIL_TEMPLATE_CATEGORIES;
+        const TEMPLATE_DEFINITIONS = EMAIL_TEMPLATE_DEFINITIONS;
 
         const PREVIEW_DATA = {
             clientName: 'Jan Kowalski',
@@ -363,8 +234,10 @@
             'green': 'bg-green-500/20 text-green-400',
             'violet': 'bg-violet-500/20 text-violet-400',
             'cyan': 'bg-cyan-500/20 text-cyan-400',
+            'sky': 'bg-sky-500/20 text-sky-400',
             'orange': 'bg-orange-500/20 text-orange-400',
-            'pink': 'bg-pink-500/20 text-pink-400'
+            'pink': 'bg-pink-500/20 text-pink-400',
+            'purple': 'bg-purple-500/20 text-purple-400'
         };
 
         async function loadTemplates() {
