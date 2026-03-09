@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030911';
+        const APP_VERSION = '2026030912';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3024,7 +3024,11 @@
                     </div>
 
                     <!-- Form -->
-                    <div id="legal-docs-form" class="space-y-6">
+                    <form id="legal-docs-form" class="space-y-6" autocomplete="off" onsubmit="return false;">
+                        <!-- Hidden honeypot fields to trick Chrome autofill -->
+                        <input type="text" name="fake-username" style="display:none" tabindex="-1" autocomplete="username">
+                        <input type="password" name="fake-password" style="display:none" tabindex="-1" autocomplete="current-password">
+
                         <!-- Info -->
                         <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3">
                             <i class="ph ph-info text-blue-400 text-xl flex-shrink-0 mt-0.5"></i>
@@ -3085,11 +3089,11 @@
                         </div>
 
                         <!-- Submit -->
-                        <button onclick="saveLegalData()" class="w-full bg-white text-black font-medium py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
+                        <button type="button" onclick="saveLegalData()" class="w-full bg-white text-black font-medium py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
                             <i class="ph ph-check-circle"></i>
                             Zapisz dane
                         </button>
-                    </div>
+                    </form>
 
                     <!-- Success State (hidden by default) -->
                     <div id="legal-docs-success" class="hidden">
