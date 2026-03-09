@@ -394,6 +394,11 @@
                             Konto TakeDrop
                             <span id="nav-check-takedrop" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('landing')" data-tab="landing" class="workflow-sidebar-btn">
+                            <i class="ph ph-browser"></i>
+                            Strona sprzedażowa
+                            <span id="nav-check-landing" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1468,41 +1473,54 @@
                                 </div>
                             </div>
                         </div>
+                    </div><!-- /tab-takedrop -->
 
-                        <!-- Landing page section -->
-                        <div class="py-4 border-t border-[#222]">
-                            <div class="flex items-center justify-between mb-4">
-                                <div>
-                                    <div class="text-[13px] text-white">Strona sprzedażowa</div>
-                                    <div class="text-[12px] text-[#666] mt-0.5">Podłącz landing page do kasy TakeDrop</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="takedrop-landing-connected" class="sr-only peer" onchange="toggleLandingPageConnected()">
-                                    <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
-                                </label>
+                    <!-- TAB: Landing Page (Etap 3) -->
+                    <div id="tab-landing" class="workflow-panel hidden">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between py-4 border-b border-[#222]">
+                            <div>
+                                <div class="text-[13px] text-white">Status strony sprzedażowej</div>
+                                <div class="text-[12px] text-[#666] mt-0.5">Zaznacz gdy strona została podłączona do TakeDrop</div>
                             </div>
-                            <div id="takedrop-landing-info" class="hidden mb-4 text-[12px] text-[#666]">
-                                Podłączona: <span id="takedrop-landing-date" class="text-[#888]">-</span>
-                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="takedrop-landing-connected" class="sr-only peer" onchange="toggleLandingPageConnected()">
+                                <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                            </label>
+                        </div>
+                        <div id="takedrop-landing-info" class="hidden py-3 border-b border-[#222] text-[12px] text-[#666]">
+                            Podłączona: <span id="takedrop-landing-date" class="text-[#888]">-</span>
+                        </div>
 
-                            <!-- Checkout link -->
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-[12px] text-[#666] mb-1.5">Link do kasy TakeDrop</label>
-                                    <input type="url" id="takedrop-checkout-link" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="https://app.takedrop.pl/pay/...">
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="saveCheckoutLink()" class="flex-1 bg-[#333] hover:bg-[#444] text-white text-[12px] font-medium px-3 py-2 rounded-md transition-colors">
+                        <!-- Checkout link -->
+                        <div class="py-4">
+                            <div class="text-[12px] text-[#666] mb-4">Link do kasy TakeDrop</div>
+                            <div class="space-y-4">
+                                <input type="url" id="takedrop-checkout-link" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="https://app.takedrop.pl/pay/...">
+                                <div class="flex gap-3">
+                                    <button onclick="saveCheckoutLink()" class="bg-white text-black text-[13px] font-medium px-4 py-2 rounded-md hover:bg-[#e5e5e5] transition-colors">
                                         Zapisz link
                                     </button>
-                                    <button onclick="generateLandingPrompt()" class="flex-1 bg-violet-600 hover:bg-violet-500 text-white text-[12px] font-medium px-3 py-2 rounded-md transition-colors flex items-center justify-center gap-1.5">
+                                    <button onclick="generateLandingPrompt()" class="bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors flex items-center gap-2">
                                         <i class="ph ph-copy"></i>
-                                        Generuj prompt
+                                        Generuj prompt dla Claude
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div><!-- /tab-takedrop -->
+
+                        <!-- Instructions -->
+                        <div class="py-4 border-t border-[#222]">
+                            <div class="text-[12px] text-[#666] mb-3">Jak podłączyć stronę:</div>
+                            <ol class="text-[13px] text-[#888] space-y-2 list-decimal list-inside">
+                                <li>Wklej link do kasy TakeDrop i zapisz</li>
+                                <li>Kliknij "Generuj prompt dla Claude"</li>
+                                <li>Wklej prompt w Claude Code</li>
+                                <li>Claude zmieni wszystkie CTA na landing page</li>
+                                <li>Zaznacz checkbox gdy gotowe</li>
+                            </ol>
+                        </div>
+                    </div><!-- /tab-landing -->
 
                     <!-- TAB: Historia (Full Activity History) -->
                     <div id="tab-historia" class="workflow-panel hidden">
@@ -4195,6 +4213,9 @@
                     loadNagrania();
                     break;
                 case 'takedrop':
+                    loadTakeDrop();
+                    break;
+                case 'landing':
                     loadTakeDrop();
                     break;
                 case 'historia':
