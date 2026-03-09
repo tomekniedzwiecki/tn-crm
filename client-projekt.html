@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030914';
+        const APP_VERSION = '2026030915';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -6905,7 +6905,11 @@
         async function confirmLegalDataSave() {
             if (!pendingLegalData) return;
 
-            closeLegalConfirmModal();
+            // Store data locally before closing modal (which clears pendingLegalData)
+            const dataToSave = { ...pendingLegalData };
+
+            // Close modal (hides it, but we already have the data)
+            document.getElementById('legal-confirm-modal').classList.add('hidden');
 
             const token = getToken();
             if (!token) {
@@ -6917,7 +6921,7 @@
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
                     .update({
-                        legal_data: pendingLegalData,
+                        legal_data: dataToSave,
                         legal_documents_ready: true
                     })
                     .eq('workflow_id', workflow.id);
@@ -6926,7 +6930,7 @@
 
                 takeDropData = {
                     ...takeDropData,
-                    legal_data: pendingLegalData,
+                    legal_data: dataToSave,
                     legal_documents_ready: true
                 };
                 pendingLegalData = null;
