@@ -630,7 +630,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -752,19 +752,17 @@
                 if (selectedStatusStages.size > 0) {
                     const nextStep = getNextStep(w);
                     statusStageMatch = Array.from(selectedStatusStages).every(stage => {
-                        // "takedrop" (Konto TD) = TD aktywny, klient ma założyć konto
+                        // "takedrop" (Konto TD) = TD aktywny, klient założył konto
                         if (stage === 'takedrop') {
-                            const result = w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created;
-                            console.log('Filter takedrop:', w.workflow_id, 'is_active:', w.takedrop_stage?.is_active, 'account_created:', w.takedrop_stage?.account_created, 'result:', result);
-                            return result;
+                            return w.takedrop_stage?.is_active && w.takedrop_stage?.account_created;
                         }
                         // "landing" (Strona TD) = konto założone, admin ma zrobić stronę
                         if (stage === 'landing') {
                             return w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected;
                         }
-                        // "legal" (Dokumenty) = strona zrobiona (tymczasowo bez legal_documents_ready)
+                        // "legal" (Dokumenty) = strona zrobiona ORAZ klient wypełnił dane
                         if (stage === 'legal') {
-                            return w.takedrop_stage?.landing_page_connected === true;
+                            return w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -971,7 +969,7 @@
                 case 'landing':
                     return !!w.takedrop_stage?.landing_page_connected;
                 case 'legal':
-                    return false; // tymczasowo - pole legal_documents_ready niedostępne w API
+                    return !!w.takedrop_stage?.legal_documents_ready;
                 default:
                     return false;
             }
@@ -1013,10 +1011,10 @@
             // Strona TD (wyświetlaj tylko jeśli konto TD założone)
             if (!w.takedrop_stage?.landing_page_connected) return 'landing';
 
-            // Dokumenty prawne - tymczasowo wyłączone (pole legal_documents_ready niedostępne w API)
-            // if (!w.takedrop_stage?.legal_documents_ready) return 'legal';
+            // Dokumenty prawne (wyświetlaj tylko jeśli strona TD gotowa)
+            if (!w.takedrop_stage?.legal_documents_ready) return 'legal';
 
-            return null; // all done (landing connected = etap 3 ukończony)
+            return null; // all done
         }
 
         function getWorkflowPath(id) {
