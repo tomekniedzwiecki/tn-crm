@@ -1477,23 +1477,26 @@
 
                     <!-- TAB: Landing Page (Etap 3) -->
                     <div id="tab-landing" class="workflow-panel hidden">
-                        <!-- Header -->
-                        <div class="flex items-center justify-between py-4 border-b border-[#222]">
-                            <div>
-                                <div class="text-[13px] text-white">Status strony sprzedażowej</div>
-                                <div class="text-[12px] text-[#666] mt-0.5">Zaznacz gdy strona została podłączona do TakeDrop</div>
+                        <!-- Domain section -->
+                        <div class="py-4 border-b border-[#222]">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <div class="text-[13px] text-white">Domena</div>
+                                    <div class="text-[12px] text-[#666] mt-0.5">Domena podłączona do TakeDrop</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="takedrop-domain-connected" class="sr-only peer" onchange="toggleDomainConnected()">
+                                    <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                                </label>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="takedrop-landing-connected" class="sr-only peer" onchange="toggleLandingPageConnected()">
-                                <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
-                            </label>
-                        </div>
-                        <div id="takedrop-landing-info" class="hidden py-3 border-b border-[#222] text-[12px] text-[#666]">
-                            Podłączona: <span id="takedrop-landing-date" class="text-[#888]">-</span>
+                            <input type="text" id="takedrop-domain" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. sklep-klienta.pl" onchange="saveDomain()">
+                            <div id="takedrop-domain-info" class="hidden mt-3 text-[12px] text-[#666]">
+                                Podłączona: <span id="takedrop-domain-date" class="text-[#888]">-</span>
+                            </div>
                         </div>
 
                         <!-- Checkout link -->
-                        <div class="py-4">
+                        <div class="py-4 border-b border-[#222]">
                             <div class="text-[12px] text-[#666] mb-4">Link do kasy TakeDrop</div>
                             <div class="space-y-4">
                                 <input type="url" id="takedrop-checkout-link" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="https://app.takedrop.pl/pay/...">
@@ -1504,16 +1507,19 @@
                             </div>
                         </div>
 
-                        <!-- Instructions -->
-                        <div class="py-4 border-t border-[#222]">
-                            <div class="text-[12px] text-[#666] mb-3">Jak podłączyć stronę:</div>
-                            <ol class="text-[13px] text-[#888] space-y-2 list-decimal list-inside">
-                                <li>Wklej link do kasy TakeDrop</li>
-                                <li>Kliknij "Generuj prompt dla Claude"</li>
-                                <li>Wklej prompt w Claude Code</li>
-                                <li>Claude zmieni wszystkie CTA na landing page</li>
-                                <li>Zaznacz checkbox gdy gotowe</li>
-                            </ol>
+                        <!-- Landing page status -->
+                        <div class="flex items-center justify-between py-4">
+                            <div>
+                                <div class="text-[13px] text-white">Strona podłączona</div>
+                                <div class="text-[12px] text-[#666] mt-0.5">Zaznacz gdy CTA zostały zmienione</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="takedrop-landing-connected" class="sr-only peer" onchange="toggleLandingPageConnected()">
+                                <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#50e3c2] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                            </label>
+                        </div>
+                        <div id="takedrop-landing-info" class="hidden pb-4 text-[12px] text-[#666]">
+                            Podłączona: <span id="takedrop-landing-date" class="text-[#888]">-</span>
                         </div>
                     </div><!-- /tab-landing -->
 
@@ -5337,6 +5343,10 @@
             const landingInfo = document.getElementById('takedrop-landing-info');
             const landingDate = document.getElementById('takedrop-landing-date');
             const checkoutLinkInput = document.getElementById('takedrop-checkout-link');
+            const domainInput = document.getElementById('takedrop-domain');
+            const domainCheckbox = document.getElementById('takedrop-domain-connected');
+            const domainInfo = document.getElementById('takedrop-domain-info');
+            const domainDate = document.getElementById('takedrop-domain-date');
 
             if (takeDropData) {
                 emailInput.value = takeDropData.account_email || '';
@@ -5368,13 +5378,23 @@
                     navCheck.classList.add('hidden');
                 }
 
+                // Domain connected
+                if (domainInput) domainInput.value = takeDropData.domain || '';
+                if (domainCheckbox) domainCheckbox.checked = takeDropData.domain_connected || false;
+                if (takeDropData.domain_connected && takeDropData.domain_connected_at && domainInfo) {
+                    domainInfo.classList.remove('hidden');
+                    domainDate.textContent = new Date(takeDropData.domain_connected_at).toLocaleString('pl-PL');
+                } else if (domainInfo) {
+                    domainInfo.classList.add('hidden');
+                }
+
                 // Landing page connected
-                landingCheckbox.checked = takeDropData.landing_page_connected || false;
-                checkoutLinkInput.value = takeDropData.checkout_link || '';
-                if (takeDropData.landing_page_connected && takeDropData.landing_page_connected_at) {
+                if (landingCheckbox) landingCheckbox.checked = takeDropData.landing_page_connected || false;
+                if (checkoutLinkInput) checkoutLinkInput.value = takeDropData.checkout_link || '';
+                if (takeDropData.landing_page_connected && takeDropData.landing_page_connected_at && landingInfo) {
                     landingInfo.classList.remove('hidden');
                     landingDate.textContent = new Date(takeDropData.landing_page_connected_at).toLocaleString('pl-PL');
-                } else {
+                } else if (landingInfo) {
                     landingInfo.classList.add('hidden');
                 }
             } else {
@@ -5388,8 +5408,12 @@
                 statusText.className = 'text-[13px] text-[#888]';
                 createdInfo.classList.add('hidden');
                 navCheck.classList.add('hidden');
-                landingCheckbox.checked = false;
-                landingInfo.classList.add('hidden');
+                if (domainInput) domainInput.value = '';
+                if (domainCheckbox) domainCheckbox.checked = false;
+                if (domainInfo) domainInfo.classList.add('hidden');
+                if (landingCheckbox) landingCheckbox.checked = false;
+                if (landingInfo) landingInfo.classList.add('hidden');
+                if (checkoutLinkInput) checkoutLinkInput.value = '';
                 checkoutLinkInput.value = '';
             }
         }
@@ -5627,6 +5651,75 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             });
         }
 
+        async function saveDomain() {
+            const domain = document.getElementById('takedrop-domain').value.trim();
+
+            try {
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({ domain: domain || null })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.domain = domain || null;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            domain: domain || null
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+            } catch (err) {
+                console.error('Error saving domain:', err);
+            }
+        }
+
+        async function toggleDomainConnected() {
+            const isConnected = document.getElementById('takedrop-domain-connected').checked;
+
+            try {
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({
+                            domain_connected: isConnected,
+                            domain_connected_at: isConnected ? new Date().toISOString() : null
+                        })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.domain_connected = isConnected;
+                    takeDropData.domain_connected_at = isConnected ? new Date().toISOString() : null;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            domain_connected: isConnected,
+                            domain_connected_at: isConnected ? new Date().toISOString() : null
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+
+                renderTakeDrop();
+                showToast(isConnected ? 'Domena oznaczona jako podłączona' : 'Status usunięty', 'success');
+            } catch (err) {
+                console.error('Error toggling domain:', err);
+                showToast('Błąd aktualizacji', 'error');
+            }
+        }
+
         window.loadTakeDrop = loadTakeDrop;
         window.toggleTakeDropActive = toggleTakeDropActive;
         window.saveTakeDropCredentials = saveTakeDropCredentials;
@@ -5634,6 +5727,8 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         window.toggleLandingPageConnected = toggleLandingPageConnected;
         window.saveCheckoutLink = saveCheckoutLink;
         window.generateLandingPrompt = generateLandingPrompt;
+        window.saveDomain = saveDomain;
+        window.toggleDomainConnected = toggleDomainConnected;
 
         // =============================================
         // CONTRACT MANAGEMENT
