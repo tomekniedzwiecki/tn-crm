@@ -630,7 +630,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created, landing_page_connected, legal_documents_ready').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, stage_accepted, account_created, landing_page_connected').in('workflow_id', workflowIds)
             ]);
 
             videoStages = {};
@@ -742,13 +742,17 @@
                 if (selectedStatusStages.size > 0) {
                     const nextStep = getNextStep(w);
                     statusStageMatch = Array.from(selectedStatusStages).every(stage => {
-                        // "landing" = next step (admin needs to create landing page)
-                        if (stage === 'landing') {
-                            return nextStep === 'landing';
+                        // "takedrop" (Konto TD) = TD aktywny, klient ma założyć konto
+                        if (stage === 'takedrop') {
+                            return w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created;
                         }
-                        // "legal" = client filled data (legal_documents_ready = true)
+                        // "landing" (Strona TD) = konto założone, admin ma zrobić stronę
+                        if (stage === 'landing') {
+                            return w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected;
+                        }
+                        // "legal" (Dokumenty) = strona zrobiona, klient ma wypełnić dane
                         if (stage === 'legal') {
-                            return w.takedrop_stage?.legal_documents_ready === true;
+                            return w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready;
                         }
                         // Other stages = next step
                         return nextStep === stage;
