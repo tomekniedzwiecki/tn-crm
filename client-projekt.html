@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030904';
+        const APP_VERSION = '2026030905';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3020,33 +3020,100 @@
                     <!-- Header -->
                     <div class="mb-8">
                         <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Dokumenty prawne</h2>
-                        <p class="text-[14px] text-[#666]">Regulamin, polityka prywatności i inne dokumenty Twojego sklepu</p>
+                        <p class="text-[14px] text-[#666]">Wypełnij dane firmy, aby wygenerować regulamin, politykę prywatności i politykę cookies</p>
                     </div>
 
-                    <!-- Status Card -->
-                    <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
-                        <div class="flex items-start gap-4">
-                            <div id="dokumenty-status-icon-container" class="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
-                                <i id="dokumenty-status-icon" class="ph ph-clock text-[#555] text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 id="dokumenty-status-title" class="text-[16px] font-medium text-white mb-2">W przygotowaniu</h3>
-                                <p id="dokumenty-status-desc" class="text-[13px] text-[#666] mb-4">
-                                    Dokumenty prawne Twojego sklepu są przygotowywane. Obejmują regulamin, politykę prywatności i politykę cookies.
-                                </p>
-                                <div class="flex flex-wrap gap-2">
-                                    <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-[12px] text-[#666]">
-                                        <i class="ph ph-file-text mr-1"></i>Regulamin
-                                    </span>
-                                    <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-[12px] text-[#666]">
-                                        <i class="ph ph-shield-check mr-1"></i>Polityka prywatności
-                                    </span>
-                                    <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-[12px] text-[#666]">
-                                        <i class="ph ph-cookie mr-1"></i>Polityka cookies
-                                    </span>
+                    <!-- Form -->
+                    <div id="legal-docs-form" class="space-y-6">
+                        <!-- Info -->
+                        <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3">
+                            <i class="ph ph-info text-blue-400 text-xl flex-shrink-0 mt-0.5"></i>
+                            <p class="text-[13px] text-blue-300/80">Te dane zostaną użyte do wygenerowania dokumentów prawnych Twojego sklepu. Upewnij się, że są poprawne.</p>
+                        </div>
+
+                        <!-- Dane firmy -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
+                            <h3 class="text-white font-medium mb-4 flex items-center gap-2">
+                                <i class="ph ph-buildings text-[#666]"></i>
+                                Dane firmy
+                            </h3>
+                            <div class="grid gap-4">
+                                <div>
+                                    <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">Nazwa marki / sklepu *</label>
+                                    <input type="text" id="client-legal-brand" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="np. MójSklep">
+                                </div>
+                                <div>
+                                    <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">Pełna nazwa firmy *</label>
+                                    <input type="text" id="client-legal-company" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="np. Jan Kowalski lub Firma XYZ Sp. z o.o.">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">NIP <span class="text-[#555]">(jeśli dotyczy)</span></label>
+                                        <input type="text" id="client-legal-nip" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="1234567890">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">REGON <span class="text-[#555]">(jeśli dotyczy)</span></label>
+                                        <input type="text" id="client-legal-regon" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="123456789">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">Adres firmy *</label>
+                                    <input type="text" id="client-legal-address" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="ul. Przykładowa 1, 00-001 Warszawa">
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Dane kontaktowe -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
+                            <h3 class="text-white font-medium mb-4 flex items-center gap-2">
+                                <i class="ph ph-envelope text-[#666]"></i>
+                                Dane kontaktowe
+                            </h3>
+                            <div class="grid gap-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">Email *</label>
+                                        <input type="email" id="client-legal-email" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="kontakt@firma.pl">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">Telefon *</label>
+                                        <input type="tel" id="client-legal-phone" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="+48 123 456 789">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <button onclick="saveLegalData()" class="w-full bg-white text-black font-medium py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-check-circle"></i>
+                            Zapisz dane
+                        </button>
+                    </div>
+
+                    <!-- Success State (hidden by default) -->
+                    <div id="legal-docs-success" class="hidden">
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                <i class="ph-fill ph-check-circle text-emerald-400 text-3xl"></i>
+                            </div>
+                            <h3 class="text-white font-medium text-lg mb-2">Dane zapisane!</h3>
+                            <p class="text-[#888] text-sm mb-4">Twoje dokumenty prawne zostaną przygotowane na podstawie podanych danych.</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
+                                    <i class="ph ph-file-text mr-1"></i>Regulamin
+                                </span>
+                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
+                                    <i class="ph ph-shield-check mr-1"></i>Polityka prywatności
+                                </span>
+                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
+                                    <i class="ph ph-cookie mr-1"></i>Polityka cookies
+                                </span>
+                            </div>
+                        </div>
+                        <button onclick="editLegalData()" class="w-full mt-4 bg-[#111] border border-[#222] text-white font-medium py-3 px-6 rounded-xl hover:bg-[#1a1a1a] transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-pencil"></i>
+                            Edytuj dane
+                        </button>
                     </div>
                 </div>
             </div>
@@ -6601,7 +6668,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at')
+                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
@@ -6621,6 +6688,7 @@
                 }
 
                 renderTakeDrop();
+                renderLegalDocsForm();
                 updateDashSidebarCheckmarks();
             } catch (err) {
                 console.error('Error loading TakeDrop:', err);
@@ -6687,6 +6755,116 @@
                 landingStep.classList.add('hidden');
             }
         }
+
+        function renderLegalDocsForm() {
+            const form = document.getElementById('legal-docs-form');
+            const success = document.getElementById('legal-docs-success');
+            if (!form || !success) return;
+
+            // If legal data exists, pre-fill form and show success state
+            if (takeDropData?.legal_data) {
+                const data = takeDropData.legal_data;
+                document.getElementById('client-legal-brand').value = data.brand_name || '';
+                document.getElementById('client-legal-company').value = data.company_name || '';
+                document.getElementById('client-legal-nip').value = data.nip || '';
+                document.getElementById('client-legal-regon').value = data.regon || '';
+                document.getElementById('client-legal-address').value = data.company_address || '';
+                document.getElementById('client-legal-email').value = data.email || '';
+                document.getElementById('client-legal-phone').value = data.phone || '';
+
+                if (takeDropData.legal_documents_ready) {
+                    form.classList.add('hidden');
+                    success.classList.remove('hidden');
+                }
+            }
+        }
+
+        async function saveLegalData() {
+            const data = {
+                brand_name: document.getElementById('client-legal-brand')?.value.trim(),
+                company_name: document.getElementById('client-legal-company')?.value.trim(),
+                nip: document.getElementById('client-legal-nip')?.value.trim(),
+                regon: document.getElementById('client-legal-regon')?.value.trim(),
+                company_address: document.getElementById('client-legal-address')?.value.trim(),
+                email: document.getElementById('client-legal-email')?.value.trim(),
+                phone: document.getElementById('client-legal-phone')?.value.trim()
+            };
+
+            // Validate required fields
+            if (!data.brand_name) {
+                showToast('Podaj nazwę marki/sklepu', 'error');
+                document.getElementById('client-legal-brand')?.focus();
+                return;
+            }
+            if (!data.company_name) {
+                showToast('Podaj nazwę firmy lub imię i nazwisko', 'error');
+                document.getElementById('client-legal-company')?.focus();
+                return;
+            }
+            if (!data.company_address) {
+                showToast('Podaj adres', 'error');
+                document.getElementById('client-legal-address')?.focus();
+                return;
+            }
+            if (!data.email) {
+                showToast('Podaj email kontaktowy', 'error');
+                document.getElementById('client-legal-email')?.focus();
+                return;
+            }
+            if (!data.phone) {
+                showToast('Podaj numer telefonu', 'error');
+                document.getElementById('client-legal-phone')?.focus();
+                return;
+            }
+
+            const token = getToken();
+            if (!token) {
+                showToast('Błąd: nieprawidłowy link projektu', 'error');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .update({
+                        legal_data: data,
+                        legal_documents_ready: true
+                    })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                takeDropData = {
+                    ...takeDropData,
+                    legal_data: data,
+                    legal_documents_ready: true
+                };
+
+                // Show success state
+                document.getElementById('legal-docs-form').classList.add('hidden');
+                document.getElementById('legal-docs-success').classList.remove('hidden');
+
+                // Update sidebar checkmarks
+                updateDashSidebarCheckmarks();
+
+                // Re-render dashboard boxes
+                if (typeof renderEtap3DokumentyBox === 'function') {
+                    renderEtap3DokumentyBox();
+                }
+
+                showToast('Dane zapisane!', 'success');
+            } catch (err) {
+                console.error('Error saving legal data:', err);
+                showToast('Błąd zapisu danych', 'error');
+            }
+        }
+        window.saveLegalData = saveLegalData;
+
+        function editLegalData() {
+            document.getElementById('legal-docs-form').classList.remove('hidden');
+            document.getElementById('legal-docs-success').classList.add('hidden');
+        }
+        window.editLegalData = editLegalData;
 
         async function confirmTakeDropAccount() {
             const emailInput = document.getElementById('takedrop-client-email');
