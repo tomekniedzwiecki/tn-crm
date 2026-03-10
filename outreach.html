@@ -360,6 +360,7 @@
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Kontakt</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Telefon</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-right">LTV</th>
+                                    <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-right">Zamówienia CRM</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Pierwszy zakup</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Ostatni zakup</th>
                                     <th class="px-4 py-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold text-center">Produkty</th>
@@ -369,7 +370,7 @@
                             </thead>
                             <tbody id="wa-contacts-table">
                                 <tr>
-                                    <td colspan="8" class="px-4 py-12 text-center text-zinc-500">
+                                    <td colspan="9" class="px-4 py-12 text-center text-zinc-500">
                                         <i class="ph ph-circle-notch animate-spin text-2xl mb-2"></i>
                                         <p>Ładowanie kontaktów...</p>
                                     </td>
@@ -2583,6 +2584,26 @@
             waContacts = data || [];
             waTotalContacts = count || 0;
 
+            // Pobierz zamówienia CRM dla tych kontaktów
+            const emails = waContacts.map(c => c.email).filter(Boolean);
+            ordersLookup = {};
+            if (emails.length > 0) {
+                const { data: ordersData } = await supabaseClient
+                    .from('orders')
+                    .select('customer_email, amount')
+                    .in('customer_email', emails)
+                    .eq('status', 'paid');
+
+                if (ordersData) {
+                    ordersData.forEach(o => {
+                        const email = o.customer_email?.toLowerCase();
+                        if (email) {
+                            ordersLookup[email] = (ordersLookup[email] || 0) + (o.amount || 0);
+                        }
+                    });
+                }
+            }
+
             renderWaContacts();
             updateWaPagination();
             await loadWaStats();
@@ -2607,7 +2628,7 @@
 
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-4 py-16 text-center text-zinc-500">
+                        <td colspan="9" class="px-4 py-16 text-center text-zinc-500">
                             <i class="ph ${hasFilters ? 'ph-funnel-simple' : 'ph-whatsapp-logo'} text-4xl mb-3 block"></i>
                             <p class="text-sm mb-1">${hasFilters ? 'Brak wyników dla wybranych filtrów' : 'Brak kontaktów z numerem telefonu'}</p>
                             ${hasFilters ? '<button onclick="resetWaFilters()" class="mt-3 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs text-white transition-colors">Wyczyść filtry</button>' : ''}
@@ -2619,6 +2640,8 @@
 
             tbody.innerHTML = waContacts.map(contact => {
                 const hasWhatsApp = !!contact.whatsapp_contacted_at;
+                const email = contact.email?.toLowerCase();
+                const orderTotal = email ? (ordersLookup[email] || 0) : 0;
 
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
@@ -2632,6 +2655,12 @@
                             <span class="font-mono text-xs ${contact.ltv_pln > 10000 ? 'text-emerald-400' : contact.ltv_pln > 1000 ? 'text-white' : 'text-zinc-500'}">
                                 ${contact.ltv_pln ? contact.ltv_pln.toLocaleString('pl-PL') + ' PLN' : '-'}
                             </span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            ${orderTotal > 0
+                                ? `<span class="font-mono text-xs text-emerald-400 font-medium">${orderTotal.toLocaleString('pl-PL')} zł</span>`
+                                : '<span class="text-xs text-zinc-600">-</span>'
+                            }
                         </td>
                         <td class="px-4 py-3 text-zinc-500 text-xs">
                             ${contact.first_purchase ? new Date(contact.first_purchase).toLocaleDateString('pl-PL') : '-'}
