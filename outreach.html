@@ -700,6 +700,7 @@
                             <tr class="border-b border-white/5 text-left">
                                 <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email</th>
                                 <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Status</th>
+                                <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Zamówienia CRM</th>
                                 <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email 1</th>
                                 <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Email 2</th>
                                 <th class="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Odpowiedź</th>
@@ -707,7 +708,7 @@
                         </thead>
                         <tbody id="details-sends-table">
                             <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                                <td colspan="6" class="px-4 py-8 text-center text-zinc-500">
                                     <i class="ph ph-circle-notch animate-spin text-xl"></i>
                                 </td>
                             </tr>
@@ -893,6 +894,7 @@
         let detailsPage = 1;
         const DETAILS_PAGE_SIZE = 50;
         let totalDetailsSends = 0;
+        let ordersLookup = {}; // email -> suma opłaconych zamówień
 
         // WhatsApp state
         let waContacts = [];
@@ -1645,6 +1647,26 @@
             detailsSends = filteredData;
             totalDetailsSends = count || 0;
 
+            // Pobierz zamówienia dla tych emaili
+            const emails = filteredData.map(s => s.contact?.email).filter(Boolean);
+            ordersLookup = {};
+            if (emails.length > 0) {
+                const { data: ordersData } = await supabaseClient
+                    .from('orders')
+                    .select('customer_email, amount')
+                    .in('customer_email', emails)
+                    .eq('status', 'paid');
+
+                if (ordersData) {
+                    ordersData.forEach(o => {
+                        const email = o.customer_email?.toLowerCase();
+                        if (email) {
+                            ordersLookup[email] = (ordersLookup[email] || 0) + (o.amount || 0);
+                        }
+                    });
+                }
+            }
+
             renderDetailsSends();
             updateDetailsPagination();
         }
@@ -1655,7 +1677,7 @@
             if (detailsSends.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                        <td colspan="6" class="px-4 py-8 text-center text-zinc-500">
                             Brak wysyłek pasujących do filtrów
                         </td>
                     </tr>
@@ -1672,15 +1694,23 @@
                 excluded: '<span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">Wykluczone</span>'
             };
 
-            tbody.innerHTML = detailsSends.map(s => `
+            tbody.innerHTML = detailsSends.map(s => {
+                const email = s.contact?.email?.toLowerCase();
+                const orderTotal = email ? (ordersLookup[email] || 0) : 0;
+                const orderDisplay = orderTotal > 0
+                    ? `<span class="text-emerald-400 font-medium">${orderTotal.toLocaleString('pl-PL')} zł</span>`
+                    : '<span class="text-zinc-600">-</span>';
+
+                return `
                 <tr class="border-b border-white/5 hover:bg-white/[0.02]">
                     <td class="px-4 py-2 text-xs font-mono">${s.contact?.email ? `<a href="#" onclick="event.preventDefault();goToLead('${s.contact.email.replace(/'/g, "\\'")}')" class="text-white hover:text-blue-400 transition-colors cursor-pointer">${s.contact.email}</a>` : '-'}</td>
                     <td class="px-4 py-2">${statusLabels[s.status] || s.status}</td>
+                    <td class="px-4 py-2 text-xs">${orderDisplay}</td>
                     <td class="px-4 py-2 text-xs text-zinc-500">${s.email_1_sent_at ? new Date(s.email_1_sent_at).toLocaleString('pl-PL') : '-'}</td>
                     <td class="px-4 py-2 text-xs text-zinc-500">${s.email_2_sent_at ? new Date(s.email_2_sent_at).toLocaleString('pl-PL') : '-'}</td>
                     <td class="px-4 py-2 text-xs text-zinc-500">${s.replied_at ? new Date(s.replied_at).toLocaleString('pl-PL') : '-'}</td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function updateDetailsPagination() {
@@ -2614,10 +2644,10 @@
                         <td class="px-4 py-3">
                             ${hasWhatsApp
                                 ? `<div class="flex flex-col gap-0.5">
-                                    <span class="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 inline-flex items-center w-fit" title="${new Date(contact.whatsapp_contacted_at).toLocaleString('pl-PL')}">
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 inline-flex items-center w-fit">
                                         <i class="ph ph-check mr-1"></i>Skontaktowano
                                     </span>
-                                    ${contact.contacted_by?.name ? `<span class="text-[10px] text-zinc-500 pl-2">${contact.contacted_by.name}</span>` : ''}
+                                    <span class="text-[10px] text-zinc-500 pl-2">${new Date(contact.whatsapp_contacted_at).toLocaleDateString('pl-PL')}${contact.contacted_by?.name ? ` · ${contact.contacted_by.name}` : ''}</span>
                                    </div>`
                                 : '<span class="text-[10px] px-2 py-0.5 rounded bg-zinc-700 text-zinc-400">Do kontaktu</span>'
                             }
