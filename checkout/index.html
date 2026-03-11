@@ -1323,6 +1323,17 @@
             document.getElementById('revolut-amount').textContent = formatPrice(parseFloat(order.amount));
             document.getElementById('revolut-order-number').textContent = order.order_number;
 
+            // Send Slack notification
+            fetch(`${SUPABASE_URL}/functions/v1/checkout-notify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({ orderId: order.id, paymentMethod: 'revolut' })
+            }).catch(err => console.error('[checkout] Slack notify error:', err));
+
             // Track event
             if (typeof fbq !== 'undefined') {
                 fbq('track', 'InitiateCheckout', {
