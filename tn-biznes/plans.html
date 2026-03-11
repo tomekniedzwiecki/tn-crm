@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="../components/shared-sidebar.js"></script>
+    <script src="shared-costs.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -361,22 +362,12 @@
         }
 
         async function loadRealizationData() {
-            // Pobierz koszty stałe (aktywne) - będą używane jako rzeczywiste koszty
-            const { data: recurringCosts } = await supabaseClient
-                .from('biznes_recurring_costs')
-                .select('amount')
-                .eq('is_active', true);
-
-            const monthlyRecurringTotal = (recurringCosts || []).reduce((s, c) => s + parseFloat(c.amount || 0), 0);
-
             // Calculate realization for each plan
             for (const plan of allPlans) {
                 const startStr = plan.period_start;
                 const endStr = plan.period_end;
 
                 // Oblicz ile miesięcy obejmuje plan
-                const startDate = new Date(plan.period_start);
-                const endDate = new Date(plan.period_end);
                 const monthsInPlan = plan.plan_type === 'quarterly' ? 3 : 1;
 
                 // Get CRM orders
@@ -395,17 +386,6 @@
                     .gte('date', startStr)
                     .lte('date', endStr);
 
-                // Get one-time costs only (koszty jednorazowe)
-                const { data: oneTimeCosts } = await supabaseClient
-                    .from('biznes_costs')
-                    .select('amount, month, date, cost_type')
-                    .eq('cost_type', 'one_time');
-
-                const filteredOneTimeCosts = (oneTimeCosts || []).filter(c => {
-                    const cd = c.month || c.date;
-                    return cd >= startStr && cd <= endStr;
-                });
-
                 // Get pipeline
                 const { data: pipeline } = await supabaseClient
                     .from('leads')
@@ -417,11 +397,9 @@
                 const manualRevenue = (manualRevenues || []).reduce((s, r) => s + toNetto(parseFloat(r.amount || 0)), 0);
                 const totalRevenue = crmRevenue + manualRevenue;
 
-                // Koszty rzeczywiste = koszty stałe (z szablonu) + koszty jednorazowe
-                // Koszty stałe są ZAWSZE traktowane jako poniesione (bo to są zobowiązania)
-                const recurringCostsForPeriod = monthlyRecurringTotal * monthsInPlan;
-                const oneTimeCostsTotal = filteredOneTimeCosts.reduce((s, c) => s + parseFloat(c.amount || 0), 0);
-                const totalCosts = recurringCostsForPeriod + oneTimeCostsTotal;
+                // Pobierz rzeczywiste koszty używając CostsService (tak jak dashboard)
+                const costsData = await CostsService.getAllCosts(supabaseClient, startStr, endStr, monthsInPlan);
+                const totalCosts = costsData.total;
 
                 const pipelineValue = (pipeline || []).reduce((s, l) => s + parseFloat(l.deal_value || 0), 0);
 
