@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -82,6 +83,30 @@
         .badge-manual { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
         .badge-received { background: rgba(16, 185, 129, 0.15); color: #34d399; }
         .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.5;
+            cursor: pointer;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        .preset-btn {
+            transition: all 0.15s;
+        }
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .preset-btn.active {
+            background: rgba(20, 184, 166, 0.2);
+            border-color: rgba(20, 184, 166, 0.4);
+            color: #14b8a6;
+        }
+
+        .stat-change-up { color: #34d399; }
+        .stat-change-down { color: #f87171; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -115,8 +140,85 @@
         <div class="flex-1 overflow-y-auto">
             <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
 
+                <!-- Date Range Filters -->
+                <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4 mb-6">
+                    <div class="flex flex-col lg:flex-row gap-4">
+                        <!-- Presets -->
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="setPreset('today')" data-preset="today" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Dziś</button>
+                            <button onclick="setPreset('yesterday')" data-preset="yesterday" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Wczoraj</button>
+                            <button onclick="setPreset('last7')" data-preset="last7" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">7 dni</button>
+                            <button onclick="setPreset('last30')" data-preset="last30" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">30 dni</button>
+                            <button onclick="setPreset('thisMonth')" data-preset="thisMonth" class="preset-btn active px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Ten miesiąc</button>
+                            <button onclick="setPreset('lastMonth')" data-preset="lastMonth" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Poprzedni miesiąc</button>
+                            <button onclick="setPreset('thisYear')" data-preset="thisYear" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Ten rok</button>
+                        </div>
+
+                        <!-- Custom Date Range -->
+                        <div class="flex items-center gap-2 ml-auto">
+                            <input type="date" id="date-from" class="input-field rounded-lg px-3 py-1.5 text-sm text-white w-[140px]" onchange="applyCustomDateRange()">
+                            <span class="text-zinc-500">—</span>
+                            <input type="date" id="date-to" class="input-field rounded-lg px-3 py-1.5 text-sm text-white w-[140px]" onchange="applyCustomDateRange()">
+                        </div>
+                    </div>
+
+                    <!-- Compare Toggle -->
+                    <div class="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="compare-toggle" class="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-teal-500 focus:ring-teal-500" onchange="toggleCompare()">
+                            <span class="text-sm text-zinc-400">Porównaj z poprzednim okresem</span>
+                        </label>
+                        <select id="compare-type" class="input-field rounded-lg px-3 py-1.5 text-sm text-white hidden" onchange="loadRevenues()">
+                            <option value="previous">Poprzedni okres (taka sama długość)</option>
+                            <option value="lastYear">Ten sam okres rok temu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats with Comparison -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-emerald-400 font-mono" id="stat-total">0 zł</div>
+                        <div class="text-xs text-zinc-500">Przychód netto</div>
+                        <div id="stat-total-change" class="text-xs mt-1 hidden"></div>
+                    </div>
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-avg">0 zł</div>
+                        <div class="text-xs text-zinc-500">Średnia transakcja</div>
+                        <div id="stat-avg-change" class="text-xs mt-1 hidden"></div>
+                    </div>
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-count">0</div>
+                        <div class="text-xs text-zinc-500">Transakcji</div>
+                        <div id="stat-count-change" class="text-xs mt-1 hidden"></div>
+                    </div>
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white font-mono" id="stat-clients">0</div>
+                        <div class="text-xs text-zinc-500">Unikalnych klientów</div>
+                        <div id="stat-clients-change" class="text-xs mt-1 hidden"></div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div id="chart-container" class="bg-zinc-950/50 border border-white/5 rounded-xl p-4 mb-6 hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-white">Porównanie okresów</h3>
+                        <div class="flex items-center gap-4 text-xs">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                                <span class="text-zinc-400" id="chart-legend-current">Aktualny okres</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-zinc-500"></div>
+                                <span class="text-zinc-400" id="chart-legend-previous">Poprzedni okres</span>
+                            </div>
+                        </div>
+                    </div>
+                    <canvas id="comparison-chart" height="200"></canvas>
+                </div>
+
                 <!-- Tabs -->
-                <div class="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
+                <div class="flex items-center gap-2 mb-4 border-b border-white/5 pb-4">
                     <button onclick="switchTab('all')" data-tab="all" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
                         <i class="ph ph-list mr-1.5"></i>Wszystkie
                     </button>
@@ -126,36 +228,13 @@
                     <button onclick="switchTab('manual')" data-tab="manual" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent">
                         <i class="ph ph-pencil mr-1.5"></i>Ręczne
                     </button>
-                </div>
 
-                <!-- Stats -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
-                        <div class="text-2xl font-semibold text-emerald-400 font-mono" id="stat-total">0 zł</div>
-                        <div class="text-xs text-zinc-500">Łącznie</div>
+                    <div class="ml-auto">
+                        <div class="relative">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
+                            <input type="text" id="filter-search" placeholder="Szukaj..." class="input-field rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-zinc-600 w-[200px]" oninput="filterRevenues()">
+                        </div>
                     </div>
-                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
-                        <div class="text-2xl font-semibold text-white font-mono" id="stat-crm">0 zł</div>
-                        <div class="text-xs text-zinc-500">Z CRM (zamówienia)</div>
-                    </div>
-                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
-                        <div class="text-2xl font-semibold text-white font-mono" id="stat-manual">0 zł</div>
-                        <div class="text-xs text-zinc-500">Ręczne</div>
-                    </div>
-                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
-                        <div class="text-2xl font-semibold text-white font-mono" id="stat-count">0</div>
-                        <div class="text-xs text-zinc-500">Transakcji</div>
-                    </div>
-                </div>
-
-                <!-- Filters -->
-                <div class="flex flex-col md:flex-row gap-3 mb-4">
-                    <div class="relative flex-1">
-                        <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-zinc-500"></i>
-                        <input type="text" id="filter-search" placeholder="Szukaj przychodu..." class="input-field w-full rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-zinc-600" oninput="filterRevenues()">
-                    </div>
-                    <select id="filter-month" class="input-field rounded-lg px-3 py-2 text-sm text-white min-w-[150px]" onchange="loadRevenues()">
-                    </select>
                 </div>
 
                 <!-- Revenues List -->
@@ -287,7 +366,11 @@
         // STATE
         // ============================================
         let allRevenues = [];
+        let comparisonRevenues = [];
         let currentTab = 'all';
+        let compareEnabled = false;
+        let currentPreset = 'thisMonth';
+        let chart = null;
 
         // ============================================
         // AUTH
@@ -308,7 +391,6 @@
             return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ' zł';
         }
 
-        // Konwersja brutto -> netto (VAT 23%)
         function toNetto(brutto) {
             return brutto / 1.23;
         }
@@ -319,78 +401,174 @@
             return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        function getCurrentMonth() {
-            const d = new Date();
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        function formatDateShort(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
         }
 
-        function populateMonthFilter() {
-            const select = document.getElementById('filter-month');
-            const months = [];
-            const now = new Date();
+        function getDateRange() {
+            return {
+                from: document.getElementById('date-from').value,
+                to: document.getElementById('date-to').value
+            };
+        }
 
-            for (let i = -6; i <= 3; i++) {
-                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-                const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                const label = d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
-                months.push({ value, label });
+        function setDateRange(from, to) {
+            document.getElementById('date-from').value = from;
+            document.getElementById('date-to').value = to;
+        }
+
+        function getDaysDiff(from, to) {
+            const d1 = new Date(from);
+            const d2 = new Date(to);
+            return Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        function getComparisonRange(from, to, type) {
+            const days = getDaysDiff(from, to);
+            const fromDate = new Date(from);
+            const toDate = new Date(to);
+
+            if (type === 'lastYear') {
+                fromDate.setFullYear(fromDate.getFullYear() - 1);
+                toDate.setFullYear(toDate.getFullYear() - 1);
+            } else {
+                // Previous period
+                fromDate.setDate(fromDate.getDate() - days);
+                toDate.setDate(toDate.getDate() - days);
             }
 
-            select.innerHTML = '<option value="">Wszystkie miesiące</option>';
-            months.forEach(m => {
-                const selected = m.value === getCurrentMonth() ? 'selected' : '';
-                select.innerHTML += `<option value="${m.value}" ${selected}>${m.label}</option>`;
+            return {
+                from: fromDate.toISOString().split('T')[0],
+                to: toDate.toISOString().split('T')[0]
+            };
+        }
+
+        // ============================================
+        // PRESETS
+        // ============================================
+        function setPreset(preset) {
+            currentPreset = preset;
+            const today = new Date();
+            let from, to;
+
+            switch (preset) {
+                case 'today':
+                    from = to = today.toISOString().split('T')[0];
+                    break;
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    from = to = yesterday.toISOString().split('T')[0];
+                    break;
+                case 'last7':
+                    to = today.toISOString().split('T')[0];
+                    const last7 = new Date(today);
+                    last7.setDate(last7.getDate() - 6);
+                    from = last7.toISOString().split('T')[0];
+                    break;
+                case 'last30':
+                    to = today.toISOString().split('T')[0];
+                    const last30 = new Date(today);
+                    last30.setDate(last30.getDate() - 29);
+                    from = last30.toISOString().split('T')[0];
+                    break;
+                case 'thisMonth':
+                    from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                    to = today.toISOString().split('T')[0];
+                    break;
+                case 'lastMonth':
+                    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                    from = lastMonthStart.toISOString().split('T')[0];
+                    to = lastMonthEnd.toISOString().split('T')[0];
+                    break;
+                case 'thisYear':
+                    from = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
+                    to = today.toISOString().split('T')[0];
+                    break;
+            }
+
+            setDateRange(from, to);
+            updatePresetButtons();
+            loadRevenues();
+        }
+
+        function updatePresetButtons() {
+            document.querySelectorAll('[data-preset]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.preset === currentPreset);
             });
+        }
+
+        function applyCustomDateRange() {
+            currentPreset = null;
+            updatePresetButtons();
+            loadRevenues();
+        }
+
+        function toggleCompare() {
+            compareEnabled = document.getElementById('compare-toggle').checked;
+            document.getElementById('compare-type').classList.toggle('hidden', !compareEnabled);
+            document.getElementById('chart-container').classList.toggle('hidden', !compareEnabled);
+            loadRevenues();
         }
 
         // ============================================
         // DATA LOADING
         // ============================================
         async function loadRevenues() {
-            const month = document.getElementById('filter-month').value;
-            let startDate = null, endDate = null;
+            const { from, to } = getDateRange();
+            if (!from || !to) return;
 
-            if (month) {
-                const [year, m] = month.split('-');
-                startDate = `${year}-${m}-01`;
-                // Calculate last day of month without timezone conversion
-                const lastDay = new Date(year, parseInt(m), 0);
-                const endYear = lastDay.getFullYear();
-                const endMonth = String(lastDay.getMonth() + 1).padStart(2, '0');
-                const endDay = String(lastDay.getDate()).padStart(2, '0');
-                endDate = `${endYear}-${endMonth}-${endDay}`;
+            // Load current period
+            allRevenues = await fetchRevenues(from, to);
+
+            // Load comparison period if enabled
+            if (compareEnabled) {
+                const compareType = document.getElementById('compare-type').value;
+                const compRange = getComparisonRange(from, to, compareType);
+                comparisonRevenues = await fetchRevenues(compRange.from, compRange.to);
+                updateChartLegends(from, to, compRange.from, compRange.to);
+            } else {
+                comparisonRevenues = [];
             }
 
+            renderRevenues();
+            updateStats();
+
+            if (compareEnabled) {
+                renderChart();
+            }
+        }
+
+        async function fetchRevenues(startDate, endDate) {
             // Load CRM orders
             let ordersQuery = supabaseClient
                 .from('orders')
-                .select('id, amount, paid_at, created_at, description, customer_name, customer_company, order_number')
+                .select('id, amount, paid_at, created_at, description, customer_name, customer_email, customer_company, order_number')
                 .eq('status', 'paid')
+                .gte('paid_at', startDate)
+                .lte('paid_at', endDate + 'T23:59:59')
                 .order('paid_at', { ascending: false });
-
-            if (startDate && endDate) {
-                ordersQuery = ordersQuery.gte('paid_at', startDate).lte('paid_at', endDate + 'T23:59:59');
-            }
 
             // Load manual revenues
             let manualQuery = supabaseClient
                 .from('biznes_revenues')
                 .select('*')
+                .gte('date', startDate)
+                .lte('date', endDate)
                 .order('date', { ascending: false });
-
-            if (startDate && endDate) {
-                manualQuery = manualQuery.gte('date', startDate).lte('date', endDate);
-            }
 
             const [ordersRes, manualRes] = await Promise.all([ordersQuery, manualQuery]);
 
-            // Filter out orders without paid_at and use paid_at as the date
             const crmRevenues = (ordersRes.data || [])
-                .filter(o => o.paid_at) // Only include orders with paid_at set
+                .filter(o => o.paid_at)
                 .map(o => ({
                     id: o.id,
                     name: o.description || 'Zamówienie',
                     client_name: o.customer_name,
+                    customer_email: o.customer_email,
                     customer_company: o.customer_company,
                     amount: toNetto(parseFloat(o.amount || 0)),
                     date: o.paid_at.split('T')[0],
@@ -405,12 +583,9 @@
                 source: 'manual'
             }));
 
-            allRevenues = [...crmRevenues, ...manualRevenues].sort((a, b) =>
+            return [...crmRevenues, ...manualRevenues].sort((a, b) =>
                 new Date(b.date) - new Date(a.date)
             );
-
-            renderRevenues();
-            updateStats();
         }
 
         // ============================================
@@ -421,7 +596,7 @@
             const filtered = getFilteredRevenues();
 
             if (filtered.length === 0) {
-                container.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center text-zinc-600">Brak przychodów</td></tr>';
+                container.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center text-zinc-600">Brak przychodów w wybranym okresie</td></tr>';
                 return;
             }
 
@@ -429,8 +604,6 @@
                 const sourceIcon = rev.source === 'crm' ? 'ph-shopping-cart' : 'ph-pencil';
                 const sourceBadge = rev.source === 'crm' ? 'badge-crm' : 'badge-manual';
                 const sourceLabel = rev.source === 'crm' ? 'CRM' : 'Ręczne';
-                const statusBadge = rev.is_received ? 'badge-received' : 'badge-pending';
-                const statusLabel = rev.is_received ? 'Otrzymane' : 'Oczekuje';
                 const clientDisplay = rev.customer_company || rev.client_name || '-';
 
                 return `
@@ -483,7 +656,7 @@
             return allRevenues.filter(rev => {
                 if (currentTab === 'crm' && rev.source !== 'crm') return false;
                 if (currentTab === 'manual' && rev.source !== 'manual') return false;
-                if (search && !rev.name.toLowerCase().includes(search) && !(rev.client_name || '').toLowerCase().includes(search)) return false;
+                if (search && !rev.name.toLowerCase().includes(search) && !(rev.client_name || '').toLowerCase().includes(search) && !(rev.customer_email || '').toLowerCase().includes(search)) return false;
                 return true;
             });
         }
@@ -493,14 +666,173 @@
         }
 
         function updateStats() {
-            const crmTotal = allRevenues.filter(r => r.source === 'crm').reduce((s, r) => s + r.amount, 0);
-            const manualTotal = allRevenues.filter(r => r.source === 'manual' && r.is_received).reduce((s, r) => s + r.amount, 0);
-            const total = crmTotal + manualTotal;
+            const total = allRevenues.filter(r => r.is_received !== false).reduce((s, r) => s + r.amount, 0);
+            const count = allRevenues.length;
+            const avg = count > 0 ? total / count : 0;
+
+            // Unique clients
+            const clients = new Set();
+            allRevenues.forEach(r => {
+                const clientId = r.customer_email || r.client_name || r.customer_company;
+                if (clientId) clients.add(clientId.toLowerCase());
+            });
 
             document.getElementById('stat-total').textContent = formatMoney(total);
-            document.getElementById('stat-crm').textContent = formatMoney(crmTotal);
-            document.getElementById('stat-manual').textContent = formatMoney(manualTotal);
-            document.getElementById('stat-count').textContent = allRevenues.length;
+            document.getElementById('stat-avg').textContent = formatMoney(avg);
+            document.getElementById('stat-count').textContent = count;
+            document.getElementById('stat-clients').textContent = clients.size;
+
+            // Update comparison stats if enabled
+            if (compareEnabled && comparisonRevenues.length >= 0) {
+                const prevTotal = comparisonRevenues.filter(r => r.is_received !== false).reduce((s, r) => s + r.amount, 0);
+                const prevCount = comparisonRevenues.length;
+                const prevAvg = prevCount > 0 ? prevTotal / prevCount : 0;
+
+                const prevClients = new Set();
+                comparisonRevenues.forEach(r => {
+                    const clientId = r.customer_email || r.client_name || r.customer_company;
+                    if (clientId) prevClients.add(clientId.toLowerCase());
+                });
+
+                showChange('stat-total-change', total, prevTotal);
+                showChange('stat-avg-change', avg, prevAvg);
+                showChange('stat-count-change', count, prevCount, true);
+                showChange('stat-clients-change', clients.size, prevClients.size, true);
+            } else {
+                hideChanges();
+            }
+        }
+
+        function showChange(elementId, current, previous, isCount = false) {
+            const el = document.getElementById(elementId);
+            if (previous === 0) {
+                el.classList.add('hidden');
+                return;
+            }
+
+            const change = ((current - previous) / previous) * 100;
+            const isUp = change >= 0;
+            const arrow = isUp ? '↑' : '↓';
+            const colorClass = isUp ? 'stat-change-up' : 'stat-change-down';
+
+            el.innerHTML = `<span class="${colorClass}">${arrow} ${Math.abs(change).toFixed(1)}%</span> <span class="text-zinc-600">vs ${isCount ? previous : formatMoney(previous)}</span>`;
+            el.classList.remove('hidden');
+        }
+
+        function hideChanges() {
+            ['stat-total-change', 'stat-avg-change', 'stat-count-change', 'stat-clients-change'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+
+        // ============================================
+        // CHART
+        // ============================================
+        function updateChartLegends(from1, to1, from2, to2) {
+            document.getElementById('chart-legend-current').textContent = `${formatDateShort(from1)} - ${formatDateShort(to1)}`;
+            document.getElementById('chart-legend-previous').textContent = `${formatDateShort(from2)} - ${formatDateShort(to2)}`;
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('comparison-chart').getContext('2d');
+
+            // Group revenues by day
+            const { from, to } = getDateRange();
+            const days = getDaysDiff(from, to);
+
+            const currentData = groupByDay(allRevenues, from, days);
+            const previousData = groupByDay(comparisonRevenues, getComparisonRange(from, to, document.getElementById('compare-type').value).from, days);
+
+            const labels = currentData.map((_, i) => `Dzień ${i + 1}`);
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Aktualny okres',
+                            data: currentData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Poprzedni okres',
+                            data: previousData,
+                            backgroundColor: 'rgba(113, 113, 122, 0.5)',
+                            borderColor: 'rgba(113, 113, 122, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#18181b',
+                            titleColor: '#fafafa',
+                            bodyColor: '#a1a1aa',
+                            borderColor: '#27272a',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    return formatMoney(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#71717a',
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255,255,255,0.05)'
+                            },
+                            ticks: {
+                                color: '#71717a',
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return formatMoney(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function groupByDay(revenues, startDate, days) {
+            const result = new Array(days).fill(0);
+            const start = new Date(startDate);
+
+            revenues.forEach(rev => {
+                const revDate = new Date(rev.date);
+                const dayIndex = Math.floor((revDate - start) / (1000 * 60 * 60 * 24));
+                if (dayIndex >= 0 && dayIndex < days) {
+                    result[dayIndex] += rev.amount;
+                }
+            });
+
+            return result;
         }
 
         // ============================================
@@ -585,7 +917,7 @@
             document.getElementById('revenue-name').value = revenue.name;
             document.getElementById('revenue-client').value = revenue.client_name || '';
             document.getElementById('revenue-category').value = revenue.category;
-            document.getElementById('revenue-amount').value = revenue.amount;
+            document.getElementById('revenue-amount').value = revenue.amount * 1.23; // Convert back to brutto for editing
             document.getElementById('revenue-date').value = revenue.date;
             document.getElementById('revenue-invoice').value = revenue.invoice_number || '';
             document.getElementById('revenue-received').checked = revenue.is_received;
@@ -635,8 +967,8 @@
                 Sidebar.setUserColor(profile.avatar_color);
             }
 
-            populateMonthFilter();
-            await loadRevenues();
+            // Set default date range (this month)
+            setPreset('thisMonth');
         }
 
         init();
