@@ -831,6 +831,10 @@
         let isCustomPayment = false;
         let customPaymentLeadId = null;
 
+        // Upgrade workflow state
+        let upgradeWorkflowId = null;
+        let upgradeToOfferId = null;
+
         // Discount code state
         let appliedDiscount = null; // { id, code, target_price, discount_amount, discount_percent }
 
@@ -1349,6 +1353,10 @@
             const customDescription = params.get('description');
             const leadId = params.get('lead_id');
 
+            // Upgrade workflow params
+            upgradeWorkflowId = params.get('upgrade_workflow_id');
+            upgradeToOfferId = params.get('upgrade_to_offer_id');
+
             if (customAmount && customDescription && !offerId) {
                 // Custom payment mode
                 isCustomPayment = true;
@@ -1662,6 +1670,14 @@
                         if (customPaymentLeadId) {
                             orderData.lead_id = customPaymentLeadId;
                         }
+                    }
+
+                    // Upgrade workflow - save reference for trigger to process
+                    if (upgradeWorkflowId && upgradeToOfferId) {
+                        orderData.upgrade_workflow_id = upgradeWorkflowId;
+                        orderData.upgrade_to_offer_id = upgradeToOfferId;
+                        orderData.skip_workflow = true; // Don't create new workflow
+                        orderData.notes += ' | Upgrade workflow';
                     }
 
                     const { data: newOrder, error: orderError } = await supabaseClient

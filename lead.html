@@ -955,6 +955,16 @@
                                         <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis płatności <span class="text-red-400">*</span></label>
                                         <input type="text" id="custom-payment-description" placeholder="np. Konsultacja AI, Audyt" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
                                     </div>
+                                    <!-- Upgrade workflow option -->
+                                    <div id="upgrade-workflow-section" class="hidden border-t border-white/5 pt-3 mt-3">
+                                        <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                                            <i class="ph ph-arrow-fat-up text-amber-400 mr-1"></i>Upgrade do oferty (opcjonalnie)
+                                        </label>
+                                        <select id="custom-payment-upgrade-offer" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                                            <option value="">-- Bez upgrade'u --</option>
+                                        </select>
+                                        <p class="text-zinc-600 text-[10px] mt-1">Po opłaceniu, projekt klienta zostanie zaktualizowany do wybranej oferty</p>
+                                    </div>
                                 </div>
 
                                 <button id="generate-custom-payment-btn" class="w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-emerald-500/30">
@@ -1310,6 +1320,8 @@
         let activities = [];
         let offers = [];
         let meetings = [];
+        let leadWorkflowId = null;
+        let leadWorkflow = null;
         let notesHistory = [];
         let hasChanges = false;
         let teamMembers = [];
@@ -1753,6 +1765,39 @@
             renderLead();
             await loadActivities();
             loadWhatsAppMessages();
+            await loadLeadWorkflow();
+        }
+
+        // Check if lead has a workflow and setup upgrade section
+        async function loadLeadWorkflow() {
+            if (!lead?.email) return;
+
+            // Find workflow by customer_email
+            const { data: workflow } = await supabaseClient
+                .from('workflows')
+                .select('id, offer_id, offer_name')
+                .eq('customer_email', lead.email)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (workflow) {
+                leadWorkflowId = workflow.id;
+                leadWorkflow = workflow;
+
+                // Populate upgrade offer select (excluding current offer)
+                const select = document.getElementById('custom-payment-upgrade-offer');
+                if (select) {
+                    select.innerHTML = '<option value="">-- Bez upgrade\'u --</option>';
+                    for (const offer of offers) {
+                        if (offer.id !== workflow.offer_id) {
+                            select.innerHTML += `<option value="${offer.id}">${offer.name} (${formatPrice(offer.price)})</option>`;
+                        }
+                    }
+                    // Show upgrade section
+                    document.getElementById('upgrade-workflow-section')?.classList.remove('hidden');
+                }
+            }
         }
 
         function renderLead() {
@@ -3826,6 +3871,14 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 description: description,
                 lead_id: lead?.id || ''
             });
+
+            // Check if upgrade option selected
+            const upgradeOfferSelect = document.getElementById('custom-payment-upgrade-offer');
+            const upgradeOfferId = upgradeOfferSelect?.value;
+            if (upgradeOfferId && leadWorkflowId) {
+                params.set('upgrade_workflow_id', leadWorkflowId);
+                params.set('upgrade_to_offer_id', upgradeOfferId);
+            }
 
             const paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
 
