@@ -454,6 +454,14 @@
         // ============================================
         // PRESETS
         // ============================================
+        // Format date as YYYY-MM-DD without timezone conversion
+        function toLocalDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function setPreset(preset) {
             currentPreset = preset;
             const today = new Date();
@@ -461,38 +469,38 @@
 
             switch (preset) {
                 case 'today':
-                    from = to = today.toISOString().split('T')[0];
+                    from = to = toLocalDateString(today);
                     break;
                 case 'yesterday':
                     const yesterday = new Date(today);
                     yesterday.setDate(yesterday.getDate() - 1);
-                    from = to = yesterday.toISOString().split('T')[0];
+                    from = to = toLocalDateString(yesterday);
                     break;
                 case 'last7':
-                    to = today.toISOString().split('T')[0];
+                    to = toLocalDateString(today);
                     const last7 = new Date(today);
                     last7.setDate(last7.getDate() - 6);
-                    from = last7.toISOString().split('T')[0];
+                    from = toLocalDateString(last7);
                     break;
                 case 'last30':
-                    to = today.toISOString().split('T')[0];
+                    to = toLocalDateString(today);
                     const last30 = new Date(today);
                     last30.setDate(last30.getDate() - 29);
-                    from = last30.toISOString().split('T')[0];
+                    from = toLocalDateString(last30);
                     break;
                 case 'thisMonth':
-                    from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                    to = today.toISOString().split('T')[0];
+                    from = toLocalDateString(new Date(today.getFullYear(), today.getMonth(), 1));
+                    to = toLocalDateString(today);
                     break;
                 case 'lastMonth':
                     const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-                    from = lastMonthStart.toISOString().split('T')[0];
-                    to = lastMonthEnd.toISOString().split('T')[0];
+                    from = toLocalDateString(lastMonthStart);
+                    to = toLocalDateString(lastMonthEnd);
                     break;
                 case 'thisYear':
-                    from = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
-                    to = today.toISOString().split('T')[0];
+                    from = toLocalDateString(new Date(today.getFullYear(), 0, 1));
+                    to = toLocalDateString(today);
                     break;
             }
 
@@ -535,8 +543,8 @@
             fromDate.setDate(fromDate.getDate() - days);
             toDate.setDate(toDate.getDate() - days);
 
-            document.getElementById('compare-from').value = fromDate.toISOString().split('T')[0];
-            document.getElementById('compare-to').value = toDate.toISOString().split('T')[0];
+            document.getElementById('compare-from').value = toLocalDateString(fromDate);
+            document.getElementById('compare-to').value = toLocalDateString(toDate);
             loadRevenues();
         }
 
@@ -903,7 +911,7 @@
 
             document.getElementById('revenue-id').value = '';
             document.getElementById('modal-title').textContent = 'Dodaj przychód ręcznie';
-            document.getElementById('revenue-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('revenue-date').value = toLocalDateString(new Date());
             document.getElementById('revenue-received').checked = true;
 
             modal.classList.remove('hidden');
