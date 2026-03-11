@@ -50,6 +50,17 @@ serve(async (req) => {
       SUPABASE_SERVICE_ROLE_KEY || ''
     )
 
+    // Pobierz dane follow-upa przed aktualizacją
+    const { data: followup, error: fetchError } = await supabase
+      .from('whatsapp_followups')
+      .select('lead_id, phone_number, message_text')
+      .eq('id', followup_id)
+      .single()
+
+    if (fetchError || !followup) {
+      throw new Error('Follow-up not found')
+    }
+
     const updateData: any = { status }
     if (status === 'sent') {
       updateData.sent_at = new Date().toISOString()
@@ -61,6 +72,17 @@ serve(async (req) => {
       .eq('id', followup_id)
 
     if (error) throw error
+
+    // Jeśli wysłany - dodaj do whatsapp_messages żeby zaktualizować "czas od ostatniej wiadomości"
+    if (status === 'sent' && followup.lead_id) {
+      await supabase.from('whatsapp_messages').insert({
+        lead_id: followup.lead_id,
+        phone_number: followup.phone_number,
+        direction: 'outbound',
+        message_text: followup.message_text,
+        message_timestamp: new Date().toISOString()
+      })
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

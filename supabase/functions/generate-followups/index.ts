@@ -173,7 +173,7 @@ serve(async (req) => {
     console.log('generate-followups: Fetching leads for stage:', stage)
     const { data: leadsData, error: leadsError } = await supabase
       .from('leads')
-      .select('id, name, phone, status, expected_close, weekly_hours, experience, target_income, open_question')
+      .select('id, name, phone, status, expected_close, weekly_hours, experience, target_income, open_question, created_at')
       .eq('status', stage)
       .not('phone', 'is', null)
 
@@ -224,8 +224,12 @@ serve(async (req) => {
         if (lastMsg) {
           hoursSinceContact = (now.getTime() - new Date(lastMsg).getTime()) / (1000 * 60 * 60)
           needsFollowup = hoursSinceContact > FOLLOWUP_HOURS
+        } else if (lead.created_at) {
+          hoursSinceContact = (now.getTime() - new Date(lead.created_at).getTime()) / (1000 * 60 * 60)
+          needsFollowup = hoursSinceContact > FOLLOWUP_HOURS
         } else {
           needsFollowup = true
+          hoursSinceContact = FOLLOWUP_HOURS + 1
         }
       } else {
         // Standard follow-up stages
@@ -233,8 +237,13 @@ serve(async (req) => {
         if (lastMsg) {
           hoursSinceContact = (now.getTime() - new Date(lastMsg).getTime()) / (1000 * 60 * 60)
           needsFollowup = hoursSinceContact > FOLLOWUP_HOURS
+        } else if (lead.created_at) {
+          // Brak wiadomości - użyj czasu od utworzenia leada
+          hoursSinceContact = (now.getTime() - new Date(lead.created_at).getTime()) / (1000 * 60 * 60)
+          needsFollowup = hoursSinceContact > FOLLOWUP_HOURS
         } else {
           needsFollowup = true
+          hoursSinceContact = FOLLOWUP_HOURS + 1
         }
       }
 

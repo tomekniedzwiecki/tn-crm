@@ -179,7 +179,7 @@ async function enqueueLeads(supabase: any, config: Config): Promise<number> {
     // Pobierz leady w tym etapie
     const { data: leadsData } = await supabase
       .from('leads')
-      .select('id, name, phone, status, expected_close')
+      .select('id, name, phone, status, expected_close, created_at')
       .eq('status', stage)
       .not('phone', 'is', null)
 
@@ -235,11 +235,18 @@ async function enqueueLeads(supabase: any, config: Config): Promise<number> {
       }
 
       const lastMsg = lastMessageMap[lead.id]
-      let hoursSinceContact = 999
+      let hoursSinceContact: number
 
       if (lastMsg) {
         hoursSinceContact = (now.getTime() - new Date(lastMsg).getTime()) / (1000 * 60 * 60)
         if (hoursSinceContact < config.followup_hours) continue
+      } else if (lead.created_at) {
+        // Brak wiadomości - użyj czasu od utworzenia leada
+        hoursSinceContact = (now.getTime() - new Date(lead.created_at).getTime()) / (1000 * 60 * 60)
+        if (hoursSinceContact < config.followup_hours) continue
+      } else {
+        // Fallback - lead bez created_at i bez wiadomości
+        hoursSinceContact = config.followup_hours + 1
       }
 
       let phone = lead.phone.replace(/[^0-9]/g, '')
