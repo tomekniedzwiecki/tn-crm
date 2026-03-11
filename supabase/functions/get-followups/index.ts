@@ -43,7 +43,7 @@ serve(async (req) => {
       .from('whatsapp_followups')
       .select('*')
       .eq('status', 'pending')
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
 
     if (error) throw error
 
