@@ -214,7 +214,9 @@
                             </div>
                         </div>
                     </div>
-                    <canvas id="comparison-chart" height="200"></canvas>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="comparison-chart"></canvas>
+                    </div>
                 </div>
 
                 <!-- Tabs -->
@@ -734,7 +736,20 @@
         }
 
         function renderChart() {
-            const ctx = document.getElementById('comparison-chart').getContext('2d');
+            // Destroy existing chart and recreate canvas to prevent size issues
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+
+            const container = document.getElementById('comparison-chart').parentElement;
+            const oldCanvas = document.getElementById('comparison-chart');
+            oldCanvas.remove();
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = 'comparison-chart';
+            container.appendChild(newCanvas);
+
+            const ctx = newCanvas.getContext('2d');
 
             // Group revenues by day
             const { from, to } = getDateRange();
@@ -744,10 +759,6 @@
             const previousData = groupByDay(comparisonRevenues, getComparisonRange(from, to, document.getElementById('compare-type').value).from, days);
 
             const labels = currentData.map((_, i) => `Dzień ${i + 1}`);
-
-            if (chart) {
-                chart.destroy();
-            }
 
             chart = new Chart(ctx, {
                 type: 'bar',
