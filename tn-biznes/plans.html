@@ -273,6 +273,14 @@
             return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
+        // Helper do formatowania daty bez problemów ze strefą czasową
+        function toLocalDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function formatPeriod(start, end, type) {
             const d = new Date(start);
             const months = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
@@ -734,10 +742,10 @@
             let periodEnd;
             if (type === 'monthly') {
                 const d = new Date(periodStart);
-                periodEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+                periodEnd = toLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
             } else {
                 const d = new Date(periodStart);
-                periodEnd = new Date(d.getFullYear(), d.getMonth() + 3, 0).toISOString().split('T')[0];
+                periodEnd = toLocalDateString(new Date(d.getFullYear(), d.getMonth() + 3, 0));
             }
 
             const targetProfit = parseFloat(document.getElementById('plan-profit').value) || 0;
