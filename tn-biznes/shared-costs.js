@@ -211,6 +211,41 @@ const CostsService = {
     },
 
     // ============================================
+    // AD COSTS (from ad_expenses table)
+    // ============================================
+    async getAdCosts(supabaseClient, startDate, endDate) {
+        const { data: adExpenses } = await supabaseClient
+            .from('ad_expenses')
+            .select('source, amount')
+            .gte('date', startDate)
+            .lte('date', endDate);
+
+        if (!adExpenses || adExpenses.length === 0) {
+            return [];
+        }
+
+        // Sum by source
+        const bySource = { google: 0, meta: 0, tiktok: 0 };
+        for (const exp of adExpenses) {
+            bySource[exp.source] = (bySource[exp.source] || 0) + parseFloat(exp.amount || 0);
+        }
+
+        const total = bySource.google + bySource.meta + bySource.tiktok;
+        if (total === 0) return [];
+
+        return [{
+            id: 'ads-total',
+            name: 'Budżet reklamowy',
+            description: `Google: ${this.formatMoney(bySource.google)} | Meta: ${this.formatMoney(bySource.meta)} | TikTok: ${this.formatMoney(bySource.tiktok)}`,
+            amount: total,
+            category: 'reklama',
+            cost_type: 'ads',
+            is_paid: true,
+            is_virtual: true
+        }];
+    },
+
+    // ============================================
     // MAIN: GET ALL COSTS
     // ============================================
     /**
@@ -223,11 +258,12 @@ const CostsService = {
      * @returns {Object} { items: Array, total: number, byCategory: Object }
      */
     async getAllCosts(supabaseClient, startDate, endDate, monthsInPeriod = 1) {
-        // 1. Pobierz koszty z biznes_costs (bez pracownikow - ci sa liczeni dynamicznie)
+        // 1. Pobierz koszty z biznes_costs (bez pracownikow i reklam - te sa liczone dynamicznie)
         const { data: biznesCosts } = await supabaseClient
             .from('biznes_costs')
             .select('*')
             .neq('category', 'pracownik')
+            .neq('category', 'reklama')
             .gte('month', startDate)
             .lte('month', endDate);
 
@@ -245,8 +281,9 @@ const CostsService = {
         const employeeCosts = await this.getEmployeeCosts(supabaseClient, startDate, nextDayStr, monthsInPeriod);
         costs.push(...employeeCosts);
 
-        // Wydatki reklamowe sa juz w biznes_costs (synchronizowane przez costs.html)
-        // Nie trzeba ich pobierac osobno!
+        // 3. Pobierz dynamiczne koszty reklam (bezposrednio z ad_expenses)
+        const adCosts = await this.getAdCosts(supabaseClient, startDate, endDate);
+        costs.push(...adCosts);
 
         // Oblicz sumy
         const total = costs.reduce((sum, c) => sum + (c.amount || 0), 0);
