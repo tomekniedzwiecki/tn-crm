@@ -1805,7 +1805,7 @@
                         const text = isOverdue ? `${Math.abs(daysRemaining)}d po terminie` : `za ${daysRemaining}d`;
                         // Make clickable to reset deadline (only if overdue or close to deadline)
                         if (isOverdue || daysRemaining <= 3) {
-                            deadlineHtml = `<button onclick="resetDeadline('${w.workflow_id}', '${nextStep}')" class="flex items-center gap-1 ${color} hover:bg-white/5 px-1 py-0.5 rounded transition-colors" title="Kliknij aby zresetować (za 2 dni)"><i class="ph ph-clock"></i>${text}</button>`;
+                            deadlineHtml = `<button onclick="resetDeadline(event, '${w.workflow_id}', '${nextStep}')" class="flex items-center gap-1 ${color} hover:bg-white/5 px-1 py-0.5 rounded transition-colors" title="Kliknij aby zresetować (za 2 dni)"><i class="ph ph-clock"></i>${text}</button>`;
                         } else {
                             deadlineHtml = `<span class="flex items-center gap-1 ${color}"><i class="ph ph-clock"></i>${text}</span>`;
                         }
@@ -1970,9 +1970,10 @@
             }
         }
 
-        async function resetDeadline(workflowId, stepKey) {
+        async function resetDeadline(event, workflowId, stepKey) {
             event.preventDefault();
             event.stopPropagation();
+            console.log('resetDeadline called:', workflowId, stepKey);
 
             // Calculate date that will result in 2 days remaining
             // New start date = today - (deadlineDays - 2)
