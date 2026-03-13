@@ -702,10 +702,11 @@
 
         function getWorkflowStage(w) {
             // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop
-            // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony) LUB etap 2 pominięty
+            // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony) LUB etap 2 pominięty/zatwierdzony
             const videoLinks = w.video_stage?.video_links || [];
             const isVideoSkipped = w.video_stage?.skipped || false;
-            if (w.takedrop_stage?.is_active || videoLinks.length >= 4 || isVideoSkipped) return 3;
+            const isVideoAccepted = w.video_stage?.stage_accepted || false;
+            if (w.takedrop_stage?.is_active || videoLinks.length >= 4 || isVideoSkipped || isVideoAccepted) return 3;
             if (w.video_stage?.is_active) return 2;
             return 1;
         }
@@ -1077,6 +1078,7 @@
             const isStarter = w.offer_name?.toLowerCase().includes('starter');
             const rc = reportCounts[w.workflow_id];
             const isVideoSkipped = w.video_stage?.skipped || false;
+            const isVideoAccepted = w.video_stage?.stage_accepted || false;
 
             // Etap 1: Umowa → Produkt → Raport → Branding → Strona
             if (!isStarter && w.contract_status !== 'signed') return 'contract';
@@ -1085,8 +1087,8 @@
             if (!w.branding_shared_at) return 'branding';
             if (!w.sales_page_shared_at) return 'salespage';
 
-            // Etap 2: Scenariusz → Profile → Nagrania (pomiń jeśli video skipped)
-            if (!isVideoSkipped) {
+            // Etap 2: Scenariusz → Profile → Nagrania (pomiń jeśli video skipped LUB accepted)
+            if (!isVideoSkipped && !isVideoAccepted) {
                 const scenarios = w.video_stage?.video_scenarios;
                 const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
                 if (!hasScenarios) return 'scenario';
@@ -1184,10 +1186,14 @@
 
             // Scenariusz - tylko gdy etap 1 ukończony (strona udostępniona)
             const isVideoSkipped = w.video_stage?.skipped || false;
+            const isVideoAccepted = w.video_stage?.stage_accepted || false;
             if (w.sales_page_shared_at) {
                 if (isVideoSkipped) {
                     // Pominięty - czerwony X
                     items.push(`<span class="flex items-center gap-1 text-red-400"><i class="ph-fill ph-x-circle text-[10px]"></i>Video</span>`);
+                } else if (isVideoAccepted) {
+                    // Zatwierdzony - zielony check
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Video</span>`);
                 } else {
                     const scenarios = w.video_stage?.video_scenarios;
                     const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
@@ -1197,9 +1203,9 @@
                 }
             }
 
-            // TakeDrop - pokazuj gdy etap 3 (4+ nagrań LUB video pominięte)
+            // TakeDrop - pokazuj gdy etap 3 (4+ nagrań LUB video pominięte/zatwierdzone)
             const videoLinks = w.video_stage?.video_links || [];
-            if (videoLinks.length >= 4 || isVideoSkipped) {
+            if (videoLinks.length >= 4 || isVideoSkipped || isVideoAccepted) {
                 if (w.takedrop_stage?.account_created) {
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
                 } else if (w.takedrop_stage?.is_active) {
@@ -1297,9 +1303,13 @@
             let s2Label = 'Etap 2';
             const hasVideo = w.video_stage?.is_active;
             const isVideoSkipped = w.video_stage?.skipped || false;
+            const isVideoAccepted = w.video_stage?.stage_accepted || false;
             if (isVideoSkipped) {
                 // Pominięty - czerwony
                 s2Class = 'bg-red-500';
+            } else if (isVideoAccepted) {
+                // Zatwierdzony - zielony
+                s2Class = 'bg-emerald-500';
             } else if (currentStage === 2) {
                 s2Class = 'bg-amber-500';
             } else if (currentStage === 3 || (hasVideo && w.video_stage?.video_shared)) {
