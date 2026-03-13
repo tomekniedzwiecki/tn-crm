@@ -3521,9 +3521,6 @@
                         navCheckNagraniaCount.className = '';
                     }
                 }
-
-                // Auto-collapse previous stages if later stages are active
-                autoCollapseStages();
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
@@ -4627,37 +4624,12 @@
         }
         window.toggleStageSection = toggleStageSection;
 
-        function collapseStageSection(stageNum) {
-            const content = document.getElementById(`stage-${stageNum}-content`);
-            const chevron = document.getElementById(`stage-${stageNum}-chevron`);
-            if (content && chevron) {
-                content.classList.add('hidden');
-                chevron.style.transform = 'rotate(-90deg)';
-            }
-        }
-
         function expandStageSection(stageNum) {
             const content = document.getElementById(`stage-${stageNum}-content`);
             const chevron = document.getElementById(`stage-${stageNum}-chevron`);
             if (content && chevron) {
                 content.classList.remove('hidden');
                 chevron.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function autoCollapseStages() {
-            // Collapse previous stages if a later stage is active
-            const stage3Active = takeDropData?.is_active || false;
-            const stage2Active = videoAdminData?.is_active || false;
-
-            // If stage 3 is active, collapse stages 1 and 2
-            if (stage3Active) {
-                collapseStageSection(1);
-                collapseStageSection(2);
-            }
-            // If stage 2 is active (but not stage 3), collapse only stage 1
-            else if (stage2Active) {
-                collapseStageSection(1);
             }
         }
 
