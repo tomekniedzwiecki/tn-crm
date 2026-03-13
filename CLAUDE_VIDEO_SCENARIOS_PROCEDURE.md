@@ -277,7 +277,7 @@ curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?work
 > **WAŻNE**: Używaj `$$` delimitera zamiast pojedynczych apostrofów `'` dla JSON-a. Apostrofy w tekście scenariuszy (np. "what's this") powodują błędy SQL.
 
 ```sql
-INSERT INTO workflow_video (workflow_id, video_scenarios)
+INSERT INTO workflow_video (workflow_id, video_scenarios, is_active, activated_at)
 VALUES ('152f445f-b318-4e97-ba13-b9d901814ee8', $$[
   {"id": "scenario_1", "showFace": true, ...},
   {"id": "scenario_2", "showFace": true, ...},
@@ -289,9 +289,14 @@ VALUES ('152f445f-b318-4e97-ba13-b9d901814ee8', $$[
   {"id": "scenario_8", "showFace": false, ...},
   {"id": "scenario_9", "showFace": false, ...},
   {"id": "scenario_10", "showFace": false, ...}
-]$$::jsonb)
-ON CONFLICT (workflow_id) DO UPDATE SET video_scenarios = EXCLUDED.video_scenarios;
+]$$::jsonb, true, NOW())
+ON CONFLICT (workflow_id) DO UPDATE SET
+  video_scenarios = EXCLUDED.video_scenarios,
+  is_active = true,
+  activated_at = COALESCE(workflow_video.activated_at, NOW());
 ```
+
+> **UWAGA**: Zapytanie automatycznie włącza widoczność zakładki Video dla klienta (`is_active = true`).
 
 ### Jak wykonać SQL
 
