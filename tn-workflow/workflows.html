@@ -704,8 +704,9 @@
             // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop
             // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony) LUB etap 2 pominięty/zatwierdzony
             const videoLinks = w.video_stage?.video_links || [];
+            const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = w.video_stage?.stage_accepted || false;
+            const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
             if (w.takedrop_stage?.is_active || videoLinks.length >= 4 || isVideoSkipped || isVideoAccepted) return 3;
             if (w.video_stage?.is_active) return 2;
             return 1;
@@ -791,8 +792,9 @@
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
                     const nextStep = getNextStep(w);
+                    const isVideoActive = w.video_stage?.is_active || false;
                     const isVideoSkipped = w.video_stage?.skipped || false;
-                    const isVideoAccepted = w.video_stage?.stage_accepted || false;
+                    const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
                     const videoLinks = w.video_stage?.video_links || [];
                     const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
                     const isEtap1Complete = !!w.sales_page_shared_at;
@@ -923,8 +925,9 @@
 
             for (const w of activeWorkflows) {
                 // Etap 3 stages - use EXACT same conditions as filter
+                const isVideoActive = w.video_stage?.is_active || false;
                 const isVideoSkipped = w.video_stage?.skipped || false;
-                const isVideoAccepted = w.video_stage?.stage_accepted || false;
+                const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
                 const videoLinks = w.video_stage?.video_links || [];
                 const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
                 const isEtap1Complete = !!w.sales_page_shared_at;
@@ -1094,8 +1097,9 @@
         function getNextStep(w) {
             const isStarter = w.offer_name?.toLowerCase().includes('starter');
             const rc = reportCounts[w.workflow_id];
+            const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = w.video_stage?.stage_accepted || false;
+            const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
 
             // Etap 1: Umowa → Produkt → Raport → Branding → Strona
             if (!isStarter && w.contract_status !== 'signed') return 'contract';
@@ -1104,8 +1108,9 @@
             if (!w.branding_shared_at) return 'branding';
             if (!w.sales_page_shared_at) return 'salespage';
 
-            // Etap 2: Scenariusz → Profile → Nagrania (pomiń jeśli video skipped LUB accepted)
-            if (!isVideoSkipped && !isVideoAccepted) {
+            // Etap 2: Scenariusz → Profile → Nagrania
+            // Tylko jeśli video aktywne i nie pominięte/zatwierdzone
+            if (isVideoActive && !isVideoSkipped && !isVideoAccepted) {
                 const scenarios = w.video_stage?.video_scenarios;
                 const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
                 if (!hasScenarios) return 'scenario';
@@ -1202,8 +1207,9 @@
             }
 
             // Scenariusz - tylko gdy etap 1 ukończony (strona udostępniona)
+            const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = w.video_stage?.stage_accepted || false;
+            const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
             if (w.sales_page_shared_at) {
                 if (isVideoSkipped) {
                     // Pominięty - czerwony X
@@ -1320,7 +1326,7 @@
             let s2Label = 'Etap 2';
             const hasVideo = w.video_stage?.is_active;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = w.video_stage?.stage_accepted || false;
+            const isVideoAccepted = hasVideo && (w.video_stage?.stage_accepted || false);
             if (isVideoSkipped) {
                 // Pominięty - czerwony
                 s2Class = 'bg-red-500';
