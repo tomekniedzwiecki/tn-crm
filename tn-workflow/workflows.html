@@ -800,10 +800,10 @@
                     const isEtap1Complete = !!w.sales_page_shared_at;
 
                     statusStageMatch = Array.from(selectedStatusStages).every(stage => {
-                        // "takedrop" (Konto TD) = Etap 1 + video ukończone ale TD nie aktywny LUB TD aktywny ale konto nie założone
+                        // "takedrop" (Konto TD) = Etap 1 + video ukończone + (TD nie aktywny LUB konto nie założone)
                         if (stage === 'takedrop') {
-                            return (isEtap1Complete && isVideoComplete && !w.takedrop_stage?.is_active) ||
-                                   (w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created);
+                            return isEtap1Complete && isVideoComplete &&
+                                   (!w.takedrop_stage?.is_active || !w.takedrop_stage?.account_created);
                         }
                         // "landing" (Strona TD) = konto założone, admin ma zrobić stronę
                         if (stage === 'landing') {
@@ -932,14 +932,12 @@
                 const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
                 const isEtap1Complete = !!w.sales_page_shared_at;
 
-                // "takedrop" = Etap 1 ukończony + video ukończone, ale TD jeszcze nie aktywny LUB aktywny ale konto nie założone
-                if (isEtap1Complete && isVideoComplete && !w.takedrop_stage?.is_active) {
-                    counts.takedrop++;
-                    continue;
-                }
-                if (w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created) {
-                    counts.takedrop++;
-                    continue;
+                // "takedrop" = Etap 1 ukończony + video ukończone + (TD nie aktywny LUB aktywny ale konto nie założone)
+                if (isEtap1Complete && isVideoComplete) {
+                    if (!w.takedrop_stage?.is_active || !w.takedrop_stage?.account_created) {
+                        counts.takedrop++;
+                        continue;
+                    }
                 }
                 // "landing" = konto założone, admin ma zrobić stronę
                 if (w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected) {
