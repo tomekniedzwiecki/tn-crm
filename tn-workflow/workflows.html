@@ -903,6 +903,7 @@
 
         function updateStageCounts() {
             // Count active workflows at each stage
+            // IMPORTANT: Use EXACT same logic as filter in applyFilters()
             const counts = {
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
@@ -913,13 +914,24 @@
             const activeWorkflows = workflows.filter(w => w.status === 'active');
 
             for (const w of activeWorkflows) {
-                // Special handling for stages where filter logic differs from getNextStep()
-                // "legal" = klient wypełnił dane, admin ma robotę (legal_documents_ready = true)
+                // Etap 3 stages - use EXACT same conditions as filter
+                // "takedrop" = TD aktywny, klient jeszcze nie podłączył konta
+                if (w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created) {
+                    counts.takedrop++;
+                    continue;
+                }
+                // "landing" = konto założone, admin ma zrobić stronę
+                if (w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected) {
+                    counts.landing++;
+                    continue;
+                }
+                // "legal" = strona TD gotowa ORAZ klient wypełnił dane (admin ma robotę)
                 if (w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready) {
                     counts.legal++;
-                    continue; // Don't count in other stages
+                    continue;
                 }
 
+                // Other stages - use getNextStep()
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep)) {
                     counts[nextStep]++;
