@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tidex — Inteligentna czystość każdego dnia</title>
+  <meta name="description" content="Robot odkurzająco-mopujący 2w1 z nawigacją LiDAR i mocą 5000Pa. Stacja samoczyszcząca, 180 minut pracy. Pozwól technologii zadbać o Twój dom.">
+  <meta property="og:title" content="Tidex — Robot sprzątający z nawigacją LiDAR">
+  <meta property="og:description" content="5000Pa mocy ssania, funkcja 2w1, stacja samoczyszcząca. Czyste podłogi bez Twojego udziału.">
+  <meta property="og:type" content="product">
+  <meta property="og:locale" content="pl_PL">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #00D4E8;
+      --primary-dark: #00B8CC;
+      --primary-light: #33DEEE;
+      --primary-soft: rgba(0, 212, 232, 0.1);
+      --primary-rgb: 0, 212, 232;
+
+      --secondary: #0A1628;
+      --secondary-light: #1A2B3C;
+      --secondary-soft: rgba(10, 22, 40, 0.1);
+      --secondary-rgb: 10, 22, 40;
+
+      --accent: #00E676;
+      --accent-light: #33EB91;
+      --accent-soft: rgba(0, 230, 118, 0.1);
+
+      --neutral-dark: #1A2332;
+      --neutral-mid: #64748B;
+      --neutral-light: #F1F5F9;
+
+      --bg-white: #FFFFFF;
+      --bg-cream: #F8FAFC;
+      --bg-soft: #F1F5F9;
+      --bg-muted: #E2E8F0;
+
+      --text-primary: #0A1628;
+      --text-secondary: #64748B;
+      --text-tertiary: #94A3B8;
+      --text-on-primary: #FFFFFF;
+
+      --border-light: rgba(10, 22, 40, 0.06);
+      --border-medium: rgba(10, 22, 40, 0.1);
+      --shadow-sm: 0 1px 3px rgba(10, 22, 40, 0.04);
+      --shadow-md: 0 4px 16px rgba(10, 22, 40, 0.08);
+      --shadow-lg: 0 16px 48px rgba(10, 22, 40, 0.1);
+      --shadow-xl: 0 24px 64px rgba(10, 22, 40, 0.12);
+      --shadow-primary: 0 8px 32px rgba(0, 212, 232, 0.25);
+      --shadow-glow: 0 0 40px rgba(0, 212, 232, 0.15);
+
+      --gradient-hero: linear-gradient(135deg, #F0FDFA 0%, #FFFFFF 50%, #F8FAFC 100%);
+      --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+
+      --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-accent: 'JetBrains Mono', monospace;
+
+      --section-padding: 100px;
+      --container-width: 1200px;
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 22px;
+      --radius-xl: 32px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-white);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .container { max-width: var(--container-width); margin: 0 auto; padding: 0 24px; }
+
+    h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 700; line-height: 1.2; color: var(--text-primary); }
+
+    .section-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-accent); font-size: 12px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 16px;
+    }
+    .section-label::before { content: ''; width: 24px; height: 2px; background: var(--gradient-primary); border-radius: 1px; }
+
+    .section-title { font-size: clamp(28px, 4vw, 44px); margin-bottom: 20px; }
+    .section-subtitle { font-size: 17px; color: var(--text-secondary); max-width: 600px; line-height: 1.7; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 16px 32px; font-family: var(--font-heading); font-size: 15px; font-weight: 600;
+      text-decoration: none; border-radius: var(--radius-md); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer; border: none; position: relative; overflow: hidden;
+    }
+    .btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s ease; }
+    .btn:hover::before { left: 100%; }
+    .btn-primary { background: var(--gradient-primary); color: var(--text-on-primary); box-shadow: var(--shadow-primary); }
+    .btn-primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 16px 48px rgba(0, 212, 232, 0.35); }
+    .btn-secondary { background: var(--gradient-glass); backdrop-filter: blur(10px); color: var(--text-primary); border: 1.5px solid var(--border-medium); }
+    .btn-secondary:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+    .img-placeholder {
+      position: relative; width: 100%; background: linear-gradient(145deg, var(--bg-soft) 0%, var(--bg-muted) 100%);
+      border: 2px dashed var(--border-medium); border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; overflow: hidden;
+    }
+    .img-placeholder::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0, 212, 232, 0.02) 10px, rgba(0, 212, 232, 0.02) 20px); }
+    .ph-icon { width: 56px; height: 56px; background: var(--bg-white); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); z-index: 1; }
+    .ph-icon svg { width: 24px; height: 24px; color: var(--primary); }
+    .ph-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); z-index: 1; }
+    .ph-size { font-size: 12px; color: var(--text-tertiary); z-index: 1; }
+
+    /* HEADER */
+    .header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 16px 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid transparent; transition: all 0.4s ease; }
+    .header.scrolled { padding: 12px 0; background: rgba(255, 255, 255, 0.95); box-shadow: 0 4px 30px rgba(0, 212, 232, 0.08); border-bottom: 1px solid rgba(0, 212, 232, 0.1); }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; text-decoration: none; }
+    .logo img { height: 44px; width: auto; object-fit: contain; }
+    .logo-text { font-family: var(--font-heading); font-size: 24px; font-weight: 700; color: var(--secondary); }
+    .logo-text span { color: var(--primary); }
+    .nav { display: flex; align-items: center; gap: 8px; }
+    .nav-link { padding: 10px 16px; font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; border-radius: var(--radius-sm); transition: all 0.2s ease; }
+    .nav-link:hover { color: var(--primary); background: var(--primary-soft); }
+    .header-cta { padding: 10px 20px; font-size: 14px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; padding: 8px; background: none; border: none; cursor: pointer; }
+    .hamburger span { width: 24px; height: 2px; background: var(--text-primary); border-radius: 1px; transition: all 0.3s ease; }
+
+    /* MOBILE MENU */
+    .mobile-menu { display: none; position: fixed; inset: 0; background: var(--bg-white); z-index: 99; padding: 100px 24px 40px; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+    .mobile-menu.open { opacity: 1; visibility: visible; }
+    .mobile-nav { display: flex; flex-direction: column; gap: 8px; }
+    .mobile-link { padding: 16px 20px; font-size: 18px; font-weight: 500; color: var(--text-primary); text-decoration: none; border-radius: var(--radius-md); transition: all 0.2s ease; }
+    .mobile-link:hover { background: var(--primary-soft); color: var(--primary); }
+
+    /* HERO */
+    .hero { position: relative; padding: 140px 0 80px; background: var(--gradient-hero); overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 80%; height: 150%; background: radial-gradient(ellipse, rgba(0, 212, 232, 0.08) 0%, transparent 60%); pointer-events: none; }
+    .hero::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 200px; background: linear-gradient(to top, var(--bg-white) 0%, transparent 100%); pointer-events: none; }
+
+    .hero-bg-animation { position: absolute; top: 50%; right: 15%; transform: translateY(-50%); width: 500px; height: 500px; pointer-events: none; z-index: 0; }
+    .lidar-wave { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(var(--primary-rgb), 0.15); animation: lidar-scan 4s ease-out infinite; }
+    .lidar-wave-1 { width: 200px; height: 200px; }
+    .lidar-wave-2 { width: 300px; height: 300px; animation-delay: 1s; }
+    .lidar-wave-3 { width: 400px; height: 400px; animation-delay: 2s; }
+    @keyframes lidar-scan { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.4; } 100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } }
+    .scan-line { position: absolute; top: 50%; left: 50%; width: 200px; height: 2px; background: linear-gradient(90deg, transparent, var(--primary), transparent); transform-origin: left center; animation: scan-rotate 6s linear infinite; }
+    @keyframes scan-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; z-index: 1; }
+    .hero-content { max-width: 100%; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; background: var(--gradient-glass); backdrop-filter: blur(10px); border: 1px solid rgba(0, 212, 232, 0.2); border-radius: 100px; font-size: 13px; font-weight: 600; color: var(--primary-dark); margin-bottom: 24px; box-shadow: var(--shadow-md); }
+    .hero-badge-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.3); } }
+    .hero-title { font-size: clamp(32px, 4.5vw, 52px); font-weight: 700; line-height: 1.15; margin-bottom: 20px; letter-spacing: -0.5px; }
+    .hero-title .highlight { background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-description { font-size: 17px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 28px; }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; }
+    .hero-features { display: flex; flex-wrap: wrap; gap: 20px; }
+    .hero-feature { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+    .hero-feature-icon { width: 20px; height: 20px; background: var(--primary-soft); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hero-feature-icon svg { width: 12px; height: 12px; color: var(--primary); }
+    .hero-visual { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .hero-product { width: 100%; max-width: 400px; }
+    .hero-product .img-placeholder { width: 100%; aspect-ratio: 4/5; border-radius: var(--radius-xl); background: var(--bg-white); box-shadow: var(--shadow-xl); }
+    .hero-specs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 400px; }
+    .hero-spec { background: var(--gradient-glass); backdrop-filter: blur(10px); padding: 14px 10px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); border: 1px solid rgba(0, 212, 232, 0.1); text-align: center; transition: all 0.3s ease; }
+    .hero-spec:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: rgba(0, 212, 232, 0.2); }
+    .hero-spec-value { font-family: var(--font-heading); font-size: 14px; font-weight: 700; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.2; margin-bottom: 3px; }
+    .hero-spec-label { font-size: 10px; color: var(--text-tertiary); line-height: 1.2; font-weight: 500; }
+
+    /* TRUST BAR */
+    .trust-bar { padding: 40px 0; background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.04) 0%, rgba(0, 230, 118, 0.04) 100%); border-top: 1px solid rgba(var(--primary-rgb), 0.1); border-bottom: 1px solid var(--border-light); }
+    .trust-items { display: flex; justify-content: center; gap: 20px; flex-wrap: nowrap; }
+    .trust-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--bg-white); border-radius: var(--radius-lg); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); transition: all 0.3s ease; flex-shrink: 0; }
+    .trust-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--primary); }
+    .trust-icon { width: 40px; height: 40px; background: var(--gradient-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-primary); flex-shrink: 0; }
+    .trust-icon svg { width: 20px; height: 20px; color: var(--text-on-primary); }
+    .trust-text { white-space: nowrap; }
+    .trust-text strong { display: block; font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .trust-text span { font-size: 12px; color: var(--text-tertiary); }
+
+    /* PROBLEM */
+    .problem { padding: var(--section-padding) 0; background: linear-gradient(180deg, #F0FDFA 0%, #E0F7FA 100%); }
+    .problem-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .problem-content { max-width: 520px; }
+    .problem-title { font-size: clamp(26px, 3.5vw, 38px); margin-bottom: 20px; }
+    .problem-text { font-size: 16px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 28px; }
+    .problem-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .problem-stat { padding: 20px; background: var(--bg-white); border-radius: var(--radius-lg); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); }
+    .problem-stat-value { font-family: var(--font-heading); font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .problem-stat-label { font-size: 13px; color: var(--text-secondary); }
+    .problem-visual .img-placeholder { aspect-ratio: 4/3; border-radius: var(--radius-xl); }
+
+    /* SOLUTION / BENTO */
+    .solution { padding: var(--section-padding) 0; background: linear-gradient(180deg, var(--bg-white) 0%, rgba(0, 230, 118, 0.03) 100%); }
+    .solution-header { text-align: center; margin-bottom: 56px; }
+    .solution-header .section-subtitle { margin: 0 auto; }
+    .bento-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    .bento-card { background: var(--bg-white); border-radius: var(--radius-xl); padding: 32px; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+    .bento-card .spotlight { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(var(--primary-rgb), 0.08) 0%, transparent 70%); pointer-events: none; opacity: 0; transition: opacity 0.4s ease; transform: translate(-50%, -50%); }
+    .bento-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+    .bento-card:hover .spotlight { opacity: 1; }
+    .bento-card:nth-child(2):hover { border-color: var(--accent); }
+    .bento-card:nth-child(2) .bento-icon { background: var(--accent-soft); }
+    .bento-card:nth-child(2) .bento-icon svg { color: var(--accent); }
+    .bento-image { margin-bottom: 20px; }
+    .bento-image .img-placeholder { aspect-ratio: 16/9; }
+    .bento-icon { width: 48px; height: 48px; background: var(--primary-soft); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; transition: transform 0.3s ease; }
+    .bento-card:hover .bento-icon { transform: scale(1.1) rotate(-5deg); }
+    .bento-icon svg { width: 24px; height: 24px; color: var(--primary); }
+    .bento-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .bento-text { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+
+    /* HOW IT WORKS */
+    .how-it-works { padding: var(--section-padding) 0; background: linear-gradient(180deg, #F0FDFA 0%, var(--bg-cream) 100%); }
+    .how-it-works-header { text-align: center; margin-bottom: 56px; }
+    .how-it-works-header .section-subtitle { margin: 0 auto; }
+    .how-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+    .how-step { background: var(--bg-white); border-radius: var(--radius-xl); overflow: hidden; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); transition: all 0.4s ease; }
+    .how-step:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    .how-step-image .img-placeholder { aspect-ratio: 4/3; border-radius: 0; border: none; border-bottom: 1px solid var(--border-light); }
+    .how-step-content { padding: 28px; }
+    .how-step-number { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: var(--gradient-primary); color: var(--text-on-primary); font-family: var(--font-heading); font-size: 18px; font-weight: 700; border-radius: 50%; margin-bottom: 16px; box-shadow: var(--shadow-primary); }
+    .how-step:nth-child(2) .how-step-number { background: linear-gradient(135deg, var(--accent), #66FFAA); }
+    .how-step:nth-child(3) .how-step-number { background: linear-gradient(135deg, #10B981, #34D399); }
+    .how-step-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .how-step-text { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+
+    /* COMPARISON */
+    .comparison { padding: var(--section-padding) 0; background: linear-gradient(180deg, rgba(0, 230, 118, 0.05) 0%, var(--bg-white) 100%); }
+    .comparison-header { text-align: center; margin-bottom: 56px; }
+    .comparison-header .section-subtitle { margin: 0 auto; }
+    .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 900px; margin: 0 auto; }
+    .comparison-card { padding: 40px; border-radius: var(--radius-xl); background: var(--bg-white); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); }
+    .comparison-card.highlight { border: 2px solid var(--primary); box-shadow: var(--shadow-lg), var(--shadow-glow); position: relative; }
+    .comparison-card.highlight::before { content: 'Polecamy'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 6px 16px; background: var(--gradient-primary); color: var(--text-on-primary); font-size: 12px; font-weight: 600; border-radius: 100px; }
+    .comparison-card h3 { font-size: 20px; margin-bottom: 12px; }
+    .comparison-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+    .comparison-card ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .comparison-card ul li { font-size: 14px; color: var(--text-secondary); padding-left: 20px; position: relative; }
+    .comparison-card ul li::before { content: '•'; position: absolute; left: 0; color: var(--text-tertiary); }
+    .comparison-card.highlight ul li::before { color: var(--primary); }
+
+    /* TESTIMONIALS */
+    .testimonials { padding: var(--section-padding) 0; background: linear-gradient(180deg, var(--bg-white) 0%, rgba(var(--primary-rgb), 0.03) 100%); }
+    .testimonials-header { text-align: center; margin-bottom: 56px; }
+    .testimonials-header .section-subtitle { margin: 0 auto; }
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .testimonial-card { background: var(--bg-white); border-radius: var(--radius-xl); padding: 32px; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); transition: all 0.4s ease; position: relative; }
+    .testimonial-card::before { content: '"'; position: absolute; top: 20px; right: 28px; font-family: Georgia, serif; font-size: 80px; line-height: 1; color: rgba(var(--primary-rgb), 0.08); }
+    .testimonial-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: rgba(var(--primary-rgb), 0.15); }
+    .testimonial-stars { display: flex; gap: 4px; margin-bottom: 18px; }
+    .testimonial-stars svg { width: 18px; height: 18px; color: #F59E0B; }
+    .testimonial-text { font-size: 15px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 24px; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 14px; }
+    .testimonial-avatar { width: 52px; height: 52px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-size: 18px; font-weight: 700; color: var(--text-on-primary); box-shadow: var(--shadow-primary); }
+    .testimonial-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .testimonial-role { font-size: 13px; color: var(--text-tertiary); }
+
+    /* FAQ */
+    .faq { padding: var(--section-padding) 0; background: linear-gradient(180deg, rgba(0, 230, 118, 0.05) 0%, var(--bg-white) 100%); }
+    .faq-header { text-align: center; margin-bottom: 56px; }
+    .faq-header .section-subtitle { margin: 0 auto; }
+    .faq-grid { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .faq-item { background: var(--bg-white); border-radius: var(--radius-lg); border: 1px solid var(--border-light); overflow: hidden; transition: all 0.3s ease; }
+    .faq-item:hover { border-color: var(--primary); }
+    .faq-question { width: 100%; padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: none; border: none; cursor: pointer; text-align: left; }
+    .faq-question-text { font-family: var(--font-heading); font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .faq-icon { width: 32px; height: 32px; background: var(--bg-cream); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.3s ease; box-shadow: var(--shadow-sm); }
+    .faq-icon svg { width: 16px; height: 16px; color: var(--primary); transition: transform 0.3s ease; }
+    .faq-item.open .faq-icon { background: var(--primary); }
+    .faq-item.open .faq-icon svg { color: var(--text-on-primary); transform: rotate(180deg); }
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .faq-answer-inner { padding: 0 28px 24px; font-size: 15px; color: var(--text-secondary); line-height: 1.8; }
+    .faq-item.open .faq-answer { max-height: 500px; }
+
+    /* OFFER */
+    .offer { padding: var(--section-padding) 0; background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.05) 0%, var(--bg-white) 50%, rgba(0, 230, 118, 0.05) 100%); }
+    .offer-inner { max-width: 900px; margin: 0 auto; }
+    .offer-header { text-align: center; margin-bottom: 48px; }
+    .offer-header .section-subtitle { margin: 0 auto; }
+    .offer-box { background: var(--bg-white); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-xl); border: 2px solid rgba(var(--primary-rgb), 0.2); position: relative; }
+    .offer-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary)); background-size: 300% 100%; animation: border-beam 3s linear infinite; }
+    @keyframes border-beam { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+    .offer-box-header { background: var(--gradient-primary); padding: 16px 32px; text-align: center; }
+    .offer-box-badge { font-size: 14px; font-weight: 700; color: var(--text-on-primary); text-transform: uppercase; letter-spacing: 1px; }
+    .offer-box-content { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; padding: 48px; }
+    .offer-product .img-placeholder { aspect-ratio: 1/1; border-radius: var(--radius-lg); }
+    .offer-details { display: flex; flex-direction: column; justify-content: center; }
+    .offer-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+    .offer-subtitle { font-size: 15px; color: var(--text-secondary); margin-bottom: 24px; }
+    .offer-price-block { display: flex; align-items: baseline; gap: 16px; margin-bottom: 24px; }
+    .offer-price { font-family: var(--font-heading); font-size: 48px; font-weight: 700; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .offer-price-old { font-size: 20px; color: var(--text-tertiary); text-decoration: line-through; }
+    .offer-savings { display: inline-block; padding: 6px 12px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; border-radius: 100px; }
+    .offer-features { margin: 24px 0; display: flex; flex-direction: column; gap: 12px; }
+    .offer-feature { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-secondary); }
+    .offer-feature svg { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+    .offer-cta { width: 100%; padding: 18px 32px; font-size: 16px; margin-top: 8px; }
+    .offer-guarantee { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px; font-size: 13px; color: var(--text-tertiary); }
+    .offer-guarantee svg { width: 16px; height: 16px; color: var(--primary); }
+
+    /* CTA BANNER */
+    .cta-banner { padding: 80px 0; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); text-align: center; position: relative; overflow: hidden; }
+    .cta-banner::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 40%); }
+    .cta-banner-title { font-size: clamp(26px, 3.5vw, 40px); font-weight: 700; color: var(--text-on-primary); margin-bottom: 16px; position: relative; }
+    .cta-banner-text { font-size: 17px; color: rgba(255, 255, 255, 0.9); margin-bottom: 32px; position: relative; }
+    .cta-banner .btn-secondary { background: var(--text-on-primary); color: var(--primary-dark); border: none; font-weight: 700; padding: 18px 36px; font-size: 16px; }
+    .cta-banner .btn-secondary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
+
+    /* FOOTER */
+    .footer { padding: 56px 0 28px; background: var(--bg-cream); border-top: 1px solid var(--border-light); }
+    .footer-inner { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+    .footer-brand { max-width: 280px; }
+    .footer-logo { display: flex; align-items: center; margin-bottom: 16px; }
+    .footer-logo-text { font-family: var(--font-heading); font-size: 24px; font-weight: 700; color: var(--secondary); }
+    .footer-logo-text span { color: var(--primary); }
+    .footer-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+    .footer-column h4 { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+    .footer-links { display: flex; flex-direction: column; gap: 12px; }
+    .footer-link { font-size: 14px; color: var(--text-secondary); text-decoration: none; transition: color 0.2s ease; }
+    .footer-link:hover { color: var(--primary); }
+    .footer-bottom { padding-top: 28px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+    .footer-copy { font-size: 13px; color: var(--text-tertiary); }
+
+    /* COOKIE BANNER */
+    .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: var(--secondary); color: var(--text-on-primary); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; z-index: 1000; transform: translateY(100%); transition: transform 0.4s ease; }
+    .cookie-banner.show { transform: translateY(0); }
+    .cookie-text { font-size: 14px; line-height: 1.5; }
+    .cookie-btn { padding: 10px 24px; background: var(--primary); color: var(--text-on-primary); border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .hero-inner { grid-template-columns: 1fr; text-align: center; }
+      .hero-content { max-width: 600px; margin: 0 auto; }
+      .hero-cta { justify-content: center; }
+      .hero-features { justify-content: center; }
+      .hero-visual { margin-top: 40px; }
+      .hero-bg-animation { display: none; }
+      .problem-inner { grid-template-columns: 1fr; }
+      .problem-content { max-width: 100%; text-align: center; }
+      .problem-stats { max-width: 400px; margin: 0 auto; }
+      .problem-visual { order: -1; max-width: 500px; margin: 0 auto 40px; }
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      :root { --section-padding: 60px; }
+      .nav { display: none; }
+      .header-cta { display: none; }
+      .hamburger { display: flex; }
+      .mobile-menu { display: block; }
+      .hero { padding: 120px 0 60px; }
+      .hero-specs { grid-template-columns: repeat(2, 1fr); }
+      .trust-items { flex-wrap: wrap; gap: 12px; }
+      .trust-item { flex: 1 1 calc(50% - 6px); min-width: 140px; }
+      .bento-grid { grid-template-columns: 1fr; }
+      .how-steps { grid-template-columns: 1fr; }
+      .comparison-grid { grid-template-columns: 1fr; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .offer-box-content { grid-template-columns: 1fr; text-align: center; }
+      .offer-price-block { justify-content: center; flex-wrap: wrap; }
+      .footer-inner { grid-template-columns: 1fr; text-align: center; }
+      .footer-brand { max-width: 100%; }
+      .footer-bottom { flex-direction: column; gap: 16px; }
+      .cookie-banner { flex-direction: column; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title { font-size: 28px; }
+      .trust-item { flex: 1 1 100%; }
+      .offer-price { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header" id="header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="#" class="logo">
+          <span class="logo-text">Tide<span>x</span></span>
+        </a>
+        <nav class="nav">
+          <a href="#funkcje" class="nav-link">Funkcje</a>
+          <a href="#jak-dziala" class="nav-link">Jak działa</a>
+          <a href="#opinie" class="nav-link">Opinie</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+        </nav>
+        <a href="#offer" class="btn btn-primary header-cta">Zamów teraz</a>
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <nav class="mobile-nav">
+      <a href="#funkcje" class="mobile-link">Funkcje</a>
+      <a href="#jak-dziala" class="mobile-link">Jak działa</a>
+      <a href="#opinie" class="mobile-link">Opinie</a>
+      <a href="#faq" class="mobile-link">FAQ</a>
+      <a href="#offer" class="btn btn-primary" style="margin-top: 24px;">Zamów teraz</a>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg-animation">
+      <div class="lidar-wave lidar-wave-1"></div>
+      <div class="lidar-wave lidar-wave-2"></div>
+      <div class="lidar-wave lidar-wave-3"></div>
+      <div class="scan-line"></div>
+    </div>
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="hero-badge-dot"></span>
+            Nowość 2026
+          </div>
+          <h1 class="hero-title">Czyste podłogi <span class="highlight">bez Twojego udziału</span></h1>
+          <p class="hero-description">Robot Tidex z nawigacją LiDAR i mocą 5000Pa sprząta i mopuje jednocześnie. Stacja samoczyszcząca robi resztę. Ty tylko odpoczywasz.</p>
+          <div class="hero-cta">
+            <a href="#offer" class="btn btn-primary">Zamów teraz</a>
+            <a href="#funkcje" class="btn btn-secondary">Zobacz funkcje</a>
+          </div>
+          <div class="hero-features">
+            <div class="hero-feature">
+              <div class="hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <span>Nawigacja LiDAR</span>
+            </div>
+            <div class="hero-feature">
+              <div class="hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <span>Funkcja 2w1</span>
+            </div>
+            <div class="hero-feature">
+              <div class="hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <span>Samoczyszczenie</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-product">
+            <div class="img-placeholder" style="aspect-ratio: 1/1;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <span class="ph-label">Hero Product</span>
+              <span class="ph-size">800×800px</span>
+            </div>
+          </div>
+          <div class="hero-specs">
+            <div class="hero-spec">
+              <div class="hero-spec-value">5000Pa</div>
+              <div class="hero-spec-label">Moc ssania</div>
+            </div>
+            <div class="hero-spec">
+              <div class="hero-spec-value">LiDAR</div>
+              <div class="hero-spec-label">Nawigacja</div>
+            </div>
+            <div class="hero-spec">
+              <div class="hero-spec-value">180 min</div>
+              <div class="hero-spec-label">Czas pracy</div>
+            </div>
+            <div class="hero-spec">
+              <div class="hero-spec-value">2w1</div>
+              <div class="hero-spec-label">Odkurza + mopuje</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST BAR -->
+  <section class="trust-bar">
+    <div class="container">
+      <div class="trust-items">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>2 lata gwarancji</strong>
+            <span>Pełna ochrona</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>Darmowa dostawa</strong>
+            <span>Od 200 zł</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>30 dni na zwrot</strong>
+            <span>Bez pytań</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div class="trust-text">
+            <strong>4.9/5</strong>
+            <span>Ocena klientów</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <div class="container">
+      <div class="problem-inner">
+        <div class="problem-content fade-in">
+          <span class="section-label">Problem</span>
+          <h2 class="problem-title">Ile godzin tygodniowo tracisz na sprzątanie?</h2>
+          <p class="problem-text">Odkurzacz, mop, wiadro z wodą. Potem ręczne opróżnianie pojemnika. I tak w kółko, co kilka dni. W dużym mieszkaniu z dziećmi lub zwierzętami to nigdy niekończąca się walka z kurzem i sierścią.</p>
+          <div class="problem-stats">
+            <div class="problem-stat">
+              <div class="problem-stat-value">5+ godz.</div>
+              <div class="problem-stat-label">Średni czas sprzątania tygodniowo</div>
+            </div>
+            <div class="problem-stat">
+              <div class="problem-stat-value">73%</div>
+              <div class="problem-stat-label">Polaków uważa sprzątanie za stratę czasu</div>
+            </div>
+          </div>
+        </div>
+        <div class="problem-visual fade-in">
+          <div class="img-placeholder">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <span class="ph-label">Problem Visual</span>
+            <span class="ph-size">800×600px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLUTION / BENTO -->
+  <section class="solution" id="funkcje">
+    <div class="container">
+      <div class="solution-header fade-in">
+        <span class="section-label">Rozwiązanie</span>
+        <h2 class="section-title">Poznaj Tidex — Twój autonomiczny sprzątacz</h2>
+        <p class="section-subtitle">Robot, który widzi, myśli i działa. Nawigacja LiDAR mapuje pomieszczenia, a Ty zyskujesz wolny czas.</p>
+      </div>
+      <div class="bento-grid">
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Feature 1</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3 class="bento-title">Nawigacja LiDAR</h3>
+          <p class="bento-text">Precyzyjne mapowanie pomieszczeń. Robot wie gdzie jest, gdzie był i gdzie ma jechać. Zero chaosu, maksymalna efektywność.</p>
+        </div>
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Feature 2</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+          </div>
+          <h3 class="bento-title">5000Pa mocy ssania</h3>
+          <p class="bento-text">Dwukrotnie więcej niż standardowe roboty. Kurz, sierść, okruchy — nic nie ma szans. Nawet z dywanów.</p>
+        </div>
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Feature 3</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M2 12h20"/></svg>
+          </div>
+          <h3 class="bento-title">Funkcja 2w1</h3>
+          <p class="bento-text">Odkurza i mopuje w jednym przejeździe. Jeden przejazd, dwa efekty. Podłogi lśnią bez dodatkowej pracy.</p>
+        </div>
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Feature 4</span>
+              <span class="ph-size">640×360px</span>
+            </div>
+          </div>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
+          <h3 class="bento-title">Stacja samoczyszcząca</h3>
+          <p class="bento-text">Automatyczne opróżnianie pojemnika. Przez tygodnie nie musisz niczego robić. Robot wraca, ładuje się i czeka na kolejną misję.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="jak-dziala">
+    <div class="container">
+      <div class="how-it-works-header fade-in">
+        <span class="section-label">Jak to działa</span>
+        <h2 class="section-title">3 kroki do czystego domu</h2>
+        <p class="section-subtitle">Konfiguracja zajmuje 5 minut. Potem robot robi wszystko sam.</p>
+      </div>
+      <div class="how-steps">
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Krok 1</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-number">1</div>
+            <h3 class="how-step-title">Postaw stację i połącz z aplikacją</h3>
+            <p class="how-step-text">Znajdź miejsce na stację dokującą, podłącz do prądu i sparuj z aplikacją Tidex. Robot automatycznie zmapuje Twoje mieszkanie.</p>
+          </div>
+        </div>
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Krok 2</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-number">2</div>
+            <h3 class="how-step-title">Ustaw harmonogram</h3>
+            <p class="how-step-text">Wybierz dni i godziny sprzątania. Możesz też wybrać konkretne pokoje. Robot zrobi resztę — nawet gdy Cię nie ma w domu.</p>
+          </div>
+        </div>
+        <div class="how-step fade-in">
+          <div class="how-step-image">
+            <div class="img-placeholder">
+              <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+              <span class="ph-label">Krok 3</span>
+              <span class="ph-size">600×450px</span>
+            </div>
+          </div>
+          <div class="how-step-content">
+            <div class="how-step-number">3</div>
+            <h3 class="how-step-title">Wróć do czystego domu</h3>
+            <p class="how-step-text">Gotowe. Robot posprzątał, wrócił na stację, opróżnił pojemnik. Ty wracasz z pracy do lśniących podłóg.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="comparison">
+    <div class="container">
+      <div class="comparison-header fade-in">
+        <span class="section-label">Porównanie</span>
+        <h2 class="section-title">Dlaczego Tidex, a nie zwykły odkurzacz?</h2>
+        <p class="section-subtitle">Porównaj czas i wysiłek. Decyzja jest oczywista.</p>
+      </div>
+      <div class="comparison-grid">
+        <div class="comparison-card fade-in">
+          <h3>Tradycyjne sprzątanie</h3>
+          <p class="comparison-desc">Ręczne odkurzanie i mycie podłóg.</p>
+          <ul>
+            <li>5+ godzin tygodniowo Twojego czasu</li>
+            <li>Trzeba pamiętać o sprzątaniu</li>
+            <li>Ręczne opróżnianie pojemnika</li>
+            <li>Wymaga wysiłku fizycznego</li>
+            <li>Nie sprząta gdy Cię nie ma</li>
+          </ul>
+        </div>
+        <div class="comparison-card highlight fade-in">
+          <h3>Tidex</h3>
+          <p class="comparison-desc">Autonomiczne sprzątanie 24/7.</p>
+          <ul>
+            <li>0 minut Twojego czasu</li>
+            <li>Harmonogram — sprząta automatycznie</li>
+            <li>Stacja samoczyszcząca</li>
+            <li>Zero wysiłku fizycznego</li>
+            <li>Sprząta nawet gdy śpisz</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials" id="opinie">
+    <div class="container">
+      <div class="testimonials-header fade-in">
+        <span class="section-label">Opinie</span>
+        <h2 class="section-title">Co mówią nasi klienci</h2>
+        <p class="section-subtitle">Ponad 2000 zadowolonych użytkowników w Polsce.</p>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Mam dwa psy i kota. Sierść wszędzie. Od kiedy mam Tidex, podłogi są czyste codziennie. Robot jeździ gdy jestem w pracy. Wracam do czystego domu."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">MK</div>
+            <div>
+              <div class="testimonial-name">Monika K.</div>
+              <div class="testimonial-role">Właścicielka 3 zwierząt</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Mieszkanie 120m2. Ręczne sprzątanie zajmowało mi całą sobotę. Teraz Tidex robi to w tygodniu gdy pracuję. Odzyskałem weekendy dla rodziny."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">TW</div>
+            <div>
+              <div class="testimonial-name">Tomasz W.</div>
+              <div class="testimonial-role">Ojciec dwójki dzieci</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">"Byłam sceptyczna. Myślałam że roboty tylko rozmazują brud. Tidex mnie zaskoczył — funkcja mopowania naprawdę działa. Podłogi są czyste jak nigdy."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">AN</div>
+            <div>
+              <div class="testimonial-name">Anna N.</div>
+              <div class="testimonial-role">Perfekcjonistka</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="faq-header fade-in">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Często zadawane pytania</h2>
+        <p class="section-subtitle">Wszystko co musisz wiedzieć przed zakupem.</p>
+      </div>
+      <div class="faq-grid">
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span class="faq-question-text">Czy robot poradzi sobie z dywanami?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Tak. Tidex ma moc ssania 5000Pa — dwukrotnie więcej niż standardowe roboty. Automatycznie wykrywa dywany i zwiększa moc. Radzi sobie z krótkim i średnim włosiem. Na wysokich dywanach shaggy lepiej sprawdzi się tradycyjny odkurzacz.</div>
+          </div>
+        </div>
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span class="faq-question-text">Jak działa funkcja mopowania?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Robot ma zbiornik na wodę i nakładkę z mikrofibry. Podczas jazdy nawilża ściereczkę i mopuje podłogę za sobą. Odkurza i mopuje jednocześnie — w jednym przejeździe. Po zakończeniu wystarczy wypłukać nakładkę.</div>
+          </div>
+        </div>
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span class="faq-question-text">Jak często muszę opróżniać pojemnik?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Praktycznie nigdy ręcznie. Stacja samoczyszcząca automatycznie opróżnia pojemnik robota po każdym sprzątaniu. Worek w stacji wystarcza na około 30 dni. Potem wymieniasz worek — to wszystko.</div>
+          </div>
+        </div>
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span class="faq-question-text">Czy robot nie spadnie ze schodów?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Nie. Tidex ma czujniki antyupadkowe które wykrywają krawędzie. Gdy robot zbliża się do schodów lub progu, automatycznie się zatrzymuje i zmienia kierunek. Dodatkowo możesz w aplikacji ustawić strefy zakazane.</div>
+          </div>
+        </div>
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span class="faq-question-text">Co jeśli mi się nie spodoba?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Masz 30 dni na testy. Jeśli z jakiegokolwiek powodu nie jesteś zadowolony — zwracasz produkt, my oddajemy 100% ceny. Bez pytań. Bez tłumaczenia się. Zero ryzyka po Twojej stronie.</div>
+          </div>
+        </div>
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            <span class="faq-question-text">Jak szybko dostanę przesyłkę?</span>
+            <div class="faq-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Wysyłamy w 24h od złożenia zamówienia. Standardowo dostajesz w 2-3 dni robocze. Dostawa kurierem jest darmowa przy zamówieniach od 200 zł.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFER -->
+  <section class="offer" id="offer">
+    <div class="container">
+      <div class="offer-inner">
+        <div class="offer-header fade-in">
+          <span class="section-label">Oferta</span>
+          <h2 class="section-title">Zamów Tidex już dziś</h2>
+          <p class="section-subtitle">Darmowa dostawa. 30 dni na zwrot. 2 lata gwarancji.</p>
+        </div>
+        <div class="offer-box fade-in">
+          <div class="offer-box-header">
+            <span class="offer-box-badge">Bestseller — Zestaw kompletny</span>
+          </div>
+          <div class="offer-box-content">
+            <div class="offer-product">
+              <div class="img-placeholder">
+                <div class="ph-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                </div>
+                <span class="ph-label">Zestaw produktu</span>
+                <span class="ph-size">800×800px</span>
+              </div>
+            </div>
+            <div class="offer-details">
+              <h3 class="offer-title">Tidex Pro 5000</h3>
+              <p class="offer-subtitle">Robot + Stacja samoczyszcząca + Akcesoria</p>
+              <div class="offer-price-block">
+                <span class="offer-price">1 997 zł</span>
+                <span class="offer-price-old">2 499 zł</span>
+                <span class="offer-savings">Oszczędzasz 502 zł</span>
+              </div>
+              <div class="offer-features">
+                <div class="offer-feature">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>Robot Tidex Pro z LiDAR i mocą 5000Pa</span>
+                </div>
+                <div class="offer-feature">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>Stacja samoczyszcząca z workami na 30 dni</span>
+                </div>
+                <div class="offer-feature">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>2 nakładki mopujące + szczotka boczna</span>
+                </div>
+                <div class="offer-feature">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>Aplikacja mobilna + instrukcja wideo</span>
+                </div>
+                <div class="offer-feature">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>2 lata pełnej gwarancji</span>
+                </div>
+              </div>
+              <a href="#" class="btn btn-primary offer-cta">Zamów teraz — 1 997 zł</a>
+              <div class="offer-guarantee">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>30 dni na zwrot. Bez pytań. Zero ryzyka.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <section class="cta-banner">
+    <div class="container">
+      <h2 class="cta-banner-title">Gotowy na czyste podłogi bez wysiłku?</h2>
+      <p class="cta-banner-text">Dołącz do 2000+ zadowolonych klientów Tidex.</p>
+      <a href="#offer" class="btn btn-secondary">Zamów teraz</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <span class="footer-logo-text">Tide<span>x</span></span>
+          </div>
+          <p class="footer-desc">Inteligentna czystość każdego dnia. Pozwól technologii zadbać o Twój dom.</p>
+        </div>
+        <div class="footer-column">
+          <h4>Produkt</h4>
+          <div class="footer-links">
+            <a href="#funkcje" class="footer-link">Funkcje</a>
+            <a href="#jak-dziala" class="footer-link">Jak działa</a>
+            <a href="#opinie" class="footer-link">Opinie</a>
+            <a href="#offer" class="footer-link">Zamów</a>
+          </div>
+        </div>
+        <div class="footer-column">
+          <h4>Pomoc</h4>
+          <div class="footer-links">
+            <a href="#faq" class="footer-link">FAQ</a>
+            <a href="#" class="footer-link">Kontakt</a>
+            <a href="#" class="footer-link">Dostawa</a>
+            <a href="#" class="footer-link">Zwroty</a>
+          </div>
+        </div>
+        <div class="footer-column">
+          <h4>Prawne</h4>
+          <div class="footer-links">
+            <a href="#" class="footer-link">Regulamin</a>
+            <a href="#" class="footer-link">Polityka prywatności</a>
+            <a href="#" class="footer-link">Gwarancja</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Tidex. Wszelkie prawa zastrzeżone.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- COOKIE BANNER -->
+  <div class="cookie-banner" id="cookieBanner">
+    <p class="cookie-text">Ta strona używa plików cookies, aby zapewnić najlepsze doświadczenia. Kontynuując, zgadzasz się na ich użycie.</p>
+    <button class="cookie-btn" id="cookieAccept">Akceptuję</button>
+  </div>
+
+  <script>
+    // Intersection Observer for fade-in
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // Header scroll effect
+    const header = document.getElementById('header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // Hamburger menu
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('active');
+      mobileMenu.classList.toggle('open');
+    });
+    document.querySelectorAll('.mobile-link').forEach(link => {
+      link.addEventListener('click', () => {
+        hamburger.classList.remove('active');
+        mobileMenu.classList.remove('open');
+      });
+    });
+
+    // Spotlight effect for bento cards
+    document.querySelectorAll('.bento-card').forEach(card => {
+      const spotlight = card.querySelector('.spotlight');
+      if (spotlight) {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          spotlight.style.left = (e.clientX - rect.left) + 'px';
+          spotlight.style.top = (e.clientY - rect.top) + 'px';
+        });
+      }
+    });
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.parentElement;
+        const isOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+        if (!isOpen) item.classList.add('open');
+      });
+    });
+
+    // Cookie banner
+    const cookieBanner = document.getElementById('cookieBanner');
+    const cookieBtn = document.getElementById('cookieAccept');
+    if (!localStorage.getItem('cookiesAccepted')) {
+      setTimeout(() => cookieBanner.classList.add('show'), 2000);
+    }
+    cookieBtn.addEventListener('click', () => {
+      localStorage.setItem('cookiesAccepted', 'true');
+      cookieBanner.classList.remove('show');
+    });
+
+    // Fade-in visible class
+    document.head.insertAdjacentHTML('beforeend', '<style>.fade-in { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; } .fade-in.visible { opacity: 1; transform: translateY(0); }</style>');
+  </script>
+
+  <!-- Conversion Toolkit -->
+  <script src="/landing-pages/shared/conversion-toolkit.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof ConversionToolkit !== 'undefined') {
+        ConversionToolkit.init({
+          brand: {
+            primary: '#00D4E8',
+            secondary: '#00E676',
+            name: 'Tidex',
+            ctaUrl: '#offer'
+          },
+          exitPopup: {
+            enabled: true,
+            headline: 'Czekaj! Mamy coś dla Ciebie',
+            subheadline: 'Zamów teraz i zyskaj darmową dostawę + dodatkowe akcesoria',
+            ctaText: 'Odbierz ofertę',
+            dismissText: 'Nie, dziękuję'
+          },
+          urgency: {
+            enabled: true,
+            countdown: { enabled: true, position: 'both', text: 'Promocja kończy się za:' },
+            stock: { enabled: true, initial: 18, min: 3 }
+          },
+          socialProof: {
+            enabled: true,
+            liveVisitors: { enabled: true },
+            recentPurchases: { enabled: true }
+          },
+          scrollCTA: { enabled: true, text: 'Zamów Tidex', pulse: true },
+          progressBar: { enabled: true },
+          extraCTAs: { enabled: true }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
