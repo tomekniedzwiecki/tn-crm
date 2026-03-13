@@ -1697,6 +1697,14 @@
                                     Pobierz plik
                                 </button>
                             </div>
+
+                            <!-- Save all documents to Supabase -->
+                            <div class="mt-4">
+                                <button onclick="saveLegalDocuments()" id="save-legal-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-[14px] font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i class="ph ph-cloud-arrow-up"></i>
+                                    Zapisz wszystkie dokumenty
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Documents generated status -->
@@ -3345,10 +3353,9 @@
                     supabaseClient.from('workflow_takedrop').select('is_active').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
-                // Store takedrop status for auto-collapse
-                if (!takeDropData && takedropRes.data) {
-                    takeDropData = takedropRes.data;
-                }
+                // Store takedrop status for auto-collapse (only is_active for nav checks)
+                // Note: Full takeDropData is loaded by loadTakeDrop() - don't overwrite it here
+                const takedropNavStatus = takedropRes.data;
 
                 const hasPublished = (repsRes.data || []).some(r => r.visible_to_client);
                 toggle('nav-check-raporty', hasPublished);
@@ -4481,6 +4488,9 @@
                     loadTakeDrop();
                     break;
                 case 'landing':
+                    loadTakeDrop();
+                    break;
+                case 'legal':
                     loadTakeDrop();
                     break;
                 case 'historia':
@@ -5695,11 +5705,13 @@
         function renderLegalClientData() {
             const clientStatus = document.getElementById('legal-client-status');
             const navCheck = document.getElementById('nav-check-legal');
+            const hasLegalData = takeDropData?.legal_data && Object.keys(takeDropData.legal_data).length > 0;
 
-            if (takeDropData?.legal_documents_ready && takeDropData?.legal_data) {
+            // Fill form with client data if available
+            if (hasLegalData) {
                 const data = takeDropData.legal_data;
 
-                // Show status banner
+                // Show status banner (client submitted data)
                 if (clientStatus) clientStatus.classList.remove('hidden');
 
                 // Fill form with client data
@@ -5718,12 +5730,33 @@
                 if (addressInput) addressInput.value = data.company_address || '';
                 if (emailInput) emailInput.value = data.email || '';
                 if (phoneInput) phoneInput.value = data.phone || '';
-
-                // Show nav checkmark
-                if (navCheck) navCheck.classList.remove('hidden');
             } else {
                 if (clientStatus) clientStatus.classList.add('hidden');
+            }
+
+            // Show nav checkmark only if documents are actually ready
+            if (takeDropData?.legal_documents_ready) {
+                if (navCheck) navCheck.classList.remove('hidden');
+
+                // Update save button to show "Zapisano" state
+                const saveBtn = document.getElementById('save-legal-btn');
+                if (saveBtn) {
+                    saveBtn.innerHTML = '<i class="ph ph-check"></i> Zapisano';
+                    saveBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                    saveBtn.classList.add('bg-emerald-700', 'cursor-default');
+                    saveBtn.disabled = true;
+                }
+            } else {
                 if (navCheck) navCheck.classList.add('hidden');
+
+                // Reset save button state
+                const saveBtn = document.getElementById('save-legal-btn');
+                if (saveBtn) {
+                    saveBtn.innerHTML = '<i class="ph ph-cloud-arrow-up"></i> Zapisz wszystkie dokumenty';
+                    saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+                    saveBtn.classList.remove('bg-emerald-700', 'cursor-default');
+                    saveBtn.disabled = false;
+                }
             }
         }
 
@@ -6215,6 +6248,102 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             showToast('Plik pobrany', 'success');
         }
 
+        async function saveLegalDocuments() {
+            // Check if documents are generated
+            if (!legalDocumentsCache.regulamin || !legalDocumentsCache.prywatnosc ||
+                !legalDocumentsCache.cookies || !legalDocumentsCache.odstapienie) {
+                showToast('Najpierw wygeneruj dokumenty', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('save-legal-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Zapisuję...';
+            btn.disabled = true;
+
+            try {
+                const fileNames = {
+                    regulamin: 'regulamin.html',
+                    prywatnosc: 'polityka-prywatnosci.html',
+                    cookies: 'polityka-cookies.html',
+                    odstapienie: 'formularz-odstapienia.html'
+                };
+
+                // Upload all documents
+                for (const [key, content] of Object.entries(legalDocumentsCache)) {
+                    const fileName = `legal/${workflow.id}/${fileNames[key]}`;
+                    const blob = new Blob([content], { type: 'text/html' });
+                    const file = new File([blob], fileNames[key], { type: 'text/html' });
+
+                    // Delete existing file if present (upsert)
+                    await supabaseClient.storage.from('attachments').remove([fileName]);
+
+                    // Upload new file
+                    const { error: uploadError } = await supabaseClient.storage
+                        .from('attachments')
+                        .upload(fileName, file, { contentType: 'text/html' });
+
+                    if (uploadError) {
+                        console.error(`Error uploading ${key}:`, uploadError);
+                        throw new Error(`Błąd przesyłania: ${fileNames[key]}`);
+                    }
+                }
+
+                // Update workflow_takedrop with legal_documents_ready = true
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({ legal_documents_ready: true })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.legal_documents_ready = true;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            legal_documents_ready: true
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+
+                // Log activity
+                logActivity('legal_documents_saved', 'Dokumenty prawne zapisane i przesłane do bazy');
+
+                showToast('Dokumenty zapisane pomyślnie', 'success');
+
+                // Update UI to show documents are saved
+                const statusDiv = document.getElementById('legal-documents-status');
+                if (statusDiv) {
+                    statusDiv.innerHTML = `
+                        <div class="flex items-center justify-between py-4 border-t border-[#222]">
+                            <div>
+                                <div class="text-[13px] text-emerald-400 font-medium">Dokumenty zapisane w bazie</div>
+                                <div class="text-[12px] text-[#666] mt-0.5">${new Date().toLocaleString('pl-PL')}</div>
+                            </div>
+                            <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                        </div>
+                    `;
+                }
+
+                // Change button to show success
+                btn.innerHTML = '<i class="ph ph-check"></i> Zapisano';
+                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                btn.classList.add('bg-emerald-700', 'cursor-default');
+
+            } catch (err) {
+                console.error('Error saving legal documents:', err);
+                showToast(err.message || 'Błąd zapisywania dokumentów', 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         async function saveDomain() {
             const domain = document.getElementById('takedrop-domain').value.trim();
 
@@ -6297,6 +6426,7 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         window.switchLegalDoc = switchLegalDoc;
         window.copyLegalDocHTML = copyLegalDocHTML;
         window.downloadLegalDoc = downloadLegalDoc;
+        window.saveLegalDocuments = saveLegalDocuments;
 
         // =============================================
         // CONTRACT MANAGEMENT
