@@ -1986,13 +1986,18 @@
             try {
                 // Get current deadline_resets
                 const workflow = workflows.find(w => w.workflow_id === workflowId);
+                console.log('Found workflow:', workflow ? 'yes' : 'no', workflow?.deadline_resets);
                 const currentResets = workflow?.deadline_resets || {};
                 const updatedResets = { ...currentResets, [stepKey]: newStartDateStr };
+                console.log('Updating deadline_resets to:', updatedResets);
 
-                const { error } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('workflows')
                     .update({ deadline_resets: updatedResets })
-                    .eq('id', workflowId);
+                    .eq('id', workflowId)
+                    .select();
+
+                console.log('Update result - data:', data, 'error:', error);
 
                 if (error) throw error;
 
