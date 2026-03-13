@@ -18,11 +18,20 @@ Uzytkownik mowi np.: "Zrob landing dla workflow X", "Wygeneruj strone sprzedazow
 
 Kompletny plik `index.html` gotowy do wrzucenia do folderu `landing-pages/[nazwa-marki]/`.
 
+### Kroki po wygenerowaniu HTML (OBOWIĄZKOWE!)
+
+1. **Pobierz logo** z `workflow_branding` (type='logo')
+2. **Przytnij logo** używając `sharp().trim()` (usuwa białe marginesy!)
+3. **Upload logo** do `attachments/landing/[nazwa-marki]/logo.png`
+4. **Użyj pełnego URL** w HTML: `https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/[nazwa-marki]/logo.png`
+
 ## Hosting assetów (WAŻNE!)
 
 Landing pages są przenoszone na zewnętrzne platformy (TakeDrop), więc **wszystkie assety muszą mieć pełne URL-e**.
 
 ### Logo — upload do Supabase Storage
+
+> **KRYTYCZNE:** Logo z `workflow_branding` ma duże białe marginesy (1024x1024). **ZAWSZE** przytnij je przed uploadem używając `sharp().trim()`! Zobacz sekcję "Logo z projektu" poniżej.
 
 Po wygenerowaniu landing page, **ZAWSZE** wrzuć logo do Supabase Storage:
 
