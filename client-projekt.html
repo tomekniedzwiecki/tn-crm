@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026031303';
+        const APP_VERSION = '2026031304';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1477,7 +1477,7 @@
                             <span>Dokumenty</span>
                             <i id="dash-nav-check-dokumenty-prawne" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
-                        <div class="dash-nav-item" onclick="switchToDashTab('bramka-platnosci')">
+                        <div id="dash-nav-bramka-platnosci" class="dash-nav-item hidden" onclick="switchToDashTab('bramka-platnosci')">
                             <i class="ph ph-credit-card"></i>
                             <span>Płatności</span>
                             <i id="dash-nav-check-bramka-platnosci" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -1573,7 +1573,7 @@
                                 <span>Dokumenty</span>
                                 <i id="dash-nav-check-dokumenty-prawne-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
-                            <div class="dash-nav-item" onclick="switchToDashTab('bramka-platnosci');toggleDashMobileMenu()">
+                            <div id="dash-nav-bramka-platnosci-mobile" class="dash-nav-item hidden" onclick="switchToDashTab('bramka-platnosci');toggleDashMobileMenu()">
                                 <i class="ph ph-credit-card"></i>
                                 <span>Płatności</span>
                                 <i id="dash-nav-check-bramka-platnosci-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -1935,7 +1935,7 @@
                             <span>Dokumenty</span>
                             <i id="nav-check-dokumenty-prawne" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
-                        <div class="dash-nav-item" data-tab="bramka-platnosci" onclick="switchTab('bramka-platnosci')">
+                        <div id="nav-bramka-platnosci" class="dash-nav-item hidden" data-tab="bramka-platnosci" onclick="switchTab('bramka-platnosci')">
                             <i class="ph ph-credit-card"></i>
                             <span>Płatności</span>
                             <i id="nav-check-bramka-platnosci" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -2036,7 +2036,7 @@
                                 <span>Dokumenty</span>
                                 <i id="nav-check-dokumenty-prawne-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
-                            <div class="dash-nav-item" data-tab="bramka-platnosci" onclick="switchTab('bramka-platnosci');toggleMobileMenu()">
+                            <div id="nav-bramka-platnosci-mobile" class="dash-nav-item hidden" data-tab="bramka-platnosci" onclick="switchTab('bramka-platnosci');toggleMobileMenu()">
                                 <i class="ph ph-credit-card"></i>
                                 <span>Płatności</span>
                                 <i id="nav-check-bramka-platnosci-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -4188,6 +4188,14 @@
             const content = document.getElementById('dash-etap3-bramka-platnosci-content');
             if (!box || !content) return;
 
+            // Hide box until legal data is submitted
+            const hasLegalData = takeDropData?.legal_data && Object.keys(takeDropData.legal_data).length > 0;
+            if (!hasLegalData) {
+                box.classList.add('hidden');
+                return;
+            }
+            box.classList.remove('hidden');
+
             const hasCredentials = takeDropData?.payment_gateway_credentials?.email;
             const isReady = takeDropData?.payment_gateway_ready;
             const hasNip = takeDropData?.legal_data?.nip && takeDropData.legal_data.nip.trim().length > 0;
@@ -4795,6 +4803,13 @@
             document.getElementById('dash-nav-check-bramka-platnosci-mobile')?.classList.toggle('hidden', !hasBramka);
             document.getElementById('nav-check-bramka-platnosci')?.classList.toggle('hidden', !hasBramka);
             document.getElementById('nav-check-bramka-platnosci-mobile')?.classList.toggle('hidden', !hasBramka);
+
+            // Show/hide payment gateway nav items (only after legal data is submitted)
+            const hasLegalData = takeDropData?.legal_data && Object.keys(takeDropData.legal_data).length > 0;
+            document.getElementById('dash-nav-bramka-platnosci')?.classList.toggle('hidden', !hasLegalData);
+            document.getElementById('dash-nav-bramka-platnosci-mobile')?.classList.toggle('hidden', !hasLegalData);
+            document.getElementById('nav-bramka-platnosci')?.classList.toggle('hidden', !hasLegalData);
+            document.getElementById('nav-bramka-platnosci-mobile')?.classList.toggle('hidden', !hasLegalData);
 
             // Update landing tab status
             updateLandingTabStatus();
