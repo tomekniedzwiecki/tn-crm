@@ -260,6 +260,11 @@
                                 <i class="ph ph-file-text"></i> Dokumenty
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
+                            <button onclick="toggleStatusStage('payment_gateway')" data-stage="payment_gateway"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-credit-card"></i> Bramka
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
                         </div>
                     </div>
                     <!-- Owner Filter -->
@@ -812,6 +817,10 @@
                         if (stage === 'legal') {
                             return w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready;
                         }
+                        // "payment_gateway" (Bramka) = dokumenty gotowe ALE bramka NIE gotowa
+                        if (stage === 'payment_gateway') {
+                            return w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready;
+                        }
                         // Other stages = next step
                         return nextStep === stage;
                     });
@@ -1254,6 +1263,16 @@
                 } else {
                     // Klient ma wypełnić dane
                     items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Dokumenty</span>`);
+                }
+            }
+
+            // Bramka - pokazuj gdy dokumenty gotowe
+            if (w.takedrop_stage?.legal_documents_ready) {
+                if (w.takedrop_stage?.payment_gateway_ready) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Bramka</span>`);
+                } else {
+                    // Klient ma założyć konto lub admin ma skonfigurować
+                    items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Bramka</span>`);
                 }
             }
 
