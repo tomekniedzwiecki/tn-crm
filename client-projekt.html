@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026031301';
+        const APP_VERSION = '2026031302';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -655,10 +655,6 @@
                 padding: 20px !important;
                 order: 4;
             }
-            #dashboard-screen #dash-box-takedrop {
-                order: 5;
-            }
-
             /* Branding box mobile layout */
             #dash-branding-content > div {
                 flex-direction: column !important;
@@ -1706,27 +1702,6 @@
                     </div>
                 </div>
 
-
-                <!-- BOX: TakeDrop (Etap 3) - conditional -->
-                <div id="dash-box-takedrop" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hidden" onclick="switchToDashTab('takedrop')">
-                    <div id="dash-takedrop-content" class="h-full">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-
-                <!-- BOX: Landing Page (Etap 3) - conditional -->
-                <div id="dash-box-landing" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hidden" onclick="switchToDashTab('landing')">
-                    <div id="dash-landing-content" class="h-full">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-
-                <!-- BOX: Dokumenty prawne (Etap 3) - conditional -->
-                <div id="dash-box-dokumenty-prawne" class="bento-box bento-sm p-0 overflow-hidden cursor-pointer transition-all hidden" onclick="switchToDashTab('dokumenty-prawne')">
-                    <div id="dash-dokumenty-prawne-content" class="h-full">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
 
             </div><!-- /dash-bento-etap1 -->
 
@@ -4479,145 +4454,7 @@
                 `;
             }
 
-            // === TAKEDROP BOX ===
-            const takedropContent = document.getElementById('dash-takedrop-content');
-            const takedropBox = document.getElementById('dash-box-takedrop');
-
-            if (takeDropData && takeDropData.is_active) {
-                takedropBox.classList.remove('hidden');
-                takedropBox.onclick = () => switchToDashTab('takedrop');
-                takedropBox.style.cursor = 'pointer';
-
-                if (!takeDropData.account_created) {
-                    takedropBox.classList.add('bento-action');
-                    takedropContent.innerHTML = `
-                        <div class="h-full p-4 flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[#666] text-[10px] uppercase tracking-wide">TakeDrop</span>
-                                <span class="flex items-center gap-1 text-amber-500 text-[10px]">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                    Akcja
-                                </span>
-                            </div>
-                            <p class="text-white text-sm font-medium">Załóż konto</p>
-                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
-                                <i class="ph ph-storefront"></i> TakeDrop
-                            </p>
-                        </div>
-                    `;
-                } else {
-                    takedropBox.classList.remove('bento-action');
-                    takedropContent.innerHTML = `
-                        <div class="h-full p-4 flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[#666] text-[10px] uppercase tracking-wide">TakeDrop</span>
-                                <span class="flex items-center gap-1 text-emerald-500 text-[10px]">
-                                    <i class="ph-fill ph-check-circle"></i>
-                                    Gotowe
-                                </span>
-                            </div>
-                            <p class="text-white text-sm font-medium">Konto aktywne</p>
-                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
-                                <i class="ph ph-storefront"></i> TakeDrop
-                            </p>
-                        </div>
-                    `;
-                }
-            } else {
-                takedropBox.classList.add('hidden');
-                takedropBox.classList.remove('bento-action');
-            }
-
-            // === LANDING BOX ===
-            const landingContent = document.getElementById('dash-landing-content');
-            const landingBox = document.getElementById('dash-box-landing');
-
-            if (takeDropData && takeDropData.is_active) {
-                landingBox.classList.remove('hidden');
-
-                if (takeDropData.landing_page_connected) {
-                    landingContent.innerHTML = `
-                        <div class="h-full p-4 flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Strona</span>
-                                <span class="flex items-center gap-1 text-emerald-500 text-[10px]">
-                                    <i class="ph-fill ph-check-circle"></i>
-                                    Gotowe
-                                </span>
-                            </div>
-                            <p class="text-white text-sm font-medium">Podłączona</p>
-                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
-                                <i class="ph ph-browser"></i> ${takeDropData.domain || 'Strona sprzedażowa'}
-                            </p>
-                        </div>
-                    `;
-                } else {
-                    landingContent.innerHTML = `
-                        <div class="h-full p-4 flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Strona</span>
-                                <span class="flex items-center gap-1 text-[#555] text-[10px]">
-                                    <i class="ph ph-clock"></i>
-                                    Oczekuje
-                                </span>
-                            </div>
-                            <p class="text-[#888] text-sm font-medium">W przygotowaniu</p>
-                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
-                                <i class="ph ph-browser"></i> Strona sprzedażowa
-                            </p>
-                        </div>
-                    `;
-                }
-            } else {
-                landingBox.classList.add('hidden');
-            }
-
-            // === DOKUMENTY BOX ===
-            const dokumentyContent = document.getElementById('dash-dokumenty-prawne-content');
-            const dokumentyBox = document.getElementById('dash-box-dokumenty-prawne');
-
-            if (takeDropData && takeDropData.is_active) {
-                dokumentyBox.classList.remove('hidden');
-
-                // For now, dokumenty status is based on landing_page_connected (can be extended later)
-                const dokumentyReady = takeDropData.landing_page_connected;
-
-                if (dokumentyReady) {
-                    dokumentyContent.innerHTML = `
-                        <div class="h-full p-4 flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Dokumenty</span>
-                                <span class="flex items-center gap-1 text-emerald-500 text-[10px]">
-                                    <i class="ph-fill ph-check-circle"></i>
-                                    Gotowe
-                                </span>
-                            </div>
-                            <p class="text-white text-sm font-medium">Przygotowane</p>
-                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
-                                <i class="ph ph-file-text"></i> Regulamin, Polityka prywatności
-                            </p>
-                        </div>
-                    `;
-                } else {
-                    dokumentyContent.innerHTML = `
-                        <div class="h-full p-4 flex flex-col">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[#666] text-[10px] uppercase tracking-wide">Dokumenty</span>
-                                <span class="flex items-center gap-1 text-[#555] text-[10px]">
-                                    <i class="ph ph-clock"></i>
-                                    Oczekuje
-                                </span>
-                            </div>
-                            <p class="text-[#888] text-sm font-medium">W przygotowaniu</p>
-                            <p class="text-[#666] text-[10px] mt-auto flex items-center gap-1">
-                                <i class="ph ph-file-text"></i> Dokumenty prawne
-                            </p>
-                        </div>
-                    `;
-                }
-            } else {
-                dokumentyBox.classList.add('hidden');
-            }
+            // Boxy TakeDrop/Landing/Dokumenty są tylko w Etapie 3, nie w Etapie 1
         }
 
         function switchToDashTab(tabName) {
