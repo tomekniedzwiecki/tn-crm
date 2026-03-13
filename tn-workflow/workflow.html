@@ -1624,29 +1624,40 @@
                             </div>
                         </div>
 
-                        <!-- Dane dostawy -->
+                        <!-- Dane dostawy (dropshipping) -->
                         <div class="mb-6 pt-6 border-t border-[#222]">
                             <h3 class="text-[14px] font-medium text-white mb-4 flex items-center gap-2">
                                 <i class="ph ph-truck text-violet-400"></i>
-                                Dostawa
+                                Dostawa (dropshipping)
                             </h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">Kurier - czas</label>
-                                    <input type="text" id="legal-delivery-courier-time" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 1-2 dni robocze" value="1-2 dni robocze">
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">Typowy czas dostawy</label>
+                                        <input type="text" id="legal-delivery-typical" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 5-14 dni roboczych" value="5-14 dni roboczych">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">Maksymalny czas</label>
+                                        <input type="text" id="legal-delivery-max" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. do 40 dni" value="do 40 dni">
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">Kurier - koszt</label>
-                                    <input type="text" id="legal-delivery-courier-cost" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 14,99 zł" value="14,99 zł">
+                                    <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">Koszt dostawy</label>
+                                    <input type="text" id="legal-delivery-cost" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 0 zł (darmowa dostawa)" value="0 zł (darmowa dostawa)">
                                 </div>
-                                <div>
-                                    <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">InPost - czas</label>
-                                    <input type="text" id="legal-delivery-inpost-time" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 1-2 dni robocze" value="1-2 dni robocze">
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">InPost - koszt</label>
-                                    <input type="text" id="legal-delivery-inpost-cost" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. 12,99 zł" value="12,99 zł">
-                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Adres do zwrotów -->
+                        <div class="mb-6 pt-6 border-t border-[#222]">
+                            <h3 class="text-[14px] font-medium text-white mb-4 flex items-center gap-2">
+                                <i class="ph ph-package text-violet-400"></i>
+                                Adres do zwrotów
+                            </h3>
+                            <div>
+                                <label class="block text-[11px] text-[#555] mb-1.5 uppercase tracking-wide">Adres zwrotów (w Polsce) *</label>
+                                <input type="text" id="legal-return-address" class="w-full bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-[#666] focus:outline-none transition-colors" placeholder="np. ul. Magazynowa 1, 00-000 Miasto">
+                                <p class="text-[11px] text-[#555] mt-1">Adres w Polsce na który klienci wysyłają zwroty. Może być inny niż adres siedziby.</p>
                             </div>
                         </div>
 
@@ -6107,11 +6118,13 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         function getLegalFormData() {
             const domain = document.getElementById('takedrop-domain')?.value.trim() || '';
             const brandName = document.getElementById('legal-brand-name')?.value.trim() || brandingData?.brand_info || domain.replace(/\.(pl|com|eu|net|org)$/i, '');
+            const companyAddress = document.getElementById('legal-company-address')?.value.trim() || '';
+            const returnAddress = document.getElementById('legal-return-address')?.value.trim() || companyAddress;
 
             return {
                 BRAND_NAME: brandName,
                 COMPANY_NAME: document.getElementById('legal-company-name')?.value.trim() || '',
-                COMPANY_ADDRESS: document.getElementById('legal-company-address')?.value.trim() || '',
+                COMPANY_ADDRESS: companyAddress,
                 NIP: document.getElementById('legal-nip')?.value.trim() || '',
                 REGON: document.getElementById('legal-regon')?.value.trim() || '-',
                 EMAIL: document.getElementById('legal-email')?.value.trim() || '',
@@ -6119,10 +6132,11 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 DOMAIN: domain,
                 MAIN_URL: domain ? `https://${domain}` : '',
                 PAYMENT_PROVIDER: 'Tpay',
-                DELIVERY_TIME_COURIER: document.getElementById('legal-delivery-courier-time')?.value.trim() || '1-2 dni robocze',
-                DELIVERY_COST_COURIER: document.getElementById('legal-delivery-courier-cost')?.value.trim() || '14,99 zł',
-                DELIVERY_TIME_INPOST: document.getElementById('legal-delivery-inpost-time')?.value.trim() || '1-2 dni robocze',
-                DELIVERY_COST_INPOST: document.getElementById('legal-delivery-inpost-cost')?.value.trim() || '12,99 zł',
+                // Dropshipping delivery
+                DELIVERY_TIME_TYPICAL: document.getElementById('legal-delivery-typical')?.value.trim() || '5-14 dni roboczych',
+                DELIVERY_TIME_MAX: document.getElementById('legal-delivery-max')?.value.trim() || 'do 40 dni',
+                DELIVERY_COST: document.getElementById('legal-delivery-cost')?.value.trim() || '0 zł (darmowa dostawa)',
+                RETURN_ADDRESS: returnAddress,
                 UPDATE_DATE: new Date().toLocaleDateString('pl-PL'),
                 YEAR: new Date().getFullYear().toString()
             };
