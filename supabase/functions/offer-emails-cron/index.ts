@@ -260,6 +260,7 @@ Deno.serve(async (req) => {
             offer_id,
             unique_token,
             valid_until,
+            custom_price,
             offer:offers (
               id,
               name,

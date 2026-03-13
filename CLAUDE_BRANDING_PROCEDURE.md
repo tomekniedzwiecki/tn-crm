@@ -315,187 +315,276 @@ Dla każdego wariantu użyj tego samego szablonu, zmieniając tylko sekcję DELI
 
 ---
 
-### PROMPTY MOCKUPÓW — Gadżety brandingowe z logo
+### PROMPTY MOCKUPÓW — Poziom Senior Product Photographer
 
-> **WAŻNE**: Mockupy w sekcji branding to **gadżety reklamowe z logo marki**. Pokazują identyfikację wizualną na fizycznych produktach promocyjnych.
+> **FILOZOFIA**: Mockupy muszą wyglądać jak sesja z budżetem $5,000 — nie jak stockowe zdjęcia. Poziom Apple, Aesop, Kinfolk Magazine. Każde zdjęcie opowiada historię marki.
 
-> **KRYTYCZNA ZASADA DLA GENEROWANIA GRAFIK:**
-> Każdy prompt MUSI zawierać na samym początku instrukcję dla modelu AI (np. Gemini):
+> **KRYTYCZNA INSTRUKCJA (zawsze na początku promptu):**
 > ```
-> INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone/wgrane w tej rozmowie.
-> NIE projektuj nowego logo. NIE wymyślaj własnego designu.
-> Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+> ⚠️ UŻYJ DOKŁADNIE TEGO LOGO które jest załączone w tej rozmowie.
+> NIE projektuj nowego logo. NIE zmieniaj proporcji, kolorów ani układu.
+> Skopiuj logo 1:1 i umieść na gadżecie zgodnie ze specyfikacją.
 > ```
-> Ta instrukcja zapobiega sytuacji gdy AI ignoruje istniejący design i tworzy własne logo.
-
-#### Filozofia mockupów brandingowych
-
-Mockupy to **standardowe gadżety promocyjne** z logo marki — ale pokazane w **kontekście dopasowanym do produktu**. Gadżety są uniwersalne, ale sceneria, tło i ewentualnie ludzie nawiązują do świata marki.
-
-| Element | Uniwersalny | Dopasowany do produktu |
-|---------|-------------|------------------------|
-| **Gadżet** | ✅ Koszulka, kubek, czapka... | — |
-| **Sceneria/tło** | — | ✅ Warsztat, kuchnia, biuro, apartament |
-| **Osoba (opcjonalnie)** | — | ✅ Mechanik, kobieta w domu, sportowiec |
-| **Rekwizyty w tle** | — | ✅ Narzędzia, kawa, rośliny, panorama |
-
-**Przykład**: Kubek z logo marki robota okiennego — nie na białym tle stockowym, ale na blacie kuchennym z widokiem na panoramę miasta za oknem.
 
 ---
 
-#### Tabela: Kontekst mockupów per kategoria produktu
+#### Wymagania fotograficzne — poziom profesjonalny
 
-| Kategoria produktu | Sceneria | Rekwizyty w tle | Typ osoby (jeśli jest) |
-|-------------------|----------|-----------------|------------------------|
-| **Smart Home / AGD** | Nowoczesna kuchnia, apartament z panoramą | Okno z widokiem, rośliny, minimalizm | Kobieta/mężczyzna 30-45, casual elegancki |
-| **Narzędzia** | Warsztat, garaż, budowa | Narzędzia, regały, drewno, metal | Mężczyzna 35-50, roboczy strój |
-| **Elektronika** | Biuro domowe, studio, salon | Monitor, słuchawki, minimalistyczne wnętrze | Młody profesjonalista 25-40 |
-| **Sport/Fitness** | Siłownia, park, domowa strefa treningowa | Hantle, mata, zielń, poranny świt | Osoba aktywna 25-40, sportowy strój |
-| **Beauty/Wellness** | Łazienka spa, sypialnia, gabinet | Świece, ręczniki, rośliny, bambus | Kobieta 28-45, naturalny look |
-| **Kawa/Gastronomia** | Kuchnia, kawiarnia, biuro | Ziarna kawy, filiżanki, ekspres | Kobieta/mężczyzna 28-45, casual |
+##### 1. OPTYKA I KADROWANIE
+
+| Typ ujęcia | Obiektyw | Przysłona | Efekt |
+|------------|----------|-----------|-------|
+| **Product hero** | 85mm | f/2.8 | Płytka głębia, bokeh w tle |
+| **Lifestyle** | 35mm | f/4 | Szerszy kontekst, environmental |
+| **Flat lay** | 50mm | f/5.6 | Równomierna ostrość, z góry |
+| **Detail/texture** | 100mm macro | f/4 | Zbliżenie na materiał, haft, fakturę |
+
+##### 2. OŚWIETLENIE
+
+| Sceneria | Setup oświetlenia | Temperatura | Mood |
+|----------|-------------------|-------------|------|
+| **Wnętrze dzienne** | Duże okno jako key light, reflektor jako fill | 5500K (daylight) | Świeży, naturalny |
+| **Golden hour** | Ciepłe światło boczne, długie cienie | 3500K (warm) | Emocjonalny, premium |
+| **Studio** | Softbox 45° jako key, fill z przeciwnej | 5000K (neutral) | Czysty, komercyjny |
+| **Moody/evening** | Praktyczne światło (lampa), ciemne tło | 2700K (tungsten) | Intymny, luksusowy |
+
+**Zasady światła:**
+- Key light: główne źródło, tworzy kształt i objętość
+- Fill light: rozjaśnia cienie, stosunek 2:1 lub 3:1 do key
+- Rim/hair light: oddziela obiekt od tła, kontur
+- Unikaj: płaskiego frontalnego światła (stockowy look)
+
+##### 3. KOMPOZYCJA
+
+| Zasada | Jak stosować |
+|--------|--------------|
+| **Rule of thirds** | Gadżet w punkcie mocy (1/3 od krawędzi) |
+| **Leading lines** | Linie blatu, okna, mebli prowadzą do produktu |
+| **Negative space** | Min. 30% kadru puste — oddech, elegancja |
+| **Layering** | Foreground (rozmyty) → product (ostry) → background (rozmyty) |
+| **Triangle composition** | 3 elementy tworzące trójkąt (produkt + 2 rekwizyty) |
+
+##### 4. COLOR GRADING / POST-PROCESSING
+
+| Styl marki | Color grade | Kontrast | Saturacja |
+|------------|-------------|----------|-----------|
+| **Premium/luksus** | Ciepłe cienie, chłodne highlights | Średni | Stonowana |
+| **Tech/modern** | Neutralny, lekko chłodny | Wysoki | Niska |
+| **Lifestyle/warm** | Pomarańcz w cieniach, teal w highlights | Niski | Naturalna |
+| **Clean/minimal** | Zimne biele, neutralne | Średni | Bardzo niska |
+
+##### 5. MATERIAŁY I TEKSTURY
+
+| Materiał | Jak pokazać | Światło |
+|----------|-------------|---------|
+| **Bawełna/tekstylia** | Widoczny splot, naturalne fałdy | Boczne, podkreśla teksturę |
+| **Ceramika matowa** | Delikatny highlight, brak odbić | Softbox, rozproszone |
+| **Metal szczotkowany** | Subtelne refleksy, nie prześwietlone | Gradient, strip softbox |
+| **Skóra/eko-skóra** | Grain widoczny, ciepłe tony | Golden hour lub ciepłe studio |
+| **Karton/papier** | Tekstura widoczna, ostre krawędzie | Boczne, raking light |
 
 ---
 
-#### Lista gadżetów do mockupów (wybierz 10):
+#### CZEGO ABSOLUTNIE UNIKAĆ (typowe błędy AI):
 
-**Odzież:**
-1. **Koszulka** — bawełniana, logo na piersi lub plecach
-2. **Bluza z kapturem** — logo na piersi, haftowane lub nadruk
-3. **Czapka z daszkiem** — logo wyhaftowane na froncie
-
-**Akcesoria:**
-4. **Kubek / termos** — ceramiczny lub stalowy, logo + kolory marki
-5. **Torba / shopperka** — bawełniana lub ekologiczna z logo
-6. **Breloczek** — metalowy lub akrylowy z logo
-
-**Materiały biurowe:**
-7. **Notes / notatnik** — okładka z logo, kolory marki
-8. **Długopis** — metalowy z grawerem logo
-9. **Wizytówki** — logo, kolory, typografia
-
-**Tekstylia:**
-10. **Ściereczka z mikrofibry** — z wyhaftowanym lub nadrukowanym logo
-11. **Ręcznik** — z haftem logo
-
-**Inne gadżety:**
-12. **Naklejki** — zestaw naklejek z logo i elementami marki
-13. **Magnesy** — na lodówkę z logo
-14. **Smycz** — na identyfikator/klucze z logo
-15. **Opakowanie produktu** — pudełko premium z brandingiem
+❌ **Stockowy look** — sterylne białe tło, plastikowe oświetlenie, brak charakteru
+❌ **Pływające obiekty** — cienie nie zgadzają się z powierzchnią
+❌ **Nienaturalne cienie** — zbyt ostre, w złym kierunku, podwójne
+❌ **Logo zniekształcone** — rozciągnięte, zła perspektywa, rozmyte
+❌ **Plastikowe materiały** — bawełna wygląda jak plastik, metal jak farba
+❌ **Overprocessing** — przesycone kolory, HDR look, nienaturalne
+❌ **Zła skala** — logo za duże/małe względem gadżetu
+❌ **Brak kontekstu** — produkt w próżni, bez historii
+❌ **Perfekcyjne = fałszywe** — zbyt idealne fałdy, niemożliwe odbicia
+❌ **Niespójne światło** — różne źródła światła w jednej scenie
 
 ---
 
-#### Struktura każdego promptu mockupowego:
+#### Szablon promptu mockupowego (UŻYWAJ DOSŁOWNIE):
 
 ```
-⚠️ INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone w tej rozmowie.
-NIE projektuj nowego logo. NIE wymyślaj własnego designu.
-Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+⚠️ UŻYJ DOKŁADNIE TEGO LOGO które jest załączone w tej rozmowie.
+NIE projektuj nowego logo. NIE zmieniaj proporcji, kolorów ani układu.
+Skopiuj logo 1:1 i umieść na gadżecie zgodnie ze specyfikacją.
 
-GADŻET: [nazwa gadżetu, np. "Koszulka bawełniana"]
-ELEMENT BRANDINGU: [co jest na gadżecie: logo, nazwa marki, tagline, ikona]
-UMIEJSCOWIENIE: [gdzie na gadżecie: na piersi, na plecach, na froncie, haft w rogu]
-TECHNIKA: [nadruk, haft, grawer, sublimacja, sitodruk]
+---
 
-KOLORY:
-- Gadżet: [kolor bazowy gadżetu — np. biały, czarny, granatowy]
-- Logo: [kolor logo — HEX]
-- Akcenty: [dodatkowe kolory marki — HEX]
+FOTOGRAF: Senior product photographer, 15 lat doświadczenia, portfolio w Kinfolk i Cereal Magazine.
+BUDŻET SESJI: $5,000 — to musi wyglądać jak profesjonalna kampania, nie stock photo.
 
-KONTEKST DOPASOWANY DO PRODUKTU:
-- Sceneria: [gdzie gadżet jest pokazany — dopasuj do świata produktu]
-  Przykłady: warsztat dla narzędzi, kuchnia dla AGD, nowoczesny apartament dla smart home,
-  siłownia dla fitness, gabinet spa dla beauty
-- Rekwizyty w tle: [2-3 elementy nawiązujące do produktu, rozmyte w tle]
-  Przykłady: panorama za oknem, ziarna kawy, narzędzia, rośliny, ręczniki
-- Osoba (opcjonalnie): [jeśli gadżet jest noszony — dopasuj osobę do grupy docelowej]
-  Przykłady: mechanik 40+ dla narzędzi, kobieta 30+ w domu dla AGD, sportowiec dla fitness
+---
 
-PREZENTACJA:
-- Ujęcie: [flat lay / na osobie / złożony / w kontekście]
-- Oświetlenie: [naturalne dopasowane do scenerii / studio]
-- Głębia ostrości: [gadżet ostry, tło lekko rozmyte]
+GADŻET:
+- Typ: [nazwa gadżetu]
+- Materiał: [bawełna, ceramika, metal, karton — szczegółowo]
+- Kolor bazowy: [HEX] — [nazwa koloru]
+- Wykończenie: [matowe, błyszczące, szczotkowane, teksturowane]
 
-STYL: [premium, lifestyle, autentyczny — NIE stockowy, dopasowany do marki]
-FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
+BRANDING NA GADŻECIE:
+- Element: [logo pełne / sam sygnet / wordmark / tagline]
+- Rozmiar: [np. "8cm szerokości" lub "15% powierzchni"]
+- Pozycja: [lewa pierś, centralnie, dolny prawy róg — precyzyjnie]
+- Technika: [haft / sitodruk / sublimacja / grawer / tłoczenie]
+- Kolor logo: [HEX]
+
+---
+
+SCENA I KONTEKST:
+
+Lokalizacja: [konkretna, np. "nowoczesna kuchnia w apartamencie z widokiem na miasto"]
+Pora dnia: [poranne światło / golden hour / wieczór / studio]
+Mood: [świeży i energiczny / spokojny i premium / ciepły i przytulny]
+
+Rekwizyty (max 3):
+1. [rekwizyt główny — związany z produktem/marką]
+2. [rekwizyt drugorzędny — tekstura/kolor]
+3. [rekwizyt tła — rozmyty, kontekst]
+
+Osoba (jeśli dotyczy):
+- Typ: [wiek, styl, co robi w kadrze]
+- Widoczność: [tylko dłonie / tors bez twarzy / sylwetka rozmyta]
+- Ubranie: [kolorystyka, styl]
+
+---
+
+SPECYFIKACJA FOTOGRAFICZNA:
+
+Obiektyw: [85mm f/2.8 portrait / 35mm f/4 environmental / 50mm f/5.6 flat lay]
+Przysłona: [f/2.8 płytka głębia / f/5.6 umiarkowana / f/8 ostra]
+Głębia ostrości: [co ostre, co rozmyte — precyzyjnie]
+
+Oświetlenie:
+- Key light: [źródło, kierunek, intensywność]
+- Fill: [stosunek do key, np. 2:1]
+- Rim/accent: [jeśli potrzebny]
+- Temperatura: [Kelvin]
+
+Kompozycja:
+- Kadrowanie: [rule of thirds / centralny / dynamiczna przekątna]
+- Punkt widzenia: [na poziomie oczu / lekko z góry / flat lay 90°]
+- Negative space: [gdzie, ile procent kadru]
+
+Color grade:
+- Cienie: [ciepłe/zimne/neutralne]
+- Highlights: [czyste białe / kremowe / chłodne]
+- Kontrast: [niski/średni/wysoki]
+- Saturacja: [stonowana/naturalna/żywa]
+
+---
+
+REFERENCJE WIZUALNE:
+Styl jak: [Apple product photography / Aesop campaign / Kinfolk editorial / Everlane lifestyle]
+
+FORMAT: 1024x1024px (ZAWSZE KWADRAT)
+JAKOŚĆ: Fotorealistyczny render, jakość sesji komercyjnej
 ```
 
 ---
 
 #### Minimum 10 mockupów dla każdej marki:
 
-1. **Koszulka z logo** — biała lub czarna, logo na piersi
-2. **Bluza z kapturem** — logo wyhaftowane
-3. **Czapka z daszkiem** — logo na froncie
-4. **Kubek ceramiczny** — logo + kolory marki
-5. **Torba bawełniana** — duże logo na froncie
-6. **Breloczek metalowy** — logo wygrawowane
-7. **Notes firmowy** — okładka z brandingiem
-8. **Zestaw naklejek** — różne warianty logo i ikony
-9. **Ściereczka z mikrofibry** — logo w rogu
-10. **Opakowanie produktu** — pudełko premium z pełnym brandingiem
+| # | Gadżet | Typ ujęcia | Sceneria |
+|---|--------|------------|----------|
+| 1 | Koszulka | Lifestyle, osoba | Kontekst dopasowany do produktu |
+| 2 | Bluza z kapturem | Lifestyle, osoba | Kontekst dopasowany do produktu |
+| 3 | Czapka z daszkiem | Product hero, flat lay | Studio lub lifestyle |
+| 4 | Kubek ceramiczny | Product hero | Blat kuchenny / biurko |
+| 5 | Torba bawełniana | Lifestyle, osoba | Zewnątrz lub wnętrze |
+| 6 | Breloczek metalowy | Flat lay, detail | Studio, tekstura w tle |
+| 7 | Notes firmowy | Flat lay | Biurko, workspace |
+| 8 | Zestaw naklejek | Flat lay | Artystyczny układ |
+| 9 | Ściereczka z mikrofibry | Product hero | Przy produkcie głównym |
+| 10 | Opakowanie produktu | Unboxing, lifestyle | Premium kontekst |
 
 ---
 
-#### Przykładowe prompty mockupów (PanoView — robot okienny):
+#### Kontekst sceny per kategoria produktu:
 
-**Kubek z logo:**
+| Kategoria | Lokalizacja | Światło | Mood | Rekwizyty |
+|-----------|-------------|---------|------|-----------|
+| **Smart Home / AGD** | Apartament z panoramą, nowoczesna kuchnia | Poranne okno, 5500K | Świeży, premium | Rośliny, marmur, widok |
+| **Narzędzia** | Warsztat, garaż, budowa | Praktyczne lampy, 4000K | Autentyczny, roboczy | Drewno, metal, narzędzia |
+| **Tech / Elektronika** | Biuro domowe, studio | Daylight + monitor glow | Clean, minimalistyczny | Klawiatura, słuchawki |
+| **Sport / Fitness** | Siłownia, park, wschód słońca | Golden hour, 3500K | Energetyczny | Mata, hantle, zieleń |
+| **Beauty / Wellness** | Spa bathroom, sypialnia | Ciepłe, świece, 2700K | Relaksujący, luksusowy | Ręczniki, bambus, świece |
+| **Kawa / Gastronomia** | Kuchnia, kawiarnia | Ciepłe poranne, 4500K | Przytulny, aromatyczny | Ziarna, filiżanki, drewno |
+
+---
+
+#### Przykład wypełnionego promptu (Prasik — parownica):
+
 ```
-⚠️ INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone w tej rozmowie.
-NIE projektuj nowego logo. NIE wymyślaj własnego designu.
-Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+⚠️ UŻYJ DOKŁADNIE TEGO LOGO które jest załączone w tej rozmowie.
+NIE projektuj nowego logo. NIE zmieniaj proporcji, kolorów ani układu.
+Skopiuj logo 1:1 i umieść na gadżecie zgodnie ze specyfikacją.
 
-GADŻET: Kubek ceramiczny matowy
-ELEMENT BRANDINGU: Logo PanoView (ikona + wordmark) + tagline "Czysta panorama, bez wysiłku"
-UMIEJSCOWIENIE: Logo na froncie kubka, tagline mniejszy pod spodem
-TECHNIKA: Nadruk ceramiczny, wysokiej jakości
+---
 
-KOLORY:
-- Kubek: Biały matowy (#F8F8F8)
-- Logo: Crystal Cyan (#00D4E8) ikona, Deep Space (#0D1B2A) tekst
-- Akcent: Safety Orange (#FF6D3A) na elemencie sensora w ikonie
+FOTOGRAF: Senior product photographer, 15 lat doświadczenia, portfolio w Kinfolk i Cereal Magazine.
+BUDŻET SESJI: $5,000 — to musi wyglądać jak profesjonalna kampania, nie stock photo.
 
-KONTEKST DOPASOWANY DO PRODUKTU:
-- Sceneria: Nowoczesna kuchnia z dużym oknem, za oknem panorama miasta
-- Rekwizyty w tle: Poranne światło, roślina w doniczce, czyste okno (rozmyte)
-- Osoba: Brak — sam kubek na blacie
+---
 
-PREZENTACJA:
-- Ujęcie: Kubek na marmurowym blacie kuchennym, lekko z boku
-- Oświetlenie: Naturalne poranne światło z okna
-- Głębia ostrości: Kubek ostry, panorama za oknem rozmyta
+GADŻET:
+- Typ: Kubek ceramiczny
+- Materiał: Ceramika matowa, gruby brzeg
+- Kolor bazowy: #FFFFFF — biały matowy
+- Wykończenie: Matowe, delikatna faktura
 
-STYL: Premium smart home lifestyle, jak Dyson lub Apple home
-FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
-```
+BRANDING NA GADŻECIE:
+- Element: Logo Prasik (sygnet + wordmark)
+- Rozmiar: 6cm szerokości, wycentrowane
+- Pozycja: Centralnie na froncie kubka
+- Technika: Nadruk ceramiczny wysokotemperaturowy
+- Kolor logo: Sygnet #4ECDC4 (Steam Teal), wordmark #1A1A2E (Charcoal)
 
-**Koszulka z logo:**
-```
-⚠️ INSTRUKCJA: Użyj DOKŁADNIE tego logo które jest załączone w tej rozmowie.
-NIE projektuj nowego logo. NIE wymyślaj własnego designu.
-Skopiuj istniejące logo 1:1 i umieść je na gadżecie zgodnie z poniższą specyfikacją.
+---
 
-GADŻET: Koszulka bawełniana premium
-ELEMENT BRANDINGU: Logo PanoView (ikona + wordmark)
-UMIEJSCOWIENIE: Na piersi po lewej stronie, rozmiar ok. 8cm
-TECHNIKA: Haft wysokiej jakości
+SCENA I KONTEKST:
 
-KOLORY:
-- Koszulka: Granatowa (#0D1B2A)
-- Logo: Crystal Cyan (#00D4E8) haftowany
+Lokalizacja: Nowoczesna sypialnia, poranne przygotowania do pracy
+Pora dnia: Wczesny poranek, światło przez zasłony
+Mood: Świeży, energetyczny, profesjonalny start dnia
 
-KONTEKST DOPASOWANY DO PRODUKTU:
-- Sceneria: Jasny, nowoczesny apartament z panoramicznymi oknami
-- Rekwizyty w tle: Widok na miasto, minimalistyczne wnętrze (rozmyte)
-- Osoba: Mężczyzna 35 lat, casualowy styl, stoi przy oknie z widokiem
+Rekwizyty:
+1. Wieszak z wyprasowaną białą koszulą (nawiązanie do produktu)
+2. Drewniany stolik nocny, jasny dąb
+3. Roślina w doniczce (rozmyta w tle)
 
-PREZENTACJA:
-- Ujęcie: Zbliżenie na tors z logo, twarz poza kadrem
-- Oświetlenie: Naturalne światło z okna, ciepłe
-- Głębia ostrości: Koszulka ostra, tło rozmyte
+Osoba: Brak — sam kubek, ale sugestia obecności (para unosząca się z kawy)
 
-STYL: Premium lifestyle, smart home, nowoczesny dom
-FORMAT: 1024x1024px (ZAWSZE KWADRAT), wysokiej jakości render fotorealistyczny
+---
+
+SPECYFIKACJA FOTOGRAFICZNA:
+
+Obiektyw: 85mm f/2.8 portrait lens
+Przysłona: f/2.8
+Głębia ostrości: Kubek ostry, koszula na wieszaku w miękkim bokeh, tło rozmyte
+
+Oświetlenie:
+- Key light: Duże okno po lewej, światło przez lniane zasłony (rozproszone)
+- Fill: Naturalny odbity od białej ściany, stosunek 3:1
+- Rim: Brak
+- Temperatura: 5500K (świeży daylight)
+
+Kompozycja:
+- Kadrowanie: Rule of thirds, kubek w prawym punkcie mocy
+- Punkt widzenia: Lekko z góry (15°), na poziomie blatu
+- Negative space: 40% po lewej stronie, oddech
+
+Color grade:
+- Cienie: Lekko ciepłe (beżowe)
+- Highlights: Czyste białe
+- Kontrast: Średni
+- Saturacja: Stonowana, naturalna
+
+---
+
+REFERENCJE WIZUALNE:
+Styl jak: Everlane lifestyle photography + Kinfolk morning rituals
+
+FORMAT: 1024x1024px (ZAWSZE KWADRAT)
+JAKOŚĆ: Fotorealistyczny render, jakość sesji komercyjnej
 ```
 
 ---
