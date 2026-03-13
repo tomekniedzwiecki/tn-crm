@@ -925,7 +925,7 @@
             const counts = {
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
-                takedrop: 0, landing: 0, legal: 0
+                takedrop: 0, landing: 0, legal: 0, payment_gateway: 0
             };
 
             // Only count active workflows
@@ -956,12 +956,17 @@
                     counts.legal++;
                     continue;
                 }
+                // "payment_gateway" = dokumenty gotowe ALE bramka NIE gotowa
+                if (w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready) {
+                    counts.payment_gateway++;
+                    continue;
+                }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
-                // Skip takedrop/landing/legal - these are handled above with exact filter logic
+                // Skip takedrop/landing/legal/payment_gateway - these are handled above with exact filter logic
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal', 'payment_gateway'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }
