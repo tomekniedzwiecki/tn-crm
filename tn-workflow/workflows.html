@@ -791,10 +791,17 @@
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
                     const nextStep = getNextStep(w);
+                    const isVideoSkipped = w.video_stage?.skipped || false;
+                    const isVideoAccepted = w.video_stage?.stage_accepted || false;
+                    const videoLinks = w.video_stage?.video_links || [];
+                    const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
+                    const isEtap1Complete = !!w.sales_page_shared_at;
+
                     statusStageMatch = Array.from(selectedStatusStages).every(stage => {
-                        // "takedrop" (Konto TD) = TD aktywny, klient jeszcze nie podłączył konta
+                        // "takedrop" (Konto TD) = Etap 1 + video ukończone ale TD nie aktywny LUB TD aktywny ale konto nie założone
                         if (stage === 'takedrop') {
-                            return w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created;
+                            return (isEtap1Complete && isVideoComplete && !w.takedrop_stage?.is_active) ||
+                                   (w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created);
                         }
                         // "landing" (Strona TD) = konto założone, admin ma zrobić stronę
                         if (stage === 'landing') {
@@ -916,7 +923,17 @@
 
             for (const w of activeWorkflows) {
                 // Etap 3 stages - use EXACT same conditions as filter
-                // "takedrop" = TD aktywny, klient jeszcze nie podłączył konta
+                const isVideoSkipped = w.video_stage?.skipped || false;
+                const isVideoAccepted = w.video_stage?.stage_accepted || false;
+                const videoLinks = w.video_stage?.video_links || [];
+                const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
+                const isEtap1Complete = !!w.sales_page_shared_at;
+
+                // "takedrop" = Etap 1 ukończony + video ukończone, ale TD jeszcze nie aktywny LUB aktywny ale konto nie założone
+                if (isEtap1Complete && isVideoComplete && !w.takedrop_stage?.is_active) {
+                    counts.takedrop++;
+                    continue;
+                }
                 if (w.takedrop_stage?.is_active && !w.takedrop_stage?.account_created) {
                     counts.takedrop++;
                     continue;
