@@ -671,7 +671,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -1438,8 +1438,46 @@
             const progressPercent = w.progress_percent || 0;
 
             if (stage === 3) {
-                // TakeDrop - Etap 3
                 const td = w.takedrop_stage;
+                const nextStep = getNextStep(w);
+
+                // Dokumenty prawne - gdy strona TD podłączona ale dokumenty nie gotowe
+                if (nextStep === 'legal') {
+                    const hasLegalData = td?.legal_data && Object.keys(td.legal_data).length > 0;
+
+                    let stepName = 'Dokumenty prawne';
+                    let status, icon, isClientTask;
+
+                    if (hasLegalData) {
+                        // Klient wypełnił dane - admin musi wygenerować
+                        status = 'Wygeneruj dokumenty';
+                        icon = 'ph ph-file-text text-cyan-400';
+                        isClientTask = false;
+                    } else {
+                        // Czekam na dane od klienta
+                        status = 'Czekam na dane';
+                        icon = 'ph ph-file-text text-amber-400';
+                        isClientTask = true;
+                    }
+
+                    const ownerBadge = isClientTask
+                        ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                        : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
+                    return `
+                        <div class="py-2">
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <i class="${icon}"></i>
+                                <span class="text-white font-medium">${stepName}</span>
+                                ${ownerBadge}
+                                <span class="text-zinc-500">·</span>
+                                <span class="text-zinc-400">${status}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // TakeDrop - Etap 3
                 const isActive = td?.is_active || false;
                 const accountCreated = td?.account_created || false;
                 const stageAccepted = td?.stage_accepted || false;
