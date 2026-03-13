@@ -808,9 +808,9 @@
                         if (stage === 'landing') {
                             return w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected;
                         }
-                        // "legal" (Dokumenty) = strona TD gotowa ORAZ klient wypełnił dane (admin ma robotę)
+                        // "legal" (Dokumenty) = strona TD gotowa ALE dokumenty NIE gotowe (czeka na wypełnienie/przygotowanie)
                         if (stage === 'legal') {
-                            return w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready;
+                            return w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -942,8 +942,8 @@
                     counts.landing++;
                     continue;
                 }
-                // "legal" = strona TD gotowa ORAZ klient wypełnił dane (admin ma robotę)
-                if (w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready) {
+                // "legal" = strona TD gotowa ALE dokumenty NIE gotowe (czeka na wypełnienie/przygotowanie)
+                if (w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready) {
                     counts.legal++;
                     continue;
                 }
