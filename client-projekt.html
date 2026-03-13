@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026030918';
+        const APP_VERSION = '2026031301';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4011,25 +4011,11 @@
             const content = document.getElementById('dash-etap3-dokumenty-prawne-content');
             if (!box || !content) return;
 
-            if (!takeDropData?.legal_documents_ready) {
-                box.classList.add('bento-action');
-                content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty</span>
-                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                W realizacji
-                            </span>
-                        </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph ph-file-text text-5xl text-amber-400 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">Dokumenty prawne</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Regulamin i polityki w przygotowaniu</p>
-                        </div>
-                    </div>
-                `;
-            } else {
+            const hasLegalData = takeDropData?.legal_data && Object.keys(takeDropData.legal_data).length > 0;
+            const isReady = takeDropData?.legal_documents_ready;
+
+            if (isReady) {
+                // Stan 3: Dokumenty gotowe
                 box.classList.remove('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
@@ -4044,6 +4030,50 @@
                             <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
                             <h3 class="text-white text-lg font-medium">Dokumenty gotowe!</h3>
                             <p class="text-[#666] text-sm text-center mt-2">Regulamin i polityki są dostępne</p>
+                        </div>
+                    </div>
+                `;
+            } else if (hasLegalData) {
+                // Stan 2: Dane wypełnione, czekamy na admina
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                W przygotowaniu
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-clock text-5xl text-amber-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Dokumenty w przygotowaniu</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Twoje dane zostały zapisane. Przygotowuję dokumenty.</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Stan 1: Klient musi wypełnić dane - WYRAŹNE CTA
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col bg-gradient-to-br from-amber-500/10 to-transparent">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs font-medium">
+                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                Wymaga akcji
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mb-4 animate-pulse">
+                                <i class="ph ph-pencil-simple text-3xl text-amber-400"></i>
+                            </div>
+                            <h3 class="text-white text-lg font-medium">Uzupełnij dane firmy</h3>
+                            <p class="text-[#888] text-sm text-center mt-2 mb-4">Potrzebuję danych do dokumentów prawnych sklepu</p>
+                            <span class="inline-flex items-center gap-2 bg-amber-500 text-black text-sm font-medium px-4 py-2 rounded-lg">
+                                <i class="ph ph-arrow-right"></i>
+                                Wypełnij teraz
+                            </span>
                         </div>
                     </div>
                 `;
