@@ -1344,27 +1344,35 @@
             const deadlineDays = deadlineSettings[stepKey];
             if (!deadlineDays) return null; // no deadline set
 
-            // Determine start date based on step
+            // Check if deadline was reset for this step
+            const resetDate = w.deadline_resets?.[stepKey];
             let startDate = null;
-            switch (stepKey) {
-                case 'contract':
-                    startDate = w.started_at;
-                    break;
-                case 'product':
-                    startDate = w.products_shared_at || w.started_at;
-                    break;
-                case 'report':
-                    startDate = w.started_at; // simplified
-                    break;
-                case 'branding':
-                    startDate = w.started_at; // simplified
-                    break;
-                case 'salespage':
-                    startDate = w.branding_shared_at || w.started_at;
-                    break;
-                case 'scenario':
-                    startDate = w.sales_page_shared_at;
-                    break;
+
+            if (resetDate) {
+                // Use reset date as start
+                startDate = resetDate;
+            } else {
+                // Determine start date based on step
+                switch (stepKey) {
+                    case 'contract':
+                        startDate = w.started_at;
+                        break;
+                    case 'product':
+                        startDate = w.products_shared_at || w.started_at;
+                        break;
+                    case 'report':
+                        startDate = w.started_at; // simplified
+                        break;
+                    case 'branding':
+                        startDate = w.started_at; // simplified
+                        break;
+                    case 'salespage':
+                        startDate = w.branding_shared_at || w.started_at;
+                        break;
+                    case 'scenario':
+                        startDate = w.sales_page_shared_at;
+                        break;
+                }
             }
 
             if (!startDate) return null;
@@ -1666,7 +1674,12 @@
                         const { daysRemaining, isOverdue } = deadlineInfo;
                         const color = isOverdue ? 'text-red-400' : (daysRemaining <= 1 ? 'text-amber-400' : (daysRemaining <= 3 ? 'text-amber-400/70' : 'text-zinc-500'));
                         const text = isOverdue ? `${Math.abs(daysRemaining)}d po terminie` : `za ${daysRemaining}d`;
-                        deadlineHtml = `<span class="flex items-center gap-1 ${color}"><i class="ph ph-clock"></i>${text}</span>`;
+                        // Make clickable to reset deadline (only if overdue or close to deadline)
+                        if (isOverdue || daysRemaining <= 3) {
+                            deadlineHtml = `<button onclick="resetDeadline('${w.workflow_id}', '${nextStep}')" class="flex items-center gap-1 ${color} hover:bg-white/5 px-1 py-0.5 rounded transition-colors" title="Kliknij aby zresetować (za 2 dni)"><i class="ph ph-clock"></i>${text}</button>`;
+                        } else {
+                            deadlineHtml = `<span class="flex items-center gap-1 ${color}"><i class="ph ph-clock"></i>${text}</span>`;
+                        }
                     }
                 }
 
@@ -1825,6 +1838,45 @@
                     ? '<i class="ph-fill ph-star text-amber-400"></i>'
                     : '<i class="ph ph-star"></i>';
                 showToast('Błąd zapisu');
+            }
+        }
+
+        async function resetDeadline(workflowId, stepKey) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Calculate date that will result in 2 days remaining
+            // New start date = today - (deadlineDays - 2)
+            const deadlineDays = deadlineSettings[stepKey] || 2;
+            const today = new Date();
+            const newStartDate = new Date(today);
+            newStartDate.setDate(newStartDate.getDate() - (deadlineDays - 2));
+            const newStartDateStr = newStartDate.toISOString().split('T')[0];
+
+            try {
+                // Get current deadline_resets
+                const workflow = workflows.find(w => w.workflow_id === workflowId);
+                const currentResets = workflow?.deadline_resets || {};
+                const updatedResets = { ...currentResets, [stepKey]: newStartDateStr };
+
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ deadline_resets: updatedResets })
+                    .eq('id', workflowId);
+
+                if (error) throw error;
+
+                // Update local data
+                if (workflow) {
+                    workflow.deadline_resets = updatedResets;
+                }
+
+                showToast('Deadline zresetowany (za 2 dni)');
+                renderWorkflows();
+
+            } catch (err) {
+                console.error('Error resetting deadline:', err);
+                showToast('Błąd resetu deadline');
             }
         }
 

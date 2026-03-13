@@ -179,107 +179,139 @@ Prompty sa RECZNE — pisane przez Claude z pelna wiedza o marce. NIE dynamiczne
 
 ---
 
-### PROMPTY LOGO — Profesjonalne podejście
+### PROMPTY LOGO — Poziom Senior Designer (12+ lat doświadczenia)
 
-> **FILOZOFIA**: Logo musi opowiadać historię produktu. Każdy prompt musi przekazać designerowi/AI pełny kontekst: co robi produkt, dla kogo jest, jakie emocje wywołuje, i jak te elementy mogą być subtelnie zakodowane w formie graficznej.
+> **FILOZOFIA**: Logo musi wyglądać jakby kosztowało $15,000 od agencji brandingowej. Poziom Dyson, Apple, Bang & Olufsen. Nie akceptujemy przeciętności.
 
-#### Co MUSI zawierać każdy prompt logo:
+> **TŁO**: Wszystkie logo ZAWSZE na BIAŁYM TLE (#FFFFFF). Bez wyjątków.
 
-1. **Pełny brief produktowy** (5-8 zdań — TO KRYTYCZNE!):
-   - **Co to za produkt**: pełna nazwa, kategoria, typ urządzenia
-   - **Jak działa**: mechanizm działania, technologia (np. "moc ssania 5600 Pa", "laser 360°", "silnik bezszczotkowy")
-   - **Kluczowe funkcje**: 3-5 najważniejszych funkcji produktu
-   - **Jaki problem rozwiązuje**: konkretny ból klienta który produkt eliminuje
-   - **Dla kogo jest przeznaczony**: szczegółowa grupa docelowa (wiek, styl życia, sytuacja)
-   - **Gdzie i kiedy jest używany**: kontekst użycia (dom, warsztat, biuro, na zewnątrz)
-   - **USP / wyróżnik**: co odróżnia ten produkt od konkurencji
-
-2. **Koncept wizualny** (szczegółowo):
-   - Jaki element produktu/funkcji może być symbolem (np. dla robota okiennego: okno, panorama, robot, przyssawka)
-   - Jak połączyć go z nazwą marki (np. litera + symbol)
-   - Jakie skojarzenia wizualne wykorzystać (np. czystość, precyzja, bezpieczeństwo)
-   - Co ma komunikować forma (precyzja, ruch, ciepło, technologia, bezpieczeństwo)
-   - Jakie emocje ma wywoływać logo (spokój, energia, profesjonalizm, zaufanie)
-
-3. **Specyfikacja techniczna**:
-   - Kolory z konkretnymi HEX i ich zastosowanie
-   - Styl typografii
-   - Tło
-   - Format i rozdzielczość
-
-#### Przykłady konceptów logo per kategoria produktu:
-
-| Produkt | Jak działa / Funkcje | Elementy wizualne | Koncept symbolu |
-|---------|---------------------|-------------------|-----------------|
-| **Kamera endoskopowa** | Elastyczny przewód z kamerą, oświetlenie LED, transmisja obrazu na telefon, inspekcja rur/silników | obiektyw, oko, promień światła, przewód, wąż | Oko/obiektyw zintegrowany z literą, promień skanujący, elastyczna linia |
-| **Robot okienny** | Przyssawka 5600 Pa, automatyczne ścieżki, potrójne bezpieczeństwo, pilot + app | okno, panorama, robot, przyssawka, czyste szkło, widok z wysokości | Okno z linią horyzontu, mały okrągły robot w rogu, litera jako ramka okna |
-| **Ekspres do kawy** | Ciśnienie 15-20 bar, młynek, spieniacz mleka, programy parzenia | filiżanka, para, ziarna, krople, crema | Filiżanka w negatywie litery, para jako dynamiczny element, ziarno kawy |
-| **Pistolet malarski** | Natrysk HVLP, regulacja ciśnienia, dysza 1.4-2.5mm, malowanie karoserii/mebli | natrysk, krople, pędzel, ruch, mgiełka farby | Dynamiczny rozbryzg z typografii, stożek natrysku, gradient kolorów |
-| **Masażer** | Wibracje 3200 RPM, głowice wymienne, 6 poziomów intensywności, regeneracja mięśni | fale, dłoń, ciepło, pulsowanie, mięśnie | Koncentryczne fale emanujące z formy, pulsujący punkt, relaksująca krzywa |
-| **Odkurzacz robotyczny** | Nawigacja LiDAR, moc ssania 4000 Pa, mopowanie, stacja opróżniająca | wir, czystość, ruch, ssanie, dom, ścieżka | Spiralny element ruchu, minimalistyczny dom, okrągły robot |
-
-#### Struktura każdego promptu logo:
+#### Szablon promptu logo (UŻYWAJ DOSŁOWNIE):
 
 ```
-PRODUKT — PEŁNY KONTEKST (TO KRYTYCZNE!):
-Produkt: [pełna nazwa produktu, np. "Robot do automatycznego mycia okien"]
-Kategoria: [np. Smart Home, AGD, Narzędzia, Beauty, Sport]
-Jak działa: [mechanizm działania — np. "Przyssawka o mocy 5600 Pa utrzymuje robota na szybie,
-  robot porusza się po zaprogramowanych ścieżkach czyszcząc okno ściereczką z mikrofibry"]
-Kluczowe funkcje:
-  - [funkcja 1, np. "Ekstremalnie mocne ssanie 5600 Pa — dwukrotnie więcej niż konkurencja"]
-  - [funkcja 2, np. "Potrójny system bezpieczeństwa: linka + UPS + alarm"]
-  - [funkcja 3, np. "Automatyczne wykrywanie krawędzi okna"]
-  - [funkcja 4, np. "Pilot zdalnego sterowania + aplikacja mobilna"]
-Problem który rozwiązuje: [np. "Mycie okien na wysokości jest niebezpieczne i czasochłonne —
-  szczególnie dla seniorów i mieszkańców apartamentowców"]
-Grupa docelowa: [szczegółowo — np. "Mieszkańcy apartamentowców 30-50 lat, właściciele domów
-  z dużymi przeszkleniami, dzieci seniorów szukające bezpiecznego rozwiązania dla rodziców"]
-Kontekst użycia: [gdzie i kiedy — np. "W domu, na oknach od wewnątrz i zewnątrz,
-  szczególnie na wysokich piętrach i trudno dostępnych oknach"]
-USP: [główny wyróżnik — np. "Najbezpieczniejszy robot okienny na rynku dzięki potrójnemu
-  systemowi zabezpieczeń"]
+KONTEKST PROJEKTU:
+Projektujesz logo dla polskiej marki premium "[NAZWA MARKI]" — [krótki opis produktu].
+To musi być logo na poziomie Dyson, Apple, Bang & Olufsen. Nie akceptuję przeciętności.
 
-MARKA:
-Nazwa: [nazwa marki]
-Tagline: [hasło marki]
-Wartości: [3-4 wartości marki, np. bezpieczeństwo, innowacja, wygoda, jakość]
-Ton komunikacji: [np. profesjonalny ale przyjazny, techniczny ale przystępny]
+---
 
-KONCEPT LOGO:
-Zaprojektuj logo które łączy [element wizualny związany z produktem] z [element typograficzny].
-Inspiracja z produktu: [co z produktu może być symbolem — np. "okno z panoramą, robot,
-  przyssawka, czysta tafla szkła, widok z wysokości"]
-Symbol powinien komunikować: [emocje/wartości: np. bezpieczeństwo, technologia, czystość, panoramiczny widok]
-Konkretny pomysł: [np. "Litera P przekształcona w abstrakcyjne okno z linią horyzontu,
-  mały okrągły element w rogu symbolizujący robota/sensor"]
-Styl formy: [geometryczne/organiczne, minimalistyczne/szczegółowe, ostre/zaokrąglone]
-Emocje do wywołania: [np. zaufanie, spokój, nowoczesność, premium]
+BRIEF PRODUKTOWY:
+Produkt: [pełna nazwa produktu i typ]
+USP: [główne wyróżniki, np. "Najszybsza na rynku (26 sek), ciśnienie 30 kPa (3x konkurencja)"]
+Grupa docelowa: [wiek, styl życia, sytuacja — np. "Profesjonaliści 28-45, podróżujący służbowo"]
+Emocje marki: [5-6 emocji: np. szybkość, świeżość, lekkość, precyzja, nowoczesność, zaufanie]
+Ton: [np. "Polski ale międzynarodowy, przyjazny ale premium"]
 
-SPECYFIKACJA:
-- Kolor główny: [HEX] ([nazwa]) — użyty na [gdzie]
-- Kolor dodatkowy: [HEX] ([nazwa]) — użyty na [gdzie]
-- Kolor akcentu: [HEX] ([nazwa]) — subtelny akcent na [gdzie]
-- Typografia: [styl podobny do nazwa fontu], [cechy: bold, geometric, humanist]
-- Tło: [kolor HEX lub opis]
-- Styl: [professional/minimal/technical/playful/premium] — jak [referencja do znanych marek w kategorii]
+---
 
-FORMAT: 1024x1024px (ZAWSZE KWADRAT), PNG z przezroczystym tłem gdzie to możliwe
+WYMAGANIA PROJEKTOWE — POZIOM SENIOR DESIGNER:
+
+1. KONSTRUKCJA GEOMETRYCZNA:
+- Zbuduj logo na siatce geometrycznej (grid system)
+- Użyj proporcji złotego podziału (1:1.618) lub systemu √2
+- Każdy element musi mieć matematyczne uzasadnienie
+- Optyczna równowaga ważniejsza niż matematyczna symetria
+
+2. SYGNET (IKONA):
+- Musi działać samodzielnie w 16x16px (favicon) i na billboardzie
+- Wykorzystaj NEGATYWNĄ PRZESTRZEŃ — ukryty symbol w kształcie (jak strzałka w FedEx, niedźwiedź w Toblerone)
+- Koncept: [pierwsza litera nazwy] z wbudowanym symbolem [element produktu] — ale subtelnie, nie dosłownie
+- NIE rób: dosłownych ikon produktu (parownik, żelazko, robot) — to amatorskie
+- ZRÓB: elegancką abstrakcję która SUGERUJE [cechę produktu] przez ruch, lekkość, formę
+
+3. WORDMARK "[NAZWA MARKI]":
+- Typografia: custom letterforms lub heavily modified geometric sans
+- Litery muszą mieć CHARAKTER — nie używaj fontu prosto z Google Fonts
+- Rozważ ligaturę lub unikalne połączenie liter
+- Proporcje: x-height wysoka, tracking optycznie wyrównany
+- Kropka nad "i" może nawiązywać do ikony (kropla, punkt, element)
+
+4. UKŁAD COMBO MARK:
+- Sygnet ZAWSZE po lewej stronie, wordmark po prawej, w jednej linii
+- Proporcje: sygnet to ~25-30% szerokości całego logo
+- Odstęp między sygnetem a tekstem = szerokość litery "i" w wordmark
+- Logo musi działać w proporcjach od 1:1 (sam sygnet) do 4:1 (pełny combo mark)
+
+5. KOLORYSTYKA:
+- Primary: [HEX] ([nazwa koloru]) — [gdzie użyty]
+- Secondary: [HEX] ([nazwa]) — użyj TYLKO jako subtelny akcent, max 10%
+- Sygnet: w kolorze primary [HEX]
+- Wordmark: w kolorze neutral dark [HEX]
+- GRADIENT: Jeśli używasz, tylko subtelny, w obrębie sygnetu
+- NIE używaj gradientu na tekście
+
+6. STYL WIZUALNY:
+- Referencje: Stripe, Linear, Notion, Figma, Vercel — nowoczesny tech minimalizm
+- Linie: czyste, pewne, bez drżenia
+- Narożniki: konsekwentne promienie (wszystkie 2px lub wszystkie 4px, nie mieszaj)
+- Grubość linii: optycznie wyrównana (cieńsze linie w mniejszych elementach)
+
+---
+
+CZEGO ABSOLUTNIE UNIKAĆ (typowe błędy AI):
+
+❌ Dosłowne ikony produktu (parownik, żelazko, robot, kubek, narzędzie)
+❌ Clipart-style, stockowe ikony
+❌ Gradienty tęczowe lub wielokolorowe
+❌ Efekty 3D, cienie, bliki, glossy
+❌ Zbyt wiele detali — logo musi działać w 1 kolorze
+❌ Tekst w łuku lub zniekształcony
+❌ Losowe fonty — każda litera musi być przemyślana
+❌ Sygnet nad tekstem (układ pionowy) — tylko poziomy!
+❌ Nierówne odstępy między literami
+❌ Zbyt cienkie linie które znikną w małym rozmiarze
+
+---
+
+PROCES MYŚLOWY DESIGNERA:
+
+Krok 1: Zacznij od SZKICU siatki geometrycznej
+Krok 2: Zbuduj sygnet na okręgach i prostych — każdy element z gridu
+Krok 3: Sprawdź czy sygnet działa w 32x32px — jeśli nie, upraszczaj
+Krok 4: Zaprojektuj wordmark z custom kerningiem
+Krok 5: Połącz sygnet z wordmark, sprawdź optyczną równowagę
+Krok 6: Testuj w czerni i bieli — jeśli działa bez koloru, działa wszędzie
+
+---
+
+DELIVERABLE:
+
+Jedno logo w formacie 1024x1024px:
+- Tło: BIAŁE (#FFFFFF)
+- Sygnet: [kolor primary HEX]
+- Wordmark "[NAZWA]": [kolor neutral dark HEX]
+- Układ: Sygnet po lewej, wordmark po prawej, wycentrowane w kadrze
+- Styl: Flat, minimalistyczny, premium, profesjonalny
+- Jakość: Wektorowa ostrość, czyste krawędzie, perfekcyjne proporcje
+
+To logo musi wyglądać jakby kosztowało $15,000 od agencji brandingowej.
 ```
+
+#### Przykłady konceptów symbolu per kategoria:
+
+| Kategoria | NIE rób (dosłowne) | ZRÓB (abstrakcja) |
+|-----------|-------------------|-------------------|
+| **Parownica** | chmurka pary, żelazko | fale unoszące się, litera z ruchem w górę |
+| **Robot okienny** | robot, okno, ścierka | panorama w negatywie, horyzont, czysta linia |
+| **Kamera endoskopowa** | kamera, przewód | oko w literze, promień światła, fokus |
+| **Ekspres do kawy** | filiżanka, ziarna | para w negatywie, krzywa crema |
+| **Masażer** | ręka, mięśnie | fale koncentryczne, pulsowanie |
+| **Odkurzacz** | odkurzacz, dom | spirala ruchu, wir, ścieżka |
 
 #### 6 wariantów logo do wygenerowania:
 
-1. **Logo główne na ciemnym tle** — pełna wersja z symbolem i wordmarkiem, wszystkie kolory
-2. **Logo na jasnym tle** — dostosowane kontrasty, zwykle primary na tekst
-3. **Logo monochromatyczne** — wersja biała i czarna, sam kształt bez kolorów
-4. **Favicon/ikona** — sam symbol (bez tekstu), rozpoznawalny w 32x32px
-5. **Combo mark poziomy** — ikona + wordmark w jednej linii, do nagłówków
-6. **Animacja (storyboard)** — 4-6 klatek pokazujących jak logo się "buduje"
+Dla każdego wariantu użyj tego samego szablonu, zmieniając tylko sekcję DELIVERABLE:
 
-> **ZASADA UKŁADU LOGO:**
-> Sygnet (ikona/symbol) zawsze po LEWEJ stronie, na równi z nazwą marki w tej samej linii.
-> Układ: `[SYGNET] [NAZWA MARKI]` — nigdy odwrotnie, nigdy sygnet nad tekstem.
-> Wyjątek: favicon/ikona (wariant 4) — sam sygnet bez tekstu.
+1. **Logo główne** — na białym tle (#FFFFFF), pełne kolory
+2. **Logo alternatywne** — na ciemnym tle (#1A1A2E), dostosowane kontrasty
+3. **Logo monochromatyczne** — wersja czarna (#000000) na białym tle
+4. **Favicon/ikona** — sam sygnet bez tekstu, na białym tle, musi działać w 32x32px
+5. **Combo mark poziomy** — sygnet + wordmark w jednej linii, proporcje 4:1
+6. **Animacja (storyboard)** — 6 klatek w gridzie 2x3 pokazujących budowanie logo
+
+> **ZASADA UKŁADU:**
+> Sygnet (ikona) ZAWSZE po LEWEJ, wordmark po PRAWEJ, w tej samej linii.
+> Układ: `[SYGNET] [NAZWA MARKI]` — nigdy odwrotnie, nigdy pionowo.
+> Wyjątek: favicon (wariant 4) — sam sygnet.
 
 ---
 
