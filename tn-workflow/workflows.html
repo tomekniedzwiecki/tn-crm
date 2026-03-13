@@ -671,7 +671,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -1130,6 +1130,9 @@
             // Dokumenty prawne (wyświetlaj tylko jeśli strona TD gotowa)
             if (!w.takedrop_stage?.legal_documents_ready) return 'legal';
 
+            // Bramka płatności (wyświetlaj tylko jeśli dokumenty gotowe)
+            if (!w.takedrop_stage?.payment_gateway_ready) return 'payment_gateway';
+
             return null; // all done
         }
 
@@ -1457,6 +1460,42 @@
                         // Czekam na dane od klienta
                         status = 'Czekam na dane';
                         icon = 'ph ph-file-text text-amber-400';
+                        isClientTask = true;
+                    }
+
+                    const ownerBadge = isClientTask
+                        ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                        : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
+                    return `
+                        <div class="py-2">
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <i class="${icon}"></i>
+                                <span class="text-white font-medium">${stepName}</span>
+                                ${ownerBadge}
+                                <span class="text-zinc-500">·</span>
+                                <span class="text-zinc-400">${status}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Bramka płatności - gdy dokumenty gotowe ale bramka nie skonfigurowana
+                if (nextStep === 'payment_gateway') {
+                    const hasCredentials = td?.payment_gateway_credentials?.email;
+
+                    let stepName = 'Bramka płatności';
+                    let status, icon, isClientTask;
+
+                    if (hasCredentials) {
+                        // Klient podał dane - admin musi skonfigurować
+                        status = 'Skonfiguruj bramkę';
+                        icon = 'ph ph-credit-card text-cyan-400';
+                        isClientTask = false;
+                    } else {
+                        // Czekam na dane od klienta
+                        status = 'Czekam na dane';
+                        icon = 'ph ph-credit-card text-amber-400';
                         isClientTask = true;
                     }
 

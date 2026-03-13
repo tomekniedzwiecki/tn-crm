@@ -404,6 +404,11 @@
                             Dokumenty prawne
                             <span id="nav-check-legal" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('payment-gateway')" data-tab="payment-gateway" class="workflow-sidebar-btn">
+                            <i class="ph ph-credit-card"></i>
+                            Bramka płatności
+                            <span id="nav-check-payment-gateway" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1729,6 +1734,92 @@
                             </div>
                         </div>
                     </div><!-- /tab-legal -->
+
+                    <!-- TAB: Bramka płatności (Etap 3) -->
+                    <div id="tab-payment-gateway" class="workflow-panel hidden">
+                        <!-- Client credentials status -->
+                        <div id="pg-client-status" class="hidden mb-6">
+                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                            <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[13px] text-emerald-400 font-medium">Klient podał dane logowania</div>
+                                            <div id="pg-client-gateway-type" class="text-[12px] text-[#888]">-</div>
+                                        </div>
+                                    </div>
+                                    <button onclick="togglePaymentCredentialsView()" class="text-[12px] text-emerald-400 hover:text-emerald-300">
+                                        <i class="ph ph-eye mr-1"></i>Pokaż dane
+                                    </button>
+                                </div>
+                                <div id="pg-credentials-details" class="hidden mt-4 pt-4 border-t border-emerald-500/20">
+                                    <div class="grid grid-cols-2 gap-4 text-[13px]">
+                                        <div>
+                                            <div class="text-[#666] text-[11px] mb-1">Email</div>
+                                            <div id="pg-cred-email" class="text-white font-mono">-</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[#666] text-[11px] mb-1">Hasło</div>
+                                            <div id="pg-cred-password" class="text-white font-mono">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No credentials yet -->
+                        <div id="pg-waiting-status" class="mb-6">
+                            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                        <i class="ph ph-clock text-amber-400 text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[13px] text-amber-400 font-medium">Oczekiwanie na dane od klienta</div>
+                                        <div id="pg-expected-gateway" class="text-[12px] text-[#888]">Klient musi założyć konto i podać dane logowania</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gateway type info -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <i class="ph ph-info text-blue-400"></i>
+                                <span class="text-[13px] text-white font-medium">Typ bramki płatności</span>
+                            </div>
+                            <div id="pg-gateway-type-info" class="text-[13px] text-[#888]">
+                                Ładowanie...
+                            </div>
+                        </div>
+
+                        <!-- Mark as configured -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-[13px] text-white">Bramka skonfigurowana</div>
+                                    <div class="text-[12px] text-[#666] mt-1">Zaznacz gdy bramka płatności jest gotowa do użytku</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="pg-configured-toggle" onchange="togglePaymentGatewayConfigured()" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Configured success state -->
+                        <div id="pg-configured-success" class="hidden mt-4">
+                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 flex items-center gap-3">
+                                <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                <div>
+                                    <div class="text-[13px] text-white">Bramka płatności skonfigurowana</div>
+                                    <div id="pg-configured-date" class="text-[12px] text-[#666] mt-0.5">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- /tab-payment-gateway -->
 
                     <!-- TAB: Historia (Full Activity History) -->
                     <div id="tab-historia" class="workflow-panel hidden">
@@ -4445,7 +4536,7 @@
             // Expand stage section if tab belongs to a collapsed stage
             const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona', 'podsumowanie'];
             const stage2Tabs = ['scenariusze', 'profile', 'nagrania'];
-            const stage3Tabs = ['takedrop', 'landing', 'legal'];
+            const stage3Tabs = ['takedrop', 'landing', 'legal', 'payment-gateway'];
 
             if (stage1Tabs.includes(tabName)) {
                 expandStageSection(1);
@@ -4503,6 +4594,9 @@
                     break;
                 case 'legal':
                     loadTakeDrop();
+                    break;
+                case 'payment-gateway':
+                    loadPaymentGateway();
                     break;
                 case 'historia':
                     loadFullHistory(true);
@@ -6441,6 +6535,156 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         window.copyLegalDocHTML = copyLegalDocHTML;
         window.downloadLegalDoc = downloadLegalDoc;
         window.saveLegalDocuments = saveLegalDocuments;
+
+        // =============================================
+        // PAYMENT GATEWAY MANAGEMENT
+        // =============================================
+        async function loadPaymentGateway() {
+            if (!takeDropData) {
+                await loadTakeDrop();
+            }
+
+            const clientStatus = document.getElementById('pg-client-status');
+            const waitingStatus = document.getElementById('pg-waiting-status');
+            const gatewayTypeInfo = document.getElementById('pg-gateway-type-info');
+            const configuredToggle = document.getElementById('pg-configured-toggle');
+            const configuredSuccess = document.getElementById('pg-configured-success');
+            const navCheck = document.getElementById('nav-check-payment-gateway');
+
+            // Determine gateway type based on NIP
+            const hasNip = takeDropData?.legal_data?.nip && takeDropData.legal_data.nip.trim().length > 0;
+            const gatewayType = hasNip ? 'payu' : 'stripe';
+            const gatewayName = hasNip ? 'PayU (firma z NIP)' : 'Stripe (osoba prywatna)';
+
+            // Show gateway type info
+            if (gatewayTypeInfo) {
+                if (hasNip) {
+                    gatewayTypeInfo.innerHTML = `
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center">
+                                <span class="text-lg font-bold text-[#00d084]">P</span>
+                            </div>
+                            <div>
+                                <div class="text-white font-medium">PayU</div>
+                                <div class="text-[#666] text-[12px]">Klient posiada NIP - bramka dla firm</div>
+                            </div>
+                        </div>
+                        <div class="text-[12px] text-[#666]">NIP klienta: <span class="text-white font-mono">${takeDropData.legal_data.nip}</span></div>
+                    `;
+                } else {
+                    gatewayTypeInfo.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center">
+                                <span class="text-lg font-bold text-[#635bff]">S</span>
+                            </div>
+                            <div>
+                                <div class="text-white font-medium">Stripe</div>
+                                <div class="text-[#666] text-[12px]">Klient bez NIP - bramka dla osób prywatnych</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Check if client provided credentials
+            const hasCredentials = takeDropData?.payment_gateway_credentials?.email;
+
+            if (hasCredentials) {
+                // Show client credentials
+                if (clientStatus) clientStatus.classList.remove('hidden');
+                if (waitingStatus) waitingStatus.classList.add('hidden');
+
+                document.getElementById('pg-client-gateway-type').textContent = gatewayName;
+                document.getElementById('pg-cred-email').textContent = takeDropData.payment_gateway_credentials.email || '-';
+                document.getElementById('pg-cred-password').textContent = takeDropData.payment_gateway_credentials.password || '-';
+            } else {
+                // Waiting for client
+                if (clientStatus) clientStatus.classList.add('hidden');
+                if (waitingStatus) waitingStatus.classList.remove('hidden');
+
+                document.getElementById('pg-expected-gateway').textContent = `Klient musi założyć konto ${gatewayName} i podać dane logowania`;
+            }
+
+            // Check configured status
+            const isConfigured = takeDropData?.payment_gateway_ready;
+            if (configuredToggle) {
+                configuredToggle.checked = isConfigured;
+            }
+
+            if (isConfigured) {
+                if (configuredSuccess) configuredSuccess.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+
+                const configDate = takeDropData.payment_gateway_configured_at;
+                if (configDate) {
+                    const formatted = new Date(configDate).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                    });
+                    document.getElementById('pg-configured-date').textContent = formatted;
+                }
+            } else {
+                if (configuredSuccess) configuredSuccess.classList.add('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+            }
+        }
+
+        function togglePaymentCredentialsView() {
+            const details = document.getElementById('pg-credentials-details');
+            if (details) {
+                details.classList.toggle('hidden');
+            }
+        }
+
+        async function togglePaymentGatewayConfigured() {
+            const toggle = document.getElementById('pg-configured-toggle');
+            const isReady = toggle?.checked || false;
+
+            try {
+                const updateData = {
+                    payment_gateway_ready: isReady,
+                    payment_gateway_configured_at: isReady ? new Date().toISOString() : null
+                };
+
+                if (takeDropData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update(updateData)
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+
+                    // Update local data
+                    takeDropData.payment_gateway_ready = isReady;
+                    takeDropData.payment_gateway_configured_at = updateData.payment_gateway_configured_at;
+                } else {
+                    // Create new record
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            ...updateData
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+
+                // Refresh UI
+                loadPaymentGateway();
+                showToast(isReady ? 'Bramka oznaczona jako skonfigurowana' : 'Bramka oznaczona jako nieskonfigurowana');
+            } catch (err) {
+                console.error('Error toggling payment gateway:', err);
+                showToast('Błąd aktualizacji', 'error');
+                // Revert toggle
+                if (toggle) toggle.checked = !isReady;
+            }
+        }
+
+        window.loadPaymentGateway = loadPaymentGateway;
+        window.togglePaymentCredentialsView = togglePaymentCredentialsView;
+        window.togglePaymentGatewayConfigured = togglePaymentGatewayConfigured;
 
         // =============================================
         // CONTRACT MANAGEMENT

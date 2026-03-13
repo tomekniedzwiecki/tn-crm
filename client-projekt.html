@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026031302';
+        const APP_VERSION = '2026031303';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1477,6 +1477,11 @@
                             <span>Dokumenty</span>
                             <i id="dash-nav-check-dokumenty-prawne" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('bramka-platnosci')">
+                            <i class="ph ph-credit-card"></i>
+                            <span>Płatności</span>
+                            <i id="dash-nav-check-bramka-platnosci" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -1567,6 +1572,11 @@
                                 <i class="ph ph-file-text"></i>
                                 <span>Dokumenty</span>
                                 <i id="dash-nav-check-dokumenty-prawne-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('bramka-platnosci');toggleDashMobileMenu()">
+                                <i class="ph ph-credit-card"></i>
+                                <span>Płatności</span>
+                                <i id="dash-nav-check-bramka-platnosci-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -1783,18 +1793,23 @@
                 </div>
 
                 <!-- Account Box -->
-                <div id="dash-etap3-box-account" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('takedrop')">
+                <div id="dash-etap3-box-account" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 180px;" onclick="switchToDashTab('takedrop')">
                     <div id="dash-etap3-account-content" class="h-full"></div>
                 </div>
 
                 <!-- Landing/Strona Box -->
-                <div id="dash-etap3-box-landing" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('landing')">
+                <div id="dash-etap3-box-landing" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 180px;" onclick="switchToDashTab('landing')">
                     <div id="dash-etap3-landing-content" class="h-full"></div>
                 </div>
 
                 <!-- Dokumenty Box -->
-                <div id="dash-etap3-box-dokumenty-prawne" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('dokumenty-prawne')">
+                <div id="dash-etap3-box-dokumenty-prawne" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 180px;" onclick="switchToDashTab('dokumenty-prawne')">
                     <div id="dash-etap3-dokumenty-prawne-content" class="h-full"></div>
+                </div>
+
+                <!-- Bramka płatności Box -->
+                <div id="dash-etap3-box-bramka-platnosci" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 180px;" onclick="switchToDashTab('bramka-platnosci')">
+                    <div id="dash-etap3-bramka-platnosci-content" class="h-full"></div>
                 </div>
             </div><!-- /dash-bento-etap3 -->
 
@@ -1920,6 +1935,11 @@
                             <span>Dokumenty</span>
                             <i id="nav-check-dokumenty-prawne" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div class="dash-nav-item" data-tab="bramka-platnosci" onclick="switchTab('bramka-platnosci')">
+                            <i class="ph ph-credit-card"></i>
+                            <span>Płatności</span>
+                            <i id="nav-check-bramka-platnosci" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -2015,6 +2035,11 @@
                                 <i class="ph ph-file-text"></i>
                                 <span>Dokumenty</span>
                                 <i id="nav-check-dokumenty-prawne-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div class="dash-nav-item" data-tab="bramka-platnosci" onclick="switchTab('bramka-platnosci');toggleMobileMenu()">
+                                <i class="ph ph-credit-card"></i>
+                                <span>Płatności</span>
+                                <i id="nav-check-bramka-platnosci-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -3126,6 +3151,107 @@
                 </div>
             </div>
 
+            <!-- TAB: Bramka płatności (Etap 3) -->
+            <div id="tab-bramka-platnosci" class="tab-panel hidden animate-enter">
+                <div class="max-w-2xl">
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Bramka płatności</h2>
+                        <p class="text-[14px] text-[#666]">Załóż konto w bramce płatności, aby móc przyjmować płatności online</p>
+                    </div>
+
+                    <!-- Gateway type info (depends on NIP) -->
+                    <div id="pg-client-gateway-info" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
+                        <div class="flex items-start gap-4">
+                            <div id="pg-gateway-icon" class="w-12 h-12 rounded-xl bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-credit-card text-xl text-white"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 id="pg-gateway-title" class="text-[16px] font-medium text-white mb-2">Ładowanie...</h3>
+                                <p id="pg-gateway-desc" class="text-[13px] text-[#666] mb-4">Sprawdzam typ bramki...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Create Account -->
+                    <div id="pg-step-register" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <span class="text-[13px] font-medium text-white">1</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-[15px] font-medium text-white mb-1">Załóż konto</h3>
+                                <p id="pg-register-desc" class="text-[13px] text-[#666] mb-4">
+                                    Kliknij przycisk poniżej i załóż konto w bramce płatności.
+                                </p>
+                                <a id="pg-register-link" href="#" target="_blank" rel="noopener noreferrer"
+                                   class="inline-flex items-center gap-2 bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
+                                    <span id="pg-register-btn-text">Załóż konto</span>
+                                    <i class="ph ph-arrow-up-right text-[14px]"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Confirm Account / Provide Credentials -->
+                    <div id="pg-step-credentials" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <span class="text-[13px] font-medium text-white">2</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h3 class="text-[15px] font-medium text-white">Podaj dane logowania</h3>
+                                    <div id="pg-credentials-success-state" class="hidden flex items-center gap-2">
+                                        <i class="ph-fill ph-check-circle text-emerald-500"></i>
+                                        <span class="text-[12px] text-emerald-500">Zapisane</span>
+                                    </div>
+                                </div>
+                                <p class="text-[13px] text-[#666] mb-5">
+                                    Podaj email i hasło, których użyłeś przy rejestracji.
+                                </p>
+                                <div id="pg-credentials-form">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                        <div>
+                                            <label class="block text-[12px] text-[#555] mb-1.5">Email</label>
+                                            <input type="email" id="pg-client-email" class="w-full bg-[#111] border border-[#252525] rounded-lg px-3.5 py-2.5 text-[13px] text-white placeholder-[#444] focus:border-[#444] focus:outline-none transition-colors" placeholder="twoj@email.pl">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[12px] text-[#555] mb-1.5">Hasło</label>
+                                            <input type="password" id="pg-client-password" class="w-full bg-[#111] border border-[#252525] rounded-lg px-3.5 py-2.5 text-[13px] text-white placeholder-[#444] focus:border-[#444] focus:outline-none transition-colors" placeholder="••••••••">
+                                        </div>
+                                    </div>
+                                    <button id="pg-confirm-btn" onclick="confirmPaymentGatewayCredentials()" class="bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
+                                        Zapisz dane
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Waiting for configuration -->
+                    <div id="pg-step-config" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 hidden">
+                        <div class="flex items-start gap-4">
+                            <div id="pg-config-icon-container" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <span class="text-[13px] font-medium text-white">3</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h3 class="text-[15px] font-medium text-white">Konfiguracja bramki</h3>
+                                    <div id="pg-config-status" class="flex items-center gap-2">
+                                        <i id="pg-config-status-icon" class="ph ph-clock text-[#555]"></i>
+                                        <span id="pg-config-status-text" class="text-[12px] text-[#555]">Oczekuje</span>
+                                    </div>
+                                </div>
+                                <p id="pg-config-desc" class="text-[13px] text-[#666]">
+                                    Teraz po mojej stronie jest skonfigurowanie bramki płatności. Poinformuję Cię, gdy będzie gotowa.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
         </div><!-- /flex -->
     </div>
@@ -3875,22 +4001,24 @@
         }
 
         function renderEtap3Dashboard() {
-            // Etap 3 ma 3 elementy: Konto, Strona, Dokumenty
+            // Etap 3 ma 4 elementy: Konto, Strona, Dokumenty, Bramka płatności
             const accountDone = takeDropData?.account_created;
             const landingDone = takeDropData?.landing_page_connected;
             const dokumentyDone = takeDropData?.legal_documents_ready;
+            const bramkaDone = takeDropData?.payment_gateway_ready;
 
-            const completedSteps = [accountDone, landingDone, dokumentyDone].filter(Boolean).length;
-            const progressPercent = Math.round((completedSteps / 3) * 100);
+            const completedSteps = [accountDone, landingDone, dokumentyDone, bramkaDone].filter(Boolean).length;
+            const progressPercent = Math.round((completedSteps / 4) * 100);
 
             document.getElementById('dash-etap3-progress-label').textContent =
-                completedSteps === 3 ? 'Etap 3 ukończony' : 'Postęp realizacji: Etap 3';
+                completedSteps === 4 ? 'Etap 3 ukończony' : 'Postęp realizacji: Etap 3';
             document.getElementById('dash-etap3-progress-percent').textContent = progressPercent;
             document.getElementById('dash-etap3-progress-bar').style.width = progressPercent + '%';
 
             renderEtap3AccountBox();
             renderEtap3LandingBox();
             renderEtap3DokumentyBox();
+            renderEtap3BramkaPlatnosciBox();
         }
 
         function renderEtap3AccountBox() {
@@ -4048,6 +4176,82 @@
                             <span class="inline-flex items-center gap-2 bg-amber-500 text-black text-sm font-medium px-4 py-2 rounded-lg">
                                 <i class="ph ph-arrow-right"></i>
                                 Wypełnij teraz
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEtap3BramkaPlatnosciBox() {
+            const box = document.getElementById('dash-etap3-box-bramka-platnosci');
+            const content = document.getElementById('dash-etap3-bramka-platnosci-content');
+            if (!box || !content) return;
+
+            const hasCredentials = takeDropData?.payment_gateway_credentials?.email;
+            const isReady = takeDropData?.payment_gateway_ready;
+            const hasNip = takeDropData?.legal_data?.nip && takeDropData.legal_data.nip.trim().length > 0;
+            const gatewayName = hasNip ? 'PayU' : 'Stripe';
+
+            if (isReady) {
+                // Stan 3: Bramka skonfigurowana
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Bramka płatności</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Skonfigurowana
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">${gatewayName} gotowe!</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Bramka płatności skonfigurowana</p>
+                        </div>
+                    </div>
+                `;
+            } else if (hasCredentials) {
+                // Stan 2: Dane podane, czekamy na admina
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Bramka płatności</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Konfiguracja
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-clock text-5xl text-amber-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Konfiguruję ${gatewayName}</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Twoje dane zostały zapisane. Konfiguruję bramkę.</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Stan 1: Klient musi założyć konto i podać dane
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col bg-gradient-to-br from-violet-500/10 to-transparent">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Bramka płatności</span>
+                            <span class="flex items-center gap-1.5 text-violet-500 text-xs font-medium">
+                                <span class="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></span>
+                                Wymaga akcji
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 rounded-full bg-violet-500/20 flex items-center justify-center mb-4 animate-pulse">
+                                <i class="ph ph-credit-card text-3xl text-violet-400"></i>
+                            </div>
+                            <h3 class="text-white text-lg font-medium">Załóż konto ${gatewayName}</h3>
+                            <p class="text-[#888] text-sm text-center mt-2 mb-4">Aby przyjmować płatności online</p>
+                            <span class="inline-flex items-center gap-2 bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg">
+                                <i class="ph ph-arrow-right"></i>
+                                Rozpocznij
                             </span>
                         </div>
                     </div>
@@ -4585,6 +4789,13 @@
             document.getElementById('nav-check-dokumenty-prawne')?.classList.toggle('hidden', !hasDokumenty);
             document.getElementById('nav-check-dokumenty-prawne-mobile')?.classList.toggle('hidden', !hasDokumenty);
 
+            // Update sidebar checkmark for Bramka płatności (green when payment_gateway_ready)
+            const hasBramka = takeDropData && takeDropData.payment_gateway_ready;
+            document.getElementById('dash-nav-check-bramka-platnosci')?.classList.toggle('hidden', !hasBramka);
+            document.getElementById('dash-nav-check-bramka-platnosci-mobile')?.classList.toggle('hidden', !hasBramka);
+            document.getElementById('nav-check-bramka-platnosci')?.classList.toggle('hidden', !hasBramka);
+            document.getElementById('nav-check-bramka-platnosci-mobile')?.classList.toggle('hidden', !hasBramka);
+
             // Update landing tab status
             updateLandingTabStatus();
             updateDokumentyTabStatus();
@@ -5105,6 +5316,9 @@
                     break;
                 case 'dokumenty-prawne':
                     // Status loaded with TakeDrop data
+                    break;
+                case 'bramka-platnosci':
+                    loadPaymentGatewayTab();
                     break;
             }
         }
@@ -6600,7 +6814,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data, domain')
+                    .select('is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_credentials, payment_gateway_configured_at')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
@@ -6909,6 +7123,138 @@
             }
         }
         window.confirmTakeDropAccount = confirmTakeDropAccount;
+
+        // =============================================
+        // PAYMENT GATEWAY (CLIENT SIDE)
+        // =============================================
+        const PAYU_REGISTER_URL = 'https://registration.payu.com/boarding/#/form?partnerId=d09890lm&origin=pl&lang=pl';
+        const STRIPE_REGISTER_URL = 'https://dashboard.stripe.com/register';
+
+        function loadPaymentGatewayTab() {
+            // Check if client has NIP (from legal_data)
+            const hasNip = takeDropData?.legal_data?.nip && takeDropData.legal_data.nip.trim().length > 0;
+            const gatewayType = hasNip ? 'payu' : 'stripe';
+
+            // Update gateway info section
+            const gatewayIcon = document.getElementById('pg-gateway-icon');
+            const gatewayTitle = document.getElementById('pg-gateway-title');
+            const gatewayDesc = document.getElementById('pg-gateway-desc');
+
+            if (hasNip) {
+                if (gatewayIcon) gatewayIcon.innerHTML = '<span class="text-xl font-bold text-[#00d084]">P</span>';
+                if (gatewayTitle) gatewayTitle.textContent = 'PayU';
+                if (gatewayDesc) gatewayDesc.textContent = 'Bramka płatności dla firm z numerem NIP. Niskie prowizje i szybkie wypłaty.';
+
+                // Update registration link
+                const registerLink = document.getElementById('pg-register-link');
+                if (registerLink) registerLink.href = PAYU_REGISTER_URL;
+                const registerBtnText = document.getElementById('pg-register-btn-text');
+                if (registerBtnText) registerBtnText.textContent = 'Załóż konto PayU';
+
+                const registerDesc = document.getElementById('pg-register-desc');
+                if (registerDesc) registerDesc.textContent = 'Przejdź do PayU i zarejestruj konto firmowe. Potrzebujesz numeru NIP i danych firmy.';
+            } else {
+                if (gatewayIcon) gatewayIcon.innerHTML = '<span class="text-xl font-bold text-[#635bff]">S</span>';
+                if (gatewayTitle) gatewayTitle.textContent = 'Stripe';
+                if (gatewayDesc) gatewayDesc.textContent = 'Bramka płatności dla osób prywatnych. Łatwa rejestracja bez firmy.';
+
+                // Update registration link
+                const registerLink = document.getElementById('pg-register-link');
+                if (registerLink) registerLink.href = STRIPE_REGISTER_URL;
+                const registerBtnText = document.getElementById('pg-register-btn-text');
+                if (registerBtnText) registerBtnText.textContent = 'Załóż konto Stripe';
+
+                const registerDesc = document.getElementById('pg-register-desc');
+                if (registerDesc) registerDesc.textContent = 'Przejdź do Stripe i zarejestruj konto. Potrzebujesz tylko podstawowych danych osobowych.';
+            }
+
+            // Check if credentials already provided
+            const hasCredentials = takeDropData?.payment_gateway_credentials?.email;
+
+            if (hasCredentials) {
+                // Show success state
+                document.getElementById('pg-credentials-success-state')?.classList.remove('hidden');
+                document.getElementById('pg-credentials-form')?.classList.add('hidden');
+                document.getElementById('pg-step-config')?.classList.remove('hidden');
+
+                // Show configured status
+                if (takeDropData?.payment_gateway_ready) {
+                    const statusIcon = document.getElementById('pg-config-status-icon');
+                    const statusText = document.getElementById('pg-config-status-text');
+                    const configDesc = document.getElementById('pg-config-desc');
+
+                    if (statusIcon) {
+                        statusIcon.classList.remove('ph-clock', 'text-[#555]');
+                        statusIcon.classList.add('ph-fill', 'ph-check-circle', 'text-emerald-500');
+                    }
+                    if (statusText) {
+                        statusText.textContent = 'Skonfigurowana';
+                        statusText.classList.remove('text-[#555]');
+                        statusText.classList.add('text-emerald-500');
+                    }
+                    if (configDesc) {
+                        configDesc.textContent = 'Bramka płatności jest skonfigurowana i gotowa do przyjmowania płatności.';
+                    }
+                }
+            } else {
+                // Show form
+                document.getElementById('pg-credentials-success-state')?.classList.add('hidden');
+                document.getElementById('pg-credentials-form')?.classList.remove('hidden');
+                document.getElementById('pg-step-config')?.classList.add('hidden');
+            }
+        }
+
+        async function confirmPaymentGatewayCredentials() {
+            const emailInput = document.getElementById('pg-client-email');
+            const passwordInput = document.getElementById('pg-client-password');
+
+            const email = emailInput?.value?.trim();
+            const password = passwordInput?.value;
+
+            if (!email) {
+                showToast('Podaj email do bramki płatności', 'error');
+                emailInput?.focus();
+                return;
+            }
+
+            if (!password) {
+                showToast('Podaj hasło do bramki płatności', 'error');
+                passwordInput?.focus();
+                return;
+            }
+
+            const hasNip = takeDropData?.legal_data?.nip && takeDropData.legal_data.nip.trim().length > 0;
+            const gatewayType = hasNip ? 'payu' : 'stripe';
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .update({
+                        payment_gateway_type: gatewayType,
+                        payment_gateway_credentials: { email, password }
+                    })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                // Update local data
+                takeDropData = {
+                    ...takeDropData,
+                    payment_gateway_type: gatewayType,
+                    payment_gateway_credentials: { email, password }
+                };
+
+                // Update UI
+                loadPaymentGatewayTab();
+                updateDashSidebar();
+                showToast('Dane zapisane!', 'success');
+
+            } catch (err) {
+                console.error('Error saving payment gateway credentials:', err);
+                showToast(err.message || 'Błąd zapisu danych', 'error');
+            }
+        }
+        window.confirmPaymentGatewayCredentials = confirmPaymentGatewayCredentials;
 
         // Mobile menu toggle
         function toggleMobileMenu() {
