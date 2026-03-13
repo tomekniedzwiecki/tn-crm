@@ -792,11 +792,10 @@
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
                     const nextStep = getNextStep(w);
-                    const isVideoActive = w.video_stage?.is_active || false;
                     const isVideoSkipped = w.video_stage?.skipped || false;
-                    const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
                     const videoLinks = w.video_stage?.video_links || [];
-                    const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
+                    // Video ukończone = pominięte LUB ma 4+ nagrań (nie polegamy na stage_accepted)
+                    const isVideoComplete = isVideoSkipped || videoLinks.length >= 4;
                     const isEtap1Complete = !!w.sales_page_shared_at;
 
                     statusStageMatch = Array.from(selectedStatusStages).every(stage => {
@@ -925,11 +924,10 @@
 
             for (const w of activeWorkflows) {
                 // Etap 3 stages - use EXACT same conditions as filter
-                const isVideoActive = w.video_stage?.is_active || false;
                 const isVideoSkipped = w.video_stage?.skipped || false;
-                const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
                 const videoLinks = w.video_stage?.video_links || [];
-                const isVideoComplete = isVideoSkipped || isVideoAccepted || videoLinks.length >= 4;
+                // Video ukończone = pominięte LUB ma 4+ nagrań (nie polegamy na stage_accepted)
+                const isVideoComplete = isVideoSkipped || videoLinks.length >= 4;
                 const isEtap1Complete = !!w.sales_page_shared_at;
 
                 // "takedrop" = Etap 1 ukończony + video ukończone + (TD nie aktywny LUB aktywny ale konto nie założone)
@@ -1095,9 +1093,7 @@
         function getNextStep(w) {
             const isStarter = w.offer_name?.toLowerCase().includes('starter');
             const rc = reportCounts[w.workflow_id];
-            const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
 
             // Etap 1: Umowa → Produkt → Raport → Branding → Strona
             if (!isStarter && w.contract_status !== 'signed') return 'contract';
@@ -1107,8 +1103,9 @@
             if (!w.sales_page_shared_at) return 'salespage';
 
             // Etap 2: Scenariusz → Profile → Nagrania
-            // Pomiń jeśli video pominięte lub zatwierdzone (z aktywnym is_active)
-            if (!isVideoSkipped && !isVideoAccepted) {
+            // Pomiń tylko jeśli video pominięte (skipped=true)
+            // Sprawdzamy rzeczywisty postęp, nie polegamy na stage_accepted
+            if (!isVideoSkipped) {
                 const scenarios = w.video_stage?.video_scenarios;
                 const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
                 if (!hasScenarios) return 'scenario';
