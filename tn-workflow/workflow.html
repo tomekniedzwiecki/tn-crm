@@ -3452,11 +3452,10 @@
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_takedrop').select('is_active').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
-                // Store takedrop status for auto-collapse (only is_active for nav checks)
-                // Note: Full takeDropData is loaded by loadTakeDrop() - don't overwrite it here
+                // Store takedrop status for nav checks
                 const takedropNavStatus = takedropRes.data;
 
                 const hasPublished = (repsRes.data || []).some(r => r.visible_to_client);
@@ -3521,6 +3520,12 @@
                         navCheckNagraniaCount.className = '';
                     }
                 }
+
+                // Etap 3 nav checks
+                toggle('nav-check-takedrop', !!takedropNavStatus?.account_created);
+                toggle('nav-check-landing', !!takedropNavStatus?.landing_page_connected);
+                toggle('nav-check-legal', !!takedropNavStatus?.legal_documents_ready);
+                toggle('nav-check-payment-gateway', !!takedropNavStatus?.payment_gateway_ready);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
