@@ -48,10 +48,10 @@ const CostsService = {
     // EMPLOYEE SALES
     // ============================================
     async getEmployeeSales(supabaseClient, teamMemberId, startDate, endDate) {
-        // Get paid orders in date range
+        // Get paid orders in date range (include commission_salesperson_id)
         const { data: orders } = await supabaseClient
             .from('orders')
-            .select('id, amount, lead_id, paid_at, customer_email')
+            .select('id, amount, lead_id, paid_at, customer_email, commission_salesperson_id')
             .eq('status', 'paid')
             .gte('paid_at', startDate)
             .lt('paid_at', endDate);
@@ -60,8 +60,9 @@ const CostsService = {
             return { totalSales: 0, orderCount: 0 };
         }
 
-        // Get leads to find assigned_to
-        const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
+        // Get leads to find assigned_to (only for orders without commission_salesperson_id)
+        const ordersNeedingLead = orders.filter(o => !o.commission_salesperson_id);
+        const leadIds = [...new Set(ordersNeedingLead.filter(o => o.lead_id).map(o => o.lead_id))];
         let leadsMap = {};
 
         if (leadIds.length > 0) {
@@ -72,8 +73,8 @@ const CostsService = {
             if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l.assigned_to]));
         }
 
-        // For orders without lead_id, try to find lead by email
-        const ordersWithoutLead = orders.filter(o => !o.lead_id && o.customer_email);
+        // For orders without lead_id and without commission_salesperson_id, try to find lead by email
+        const ordersWithoutLead = ordersNeedingLead.filter(o => !o.lead_id && o.customer_email);
         if (ordersWithoutLead.length > 0) {
             const emails = [...new Set(ordersWithoutLead.map(o => o.customer_email))];
             const { data: leadsByEmail } = await supabaseClient
@@ -93,11 +94,15 @@ const CostsService = {
         }
 
         // Sum orders for this team member (convert to NETTO)
+        // Priority: commission_salesperson_id > leads.assigned_to
         let totalSales = 0;
         let orderCount = 0;
 
         for (const order of orders) {
-            const assignedTo = order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id];
+            // Najpierw sprawdz reczne przypisanie, potem lead
+            const assignedTo = order.commission_salesperson_id
+                || (order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id]);
+
             if (assignedTo === teamMemberId) {
                 totalSales += this.toNetto(parseFloat(order.amount));
                 orderCount++;

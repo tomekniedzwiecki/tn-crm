@@ -305,6 +305,24 @@
             return teamMembers.find(m => m.id === id);
         }
 
+        async function changeSalesperson(orderId, salespersonId) {
+            const value = salespersonId || null;
+
+            const { error } = await supabaseClient
+                .from('orders')
+                .update({ commission_salesperson_id: value })
+                .eq('id', orderId);
+
+            if (error) {
+                console.error('Błąd zapisu:', error);
+                alert('Błąd zapisu');
+                return;
+            }
+
+            // Przeładuj dane
+            loadData();
+        }
+
         async function loadData() {
             const container = document.getElementById('salespeople-container');
             container.innerHTML = '<div class="text-center py-16 text-zinc-600"><i class="ph ph-circle-notch animate-spin text-2xl"></i></div>';
@@ -314,7 +332,7 @@
 
             const { data: orders } = await supabaseClient
                 .from('orders')
-                .select('id, amount, lead_id, paid_at, customer_email, customer_name, description, order_number')
+                .select('id, amount, lead_id, paid_at, customer_email, customer_name, description, order_number, commission_salesperson_id')
                 .eq('status', 'paid')
                 .gte('paid_at', start.toISOString())
                 .lte('paid_at', end.toISOString())
@@ -351,7 +369,10 @@
                 let assignedTo = null;
                 let leadData = null;
 
-                if (order.lead_id && leadsMap[order.lead_id]) {
+                // Priorytet: commission_salesperson_id > leads.assigned_to
+                if (order.commission_salesperson_id) {
+                    assignedTo = order.commission_salesperson_id;
+                } else if (order.lead_id && leadsMap[order.lead_id]) {
                     assignedTo = leadsMap[order.lead_id].assigned_to;
                     leadData = leadsMap[order.lead_id];
                 }
@@ -363,10 +384,14 @@
                         .eq('email', order.customer_email)
                         .maybeSingle();
                     if (lead) {
-                        assignedTo = lead.assigned_to;
+                        assignedTo = order.commission_salesperson_id || lead.assigned_to;
                         leadData = lead;
                     }
                 }
+
+                // Zapisz oryginalnego handlowca z leada (do wyswietlenia w UI)
+                order._leadAssignedTo = leadData?.assigned_to || (order.lead_id && leadsMap[order.lead_id]?.assigned_to);
+                order._effectiveSalesperson = assignedTo;
 
                 const key = assignedTo || 'unassigned';
                 if (!byPerson[key]) {
@@ -505,6 +530,18 @@
                                                     <div class="text-white text-sm">${clientName}</div>
                                                     <div class="text-zinc-600 text-xs truncate max-w-[250px]">${o.description || o.order_number || ''}</div>
                                                 </td>
+                                                ${isAdmin ? `
+                                                <td class="py-3 px-2">
+                                                    <select onchange="changeSalesperson('${o.id}', this.value)"
+                                                        class="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 focus:border-emerald-500 focus:outline-none cursor-pointer">
+                                                        <option value="" ${!o._effectiveSalesperson ? 'selected' : ''}>— brak —</option>
+                                                        ${teamMembers.filter(m => m.role === 'salesperson' || m.role === 'admin').map(m => `
+                                                            <option value="${m.id}" ${o._effectiveSalesperson === m.id ? 'selected' : ''}>${m.name}</option>
+                                                        `).join('')}
+                                                    </select>
+                                                    ${o.commission_salesperson_id ? '<i class="ph ph-pencil-simple text-amber-500/60 text-[10px] ml-1" title="Ręcznie zmieniony"></i>' : ''}
+                                                </td>
+                                                ` : ''}
                                                 <td class="px-5 py-3 text-right">
                                                     <div class="text-white font-mono text-sm">${fmt(parseFloat(o.amount))}</div>
                                                     <div class="text-zinc-600 text-[10px]">${fmtDate(o.paid_at)}</div>
