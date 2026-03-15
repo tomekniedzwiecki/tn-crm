@@ -369,12 +369,16 @@
                 let assignedTo = null;
                 let leadData = null;
 
+                // Pobierz dane leada (do linku)
+                if (order.lead_id && leadsMap[order.lead_id]) {
+                    leadData = leadsMap[order.lead_id];
+                }
+
                 // Priorytet: commission_salesperson_id > leads.assigned_to
                 if (order.commission_salesperson_id) {
                     assignedTo = order.commission_salesperson_id;
-                } else if (order.lead_id && leadsMap[order.lead_id]) {
-                    assignedTo = leadsMap[order.lead_id].assigned_to;
-                    leadData = leadsMap[order.lead_id];
+                } else if (leadData) {
+                    assignedTo = leadData.assigned_to;
                 }
 
                 if (!assignedTo && order.customer_email) {
