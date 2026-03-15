@@ -193,6 +193,11 @@
         </div>
     </div>
 
+    <!-- Salesperson Picker Popup -->
+    <div id="salesperson-picker" class="hidden fixed z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-xl py-1 min-w-[140px] animate-enter">
+        <!-- Populated dynamically -->
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -319,8 +324,60 @@
                 return;
             }
 
-            // Przeładuj dane
+            hideSalespersonPicker();
             loadData();
+        }
+
+        let currentPickerOrderId = null;
+
+        function showSalespersonPicker(orderId, btn) {
+            hideSalespersonPicker();
+            currentPickerOrderId = orderId;
+
+            const rect = btn.getBoundingClientRect();
+            const picker = document.getElementById('salesperson-picker');
+
+            // Populate with salespeople
+            const salespeople = teamMembers.filter(m => m.role === 'salesperson' || m.role === 'admin');
+            picker.innerHTML = `
+                <button onclick="selectSalesperson('')" class="w-full px-3 py-1.5 text-left text-xs text-zinc-500 hover:bg-white/5 hover:text-white transition-colors">
+                    — brak —
+                </button>
+                ${salespeople.map(m => `
+                    <button onclick="selectSalesperson('${m.id}')" class="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full" style="background:${m.color || '#52525b'}"></span>
+                        ${m.name}
+                    </button>
+                `).join('')}
+            `;
+
+            picker.style.top = (rect.bottom + 4) + 'px';
+            picker.style.left = rect.left + 'px';
+            picker.classList.remove('hidden');
+
+            // Close on click outside
+            setTimeout(() => {
+                document.addEventListener('click', closeSalespersonPickerOnClickOutside);
+            }, 10);
+        }
+
+        function hideSalespersonPicker() {
+            document.getElementById('salesperson-picker').classList.add('hidden');
+            document.removeEventListener('click', closeSalespersonPickerOnClickOutside);
+            currentPickerOrderId = null;
+        }
+
+        function closeSalespersonPickerOnClickOutside(e) {
+            const picker = document.getElementById('salesperson-picker');
+            if (!picker.contains(e.target)) {
+                hideSalespersonPicker();
+            }
+        }
+
+        function selectSalesperson(memberId) {
+            if (currentPickerOrderId) {
+                changeSalesperson(currentPickerOrderId, memberId);
+            }
         }
 
         async function loadData() {
@@ -536,14 +593,14 @@
                                                 </td>
                                                 ${isAdmin ? `
                                                 <td class="py-3 px-2">
-                                                    <select onchange="changeSalesperson('${o.id}', this.value)"
-                                                        class="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 focus:border-emerald-500 focus:outline-none cursor-pointer">
-                                                        <option value="" ${!o._effectiveSalesperson ? 'selected' : ''}>— brak —</option>
-                                                        ${teamMembers.filter(m => m.role === 'salesperson' || m.role === 'admin').map(m => `
-                                                            <option value="${m.id}" ${o._effectiveSalesperson === m.id ? 'selected' : ''}>${m.name}</option>
-                                                        `).join('')}
-                                                    </select>
-                                                    ${o.commission_salesperson_id ? '<i class="ph ph-pencil-simple text-amber-500/60 text-[10px] ml-1" title="Ręcznie zmieniony"></i>' : ''}
+                                                    <div class="salesperson-cell flex items-center gap-1.5 group">
+                                                        <span class="text-zinc-400 text-xs">${getMember(o._effectiveSalesperson)?.name || '—'}</span>
+                                                        ${o.commission_salesperson_id ? '<i class="ph ph-pencil-simple text-amber-500/60 text-[10px]" title="Ręcznie zmieniony"></i>' : ''}
+                                                        <button onclick="showSalespersonPicker('${o.id}', this)"
+                                                            class="opacity-0 group-hover:opacity-100 w-5 h-5 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-white transition-all text-[10px]">
+                                                            <i class="ph ph-swap"></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                                 ` : ''}
                                                 <td class="px-5 py-3 text-right">
