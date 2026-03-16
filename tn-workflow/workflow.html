@@ -478,7 +478,12 @@
                                 </div>
                                 <div class="px-5 py-4">
                                     <div class="text-[#666] text-[10px] font-medium uppercase tracking-wider mb-1">Telefon</div>
-                                    <div id="customer-phone" class="text-white text-[13px] font-mono">-</div>
+                                    <div class="flex items-center gap-2">
+                                        <span id="customer-phone" class="text-white text-[13px] font-mono">-</span>
+                                        <button id="whatsapp-btn" onclick="openWhatsApp()" class="hidden w-6 h-6 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-md flex items-center justify-center transition-colors" title="Napisz na WhatsApp">
+                                            <i class="ph ph-whatsapp-logo text-[14px]"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="px-5 py-4 group cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="openChangeOfferModal()">
                                     <div class="flex items-center justify-between">
@@ -3261,6 +3266,22 @@
             }
         }
 
+        function openWhatsApp() {
+            if (!workflow || !workflow.customer_phone) return;
+            // Clean phone number - remove spaces, dashes, parentheses
+            let phone = workflow.customer_phone.replace(/[\s\-\(\)]/g, '');
+            // Add Polish country code if not present
+            if (phone.startsWith('0')) {
+                phone = '48' + phone.substring(1);
+            } else if (!phone.startsWith('+') && !phone.startsWith('48')) {
+                phone = '48' + phone;
+            }
+            // Remove + if present
+            phone = phone.replace('+', '');
+            window.open(`https://wa.me/${phone}`, '_blank');
+        }
+        window.openWhatsApp = openWhatsApp;
+
         async function copyWorkflowId() {
             if (!workflow) return;
             try {
@@ -3748,6 +3769,11 @@
             }
             document.getElementById('customer-company').textContent = workflow.customer_company || '-';
             document.getElementById('customer-phone').textContent = workflow.customer_phone || '-';
+            // Show WhatsApp button if phone exists
+            const whatsappBtn = document.getElementById('whatsapp-btn');
+            if (whatsappBtn) {
+                whatsappBtn.classList.toggle('hidden', !workflow.customer_phone);
+            }
             document.getElementById('workflow-id-display').textContent = workflow.id || '-';
             document.getElementById('offer-name').textContent = workflow.offer_name;
             document.getElementById('amount').textContent = formatPrice(workflow.amount);
