@@ -2721,8 +2721,8 @@
                 return;
             }
 
-            // Show only 3 most recent
-            const recentComments = comments.slice(0, 3);
+            // Show only 3 most recent (comments are sorted oldest first, so take last 3 and reverse)
+            const recentComments = comments.slice(-3).reverse();
 
             container.innerHTML = recentComments.map(c => {
                 const isClient = c.author_type === 'client';
@@ -9540,16 +9540,20 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             const countEl = document.getElementById('comments-count');
             const clientCountEl = document.getElementById('client-comments-count');
 
-            countEl.textContent = comments.length;
-            clientCountEl.textContent = comments.filter(c => c.author_type === 'client').length;
+            // Update counts if elements exist
+            if (countEl) countEl.textContent = comments.length;
+            if (clientCountEl) clientCountEl.textContent = comments.filter(c => c.author_type === 'client').length;
+
+            // Skip rendering if container doesn't exist (e.g. no full comments panel)
+            if (!container) return;
 
             if (comments.length === 0) {
                 container.innerHTML = '';
-                empty.classList.remove('hidden');
+                if (empty) empty.classList.remove('hidden');
                 return;
             }
 
-            empty.classList.add('hidden');
+            if (empty) empty.classList.add('hidden');
             container.innerHTML = comments.map(c => {
                 const isTeam = c.author_type === 'team';
                 return `
