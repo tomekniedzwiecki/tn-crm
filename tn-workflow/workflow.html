@@ -477,7 +477,12 @@
                                 </div>
                                 <div>
                                     <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider block mb-1.5">Kwota</span>
-                                    <span id="amount" class="text-white text-[14px] font-mono font-semibold">-</span>
+                                    <div class="flex items-center gap-2">
+                                        <span id="amount" class="text-white text-[14px] font-mono font-semibold">-</span>
+                                        <button onclick="openEditAmountModal()" class="text-amber-400 hover:text-amber-300 text-xs" title="Edytuj kwotę">
+                                            <i class="ph ph-pencil-simple"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -4160,6 +4165,37 @@
             } catch (err) {
                 console.error('Change offer error:', err);
                 showToast('Błąd zmiany pakietu', 'error');
+            }
+        }
+
+        // Edit Amount Modal
+        function openEditAmountModal() {
+            document.getElementById('edit-amount-input').value = workflow.amount || 0;
+            document.getElementById('edit-amount-modal').classList.remove('hidden');
+        }
+
+        function closeEditAmountModal() {
+            document.getElementById('edit-amount-modal').classList.add('hidden');
+        }
+
+        async function saveAmount() {
+            const newAmount = parseFloat(document.getElementById('edit-amount-input').value) || 0;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ amount: newAmount, updated_at: new Date().toISOString() })
+                    .eq('id', workflow.id);
+
+                if (error) throw error;
+
+                workflow.amount = newAmount;
+                document.getElementById('amount').textContent = formatPrice(newAmount);
+                showToast('Kwota zapisana', 'success');
+                closeEditAmountModal();
+            } catch (err) {
+                console.error('Save amount error:', err);
+                showToast('Błąd zapisu kwoty', 'error');
             }
         }
 
@@ -9769,6 +9805,30 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 </button>
                 <button onclick="confirmChangeOffer()" class="flex-1 h-9 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 text-[13px] font-medium rounded-lg transition-colors">
                     Zmień pakiet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Amount Modal -->
+    <div id="edit-amount-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+        <div class="bg-[#0d0d0d] border border-emerald-500/30 rounded-2xl p-6 max-w-sm w-full">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-emerald-500/10 rounded-full flex items-center justify-center">
+                    <i class="ph ph-currency-circle-dollar text-emerald-400 text-xl"></i>
+                </div>
+                <h3 class="text-white font-semibold text-[15px]">Edytuj kwotę</h3>
+            </div>
+            <div class="mb-5">
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Kwota (PLN)</label>
+                <input type="number" id="edit-amount-input" step="0.01" min="0" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px] font-mono" placeholder="0.00">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeEditAmountModal()" class="flex-1 h-9 bg-transparent border border-[#262626] text-[#888] hover:text-white text-[13px] rounded-lg transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="saveAmount()" class="flex-1 h-9 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-[13px] font-medium rounded-lg transition-colors">
+                    Zapisz
                 </button>
             </div>
         </div>
