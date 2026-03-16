@@ -2348,6 +2348,39 @@
         </div>
     </div>
 
+    <!-- Email Preview Modal -->
+    <div id="email-preview-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <i class="ph ph-envelope text-blue-400"></i>
+                    </div>
+                    <div>
+                        <div id="email-preview-subject" class="font-medium text-white">Temat wiadomości</div>
+                        <div id="email-preview-date" class="text-[11px] text-zinc-500"></div>
+                    </div>
+                </div>
+                <button onclick="closeEmailPreview()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="px-5 py-3 border-b border-white/5 bg-zinc-900/50 flex items-center gap-4 text-[12px]">
+                <div class="flex items-center gap-2">
+                    <span class="text-zinc-500">Do:</span>
+                    <span id="email-preview-to" class="text-zinc-300"></span>
+                </div>
+                <div id="email-preview-status" class="flex items-center gap-1.5 ml-auto"></div>
+            </div>
+            <div id="email-preview-content" class="p-5 overflow-y-auto flex-1 bg-white">
+                <!-- Email HTML content will be rendered here -->
+            </div>
+            <div class="px-5 py-4 border-t border-white/5 bg-zinc-900/50">
+                <button onclick="closeEmailPreview()" class="w-full text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Image Lightbox -->
     <div id="image-lightbox" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 z-[60] cursor-pointer" onclick="closeImageLightbox()">
         <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
@@ -2716,7 +2749,7 @@
             // Show only 4 most recent
             const recentEmails = workflowEmails.slice(0, 4);
 
-            container.innerHTML = recentEmails.map(email => {
+            container.innerHTML = recentEmails.map((email, index) => {
                 const timeAgo = formatTimeAgo(new Date(email.created_at));
                 const statusConfig = {
                     'sent': { icon: 'ph-paper-plane-tilt', bg: 'bg-[#111]', color: 'text-[#555]' },
@@ -2727,7 +2760,7 @@
                 const status = statusConfig[email.status] || statusConfig['sent'];
 
                 return `
-                    <div class="flex items-center gap-3 py-3 border-b border-[#1a1a1a] last:border-0 group">
+                    <div class="flex items-center gap-3 py-3 border-b border-[#1a1a1a] last:border-0 group cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded-lg transition-colors" onclick="openEmailPreview(${index})">
                         <div class="w-8 h-8 rounded-lg ${status.bg} border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 group-hover:border-[#262626] transition-colors">
                             <i class="ph ${status.icon} text-[13px] ${status.color}"></i>
                         </div>
@@ -2735,10 +2768,55 @@
                             <div class="text-[#ccc] text-[13px] truncate">${escapeHtml(email.subject || 'Bez tematu')}</div>
                             <div class="text-[#555] text-[11px] mt-1">${timeAgo}</div>
                         </div>
+                        <i class="ph ph-arrow-square-out text-[12px] text-[#333] group-hover:text-[#555] transition-colors"></i>
                     </div>
                 `;
             }).join('');
         }
+
+        function openEmailPreview(index) {
+            const email = workflowEmails[index];
+            if (!email) return;
+
+            const date = new Date(email.created_at);
+            const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            const statusConfig = {
+                'sent': { icon: 'ph-paper-plane-tilt', color: 'text-zinc-400', label: 'Wysłano' },
+                'delivered': { icon: 'ph-check-circle', color: 'text-emerald-400', label: 'Dostarczono' },
+                'opened': { icon: 'ph-envelope-open', color: 'text-blue-400', label: 'Otwarto' },
+                'clicked': { icon: 'ph-cursor-click', color: 'text-violet-400', label: 'Kliknięto' },
+                'bounced': { icon: 'ph-x-circle', color: 'text-red-400', label: 'Odrzucono' },
+                'failed': { icon: 'ph-warning', color: 'text-red-400', label: 'Błąd' }
+            };
+            const status = statusConfig[email.status] || statusConfig['sent'];
+
+            document.getElementById('email-preview-subject').textContent = email.subject || 'Bez tematu';
+            document.getElementById('email-preview-date').textContent = dateStr;
+            document.getElementById('email-preview-to').textContent = email.to_email;
+            document.getElementById('email-preview-status').innerHTML = `
+                <i class="ph ${status.icon} ${status.color}"></i>
+                <span class="${status.color}">${status.label}</span>
+            `;
+
+            // Render HTML content
+            const contentEl = document.getElementById('email-preview-content');
+            if (email.html_body) {
+                contentEl.innerHTML = email.html_body;
+            } else if (email.body) {
+                contentEl.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${escapeHtml(email.body)}</pre>`;
+            } else {
+                contentEl.innerHTML = '<div style="color: #999; text-align: center; padding: 40px;">Brak treści wiadomości</div>';
+            }
+
+            document.getElementById('email-preview-modal').classList.remove('hidden');
+        }
+        window.openEmailPreview = openEmailPreview;
+
+        function closeEmailPreview() {
+            document.getElementById('email-preview-modal').classList.add('hidden');
+        }
+        window.closeEmailPreview = closeEmailPreview;
 
         function renderRecentComments() {
             const container = document.getElementById('recent-comments');
