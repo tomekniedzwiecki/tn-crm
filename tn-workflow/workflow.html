@@ -4085,32 +4085,42 @@
         let allOffers = [];
 
         async function openChangeOfferModal() {
-            // Load offers if not loaded
-            if (allOffers.length === 0) {
-                const { data } = await supabaseClient
-                    .from('offers')
-                    .select('id, name, price')
-                    .eq('is_active', true)
-                    .order('price');
-                allOffers = data || [];
-            }
-
-            // Set current offer type
-            document.getElementById('change-offer-type-select').value = workflow.offer_type || 'full';
-
-            // Populate offer select (excluding current offer)
-            const select = document.getElementById('change-offer-select');
-            select.innerHTML = '<option value="">-- Bez zmiany oferty --</option>';
-            for (const offer of allOffers) {
-                if (offer.id !== workflow.offer_id) {
-                    const option = document.createElement('option');
-                    option.value = offer.id;
-                    option.textContent = `${offer.name} (${formatMoney(offer.price)})`;
-                    select.appendChild(option);
+            try {
+                // Load offers if not loaded
+                if (allOffers.length === 0) {
+                    const { data } = await supabaseClient
+                        .from('offers')
+                        .select('id, name, price')
+                        .eq('is_active', true)
+                        .order('price');
+                    allOffers = data || [];
                 }
-            }
 
-            document.getElementById('change-offer-modal').classList.remove('hidden');
+                // Set current offer type
+                const typeSelect = document.getElementById('change-offer-type-select');
+                if (typeSelect) {
+                    typeSelect.value = workflow.offer_type || 'full';
+                }
+
+                // Populate offer select (excluding current offer)
+                const select = document.getElementById('change-offer-select');
+                if (select) {
+                    select.innerHTML = '<option value="">-- Bez zmiany oferty --</option>';
+                    for (const offer of allOffers) {
+                        if (offer.id !== workflow.offer_id) {
+                            const option = document.createElement('option');
+                            option.value = offer.id;
+                            option.textContent = `${offer.name} (${formatMoney(offer.price)})`;
+                            select.appendChild(option);
+                        }
+                    }
+                }
+
+                document.getElementById('change-offer-modal').classList.remove('hidden');
+            } catch (err) {
+                console.error('Error opening change offer modal:', err);
+                showToast('Błąd otwierania modala', 'error');
+            }
         }
 
         function closeChangeOfferModal() {
