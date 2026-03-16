@@ -4090,27 +4090,22 @@
                 if (allOffers.length === 0) {
                     const { data } = await supabaseClient
                         .from('offers')
-                        .select('id, name, price')
+                        .select('id, name, price, offer_type')
                         .eq('is_active', true)
                         .order('price');
                     allOffers = data || [];
                 }
 
-                // Set current offer type
-                const typeSelect = document.getElementById('change-offer-type-select');
-                if (typeSelect) {
-                    typeSelect.value = workflow.offer_type || 'full';
-                }
-
                 // Populate offer select (excluding current offer)
                 const select = document.getElementById('change-offer-select');
                 if (select) {
-                    select.innerHTML = '<option value="">-- Bez zmiany oferty --</option>';
+                    select.innerHTML = '';
                     for (const offer of allOffers) {
                         if (offer.id !== workflow.offer_id) {
                             const option = document.createElement('option');
                             option.value = offer.id;
-                            option.textContent = `${offer.name} (${formatPrice(offer.price)})`;
+                            const typeLabel = offer.offer_type === 'starter' ? 'Starter' : 'Pełen pakiet';
+                            option.textContent = `${offer.name} (${formatPrice(offer.price)}) - ${typeLabel}`;
                             select.appendChild(option);
                         }
                     }
@@ -4128,43 +4123,35 @@
         }
 
         async function confirmChangeOffer() {
-            const newOfferType = document.getElementById('change-offer-type-select').value;
             const newOfferId = document.getElementById('change-offer-select').value;
+            if (!newOfferId) {
+                showToast('Wybierz ofertę', 'error');
+                return;
+            }
 
             try {
-                const updates = {
-                    offer_type: newOfferType,
-                    updated_at: new Date().toISOString()
-                };
+                const { data: offer } = await supabaseClient
+                    .from('offers')
+                    .select('*')
+                    .eq('id', newOfferId)
+                    .single();
 
-                // If changing to a new offer
-                if (newOfferId) {
-                    const { data: offer } = await supabaseClient
-                        .from('offers')
-                        .select('*')
-                        .eq('id', newOfferId)
-                        .single();
-
-                    if (!offer) throw new Error('Offer not found');
-
-                    updates.offer_id = newOfferId;
-                    updates.offer_name = offer.name;
-                    updates.milestones_snapshot = offer.milestones;
-                }
+                if (!offer) throw new Error('Offer not found');
 
                 const { error } = await supabaseClient
                     .from('workflows')
-                    .update(updates)
+                    .update({
+                        offer_id: newOfferId,
+                        offer_name: offer.name,
+                        offer_type: offer.offer_type || 'full',
+                        milestones_snapshot: offer.milestones,
+                        updated_at: new Date().toISOString()
+                    })
                     .eq('id', workflow.id);
 
                 if (error) throw error;
 
-                const typeLabel = newOfferType === 'full' ? 'Pełen pakiet' : 'Starter';
-                if (newOfferId) {
-                    showToast(`Zmieniono na: ${updates.offer_name} (${typeLabel})`, 'success');
-                } else {
-                    showToast(`Typ zmieniony na: ${typeLabel}`, 'success');
-                }
+                showToast(`Zmieniono na: ${offer.name}`, 'success');
                 closeChangeOfferModal();
 
                 // Refresh workflow data
@@ -9770,18 +9757,10 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 </div>
                 <h3 class="text-white font-semibold text-[15px]">Zmień pakiet</h3>
             </div>
-            <p class="text-[#888] text-[13px] mb-4">Zmień typ oferty lub wybierz nowy pakiet. Kamienie milowe zostaną zaktualizowane zgodnie z nową ofertą.</p>
-            <div class="mb-4">
-                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Typ oferty</label>
-                <select id="change-offer-type-select" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
-                    <option value="full">Pełen pakiet</option>
-                    <option value="starter">Starter</option>
-                </select>
-            </div>
+            <p class="text-[#888] text-[13px] mb-4">Wybierz nowy pakiet. Kamienie milowe i typ oferty zostaną zaktualizowane.</p>
             <div class="mb-5">
-                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Nowa oferta (opcjonalnie)</label>
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Nowa oferta</label>
                 <select id="change-offer-select" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
-                    <option value="">-- Bez zmiany oferty --</option>
                 </select>
             </div>
             <div class="flex gap-3">
