@@ -479,13 +479,6 @@
                                     <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider block mb-1.5">Kwota</span>
                                     <span id="amount" class="text-white text-[14px] font-mono font-semibold">-</span>
                                 </div>
-                                <div>
-                                    <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider block mb-1.5">Typ</span>
-                                    <select id="offer-type-select" onchange="changeOfferType(this.value)" class="bg-[#111] border border-[#333] rounded px-2 py-1 text-[13px] text-white cursor-pointer hover:border-[#555] transition-colors">
-                                        <option value="full" class="bg-[#111]">Pelen pakiet</option>
-                                        <option value="starter" class="bg-[#111]">Starter</option>
-                                    </select>
-                                </div>
                             </div>
 
                             <!-- Actions Section -->
@@ -3688,7 +3681,6 @@
             document.getElementById('customer-phone').textContent = workflow.customer_phone || '-';
             document.getElementById('workflow-id-display').textContent = workflow.id || '-';
             document.getElementById('offer-name').textContent = workflow.offer_name;
-            document.getElementById('offer-type-select').value = workflow.offer_type || 'full';
             document.getElementById('amount').textContent = formatPrice(workflow.amount);
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);
             document.getElementById('access-count').textContent = workflow.accessCount;
@@ -4103,9 +4095,12 @@
                 allOffers = data || [];
             }
 
-            // Populate select (excluding current offer)
+            // Set current offer type
+            document.getElementById('change-offer-type-select').value = workflow.offer_type || 'full';
+
+            // Populate offer select (excluding current offer)
             const select = document.getElementById('change-offer-select');
-            select.innerHTML = '';
+            select.innerHTML = '<option value="">-- Bez zmiany oferty --</option>';
             for (const offer of allOffers) {
                 if (offer.id !== workflow.offer_id) {
                     const option = document.createElement('option');
@@ -4123,37 +4118,43 @@
         }
 
         async function confirmChangeOffer() {
-            const select = document.getElementById('change-offer-select');
-            const newOfferId = select.value;
-            if (!newOfferId) return;
-
-            const newOffer = allOffers.find(o => o.id === newOfferId);
-            if (!newOffer) return;
+            const newOfferType = document.getElementById('change-offer-type-select').value;
+            const newOfferId = document.getElementById('change-offer-select').value;
 
             try {
-                // Get full offer with milestones
-                const { data: offer } = await supabaseClient
-                    .from('offers')
-                    .select('*')
-                    .eq('id', newOfferId)
-                    .single();
+                const updates = {
+                    offer_type: newOfferType,
+                    updated_at: new Date().toISOString()
+                };
 
-                if (!offer) throw new Error('Offer not found');
+                // If changing to a new offer
+                if (newOfferId) {
+                    const { data: offer } = await supabaseClient
+                        .from('offers')
+                        .select('*')
+                        .eq('id', newOfferId)
+                        .single();
 
-                // Update workflow
+                    if (!offer) throw new Error('Offer not found');
+
+                    updates.offer_id = newOfferId;
+                    updates.offer_name = offer.name;
+                    updates.milestones_snapshot = offer.milestones;
+                }
+
                 const { error } = await supabaseClient
                     .from('workflows')
-                    .update({
-                        offer_id: newOfferId,
-                        offer_name: offer.name,
-                        milestones_snapshot: offer.milestones,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update(updates)
                     .eq('id', workflow.id);
 
                 if (error) throw error;
 
-                showToast('Pakiet zmieniony na: ' + offer.name, 'success');
+                const typeLabel = newOfferType === 'full' ? 'Pełen pakiet' : 'Starter';
+                if (newOfferId) {
+                    showToast(`Zmieniono na: ${updates.offer_name} (${typeLabel})`, 'success');
+                } else {
+                    showToast(`Typ zmieniony na: ${typeLabel}`, 'success');
+                }
                 closeChangeOfferModal();
 
                 // Refresh workflow data
@@ -4162,32 +4163,6 @@
             } catch (err) {
                 console.error('Change offer error:', err);
                 showToast('Błąd zmiany pakietu', 'error');
-            }
-        }
-
-        // Change offer type (full/starter)
-        async function changeOfferType(newType) {
-            if (!workflow || workflow.offer_type === newType) return;
-
-            try {
-                const { error } = await supabaseClient
-                    .from('workflows')
-                    .update({ offer_type: newType, updated_at: new Date().toISOString() })
-                    .eq('id', workflow.id);
-
-                if (error) throw error;
-
-                workflow.offer_type = newType;
-                showToast(`Typ zmieniony na: ${newType === 'full' ? 'Pełen pakiet' : 'Starter'}`, 'success');
-
-                // Refresh checklist and pending actions
-                renderStatusChecklist();
-                checkPendingActions();
-            } catch (err) {
-                console.error('Change offer type error:', err);
-                showToast('Błąd zmiany typu oferty', 'error');
-                // Revert select
-                document.getElementById('offer-type-select').value = workflow.offer_type || 'full';
             }
         }
 
@@ -9785,10 +9760,18 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 </div>
                 <h3 class="text-white font-semibold text-[15px]">Zmień pakiet</h3>
             </div>
-            <p class="text-[#888] text-[13px] mb-4">Wybierz nowy pakiet dla tego projektu. Kamienie milowe zostaną zaktualizowane zgodnie z nową ofertą.</p>
+            <p class="text-[#888] text-[13px] mb-4">Zmień typ oferty lub wybierz nowy pakiet. Kamienie milowe zostaną zaktualizowane zgodnie z nową ofertą.</p>
+            <div class="mb-4">
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Typ oferty</label>
+                <select id="change-offer-type-select" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
+                    <option value="full">Pełen pakiet</option>
+                    <option value="starter">Starter</option>
+                </select>
+            </div>
             <div class="mb-5">
-                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Nowa oferta</label>
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Nowa oferta (opcjonalnie)</label>
                 <select id="change-offer-select" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
+                    <option value="">-- Bez zmiany oferty --</option>
                 </select>
             </div>
             <div class="flex gap-3">
