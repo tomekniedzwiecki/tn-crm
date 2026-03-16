@@ -479,6 +479,13 @@
                                     <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider block mb-1.5">Kwota</span>
                                     <span id="amount" class="text-white text-[14px] font-mono font-semibold">-</span>
                                 </div>
+                                <div>
+                                    <span class="text-[#555] text-[11px] font-medium uppercase tracking-wider block mb-1.5">Typ</span>
+                                    <select id="offer-type-select" onchange="changeOfferType(this.value)" class="bg-[#111] border border-[#333] rounded px-2 py-1 text-[13px] text-white cursor-pointer hover:border-[#555] transition-colors">
+                                        <option value="full" class="bg-[#111]">Pelen pakiet</option>
+                                        <option value="starter" class="bg-[#111]">Starter</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <!-- Actions Section -->
@@ -2786,7 +2793,7 @@
             const container = document.getElementById('status-checklist');
             if (!container || !workflow) return;
 
-            const isStarter = workflow.offer_name?.toLowerCase().includes('starter');
+            const isStarter = workflow.offer_type === 'starter';
 
             // Check if reports are published
             const { data: reports } = await supabaseClient
@@ -2881,7 +2888,7 @@
             if (!workflow) return;
 
             const actions = [];
-            const isStarter = workflow.offer_name?.toLowerCase().includes('starter');
+            const isStarter = workflow.offer_type === 'starter';
 
             // Unsigned contract (not for Starter)
             if (!isStarter && workflow.contract_status !== 'signed') {
@@ -3681,6 +3688,7 @@
             document.getElementById('customer-phone').textContent = workflow.customer_phone || '-';
             document.getElementById('workflow-id-display').textContent = workflow.id || '-';
             document.getElementById('offer-name').textContent = workflow.offer_name;
+            document.getElementById('offer-type-select').value = workflow.offer_type || 'full';
             document.getElementById('amount').textContent = formatPrice(workflow.amount);
             document.getElementById('started-at').textContent = formatDate(workflow.started_at);
             document.getElementById('access-count').textContent = workflow.accessCount;
@@ -4154,6 +4162,32 @@
             } catch (err) {
                 console.error('Change offer error:', err);
                 showToast('Błąd zmiany pakietu', 'error');
+            }
+        }
+
+        // Change offer type (full/starter)
+        async function changeOfferType(newType) {
+            if (!workflow || workflow.offer_type === newType) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ offer_type: newType, updated_at: new Date().toISOString() })
+                    .eq('id', workflow.id);
+
+                if (error) throw error;
+
+                workflow.offer_type = newType;
+                showToast(`Typ zmieniony na: ${newType === 'full' ? 'Pełen pakiet' : 'Starter'}`, 'success');
+
+                // Refresh checklist and pending actions
+                renderStatusChecklist();
+                checkPendingActions();
+            } catch (err) {
+                console.error('Change offer type error:', err);
+                showToast('Błąd zmiany typu oferty', 'error');
+                // Revert select
+                document.getElementById('offer-type-select').value = workflow.offer_type || 'full';
             }
         }
 
@@ -4669,7 +4703,7 @@
             const items = [];
 
             // Contract (skip for Starter)
-            const isStarter = workflow.offer_name?.toLowerCase().includes('starter');
+            const isStarter = workflow.offer_type === 'starter';
             if (!isStarter) {
                 const done = workflow.contract_status === 'signed';
                 items.push({
