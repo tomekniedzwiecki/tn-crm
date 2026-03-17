@@ -6496,20 +6496,26 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         }
 
         function getLegalFormData() {
-            // Get domain from landing page URL or takedrop data
+            // Get domain from multiple sources
             let domain = '';
-            const urlField = document.getElementById('landing-page-url')?.value.trim();
-            if (urlField) {
+
+            // Helper to extract domain from URL
+            function extractDomain(urlStr) {
+                if (!urlStr) return '';
                 try {
-                    const url = new URL(urlField);
-                    domain = url.hostname;
+                    const url = new URL(urlStr.startsWith('http') ? urlStr : 'https://' + urlStr);
+                    return url.hostname;
                 } catch {
-                    domain = urlField.replace(/^https?:\/\//, '');
+                    return urlStr.replace(/^https?:\/\//, '').split('/')[0];
                 }
             }
-            if (!domain) {
-                domain = takeDropData?.domain || '';
-            }
+
+            // Try sources in order of priority
+            domain = extractDomain(document.getElementById('landing-page-url')?.value.trim()) ||
+                     extractDomain(takeDropData?.landing_url) ||
+                     extractDomain(takeDropData?.domain) ||
+                     extractDomain(workflow?.sales_page_url) ||
+                     '';
             const brandName = document.getElementById('legal-brand-name')?.value.trim() || brandingData?.brand_info || domain.replace(/\.(pl|com|eu|net|org)$/i, '');
             const companyAddress = document.getElementById('legal-company-address')?.value.trim() || '';
             const returnAddress = document.getElementById('legal-return-address')?.value.trim() || companyAddress;
