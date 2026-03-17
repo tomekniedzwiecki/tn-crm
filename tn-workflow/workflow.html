@@ -6965,10 +6965,27 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
 
         async function copyLandingCheckoutPrompt() {
             const checkoutLink = document.getElementById('landing-checkout-link')?.textContent;
-            const domain = document.getElementById('landing-domain')?.value.trim();
+
+            // Get domain from URL field or suggested domain
+            let domain = '';
+            const urlField = document.getElementById('landing-page-url')?.value.trim();
+            if (urlField) {
+                // Extract domain from URL (e.g. https://colorjet.pl -> colorjet.pl)
+                try {
+                    const url = new URL(urlField);
+                    domain = url.hostname;
+                } catch {
+                    domain = urlField;
+                }
+            }
+            if (!domain) {
+                // Fallback to suggested domain
+                domain = document.getElementById('landing-suggested-domain')?.textContent.trim();
+                if (domain === '—') domain = '';
+            }
 
             if (!checkoutLink || !domain) {
-                showToast('Podaj domenę i ID produktu', 'error');
+                showToast('Podaj URL strony i ID produktu', 'error');
                 return;
             }
 
