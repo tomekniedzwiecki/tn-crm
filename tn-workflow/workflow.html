@@ -1716,11 +1716,8 @@
                                 <button onclick="switchLegalDoc('prywatnosc')" id="legal-tab-prywatnosc" class="legal-doc-tab px-4 py-2 text-[13px] rounded-lg bg-[#111] text-[#888] hover:bg-[#1a1a1a] whitespace-nowrap">
                                     Polityka prywatności
                                 </button>
-                                <button onclick="switchLegalDoc('cookies')" id="legal-tab-cookies" class="legal-doc-tab px-4 py-2 text-[13px] rounded-lg bg-[#111] text-[#888] hover:bg-[#1a1a1a] whitespace-nowrap">
-                                    Polityka cookies
-                                </button>
-                                <button onclick="switchLegalDoc('odstapienie')" id="legal-tab-odstapienie" class="legal-doc-tab px-4 py-2 text-[13px] rounded-lg bg-[#111] text-[#888] hover:bg-[#1a1a1a] whitespace-nowrap">
-                                    Formularz odstąpienia
+                                <button onclick="switchLegalDoc('dostawa')" id="legal-tab-dostawa" class="legal-doc-tab px-4 py-2 text-[13px] rounded-lg bg-[#111] text-[#888] hover:bg-[#1a1a1a] whitespace-nowrap">
+                                    Warunki dostawy
                                 </button>
                             </div>
 
@@ -6440,23 +6437,20 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         const legalTemplates = {
             regulamin: null,
             prywatnosc: null,
-            cookies: null,
-            odstapienie: null
+            dostawa: null
         };
 
         async function loadLegalTemplates() {
             const baseUrl = '../templates/dokumenty-prawne/';
             const cacheBust = '?v=' + Date.now();
             try {
-                const [reg, pryw, cook, dostawa] = await Promise.all([
+                const [reg, pryw, dostawa] = await Promise.all([
                     fetch(baseUrl + 'regulamin.html' + cacheBust).then(r => r.text()),
                     fetch(baseUrl + 'polityka-prywatnosci.html' + cacheBust).then(r => r.text()),
-                    fetch(baseUrl + 'polityka-cookies.html' + cacheBust).then(r => r.text()),
                     fetch(baseUrl + 'warunki-dostawy.html' + cacheBust).then(r => r.text())
                 ]);
                 legalTemplates.regulamin = reg;
                 legalTemplates.prywatnosc = pryw;
-                legalTemplates.cookies = cook;
                 legalTemplates.dostawa = dostawa;
             } catch (err) {
                 console.error('Error loading legal templates:', err);
@@ -6472,7 +6466,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const fileNames = {
                 regulamin: 'regulamin.html',
                 prywatnosc: 'polityka-prywatnosci.html',
-                cookies: 'polityka-cookies.html',
                 dostawa: 'warunki-dostawy.html'
             };
 
@@ -6587,8 +6580,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             legalDocumentsCache = {
                 regulamin: fillTemplate(legalTemplates.regulamin, data),
                 prywatnosc: fillTemplate(legalTemplates.prywatnosc, data),
-                cookies: fillTemplate(legalTemplates.cookies, data),
-                odstapienie: fillTemplate(legalTemplates.odstapienie, data)
+                dostawa: fillTemplate(legalTemplates.dostawa, data)
             };
 
             // Show preview
@@ -6653,8 +6645,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const fileNames = {
                 regulamin: 'regulamin.html',
                 prywatnosc: 'polityka-prywatnosci.html',
-                cookies: 'polityka-cookies.html',
-                odstapienie: 'formularz-odstapienia.html'
+                dostawa: 'warunki-dostawy.html'
             };
 
             const blob = new Blob([html], { type: 'text/html' });
@@ -6673,7 +6664,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         async function saveLegalDocuments() {
             // Check if documents are generated
             if (!legalDocumentsCache.regulamin || !legalDocumentsCache.prywatnosc ||
-                !legalDocumentsCache.cookies || !legalDocumentsCache.odstapienie) {
+                !legalDocumentsCache.dostawa) {
                 showToast('Najpierw wygeneruj dokumenty', 'error');
                 return;
             }
@@ -6687,8 +6678,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 const fileNames = {
                     regulamin: 'regulamin.html',
                     prywatnosc: 'polityka-prywatnosci.html',
-                    cookies: 'polityka-cookies.html',
-                    odstapienie: 'formularz-odstapienia.html'
+                    dostawa: 'warunki-dostawy.html'
                 };
 
                 // Upload all documents
