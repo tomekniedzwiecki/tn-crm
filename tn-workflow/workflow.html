@@ -6965,20 +6965,27 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
 
         async function copyLandingCheckoutPrompt() {
             const checkoutLink = document.getElementById('landing-checkout-link')?.textContent;
-            if (!checkoutLink) {
-                showToast('Najpierw wpisz ID produktu', 'warning');
+            const domain = document.getElementById('landing-domain')?.value.trim();
+
+            if (!checkoutLink || !domain) {
+                showToast('Podaj domenę i ID produktu', 'error');
                 return;
             }
 
-            const prompt = `Podmień wszystkie linki CTA (przyciski "Kup teraz", "Zamów", itp.) na ten adres:
+            // Get folder name from domain (remove extension like .pl, .com)
+            const folderName = domain.replace(/\.(pl|com|eu|net|org|shop|store|co)$/i, '').toLowerCase();
 
+            const prompt = `Zmień wszystkie linki CTA (przyciski "Zamów", "Kup teraz", href="#offer" itp.) w pliku:
+landing-pages/${folderName}/index.html
+
+Na ten link do kasy TakeDrop:
 ${checkoutLink}
 
-Nie zmieniaj nic innego w kodzie HTML.`;
+Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki prowadzące do zakupu/zamówienia.`;
 
             try {
                 await navigator.clipboard.writeText(prompt);
-                showToast('Prompt skopiowany');
+                showToast('Prompt skopiowany do schowka', 'success');
             } catch (err) {
                 const textArea = document.createElement('textarea');
                 textArea.value = prompt;
@@ -6988,7 +6995,7 @@ Nie zmieniaj nic innego w kodzie HTML.`;
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showToast('Prompt skopiowany');
+                showToast('Prompt skopiowany do schowka', 'success');
             }
         }
 
