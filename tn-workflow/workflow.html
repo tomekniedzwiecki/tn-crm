@@ -1516,14 +1516,14 @@
                                 <div class="ml-8">
                                     <div class="flex items-center gap-3">
                                         <input type="text" id="landing-product-id" class="w-56 bg-transparent border border-[#333] rounded px-2.5 py-1.5 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none font-mono" placeholder="103035094-321191805" onchange="saveLandingProductId()">
-                                        <button onclick="copyAIPrompt('landing')" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        <button onclick="copyLandingCheckoutPrompt()" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
                                             <i class="ph ph-copy"></i> Kopiuj prompt
                                         </button>
                                     </div>
                                     <p class="text-[#555] text-[10px] mt-1">Format: ID-WARIANT</p>
-                                </div>
-                                <div id="landing-checkout-preview" class="hidden ml-8 mt-2">
-                                    <code id="landing-checkout-link" class="text-[11px] text-[#50e3c2] font-mono"></code>
+                                    <div id="landing-checkout-preview" class="mt-2">
+                                        <code id="landing-checkout-link" class="text-[11px] text-[#50e3c2] font-mono"></code>
+                                    </div>
                                 </div>
                             </div>
 
@@ -6905,6 +6905,35 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             }
         }
 
+        async function copyLandingCheckoutPrompt() {
+            const checkoutLink = document.getElementById('landing-checkout-link')?.textContent;
+            if (!checkoutLink) {
+                showToast('Najpierw wpisz ID produktu', 'warning');
+                return;
+            }
+
+            const prompt = `Podmień wszystkie linki CTA (przyciski "Kup teraz", "Zamów", itp.) na ten adres:
+
+${checkoutLink}
+
+Nie zmieniaj nic innego w kodzie HTML.`;
+
+            try {
+                await navigator.clipboard.writeText(prompt);
+                showToast('Prompt skopiowany');
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = prompt;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Prompt skopiowany');
+            }
+        }
+
         async function saveLandingPageUrl() {
             const url = document.getElementById('landing-page-url')?.value.trim();
             const status = document.querySelector('input[name="landing-status"]:checked')?.value || 'draft';
@@ -6940,15 +6969,15 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             const productId = document.getElementById('landing-product-id')?.value.trim();
             const domainEl = document.getElementById('landing-suggested-domain');
             const domain = domainEl?.textContent || 'domena.pl';
-            const preview = document.getElementById('landing-checkout-preview');
             const link = document.getElementById('landing-checkout-link');
 
-            if (productId && preview && link) {
-                const checkoutUrl = `https://${domain}/checkout?products=${productId}`;
-                link.textContent = checkoutUrl;
-                preview.classList.remove('hidden');
-            } else if (preview) {
-                preview.classList.add('hidden');
+            if (link) {
+                if (productId) {
+                    const checkoutUrl = `https://${domain}/checkout?products=${productId}`;
+                    link.textContent = checkoutUrl;
+                } else {
+                    link.textContent = '—';
+                }
             }
         }
 
@@ -7054,6 +7083,7 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         window.toggleLandingActive = toggleLandingActive;
         window.saveLandingDnsStatus = saveLandingDnsStatus;
         window.saveLandingProductId = saveLandingProductId;
+        window.copyLandingCheckoutPrompt = copyLandingCheckoutPrompt;
         window.saveLandingPageUrl = saveLandingPageUrl;
         window.loadLandingPageSteps = loadLandingPageSteps;
 
