@@ -6496,7 +6496,20 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         }
 
         function getLegalFormData() {
-            const domain = document.getElementById('takedrop-domain')?.value.trim() || '';
+            // Get domain from landing page URL or takedrop data
+            let domain = '';
+            const urlField = document.getElementById('landing-page-url')?.value.trim();
+            if (urlField) {
+                try {
+                    const url = new URL(urlField);
+                    domain = url.hostname;
+                } catch {
+                    domain = urlField.replace(/^https?:\/\//, '');
+                }
+            }
+            if (!domain) {
+                domain = takeDropData?.domain || '';
+            }
             const brandName = document.getElementById('legal-brand-name')?.value.trim() || brandingData?.brand_info || domain.replace(/\.(pl|com|eu|net|org)$/i, '');
             const companyAddress = document.getElementById('legal-company-address')?.value.trim() || '';
             const returnAddress = document.getElementById('legal-return-address')?.value.trim() || companyAddress;
