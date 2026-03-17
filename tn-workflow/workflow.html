@@ -1628,8 +1628,12 @@
                             </div>
                         </div>
 
-                        <!-- Generate button -->
-                        <div class="pt-6 border-t border-[#222]">
+                        <!-- Save form data + Generate buttons -->
+                        <div class="pt-6 border-t border-[#222] space-y-3">
+                            <button onclick="saveLegalFormData()" id="save-legal-form-btn" class="w-full bg-zinc-700 hover:bg-zinc-600 text-white text-[14px] font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i class="ph ph-floppy-disk"></i>
+                                Zapisz dane formularza
+                            </button>
                             <button onclick="generateLegalDocuments()" class="w-full bg-violet-600 hover:bg-violet-500 text-white text-[14px] font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
                                 <i class="ph ph-magic-wand"></i>
                                 Generuj dokumenty
@@ -5939,6 +5943,50 @@
             }
         }
 
+        async function saveLegalFormData() {
+            const btn = document.getElementById('save-legal-form-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Zapisuję...';
+            btn.disabled = true;
+
+            try {
+                const legalData = {
+                    brand_name: document.getElementById('legal-brand-name')?.value.trim() || '',
+                    company_name: document.getElementById('legal-company-name')?.value.trim() || '',
+                    nip: document.getElementById('legal-nip')?.value.trim() || '',
+                    regon: document.getElementById('legal-regon')?.value.trim() || '',
+                    company_address: document.getElementById('legal-company-address')?.value.trim() || '',
+                    email: document.getElementById('legal-email')?.value.trim() || '',
+                    phone: document.getElementById('legal-phone')?.value.trim() || '',
+                    return_address: document.getElementById('legal-return-address')?.value.trim() || ''
+                };
+
+                if (!takeDropData) {
+                    await loadTakeDrop();
+                }
+
+                if (takeDropData) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update({ legal_data: legalData })
+                        .eq('id', takeDropData.id);
+
+                    if (error) throw error;
+                    takeDropData.legal_data = legalData;
+                    showToast('Dane formularza zapisane', 'success');
+                } else {
+                    showToast('Brak rekordu TakeDrop', 'error');
+                }
+            } catch (err) {
+                console.error('Error saving legal form data:', err);
+                showToast('Błąd zapisu: ' + err.message, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+        window.saveLegalFormData = saveLegalFormData;
+
         function renderLegalClientData() {
             const clientStatus = document.getElementById('legal-client-status');
             const navCheck = document.getElementById('nav-check-legal');
@@ -5959,6 +6007,7 @@
                 const addressInput = document.getElementById('legal-company-address');
                 const emailInput = document.getElementById('legal-email');
                 const phoneInput = document.getElementById('legal-phone');
+                const returnAddressInput = document.getElementById('legal-return-address');
 
                 if (brandInput) brandInput.value = data.brand_name || '';
                 if (companyInput) companyInput.value = data.company_name || '';
@@ -5967,6 +6016,7 @@
                 if (addressInput) addressInput.value = data.company_address || '';
                 if (emailInput) emailInput.value = data.email || '';
                 if (phoneInput) phoneInput.value = data.phone || '';
+                if (returnAddressInput) returnAddressInput.value = data.return_address || '';
             } else {
                 if (clientStatus) clientStatus.classList.add('hidden');
             }
