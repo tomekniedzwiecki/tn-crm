@@ -1454,6 +1454,18 @@
 
                     <!-- TAB: Landing Page (Etap 3) -->
                     <div id="tab-landing" class="workflow-panel hidden">
+                        <!-- Toggle widoczności -->
+                        <div class="flex items-center justify-between py-4 border-b border-[#222] mb-4">
+                            <div>
+                                <div class="text-[13px] text-white">Widoczność dla klienta</div>
+                                <div class="text-[12px] text-[#666] mt-0.5">Włącz, aby klient widział zakładkę Landing Page</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="landing-active" class="sr-only peer" onchange="toggleLandingActive()">
+                                <div class="w-[42px] h-[24px] bg-[#333] rounded-full peer peer-checked:bg-[#0070f3] after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px]"></div>
+                            </label>
+                        </div>
+
                         <div class="space-y-4">
                             <!-- 1. Domena -->
                             <div class="flex items-center justify-between py-3 border-b border-[#222]">
@@ -6825,6 +6837,35 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             }
         }
 
+        async function toggleLandingActive() {
+            const isActive = document.getElementById('landing-active')?.checked || false;
+            if (!workflow?.id) return;
+
+            const updateData = {
+                workflow_id: workflow.id,
+                landing_active: isActive
+            };
+            if (isActive && !takeDropData?.landing_activated_at) {
+                updateData.landing_activated_at = new Date().toISOString();
+            }
+
+            const { error } = await supabaseClient
+                .from('workflow_takedrop')
+                .upsert(updateData, { onConflict: 'workflow_id' });
+
+            if (!error) {
+                if (takeDropData) {
+                    takeDropData.landing_active = isActive;
+                    if (isActive && !takeDropData.landing_activated_at) {
+                        takeDropData.landing_activated_at = new Date().toISOString();
+                    }
+                }
+                showToast(isActive ? 'Landing page udostępniony klientowi' : 'Landing page ukryty', 'success');
+            } else {
+                showToast('Błąd: ' + error.message, 'error');
+            }
+        }
+
         async function saveLandingDnsStatus() {
             const done = document.getElementById('landing-dns-done')?.checked || false;
             if (!workflow?.id) return;
@@ -6925,6 +6966,12 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         }
 
         function loadLandingPageSteps() {
+            // Load landing active toggle
+            const activeCheckbox = document.getElementById('landing-active');
+            if (activeCheckbox && takeDropData) {
+                activeCheckbox.checked = takeDropData.landing_active || false;
+            }
+
             // Get brand info for domain suggestion
             const brandInfo = brandingItems.find(b => b.type === 'brand_info');
             const brandName = brandInfo?.title || workflow?.offer_name || 'marka';
@@ -7004,6 +7051,7 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         }
 
         window.toggleLandingStep = toggleLandingStep;
+        window.toggleLandingActive = toggleLandingActive;
         window.saveLandingDnsStatus = saveLandingDnsStatus;
         window.saveLandingProductId = saveLandingProductId;
         window.saveLandingPageUrl = saveLandingPageUrl;
