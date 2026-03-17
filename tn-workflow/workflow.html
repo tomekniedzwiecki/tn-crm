@@ -7935,6 +7935,29 @@ Nie zmieniaj nic innego w kodzie HTML.`;
             await loadUsedMockupPrompts();
 
             renderBranding();
+            updateSuggestedDomain();
+        }
+
+        function updateSuggestedDomain() {
+            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+            if (!brandInfo) return;
+
+            const brandName = brandInfo.title || '';
+            if (!brandName) return;
+
+            const suggestedDomain = brandName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.pl';
+
+            // Update LH.pl link
+            const lhLink = document.getElementById('landing-lh-link');
+            if (lhLink) {
+                lhLink.href = `https://www.lh.pl/domeny/wyniki?domain=${encodeURIComponent(suggestedDomain)}`;
+            }
+
+            // Update suggested domain display
+            const domainDisplay = document.getElementById('landing-suggested-domain');
+            if (domainDisplay) {
+                domainDisplay.textContent = suggestedDomain;
+            }
         }
 
         const loadedFonts = new Set();
@@ -10319,6 +10342,8 @@ Nie zmieniaj nic innego w kodzie HTML.`;
             const session = await checkAuth();
             if (session) {
                 await loadWorkflow();
+                // Load branding for suggested domain and favicon
+                await loadBranding();
                 // Load comments for badge (without rendering)
                 await loadCommentsForBadge();
                 // Set favicon from branding logo
