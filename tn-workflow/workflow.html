@@ -1454,224 +1454,106 @@
 
                     <!-- TAB: Landing Page (Etap 3) -->
                     <div id="tab-landing" class="workflow-panel hidden">
-                        <!-- Step-by-step Guide -->
-                        <div class="space-y-3">
-                            <!-- Step 1: Kup domenę -->
-                            <div class="bg-[#111] border border-[#222] rounded-lg overflow-hidden">
-                                <div class="flex items-start gap-4 p-4">
-                                    <div class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[12px] font-bold">1</div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between gap-3 mb-2">
-                                            <h4 class="text-white text-[13px] font-medium">Kup domenę w LH.pl</h4>
-                                            <a id="landing-lh-link" href="#" target="_blank" class="bg-blue-600 hover:bg-blue-500 text-white text-[11px] px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap">
-                                                <i class="ph ph-shopping-cart"></i> Kup domenę
-                                            </a>
-                                        </div>
-                                        <p class="text-[#666] text-[12px]">Domena .pl kosztuje ~50 zł/rok</p>
-                                        <div class="mt-2 p-2 bg-[#0a0a0a] rounded-md">
-                                            <div class="text-[#555] text-[11px] mb-1">Sugerowana domena:</div>
-                                            <code id="landing-suggested-domain" class="text-cyan-400 text-[12px] font-mono">loading...</code>
-                                        </div>
-                                    </div>
+                        <div class="space-y-4">
+                            <!-- 1. Domena -->
+                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">1</span>
+                                    <span class="text-[13px] text-white">Kup domenę</span>
+                                    <code id="landing-suggested-domain" class="text-[12px] text-[#666] font-mono ml-2">—</code>
                                 </div>
+                                <a id="landing-lh-link" href="#" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                    LH.pl <i class="ph ph-arrow-square-out"></i>
+                                </a>
                             </div>
 
-                            <!-- Step 2: Ustaw DNS -->
-                            <div class="bg-[#111] border border-[#222] rounded-lg overflow-hidden">
-                                <button onclick="toggleLandingStep(2)" class="w-full flex items-start gap-4 p-4 text-left hover:bg-[#1a1a1a] transition-colors">
-                                    <div class="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[12px] font-bold">2</div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <h4 class="text-white text-[13px] font-medium">Ustaw DNS na TN</h4>
-                                            <i id="landing-step2-chevron" class="ph ph-caret-down text-[#555] transition-transform"></i>
-                                        </div>
-                                        <p class="text-[#666] text-[12px] mt-1">Skonfiguruj rekordy DNS w panelu LH.pl</p>
-                                    </div>
-                                </button>
-                                <div id="landing-step2-content" class="hidden border-t border-[#222] p-4 bg-[#0a0a0a]">
-                                    <div class="space-y-3">
-                                        <p class="text-[#888] text-[12px]">W panelu LH.pl: <span class="text-white">Domeny → Twoja domena → DNS</span></p>
-                                        <div class="bg-[#111] rounded-md p-3">
-                                            <p class="text-[#555] text-[10px] font-mono uppercase tracking-wider mb-2">Rekord A:</p>
-                                            <div class="grid grid-cols-3 gap-2 text-[12px]">
-                                                <div><span class="text-[#555]">Nazwa:</span> <code class="text-cyan-400">@</code></div>
-                                                <div><span class="text-[#555]">Typ:</span> <code class="text-cyan-400">A</code></div>
-                                                <div><span class="text-[#555]">Wartość:</span> <code class="text-cyan-400">37.128.190.76</code></div>
-                                            </div>
-                                        </div>
-                                        <div class="bg-[#111] rounded-md p-3">
-                                            <p class="text-[#555] text-[10px] font-mono uppercase tracking-wider mb-2">Rekord CNAME:</p>
-                                            <div class="grid grid-cols-3 gap-2 text-[12px]">
-                                                <div><span class="text-[#555]">Nazwa:</span> <code class="text-cyan-400">www</code></div>
-                                                <div><span class="text-[#555]">Typ:</span> <code class="text-cyan-400">CNAME</code></div>
-                                                <div><span class="text-[#555]">Wartość:</span> <code id="landing-cname-value" class="text-cyan-400">domena.pl</code></div>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-2 text-amber-400/80 text-[11px]">
-                                            <i class="ph ph-clock"></i>
-                                            <span>Propagacja DNS: do 24h (zwykle 5-30 min)</span>
-                                        </div>
-                                    </div>
+                            <!-- 2. DNS -->
+                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">2</span>
+                                    <span class="text-[13px] text-white">Ustaw DNS</span>
                                 </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="landing-dns-done" class="sr-only peer" onchange="saveLandingDnsStatus()">
+                                    <div class="w-9 h-5 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#666] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white"></div>
+                                </label>
                             </div>
 
-                            <!-- Step 3: Dodaj produkt -->
-                            <div class="bg-[#111] border border-[#222] rounded-lg overflow-hidden">
-                                <button onclick="toggleLandingStep(3)" class="w-full flex items-start gap-4 p-4 text-left hover:bg-[#1a1a1a] transition-colors">
-                                    <div class="flex-shrink-0 w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-[12px] font-bold">3</div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <h4 class="text-white text-[13px] font-medium">Dodaj produkt w TakeDrop</h4>
-                                            <i id="landing-step3-chevron" class="ph ph-caret-down text-[#555] transition-transform"></i>
-                                        </div>
-                                        <p class="text-[#666] text-[12px] mt-1">Stwórz produkt i skopiuj ID</p>
-                                    </div>
-                                </button>
-                                <div id="landing-step3-content" class="hidden border-t border-[#222] p-4 bg-[#0a0a0a]">
-                                    <ol class="text-[#888] text-[12px] space-y-1.5 list-decimal list-inside">
-                                        <li>Zaloguj się do <a href="https://admin.takedrop.pl" target="_blank" class="text-cyan-400 hover:underline">admin.takedrop.pl</a></li>
-                                        <li>Przejdź do <span class="text-white">Produkty → Dodaj produkt</span></li>
-                                        <li>Wypełnij dane (nazwa, cena, zdjęcia)</li>
-                                        <li>Status: <span class="text-emerald-400">Opublikowany</span></li>
-                                        <li>Skopiuj <span class="text-white">ID produktu</span> z URL</li>
-                                    </ol>
-                                    <a href="https://admin.takedrop.pl/products" target="_blank" class="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-500 text-white text-[11px] px-3 py-1.5 rounded-md mt-3 transition-colors">
-                                        <i class="ph ph-arrow-square-out"></i> Panel TakeDrop
+                            <!-- 3. Produkt TD -->
+                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">3</span>
+                                    <span class="text-[13px] text-white">Dodaj produkt</span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <a id="landing-aliexpress-link" href="#" target="_blank" class="hidden text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        AliExpress <i class="ph ph-arrow-square-out"></i>
+                                    </a>
+                                    <a id="landing-takedrop-login" href="#" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        TakeDrop <i class="ph ph-arrow-square-out"></i>
                                     </a>
                                 </div>
                             </div>
 
-                            <!-- Step 4: Generuj prompt -->
-                            <div class="bg-[#111] border border-[#222] rounded-lg overflow-hidden">
-                                <button onclick="toggleLandingStep(4)" class="w-full flex items-start gap-4 p-4 text-left hover:bg-[#1a1a1a] transition-colors">
-                                    <div class="flex-shrink-0 w-7 h-7 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[12px] font-bold">4</div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <h4 class="text-white text-[13px] font-medium">Wygeneruj landing page</h4>
-                                            <i id="landing-step4-chevron" class="ph ph-caret-down text-[#555] transition-transform"></i>
-                                        </div>
-                                        <p class="text-[#666] text-[12px] mt-1">Skopiuj prompt i wygeneruj HTML w Claude</p>
-                                    </div>
-                                </button>
-                                <div id="landing-step4-content" class="hidden border-t border-[#222] p-4 bg-[#0a0a0a]">
-                                    <div class="space-y-3">
-                                        <div class="bg-[#111] rounded-md p-3">
-                                            <label class="block text-[#555] text-[10px] font-mono uppercase tracking-wider mb-2">ID produktu TakeDrop</label>
-                                            <div class="flex gap-2">
-                                                <input type="text" id="landing-product-id" class="flex-1 bg-transparent border border-[#333] rounded-md px-3 py-2 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none font-mono" placeholder="np. 103035094-321191805" onchange="saveLandingProductId()">
-                                            </div>
-                                            <p class="text-[#555] text-[10px] mt-1.5">Format: ID-WARIANT (np. 103035094-321191805)</p>
-                                        </div>
-                                        <div id="landing-checkout-preview" class="hidden bg-[#111] rounded-md p-3">
-                                            <div class="text-[#555] text-[10px] mb-1">Link do kasy:</div>
-                                            <code id="landing-checkout-link" class="text-[#50e3c2] text-[11px] break-all"></code>
-                                        </div>
-                                        <button onclick="copyAIPrompt('landing')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-[12px] px-4 py-2 rounded-md transition-colors flex items-center gap-2">
-                                            <i class="ph ph-robot"></i> Kopiuj prompt AI
-                                        </button>
-                                    </div>
+                            <!-- 4. ID produktu + prompt -->
+                            <div class="py-3 border-b border-[#222]">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">4</span>
+                                    <span class="text-[13px] text-white">Generuj landing</span>
+                                </div>
+                                <div class="ml-8 flex items-center gap-3">
+                                    <input type="text" id="landing-product-id" class="w-48 bg-transparent border border-[#333] rounded px-2.5 py-1.5 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none font-mono" placeholder="ID produktu" onchange="saveLandingProductId()">
+                                    <button onclick="copyAIPrompt('landing')" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        <i class="ph ph-copy"></i> Kopiuj prompt
+                                    </button>
+                                </div>
+                                <div id="landing-checkout-preview" class="hidden ml-8 mt-2">
+                                    <code id="landing-checkout-link" class="text-[11px] text-[#50e3c2] font-mono"></code>
                                 </div>
                             </div>
 
-                            <!-- Step 5: Konfiguracja TakeDrop -->
-                            <div class="bg-[#111] border border-[#222] rounded-lg overflow-hidden">
-                                <button onclick="toggleLandingStep(5)" class="w-full flex items-start gap-4 p-4 text-left hover:bg-[#1a1a1a] transition-colors">
-                                    <div class="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[12px] font-bold">5</div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <h4 class="text-white text-[13px] font-medium">Skonfiguruj TakeDrop</h4>
-                                            <i id="landing-step5-chevron" class="ph ph-caret-down text-[#555] transition-transform"></i>
-                                        </div>
-                                        <p class="text-[#666] text-[12px] mt-1">Dodaj HTML, logo i podłącz domenę</p>
-                                    </div>
-                                </button>
-                                <div id="landing-step5-content" class="hidden border-t border-[#222] p-4 bg-[#0a0a0a]">
-                                    <div class="space-y-3">
-                                        <!-- 5a: HTML -->
-                                        <div class="bg-[#111] rounded-md p-3">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="text-emerald-400 text-[10px] font-mono">5a</span>
-                                                <span class="text-white text-[12px]">Dodaj stronę HTML</span>
-                                            </div>
-                                            <ol class="text-[#888] text-[11px] space-y-1 list-decimal list-inside ml-3">
-                                                <li>Przejdź do <span class="text-white">Strony niestandardowe</span></li>
-                                                <li>Kliknij <span class="text-white">Dodaj stronę</span></li>
-                                                <li>Wklej wygenerowany HTML</li>
-                                            </ol>
-                                            <a href="https://app.takedrop.pl/shop/custom-pages" target="_blank" class="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-[10px] mt-2">
-                                                <i class="ph ph-arrow-square-out"></i> Otwórz
-                                            </a>
-                                        </div>
-
-                                        <!-- 5b: Logo -->
-                                        <div class="bg-[#111] rounded-md p-3">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="text-emerald-400 text-[10px] font-mono">5b</span>
-                                                <span class="text-white text-[12px]">Dodaj logo do kasy</span>
-                                            </div>
-                                            <ol class="text-[#888] text-[11px] space-y-1 list-decimal list-inside ml-3">
-                                                <li>Przejdź do <span class="text-white">Ustawienia → Strona</span></li>
-                                                <li>Wgraj logo (min. 200x200px)</li>
-                                            </ol>
-                                            <a href="https://app.takedrop.pl/shop/settings" target="_blank" class="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-[10px] mt-2">
-                                                <i class="ph ph-arrow-square-out"></i> Otwórz
-                                            </a>
-                                        </div>
-
-                                        <!-- 5c: Domena -->
-                                        <div class="bg-[#111] rounded-md p-3">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="text-emerald-400 text-[10px] font-mono">5c</span>
-                                                <span class="text-white text-[12px]">Podłącz domenę</span>
-                                            </div>
-                                            <ol class="text-[#888] text-[11px] space-y-1 list-decimal list-inside ml-3">
-                                                <li>Przejdź do <span class="text-white">Ustawienia → Domena</span></li>
-                                                <li>Wpisz domenę z kroku 1</li>
-                                                <li>Poczekaj na SSL (do 24h)</li>
-                                            </ol>
-                                            <a href="https://app.takedrop.pl/shop/domain" target="_blank" class="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-[10px] mt-2">
-                                                <i class="ph ph-arrow-square-out"></i> Otwórz
-                                            </a>
-                                        </div>
-                                    </div>
+                            <!-- 5. Konfiguracja TD -->
+                            <div class="py-3 border-b border-[#222]">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">5</span>
+                                    <span class="text-[13px] text-white">Konfiguruj TakeDrop</span>
+                                </div>
+                                <div class="ml-8 flex flex-wrap gap-4">
+                                    <a href="https://app.takedrop.pl/shop/theme" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        Strona HTML <i class="ph ph-arrow-square-out"></i>
+                                    </a>
+                                    <a href="https://builder.takedrop.pl/settings" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        Logo <i class="ph ph-arrow-square-out"></i>
+                                    </a>
+                                    <a href="https://app.takedrop.pl/shop/domain" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        Domena <i class="ph ph-arrow-square-out"></i>
+                                    </a>
                                 </div>
                             </div>
 
-                            <!-- Step 6: Potwierdź -->
-                            <div class="bg-[#111] border border-[#222] rounded-lg overflow-hidden">
-                                <div class="flex items-start gap-4 p-4">
-                                    <div id="landing-step6-icon" class="flex-shrink-0 w-7 h-7 rounded-full bg-[#222] text-[#555] flex items-center justify-center text-[12px] font-bold">6</div>
-                                    <div class="flex-1 min-w-0">
-                                        <h4 class="text-white text-[13px] font-medium mb-2">Potwierdź działanie strony</h4>
-                                        <p class="text-[#666] text-[12px] mb-3">Wklej URL i zaznacz status</p>
-                                        <div class="flex flex-col sm:flex-row gap-3">
-                                            <div class="flex-1">
-                                                <div class="flex gap-2">
-                                                    <input type="url" id="landing-page-url" class="flex-1 bg-transparent border border-[#333] rounded-md px-3 py-2 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none" placeholder="https://twojamarka.pl" onchange="saveLandingPageUrl()">
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <label class="flex items-center gap-1.5 cursor-pointer">
-                                                    <input type="radio" name="landing-status" value="draft" class="accent-[#555]" checked onchange="saveLandingPageUrl()">
-                                                    <span class="text-[#888] text-[12px]">Draft</span>
-                                                </label>
-                                                <label class="flex items-center gap-1.5 cursor-pointer">
-                                                    <input type="radio" name="landing-status" value="live" class="accent-emerald-500" onchange="saveLandingPageUrl()">
-                                                    <span class="text-emerald-400 text-[12px]">Live</span>
-                                                </label>
-                                            </div>
-                                        </div>
+                            <!-- 6. URL strony -->
+                            <div class="py-3">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span id="landing-step6-icon" class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">6</span>
+                                    <span class="text-[13px] text-white">URL strony</span>
+                                </div>
+                                <div class="ml-8 flex items-center gap-3">
+                                    <input type="url" id="landing-page-url" class="flex-1 max-w-xs bg-transparent border border-[#333] rounded px-2.5 py-1.5 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none font-mono" placeholder="https://marka.pl" onchange="saveLandingPageUrl()">
+                                    <div class="flex items-center gap-2">
+                                        <label class="flex items-center gap-1 cursor-pointer">
+                                            <input type="radio" name="landing-status" value="draft" class="accent-[#555] w-3 h-3" checked onchange="saveLandingPageUrl()">
+                                            <span class="text-[11px] text-[#666]">Draft</span>
+                                        </label>
+                                        <label class="flex items-center gap-1 cursor-pointer">
+                                            <input type="radio" name="landing-status" value="live" class="accent-emerald-500 w-3 h-3" onchange="saveLandingPageUrl()">
+                                            <span class="text-[11px] text-emerald-400">Live</span>
+                                        </label>
                                     </div>
+                                    <a id="landing-page-link" href="#" target="_blank" class="hidden text-[12px] text-[#666] hover:text-white transition-colors">
+                                        <i class="ph ph-arrow-square-out"></i>
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Link to open page -->
-                        <div id="landing-page-preview" class="hidden mt-4">
-                            <a id="landing-page-link" href="#" target="_blank" class="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 text-[12px] bg-[#111] border border-cyan-500/20 px-4 py-2.5 rounded-md hover:border-cyan-500/40 transition-colors">
-                                <i class="ph ph-arrow-square-out"></i>
-                                Otwórz stronę
-                            </a>
                         </div>
                     </div><!-- /tab-landing -->
 
@@ -6940,6 +6822,25 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             }
         }
 
+        async function saveLandingDnsStatus() {
+            const done = document.getElementById('landing-dns-done')?.checked || false;
+            if (!workflow?.id) return;
+
+            const { error } = await supabaseClient
+                .from('workflow_takedrop')
+                .upsert({
+                    workflow_id: workflow.id,
+                    dns_configured: done
+                }, { onConflict: 'workflow_id' });
+
+            if (!error) {
+                if (takeDropData) takeDropData.dns_configured = done;
+                showToast(done ? 'DNS ustawione' : 'DNS odznaczone', 'success');
+            } else {
+                showToast('Błąd: ' + error.message, 'error');
+            }
+        }
+
         async function saveLandingProductId() {
             const productId = document.getElementById('landing-product-id')?.value.trim();
             if (!workflow?.id) return;
@@ -7038,14 +6939,41 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 domainDisplay.textContent = suggestedDomain;
             }
 
-            // Update CNAME value
-            const cnameValue = document.getElementById('landing-cname-value');
-            if (cnameValue) {
-                cnameValue.textContent = suggestedDomain;
+            // Load AliExpress link from selected product
+            const aliLink = document.getElementById('landing-aliexpress-link');
+            if (aliLink && workflow?.selected_product_id) {
+                supabaseClient
+                    .from('workflow_products')
+                    .select('source_url')
+                    .eq('id', workflow.selected_product_id)
+                    .single()
+                    .then(({ data }) => {
+                        if (data?.source_url) {
+                            aliLink.href = data.source_url;
+                            aliLink.classList.remove('hidden');
+                        }
+                    });
+            }
+
+            // Load TakeDrop login link with credentials in query
+            const tdLogin = document.getElementById('landing-takedrop-login');
+            if (tdLogin && takeDropData) {
+                const email = takeDropData.account_email || '';
+                const password = takeDropData.account_password || '';
+                if (email || password) {
+                    tdLogin.href = `https://app.takedrop.pl/login?e=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
+                } else {
+                    tdLogin.href = 'https://app.takedrop.pl/login';
+                }
             }
 
             // Load existing data from takeDropData
             if (takeDropData) {
+                // Load DNS status
+                const dnsCheckbox = document.getElementById('landing-dns-done');
+                if (dnsCheckbox) {
+                    dnsCheckbox.checked = takeDropData.dns_configured || false;
+                }
                 const productIdInput = document.getElementById('landing-product-id');
                 if (productIdInput && takeDropData.product_id) {
                     productIdInput.value = takeDropData.product_id;
@@ -7073,6 +7001,7 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
         }
 
         window.toggleLandingStep = toggleLandingStep;
+        window.saveLandingDnsStatus = saveLandingDnsStatus;
         window.saveLandingProductId = saveLandingProductId;
         window.saveLandingPageUrl = saveLandingPageUrl;
         window.loadLandingPageSteps = loadLandingPageSteps;
