@@ -6436,12 +6436,13 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
 
         async function loadLegalTemplates() {
             const baseUrl = '../templates/dokumenty-prawne/';
+            const cacheBust = '?v=' + Date.now();
             try {
                 const [reg, pryw, cook, odst] = await Promise.all([
-                    fetch(baseUrl + 'regulamin.html').then(r => r.text()),
-                    fetch(baseUrl + 'polityka-prywatnosci.html').then(r => r.text()),
-                    fetch(baseUrl + 'polityka-cookies.html').then(r => r.text()),
-                    fetch(baseUrl + 'formularz-odstapienia.html').then(r => r.text())
+                    fetch(baseUrl + 'regulamin.html' + cacheBust).then(r => r.text()),
+                    fetch(baseUrl + 'polityka-prywatnosci.html' + cacheBust).then(r => r.text()),
+                    fetch(baseUrl + 'polityka-cookies.html' + cacheBust).then(r => r.text()),
+                    fetch(baseUrl + 'formularz-odstapienia.html' + cacheBust).then(r => r.text())
                 ]);
                 legalTemplates.regulamin = reg;
                 legalTemplates.prywatnosc = pryw;
@@ -6564,10 +6565,8 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 return;
             }
 
-            // Load templates if not loaded
-            if (!legalTemplates.regulamin) {
-                await loadLegalTemplates();
-            }
+            // Always reload templates fresh
+            await loadLegalTemplates();
 
             if (!legalTemplates.regulamin) {
                 showToast('Nie udało się załadować szablonów dokumentów', 'error');
