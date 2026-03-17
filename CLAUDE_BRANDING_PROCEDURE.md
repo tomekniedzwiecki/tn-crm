@@ -328,6 +328,49 @@ Dla każdego wariantu użyj tego samego szablonu, zmieniając tylko sekcję DELI
 
 ---
 
+#### ⚠️ KRYTYCZNE: Mockupy muszą opowiadać historię PRODUKTU
+
+**NIE RÓB generycznych "lifestyle" mockupów!** Każdy mockup musi być głęboko dopasowany do:
+
+1. **Samego produktu** — co to jest, jak działa, do czego służy
+2. **Grupy docelowej** — kto kupuje, w jakiej sytuacji życiowej
+3. **USP produktu** — co wyróżnia, jaki problem rozwiązuje
+4. **Kontekstu użycia** — gdzie i kiedy produkt jest używany
+
+**ZASADA STORYTELLINGU:**
+- Każdy mockup opowiada mini-historię związaną z produktem
+- Gadżet (koszulka, kubek, torba) jest tylko NOŚNIKIEM — ważniejszy jest KONTEKST
+- Pokaż EFEKTY użycia produktu, nie tylko sam gadżet
+
+**PRZYKŁADY DOBREGO vs ZŁEGO podejścia:**
+
+| Produkt | ❌ ZŁEGO (generyczne) | ✅ DOBRE (dopasowane) |
+|---------|----------------------|----------------------|
+| **Robot uczący rysunku** | Koszulka w studio, model pozuje | Dziecko w koszulce leży na podłodze i rysuje z robotem |
+| **Parownica do ubrań** | Kubek na białym biurku | Kubek w sypialni obok wieszaka z wyprasowaną koszulą |
+| **Robot do mycia okien** | Czapka flat lay na drewnie | Osoba w czapce patrzy przez czyste okno na panoramę |
+| **Masażer** | Torba w studio | Torba na siłowni, wystają ręcznik i masażer |
+
+**CO POKAZYWAĆ W MOCKUPACH:**
+
+| Element | Jak pokazać |
+|---------|------------|
+| **Produkt w akcji** | Robot/urządzenie widoczne, ktoś go używa |
+| **Efekty/rezultaty** | Rysunki dziecka, czyste okno, wyprasowane ubranie |
+| **Kontekst emocjonalny** | Rodzic obserwuje z dumą, relaks po użyciu |
+| **Alternatywa dla problemu** | Tablet odłożony (zamiast ekranu), zmęczenie przed użyciem |
+| **Postępy/rozwój** | Galeria rysunków na lodówce, "przed i po" |
+
+**CZEGO NIE POKAZYWAĆ:**
+
+❌ Sterylne studio bez kontekstu
+❌ Model pozujący bez interakcji z produktem
+❌ Gadżet sam w sobie jako "bohater" (bez historii)
+❌ Generyczne "lifestyle" które pasuje do każdego produktu
+❌ Sceny które nie mają związku z produktem
+
+---
+
 #### Wymagania fotograficzne — poziom profesjonalny
 
 ##### 1. OPTYKA I KADROWANIE
@@ -483,35 +526,53 @@ JAKOŚĆ: Fotorealistyczny render, jakość sesji komercyjnej
 
 #### Minimum 10 mockupów dla każdej marki:
 
-| # | Gadżet | Typ ujęcia | Sceneria |
-|---|--------|------------|----------|
-| 1 | Koszulka | Lifestyle, osoba | Kontekst dopasowany do produktu |
-| 2 | Bluza z kapturem | Lifestyle, osoba | Kontekst dopasowany do produktu |
-| 3 | Czapka z daszkiem | Product hero, flat lay | Studio lub lifestyle |
-| 4 | Kubek ceramiczny | Product hero | Blat kuchenny / biurko |
-| 5 | Torba bawełniana | Lifestyle, osoba | Zewnątrz lub wnętrze |
-| 6 | Breloczek metalowy | Flat lay, detail | Studio, tekstura w tle |
-| 7 | Notes firmowy | Flat lay | Biurko, workspace |
-| 8 | Zestaw naklejek | Flat lay | Artystyczny układ |
-| 9 | Ściereczka z mikrofibry | Product hero | Przy produkcie głównym |
-| 10 | Opakowanie produktu | Unboxing, lifestyle | Premium kontekst |
+**WAŻNE:** Poniższa lista to tylko GADŻETY — sceneria i kontekst MUSZĄ być dopasowane do produktu!
+
+| # | Gadżet | Jak dopasować do produktu |
+|---|--------|---------------------------|
+| 1 | Koszulka | Osoba UŻYWA produktu w koszulce (nie pozuje!) |
+| 2 | Bluza z kapturem | Moment związany z produktem (rodzina, praca, hobby) |
+| 3 | Czapka z daszkiem | Kontekst outdoorowy LUB związany z produktem |
+| 4 | Kubek ceramiczny | Poranna rutyna + nawiązanie do produktu w tle |
+| 5 | Torba bawełniana | W drodze do/z miejsca związanego z produktem |
+| 6 | Breloczek metalowy | Na plecaku/kluczach + produkt widoczny w tle |
+| 7 | Notes firmowy | "Dziennik postępów" lub dokumentacja związana z produktem |
+| 8 | Zestaw naklejek | Na lodówce/laptopie + efekty użycia produktu |
+| 9 | Ściereczka z mikrofibry | Dbanie o produkt, relacja użytkownik-produkt |
+| 10 | Opakowanie produktu | Moment unboxing, radość z prezentu |
 
 ---
 
 #### Kontekst sceny per kategoria produktu:
 
-| Kategoria | Lokalizacja | Światło | Mood | Rekwizyty |
-|-----------|-------------|---------|------|-----------|
-| **Smart Home / AGD** | Apartament z panoramą, nowoczesna kuchnia | Poranne okno, 5500K | Świeży, premium | Rośliny, marmur, widok |
-| **Narzędzia** | Warsztat, garaż, budowa | Praktyczne lampy, 4000K | Autentyczny, roboczy | Drewno, metal, narzędzia |
-| **Tech / Elektronika** | Biuro domowe, studio | Daylight + monitor glow | Clean, minimalistyczny | Klawiatura, słuchawki |
-| **Sport / Fitness** | Siłownia, park, wschód słońca | Golden hour, 3500K | Energetyczny | Mata, hantle, zieleń |
-| **Beauty / Wellness** | Spa bathroom, sypialnia | Ciepłe, świece, 2700K | Relaksujący, luksusowy | Ręczniki, bambus, świece |
-| **Kawa / Gastronomia** | Kuchnia, kawiarnia | Ciepłe poranne, 4500K | Przytulny, aromatyczny | Ziarna, filiżanki, drewno |
+**ZASADA:** Mockupy pokazują PRODUKT W UŻYCIU, nie tylko gadżet!
+
+| Kategoria | Lokalizacja | Co pokazać w scenie | Storytelling |
+|-----------|-------------|---------------------|--------------|
+| **Kids / Edukacja** | Pokój dziecięcy, kuchnia rodzinna, piknik | Dziecko używa produktu, rodzic obserwuje z dumą | "Zamiast tableta", postępy w nauce, galeria prac na lodówce |
+| **Smart Home / AGD** | Dom, sypialnia, kuchnia | Produkt w akcji, efekt "przed/po" | Poranna rutyna, ułatwienie życia |
+| **Robot okienny** | Apartament z panoramą | Osoba patrzy przez CZYSTE okno, robot pracuje | Panorama miasta, wolny czas zamiast sprzątania |
+| **Parownica** | Sypialnia, garderoba | Wyprasowane ubrania na wieszaku, przygotowanie do wyjścia | Profesjonalny wygląd, oszczędność czasu |
+| **Narzędzia** | Warsztat, garaż, budowa | Efekt pracy (naprawione, zbudowane), narzędzie w akcji | Satysfakcja z własnoręcznej roboty |
+| **Sport / Fitness** | Siłownia, park, dom | Po treningu z produktem, regeneracja | Energia, zdrowie, aktywność |
+| **Beauty / Wellness** | Łazienka, sypialnia | Moment relaksu, efekt użycia (skóra, włosy) | Self-care, czas dla siebie |
+| **Masażer** | Sofa, sypialnia, po treningu | Osoba używa masażera, ulga, relaks | Regeneracja, koniec bólu |
+| **Kamera/Endoskop** | Warsztat, dom, samochód | Ekran pokazuje co widzi kamera, "odkrycie" | Diagnoza problemu, satysfakcja z naprawy |
+| **Odkurzacz** | Dom, pokój, samochód | Czysta przestrzeń, rodzina korzysta z czystego domu | Czystość bez wysiłku |
+
+**Dla każdej kategorii pytaj się:**
+1. Gdzie produkt jest używany? → Tam ustaw scenę mockupu
+2. Kto używa? → Ta osoba powinna być w mockupie
+3. Jaki efekt daje produkt? → Pokaż ten efekt (czyste okno, rysunek dziecka, wyprasowana koszula)
+4. Jaki problem rozwiązuje? → Pokaż "przed" (zmęczenie) i "po" (ulga) lub alternatywę (tablet odłożony)
 
 ---
 
 #### Przykład wypełnionego promptu (Prasik — parownica):
+
+**KONTEKST PRODUKTU:** Parownica do ubrań, USP: szybkie prasowanie (26 sek), profesjonalny wygląd bez wysiłku. Grupa docelowa: profesjonaliści 28-45, podróżujący służbowo.
+
+**STORYTELLING:** Pokazujemy efekt użycia parownicy (wyprasowana koszula) + poranny rytuał profesjonalisty.
 
 ```
 ⚠️ UŻYJ DOKŁADNIE TEGO LOGO które jest załączone w tej rozmowie.
@@ -546,12 +607,15 @@ Lokalizacja: Nowoczesna sypialnia, poranne przygotowania do pracy
 Pora dnia: Wczesny poranek, światło przez zasłony
 Mood: Świeży, energetyczny, profesjonalny start dnia
 
-Rekwizyty:
-1. Wieszak z wyprasowaną białą koszulą (nawiązanie do produktu)
-2. Drewniany stolik nocny, jasny dąb
-3. Roślina w doniczce (rozmyta w tle)
+KLUCZOWY KONTEKST PRODUKTU (STORYTELLING):
+Profesjonalista przygotowuje się do ważnego spotkania. Parownica Prasik właśnie skończyła pracę — PERFEKCYJNIE WYPRASOWANA biała koszula wisi na wieszaku (efekt użycia produktu!). Kubek z kawą czeka na stoliku. Sugestia: "26 sekund i jestem gotowy".
 
-Osoba: Brak — sam kubek, ale sugestia obecności (para unosząca się z kawy)
+Rekwizyty:
+1. Wieszak z IDEALNIE wyprasowaną białą koszulą (EFEKT PRODUKTU — główny element!)
+2. Parownica Prasik odłożona obok (widoczna, ale nie dominuje)
+3. Teczka/laptop bag przy drzwiach (kontekst: profesjonalista, spotkanie)
+
+Osoba: Brak — ale sugestia obecności (kawa paruje, koszula właśnie wyprasowana)
 
 ---
 
@@ -559,22 +623,22 @@ SPECYFIKACJA FOTOGRAFICZNA:
 
 Obiektyw: 85mm f/2.8 portrait lens
 Przysłona: f/2.8
-Głębia ostrości: Kubek ostry, koszula na wieszaku w miękkim bokeh, tło rozmyte
+Głębia ostrości: Kubek ostry, koszula na wieszaku w miękkim bokeh ALE WYRAŹNA (to efekt produktu!), tło rozmyte
 
 Oświetlenie:
 - Key light: Duże okno po lewej, światło przez lniane zasłony (rozproszone)
 - Fill: Naturalny odbity od białej ściany, stosunek 3:1
-- Rim: Brak
 - Temperatura: 5500K (świeży daylight)
 
 Kompozycja:
 - Kadrowanie: Rule of thirds, kubek w prawym punkcie mocy
+- WAŻNE: Koszula na wieszaku MUSI być widoczna w kadrze — to opowiada historię!
 - Punkt widzenia: Lekko z góry (15°), na poziomie blatu
-- Negative space: 40% po lewej stronie, oddech
+- Negative space: 30%
 
 Color grade:
 - Cienie: Lekko ciepłe (beżowe)
-- Highlights: Czyste białe
+- Highlights: Czyste białe — podkreśla CZYSTOŚĆ wyprasowanej koszuli
 - Kontrast: Średni
 - Saturacja: Stonowana, naturalna
 
@@ -582,10 +646,18 @@ Color grade:
 
 REFERENCJE WIZUALNE:
 Styl jak: Everlane lifestyle photography + Kinfolk morning rituals
+NIE JAK: Generyczny kubek na biurku bez kontekstu
 
 FORMAT: 1024x1024px (ZAWSZE KWADRAT)
 JAKOŚĆ: Fotorealistyczny render, jakość sesji komercyjnej
 ```
+
+**DLACZEGO TEN MOCKUP DZIAŁA:**
+- ✅ Pokazuje EFEKT produktu (wyprasowana koszula)
+- ✅ Kontekst dopasowany do grupy docelowej (profesjonalista, poranek przed spotkaniem)
+- ✅ Produkt widoczny w scenie (parownica odłożona)
+- ✅ Opowiada historię: "użyłem parownicy → jestem gotowy na spotkanie"
+- ❌ NIE jest to: kubek na pustym biurku, model w studio
 
 ---
 
