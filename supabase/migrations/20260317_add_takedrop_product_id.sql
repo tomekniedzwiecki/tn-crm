@@ -6,73 +6,100 @@ ALTER TABLE workflows ADD COLUMN IF NOT EXISTS takedrop_product_id TEXT;
 COMMENT ON COLUMN workflows.takedrop_product_id IS 'TakeDrop product ID for checkout link generation (e.g., 103035094-321191805)';
 
 -- Update the workflow_progress view to include the new column
+-- Based on 20260313_add_deadline_resets_to_view.sql structure
+
 DROP VIEW IF EXISTS workflow_progress;
 
-CREATE OR REPLACE VIEW workflow_progress AS
+CREATE VIEW workflow_progress AS
 SELECT
-    w.id,
-    w.order_id,
+    w.id AS workflow_id,
     w.customer_email,
     w.customer_name,
     w.customer_company,
     w.customer_phone,
     w.offer_name,
-    w.offer_id,
     w.amount,
     w.status,
-    w.current_milestone_index,
-    w.unique_token,
-    w.client_password_hash,
     w.started_at,
-    w.completed_at,
-    w.milestones_snapshot,
-    w.name,
-    w.contract_signed_at,
+    w.unique_token,
+    w.contract_status,
     w.products_shared_at,
+    w.selected_product_id,
     w.branding_shared_at,
     w.sales_page_shared_at,
     w.sales_page_url,
-    w.sales_page_status,
     w.starred,
-    w.stage1_accepted_at,
-    w.takedrop_product_id,
-    w.created_at,
     w.updated_at,
+    w.deadline_resets,
+    w.takedrop_product_id,  -- ADDED: for checkout link generation
+    -- Last admin activity (from workflow_activities where performed_by is not null)
     (
-        SELECT COUNT(*)::INTEGER
+        SELECT wa.created_at
+        FROM workflow_activities wa
+        WHERE wa.workflow_id = w.id AND wa.performed_by IS NOT NULL
+        ORDER BY wa.created_at DESC
+        LIMIT 1
+    ) AS last_admin_activity,
+    COUNT(wt.id) AS total_tasks,
+    COUNT(wt.id) FILTER (WHERE wt.completed = true) AS completed_tasks,
+    CASE
+        WHEN COUNT(wt.id) > 0
+        THEN ROUND((COUNT(wt.id) FILTER (WHERE wt.completed = true)::DECIMAL / COUNT(wt.id)) * 100)
+        ELSE 0
+    END AS progress_percent,
+    (
+        SELECT wm.title
         FROM workflow_milestones wm
-        WHERE wm.workflow_id = w.id AND wm.status = 'completed'
-    ) AS completed_milestones,
+        WHERE wm.workflow_id = w.id AND wm.status = 'in_progress'
+        ORDER BY wm.milestone_index
+        LIMIT 1
+    ) AS current_milestone_title,
     (
-        SELECT COUNT(*)::INTEGER
+        SELECT wm.deadline
+        FROM workflow_milestones wm
+        WHERE wm.workflow_id = w.id AND wm.status = 'in_progress'
+        ORDER BY wm.milestone_index
+        LIMIT 1
+    ) AS current_milestone_deadline,
+    (
+        SELECT COUNT(*)
         FROM workflow_milestones wm
         WHERE wm.workflow_id = w.id
     ) AS total_milestones,
     (
-        SELECT json_agg(json_build_object(
-            'id', wm.id,
-            'title', wm.title,
-            'status', wm.status,
-            'deadline', wm.deadline,
-            'milestone_index', wm.milestone_index
-        ) ORDER BY wm.milestone_index)
+        SELECT COUNT(*)
         FROM workflow_milestones wm
-        WHERE wm.workflow_id = w.id
-    ) AS milestones_summary,
+        WHERE wm.workflow_id = w.id AND wm.status = 'completed'
+    ) AS completed_milestones,
+    -- Video status fields
     (
-        SELECT wa.created_at
-        FROM workflow_activities wa
-        WHERE wa.workflow_id = w.id
-        AND wa.actor_type = 'admin'
-        ORDER BY wa.created_at DESC
+        SELECT wv.is_active
+        FROM workflow_video wv
+        WHERE wv.workflow_id = w.id
         LIMIT 1
-    ) AS last_admin_activity,
+    ) AS video_stage_active,
     (
-        SELECT wd.deadline_resets
-        FROM workflow_deadlines wd
-        WHERE wd.workflow_id = w.id
-    ) AS deadline_resets
-FROM workflows w;
+        SELECT COALESCE(jsonb_array_length(wv.video_links), 0) > 0
+        FROM workflow_video wv
+        WHERE wv.workflow_id = w.id
+        LIMIT 1
+    ) AS has_client_video_links,
+    -- Waiting for client = video stage active but no client video links yet
+    (
+        SELECT wv.is_active = true AND COALESCE(jsonb_array_length(wv.video_links), 0) = 0
+        FROM workflow_video wv
+        WHERE wv.workflow_id = w.id
+        LIMIT 1
+    ) AS waiting_for_client,
+    -- When video stage was activated (for calculating waiting days)
+    (
+        SELECT wv.activated_at
+        FROM workflow_video wv
+        WHERE wv.workflow_id = w.id
+        LIMIT 1
+    ) AS video_activated_at
+FROM workflows w
+LEFT JOIN workflow_tasks wt ON wt.workflow_id = w.id
+GROUP BY w.id;
 
--- Grant access to the view
-GRANT SELECT ON workflow_progress TO anon, authenticated;
+COMMENT ON VIEW workflow_progress IS 'Aggregated workflow progress with takedrop_product_id for admin dashboard';
