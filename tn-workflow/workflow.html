@@ -6841,6 +6841,9 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             const isActive = document.getElementById('landing-active')?.checked || false;
             if (!workflow?.id) return;
 
+            const wasActive = takeDropData?.landing_active || false;
+            const isFirstActivation = isActive && !wasActive;
+
             const updateData = {
                 workflow_id: workflow.id,
                 landing_active: isActive
@@ -6861,6 +6864,30 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                     }
                 }
                 showToast(isActive ? 'Landing page udostępniony klientowi' : 'Landing page ukryty', 'success');
+
+                // Trigger automation when activating for the first time
+                if (isFirstActivation && workflow) {
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'sales_page_shared',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName: workflow.customer_name || workflow.customer_company || 'Kliencie',
+                                    workflow_id: workflow.id,
+                                    projectUrl: projectUrl,
+                                    salesPageUrl: takeDropData?.landing_url || ''
+                                }
+                            }
+                        });
+                        console.log('Landing page activation automation triggered');
+                    } catch (e) {
+                        console.log('Automation trigger error:', e);
+                    }
+                }
             } else {
                 showToast('Błąd: ' + error.message, 'error');
             }
