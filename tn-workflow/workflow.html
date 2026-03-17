@@ -6844,30 +6844,45 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
             const wasActive = takeDropData?.landing_active || false;
             const isFirstActivation = isActive && !wasActive;
 
-            const updateData = {
-                workflow_id: workflow.id,
-                landing_active: isActive
-            };
-            if (isActive && !takeDropData?.landing_activated_at) {
-                updateData.landing_activated_at = new Date().toISOString();
-            }
+            try {
+                const now = new Date().toISOString();
 
-            const { error } = await supabaseClient
-                .from('workflow_takedrop')
-                .upsert(updateData, { onConflict: 'workflow_id' });
-
-            if (!error) {
-                if (takeDropData) {
-                    takeDropData.landing_active = isActive;
-                    if (isActive && !takeDropData.landing_activated_at) {
-                        takeDropData.landing_activated_at = new Date().toISOString();
-                    }
+                // Update workflow_takedrop
+                const updateData = {
+                    workflow_id: workflow.id,
+                    landing_active: isActive
+                };
+                if (isActive && !takeDropData?.landing_activated_at) {
+                    updateData.landing_activated_at = now;
                 }
-                showToast(isActive ? 'Landing page udostępniony klientowi' : 'Landing page ukryty', 'success');
 
-                // Trigger automation when activating for the first time
-                if (isFirstActivation && workflow) {
-                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                const { error: tdError } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .upsert(updateData, { onConflict: 'workflow_id' });
+
+                if (tdError) throw tdError;
+
+                // On first activation - also update workflow.sales_page_shared_at
+                if (isFirstActivation) {
+                    const { error: wfError } = await supabaseClient
+                        .from('workflows')
+                        .update({ sales_page_shared_at: now })
+                        .eq('id', workflow.id);
+
+                    if (wfError) throw wfError;
+
+                    workflow.sales_page_shared_at = now;
+                    updateSalesPageDeliverUI();
+                    updateNavChecks();
+
+                    // Log activity
+                    logActivity('sales_page_shared', 'Udostępniono stronę sprzedażową klientowi', { url: takeDropData?.landing_url });
+
+                    // Trigger automation
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#strona`;
+                    const salesPageUrl = takeDropData?.landing_url || '';
+
                     try {
                         await supabaseClient.functions.invoke('automation-trigger', {
                             body: {
@@ -6876,10 +6891,9 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                                 entity_id: workflow.id,
                                 context: {
                                     email: workflow.customer_email,
-                                    clientName: workflow.customer_name || workflow.customer_company || 'Kliencie',
-                                    workflow_id: workflow.id,
-                                    projectUrl: projectUrl,
-                                    salesPageUrl: takeDropData?.landing_url || ''
+                                    clientName,
+                                    projectUrl,
+                                    salesPageUrl
                                 }
                             }
                         });
@@ -6888,8 +6902,18 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                         console.log('Automation trigger error:', e);
                     }
                 }
-            } else {
-                showToast('Błąd: ' + error.message, 'error');
+
+                if (takeDropData) {
+                    takeDropData.landing_active = isActive;
+                    if (isActive && !takeDropData.landing_activated_at) {
+                        takeDropData.landing_activated_at = now;
+                    }
+                }
+
+                showToast(isActive ? 'Landing page udostępniony klientowi' : 'Landing page ukryty', 'success');
+            } catch (err) {
+                console.error('Error toggling landing active:', err);
+                showToast('Błąd: ' + err.message, 'error');
             }
         }
 
