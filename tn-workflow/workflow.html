@@ -6855,6 +6855,11 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
                 if (isActive && !takeDropData?.landing_activated_at) {
                     updateData.landing_activated_at = now;
                 }
+                // Also mark landing_page_connected for nav checkbox
+                if (isFirstActivation) {
+                    updateData.landing_page_connected = true;
+                    updateData.landing_page_connected_at = now;
+                }
 
                 const { error: tdError } = await supabaseClient
                     .from('workflow_takedrop')
@@ -6905,8 +6910,10 @@ Nie zmieniaj linków nawigacyjnych (np. #features, #faq). Zmień tylko linki pro
 
                 if (takeDropData) {
                     takeDropData.landing_active = isActive;
-                    if (isActive && !takeDropData.landing_activated_at) {
+                    if (isFirstActivation) {
                         takeDropData.landing_activated_at = now;
+                        takeDropData.landing_page_connected = true;
+                        takeDropData.landing_page_connected_at = now;
                     }
                 }
 
