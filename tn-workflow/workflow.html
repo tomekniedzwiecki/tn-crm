@@ -3530,11 +3530,28 @@
                 return;
             }
 
+            // Get brand info
+            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+            const brandName = brandInfo?.title || workflow.name || 'Marka';
+            const brandTagline = brandInfo?.value || '';
+
+            // Build domain from brand name
+            const suggestedDomain = brandName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.pl';
+
+            // Build checkout link if we have takedrop_product_id
+            const productId = workflow.takedrop_product_id || document.getElementById('sales-page-product-id')?.value || '';
+            const checkoutLink = productId ? `https://${suggestedDomain}/checkout?products=${productId}` : '';
+
             // Replace variables
             let content = template.content;
             content = content.replace(/\{\{customer_name\}\}/g, workflow.customer_name || workflow.customer_company || 'Klient');
             content = content.replace(/\{\{workflow_id\}\}/g, workflow.id);
             content = content.replace(/\{\{product_name\}\}/g, workflow.offer_name || 'Produkt');
+            content = content.replace(/\{\{brand_name\}\}/g, brandName);
+            content = content.replace(/\{\{brand_tagline\}\}/g, brandTagline);
+            content = content.replace(/\{\{domain\}\}/g, suggestedDomain);
+            content = content.replace(/\{\{takedrop_product_id\}\}/g, productId);
+            content = content.replace(/\{\{checkout_link\}\}/g, checkoutLink);
 
             try {
                 await navigator.clipboard.writeText(content);
