@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026031304';
+        const APP_VERSION = '2026031801';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3341,6 +3341,7 @@
         const CONTRACT_TEMPLATES = {
             '30bf199b-8bc1-4810-8716-43dbffeb9113': '/umowy/umowa-budowa-sklepu.html',
             'bc5212fd-3f57-46a8-a2e9-07c030e97a3f': '/umowy/umowa-mentoring-ai.html'
+            // starter (6ee10c3a-...) nie ma umowy - sekcja ukryta automatycznie
         };
 
         function formatPrice(v) {
@@ -4974,7 +4975,7 @@
                     showScreen('contract-data');
                     return;
                 } else if (['data_filled', 'pending_signature'].includes(workflow.contract_status)) {
-                    prepareContractHtml();
+                    await prepareContractHtml();
                     showScreen('contract-signing');
                     return;
                 }
@@ -5270,6 +5271,7 @@
             if (error || data === false) { showToast('Blad zapisu', 'error'); return; }
 
             Object.assign(workflow, updateData);
+            await prepareContractHtml();
             showScreen('contract-signing');
         }
         window.submitContractData = submitContractData;
