@@ -174,12 +174,12 @@
                         <div>
                             <div class="text-xs text-zinc-500 mb-1">ZUS społeczny</div>
                             <div class="text-xl font-mono text-amber-400" id="due-zus-spoleczny">0 zł</div>
-                            <div class="text-[10px] text-zinc-600">stała składka</div>
+                            <div class="text-[10px] text-zinc-600">stała 1 788 zł/mies</div>
                         </div>
                         <div>
                             <div class="text-xs text-zinc-500 mb-1">ZUS zdrowotny</div>
                             <div class="text-xl font-mono text-amber-400" id="due-zus-zdrowotny">0 zł</div>
-                            <div class="text-[10px] text-zinc-600">4,9% od dochodu</div>
+                            <div class="text-[10px] text-zinc-600">4,9% dochodu, min. 433 zł</div>
                         </div>
                         <div>
                             <div class="text-xs text-zinc-500 mb-1">PIT 19%</div>
@@ -230,8 +230,9 @@
         // ============================================
         // CONSTANTS
         // ============================================
-        const LIMIT_ZDROWOTNY_ROCZNY = 11600; // Limit odliczenia zdrowotnej jako koszt
-        const ZUS_SPOLECZNY_MIESIECZNIE = 1600; // Stała składka ZUS społeczny (ok. 1600 zł/mies dla dużego ZUS)
+        const LIMIT_ZDROWOTNY_ROCZNY = 14100; // Limit odliczenia zdrowotnej jako koszt (2026)
+        const ZUS_SPOLECZNY_MIESIECZNIE = 1788; // Stała składka ZUS społeczny (bez dobrowolnego chorobowego)
+        const MIN_ZDROWOTNY_MIESIECZNIE = 433; // Minimalna składka zdrowotna 2026
 
 
         // ============================================
@@ -401,9 +402,9 @@
             // ZUS społeczny
             const zusSpoleczny = zusBase * monthsInPeriod;
 
-            // ZUS zdrowotny
-            const podstawaZdrowotna = Math.max(dochod - zusSpoleczny, 3500 * monthsInPeriod);
-            const zusZdrowotny = podstawaZdrowotna * 0.049;
+            // ZUS zdrowotny (4,9% od dochodu, min. 433 zł/mies)
+            const podstawaZdrowotna = Math.max(0, dochod - zusSpoleczny);
+            const zusZdrowotny = Math.max(podstawaZdrowotna * 0.049, MIN_ZDROWOTNY_MIESIECZNIE * monthsInPeriod);
             const zusTotal = zusSpoleczny + zusZdrowotny;
 
             // Limit zdrowotnej jako koszt
