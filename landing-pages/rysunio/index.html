@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rysunio - Robot Edukacyjny STEAM | Kreska, która uczy</title>
+  <meta name="description" content="Rysunio to inteligentny robot edukacyjny, który uczy dzieci rysunku i podstaw angielskiego. Bez ekranów, bez poczucia winy. Mądra zabawka dla małych artystów.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Rysunio - Robot Edukacyjny STEAM">
+  <meta property="og:description" content="Kreska, która uczy. Inteligentny robot do nauki rysunku dla dzieci.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pl_PL">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Brand Colors */
+      --primary: #4ECDC4;
+      --primary-rgb: 78, 205, 196;
+      --secondary: #FF6B6B;
+      --secondary-rgb: 255, 107, 107;
+      --accent: #FFD93D;
+      --accent-rgb: 255, 217, 61;
+      --neutral-dark: #2D3436;
+      --neutral-mid: #636E72;
+      --neutral-light: #F8F9FA;
+
+      /* Derived */
+      --primary-soft: rgba(78, 205, 196, 0.1);
+      --primary-glow: rgba(78, 205, 196, 0.3);
+      --secondary-soft: rgba(255, 107, 107, 0.1);
+      --accent-soft: rgba(255, 217, 61, 0.15);
+
+      /* Light theme */
+      --bg-white: #FFFFFF;
+      --bg-alt: #FFF9E6;
+      --text-dark: #2D3436;
+      --text-secondary: #636E72;
+      --border-light: #E5E7EB;
+
+      /* Typography */
+      --font-heading: 'Fredoka One', cursive;
+      --font-body: 'Nunito', sans-serif;
+      --font-accent: 'Patrick Hand', cursive;
+
+      /* Spacing & Radius */
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+
+      /* Shadows */
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.1);
+      --shadow-xl: 0 24px 48px rgba(0,0,0,0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--text-dark);
+      background: var(--bg-white);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Utility Classes */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-label {
+      font-family: var(--font-accent);
+      font-size: 18px;
+      color: var(--secondary);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      color: var(--text-dark);
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 600px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 36px;
+      background: var(--secondary);
+      color: #FFFFFF;
+      font-family: var(--font-heading);
+      font-size: 18px;
+      text-decoration: none;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(255, 107, 107, 0.5);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 36px;
+      background: var(--bg-white);
+      color: var(--text-dark);
+      font-family: var(--font-heading);
+      font-size: 18px;
+      text-decoration: none;
+      border-radius: 50px;
+      border: 3px solid var(--primary);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--primary);
+      color: #FFFFFF;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Placeholder Images */
+    .img-placeholder {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--primary-soft) 0%, var(--accent-soft) 100%);
+      border: 3px dashed var(--primary);
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .img-placeholder-text {
+      font-family: var(--font-accent);
+      font-size: 16px;
+      color: var(--primary);
+    }
+
+    .img-placeholder-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--primary-soft);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .img-placeholder-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--primary);
+    }
+
+    /* ============================================
+       HEADER
+    ============================================ */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.9);
+      border-bottom: 2px solid rgba(78, 205, 196, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .header.scrolled {
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 80px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo img {
+      height: 44px;
+      width: auto;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+    }
+
+    .header-cta {
+      padding: 14px 28px;
+      font-size: 16px;
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .hamburger span {
+      width: 28px;
+      height: 3px;
+      background: var(--text-dark);
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      .nav, .header-cta {
+        display: none;
+      }
+      .hamburger {
+        display: flex;
+      }
+    }
+
+    /* ============================================
+       MOBILE MENU
+    ============================================ */
+    .mobile-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-white);
+      z-index: 99;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .mobile-menu.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .mobile-menu .nav-link {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .mobile-menu-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: none;
+      border: none;
+      font-size: 40px;
+      cursor: pointer;
+      color: var(--text-dark);
+    }
+
+    /* ============================================
+       HERO
+    ============================================ */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      background: linear-gradient(180deg, #FFF9E6 0%, #FFFFFF 100%);
+      overflow: hidden;
+    }
+
+    /* Decorative elements */
+    .hero-decoration {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .hero-blob-1 {
+      top: 10%;
+      right: 5%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(78, 205, 196, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: blob-float 6s ease-in-out infinite;
+    }
+
+    .hero-blob-2 {
+      bottom: 10%;
+      left: 5%;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(255, 107, 107, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: blob-float 8s ease-in-out infinite reverse;
+    }
+
+    .hero-blob-3 {
+      top: 40%;
+      left: 15%;
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle, rgba(255, 217, 61, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: blob-float 5s ease-in-out infinite;
+    }
+
+    @keyframes blob-float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.05); }
+    }
+
+    /* Floating pencils animation */
+    .hero-pencils {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .pencil {
+      position: absolute;
+      font-size: 32px;
+      opacity: 0.15;
+      animation: pencil-float 10s ease-in-out infinite;
+    }
+
+    .pencil:nth-child(1) { top: 15%; left: 10%; animation-delay: 0s; }
+    .pencil:nth-child(2) { top: 25%; right: 15%; animation-delay: 2s; }
+    .pencil:nth-child(3) { bottom: 20%; left: 20%; animation-delay: 4s; }
+    .pencil:nth-child(4) { top: 60%; right: 8%; animation-delay: 1s; }
+    .pencil:nth-child(5) { bottom: 30%; right: 25%; animation-delay: 3s; }
+
+    @keyframes pencil-float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-15px) rotate(5deg); }
+      75% { transform: translateY(10px) rotate(-5deg); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    @media (max-width: 968px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--accent);
+      border-radius: 50px;
+      font-family: var(--font-accent);
+      font-size: 16px;
+      color: var(--text-dark);
+      margin-bottom: 24px;
+      box-shadow: 0 4px 15px rgba(255, 217, 61, 0.4);
+    }
+
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: clamp(40px, 7vw, 64px);
+      line-height: 1.1;
+      margin-bottom: 24px;
+      color: var(--text-dark);
+    }
+
+    .hero-title .highlight {
+      color: var(--primary);
+      position: relative;
+    }
+
+    .hero-title .highlight::after {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      left: 0;
+      right: 0;
+      height: 12px;
+      background: var(--accent);
+      opacity: 0.4;
+      z-index: -1;
+      border-radius: 4px;
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      max-width: 500px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 968px) {
+      .hero-subtitle {
+        margin: 0 auto 32px;
+      }
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    @media (max-width: 968px) {
+      .hero-ctas {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-ctas {
+        flex-direction: column;
+      }
+      .hero-ctas .btn-primary,
+      .hero-ctas .btn-secondary {
+        width: 100%;
+      }
+    }
+
+    .hero-trust {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    @media (max-width: 968px) {
+      .hero-trust {
+        justify-content: center;
+      }
+    }
+
+    .hero-trust-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .hero-trust-item svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
+    }
+
+    .hero-image {
+      position: relative;
+    }
+
+    .hero-image .img-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+    }
+
+    @media (max-width: 968px) {
+      .hero-image {
+        order: -1;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+    }
+
+    /* ============================================
+       TRUST BAR
+    ============================================ */
+    .trust-bar {
+      padding: 40px 0;
+      background: var(--bg-white);
+      border-top: 2px solid var(--border-light);
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    .trust-items {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      background: var(--bg-white);
+      border: 2px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      transition: all 0.3s ease;
+    }
+
+    .trust-item:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .trust-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-soft);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .trust-item:nth-child(2) .trust-icon {
+      background: var(--secondary-soft);
+    }
+
+    .trust-item:nth-child(3) .trust-icon {
+      background: var(--accent-soft);
+    }
+
+    .trust-item:nth-child(4) .trust-icon {
+      background: rgba(78, 205, 196, 0.1);
+    }
+
+    .trust-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--primary);
+    }
+
+    .trust-item:nth-child(2) .trust-icon svg {
+      color: var(--secondary);
+    }
+
+    .trust-item:nth-child(3) .trust-icon svg {
+      color: #F59E0B;
+    }
+
+    .trust-item:nth-child(4) .trust-icon svg {
+      color: var(--primary);
+    }
+
+    .trust-text strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .trust-text span {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       PROBLEM SECTION
+    ============================================ */
+    .problem {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, #FFF5F5 100%);
+    }
+
+    .problem-content {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .problem-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    @media (max-width: 768px) {
+      .problem-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .problem-card {
+      padding: 32px 24px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+
+    .problem-card-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      background: var(--secondary-soft);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .problem-card h3 {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    .problem-card p {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       SOLUTION / FEATURES
+    ============================================ */
+    .solution {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, #E8FFF9 100%);
+    }
+
+    .solution-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .solution-header .section-subtitle {
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-card {
+      padding: 40px;
+      background: var(--bg-white);
+      border: 3px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      transition: all 0.4s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feature-card:nth-child(2):hover {
+      border-color: var(--secondary);
+    }
+
+    .feature-card:nth-child(3):hover {
+      border-color: var(--accent);
+    }
+
+    .feature-icon {
+      width: 72px;
+      height: 72px;
+      background: var(--primary-soft);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      font-size: 36px;
+    }
+
+    .feature-card:nth-child(2) .feature-icon {
+      background: var(--secondary-soft);
+    }
+
+    .feature-card:nth-child(3) .feature-icon {
+      background: var(--accent-soft);
+    }
+
+    .feature-card:nth-child(4) .feature-icon {
+      background: rgba(78, 205, 196, 0.1);
+    }
+
+    .feature-title {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    .feature-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ============================================
+       HOW IT WORKS
+    ============================================ */
+    .how-it-works {
+      padding: 100px 0;
+      background: var(--accent-soft);
+    }
+
+    .how-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .how-steps {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+    }
+
+    .how-step {
+      text-align: center;
+      position: relative;
+    }
+
+    .how-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 50px;
+      right: -16px;
+      width: calc(100% - 100px);
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transform: translateX(50%);
+      border-radius: 2px;
+    }
+
+    @media (max-width: 768px) {
+      .how-step:not(:last-child)::after {
+        display: none;
+      }
+    }
+
+    .how-step-number {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 24px;
+      background: var(--bg-white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-size: 48px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      z-index: 1;
+    }
+
+    .how-step:nth-child(1) .how-step-number {
+      color: var(--primary);
+      border: 4px solid var(--primary);
+    }
+
+    .how-step:nth-child(2) .how-step-number {
+      color: var(--secondary);
+      border: 4px solid var(--secondary);
+    }
+
+    .how-step:nth-child(3) .how-step-number {
+      color: #10B981;
+      border: 4px solid #10B981;
+    }
+
+    .how-step-title {
+      font-family: var(--font-heading);
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    .how-step-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    /* ============================================
+       TESTIMONIALS
+    ============================================ */
+    .testimonials {
+      padding: 100px 0;
+      background: var(--bg-white);
+    }
+
+    .testimonials-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 968px) {
+      .testimonials-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+        margin: 0 auto;
+      }
+    }
+
+    .testimonial-card {
+      padding: 32px;
+      background: var(--bg-white);
+      border: 3px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      transition: all 0.3s ease;
+    }
+
+    .testimonial-card:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+
+    .testimonial-stars {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .testimonial-stars svg {
+      width: 20px;
+      height: 20px;
+      color: var(--accent);
+      fill: var(--accent);
+    }
+
+    .testimonial-text {
+      font-size: 16px;
+      color: var(--text-dark);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .testimonial-avatar {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary-soft), var(--secondary-soft));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-size: 20px;
+      color: var(--primary);
+    }
+
+    .testimonial-info strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .testimonial-info span {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       FAQ
+    ============================================ */
+    .faq {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, #E8FFF9 100%);
+    }
+
+    .faq-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .faq-list {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      border: 3px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      overflow: hidden;
+      background: var(--bg-white);
+      transition: all 0.3s ease;
+    }
+
+    .faq-item:hover {
+      border-color: var(--primary);
+    }
+
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      font-family: var(--font-heading);
+      font-size: 18px;
+      color: var(--text-dark);
+    }
+
+    .faq-question svg {
+      width: 24px;
+      height: 24px;
+      color: var(--primary);
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-question svg {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+    }
+
+    .faq-answer-inner {
+      padding: 0 24px 24px;
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ============================================
+       OFFER
+    ============================================ */
+    .offer {
+      padding: 100px 0;
+      background: linear-gradient(135deg, var(--accent-soft) 0%, #FFF 50%, var(--primary-soft) 100%);
+    }
+
+    .offer-content {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .offer-box {
+      position: relative;
+      padding: 48px 40px;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      border: 4px solid var(--primary);
+      overflow: hidden;
+    }
+
+    .offer-ribbon {
+      position: absolute;
+      top: 24px;
+      right: -35px;
+      background: var(--secondary);
+      color: #FFF;
+      padding: 8px 40px;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      transform: rotate(45deg);
+    }
+
+    .offer-label {
+      display: inline-block;
+      padding: 8px 20px;
+      background: var(--accent);
+      border-radius: 50px;
+      font-family: var(--font-accent);
+      font-size: 16px;
+      color: var(--text-dark);
+      margin-bottom: 24px;
+    }
+
+    .offer-title {
+      font-family: var(--font-heading);
+      font-size: 32px;
+      margin-bottom: 8px;
+      color: var(--text-dark);
+    }
+
+    .offer-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+
+    .offer-price {
+      margin-bottom: 32px;
+    }
+
+    .offer-price-value {
+      font-family: var(--font-heading);
+      font-size: 56px;
+      color: var(--secondary);
+    }
+
+    .offer-price-value span {
+      font-size: 24px;
+      color: var(--text-secondary);
+    }
+
+    .offer-features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 32px;
+    }
+
+    .offer-features li {
+      padding: 14px 0;
+      border-bottom: 2px dashed var(--border-light);
+      font-size: 16px;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .offer-features li:last-child {
+      border-bottom: none;
+    }
+
+    .offer-features li::before {
+      content: '';
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .offer-cta {
+      width: 100%;
+      padding: 20px 32px;
+      font-size: 20px;
+    }
+
+    .offer-guarantee {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .offer-guarantee svg {
+      width: 20px;
+      height: 20px;
+      color: #10B981;
+    }
+
+    /* ============================================
+       CTA BANNER
+    ============================================ */
+    .cta-banner {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      text-align: center;
+    }
+
+    .cta-title {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 5vw, 44px);
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .cta-subtitle {
+      font-size: 20px;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 32px;
+    }
+
+    .cta-banner .btn-primary {
+      background: var(--accent);
+      color: var(--text-dark);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    .cta-banner .btn-primary:hover {
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    /* ============================================
+       FOOTER
+    ============================================ */
+    .footer {
+      padding: 60px 0 100px;
+      background: var(--neutral-light);
+      border-top: 3px solid var(--border-light);
+    }
+
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+    }
+
+    @media (max-width: 768px) {
+      .footer-inner {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        text-align: center;
+      }
+    }
+
+    .footer-brand img {
+      height: 40px;
+      margin-bottom: 16px;
+    }
+
+    .footer-brand p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 300px;
+    }
+
+    @media (max-width: 768px) {
+      .footer-brand p {
+        margin: 0 auto;
+      }
+    }
+
+    .footer-links h4 {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+    }
+
+    .footer-links ul {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: 12px;
+    }
+
+    .footer-links a {
+      font-size: 15px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+    }
+
+    .footer-bottom {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 2px solid var(--border-light);
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       STICKY CTA (Mobile)
+    ============================================ */
+    .sticky-cta {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 24px;
+      background: var(--bg-white);
+      border-top: 3px solid var(--primary);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      z-index: 90;
+    }
+
+    @media (max-width: 768px) {
+      .sticky-cta {
+        display: block;
+      }
+    }
+
+    .sticky-cta .btn-primary {
+      width: 100%;
+    }
+
+    /* ============================================
+       COOKIE BANNER
+    ============================================ */
+    .cookie-banner {
+      position: fixed;
+      bottom: 80px;
+      left: 24px;
+      right: 24px;
+      max-width: 400px;
+      padding: 24px;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      border: 3px solid var(--border-light);
+      z-index: 95;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .cookie-banner {
+        bottom: 100px;
+        left: 16px;
+        right: 16px;
+      }
+    }
+
+    .cookie-banner.show {
+      display: block;
+    }
+
+    .cookie-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .cookie-text a {
+      color: var(--primary);
+    }
+
+    .cookie-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .cookie-buttons button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .cookie-accept {
+      background: var(--primary);
+      color: #FFF;
+      border: none;
+    }
+
+    .cookie-decline {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 2px solid var(--border-light);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="#" class="logo">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/rysunio/logo.png" alt="Rysunio">
+        </a>
+
+        <nav class="nav">
+          <a href="#funkcje" class="nav-link">Funkcje</a>
+          <a href="#jak-dziala" class="nav-link">Jak działa</a>
+          <a href="#opinie" class="nav-link">Opinie</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+        </nav>
+
+        <a href="#zamow" class="btn-primary header-cta">Zamów teraz</a>
+
+        <button class="hamburger" onclick="toggleMobileMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-menu-close" onclick="toggleMobileMenu()">&times;</button>
+    <a href="#funkcje" class="nav-link" onclick="toggleMobileMenu()">Funkcje</a>
+    <a href="#jak-dziala" class="nav-link" onclick="toggleMobileMenu()">Jak działa</a>
+    <a href="#opinie" class="nav-link" onclick="toggleMobileMenu()">Opinie</a>
+    <a href="#faq" class="nav-link" onclick="toggleMobileMenu()">FAQ</a>
+    <a href="#zamow" class="btn-primary" onclick="toggleMobileMenu()">Zamów teraz</a>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <!-- Decorative blobs -->
+    <div class="hero-decoration hero-blob-1"></div>
+    <div class="hero-decoration hero-blob-2"></div>
+    <div class="hero-decoration hero-blob-3"></div>
+
+    <!-- Floating pencils -->
+    <div class="hero-pencils">
+      <span class="pencil">&#9998;</span>
+      <span class="pencil">&#9998;</span>
+      <span class="pencil">&#9998;</span>
+      <span class="pencil">&#9998;</span>
+      <span class="pencil">&#9998;</span>
+    </div>
+
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text">
+          <span class="hero-badge">Zabawka STEAM</span>
+          <h1 class="hero-title">
+            Twoje dziecko <span class="highlight">rysuje</span> i uczy się angielskiego
+          </h1>
+          <p class="hero-subtitle">
+            Rysunio to inteligentny robot, który prowadzi rękę malucha krok po kroku. Uczy rysunku, liter i słówek angielskich — bez ekranów i bez poczucia winy.
+          </p>
+
+          <div class="hero-ctas">
+            <a href="#zamow" class="btn-primary">
+              Zamów Rysunio
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <a href="#funkcje" class="btn-secondary">
+              Zobacz jak działa
+            </a>
+          </div>
+
+          <div class="hero-trust">
+            <div class="hero-trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              Bez ekranów
+            </div>
+            <div class="hero-trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              Od 3 lat
+            </div>
+            <div class="hero-trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              100+ wzorów
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-image">
+          <div class="img-placeholder">
+            <div class="img-placeholder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <span class="img-placeholder-text">Zdjęcie produktu</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Bar -->
+  <section class="trust-bar">
+    <div class="container">
+      <div class="trust-items">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Bezpieczne materiały</strong>
+            <span>Certyfikat CE</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+              <line x1="9" y1="9" x2="9.01" y2="9"/>
+              <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Od 3 lat</strong>
+            <span>Idealny dla maluchów</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>4.9/5 gwiazdek</strong>
+            <span>Opinie rodziców</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="3" width="15" height="13" rx="2"/>
+              <path d="M16 8h4a2 2 0 012 2v9a2 2 0 01-2 2H8a2 2 0 01-2-2v-4"/>
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Darmowa dostawa</strong>
+            <span>Od 200 zł</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem Section -->
+  <section class="problem fade-in">
+    <div class="container">
+      <div class="problem-content">
+        <span class="section-label">Problem</span>
+        <h2 class="section-title">Czy też martwisz się o ekrany?</h2>
+        <p class="section-subtitle" style="margin: 0 auto;">
+          Dzieci spędzają coraz więcej czasu przy tabletach i telefonach. Chcesz dać maluchowi mądrą zabawkę, która rozwija — a nie uzależnia.
+        </p>
+
+        <div class="problem-cards">
+          <div class="problem-card">
+            <div class="problem-card-icon">&#128247;</div>
+            <h3>Za dużo ekranów</h3>
+            <p>Tablet to łatwe rozwiązanie, ale nie rozwija motoryki ani kreatywności.</p>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon">&#128556;</div>
+            <h3>Poczucie winy</h3>
+            <p>Wiesz, że mogłoby być lepiej, ale brakuje czasu na ciągłe zajęcia z dzieckiem.</p>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon">&#127912;</div>
+            <h3>Brak pomysłów</h3>
+            <p>Co narysować? Jak pokazać? Dziecko szybko się nudzi i rezygnuje.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution / Features -->
+  <section class="solution fade-in" id="funkcje">
+    <div class="container">
+      <div class="solution-header">
+        <span class="section-label">Rozwiązanie</span>
+        <h2 class="section-title">Rysunio — kreska, która uczy</h2>
+        <p class="section-subtitle">
+          Robot edukacyjny STEAM, który prowadzi rękę dziecka krok po kroku. Bez ekranów, bez frustracji.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">&#9998;</div>
+          <h3 class="feature-title">Prowadzi rękę dziecka</h3>
+          <p class="feature-desc">
+            Rysunio krok po kroku pokazuje jak narysować zwierzątko, literę czy pojazd. Maluch trzyma pisak i rysuje razem z robotem — sam!
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">&#127468;&#127463;</div>
+          <h3 class="feature-title">Uczy angielskiego</h3>
+          <p class="feature-desc">
+            Przy każdym rysunku Rysunio wymawia słówko po angielsku. "Cat", "Dog", "Apple" — nauka przez zabawę, bez wysiłku.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">&#128218;</div>
+          <h3 class="feature-title">100+ wzorów do rysowania</h3>
+          <p class="feature-desc">
+            Zwierzątka, pojazdy, litery, cyfry, kształty. Karty z wzorami wymieniasz w kilka sekund. Nowe paczki dokupujesz osobno.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">&#128170;</div>
+          <h3 class="feature-title">Rozwija motorykę</h3>
+          <p class="feature-desc">
+            Rysowanie to najlepszy trening małej motoryki. Przygotowuje rękę do pisania lepiej niż jakiekolwiek ćwiczenia.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works fade-in" id="jak-dziala">
+    <div class="container">
+      <div class="how-header">
+        <span class="section-label">Jak to działa</span>
+        <h2 class="section-title">3 proste kroki</h2>
+      </div>
+
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step-number">1</div>
+          <h3 class="how-step-title">Włóż kartę</h3>
+          <p class="how-step-desc">
+            Wybierz kartę z wzorem — kotek, samochód, litera "A"... Włóż do Rysunia.
+          </p>
+        </div>
+
+        <div class="how-step">
+          <div class="how-step-number">2</div>
+          <h3 class="how-step-title">Chwyć pisak</h3>
+          <p class="how-step-desc">
+            Dziecko chwyta pisak zamontowany w robocie. Rysunio zaczyna się ruszać.
+          </p>
+        </div>
+
+        <div class="how-step">
+          <div class="how-step-number">3</div>
+          <h3 class="how-step-title">Rysuj razem!</h3>
+          <p class="how-step-desc">
+            Robot prowadzi rękę krok po kroku. Maluch rysuje sam — i jest z siebie dumny!
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials fade-in" id="opinie">
+    <div class="container">
+      <div class="testimonials-header">
+        <span class="section-label">Opinie rodziców</span>
+        <h2 class="section-title">Co mówią mamy i tatowie</h2>
+      </div>
+
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">
+            "Córka (4 lata) jest zachwycona! Wcześniej nie chciała rysować bo 'jej nie wychodzi'. Z Rysuniem sama rysuje kotki i psy. Jest taka dumna z siebie!"
+          </p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">AK</div>
+            <div class="testimonial-info">
+              <strong>Anna K.</strong>
+              <span>Mama 4-latki, Warszawa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">
+            "Wreszcie zabawka bez ekranu! Syn sam prosi żeby rysować. Bonus: uczy się angielskich słówek przy okazji. Polecam każdemu rodzicowi."
+          </p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">MP</div>
+            <div class="testimonial-info">
+              <strong>Michał P.</strong>
+              <span>Tata 5-latka, Kraków</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <p class="testimonial-text">
+            "Kupiłam jako prezent dla wnuczki. Teraz jak przychodzę — od razu 'Babciu, porysujemy z Rysuniem!'. Najlepszy prezent jaki dałam."
+          </p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">EW</div>
+            <div class="testimonial-info">
+              <strong>Ewa W.</strong>
+              <span>Babcia 3-latki, Poznań</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq fade-in" id="faq">
+    <div class="container">
+      <div class="faq-header">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Pytania rodziców</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Dla jakiego wieku jest Rysunio?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Rysunio jest przeznaczony dla dzieci od 3 lat. Młodsze maluchy mogą potrzebować pomocy rodzica przy wkładaniu kart, ale samo rysowanie jest intuicyjne. Starsze dzieci (5-7 lat) używają Rysunia samodzielnie.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Czy Rysunio wymaga baterii lub ładowania?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Tak, Rysunio działa na bateriach AA (4 sztuki) lub można podłączyć zasilacz USB (w zestawie). Na bateriach działa około 8-10 godzin ciągłej zabawy.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Ile wzorów jest w zestawie?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              W zestawie startowym jest 24 karty z wzorami (zwierzątka, pojazdy, podstawowe kształty). Dodatkowe paczki tematyczne (litery, cyfry, dinozaury, księżniczki) można dokupić osobno — każda zawiera 12 nowych wzorów.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Czy Rysunio naprawdę uczy angielskiego?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Tak! Przy każdym rysunku Rysunio wymawia nazwę po angielsku. Dziecko słyszy "Cat" rysując kotka, "Car" rysując samochód. To nauka przez powtarzanie — najskuteczniejsza metoda dla maluchów.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Czy mogę zwrócić jeśli dziecku się nie spodoba?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Oczywiście! Masz 30 dni na zwrot bez podania przyczyny. Jeśli Twoje dziecko nie pokocha Rysunia — oddasz bez problemu i dostaniesz pełny zwrot pieniędzy.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Z jakich materiałów jest zrobiony?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Rysunio jest wykonany z bezpiecznego plastiku ABS, bez BPA i ftalanów. Posiada certyfikat CE i spełnia wszystkie europejskie normy bezpieczeństwa zabawek. Krawędzie są zaokrąglone, pisaki nietoksyczne.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Offer -->
+  <section class="offer fade-in" id="zamow">
+    <div class="container">
+      <div class="offer-content">
+        <div class="offer-box">
+          <div class="offer-ribbon">HIT!</div>
+          <span class="offer-label">Zestaw startowy</span>
+          <h3 class="offer-title">Rysunio + 24 karty</h3>
+          <p class="offer-subtitle">Wszystko czego potrzebujesz do pierwszej zabawy</p>
+
+          <div class="offer-price">
+            <span class="offer-price-value">199 <span>zł</span></span>
+          </div>
+
+          <ul class="offer-features">
+            <li>Robot Rysunio z głośnikiem</li>
+            <li>24 karty z wzorami (zwierzątka, pojazdy, kształty)</li>
+            <li>3 kolorowe pisaki zmywalne</li>
+            <li>Blok do rysowania A4 (50 kartek)</li>
+            <li>Kabel USB do zasilania</li>
+            <li>Instrukcja obsługi PL</li>
+          </ul>
+
+          <a href="#" class="btn-primary offer-cta">
+            Zamów Rysunio
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+
+          <div class="offer-guarantee">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            30 dni na zwrot | Bezpieczne materiały | Certyfikat CE
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Banner -->
+  <section class="cta-banner">
+    <div class="container">
+      <h2 class="cta-title">Kreska, która uczy</h2>
+      <p class="cta-subtitle">Pozwól dziecku tworzyć — Rysunio poprowadzi każdą kreskę!</p>
+      <a href="#zamow" class="btn-primary">Zamów teraz za 199 zł</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/rysunio/logo.png" alt="Rysunio">
+          <p>Rysunio to inteligentny robot edukacyjny STEAM dla dzieci. Uczy rysunku i angielskiego — bez ekranów, bez poczucia winy.</p>
+        </div>
+
+        <div class="footer-links">
+          <h4>Informacje</h4>
+          <ul>
+            <li><a href="#">O produkcie</a></li>
+            <li><a href="#">Dodatkowe karty</a></li>
+            <li><a href="#">Kontakt</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links">
+          <h4>Prawne</h4>
+          <ul>
+            <li><a href="#">Regulamin</a></li>
+            <li><a href="#">Polityka prywatności</a></li>
+            <li><a href="#">Zwroty</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        © 2024 Rysunio. Wszystkie prawa zastrzeżone.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Sticky CTA (Mobile) -->
+  <div class="sticky-cta">
+    <a href="#zamow" class="btn-primary">Zamów Rysunio — 199 zł</a>
+  </div>
+
+  <!-- Cookie Banner -->
+  <div class="cookie-banner" id="cookieBanner">
+    <p class="cookie-text">
+      Ta strona używa plików cookie.
+      <a href="#">Dowiedz się więcej</a>
+    </p>
+    <div class="cookie-buttons">
+      <button class="cookie-decline" onclick="closeCookieBanner()">Odrzuć</button>
+      <button class="cookie-accept" onclick="acceptCookies()">OK</button>
+    </div>
+  </div>
+
+  <script>
+    // Mobile Menu
+    function toggleMobileMenu() {
+      document.getElementById('mobileMenu').classList.toggle('open');
+    }
+
+    // Header scroll effect
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+
+    // FAQ Toggle
+    function toggleFaq(button) {
+      const item = button.parentElement;
+      item.classList.toggle('open');
+    }
+
+    // Fade-in on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // Cookie Banner
+    function showCookieBanner() {
+      if (!localStorage.getItem('cookiesAccepted')) {
+        setTimeout(() => {
+          document.getElementById('cookieBanner').classList.add('show');
+        }, 2000);
+      }
+    }
+
+    function acceptCookies() {
+      localStorage.setItem('cookiesAccepted', 'true');
+      closeCookieBanner();
+    }
+
+    function closeCookieBanner() {
+      document.getElementById('cookieBanner').classList.remove('show');
+    }
+
+    showCookieBanner();
+  </script>
+</body>
+</html>
