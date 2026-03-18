@@ -623,8 +623,8 @@
                             </div>
 
                             <!-- Komentarze Tab -->
-                            <div id="activity-tab-komentarze" class="activity-tab-content hidden">
-                                <div id="recent-comments" class="space-y-0 mb-4">
+                            <div id="activity-tab-komentarze" class="activity-tab-content hidden flex flex-col" style="height: 320px;">
+                                <div id="recent-comments" class="flex-1 overflow-y-auto space-y-0 mb-3 pr-1" style="scrollbar-width: thin; scrollbar-color: #333 transparent;">
                                     <div class="flex flex-col items-center justify-center py-8 text-center">
                                         <div class="w-12 h-12 rounded-full bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
                                             <i class="ph ph-chat-circle-dots text-[20px] text-[#333]"></i>
@@ -632,7 +632,7 @@
                                         <div class="text-[#444] text-[13px]">Brak komentarzy</div>
                                     </div>
                                 </div>
-                                <div class="flex gap-2 pt-4 border-t border-[#1a1a1a]">
+                                <div class="flex gap-2 pt-3 border-t border-[#1a1a1a] flex-shrink-0">
                                     <input type="text" id="quick-comment" placeholder="Napisz komentarz..."
                                         class="flex-1 h-10 bg-[#111] border border-[#1a1a1a] rounded-lg px-4 text-[13px] text-white placeholder-[#444] focus:outline-none focus:border-[#333] transition-colors"
                                         onkeydown="if(event.key==='Enter') postQuickComment()">
@@ -640,6 +640,30 @@
                                         <i class="ph ph-paper-plane-right text-[14px]"></i>
                                         Wyślij
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- Edit Comment Modal -->
+                            <div id="edit-comment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm" onclick="if(event.target === this) closeEditCommentModal()">
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl w-full max-w-md mx-4 shadow-2xl" onclick="event.stopPropagation()">
+                                    <div class="flex items-center justify-between px-5 py-4 border-b border-[#1a1a1a]">
+                                        <h3 class="text-white font-semibold text-[15px]">Edytuj komentarz</h3>
+                                        <button onclick="closeEditCommentModal()" class="text-[#555] hover:text-white transition-colors">
+                                            <i class="ph ph-x text-[18px]"></i>
+                                        </button>
+                                    </div>
+                                    <div class="p-5">
+                                        <textarea id="edit-comment-content" rows="4"
+                                            class="w-full bg-[#111] border border-[#1a1a1a] rounded-lg px-4 py-3 text-[13px] text-white placeholder-[#444] focus:outline-none focus:border-[#333] transition-colors resize-none"></textarea>
+                                    </div>
+                                    <div class="flex justify-end gap-3 px-5 py-4 border-t border-[#1a1a1a]">
+                                        <button onclick="closeEditCommentModal()" class="px-4 py-2 text-[13px] text-[#888] hover:text-white transition-colors">
+                                            Anuluj
+                                        </button>
+                                        <button onclick="saveEditedComment()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-black rounded-lg text-[13px] font-medium transition-colors">
+                                            Zapisz
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2901,30 +2925,153 @@
                 return;
             }
 
-            // Show only 4 most recent (comments are sorted oldest first, so take last 4 and reverse)
-            const recentComments = comments.slice(-4).reverse();
+            // Show all comments, newest first
+            const sortedComments = [...comments].reverse();
 
-            container.innerHTML = recentComments.map(c => {
+            container.innerHTML = sortedComments.map(c => {
                 const isClient = c.author_type === 'client';
+                const isTeam = c.author_type === 'team';
                 const timeAgo = formatTimeAgo(new Date(c.created_at));
                 const icon = isClient ? 'ph-user' : 'ph-user-circle-gear';
                 const bgColor = isClient ? 'bg-amber-500/10' : 'bg-cyan-500/10';
                 const iconColor = isClient ? 'text-amber-400' : 'text-cyan-400';
-                const truncatedContent = c.content.length > 60 ? c.content.substring(0, 60) + '...' : c.content;
+                const borderColor = isClient ? 'border-amber-500/20' : 'border-cyan-500/20';
+
+                // Show full content, but collapse very long ones
+                const isLong = c.content.length > 200;
+                const contentId = `comment-content-${c.id}`;
+
+                // Team comments can be edited/deleted
+                const actions = isTeam ? `
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="editComment('${c.id}')" class="p-1 text-[#555] hover:text-cyan-400 transition-colors" title="Edytuj">
+                            <i class="ph ph-pencil-simple text-[12px]"></i>
+                        </button>
+                        <button onclick="deleteComment('${c.id}')" class="p-1 text-[#555] hover:text-red-400 transition-colors" title="Usuń">
+                            <i class="ph ph-trash text-[12px]"></i>
+                        </button>
+                    </div>
+                ` : '';
 
                 return `
-                    <div class="flex items-start gap-3 py-2 border-b border-[#1a1a1a] last:border-0">
-                        <div class="w-6 h-6 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i class="ph ${icon} text-[11px] ${iconColor}"></i>
+                    <div class="group flex items-start gap-3 py-3 px-2 -mx-2 rounded-lg hover:bg-[#111] border-b border-[#1a1a1a] last:border-0 transition-colors">
+                        <div class="w-7 h-7 rounded-full ${bgColor} border ${borderColor} flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="ph ${icon} text-[12px] ${iconColor}"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="text-[#ccc] text-[12px] leading-relaxed">${escapeHtml(truncatedContent)}</div>
-                            <div class="text-[#555] text-[10px] mt-1">${timeAgo}</div>
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[#888] text-[11px] font-medium">${escapeHtml(c.author_name || (isClient ? 'Klient' : 'Team'))}</span>
+                                    <span class="text-[#444] text-[10px]">${timeAgo}</span>
+                                </div>
+                                ${actions}
+                            </div>
+                            <div id="${contentId}" class="text-[#ccc] text-[12px] leading-relaxed whitespace-pre-wrap ${isLong ? 'line-clamp-3' : ''}">${escapeHtml(c.content)}</div>
+                            ${isLong ? `
+                                <button onclick="toggleCommentExpand('${contentId}', this)" class="text-cyan-400 hover:text-cyan-300 text-[11px] mt-1 transition-colors">
+                                    Pokaż więcej
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
+
+            // Scroll to top (newest comments)
+            container.scrollTop = 0;
         }
+
+        function toggleCommentExpand(contentId, btn) {
+            const content = document.getElementById(contentId);
+            if (!content) return;
+
+            if (content.classList.contains('line-clamp-3')) {
+                content.classList.remove('line-clamp-3');
+                btn.textContent = 'Pokaż mniej';
+            } else {
+                content.classList.add('line-clamp-3');
+                btn.textContent = 'Pokaż więcej';
+            }
+        }
+        window.toggleCommentExpand = toggleCommentExpand;
+
+        let editingCommentId = null;
+
+        function editComment(commentId) {
+            const comment = comments.find(c => c.id === commentId);
+            if (!comment) return;
+
+            editingCommentId = commentId;
+            document.getElementById('edit-comment-content').value = comment.content;
+            document.getElementById('edit-comment-modal').classList.remove('hidden');
+            document.getElementById('edit-comment-modal').classList.add('flex');
+            document.getElementById('edit-comment-content').focus();
+        }
+        window.editComment = editComment;
+
+        function closeEditCommentModal() {
+            editingCommentId = null;
+            document.getElementById('edit-comment-modal').classList.add('hidden');
+            document.getElementById('edit-comment-modal').classList.remove('flex');
+        }
+        window.closeEditCommentModal = closeEditCommentModal;
+
+        async function saveEditedComment() {
+            if (!editingCommentId) return;
+
+            const content = document.getElementById('edit-comment-content').value.trim();
+            if (!content) {
+                showToast('Komentarz nie może być pusty', 'error');
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('workflow_comments')
+                .update({ content, updated_at: new Date().toISOString() })
+                .eq('id', editingCommentId);
+
+            if (error) {
+                console.error('Error updating comment:', error);
+                showToast('Błąd zapisu: ' + error.message, 'error');
+                return;
+            }
+
+            // Update local state
+            const idx = comments.findIndex(c => c.id === editingCommentId);
+            if (idx !== -1) {
+                comments[idx].content = content;
+            }
+
+            closeEditCommentModal();
+            renderRecentComments();
+            renderComments();
+            showToast('Komentarz zaktualizowany', 'success');
+        }
+        window.saveEditedComment = saveEditedComment;
+
+        async function deleteComment(commentId) {
+            if (!confirm('Na pewno usunąć ten komentarz?')) return;
+
+            const { error } = await supabaseClient
+                .from('workflow_comments')
+                .delete()
+                .eq('id', commentId);
+
+            if (error) {
+                console.error('Error deleting comment:', error);
+                showToast('Błąd usuwania: ' + error.message, 'error');
+                return;
+            }
+
+            // Update local state
+            comments = comments.filter(c => c.id !== commentId);
+
+            renderRecentComments();
+            renderComments();
+            updateCommentsBadge();
+            showToast('Komentarz usunięty', 'success');
+        }
+        window.deleteComment = deleteComment;
 
         // ============================================
         // STATUS CHECKLIST
