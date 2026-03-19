@@ -9723,7 +9723,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     }
                 }
             }
-            landingPagePath = landingName ? `landing-pages/${landingName}/index.html` : '';
+            if (!landingName) {
+                showToast('Nie można ustalić nazwy landinga', 'error');
+                return;
+            }
+
+            landingPagePath = `landing-pages/${landingName}/index.html`;
 
             const statusDiv = document.getElementById('landing-analyze-status');
             const placeholdersDiv = document.getElementById('landing-placeholders');
@@ -9732,12 +9737,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             placeholdersDiv.classList.add('hidden');
 
             try {
-                // Fetch HTML from the landing page - try multiple URL variants
-                let fetchUrl = url;
-                if (!url.endsWith('.html')) {
-                    fetchUrl = url.endsWith('/') ? url : url + '/';
-                }
-                const response = await fetch(fetchUrl);
+                // Fetch from same origin to avoid CORS issues
+                const sameOriginUrl = `${window.location.origin}/landing-pages/${landingName}/index.html`;
+                console.log('Fetching landing from:', sameOriginUrl);
+                const response = await fetch(sameOriginUrl);
 
                 if (!response.ok) {
                     throw new Error(`Nie można pobrać strony: ${response.status}`);
