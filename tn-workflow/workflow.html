@@ -1602,15 +1602,21 @@
                                     <i class="ph ph-scan text-cyan-400"></i>
                                     Analiza strony
                                 </h4>
-                                <button onclick="analyzeLandingPage()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-1.5 rounded-lg text-[12px] font-medium flex items-center gap-2">
-                                    <i class="ph ph-magnifying-glass"></i>
-                                    Analizuj landing
-                                </button>
                             </div>
 
                             <p class="text-[#666] text-[12px] mb-4">
-                                Skanuje HTML strony, znajduje miejsca na grafiki (img-placeholder), generuje obrazy AI i aktualizuje pliki.
+                                Wklej HTML strony, znajdź miejsca na grafiki, wygeneruj obrazy AI.
                             </p>
+
+                            <!-- HTML Input -->
+                            <div class="mb-4">
+                                <textarea id="landing-html-input" rows="5" class="w-full bg-[#0a0a0a] border border-[#222] rounded-md px-3 py-2 text-[11px] text-[#888] placeholder-[#444] focus:border-cyan-500/50 focus:outline-none resize-y font-mono" placeholder="Wklej tutaj kod HTML strony..."></textarea>
+                            </div>
+
+                            <button onclick="analyzeLandingHtml()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-[12px] font-medium flex items-center justify-center gap-2 mb-4">
+                                <i class="ph ph-magnifying-glass"></i>
+                                Analizuj HTML
+                            </button>
 
                             <!-- Analyze Status -->
                             <div id="landing-analyze-status" class="hidden mb-4">
@@ -9696,39 +9702,36 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         let foundPlaceholders = [];
         let modifiedHtml = '';
 
-        async function analyzeLandingPage() {
-            const urlInput = document.getElementById('landing-page-url');
-            const url = urlInput?.value?.trim();
+        function analyzeLandingHtml() {
+            const htmlInput = document.getElementById('landing-html-input');
+            const html = htmlInput?.value?.trim();
 
-            if (!url) {
-                showToast('Wprowadź URL strony', 'error');
+            if (!html) {
+                showToast('Wklej HTML strony', 'error');
                 return;
             }
 
-            // Extract landing name - try from URL pattern first, then from branding, then from domain
+            // Get landing name from branding or URL input
+            const urlInput = document.getElementById('landing-page-url');
+            const url = urlInput?.value?.trim() || '';
             let landingName = '';
+
             const matchLandingPages = url.match(/landing-pages\/([^\/]+)/);
             if (matchLandingPages) {
                 landingName = matchLandingPages[1];
             } else {
-                // Try to get from branding
                 const brandInfo = brandingItems.find(b => b.type === 'brand_info');
                 if (brandInfo?.name) {
                     landingName = brandInfo.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
                 } else {
-                    // Extract from domain (e.g., https://inspektron.pl -> inspektron)
                     const domainMatch = url.match(/https?:\/\/([^\/]+)/);
                     if (domainMatch) {
                         landingName = domainMatch[1].replace(/\.(pl|com|eu|net|org|takedrop\.pl)$/i, '').replace(/^www\./, '');
                     }
                 }
             }
-            if (!landingName) {
-                showToast('Nie można ustalić nazwy landinga', 'error');
-                return;
-            }
 
-            landingPagePath = `landing-pages/${landingName}/index.html`;
+            landingPagePath = landingName ? `landing-pages/${landingName}/index.html` : 'landing-pages/unknown/index.html';
 
             const statusDiv = document.getElementById('landing-analyze-status');
             const placeholdersDiv = document.getElementById('landing-placeholders');
@@ -9737,17 +9740,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             placeholdersDiv.classList.add('hidden');
 
             try {
-                // Fetch from same origin to avoid CORS issues
-                const sameOriginUrl = `${window.location.origin}/landing-pages/${landingName}/index.html`;
-                console.log('Fetching landing from:', sameOriginUrl);
-                const response = await fetch(sameOriginUrl);
-
-                if (!response.ok) {
-                    throw new Error(`Nie można pobrać strony: ${response.status}`);
-                }
-
-                landingPageHtml = await response.text();
-                modifiedHtml = landingPageHtml;
+                landingPageHtml = html;
+                modifiedHtml = html;
 
                 // Parse HTML and find placeholders
                 const parser = new DOMParser();
@@ -10041,7 +10035,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         // Expose functions to window
-        window.analyzeLandingPage = analyzeLandingPage;
+        window.analyzeLandingHtml = analyzeLandingHtml;
         window.generatePlaceholderImage = generatePlaceholderImage;
         window.insertGeneratedImage = insertGeneratedImage;
         window.saveLandingChanges = saveLandingChanges;
