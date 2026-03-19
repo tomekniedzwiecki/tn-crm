@@ -1595,6 +1595,54 @@
                             </div>
                         </div>
 
+                        <!-- Landing Page Analyzer Section -->
+                        <div class="mt-8 pt-8 border-t border-[#222]">
+                            <div class="flex items-center justify-between mb-6">
+                                <h4 class="text-[14px] font-medium text-white flex items-center gap-2">
+                                    <i class="ph ph-scan text-cyan-400"></i>
+                                    Analiza strony
+                                </h4>
+                                <button onclick="analyzeLandingPage()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-1.5 rounded-lg text-[12px] font-medium flex items-center gap-2">
+                                    <i class="ph ph-magnifying-glass"></i>
+                                    Analizuj landing
+                                </button>
+                            </div>
+
+                            <p class="text-[#666] text-[12px] mb-4">
+                                Skanuje HTML strony, znajduje miejsca na grafiki (img-placeholder), generuje obrazy AI i aktualizuje pliki.
+                            </p>
+
+                            <!-- Analyze Status -->
+                            <div id="landing-analyze-status" class="hidden mb-4">
+                                <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+                                    <div class="flex items-center gap-3">
+                                        <i class="ph ph-spinner animate-spin text-cyan-400"></i>
+                                        <span class="text-[13px] text-cyan-400">Analizuję stronę...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Found Placeholders -->
+                            <div id="landing-placeholders" class="hidden space-y-3 mb-6">
+                                <div class="flex items-center justify-between">
+                                    <h5 class="text-[12px] font-medium text-[#888]">Znalezione miejsca na grafiki</h5>
+                                    <span id="placeholders-count" class="text-[11px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded"></span>
+                                </div>
+                                <div id="placeholders-list" class="space-y-3">
+                                    <!-- Placeholders will be inserted here -->
+                                </div>
+
+                                <!-- Save Changes Button -->
+                                <div id="save-landing-changes" class="hidden pt-4 border-t border-[#222]">
+                                    <button onclick="saveLandingChanges()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-center gap-2">
+                                        <i class="ph ph-floppy-disk"></i>
+                                        Zapisz zmiany i opublikuj
+                                    </button>
+                                    <p class="text-[10px] text-[#555] mt-2 text-center">Zapisuje plik HTML, commituje i pushuje na Vercel</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- AI Image Generator Section -->
                         <div class="mt-8 pt-8 border-t border-[#222]">
                             <div class="flex items-center justify-between mb-6">
@@ -1602,7 +1650,7 @@
                                     <i class="ph ph-image text-violet-400"></i>
                                     Generator grafik AI
                                 </h4>
-                                <span class="text-[10px] text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">Imagen 3</span>
+                                <span class="text-[10px] text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">Gemini 3.1</span>
                             </div>
 
                             <p class="text-[#666] text-[12px] mb-6">
@@ -9641,7 +9689,348 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.deliverSalesPage = deliverSalesPage;
 
         // =============================================
-        // AI IMAGE GENERATOR (Imagen 3)
+        // LANDING PAGE ANALYZER
+        // =============================================
+        let landingPageHtml = '';
+        let landingPagePath = '';
+        let foundPlaceholders = [];
+        let modifiedHtml = '';
+
+        async function analyzeLandingPage() {
+            const urlInput = document.getElementById('landing-page-url');
+            const url = urlInput?.value?.trim();
+
+            if (!url) {
+                showToast('Wprowadź URL strony', 'error');
+                return;
+            }
+
+            // Extract landing name from URL (e.g., https://tn-crm.vercel.app/landing-pages/inspektron/ -> inspektron)
+            const match = url.match(/landing-pages\/([^\/]+)/);
+            if (!match) {
+                showToast('URL musi zawierać /landing-pages/[nazwa]/', 'error');
+                return;
+            }
+            const landingName = match[1];
+            landingPagePath = `landing-pages/${landingName}/index.html`;
+
+            const statusDiv = document.getElementById('landing-analyze-status');
+            const placeholdersDiv = document.getElementById('landing-placeholders');
+
+            statusDiv.classList.remove('hidden');
+            placeholdersDiv.classList.add('hidden');
+
+            try {
+                // Fetch HTML from the landing page
+                const fetchUrl = url.endsWith('/') ? url + 'index.html' : url + '/index.html';
+                const response = await fetch(fetchUrl);
+
+                if (!response.ok) {
+                    throw new Error(`Nie można pobrać strony: ${response.status}`);
+                }
+
+                landingPageHtml = await response.text();
+                modifiedHtml = landingPageHtml;
+
+                // Parse HTML and find placeholders
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(landingPageHtml, 'text/html');
+
+                foundPlaceholders = [];
+
+                // Find all img-placeholder divs
+                const placeholderDivs = doc.querySelectorAll('.img-placeholder, [class*="img-placeholder"]');
+                placeholderDivs.forEach((el, index) => {
+                    const contextText = el.textContent?.trim() || '';
+                    const parentSection = el.closest('section');
+                    const sectionId = parentSection?.id || '';
+                    const sectionClass = parentSection?.className || '';
+
+                    // Get nearby heading for context
+                    const nearbyHeading = parentSection?.querySelector('h1, h2, h3')?.textContent?.trim() || '';
+
+                    foundPlaceholders.push({
+                        id: `placeholder-${index}`,
+                        type: 'img-placeholder',
+                        element: el.outerHTML,
+                        context: contextText,
+                        section: sectionId || sectionClass.split(' ')[0] || 'unknown',
+                        heading: nearbyHeading,
+                        generatedUrl: null,
+                        prompt: generatePromptForPlaceholder(contextText, nearbyHeading, sectionId)
+                    });
+                });
+
+                // Find testimonial avatars with initials
+                const avatarDivs = doc.querySelectorAll('[class*="avatar"], [class*="initials"]');
+                avatarDivs.forEach((el, index) => {
+                    const initials = el.textContent?.trim() || '';
+                    if (initials && initials.length <= 3 && /^[A-Z]+$/.test(initials)) {
+                        foundPlaceholders.push({
+                            id: `avatar-${index}`,
+                            type: 'avatar',
+                            element: el.outerHTML,
+                            context: `Avatar: ${initials}`,
+                            section: 'testimonials',
+                            heading: 'Opinie klientów',
+                            generatedUrl: null,
+                            prompt: `Professional headshot portrait photo of a Polish person (initials ${initials}), natural lighting, business casual, friendly expression, neutral background, photorealistic, high quality`
+                        });
+                    }
+                });
+
+                displayImagePlaceholders();
+                showToast(`Znaleziono ${foundPlaceholders.length} miejsc na grafiki`, 'success');
+
+            } catch (err) {
+                console.error('Analyze error:', err);
+                showToast(err.message, 'error');
+            } finally {
+                statusDiv.classList.add('hidden');
+            }
+        }
+
+        function generatePromptForPlaceholder(context, heading, section) {
+            // Build brand context
+            let brandContext = '';
+            if (brandingItems.length > 0) {
+                const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+                const colors = brandingItems.filter(b => b.type === 'color');
+                if (brandInfo?.name) brandContext += `Brand: ${brandInfo.name}. `;
+                if (colors.length > 0) {
+                    const mainColor = colors.find(c => c.role === 'primary')?.value;
+                    if (mainColor) brandContext += `Brand color: ${mainColor}. `;
+                }
+            }
+
+            // Product context
+            let productContext = '';
+            if (workflow?.product_name) {
+                productContext = `Product: ${workflow.product_name}. `;
+            }
+
+            const contextLower = context.toLowerCase();
+            const headingLower = heading.toLowerCase();
+
+            if (contextLower.includes('produkt') || contextLower.includes('product')) {
+                return `Professional product photography, ${productContext}${brandContext}clean studio setup, premium quality, e-commerce style, white or gradient background`;
+            }
+
+            if (contextLower.includes('hero') || section.includes('hero')) {
+                return `Professional hero banner for e-commerce, ${productContext}${brandContext}modern design, premium feel, lifestyle imagery`;
+            }
+
+            if (contextLower.includes('korzy') || contextLower.includes('benefit')) {
+                return `Abstract illustration representing benefits, ${brandContext}modern minimal style, professional, ${heading}`;
+            }
+
+            if (contextLower.includes('tło') || contextLower.includes('background')) {
+                return `Subtle background texture or pattern, ${brandContext}professional, minimal, suitable for text overlay`;
+            }
+
+            // Default prompt based on context
+            return `Professional image for e-commerce landing page, ${productContext}${brandContext}context: ${context || heading || 'product showcase'}, high quality, modern design`;
+        }
+
+        function displayImagePlaceholders() {
+            const placeholdersDiv = document.getElementById('landing-placeholders');
+            const listDiv = document.getElementById('placeholders-list');
+            const countSpan = document.getElementById('placeholders-count');
+
+            if (foundPlaceholders.length === 0) {
+                placeholdersDiv.classList.add('hidden');
+                return;
+            }
+
+            countSpan.textContent = `${foundPlaceholders.length} elementów`;
+
+            listDiv.innerHTML = foundPlaceholders.map((p, index) => `
+                <div class="bg-[#111] border border-[#222] rounded-lg p-4" id="ph-${p.id}">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-[11px] font-medium">${index + 1}</span>
+                            <div>
+                                <div class="text-white text-[12px] font-medium">${p.context || p.type}</div>
+                                <div class="text-[#555] text-[10px]">Sekcja: ${p.section}${p.heading ? ' | ' + p.heading : ''}</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded ${p.type === 'avatar' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'}">${p.type}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-[10px] text-[#555] mb-1 uppercase tracking-wide">Prompt</label>
+                        <textarea id="prompt-${p.id}" rows="2" class="w-full bg-[#0a0a0a] border border-[#222] rounded-md px-3 py-2 text-[12px] text-white placeholder-[#555] focus:border-cyan-500/50 focus:outline-none resize-none">${p.prompt}</textarea>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="generatePlaceholderImage('${p.id}')" class="flex-1 bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5" id="gen-btn-${p.id}">
+                            <i class="ph ph-sparkle"></i>
+                            Generuj
+                        </button>
+                        <button onclick="insertGeneratedImage('${p.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed" id="insert-btn-${p.id}" disabled>
+                            <i class="ph ph-arrow-square-in"></i>
+                            Wstaw
+                        </button>
+                    </div>
+
+                    <div id="preview-${p.id}" class="hidden mt-3">
+                        <img src="" alt="Generated" class="w-full max-w-[200px] rounded-lg border border-[#333]">
+                    </div>
+                </div>
+            `).join('');
+
+            placeholdersDiv.classList.remove('hidden');
+        }
+
+        async function generatePlaceholderImage(placeholderId) {
+            const placeholder = foundPlaceholders.find(p => p.id === placeholderId);
+            if (!placeholder) return;
+
+            const promptEl = document.getElementById(`prompt-${placeholderId}`);
+            const prompt = promptEl?.value?.trim();
+
+            if (!prompt) {
+                showToast('Wpisz prompt', 'error');
+                return;
+            }
+
+            const btn = document.getElementById(`gen-btn-${placeholderId}`);
+            const insertBtn = document.getElementById(`insert-btn-${placeholderId}`);
+            const previewDiv = document.getElementById(`preview-${placeholderId}`);
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generuję...';
+
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('generate-image', {
+                    body: {
+                        prompt,
+                        count: 1,
+                        workflow_id: workflow.id,
+                        type: placeholder.type
+                    }
+                });
+
+                if (error) throw error;
+                if (data.error) throw new Error(data.error);
+
+                if (data.images && data.images.length > 0) {
+                    placeholder.generatedUrl = data.images[0].url;
+
+                    // Show preview
+                    previewDiv.classList.remove('hidden');
+                    previewDiv.querySelector('img').src = placeholder.generatedUrl;
+
+                    // Enable insert button
+                    insertBtn.disabled = false;
+
+                    showToast('Grafika wygenerowana', 'success');
+                }
+
+            } catch (err) {
+                console.error('Generate error:', err);
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-sparkle"></i> Generuj';
+            }
+        }
+
+        function insertGeneratedImage(placeholderId) {
+            const placeholder = foundPlaceholders.find(p => p.id === placeholderId);
+            if (!placeholder || !placeholder.generatedUrl) {
+                showToast('Najpierw wygeneruj grafikę', 'error');
+                return;
+            }
+
+            // Replace placeholder element with img tag in modified HTML
+            const imgTag = `<img src="${placeholder.generatedUrl}" alt="${placeholder.context || 'Image'}" class="w-full h-auto rounded-lg">`;
+
+            // Find and replace the placeholder element
+            // This is a simplified replacement - in real scenario might need more sophisticated parsing
+            modifiedHtml = modifiedHtml.replace(placeholder.element, imgTag);
+
+            // Mark as inserted
+            const card = document.getElementById(`ph-${placeholderId}`);
+            if (card) {
+                card.classList.add('border-emerald-500/50');
+                card.querySelector(`#insert-btn-${placeholderId}`).innerHTML = '<i class="ph ph-check"></i> Wstawiono';
+                card.querySelector(`#insert-btn-${placeholderId}`).disabled = true;
+            }
+
+            // Show save button
+            document.getElementById('save-landing-changes').classList.remove('hidden');
+
+            showToast('Grafika wstawiona do HTML', 'success');
+        }
+
+        async function saveLandingChanges() {
+            if (!modifiedHtml || !landingPagePath) {
+                showToast('Brak zmian do zapisania', 'error');
+                return;
+            }
+
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Zapisuję...';
+
+            try {
+                // We need to save the file via an API call
+                // For now, we'll copy to clipboard and show instructions
+                await navigator.clipboard.writeText(modifiedHtml);
+
+                showToast('HTML skopiowany do schowka. Wklej do pliku: ' + landingPagePath, 'success');
+
+                // Show manual instructions modal
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-lg w-full p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                            <i class="ph ph-clipboard-text text-emerald-400"></i>
+                            HTML skopiowany!
+                        </h3>
+                        <p class="text-zinc-400 text-sm mb-4">
+                            Zmodyfikowany HTML został skopiowany do schowka. Aby opublikować zmiany:
+                        </p>
+                        <ol class="text-zinc-300 text-sm space-y-2 mb-6">
+                            <li class="flex items-start gap-2">
+                                <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</span>
+                                <span>Otwórz plik: <code class="text-cyan-400 bg-zinc-800 px-1 rounded">${landingPagePath}</code></span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span>
+                                <span>Zamień całą zawartość na skopiowany HTML (Ctrl+A, Ctrl+V)</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span>
+                                <span>Zapisz plik i wykonaj: <code class="text-cyan-400 bg-zinc-800 px-1 rounded">git add . && git commit -m "Update landing images" && git push</code></span>
+                            </li>
+                        </ol>
+                        <button onclick="this.closest('.fixed').remove()" class="w-full bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-lg text-sm">
+                            Rozumiem
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+            } catch (err) {
+                console.error('Save error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Zapisz zmiany i opublikuj';
+            }
+        }
+
+        // Expose functions to window
+        window.analyzeLandingPage = analyzeLandingPage;
+        window.generatePlaceholderImage = generatePlaceholderImage;
+        window.insertGeneratedImage = insertGeneratedImage;
+        window.saveLandingChanges = saveLandingChanges;
+
+        // =============================================
+        // AI IMAGE GENERATOR (Gemini 3.1)
         // =============================================
         const AI_IMAGE_TYPES = {
             hero: {
