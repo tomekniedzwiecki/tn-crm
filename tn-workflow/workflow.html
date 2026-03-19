@@ -9705,14 +9705,25 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 return;
             }
 
-            // Extract landing name from URL (e.g., https://tn-crm.vercel.app/landing-pages/inspektron/ -> inspektron)
-            const match = url.match(/landing-pages\/([^\/]+)/);
-            if (!match) {
-                showToast('URL musi zawierać /landing-pages/[nazwa]/', 'error');
-                return;
+            // Extract landing name - try from URL pattern first, then from branding, then from domain
+            let landingName = '';
+            const matchLandingPages = url.match(/landing-pages\/([^\/]+)/);
+            if (matchLandingPages) {
+                landingName = matchLandingPages[1];
+            } else {
+                // Try to get from branding
+                const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+                if (brandInfo?.name) {
+                    landingName = brandInfo.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                } else {
+                    // Extract from domain (e.g., https://inspektron.pl -> inspektron)
+                    const domainMatch = url.match(/https?:\/\/([^\/]+)/);
+                    if (domainMatch) {
+                        landingName = domainMatch[1].replace(/\.(pl|com|eu|net|org|takedrop\.pl)$/i, '').replace(/^www\./, '');
+                    }
+                }
             }
-            const landingName = match[1];
-            landingPagePath = `landing-pages/${landingName}/index.html`;
+            landingPagePath = landingName ? `landing-pages/${landingName}/index.html` : '';
 
             const statusDiv = document.getElementById('landing-analyze-status');
             const placeholdersDiv = document.getElementById('landing-placeholders');
@@ -9721,8 +9732,11 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             placeholdersDiv.classList.add('hidden');
 
             try {
-                // Fetch HTML from the landing page
-                const fetchUrl = url.endsWith('/') ? url + 'index.html' : url + '/index.html';
+                // Fetch HTML from the landing page - try multiple URL variants
+                let fetchUrl = url;
+                if (!url.endsWith('.html')) {
+                    fetchUrl = url.endsWith('/') ? url : url + '/';
+                }
                 const response = await fetch(fetchUrl);
 
                 if (!response.ok) {
