@@ -18,74 +18,68 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
-// Generate image using Google AI Studio (Imagen 3)
-async function generateWithImagen(
+// Generate image using Gemini 2.0 Flash with image generation
+async function generateWithGemini(
   prompt: string,
-  count: number
-): Promise<{ images: { base64: string }[] }> {
-  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
-  if (!apiKey) {
-    throw new Error('Missing GOOGLE_AI_API_KEY')
-  }
+  count: number,
+  apiKey: string
+): Promise<{ images: { base64: string; mimeType: string }[] }> {
 
-  // Imagen 3 via Google AI Studio
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`
+  // Gemini 3.1 Flash with image generation
+  const model = 'gemini-3.1-flash-image-preview'
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      instances: [{ prompt }],
-      parameters: {
-        sampleCount: Math.min(count, 4)
-      }
-    })
-  })
+  console.log(`Using model: ${model}`)
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Imagen API error:', errorText)
+  const images: { base64: string; mimeType: string }[] = []
 
-    // Try alternative endpoint format
-    const altEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImages?key=${apiKey}`
+  // Generate images (Gemini generates 1 per request)
+  for (let i = 0; i < Math.min(count, 4); i++) {
+    console.log(`Generating image ${i + 1}/${count}...`)
 
-    const altResponse = await fetch(altEndpoint, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        prompt,
-        number_of_images: Math.min(count, 4)
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
       })
     })
 
-    if (!altResponse.ok) {
-      const altErrorText = await altResponse.text()
-      throw new Error(`Imagen API error: ${altErrorText}`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Gemini API error:', errorText)
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`)
     }
 
-    const altData = await altResponse.json()
-    return {
-      images: (altData.generatedImages || []).map((img: { image: { imageBytes: string } }) => ({
-        base64: img.image.imageBytes
-      }))
+    const data = await response.json()
+    console.log('API response keys:', Object.keys(data))
+
+    // Extract image from response
+    if (data.candidates && data.candidates[0]?.content?.parts) {
+      for (const part of data.candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          images.push({
+            base64: part.inlineData.data,
+            mimeType: part.inlineData.mimeType || 'image/png'
+          })
+          console.log(`Found image with mimeType: ${part.inlineData.mimeType}`)
+        }
+      }
     }
   }
 
-  const data = await response.json()
-
-  if (!data.predictions || data.predictions.length === 0) {
-    throw new Error('No images generated')
+  if (images.length === 0) {
+    throw new Error('No images generated - model may not support image generation or prompt was blocked')
   }
 
-  return {
-    images: data.predictions.map((pred: { bytesBase64Encoded: string }) => ({
-      base64: pred.bytesBase64Encoded
-    }))
-  }
+  return { images }
 }
 
 Deno.serve(async (req) => {
@@ -105,6 +99,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
+    if (!apiKey) {
+      throw new Error('Missing GOOGLE_AI_API_KEY - add it in Supabase Edge Functions Secrets')
+    }
+
     const body = await req.json()
     const { prompt, count = 1, workflow_id, type } = body
 
@@ -118,7 +117,7 @@ Deno.serve(async (req) => {
     console.log(`Generating ${count} image(s) for workflow ${workflow_id}, type: ${type}`)
     console.log(`Prompt: ${prompt.substring(0, 100)}...`)
 
-    const result = await generateWithImagen(prompt, count)
+    const result = await generateWithGemini(prompt, count, apiKey)
 
     // Upload to Supabase Storage
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -127,7 +126,8 @@ Deno.serve(async (req) => {
 
     const uploadedImages = await Promise.all(
       result.images.map(async (img, index) => {
-        const filename = `ai-generated/${workflow_id || 'temp'}/${Date.now()}_${index}.png`
+        const ext = img.mimeType.includes('jpeg') || img.mimeType.includes('jpg') ? 'jpg' : 'png'
+        const filename = `ai-generated/${workflow_id || 'temp'}/${Date.now()}_${index}.${ext}`
 
         // Convert base64 to Uint8Array
         const binaryString = atob(img.base64)
@@ -138,12 +138,12 @@ Deno.serve(async (req) => {
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filename, bytes, { contentType: 'image/png' })
+          .upload(filename, bytes, { contentType: img.mimeType })
 
         if (uploadError) {
           console.error('Upload error:', uploadError)
           // Return data URL as fallback
-          return { url: `data:image/png;base64,${img.base64}` }
+          return { url: `data:${img.mimeType};base64,${img.base64}` }
         }
 
         const { data: { publicUrl } } = supabase.storage
