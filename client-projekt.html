@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032003';
+        const APP_VERSION = '2026032004';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1961,6 +1961,15 @@
                             <i id="nav-check-test-sklepu" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                     </div>
+
+                    <div id="ads-stage-desktop" class="hidden">
+                        <div class="dash-nav-section">Etap 4</div>
+                        <div class="dash-nav-item" data-tab="konto-reklamowe" onclick="switchTab('konto-reklamowe')">
+                            <i class="ph ph-megaphone-simple"></i>
+                            <span>Konto reklamowe</span>
+                            <i id="nav-check-konto-reklamowe" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                    </div>
                 </nav>
 
                 <div class="dash-sidebar-footer">
@@ -2065,6 +2074,15 @@
                                 <i class="ph ph-magnifying-glass"></i>
                                 <span>Test sklepu</span>
                                 <i id="nav-check-test-sklepu-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                        </div>
+
+                        <div id="ads-stage-mobile" class="hidden">
+                            <div class="dash-nav-section">Etap 4</div>
+                            <div class="dash-nav-item" data-tab="konto-reklamowe" onclick="switchTab('konto-reklamowe');toggleMobileMenu()">
+                                <i class="ph ph-megaphone-simple"></i>
+                                <span>Konto reklamowe</span>
+                                <i id="nav-check-konto-reklamowe-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -3416,6 +3434,68 @@
                 </div>
             </div>
 
+            <!-- TAB: Konto reklamowe (Etap 4) -->
+            <div id="tab-konto-reklamowe" class="tab-panel hidden animate-enter">
+                <div class="max-w-3xl">
+                    <div class="flex items-start gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-megaphone-simple text-2xl text-rose-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Konto reklamowe</h2>
+                            <p class="text-[14px] text-[#888] leading-relaxed">
+                                Konfiguracja konta reklamowego do kampanii Meta Ads i TikTok Ads.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Not active state -->
+                    <div id="ad-account-not-active-client" class="hidden">
+                        <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                                    <i class="ph ph-lock text-zinc-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[16px] font-medium text-zinc-300">Etap 4 jeszcze nieaktywny</h3>
+                                    <p class="text-[13px] text-[#666] mt-1">Ten etap zostanie odblokowany po zaakceptowaniu testu sklepu.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active state - pending -->
+                    <div id="ad-account-pending-client" class="hidden">
+                        <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                                    <i class="ph ph-hourglass text-cyan-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[16px] font-medium text-cyan-400">Konfiguracja w toku</h3>
+                                    <p class="text-[13px] text-[#888] mt-1">Trwa konfiguracja Twojego konta reklamowego. Dam Ci znać gdy będzie gotowe.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active state - ready -->
+                    <div id="ad-account-ready-client" class="hidden">
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-check-circle text-emerald-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[16px] font-medium text-emerald-400">Konto reklamowe skonfigurowane</h3>
+                                    <p id="ad-account-ready-date-client" class="text-[13px] text-[#888] mt-1">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
         </div><!-- /flex -->
     </div>
@@ -3686,7 +3766,7 @@
             { id: 1, name: 'Marka', icon: 'ph-paint-brush' },
             { id: 2, name: 'Etap 2', icon: 'ph-video-camera' },
             { id: 3, name: 'Etap 3', icon: 'ph-storefront' },
-            { id: 4, name: 'Etap 4', icon: 'ph-circle-dashed' },
+            { id: 4, name: 'Etap 4', icon: 'ph-megaphone-simple' },
             { id: 5, name: 'Etap 5', icon: 'ph-circle-dashed' }
         ];
 
@@ -5612,6 +5692,9 @@
                 case 'test-sklepu':
                     loadTestSklepu();
                     break;
+                case 'konto-reklamowe':
+                    loadKontoReklamowe();
+                    break;
             }
         }
         window.switchTab = switchTab;
@@ -7204,6 +7287,7 @@
 
         // TakeDrop functions
         let takeDropData = null;
+        let adsData = null;
 
         async function loadTakeDrop() {
             try {
@@ -7226,6 +7310,18 @@
                 } else {
                     if (takedropDesktop) takedropDesktop.classList.add('hidden');
                     if (takedropMobile) takedropMobile.classList.add('hidden');
+                }
+
+                // Show/hide Etap 4 (Ads) based on test_accepted
+                const adsDesktop = document.getElementById('ads-stage-desktop');
+                const adsMobile = document.getElementById('ads-stage-mobile');
+
+                if (takeDropData && takeDropData.test_accepted) {
+                    if (adsDesktop) adsDesktop.classList.remove('hidden');
+                    if (adsMobile) adsMobile.classList.remove('hidden');
+                } else {
+                    if (adsDesktop) adsDesktop.classList.add('hidden');
+                    if (adsMobile) adsMobile.classList.add('hidden');
                 }
 
                 renderTakeDrop();
@@ -7745,6 +7841,12 @@
                     // Create confetti effect
                     createConfetti();
 
+                    // Show Etap 4 navigation
+                    const adsDesktop = document.getElementById('ads-stage-desktop');
+                    const adsMobile = document.getElementById('ads-stage-mobile');
+                    if (adsDesktop) adsDesktop.classList.remove('hidden');
+                    if (adsMobile) adsMobile.classList.remove('hidden');
+
                     // Refresh UI
                     loadTestSklepu();
                     updateDashSidebar();
@@ -7757,6 +7859,58 @@
             }
         }
         window.acceptTestAndProceed = acceptTestAndProceed;
+
+        // Konto reklamowe (Etap 4) functions
+        async function loadKontoReklamowe() {
+            // Load ads data
+            const { data } = await supabaseClient
+                .from('workflow_ads')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .maybeSingle();
+
+            adsData = data;
+
+            const notActiveEl = document.getElementById('ad-account-not-active-client');
+            const pendingEl = document.getElementById('ad-account-pending-client');
+            const readyEl = document.getElementById('ad-account-ready-client');
+            const navCheck = document.getElementById('nav-check-konto-reklamowe');
+            const navCheckMobile = document.getElementById('nav-check-konto-reklamowe-mobile');
+
+            // Hide all states first
+            if (notActiveEl) notActiveEl.classList.add('hidden');
+            if (pendingEl) pendingEl.classList.add('hidden');
+            if (readyEl) readyEl.classList.add('hidden');
+
+            // Check if test_accepted (stage 4 active)
+            if (!takeDropData?.test_accepted) {
+                if (notActiveEl) notActiveEl.classList.remove('hidden');
+                return;
+            }
+
+            // Stage 4 is active
+            if (adsData?.ad_account_ready) {
+                // Show ready state
+                if (readyEl) readyEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckMobile) navCheckMobile.classList.remove('hidden');
+
+                const readyDate = adsData.ad_account_configured_at;
+                if (readyDate) {
+                    const dateEl = document.getElementById('ad-account-ready-date-client');
+                    if (dateEl) {
+                        dateEl.textContent = 'Skonfigurowane ' + new Date(readyDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                        });
+                    }
+                }
+            } else {
+                // Show pending state
+                if (pendingEl) pendingEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+                if (navCheckMobile) navCheckMobile.classList.add('hidden');
+            }
+        }
 
         // Mobile menu toggle
         function toggleMobileMenu() {

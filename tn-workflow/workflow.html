@@ -416,6 +416,21 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Etap 4 - Reklamy -->
+                <div id="nav-stage4" class="hidden pt-4 mt-4 border-t border-white/5">
+                    <button onclick="toggleStageSection(4)" class="flex items-center justify-between w-full px-3 mb-2 group cursor-pointer">
+                        <span class="text-[10px] text-zinc-600 uppercase tracking-wider">Etap 4</span>
+                        <i id="stage-4-chevron" class="ph ph-caret-down text-zinc-600 text-xs transition-transform"></i>
+                    </button>
+                    <div id="stage-4-content">
+                        <button onclick="switchTab('ad-account')" data-tab="ad-account" class="workflow-sidebar-btn">
+                            <i class="ph ph-megaphone-simple"></i>
+                            Konto reklamowe
+                            <span id="nav-check-ad-account" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Main Content Area -->
@@ -1995,6 +2010,75 @@
                             </div>
                         </div>
                     </div><!-- /tab-test -->
+
+                    <!-- TAB: Konto reklamowe (Etap 4) -->
+                    <div id="tab-ad-account" class="workflow-panel hidden">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                                <i class="ph ph-megaphone-simple text-rose-400"></i>
+                                Konto reklamowe
+                            </h3>
+                            <p class="text-[13px] text-[#666]">Konfiguracja konta reklamowego dla kampanii Meta/TikTok.</p>
+                        </div>
+
+                        <!-- Stage 4 not active info -->
+                        <div id="ad-account-not-active" class="hidden">
+                            <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                                        <i class="ph ph-lock text-zinc-400 text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[13px] text-zinc-300">Etap 4 nieaktywny</div>
+                                        <div class="text-[12px] text-[#666]">Etap 4 zostanie odblokowany gdy klient zaakceptuje test sklepu</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stage 4 active content -->
+                        <div id="ad-account-content" class="hidden">
+                            <!-- Status info -->
+                            <div id="ad-account-ready-status" class="hidden mb-6">
+                                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                            <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[13px] text-emerald-400 font-medium">Konto reklamowe skonfigurowane</div>
+                                            <div id="ad-account-ready-date" class="text-[12px] text-[#888]">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placeholder for future ad account config -->
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                                <div class="text-center py-8">
+                                    <div class="w-14 h-14 mx-auto mb-4 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                                        <i class="ph ph-megaphone-simple text-2xl text-rose-400"></i>
+                                    </div>
+                                    <h4 class="text-[15px] font-medium text-white mb-2">Konfiguracja konta reklamowego</h4>
+                                    <p class="text-[13px] text-[#666]">Tutaj pojawią się opcje konfiguracji kont Meta Ads i TikTok Ads.</p>
+                                </div>
+                            </div>
+
+                            <!-- Manual toggle for ad account ready -->
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-[13px] text-white">Konto reklamowe gotowe</div>
+                                        <div class="text-[12px] text-[#666] mt-1">Zaznacz gdy konto reklamowe jest skonfigurowane</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="ad-account-ready-toggle" onchange="toggleAdAccountReady()" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- /tab-ad-account -->
 
                     <!-- TAB: Historia (Full Activity History) -->
                     <div id="tab-historia" class="workflow-panel hidden">
@@ -3874,11 +3958,12 @@
                 toggle('nav-check-strona', !!workflow.sales_page_shared_at);
 
                 // These need DB queries
-                const [brandRes, repsRes, videoRes, takedropRes] = await Promise.all([
+                const [brandRes, repsRes, videoRes, takedropRes, adsRes] = await Promise.all([
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -3953,6 +4038,14 @@
                 toggle('nav-check-legal', !!takedropNavStatus?.legal_documents_ready);
                 toggle('nav-check-payment-gateway', !!takedropNavStatus?.payment_gateway_ready);
                 toggle('nav-check-test', !!takedropNavStatus?.test_accepted);
+
+                // Etap 4 - show when test_accepted is true
+                const adsNavStatus = adsRes.data;
+                const navStage4 = document.getElementById('nav-stage4');
+                if (navStage4) {
+                    navStage4.classList.toggle('hidden', !takedropNavStatus?.test_accepted);
+                }
+                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
@@ -5030,6 +5123,7 @@
             const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona', 'podsumowanie'];
             const stage2Tabs = ['scenariusze', 'profile', 'nagrania'];
             const stage3Tabs = ['takedrop', 'landing', 'legal', 'payment-gateway', 'test'];
+            const stage4Tabs = ['ad-account'];
 
             if (stage1Tabs.includes(tabName)) {
                 expandStageSection(1);
@@ -5037,6 +5131,8 @@
                 expandStageSection(2);
             } else if (stage3Tabs.includes(tabName)) {
                 expandStageSection(3);
+            } else if (stage4Tabs.includes(tabName)) {
+                expandStageSection(4);
             }
 
             // Update sidebar buttons
@@ -5094,6 +5190,9 @@
                     break;
                 case 'test':
                     loadTestTab();
+                    break;
+                case 'ad-account':
+                    loadAdAccountTab();
                     break;
                 case 'historia':
                     loadFullHistory(true);
@@ -7753,6 +7852,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
 
                 loadTestTab();
+                updateNavChecks(); // Update nav to show/hide stage 4
                 showToast(isCompleted ? 'Test zaakceptowany' : 'Test oznaczony jako niezakończony');
             } catch (err) {
                 console.error('Error toggling test:', err);
@@ -7820,6 +7920,121 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.loadTestTab = loadTestTab;
         window.toggleTestCompleted = toggleTestCompleted;
         window.sendTestReadyNotification = sendTestReadyNotification;
+
+        // =============================================
+        // AD ACCOUNT (ETAP 4)
+        // =============================================
+        let adsData = null;
+
+        async function loadAdAccountTab() {
+            // Load ads data
+            const { data } = await supabaseClient
+                .from('workflow_ads')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .maybeSingle();
+
+            adsData = data;
+
+            const notActiveEl = document.getElementById('ad-account-not-active');
+            const contentEl = document.getElementById('ad-account-content');
+            const readyStatusEl = document.getElementById('ad-account-ready-status');
+            const readyToggle = document.getElementById('ad-account-ready-toggle');
+            const navCheck = document.getElementById('nav-check-ad-account');
+
+            // Check if test_accepted (stage 3 completed)
+            if (!takeDropData) {
+                const { data: tdData } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .select('test_accepted')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                takeDropData = tdData;
+            }
+
+            const isStage4Active = !!takeDropData?.test_accepted;
+
+            if (!isStage4Active) {
+                // Stage 4 not yet active
+                if (notActiveEl) notActiveEl.classList.remove('hidden');
+                if (contentEl) contentEl.classList.add('hidden');
+                return;
+            }
+
+            // Stage 4 is active
+            if (notActiveEl) notActiveEl.classList.add('hidden');
+            if (contentEl) contentEl.classList.remove('hidden');
+
+            // Check ad account ready status
+            if (adsData?.ad_account_ready) {
+                if (readyStatusEl) readyStatusEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (readyToggle) readyToggle.checked = true;
+
+                const readyDate = adsData.ad_account_configured_at;
+                if (readyDate) {
+                    const dateEl = document.getElementById('ad-account-ready-date');
+                    if (dateEl) {
+                        dateEl.textContent = new Date(readyDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+            } else {
+                if (readyStatusEl) readyStatusEl.classList.add('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+                if (readyToggle) readyToggle.checked = false;
+            }
+        }
+
+        async function toggleAdAccountReady() {
+            const toggle = document.getElementById('ad-account-ready-toggle');
+            const isReady = toggle?.checked || false;
+
+            try {
+                const updateData = {
+                    ad_account_ready: isReady,
+                    ad_account_configured_at: isReady ? new Date().toISOString() : null
+                };
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update(updateData)
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+
+                    adsData.ad_account_ready = isReady;
+                    adsData.ad_account_configured_at = updateData.ad_account_configured_at;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: new Date().toISOString(),
+                            ...updateData
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                loadAdAccountTab();
+                updateNavChecks();
+                showToast(isReady ? 'Konto reklamowe oznaczone jako gotowe' : 'Konto reklamowe oznaczone jako niegotowe');
+            } catch (err) {
+                console.error('Error toggling ad account:', err);
+                showToast('Błąd aktualizacji', 'error');
+                if (toggle) toggle.checked = !isReady;
+            }
+        }
+
+        window.loadAdAccountTab = loadAdAccountTab;
+        window.toggleAdAccountReady = toggleAdAccountReady;
 
         // =============================================
         // CONTRACT MANAGEMENT
