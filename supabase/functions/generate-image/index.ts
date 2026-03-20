@@ -41,12 +41,12 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeTy
   return { base64, mimeType: contentType }
 }
 
-// Generate image using Gemini with optional reference image
+// Generate image using Gemini with optional reference images
 async function generateWithGemini(
   prompt: string,
   count: number,
   apiKey: string,
-  referenceImageUrl?: string
+  referenceImages?: { url: string; type: 'logo' | 'product' }[]
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
 
   const model = 'gemini-3-pro-image-preview'
@@ -59,25 +59,35 @@ async function generateWithGemini(
   // Build parts array
   const parts: any[] = []
 
-  // Add reference image if provided
-  if (referenceImageUrl) {
-    try {
-      const refImage = await fetchImageAsBase64(referenceImageUrl)
-      parts.push({
-        inline_data: {
-          mime_type: refImage.mimeType,
-          data: refImage.base64
+  // Add reference images if provided
+  let imageContext = ''
+  if (referenceImages && referenceImages.length > 0) {
+    for (const ref of referenceImages) {
+      try {
+        console.log(`Fetching ${ref.type} image: ${ref.url}`)
+        const refImage = await fetchImageAsBase64(ref.url)
+        parts.push({
+          inline_data: {
+            mime_type: refImage.mimeType,
+            data: refImage.base64
+          }
+        })
+        if (ref.type === 'logo') {
+          imageContext += 'Image 1 is the LOGO - use it exactly as provided on the mockup. '
+        } else if (ref.type === 'product') {
+          imageContext += 'Image 2 is the PRODUCT - this is what the brand sells, show it in use in the scene. '
         }
-      })
-      // Modify prompt to reference the image
-      parts.push({
-        text: `Use this product image as reference. The generated image MUST show this EXACT same product (same shape, colors, design, details). ${prompt}`
-      })
-    } catch (err) {
-      console.error('Failed to fetch reference image:', err)
-      // Fall back to text-only prompt
-      parts.push({ text: prompt })
+      } catch (err) {
+        console.error(`Failed to fetch ${ref.type} image:`, err)
+      }
     }
+  }
+
+  // Add prompt with image context
+  if (imageContext) {
+    parts.push({
+      text: `${imageContext}\n\n${prompt}`
+    })
   } else {
     parts.push({ text: prompt })
   }
@@ -154,7 +164,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { prompt, count = 1, workflow_id, type, reference_image_url } = body
+    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images } = body
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), {
@@ -165,11 +175,18 @@ Deno.serve(async (req) => {
 
     console.log(`Generating ${count} image(s) for workflow ${workflow_id}, type: ${type}`)
     console.log(`Prompt: ${prompt.substring(0, 100)}...`)
-    if (reference_image_url) {
-      console.log(`Reference image: ${reference_image_url}`)
+
+    // Support both old format (reference_image_url) and new format (reference_images array)
+    let refImages: { url: string; type: 'logo' | 'product' }[] = []
+    if (reference_images && Array.isArray(reference_images)) {
+      refImages = reference_images
+      console.log(`Reference images: ${refImages.length} (new format)`)
+    } else if (reference_image_url) {
+      refImages = [{ url: reference_image_url, type: 'logo' }]
+      console.log(`Reference image: ${reference_image_url} (legacy format)`)
     }
 
-    const result = await generateWithGemini(prompt, count, apiKey, reference_image_url)
+    const result = await generateWithGemini(prompt, count, apiKey, refImages)
 
     // Upload to Supabase Storage
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!

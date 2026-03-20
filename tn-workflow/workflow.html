@@ -9928,6 +9928,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             return logo?.file_url || null;
         }
 
+        function getProductImageUrl() {
+            return brandingProduct?.image_url || null;
+        }
+
         function getMockupPromptByIndex(index) {
             // First check database prompts
             const dbPrompts = brandingItems.filter(b => b.type === 'ai_prompt');
@@ -10013,6 +10017,18 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
                 try {
                     const logoUrl = getLogoUrl();
+                    const productImageUrl = getProductImageUrl();
+
+                    // Build reference images array
+                    const referenceImages = [];
+                    if (logoUrl) {
+                        referenceImages.push({ url: logoUrl, type: 'logo' });
+                    }
+                    if (productImageUrl) {
+                        referenceImages.push({ url: productImageUrl, type: 'product' });
+                    }
+
+                    console.log('[MOCKUP GEN] Reference images:', referenceImages.map(r => r.type));
 
                     // Call generate-image API
                     const { data, error } = await supabaseClient.functions.invoke('generate-image', {
@@ -10021,7 +10037,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                             count: 1,
                             workflow_id: workflow.id,
                             type: 'mockup',
-                            reference_image_url: logoUrl
+                            reference_images: referenceImages
                         }
                     });
 
