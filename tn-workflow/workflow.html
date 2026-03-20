@@ -1099,8 +1099,11 @@
                                 Strona sprzedazowa
                             </h3>
                             <div class="flex items-center gap-3">
-                                <button onclick="copyAIPrompt('landing')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt AI">
+                                <button onclick="copyAIPrompt('landing')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt do wygenerowania landing page">
                                     <i class="ph ph-robot"></i> Prompt
+                                </button>
+                                <button onclick="copyAIPrompt('ai_images')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt do wygenerowania grafik AI">
+                                    <i class="ph ph-image"></i> AI Images
                                 </button>
                                 <span id="sales-page-delivered-badge" class="hidden text-xs text-emerald-400 flex items-center gap-1">
                                     <i class="ph ph-check-circle"></i> Przekazano klientowi
@@ -1595,53 +1598,6 @@
                             </div>
                         </div>
 
-                        <!-- Landing Page Analyzer Section -->
-                        <div class="mt-8 pt-8 border-t border-[#222]">
-                            <!-- Generator promptu do Claude -->
-                            <div class="flex items-center justify-between mb-6">
-                                <h4 class="text-[14px] font-medium text-white flex items-center gap-2">
-                                    <i class="ph ph-magic-wand text-violet-400"></i>
-                                    Generator grafik AI
-                                </h4>
-                                <span class="text-[10px] text-[#555] bg-[#1a1a1a] px-2 py-1 rounded">Claude + Gemini</span>
-                            </div>
-
-                            <p class="text-[#666] text-[12px] mb-4">
-                                Wygeneruj prompt i wklej go do Claude Code. Claude przeanalizuje stronę, raporty i wygeneruje spójne grafiki z produktem.
-                            </p>
-
-                            <!-- Product Reference Preview -->
-                            <div id="ai-product-reference" class="bg-[#111] border border-[#222] rounded-lg p-4 mb-4">
-                                <div class="flex items-center gap-4">
-                                    <div id="ai-product-image" class="w-16 h-16 rounded-lg bg-[#0a0a0a] border border-[#222] flex items-center justify-center overflow-hidden">
-                                        <i class="ph ph-package text-[#333] text-2xl"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div id="ai-product-name" class="text-[13px] text-white font-medium truncate">Brak wybranego produktu</div>
-                                        <div id="ai-product-url" class="text-[11px] text-[#555] truncate mt-1">Wybierz produkt w kroku "Produkty"</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Generate Prompt Button -->
-                            <button onclick="generateAIImagesPrompt()" class="w-full bg-violet-600 hover:bg-violet-500 text-white px-4 py-3 rounded-lg text-[13px] font-medium flex items-center justify-center gap-2 mb-4">
-                                <i class="ph ph-sparkle"></i>
-                                Generuj prompt do Claude
-                            </button>
-
-                            <!-- Generated Prompt -->
-                            <div id="ai-prompt-output" class="hidden">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[11px] text-[#555] uppercase tracking-wide">Prompt do skopiowania</span>
-                                    <button onclick="copyAIPrompt()" class="text-[11px] text-violet-400 hover:text-violet-300 flex items-center gap-1">
-                                        <i class="ph ph-copy"></i>
-                                        Kopiuj
-                                    </button>
-                                </div>
-                                <div id="ai-prompt-text" class="bg-[#0a0a0a] border border-[#222] rounded-lg p-4 text-[12px] text-[#888] font-mono whitespace-pre-wrap max-h-[300px] overflow-y-auto"></div>
-                                <p class="text-[10px] text-[#444] mt-2">Skopiuj prompt i wklej do Claude Code. Claude wygeneruje grafiki i zaktualizuje stronę.</p>
-                            </div>
-                        </div>
                     </div><!-- /tab-landing -->
 
                     <!-- TAB: Dokumenty prawne (Etap 3) -->
@@ -4980,7 +4936,6 @@
                     break;
                 case 'strona':
                     loadSalesPage();
-                    updateAIProductReference();
                     break;
                 case 'produkty':
                     loadProducts();
@@ -9931,139 +9886,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.generatePlaceholderImage = generatePlaceholderImage;
         window.insertGeneratedImage = insertGeneratedImage;
         window.saveLandingChanges = saveLandingChanges;
-
-        // =============================================
-        // AI IMAGES PROMPT GENERATOR (for Claude)
-        // =============================================
-        async function generateAIImagesPrompt() {
-            // Get selected product
-            const selectedProductId = workflow.selected_product_id;
-            if (!selectedProductId) {
-                showToast('Najpierw wybierz produkt w kroku "Produkty"', 'error');
-                return;
-            }
-
-            // Load product details
-            const { data: product, error: productError } = await supabaseClient
-                .from('workflow_products')
-                .select('*')
-                .eq('id', selectedProductId)
-                .single();
-
-            if (productError || !product) {
-                showToast('Nie znaleziono produktu', 'error');
-                return;
-            }
-
-            // Load reports
-            const { data: reports } = await supabaseClient
-                .from('workflow_reports')
-                .select('name, notes')
-                .eq('workflow_id', workflow.id);
-
-            // Get brand info
-            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
-            const brandName = brandInfo?.name || workflow.customer_name || 'Marka';
-
-            // Build prompt
-            let prompt = `Wygeneruj grafiki AI dla landing page "${brandName}"
-
-== DANE WORKFLOW ==
-- Workflow ID: ${workflow.id}
-- Nazwa marki: ${brandName}
-- URL strony: ${workflow.sales_page_url || 'brak'}
-
-== PRODUKT ==
-- Nazwa: ${product.name}
-- Opis: ${product.description || 'brak'}
-- Zdjęcie referencyjne: ${product.image_url || 'brak'}
-- Źródło: ${product.source_url || 'brak'}
-`;
-
-            // Add reports info
-            if (reports && reports.length > 0) {
-                prompt += `\n== RAPORTY (analiza grupy docelowej) ==\n`;
-                reports.forEach(r => {
-                    prompt += `- ${r.name}`;
-                    if (r.notes) prompt += `: ${r.notes}`;
-                    prompt += '\n';
-                });
-            }
-
-            // Add branding context
-            if (brandingItems.length > 0) {
-                const colors = brandingItems.filter(b => b.type === 'color');
-                const tagline = brandInfo?.tagline;
-                const description = brandInfo?.description;
-
-                prompt += `\n== BRANDING ==\n`;
-                if (tagline) prompt += `- Tagline: ${tagline}\n`;
-                if (description) prompt += `- Opis marki: ${description}\n`;
-                if (colors.length > 0) {
-                    prompt += `- Kolory: ${colors.map(c => `${c.role}: ${c.value}`).join(', ')}\n`;
-                }
-            }
-
-            prompt += `
-== ZADANIE ==
-1. Przeczytaj plik CLAUDE_AI_IMAGES_PROCEDURE.md
-2. Pobierz i przeanalizuj stronę: landing-pages/${brandName.toLowerCase().replace(/\s+/g, '')}/index.html
-3. Przeanalizuj raporty, żeby zrozumieć grupę docelową
-4. Określ które sekcje potrzebują obrazów (Hero ZAWSZE)
-5. Wygeneruj obrazy używając reference_image_url: ${product.image_url || 'BRAK - użyj opisu produktu'}
-6. Zaktualizuj HTML i deploy
-
-WAŻNE: Każdy obraz musi pokazywać DOKŁADNIE ten sam produkt (spójność) i być osadzony w realiach prawdziwych klientów.`;
-
-            // Display prompt
-            const outputDiv = document.getElementById('ai-prompt-output');
-            const textDiv = document.getElementById('ai-prompt-text');
-            textDiv.textContent = prompt;
-            outputDiv.classList.remove('hidden');
-
-            showToast('Prompt wygenerowany - skopiuj i wklej do Claude', 'success');
-        }
-
-        function copyAIPrompt() {
-            const text = document.getElementById('ai-prompt-text').textContent;
-            navigator.clipboard.writeText(text);
-            showToast('Prompt skopiowany do schowka', 'success');
-        }
-
-        // Update product reference preview when tab is shown
-        function updateAIProductReference() {
-            const imgContainer = document.getElementById('ai-product-image');
-            const nameEl = document.getElementById('ai-product-name');
-            const urlEl = document.getElementById('ai-product-url');
-
-            if (!workflow.selected_product_id) {
-                imgContainer.innerHTML = '<i class="ph ph-package text-[#333] text-2xl"></i>';
-                nameEl.textContent = 'Brak wybranego produktu';
-                urlEl.textContent = 'Wybierz produkt w kroku "Produkty"';
-                return;
-            }
-
-            // Load product
-            supabaseClient
-                .from('workflow_products')
-                .select('name, image_url')
-                .eq('id', workflow.selected_product_id)
-                .single()
-                .then(({ data: product }) => {
-                    if (product) {
-                        if (product.image_url) {
-                            imgContainer.innerHTML = `<img src="${product.image_url}" alt="${product.name}" class="w-full h-full object-cover">`;
-                        }
-                        nameEl.textContent = product.name;
-                        urlEl.textContent = product.image_url ? 'Zdjęcie referencyjne dostępne' : 'Brak zdjęcia produktu';
-                        urlEl.classList.toggle('text-emerald-500', !!product.image_url);
-                        urlEl.classList.toggle('text-[#555]', !product.image_url);
-                    }
-                });
-        }
-
-        window.generateAIImagesPrompt = generateAIImagesPrompt;
-        window.copyAIPrompt = copyAIPrompt;
 
         // =============================================
         // PRODUCTS MANAGEMENT
