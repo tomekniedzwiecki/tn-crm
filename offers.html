@@ -270,6 +270,21 @@
                         <!-- Will be rendered by JS -->
                     </div>
 
+                    <!-- Pagination -->
+                    <div id="sent-pagination" class="hidden flex items-center justify-between mt-6 pt-4 border-t border-white/5">
+                        <div class="text-sm text-zinc-500">
+                            <span id="sent-page-info">1-10 z 50</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="sentPagePrev()" id="sent-prev-btn" class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                                <i class="ph ph-caret-left mr-1"></i>Poprzednia
+                            </button>
+                            <button onclick="sentPageNext()" id="sent-next-btn" class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                                Następna<i class="ph ph-caret-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
                     <div id="sent-empty" class="hidden py-16 text-center">
                         <i class="ph ph-paper-plane-tilt text-4xl text-zinc-700 mb-3"></i>
                         <p class="text-zinc-400 text-sm mb-1">Brak wysłanych ofert</p>
@@ -1032,6 +1047,26 @@
             document.getElementById('sent-conversion').textContent = `${conversion}%`;
         }
 
+        // Pagination
+        let sentPage = 1;
+        const sentPerPage = 15;
+        let lastFiltered = [];
+
+        function sentPagePrev() {
+            if (sentPage > 1) {
+                sentPage--;
+                renderSentOffers();
+            }
+        }
+
+        function sentPageNext() {
+            const totalPages = Math.ceil(lastFiltered.length / sentPerPage);
+            if (sentPage < totalPages) {
+                sentPage++;
+                renderSentOffers();
+            }
+        }
+
         // Chart
         let sentChart = null;
         let chartDays = 30;
@@ -1173,6 +1208,7 @@
         }
 
         function filterSentOffers() {
+            sentPage = 1;
             renderSentOffers();
         }
 
@@ -1187,6 +1223,7 @@
             // Reset dates
             document.getElementById('sent-filter-date-from').value = '';
             document.getElementById('sent-filter-date-to').value = '';
+            sentPage = 1;
             renderSentOffers();
         }
 
@@ -1257,15 +1294,38 @@
             // Update stats based on filtered results
             updateSentStats(filtered);
 
+            // Store for pagination
+            lastFiltered = filtered;
+
+            // Pagination
+            const paginationEl = document.getElementById('sent-pagination');
+            const totalPages = Math.ceil(filtered.length / sentPerPage);
+
             if (filtered.length === 0) {
                 list.innerHTML = '';
                 emptyState.classList.remove('hidden');
+                paginationEl.classList.add('hidden');
                 return;
             }
 
             emptyState.classList.add('hidden');
 
-            list.innerHTML = filtered.map(so => {
+            // Paginate
+            const start = (sentPage - 1) * sentPerPage;
+            const end = start + sentPerPage;
+            const paginated = filtered.slice(start, end);
+
+            // Update pagination UI
+            if (filtered.length > sentPerPage) {
+                paginationEl.classList.remove('hidden');
+                document.getElementById('sent-page-info').textContent = `${start + 1}-${Math.min(end, filtered.length)} z ${filtered.length}`;
+                document.getElementById('sent-prev-btn').disabled = sentPage <= 1;
+                document.getElementById('sent-next-btn').disabled = sentPage >= totalPages;
+            } else {
+                paginationEl.classList.add('hidden');
+            }
+
+            list.innerHTML = paginated.map(so => {
                 const lead = so.leads || {};
                 const offer = so.offers || {};
                 const viewCount = so.view_count || (so.view_history?.length || 0);
