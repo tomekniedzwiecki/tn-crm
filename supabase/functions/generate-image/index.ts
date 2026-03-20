@@ -49,7 +49,7 @@ async function generateWithGemini(
   referenceImageUrl?: string
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
 
-  const model = 'gemini-3.1-flash-image-preview'
+  const model = 'gemini-3-pro-image-preview'
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
   console.log(`Using model: ${model}`)
