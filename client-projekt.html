@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032014';
+        const APP_VERSION = '2026032015';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -8225,6 +8225,30 @@
                     takeDropData.test_accepted = true;
                     takeDropData.test_accepted_at = new Date().toISOString();
 
+                    // Trigger automation for ads_activated (email to client)
+                    try {
+                        const clientName = workflow?.customer_name || workflow?.client_name || 'Klient';
+                        const brandName = workflow?.brand_name || workflow?.name || 'Projekt';
+                        const projectUrl = window.location.href.split('?')[0] + '?id=' + workflow.id;
+
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'ads_activated',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    clientName,
+                                    brandName,
+                                    projectUrl,
+                                    email: workflow?.client_email
+                                }
+                            }
+                        });
+                        console.log('Automation trigger fired: ads_activated');
+                    } catch (triggerErr) {
+                        console.error('Automation trigger error:', triggerErr);
+                    }
+
                     // Create confetti effect
                     createConfetti();
 
@@ -8368,7 +8392,9 @@
                     const clientName = workflow?.customer_name || workflow?.client_name || 'Klient';
                     const brandName = workflow?.brand_name || workflow?.name || 'Projekt';
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${workflow.id}`;
+                    const clientProjectUrl = window.location.href.split('?')[0] + '?id=' + workflow.id;
 
+                    // Email to admin
                     await supabaseClient.functions.invoke('automation-trigger', {
                         body: {
                             trigger_type: 'partner_access_granted',
@@ -8382,6 +8408,22 @@
                         }
                     });
                     console.log('Automation trigger fired: partner_access_granted');
+
+                    // Email to client (next steps)
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'partner_step_completed',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                clientName,
+                                brandName,
+                                projectUrl: clientProjectUrl,
+                                email: workflow?.client_email
+                            }
+                        }
+                    });
+                    console.log('Automation trigger fired: partner_step_completed');
                 } catch (triggerErr) {
                     console.error('Automation trigger error:', triggerErr);
                 }
@@ -8481,7 +8523,9 @@
                     const clientName = workflow?.customer_name || workflow?.client_name || 'Klient';
                     const brandName = workflow?.brand_name || workflow?.name || 'Projekt';
                     const projectUrl = `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${workflow.id}`;
+                    const clientProjectUrl = window.location.href.split('?')[0] + '?id=' + workflow.id;
 
+                    // Email to admin
                     await supabaseClient.functions.invoke('automation-trigger', {
                         body: {
                             trigger_type: 'budget_funded',
@@ -8495,6 +8539,22 @@
                         }
                     });
                     console.log('Automation trigger fired: budget_funded');
+
+                    // Email to client (final confirmation)
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'ads_completed',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                clientName,
+                                brandName,
+                                projectUrl: clientProjectUrl,
+                                email: workflow?.client_email
+                            }
+                        }
+                    });
+                    console.log('Automation trigger fired: ads_completed');
                 } catch (triggerErr) {
                     console.error('Automation trigger error:', triggerErr);
                 }

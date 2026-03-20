@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     reklamy: {
         label: 'Etap 4 - Reklamy',
         description: 'Maile związane z reklamami Meta Ads',
-        templates: ['partner_access_granted', 'budget_funded']
+        templates: ['ads_activated', 'partner_access_granted', 'partner_step_completed', 'budget_funded', 'ads_completed']
     }
 };
 
@@ -144,17 +144,35 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         icon: 'ph-browser',
         color: 'cyan'
     },
+    'ads_activated': {
+        name: 'Reklamy aktywowane',
+        description: 'Wysyłany do klienta gdy Etap 4 się odblokuje',
+        icon: 'ph-megaphone',
+        color: 'rose'
+    },
     'partner_access_granted': {
         name: 'Klient dodał partnera',
         description: 'Wysyłany do admina gdy klient potwierdzi dostęp partnera',
         icon: 'ph-user-circle-plus',
         color: 'rose'
     },
+    'partner_step_completed': {
+        name: 'Partner potwierdzony',
+        description: 'Wysyłany do klienta po potwierdzeniu partnera',
+        icon: 'ph-check-circle',
+        color: 'emerald'
+    },
     'budget_funded': {
         name: 'Budżet doładowany',
         description: 'Wysyłany do admina gdy klient doładuje konto reklamowe',
         icon: 'ph-wallet',
         color: 'emerald'
+    },
+    'ads_completed': {
+        name: 'Reklamy gotowe',
+        description: 'Wysyłany do klienta po doładowaniu budżetu',
+        icon: 'ph-rocket-launch',
+        color: 'violet'
     }
 };
 
@@ -206,8 +224,11 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
+        { value: 'ads_activated', label: 'Reklamy aktywowane' },
         { value: 'partner_access_granted', label: 'Klient dodał partnera' },
-        { value: 'budget_funded', label: 'Budżet doładowany' }
+        { value: 'partner_step_completed', label: 'Partner potwierdzony' },
+        { value: 'budget_funded', label: 'Budżet doładowany' },
+        { value: 'ads_completed', label: 'Reklamy ukończone' }
     ]
 };
 
@@ -238,6 +259,9 @@ const TRIGGER_DEFINITIONS = {
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
     test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
     // Etap 4 - Reklamy
+    ads_activated: { label: 'Reklamy aktywowane', icon: 'ph-megaphone', color: 'rose' },
     partner_access_granted: { label: 'Klient dodał partnera', icon: 'ph-user-circle-plus', color: 'rose' },
-    budget_funded: { label: 'Budżet doładowany', icon: 'ph-wallet', color: 'emerald' }
+    partner_step_completed: { label: 'Partner potwierdzony', icon: 'ph-check-circle', color: 'emerald' },
+    budget_funded: { label: 'Budżet doładowany', icon: 'ph-wallet', color: 'emerald' },
+    ads_completed: { label: 'Reklamy ukończone', icon: 'ph-rocket-launch', color: 'violet' }
 };
