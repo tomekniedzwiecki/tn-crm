@@ -193,13 +193,24 @@
                 <div id="tab-sent" class="tab-content animate-enter">
                     <!-- Filters row -->
                     <div class="flex flex-wrap items-center gap-3 mb-6">
-                        <select id="sent-filter-status" onchange="filterSentOffers()" class="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg">
-                            <option value="all">Status: Wszyscy</option>
-                            <option value="not-bought">Nie kupili</option>
-                            <option value="bought">Kupili</option>
-                            <option value="expired">Wygasłe</option>
-                            <option value="pending">Oczekujące</option>
-                        </select>
+                        <div class="flex items-center gap-2">
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="filter-not-bought" onchange="filterSentOffers()" checked class="accent-amber-500">
+                                <span>Nie kupili</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="filter-bought" onchange="filterSentOffers()" checked class="accent-emerald-500">
+                                <span>Kupili</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="filter-expired" onchange="filterSentOffers()" checked class="accent-red-500">
+                                <span>Wygasłe</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="filter-pending" onchange="filterSentOffers()" checked class="accent-blue-500">
+                                <span>Oczekujące</span>
+                            </label>
+                        </div>
                         <select id="sent-filter-views" onchange="filterSentOffers()" class="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg">
                             <option value="all">Otwarcia: Wszystkie</option>
                             <option value="0">0 otwarć</option>
@@ -207,13 +218,12 @@
                             <option value="3+">3+ otwarć</option>
                             <option value="5+">5+ otwarć</option>
                         </select>
-                        <select id="sent-filter-date" onchange="filterSentOffers()" class="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg">
-                            <option value="all">Data: Wszystkie</option>
-                            <option value="today">Dzisiaj</option>
-                            <option value="week">Ostatni tydzień</option>
-                            <option value="month">Ostatni miesiąc</option>
-                            <option value="older">Starsze</option>
-                        </select>
+                        <div class="flex items-center gap-2">
+                            <span class="text-zinc-500 text-sm">od:</span>
+                            <input type="date" id="sent-filter-date-from" onchange="filterSentOffers()" class="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg">
+                            <span class="text-zinc-500 text-sm">do:</span>
+                            <input type="date" id="sent-filter-date-to" onchange="filterSentOffers()" class="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg">
+                        </div>
                         <button onclick="resetSentFilters()" class="text-zinc-500 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
                             <i class="ph ph-x mr-1"></i>Reset
                         </button>
@@ -1009,9 +1019,16 @@
         }
 
         function resetSentFilters() {
-            document.getElementById('sent-filter-status').value = 'all';
+            // Reset status checkboxes
+            document.getElementById('filter-not-bought').checked = true;
+            document.getElementById('filter-bought').checked = true;
+            document.getElementById('filter-expired').checked = true;
+            document.getElementById('filter-pending').checked = true;
+            // Reset views
             document.getElementById('sent-filter-views').value = 'all';
-            document.getElementById('sent-filter-date').value = 'all';
+            // Reset dates
+            document.getElementById('sent-filter-date-from').value = '';
+            document.getElementById('sent-filter-date-to').value = '';
             renderSentOffers();
         }
 
@@ -1025,15 +1042,22 @@
             const list = document.getElementById('sent-list');
             const emptyState = document.getElementById('sent-empty');
 
-            // Get filter values
-            const statusFilter = document.getElementById('sent-filter-status').value;
+            // Get filter values - status checkboxes
+            const showNotBought = document.getElementById('filter-not-bought').checked;
+            const showBought = document.getElementById('filter-bought').checked;
+            const showExpired = document.getElementById('filter-expired').checked;
+            const showPending = document.getElementById('filter-pending').checked;
+
+            // Views filter
             const viewsFilter = document.getElementById('sent-filter-views').value;
-            const dateFilter = document.getElementById('sent-filter-date').value;
+
+            // Date range filter
+            const dateFrom = document.getElementById('sent-filter-date-from').value;
+            const dateTo = document.getElementById('sent-filter-date-to').value;
+            const dateFromObj = dateFrom ? new Date(dateFrom) : null;
+            const dateToObj = dateTo ? new Date(dateTo + 'T23:59:59') : null;
 
             const now = new Date();
-            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
             // Apply filters
             let filtered = sentOffers.filter(so => {
@@ -1042,11 +1066,22 @@
                 const validUntil = new Date(so.valid_until);
                 const isExpired = validUntil < now;
 
-                // Status filter
-                if (statusFilter === 'bought' && !so.hasPurchased) return false;
-                if (statusFilter === 'not-bought' && so.hasPurchased) return false;
-                if (statusFilter === 'expired' && (!isExpired || so.hasPurchased)) return false;
-                if (statusFilter === 'pending' && (isExpired || so.hasPurchased)) return false;
+                // Determine status category
+                let statusCategory;
+                if (so.hasPurchased) {
+                    statusCategory = 'bought';
+                } else if (isExpired) {
+                    statusCategory = 'expired';
+                } else {
+                    statusCategory = 'pending';
+                }
+
+                // Status filter (checkbox-based)
+                if (statusCategory === 'bought' && !showBought) return false;
+                if (statusCategory === 'expired' && !showExpired) return false;
+                if (statusCategory === 'pending' && !showPending) return false;
+                // "not-bought" includes both expired and pending
+                if (!so.hasPurchased && !showNotBought) return false;
 
                 // Views filter
                 if (viewsFilter === '0' && viewCount !== 0) return false;
@@ -1054,11 +1089,9 @@
                 if (viewsFilter === '3+' && viewCount < 3) return false;
                 if (viewsFilter === '5+' && viewCount < 5) return false;
 
-                // Date filter
-                if (dateFilter === 'today' && createdAt < todayStart) return false;
-                if (dateFilter === 'week' && createdAt < weekAgo) return false;
-                if (dateFilter === 'month' && createdAt < monthAgo) return false;
-                if (dateFilter === 'older' && createdAt >= monthAgo) return false;
+                // Date range filter
+                if (dateFromObj && createdAt < dateFromObj) return false;
+                if (dateToObj && createdAt > dateToObj) return false;
 
                 return true;
             });
