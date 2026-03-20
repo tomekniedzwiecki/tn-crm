@@ -270,6 +270,11 @@
                                 <i class="ph ph-credit-card"></i> Bramka
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
+                            <button onclick="toggleStatusStage('test')" data-stage="test"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-magnifying-glass"></i> Test
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-cyan-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
                         </div>
                     </div>
                     <!-- Owner Filter -->
@@ -681,7 +686,7 @@
 
             const [videoRes, takedropRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -832,6 +837,10 @@
                         if (stage === 'payment_gateway') {
                             return w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready;
                         }
+                        // "test" = bramka gotowa ALE test NIE zaakceptowany
+                        if (stage === 'test') {
+                            return w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted;
+                        }
                         // Other stages = next step
                         return nextStep === stage;
                     });
@@ -936,7 +945,7 @@
             const counts = {
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
-                takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0
+                takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0
             };
 
             // Only count active workflows
@@ -978,12 +987,17 @@
                     counts.payment_gateway++;
                     continue;
                 }
+                // "test" = bramka gotowa ALE test NIE zaakceptowany
+                if (w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted) {
+                    counts.test++;
+                    continue;
+                }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
-                // Skip takedrop/landing/legal_data/legal/payment_gateway - these are handled above with exact filter logic
+                // Skip takedrop/landing/legal_data/legal/payment_gateway/test - these are handled above with exact filter logic
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }
@@ -1173,6 +1187,9 @@
             // Bramka płatności (wyświetlaj tylko jeśli dokumenty gotowe)
             if (!w.takedrop_stage?.payment_gateway_ready) return 'payment_gateway';
 
+            // Test sklepu (wyświetlaj tylko jeśli bramka gotowa)
+            if (!w.takedrop_stage?.test_accepted) return 'test';
+
             return null; // all done
         }
 
@@ -1304,6 +1321,16 @@
                 } else {
                     // Klient ma założyć konto lub admin ma skonfigurować
                     items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Bramka</span>`);
+                }
+            }
+
+            // Test - pokazuj gdy bramka gotowa
+            if (w.takedrop_stage?.payment_gateway_ready) {
+                if (w.takedrop_stage?.test_accepted) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Test</span>`);
+                } else {
+                    // Klient ma przetestować sklep
+                    items.push(`<span class="flex items-center gap-1 text-cyan-400"><i class="ph ph-circle-notch text-[10px]"></i>Test</span>`);
                 }
             }
 
@@ -1546,6 +1573,42 @@
                         // Czekam na dane od klienta
                         status = 'Czekam na dane';
                         icon = 'ph ph-credit-card text-amber-400';
+                        isClientTask = true;
+                    }
+
+                    const ownerBadge = isClientTask
+                        ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                        : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
+                    return `
+                        <div class="py-2">
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <i class="${icon}"></i>
+                                <span class="text-white font-medium">${stepName}</span>
+                                ${ownerBadge}
+                                <span class="text-zinc-500">·</span>
+                                <span class="text-zinc-400">${status}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Test sklepu - gdy bramka gotowa ale test nie zaakceptowany
+                if (nextStep === 'test') {
+                    const hasFeedback = td?.test_feedback_sent;
+
+                    let stepName = 'Test sklepu';
+                    let status, icon, isClientTask;
+
+                    if (hasFeedback) {
+                        // Klient wysłał uwagi - admin musi poprawić
+                        status = 'Uwagi do poprawy';
+                        icon = 'ph ph-envelope text-amber-400';
+                        isClientTask = false;
+                    } else {
+                        // Czekam na akceptację od klienta
+                        status = 'Czekam na akceptację';
+                        icon = 'ph ph-magnifying-glass text-cyan-400';
                         isClientTask = true;
                     }
 
