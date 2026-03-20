@@ -1002,9 +1002,10 @@
             updateSentStats();
         }
 
-        function updateSentStats() {
-            const total = sentOffers.length;
-            const bought = sentOffers.filter(o => o.hasPurchased).length;
+        function updateSentStats(filtered) {
+            const data = filtered || sentOffers;
+            const total = data.length;
+            const bought = data.filter(o => o.hasPurchased).length;
             const notBought = total - bought;
             const conversion = total > 0 ? Math.round((bought / total) * 100) : 0;
 
@@ -1095,6 +1096,9 @@
 
                 return true;
             });
+
+            // Update stats based on filtered results
+            updateSentStats(filtered);
 
             if (filtered.length === 0) {
                 list.innerHTML = '';
