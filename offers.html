@@ -1099,11 +1099,23 @@
                 });
             }
 
-            // Enrich data with purchase status
+            // Build map of lead_id -> first offer date
+            const firstOfferMap = {};
+            clientOffers.forEach(co => {
+                const leadId = co.lead_id;
+                const createdAt = new Date(co.created_at);
+                if (!firstOfferMap[leadId] || createdAt < firstOfferMap[leadId]) {
+                    firstOfferMap[leadId] = createdAt;
+                }
+            });
+
+            // Enrich data with purchase status and first offer date
             sentOffers = clientOffers.map(co => ({
                 ...co,
                 hasPurchased: !!ordersMap[co.leads?.email],
-                purchaseDate: ordersMap[co.leads?.email]?.created_at
+                purchaseDate: ordersMap[co.leads?.email]?.created_at,
+                firstOfferDate: firstOfferMap[co.lead_id],
+                isReturning: firstOfferMap[co.lead_id] < new Date(co.created_at)
             }));
 
             document.getElementById('sent-loading').classList.add('hidden');
@@ -1131,13 +1143,13 @@
             const bought = sentOffers.filter(o => o.hasPurchased);
             const notBought = sentOffers.filter(o => !o.hasPurchased);
 
-            // Days to purchase calculation
+            // Days to purchase calculation (from FIRST offer for this lead)
             const daysToP = bought
-                .filter(o => o.purchaseDate)
+                .filter(o => o.purchaseDate && o.firstOfferDate)
                 .map(o => {
-                    const offerDate = new Date(o.created_at);
+                    const firstOfferDate = new Date(o.firstOfferDate);
                     const purchaseDate = new Date(o.purchaseDate);
-                    return Math.round((purchaseDate - offerDate) / (1000 * 60 * 60 * 24));
+                    return Math.round((purchaseDate - firstOfferDate) / (1000 * 60 * 60 * 24));
                 })
                 .filter(d => d >= 0)
                 .sort((a, b) => a - b);
@@ -1548,6 +1560,9 @@
                                 <a href="${getLeadPath(lead.id)}" class="font-medium text-white hover:text-amber-400 transition-colors truncate">
                                     ${lead.name || lead.company || lead.email || 'Bez nazwy'}
                                 </a>
+                                ${so.isReturning ? `<span class="px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" title="Kolejna oferta dla tego leada">
+                                    <i class="ph ph-arrow-counter-clockwise"></i> powrót
+                                </span>` : ''}
                                 ${statusBadge}
                             </div>
                             <div class="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
