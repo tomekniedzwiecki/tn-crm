@@ -18,20 +18,69 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
-// Generate image using Gemini 2.0 Flash with image generation
+// Fetch image and convert to base64
+async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+  console.log(`Fetching reference image: ${url}`)
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch reference image: ${response.status}`)
+  }
+
+  const contentType = response.headers.get('content-type') || 'image/jpeg'
+  const arrayBuffer = await response.arrayBuffer()
+  const uint8Array = new Uint8Array(arrayBuffer)
+
+  // Convert to base64
+  let binary = ''
+  for (let i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i])
+  }
+  const base64 = btoa(binary)
+
+  console.log(`Reference image fetched: ${contentType}, ${base64.length} chars`)
+  return { base64, mimeType: contentType }
+}
+
+// Generate image using Gemini with optional reference image
 async function generateWithGemini(
   prompt: string,
   count: number,
-  apiKey: string
+  apiKey: string,
+  referenceImageUrl?: string
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
 
-  // Gemini 3.1 Flash with image generation
   const model = 'gemini-3.1-flash-image-preview'
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
   console.log(`Using model: ${model}`)
 
   const images: { base64: string; mimeType: string }[] = []
+
+  // Build parts array
+  const parts: any[] = []
+
+  // Add reference image if provided
+  if (referenceImageUrl) {
+    try {
+      const refImage = await fetchImageAsBase64(referenceImageUrl)
+      parts.push({
+        inline_data: {
+          mime_type: refImage.mimeType,
+          data: refImage.base64
+        }
+      })
+      // Modify prompt to reference the image
+      parts.push({
+        text: `Use this product image as reference. The generated image MUST show this EXACT same product (same shape, colors, design, details). ${prompt}`
+      })
+    } catch (err) {
+      console.error('Failed to fetch reference image:', err)
+      // Fall back to text-only prompt
+      parts.push({ text: prompt })
+    }
+  } else {
+    parts.push({ text: prompt })
+  }
 
   // Generate images (Gemini generates 1 per request)
   for (let i = 0; i < Math.min(count, 4); i++) {
@@ -44,7 +93,7 @@ async function generateWithGemini(
       },
       body: JSON.stringify({
         contents: [{
-          parts: [{ text: prompt }]
+          parts: parts
         }],
         generationConfig: {
           responseModalities: ['TEXT', 'IMAGE']
@@ -105,7 +154,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { prompt, count = 1, workflow_id, type } = body
+    const { prompt, count = 1, workflow_id, type, reference_image_url } = body
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), {
@@ -116,8 +165,11 @@ Deno.serve(async (req) => {
 
     console.log(`Generating ${count} image(s) for workflow ${workflow_id}, type: ${type}`)
     console.log(`Prompt: ${prompt.substring(0, 100)}...`)
+    if (reference_image_url) {
+      console.log(`Reference image: ${reference_image_url}`)
+    }
 
-    const result = await generateWithGemini(prompt, count, apiKey)
+    const result = await generateWithGemini(prompt, count, apiKey, reference_image_url)
 
     // Upload to Supabase Storage
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
