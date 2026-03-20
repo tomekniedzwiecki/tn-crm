@@ -250,6 +250,36 @@
                         </div>
                     </div>
 
+                    <!-- Insights row -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
+                            <div class="text-lg font-semibold text-blue-400" id="stat-avg-days">-</div>
+                            <div class="text-zinc-500 text-[10px] font-mono">śr. dni do zakupu</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
+                            <div class="text-lg font-semibold text-emerald-400" id="stat-views-bought">-</div>
+                            <div class="text-zinc-500 text-[10px] font-mono">śr. otwarć (kupili)</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
+                            <div class="text-lg font-semibold text-zinc-400" id="stat-views-not-bought">-</div>
+                            <div class="text-zinc-500 text-[10px] font-mono">śr. otwarć (nie kupili)</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
+                            <div class="text-lg font-semibold text-purple-400" id="stat-conv-starter">-</div>
+                            <div class="text-zinc-500 text-[10px] font-mono">konwersja starter</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
+                            <div class="text-lg font-semibold text-amber-400" id="stat-conv-full">-</div>
+                            <div class="text-zinc-500 text-[10px] font-mono">konwersja full</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3 cursor-pointer hover:border-orange-500/30 transition-colors" onclick="filterHotLeads()">
+                            <div class="text-lg font-semibold text-orange-400" id="stat-hot-leads">-</div>
+                            <div class="text-zinc-500 text-[10px] font-mono flex items-center gap-1">
+                                <i class="ph ph-fire"></i>gorące leady (3+ otwarć)
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Chart -->
                     <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4 mb-6">
                         <div class="flex items-center justify-between mb-4">
@@ -1031,6 +1061,7 @@
             document.getElementById('sent-loading').classList.add('hidden');
             renderSentOffers();
             updateSentStats();
+            updateSentInsights();
             renderSentChart();
         }
 
@@ -1045,6 +1076,74 @@
             document.getElementById('sent-bought').textContent = bought;
             document.getElementById('sent-not-bought').textContent = notBought;
             document.getElementById('sent-conversion').textContent = `${conversion}%`;
+        }
+
+        function updateSentInsights() {
+            // Calculate insights from ALL sent offers (not filtered)
+            const bought = sentOffers.filter(o => o.hasPurchased);
+            const notBought = sentOffers.filter(o => !o.hasPurchased);
+
+            // Average days to purchase
+            const daysToP = bought
+                .filter(o => o.purchaseDate)
+                .map(o => {
+                    const offerDate = new Date(o.created_at);
+                    const purchaseDate = new Date(o.purchaseDate);
+                    return Math.round((purchaseDate - offerDate) / (1000 * 60 * 60 * 24));
+                })
+                .filter(d => d >= 0);
+            const avgDays = daysToP.length > 0
+                ? Math.round(daysToP.reduce((a, b) => a + b, 0) / daysToP.length)
+                : '-';
+            document.getElementById('stat-avg-days').textContent = avgDays !== '-' ? `${avgDays} dni` : '-';
+
+            // Average views for buyers vs non-buyers
+            const viewsBought = bought.map(o => o.view_count || (o.view_history?.length || 0));
+            const avgViewsBought = viewsBought.length > 0
+                ? (viewsBought.reduce((a, b) => a + b, 0) / viewsBought.length).toFixed(1)
+                : '-';
+            document.getElementById('stat-views-bought').textContent = avgViewsBought;
+
+            const viewsNotBought = notBought.map(o => o.view_count || (o.view_history?.length || 0));
+            const avgViewsNotBought = viewsNotBought.length > 0
+                ? (viewsNotBought.reduce((a, b) => a + b, 0) / viewsNotBought.length).toFixed(1)
+                : '-';
+            document.getElementById('stat-views-not-bought').textContent = avgViewsNotBought;
+
+            // Conversion by offer type
+            const starters = sentOffers.filter(o => o.offer_type === 'starter');
+            const startersBought = starters.filter(o => o.hasPurchased).length;
+            const starterConv = starters.length > 0 ? Math.round((startersBought / starters.length) * 100) : 0;
+            document.getElementById('stat-conv-starter').textContent = `${starterConv}%`;
+
+            const fulls = sentOffers.filter(o => o.offer_type === 'full');
+            const fullsBought = fulls.filter(o => o.hasPurchased).length;
+            const fullConv = fulls.length > 0 ? Math.round((fullsBought / fulls.length) * 100) : 0;
+            document.getElementById('stat-conv-full').textContent = `${fullConv}%`;
+
+            // Hot leads: 3+ views, not expired, not bought
+            const now = new Date();
+            const hotLeads = sentOffers.filter(o => {
+                if (o.hasPurchased) return false;
+                const viewCount = o.view_count || (o.view_history?.length || 0);
+                if (viewCount < 3) return false;
+                const validUntil = new Date(o.valid_until);
+                return validUntil >= now; // not expired
+            });
+            document.getElementById('stat-hot-leads').textContent = hotLeads.length;
+        }
+
+        function filterHotLeads() {
+            // Set filters to show only hot leads
+            document.getElementById('filter-not-bought').checked = true;
+            document.getElementById('filter-bought').checked = false;
+            document.getElementById('filter-expired').checked = false;
+            document.getElementById('filter-pending').checked = true;
+            document.getElementById('sent-filter-views').value = '3+';
+            document.getElementById('sent-filter-date-from').value = '';
+            document.getElementById('sent-filter-date-to').value = '';
+            sentPage = 1;
+            renderSentOffers();
         }
 
         // Pagination
