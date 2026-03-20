@@ -400,14 +400,25 @@ https://tn-crm.vercel.app/landing-pages/[nazwa]/
 
 ## Typowe błędy - NIE RÓB TEGO
 
-1. **Generowanie bez referencji produktu** - obrazy będą niespójne
-2. **Abstrakcyjne tła** - używaj realistycznych wnętrz klientów
-3. **Pomijanie Hero** - Hero ZAWSZE musi mieć obraz
-4. **Ignorowanie raportów** - raporty zawierają kluczowe info o kliencie
-5. **Generyczne osoby** - pokazuj konkretną grupę docelową (wiek, płeć, sytuacja)
-6. **Zbyt dużo obrazów** - 5-7 obrazów wystarczy, nie rób galerii
-7. **Tekst na obrazach** - NIGDY nie generuj napisów, etykiet, watermarków
-8. **Halucynowanie funkcji** - NIE dodawaj przycisków, LED, sprayu których nie ma na referencji
+### Błędy CSS/HTML (powodują ucięte obrazy!)
+
+1. **Inline styles z fixed height** - `style="height: 180px"` → obraz się ucina
+2. **Brak aspect-ratio w CSS** - obraz rozjeżdża layout
+3. **Brak object-fit: cover** - obraz się rozciąga/ściska
+4. **Inline grid styles** - `style="display: grid"` → nie działa responsive
+
+**ROZWIĄZANIE:** Zawsze używaj klas CSS z `aspect-ratio` i `object-fit: cover`
+
+### Błędy generowania
+
+5. **Generowanie bez referencji produktu** - obrazy będą niespójne
+6. **Abstrakcyjne tła** - używaj realistycznych wnętrz klientów
+7. **Pomijanie sekcji** - Hero, Problem, Solution, Steps, Offer MUSZĄ mieć obrazy
+8. **Ignorowanie raportów** - raporty zawierają kluczowe info o kliencie
+9. **Generyczne osoby** - pokazuj konkretną grupę docelową (wiek, płeć, sytuacja)
+10. **Zbyt dużo obrazów** - 5-7 obrazów wystarczy, nie rób galerii
+11. **Tekst na obrazach** - NIGDY nie generuj napisów, etykiet, watermarków
+12. **Halucynowanie funkcji** - NIE dodawaj przycisków, LED, sprayu których nie ma na referencji
 
 ---
 
