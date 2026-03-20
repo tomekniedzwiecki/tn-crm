@@ -125,6 +125,12 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image
 4. **Styl fotografii** (product photography, lifestyle, instructional)
 5. **"No text, no captions, no labels, no watermarks"** - ZAWSZE na końcu każdego promptu
 
+**ZAKAZ HALUCYNACJI - opisuj TYLKO to co widzisz na referencji:**
+- NIE dodawaj funkcji/przycisków/wyświetlaczy których nie ma na produkcie
+- NIE wymyślaj efektów (spray wodny, LED, animacje) jeśli ich nie widać
+- NIE zgaduj kolorów ani detali - opisuj TYLKO widoczne elementy
+- Jeśli czegoś nie widzisz na zdjęciu referencyjnym - NIE opisuj tego
+
 **Szablon promptu:**
 
 ```
@@ -201,58 +207,179 @@ Studio product photography, e-commerce style. White/light background.
 
 ## KROK 4: Wstawianie obrazów do HTML
 
-### 4.1 Hero - zawsze pełna szerokość
+### 4.0 WAŻNE: Używaj CSS, NIE inline styles!
 
+**NIGDY nie używaj inline styles dla obrazów.** Obrazy z fixed height/width się ucinają na różnych ekranach.
+
+Zamiast tego:
+1. Dodaj klasę CSS z `aspect-ratio` i `object-fit: cover`
+2. Użyj tylko klasy w HTML, bez `style="..."`
+
+### 4.1 Wymagane klasy CSS dla obrazów
+
+**ZAWSZE sprawdź czy te klasy istnieją w CSS. Jeśli nie - DODAJ JE:**
+
+```css
+/* Hero product image */
+.hero-product img {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 50px -12px rgba(0,212,232,0.25);
+}
+
+/* Problem section image */
+.problem-visual img {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Bento/Solution section image */
+.bento-card.bento-image {
+  grid-column: span 2;
+  padding: 0;
+  overflow: hidden;
+}
+
+.bento-card.bento-image img {
+  width: 100%;
+  aspect-ratio: 21/9;
+  object-fit: cover;
+  display: block;
+}
+
+/* Step images (How it works) */
+.step-image {
+  margin-bottom: 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.step-image img {
+  width: 100%;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  display: block;
+}
+
+/* Offer section with image */
+.offer-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  max-width: 900px;
+}
+
+.offer-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: var(--bg-soft);
+}
+
+.offer-image img {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bento-card.bento-image {
+    grid-column: span 1;
+  }
+
+  .offer-box {
+    grid-template-columns: 1fr;
+  }
+
+  .offer-content {
+    text-align: center;
+  }
+}
+```
+
+### 4.2 HTML - używaj TYLKO klas, bez inline styles
+
+**Hero:**
 ```html
-<div class="hero-image">
-  <img src="[URL]" alt="[Nazwa produktu] w akcji"
-       style="width: 100%; max-width: 600px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+<div class="hero-product">
+  <img src="[URL]" alt="[Nazwa produktu]">
 </div>
 ```
 
-### 4.2 Solution/Bento - jako pierwszy element grid
-
+**Problem:**
 ```html
-<div class="bento-card bento-image fade-in" style="grid-column: span 2; padding: 0; overflow: hidden;">
-  <img src="[URL]" alt="[Opis]" style="width: 100%; height: 320px; object-fit: cover;">
+<div class="problem-visual">
+  <img src="[URL]" alt="[Opis problemu]">
 </div>
 ```
 
-### 4.3 How it works - obraz nad każdym krokiem
+**Bento/Solution:**
+```html
+<div class="bento-card bento-image fade-in">
+  <img src="[URL]" alt="[Produkt w akcji]">
+</div>
+```
 
+**Steps (How it works):**
 ```html
 <div class="step fade-in">
-  <div class="step-image" style="margin-bottom: 20px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-    <img src="[URL]" alt="Krok X - [Opis]" style="width: 100%; height: 180px; object-fit: cover;">
+  <div class="step-image">
+    <img src="[URL]" alt="Krok X - [Opis]">
   </div>
   <div class="step-number">X</div>
   <h3 class="step-title">...</h3>
-  ...
 </div>
 ```
 
-### 4.4 Responsive - dodaj CSS dla mobile
-
-```css
-@media (max-width: 900px) {
-  .bento-image {
-    grid-column: span 1 !important;
-  }
-}
+**Offer:**
+```html
+<div class="offer-box fade-in">
+  <div class="offer-image">
+    <img src="[URL]" alt="[Nazwa zestawu]">
+  </div>
+  <div class="offer-content">
+    <!-- treść oferty -->
+  </div>
+</div>
 ```
 
 ---
 
 ## KROK 5: Weryfikacja i deploy
 
-### 5.1 Checklist przed deployem
+### 5.1 Sekcje które MUSZĄ mieć obrazy (checklist)
 
-- [ ] Hero ma obraz produktu
+| Sekcja | Obraz | Aspect Ratio | Co pokazuje |
+|--------|-------|--------------|-------------|
+| **Hero** | ZAWSZE | 1:1 | Produkt w lifestyle context |
+| **Problem** | TAK | 4:3 | Frustracja/ból klienta |
+| **Solution/Bento** | TAK | 21:9 | Produkt w akcji |
+| **How it works** | TAK (każdy krok) | 16:10 | Instrukcja krok po kroku |
+| **Offer** | TAK | 1:1 | Kompletny zestaw produktowy |
+| Testimonials | NIE | - | Avatary/inicjały |
+| FAQ | NIE | - | Tekst wystarczy |
+
+### 5.2 Checklist przed deployem
+
+- [ ] **Wszystkie wymagane sekcje mają obrazy** (Hero, Problem, Solution, Steps, Offer)
+- [ ] **Brak inline styles na img** - wszystko przez klasy CSS
+- [ ] **CSS ma aspect-ratio** dla każdego typu obrazu
+- [ ] **Responsive działa** - sprawdź na mobile
 - [ ] Wszystkie obrazy pokazują TEN SAM produkt (spójność)
 - [ ] Obrazy są osadzone w realistycznym kontekście klienta
-- [ ] Brak abstrakcyjnych/oderwanych od rzeczywistości grafik
 - [ ] Alt texty są opisowe
-- [ ] Responsive działa na mobile
 
 ### 5.2 Deploy na Vercel
 
@@ -280,6 +407,7 @@ https://tn-crm.vercel.app/landing-pages/[nazwa]/
 5. **Generyczne osoby** - pokazuj konkretną grupę docelową (wiek, płeć, sytuacja)
 6. **Zbyt dużo obrazów** - 5-7 obrazów wystarczy, nie rób galerii
 7. **Tekst na obrazach** - NIGDY nie generuj napisów, etykiet, watermarków
+8. **Halucynowanie funkcji** - NIE dodawaj przycisków, LED, sprayu których nie ma na referencji
 
 ---
 
