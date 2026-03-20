@@ -1144,8 +1144,15 @@
             const notBought = sentOffers.filter(o => !o.hasPurchased);
 
             // Days to purchase calculation (from FIRST offer for this lead)
+            // Deduplicate by lead_id - count each lead only once
+            const seenLeads = new Set();
             const daysToP = bought
-                .filter(o => o.purchaseDate && o.firstOfferDate)
+                .filter(o => {
+                    if (!o.purchaseDate || !o.firstOfferDate || !o.lead_id) return false;
+                    if (seenLeads.has(o.lead_id)) return false;
+                    seenLeads.add(o.lead_id);
+                    return true;
+                })
                 .map(o => {
                     const firstOfferDate = new Date(o.firstOfferDate);
                     const purchaseDate = new Date(o.purchaseDate);
