@@ -2038,7 +2038,7 @@
 
                         <!-- Stage 4 active content -->
                         <div id="ad-account-content" class="hidden">
-                            <!-- Status info -->
+                            <!-- Status: Ready -->
                             <div id="ad-account-ready-status" class="hidden mb-6">
                                 <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
                                     <div class="flex items-center gap-3">
@@ -2053,14 +2053,33 @@
                                 </div>
                             </div>
 
-                            <!-- Placeholder for future ad account config -->
-                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
-                                <div class="text-center py-8">
-                                    <div class="w-14 h-14 mx-auto mb-4 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                                        <i class="ph ph-megaphone-simple text-2xl text-rose-400"></i>
+                            <!-- Status: Client confirmed partner access -->
+                            <div id="ad-account-partner-granted-status" class="hidden mb-6">
+                                <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                            <i class="ph ph-user-check text-amber-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[13px] text-amber-400 font-medium">Klient potwierdził dostęp partnera</div>
+                                            <div id="ad-account-partner-granted-date" class="text-[12px] text-[#888]">-</div>
+                                        </div>
                                     </div>
-                                    <h4 class="text-[15px] font-medium text-white mb-2">Konfiguracja konta reklamowego</h4>
-                                    <p class="text-[13px] text-[#666]">Tutaj pojawią się opcje konfiguracji kont Meta Ads i TikTok Ads.</p>
+                                </div>
+                            </div>
+
+                            <!-- Status: Waiting for client -->
+                            <div id="ad-account-waiting-status" class="mb-6">
+                                <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                                            <i class="ph ph-hourglass text-zinc-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[13px] text-zinc-300 font-medium">Czekam na klienta</div>
+                                            <div class="text-[12px] text-[#666]">Klient ma instrukcję w portalu — musi dodać Cię jako partnera</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -7939,6 +7958,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const notActiveEl = document.getElementById('ad-account-not-active');
             const contentEl = document.getElementById('ad-account-content');
             const readyStatusEl = document.getElementById('ad-account-ready-status');
+            const partnerGrantedStatusEl = document.getElementById('ad-account-partner-granted-status');
+            const waitingStatusEl = document.getElementById('ad-account-waiting-status');
             const readyToggle = document.getElementById('ad-account-ready-toggle');
             const navCheck = document.getElementById('nav-check-ad-account');
 
@@ -7965,8 +7986,14 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (notActiveEl) notActiveEl.classList.add('hidden');
             if (contentEl) contentEl.classList.remove('hidden');
 
-            // Check ad account ready status
+            // Hide all status sections first
+            if (readyStatusEl) readyStatusEl.classList.add('hidden');
+            if (partnerGrantedStatusEl) partnerGrantedStatusEl.classList.add('hidden');
+            if (waitingStatusEl) waitingStatusEl.classList.add('hidden');
+
+            // Check ad account status
             if (adsData?.ad_account_ready) {
+                // Admin confirmed everything is ready
                 if (readyStatusEl) readyStatusEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (readyToggle) readyToggle.checked = true;
@@ -7980,8 +8007,24 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         });
                     }
                 }
+            } else if (adsData?.partner_access_granted) {
+                // Client confirmed partner access, waiting for admin to verify
+                if (partnerGrantedStatusEl) partnerGrantedStatusEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+                if (readyToggle) readyToggle.checked = false;
+
+                const grantedDate = adsData.partner_access_granted_at;
+                if (grantedDate) {
+                    const dateEl = document.getElementById('ad-account-partner-granted-date');
+                    if (dateEl) {
+                        dateEl.textContent = new Date(grantedDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
             } else {
-                if (readyStatusEl) readyStatusEl.classList.add('hidden');
+                // Waiting for client to confirm
+                if (waitingStatusEl) waitingStatusEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
                 if (readyToggle) readyToggle.checked = false;
             }
