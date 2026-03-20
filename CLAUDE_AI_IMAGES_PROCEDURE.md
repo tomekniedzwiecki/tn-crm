@@ -1,5 +1,17 @@
 # Procedura generowania obrazów AI dla landing pages
 
+## WAŻNE: Działaj autonomicznie
+
+**Nie pytaj o pozwolenie na każdy krok.** Wykonaj całą procedurę od początku do końca bez zatrzymywania się:
+- Czytaj pliki bez pytania
+- Generuj obrazy bez pytania
+- Edytuj HTML bez pytania
+- Commituj i pushuj bez pytania
+
+Użytkownik uruchomił tę procedurę świadomie - oczekuje gotowego rezultatu, nie pytań.
+
+---
+
 ## Kiedy używać
 
 Gdy użytkownik prosi o:
@@ -111,6 +123,7 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image
 2. **Realistyczny kontekst klienta** (nie abstrakcyjne tło)
 3. **Konkretną sytuację użycia** (nie "produkt na białym tle")
 4. **Styl fotografii** (product photography, lifestyle, instructional)
+5. **"No text, no captions, no labels, no watermarks"** - ZAWSZE na końcu każdego promptu
 
 **Szablon promptu:**
 
@@ -121,7 +134,7 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image
 
 [SZCZEGÓŁY WIZUALNE]: [Oświetlenie, perspektywa, nastrój].
 
-[STYL]: Professional product photography, [lifestyle/instructional/advertising] style. Photorealistic.
+[STYL]: Professional product photography, [lifestyle/instructional/advertising] style. Photorealistic. No text, no captions, no labels, no watermarks.
 ```
 
 ### 3.4 Przykłady promptów dla różnych sekcji
@@ -266,6 +279,7 @@ https://tn-crm.vercel.app/landing-pages/[nazwa]/
 4. **Ignorowanie raportów** - raporty zawierają kluczowe info o kliencie
 5. **Generyczne osoby** - pokazuj konkretną grupę docelową (wiek, płeć, sytuacja)
 6. **Zbyt dużo obrazów** - 5-7 obrazów wystarczy, nie rób galerii
+7. **Tekst na obrazach** - NIGDY nie generuj napisów, etykiet, watermarków
 
 ---
 
