@@ -53,20 +53,24 @@ WHERE workflow_id = 'ID_WORKFLOW';
 Read landing-pages/[nazwa]/index.html
 ```
 
-### 2.2 Zidentyfikuj sekcje i ich przekaz
+### 2.2 Przeanalizuj KAŻDĄ sekcję indywidualnie
 
-Dla każdej sekcji określ:
+**Dla każdej sekcji w HTML odpowiedz na pytania:**
 
-| Sekcja | Przekaz | Czy potrzebuje obrazu? |
-|--------|---------|------------------------|
-| Hero | Pierwsze wrażenie, pokazanie produktu | **ZAWSZE TAK** |
-| Problem | Ból klienta, frustracja | Tak - pokazać problem |
-| Solution/Bento | Funkcje produktu | Tak - produkt w akcji |
-| How it works | Instrukcja użycia | Tak - krok po kroku |
-| Comparison | Przewaga nad konkurencją | Opcjonalnie |
-| Testimonials | Opinie klientów | NIE (zdjęcia osób) |
-| Offer | Zestaw/pakiet | Tak - cały zestaw |
-| FAQ | Odpowiedzi | NIE |
+1. **Czy sekcja ma już miejsce na obraz?** (img tag, placeholder, div z background)
+2. **Czy obraz jest potrzebny dla przekazu tej sekcji?**
+3. **Jeśli nie ma miejsca ale powinno być** → EDYTUJ HTML żeby dodać miejsce na obraz
+
+**Zasady:**
+- **Hero** - ZAWSZE musi mieć obraz produktu (jeśli nie ma, dodaj)
+- **Problem** - obraz pokazujący frustrację/ból klienta wzmacnia przekaz
+- **Solution/Features** - produkt w akcji buduje zaufanie
+- **How it works** - wizualna instrukcja ułatwia zrozumienie
+- **Testimonials** - NIE generuj twarzy, użyj avatarów/inicjałów
+- **FAQ** - tekst wystarczy
+- **Offer** - zestaw produktów zwiększa postrzeganą wartość
+
+**Każdy landing jest inny** - nie zakładaj że ma konkretne sekcje. Przeczytaj HTML i dostosuj się do tego co jest.
 
 ### 2.3 Określ kontekst wizualny
 
@@ -278,12 +282,15 @@ https://tn-crm.vercel.app/landing-pages/[nazwa]/
 
 ```
 1. Pobierz workflow data (produkt + image_url)
-2. Przeczytaj raporty → zrozum klienta
-3. Przeczytaj landing → zrozum przekaz
-4. Określ które sekcje potrzebują obrazów (Hero ZAWSZE)
-5. Napisz prompty osadzone w rzeczywistości klienta
-6. Generuj z reference_image_url
-7. Wstaw do HTML
+2. Przeczytaj raporty → zrozum klienta (wiek, płeć, gdzie mieszka, problemy)
+3. Przeczytaj CAŁY landing HTML
+4. Przeanalizuj KAŻDĄ sekcję:
+   - Czy ma miejsce na obraz?
+   - Czy obraz wzmocni przekaz?
+   - Jeśli nie ma miejsca ale powinno być → edytuj HTML
+5. Napisz prompty osadzone w realiach klienta
+6. Generuj z reference_image_url (spójność produktu!)
+7. Wstaw do HTML (edytuj jeśli trzeba dodać miejsce)
 8. Deploy + link
 ```
 
