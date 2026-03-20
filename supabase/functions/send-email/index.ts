@@ -42,6 +42,7 @@ const VALID_EMAIL_TYPES = [
   'takedrop_activated',
   'takedrop_welcome',
   'landing_page_connected',
+  'test_ready',
   'direct'
 ]
 

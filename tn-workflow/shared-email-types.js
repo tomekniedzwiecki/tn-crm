@@ -32,7 +32,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     takedrop: {
         label: 'Etap 3 - Konfiguracja sklepu',
         description: 'Maile związane z konfiguracją TakeDrop',
-        templates: ['takedrop_activated', 'landing_page_connected']
+        templates: ['takedrop_activated', 'landing_page_connected', 'test_ready']
     }
 };
 
@@ -132,6 +132,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy strona zostanie podłączona do TakeDrop',
         icon: 'ph-link',
         color: 'sky'
+    },
+    'test_ready': {
+        name: 'Test sklepu gotowy',
+        description: 'Wysyłany gdy sklep jest gotowy do testów przez klienta',
+        icon: 'ph-browser',
+        color: 'cyan'
     }
 };
 
@@ -181,7 +187,8 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'sales_page_shared', label: 'Sales page udostępniony' },
         { value: 'video_activated', label: 'Aktywuj Video' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
-        { value: 'landing_page_connected', label: 'Strona podłączona' }
+        { value: 'landing_page_connected', label: 'Strona podłączona' },
+        { value: 'test_ready', label: 'Test sklepu gotowy' }
     ]
 };
 
@@ -209,5 +216,6 @@ const TRIGGER_DEFINITIONS = {
     video_activated: { label: 'Aktywuj Video', icon: 'ph-video-camera', color: 'cyan' },
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
-    landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' }
+    landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
+    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' }
 };

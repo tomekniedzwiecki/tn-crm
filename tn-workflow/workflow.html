@@ -1944,6 +1944,28 @@
                             </div>
                         </div>
 
+                        <!-- Notify client button -->
+                        <div id="test-notify-section" class="mb-6">
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-[13px] text-white">Powiadom klienta o teście</div>
+                                        <div class="text-[12px] text-[#666] mt-1">Wyślij email z informacją, że sklep jest gotowy do przeglądu</div>
+                                    </div>
+                                    <button onclick="sendTestReadyNotification()" id="test-notify-btn" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-white text-[12px] font-medium rounded-lg flex items-center gap-2 transition-colors">
+                                        <i class="ph ph-paper-plane-tilt"></i>
+                                        Wyślij powiadomienie
+                                    </button>
+                                </div>
+                                <div id="test-notified-info" class="hidden mt-3 pt-3 border-t border-[#1a1a1a]">
+                                    <div class="flex items-center gap-2 text-[12px] text-emerald-400">
+                                        <i class="ph-fill ph-check-circle"></i>
+                                        <span>Powiadomienie wysłane: <span id="test-notified-date">-</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Waiting status -->
                         <div id="test-waiting-status" class="mb-6">
                             <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
@@ -3856,7 +3878,7 @@
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -7680,6 +7702,20 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (navCheck) navCheck.classList.add('hidden');
                 if (completedToggle) completedToggle.checked = false;
             }
+
+            // Show notification info if sent
+            const notifiedInfo = document.getElementById('test-notified-info');
+            const notifiedDate = document.getElementById('test-notified-date');
+            if (takeDropData?.test_notified_at) {
+                if (notifiedInfo) notifiedInfo.classList.remove('hidden');
+                if (notifiedDate) {
+                    notifiedDate.textContent = new Date(takeDropData.test_notified_at).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                }
+            } else {
+                if (notifiedInfo) notifiedInfo.classList.add('hidden');
+            }
         }
 
         async function toggleTestCompleted() {
@@ -7725,8 +7761,65 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
+        async function sendTestReadyNotification() {
+            const btn = document.getElementById('test-notify-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Wysyłanie...';
+            }
+
+            try {
+                const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'test_ready',
+                        entity_type: 'workflow',
+                        entity_id: workflow.id,
+                        context: {
+                            email: workflow.customer_email,
+                            clientName: clientName,
+                            projectUrl: `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
+                        }
+                    }
+                });
+                console.log('Automation trigger fired: test_ready');
+
+                // Save notification timestamp
+                const now = new Date().toISOString();
+                const updateData = { test_notified_at: now };
+
+                if (takeDropData?.id) {
+                    await supabaseClient
+                        .from('workflow_takedrop')
+                        .update(updateData)
+                        .eq('id', takeDropData.id);
+                    takeDropData.test_notified_at = now;
+                } else {
+                    const { data } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({ workflow_id: workflow.id, ...updateData })
+                        .select()
+                        .single();
+                    takeDropData = data;
+                }
+
+                showToast('Powiadomienie wysłane do klienta', 'success');
+                loadTestTab();
+            } catch (err) {
+                console.error('Error sending test notification:', err);
+                showToast('Błąd wysyłania powiadomienia', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Wyślij powiadomienie';
+                }
+            }
+        }
+
         window.loadTestTab = loadTestTab;
         window.toggleTestCompleted = toggleTestCompleted;
+        window.sendTestReadyNotification = sendTestReadyNotification;
 
         // =============================================
         // CONTRACT MANAGEMENT
