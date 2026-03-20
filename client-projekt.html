@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032010';
+        const APP_VERSION = '2026032011';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5506,6 +5506,25 @@
             document.getElementById('nav-test-sklepu-mobile')?.classList.toggle('hidden', !hasPaymentGateway);
             document.getElementById('dash-nav-test-sklepu')?.classList.toggle('hidden', !hasPaymentGateway);
             document.getElementById('dash-nav-test-sklepu-mobile')?.classList.toggle('hidden', !hasPaymentGateway);
+
+            // Show/hide Etap 4 (Reklamy) nav section when test_accepted
+            const hasTestAccepted = takeDropData?.test_accepted;
+            document.getElementById('ads-stage-desktop')?.classList.toggle('hidden', !hasTestAccepted);
+            document.getElementById('ads-stage-mobile')?.classList.toggle('hidden', !hasTestAccepted);
+
+            // Show/hide Budżet nav item (only after partner_access_granted)
+            const hasPartnerAccess = adsData?.partner_access_granted;
+            document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasPartnerAccess);
+            document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasPartnerAccess);
+
+            // Update Konto reklamowe checkmark (green when partner_access_granted)
+            document.getElementById('nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasPartnerAccess);
+            document.getElementById('nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasPartnerAccess);
+
+            // Update Budżet checkmark (green when budget_funded)
+            const hasBudgetFunded = adsData?.budget_funded;
+            document.getElementById('nav-check-budzet')?.classList.toggle('hidden', !hasBudgetFunded);
+            document.getElementById('nav-check-budzet-mobile')?.classList.toggle('hidden', !hasBudgetFunded);
 
             // Update landing tab status
             updateLandingTabStatus();
