@@ -12,6 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -246,6 +247,21 @@
                         <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4">
                             <div class="text-2xl font-semibold text-white" id="sent-conversion">-</div>
                             <div class="text-zinc-500 text-xs font-mono">konwersja</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-sm text-zinc-400 font-medium">Wysłane oferty dziennie</div>
+                            <div class="flex gap-1">
+                                <button onclick="setChartDays(30)" id="chart-btn-30" class="px-3 py-1 text-xs rounded-md transition-all bg-amber-500/20 text-amber-400 border border-amber-500/30">30 dni</button>
+                                <button onclick="setChartDays(90)" id="chart-btn-90" class="px-3 py-1 text-xs rounded-md transition-all text-zinc-500 hover:text-white">90 dni</button>
+                                <button onclick="setChartDays(120)" id="chart-btn-120" class="px-3 py-1 text-xs rounded-md transition-all text-zinc-500 hover:text-white">120 dni</button>
+                            </div>
+                        </div>
+                        <div class="h-48">
+                            <canvas id="sent-chart"></canvas>
                         </div>
                     </div>
 
@@ -1000,6 +1016,7 @@
             document.getElementById('sent-loading').classList.add('hidden');
             renderSentOffers();
             updateSentStats();
+            renderSentChart();
         }
 
         function updateSentStats(filtered) {
@@ -1013,6 +1030,112 @@
             document.getElementById('sent-bought').textContent = bought;
             document.getElementById('sent-not-bought').textContent = notBought;
             document.getElementById('sent-conversion').textContent = `${conversion}%`;
+        }
+
+        // Chart
+        let sentChart = null;
+        let chartDays = 30;
+
+        function setChartDays(days) {
+            chartDays = days;
+            // Update button styles
+            [30, 90, 120].forEach(d => {
+                const btn = document.getElementById(`chart-btn-${d}`);
+                if (d === days) {
+                    btn.className = 'px-3 py-1 text-xs rounded-md transition-all bg-amber-500/20 text-amber-400 border border-amber-500/30';
+                } else {
+                    btn.className = 'px-3 py-1 text-xs rounded-md transition-all text-zinc-500 hover:text-white';
+                }
+            });
+            renderSentChart();
+        }
+
+        function renderSentChart() {
+            const ctx = document.getElementById('sent-chart');
+            if (!ctx) return;
+
+            // Generate date range
+            const now = new Date();
+            const labels = [];
+            const dataMap = {};
+
+            for (let i = chartDays - 1; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                const key = date.toISOString().split('T')[0];
+                labels.push(key);
+                dataMap[key] = 0;
+            }
+
+            // Count offers per day
+            sentOffers.forEach(so => {
+                const dateKey = new Date(so.created_at).toISOString().split('T')[0];
+                if (dataMap.hasOwnProperty(dateKey)) {
+                    dataMap[dateKey]++;
+                }
+            });
+
+            const data = labels.map(l => dataMap[l]);
+
+            // Format labels for display
+            const displayLabels = labels.map(l => {
+                const d = new Date(l);
+                return `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+            });
+
+            if (sentChart) {
+                sentChart.destroy();
+            }
+
+            sentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: displayLabels,
+                    datasets: [{
+                        label: 'Wysłane oferty',
+                        data: data,
+                        backgroundColor: 'rgba(245, 158, 11, 0.5)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 1,
+                        borderRadius: 3,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => {
+                                    const idx = items[0].dataIndex;
+                                    const d = new Date(labels[idx]);
+                                    return d.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.03)' },
+                            ticks: {
+                                color: '#71717a',
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: chartDays <= 30 ? 15 : 12
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.03)' },
+                            ticks: {
+                                color: '#71717a',
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function filterSentOffers() {
