@@ -9064,9 +9064,41 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 // Log activity
                 logActivity('branding_item_deleted', `Usunięto element brandingu: ${item?.title || item?.type || 'element'}`, { item_id: id, item_type: item?.type });
 
+                // If deleting a mockup, mark the corresponding prompt as unused
+                if (item?.type === 'mockup' && item?.title) {
+                    await markMockupPromptUnused(item.title);
+                }
+
                 brandingItems = brandingItems.filter(b => b.id !== id);
                 renderBranding();
                 showToast('Element usunięty', 'success');
+            }
+        }
+
+        // Mark mockup prompt as unused (when mockup is deleted)
+        async function markMockupPromptUnused(label) {
+            if (!workflow?.id) return;
+
+            // Remove from local set
+            usedMockupPrompts.delete(label);
+
+            // Update in database - find ai_prompt with this title and mark as unused
+            const { data: existing } = await supabaseClient
+                .from('workflow_branding')
+                .select('id, notes')
+                .eq('workflow_id', workflow.id)
+                .eq('type', 'ai_prompt')
+                .eq('title', label)
+                .maybeSingle();
+
+            if (existing) {
+                const notes = parseNotes(existing.notes);
+                if (notes.category === 'mockup') {
+                    await supabaseClient
+                        .from('workflow_branding')
+                        .update({ notes: JSON.stringify({ category: 'mockup', used: false }) })
+                        .eq('id', existing.id);
+                }
             }
         }
 
