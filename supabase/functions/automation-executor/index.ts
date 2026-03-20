@@ -317,16 +317,32 @@ async function processActionStep(
   step: AutomationStep,
   timestamp: string
 ): Promise<{ log: any }> {
-  const { action_type, email_type } = step.config
+  const { action_type, email_type, to_admin } = step.config as { action_type?: string; email_type?: string; to_admin?: boolean }
 
   if (action_type === 'send_email' && email_type) {
-    console.log(`[automation-executor] Sending email type: ${email_type}`)
+    console.log(`[automation-executor] Sending email type: ${email_type}, to_admin: ${to_admin}`)
 
     // Build email data from context
     const context = execution.context || {}
 
+    // Determine recipient email
+    let recipientEmail = context.email
+
+    // For admin notifications, use admin email
+    if (to_admin) {
+      // Get admin email from settings or use default
+      const { data: adminSetting } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'admin_notification_email')
+        .single()
+
+      recipientEmail = adminSetting?.value || 'biuro@tomekniedzwiecki.pl'
+      console.log(`[automation-executor] Using admin email: ${recipientEmail}`)
+    }
+
     // Validate required email field
-    if (!context.email) {
+    if (!recipientEmail) {
       console.error(`[automation-executor] Missing email address in context`)
       return {
         log: {
@@ -365,8 +381,9 @@ async function processActionStep(
     }
 
     const emailData = {
-      email: context.email,
+      email: recipientEmail,
       clientName: context.clientName || context.customer_name,
+      brandName: context.brandName,
       offerName: context.offerName || context.offer_name,
       offerPrice: context.offerPrice || context.amount,
       validUntil: context.validUntil || context.valid_until,

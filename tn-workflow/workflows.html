@@ -289,6 +289,11 @@
                                 <i class="ph ph-megaphone-simple"></i> Konto reklamowe
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
+                            <button onclick="toggleStatusStage('budget')" data-stage="budget"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-wallet"></i> Budżet
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
                         </div>
                     </div>
                     <!-- Owner Filter -->
@@ -701,7 +706,7 @@
             const [videoRes, takedropRes, adsRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, budget_funded').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -867,9 +872,13 @@
                         if (stage === 'test') {
                             return w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted;
                         }
-                        // "ad_account" = test zaakceptowany ALE konto reklamowe NIE gotowe
+                        // "ad_account" = test zaakceptowany ALE partner access NIE granted
                         if (stage === 'ad_account') {
-                            return w.takedrop_stage?.test_accepted && !w.ads_stage?.ad_account_ready;
+                            return w.takedrop_stage?.test_accepted && !w.ads_stage?.partner_access_granted;
+                        }
+                        // "budget" = partner access granted ALE budget NIE funded
+                        if (stage === 'budget') {
+                            return w.ads_stage?.partner_access_granted && !w.ads_stage?.budget_funded;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -976,7 +985,7 @@
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
                 takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
-                ad_account: 0
+                ad_account: 0, budget: 0
             };
 
             // Only count active workflows
@@ -1023,17 +1032,22 @@
                     counts.test++;
                     continue;
                 }
-                // "ad_account" = test zaakceptowany ALE konto reklamowe NIE gotowe
-                if (w.takedrop_stage?.test_accepted && !w.ads_stage?.ad_account_ready) {
+                // "ad_account" = test zaakceptowany ALE partner access NIE granted
+                if (w.takedrop_stage?.test_accepted && !w.ads_stage?.partner_access_granted) {
                     counts.ad_account++;
+                    continue;
+                }
+                // "budget" = partner access granted ALE budget NIE funded
+                if (w.ads_stage?.partner_access_granted && !w.ads_stage?.budget_funded) {
+                    counts.budget++;
                     continue;
                 }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
-                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account - these are handled above with exact filter logic
+                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account/budget - these are handled above with exact filter logic
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }

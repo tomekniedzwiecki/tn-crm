@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032007';
+        const APP_VERSION = '2026032008';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1969,6 +1969,11 @@
                             <span>Konto reklamowe</span>
                             <i id="nav-check-konto-reklamowe" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="nav-budzet-desktop" class="dash-nav-item hidden" data-tab="budzet" onclick="switchTab('budzet')">
+                            <i class="ph ph-wallet"></i>
+                            <span>Budżet</span>
+                            <i id="nav-check-budzet" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -2083,6 +2088,11 @@
                                 <i class="ph ph-megaphone-simple"></i>
                                 <span>Konto reklamowe</span>
                                 <i id="nav-check-konto-reklamowe-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="nav-budzet-mobile" class="dash-nav-item hidden" data-tab="budzet" onclick="switchTab('budzet');toggleMobileMenu()">
+                                <i class="ph ph-wallet"></i>
+                                <span>Budżet</span>
+                                <i id="nav-check-budzet-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -3648,6 +3658,173 @@
                                     <p id="ad-account-ready-date-client" class="text-[13px] text-[#888] mt-1">-</p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Budżet reklamowy (Etap 4) -->
+            <div id="tab-budzet" class="tab-panel hidden animate-enter">
+                <div class="max-w-3xl">
+                    <div class="flex items-start gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-wallet text-2xl text-emerald-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Budżet reklamowy</h2>
+                            <p class="text-[14px] text-[#888] leading-relaxed">
+                                Doładuj swoje konto reklamowe kwotą startową, żebym mógł uruchomić kampanie.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Not active state (waiting for partner access) -->
+                    <div id="budzet-not-active-client" class="hidden">
+                        <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                                    <i class="ph ph-lock text-zinc-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[16px] font-medium text-zinc-300">Najpierw dodaj mnie jako partnera</h3>
+                                    <p class="text-[13px] text-[#666] mt-1">Ten krok będzie dostępny po potwierdzeniu dostępu do konta reklamowego.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active state - instructions -->
+                    <div id="budzet-pending-client" class="hidden">
+                        <!-- Intro -->
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-5 mb-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i class="ph ph-info text-emerald-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[15px] font-medium text-emerald-400 mb-1">Płatności ręczne (prepaid)</h3>
+                                    <p class="text-[13px] text-[#999] leading-relaxed">
+                                        Zamiast podpinać kartę, z której Meta automatycznie ściąga pieniądze, doładujesz konto
+                                        konkretną kwotą. Reklamy będą się wyświetlać dopóki masz środki na koncie.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1 -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-400 text-sm font-bold">1</div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-2">Wejdź w ustawienia płatności</h4>
+                                    <ol class="text-[13px] text-[#888] space-y-2 mb-4">
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">a)</span>
+                                            <span>Otwórz <a href="https://adsmanager.facebook.com" target="_blank" class="text-emerald-400 hover:text-emerald-300 font-medium">Menedżer reklam</a></span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">b)</span>
+                                            <span>Kliknij <strong class="text-white">ikonę koła zębatego</strong> w lewym dolnym rogu</span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">c)</span>
+                                            <span>Wybierz <strong class="text-white">Ustawienia płatności</strong></span>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-400 text-sm font-bold">2</div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-2">Ustaw płatności ręczne</h4>
+                                    <p class="text-[13px] text-[#888] mb-4 leading-relaxed">
+                                        Jeśli masz opcję wyboru, wybierz <strong class="text-white">"Płatności ręczne"</strong> (Manual Payments)
+                                        zamiast "Płatności automatyczne".
+                                    </p>
+                                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                                        <p class="text-[12px] text-amber-400">
+                                            <i class="ph ph-info mr-1"></i>
+                                            Jeśli nie widzisz tej opcji, przejdź do kroku 3 — niektóre konta mają domyślnie tylko jeden tryb.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-400 text-sm font-bold">3</div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-2">Doładuj konto</h4>
+                                    <ol class="text-[13px] text-[#888] space-y-2 mb-4">
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">a)</span>
+                                            <span>Kliknij <strong class="text-white">"Dodaj środki"</strong> lub <strong class="text-white">"Doładuj konto"</strong></span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">b)</span>
+                                            <span>Wpisz kwotę:</span>
+                                        </li>
+                                    </ol>
+
+                                    <!-- Amount display -->
+                                    <div class="bg-[#111] border border-[#222] rounded-lg p-4 mb-4">
+                                        <div class="text-center">
+                                            <div class="text-[11px] text-[#666] uppercase tracking-wider mb-1">Kwota do doładowania</div>
+                                            <div class="text-[32px] font-bold text-white">1000 <span class="text-[18px] text-[#888]">zł</span></div>
+                                        </div>
+                                    </div>
+
+                                    <ol start="3" class="text-[13px] text-[#888] space-y-2">
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">c)</span>
+                                            <span>Wybierz metodę płatności: <strong class="text-white">BLIK</strong>, przelew bankowy lub PayU</span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-medium">d)</span>
+                                            <span>Dokończ płatność</span>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Confirm button -->
+                        <div class="mt-6 pt-6 border-t border-[#1a1a1a]">
+                            <button onclick="confirmBudgetFunded()" id="confirm-budget-btn"
+                                    class="w-full flex items-center justify-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-white py-4 rounded-xl text-[15px] font-semibold transition-colors">
+                                <i class="ph ph-check-circle text-xl"></i>
+                                Doładowałem konto
+                            </button>
+                            <p class="text-[12px] text-[#666] text-center mt-3">
+                                Kliknij gdy doładujesz konto kwotą 1000 zł
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Budget funded - waiting for admin -->
+                    <div id="budzet-funded-client" class="hidden">
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph-fill ph-check-circle text-emerald-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-[16px] font-medium text-emerald-400">Konto doładowane</h3>
+                                    <p id="budzet-funded-date" class="text-[13px] text-[#888] mt-1">Potwierdzono</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mt-4">
+                            <p class="text-[13px] text-[#888] leading-relaxed">
+                                Świetnie! Teraz sprawdzę środki na koncie i przygotuję pierwszą kampanię reklamową.
+                                Dam Ci znać mailem gdy wszystko będzie gotowe do uruchomienia.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -5868,6 +6045,9 @@
                 case 'konto-reklamowe':
                     loadKontoReklamowe();
                     break;
+                case 'budzet':
+                    loadBudzet();
+                    break;
             }
         }
         window.switchTab = switchTab;
@@ -8070,6 +8250,10 @@
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (navCheckMobile) navCheckMobile.classList.remove('hidden');
 
+                // Show Budżet nav item
+                document.getElementById('nav-budzet-desktop')?.classList.remove('hidden');
+                document.getElementById('nav-budzet-mobile')?.classList.remove('hidden');
+
                 const readyDate = adsData.ad_account_configured_at;
                 if (readyDate) {
                     const dateEl = document.getElementById('ad-account-ready-date-client');
@@ -8080,10 +8264,14 @@
                     }
                 }
             } else if (adsData?.partner_access_granted) {
-                // Client confirmed they added partner, waiting for admin
+                // Client confirmed they added partner, show checkmark and unlock Budżet
                 if (partnerGrantedEl) partnerGrantedEl.classList.remove('hidden');
-                if (navCheck) navCheck.classList.add('hidden');
-                if (navCheckMobile) navCheckMobile.classList.add('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckMobile) navCheckMobile.classList.remove('hidden');
+
+                // Show Budżet nav item (unlocked after partner access)
+                document.getElementById('nav-budzet-desktop')?.classList.remove('hidden');
+                document.getElementById('nav-budzet-mobile')?.classList.remove('hidden');
 
                 const grantedDate = adsData.partner_access_granted_at;
                 if (grantedDate) {
@@ -8141,6 +8329,29 @@
                     adsData = data;
                 }
 
+                // Trigger automation for admin notification
+                try {
+                    const clientName = workflow?.customer_name || workflow?.client_name || 'Klient';
+                    const brandName = workflow?.brand_name || workflow?.name || 'Projekt';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${workflow.id}`;
+
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'partner_access_granted',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                clientName,
+                                brandName,
+                                projectUrl
+                            }
+                        }
+                    });
+                    console.log('Automation trigger fired: partner_access_granted');
+                } catch (triggerErr) {
+                    console.error('Automation trigger error:', triggerErr);
+                }
+
                 showToast('Dziękuję! Sprawdzę dostęp i dam znać.', 'success');
                 loadKontoReklamowe();
             } catch (err) {
@@ -8153,6 +8364,119 @@
             }
         }
         window.confirmPartnerAccess = confirmPartnerAccess;
+
+        // Budżet reklamowy functions
+        async function loadBudzet() {
+            // Make sure we have ads data
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
+            const notActiveEl = document.getElementById('budzet-not-active-client');
+            const pendingEl = document.getElementById('budzet-pending-client');
+            const fundedEl = document.getElementById('budzet-funded-client');
+            const navCheck = document.getElementById('nav-check-budzet');
+            const navCheckMobile = document.getElementById('nav-check-budzet-mobile');
+
+            // Hide all states first
+            if (notActiveEl) notActiveEl.classList.add('hidden');
+            if (pendingEl) pendingEl.classList.add('hidden');
+            if (fundedEl) fundedEl.classList.add('hidden');
+
+            // Check if partner access granted (prerequisite for budget step)
+            if (!adsData?.partner_access_granted) {
+                if (notActiveEl) notActiveEl.classList.remove('hidden');
+                return;
+            }
+
+            // Partner access granted - show budget step
+            if (adsData?.budget_funded) {
+                // Budget already funded
+                if (fundedEl) fundedEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckMobile) navCheckMobile.classList.remove('hidden');
+
+                const fundedDate = adsData.budget_funded_at;
+                if (fundedDate) {
+                    const dateEl = document.getElementById('budzet-funded-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Potwierdzono ' + new Date(fundedDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+            } else {
+                // Show instructions
+                if (pendingEl) pendingEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+                if (navCheckMobile) navCheckMobile.classList.add('hidden');
+            }
+        }
+
+        async function confirmBudgetFunded() {
+            const btn = document.getElementById('confirm-budget-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> Zapisuję...';
+            }
+
+            try {
+                const now = new Date().toISOString();
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            budget_funded: true,
+                            budget_funded_at: now
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.budget_funded = true;
+                    adsData.budget_funded_at = now;
+                }
+
+                // Trigger automation for admin notification
+                try {
+                    const clientName = workflow?.customer_name || workflow?.client_name || 'Klient';
+                    const brandName = workflow?.brand_name || workflow?.name || 'Projekt';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${workflow.id}`;
+
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'budget_funded',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                clientName,
+                                brandName,
+                                projectUrl
+                            }
+                        }
+                    });
+                    console.log('Automation trigger fired: budget_funded');
+                } catch (triggerErr) {
+                    console.error('Automation trigger error:', triggerErr);
+                }
+
+                showToast('Świetnie! Przygotowuję kampanię.', 'success');
+                loadBudzet();
+            } catch (err) {
+                console.error('Error confirming budget funded:', err);
+                showToast('Błąd zapisu', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-check-circle text-xl"></i> Doładowałem konto';
+                }
+            }
+        }
+        window.confirmBudgetFunded = confirmBudgetFunded;
 
         // Mobile menu toggle
         function toggleMobileMenu() {

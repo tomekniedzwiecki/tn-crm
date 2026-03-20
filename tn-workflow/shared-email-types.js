@@ -33,6 +33,11 @@ const EMAIL_TEMPLATE_CATEGORIES = {
         label: 'Etap 3 - Konfiguracja sklepu',
         description: 'Maile związane z konfiguracją TakeDrop',
         templates: ['takedrop_activated', 'landing_page_connected', 'test_ready']
+    },
+    reklamy: {
+        label: 'Etap 4 - Reklamy',
+        description: 'Maile związane z reklamami Meta Ads',
+        templates: ['partner_access_granted', 'budget_funded']
     }
 };
 
@@ -138,6 +143,18 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy sklep jest gotowy do testów przez klienta',
         icon: 'ph-browser',
         color: 'cyan'
+    },
+    'partner_access_granted': {
+        name: 'Klient dodał partnera',
+        description: 'Wysyłany do admina gdy klient potwierdzi dostęp partnera',
+        icon: 'ph-user-circle-plus',
+        color: 'rose'
+    },
+    'budget_funded': {
+        name: 'Budżet doładowany',
+        description: 'Wysyłany do admina gdy klient doładuje konto reklamowe',
+        icon: 'ph-wallet',
+        color: 'emerald'
     }
 };
 
@@ -188,7 +205,9 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'video_activated', label: 'Aktywuj Video' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
-        { value: 'test_ready', label: 'Test sklepu gotowy' }
+        { value: 'test_ready', label: 'Test sklepu gotowy' },
+        { value: 'partner_access_granted', label: 'Klient dodał partnera' },
+        { value: 'budget_funded', label: 'Budżet doładowany' }
     ]
 };
 
@@ -217,5 +236,8 @@ const TRIGGER_DEFINITIONS = {
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
-    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' }
+    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
+    // Etap 4 - Reklamy
+    partner_access_granted: { label: 'Klient dodał partnera', icon: 'ph-user-circle-plus', color: 'rose' },
+    budget_funded: { label: 'Budżet doładowany', icon: 'ph-wallet', color: 'emerald' }
 };

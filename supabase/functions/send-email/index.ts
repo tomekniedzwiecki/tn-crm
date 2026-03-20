@@ -43,6 +43,9 @@ const VALID_EMAIL_TYPES = [
   'takedrop_welcome',
   'landing_page_connected',
   'test_ready',
+  // Etap 4 - Reklamy (admin notifications)
+  'partner_access_granted',
+  'budget_funded',
   'direct'
 ]
 
@@ -67,7 +70,10 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   video_activated: 'Czas na nagranie materiałów video!',
   // Etap 3 - TakeDrop
   takedrop_activated: 'Załóż konto na platformie sklepowej',
-  takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 3!'
+  takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 3!',
+  // Etap 4 - Reklamy (admin notifications)
+  partner_access_granted: 'Klient udostępnił konto reklamowe - {{brandName}}',
+  budget_funded: 'Klient doładował konto reklamowe - {{brandName}}'
 }
 
 // Offer flow email types (use special reply-to)
