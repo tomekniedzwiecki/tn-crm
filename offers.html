@@ -134,6 +134,11 @@
                         <span class="tab-label">Oferty</span>
                         <span id="offers-count" class="tab-count">-</span>
                     </button>
+                    <button onclick="switchTab('sent')" data-tab="sent" class="submenu-tab">
+                        <i class="ph ph-paper-plane-tilt tab-icon"></i>
+                        <span class="tab-label">Wysłane</span>
+                        <span id="sent-count" class="tab-count">-</span>
+                    </button>
                     <button onclick="switchTab('codes')" data-tab="codes" class="submenu-tab">
                         <i class="ph ph-ticket tab-icon"></i>
                         <span class="tab-label">Kody rabatowe</span>
@@ -149,9 +154,14 @@
                     <span class="tab-label">Oferty</span>
                     <span id="offers-count-mobile" class="tab-count">-</span>
                 </button>
+                <button onclick="switchTab('sent')" data-tab="sent" class="submenu-tab flex-1 justify-center !rounded-b-none !border-b-0">
+                    <i class="ph ph-paper-plane-tilt tab-icon"></i>
+                    <span class="tab-label">Wysłane</span>
+                    <span id="sent-count-mobile" class="tab-count">-</span>
+                </button>
                 <button onclick="switchTab('codes')" data-tab="codes" class="submenu-tab flex-1 justify-center !rounded-b-none !border-b-0">
                     <i class="ph ph-ticket tab-icon"></i>
-                    <span class="tab-label">Kody rabatowe</span>
+                    <span class="tab-label">Kody</span>
                     <span id="codes-count-mobile" class="tab-count">-</span>
                 </button>
             </div>
@@ -196,6 +206,62 @@
                 <!-- Discount Codes Tab -->
                 <div id="tab-codes" class="tab-content">
                     <iframe id="codes-iframe" src="/discount-codes" class="w-full h-full border-0" style="min-height: calc(100vh - 64px);"></iframe>
+                </div>
+
+                <!-- Sent Offers Tab -->
+                <div id="tab-sent" class="tab-content p-6 lg:p-10">
+                    <div class="max-w-6xl mx-auto animate-enter">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Wysłane oferty</h1>
+                                <p class="text-zinc-500">Leady, którym wygenerowałeś ofertę. Śledź konwersję.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <!-- Filter -->
+                                <select id="sent-filter" onchange="filterSentOffers()" class="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg">
+                                    <option value="all">Wszyscy</option>
+                                    <option value="not-bought">Nie kupili</option>
+                                    <option value="bought">Kupili</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Stats row -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4">
+                                <div class="text-2xl font-semibold text-white" id="sent-total">-</div>
+                                <div class="text-zinc-500 text-xs font-mono">wysłanych</div>
+                            </div>
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4">
+                                <div class="text-2xl font-semibold text-emerald-400" id="sent-bought">-</div>
+                                <div class="text-zinc-500 text-xs font-mono">kupili</div>
+                            </div>
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4">
+                                <div class="text-2xl font-semibold text-amber-400" id="sent-not-bought">-</div>
+                                <div class="text-zinc-500 text-xs font-mono">nie kupili</div>
+                            </div>
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4">
+                                <div class="text-2xl font-semibold text-white" id="sent-conversion">-</div>
+                                <div class="text-zinc-500 text-xs font-mono">konwersja</div>
+                            </div>
+                        </div>
+
+                        <!-- Sent offers list -->
+                        <div id="sent-list" class="space-y-3">
+                            <!-- Will be rendered by JS -->
+                        </div>
+
+                        <div id="sent-empty" class="hidden py-16 text-center">
+                            <i class="ph ph-paper-plane-tilt text-4xl text-zinc-700 mb-3"></i>
+                            <p class="text-zinc-400 text-sm mb-1">Brak wysłanych ofert</p>
+                            <p class="text-zinc-600 text-xs font-mono">Wygeneruj ofertę dla leada, aby zobaczyć ją tutaj</p>
+                        </div>
+
+                        <div id="sent-loading" class="hidden py-16 text-center">
+                            <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
+                            <p class="text-zinc-500 text-sm font-mono">Ładowanie...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -275,6 +341,10 @@
         let currentMember = null;
         let isAdmin = false;
 
+        // Sent offers state
+        let sentOffers = [];
+        let sentOffersFilter = 'all';
+
         // Tab switching
         function switchTab(tabName) {
             currentTab = tabName;
@@ -302,6 +372,13 @@
                         <span class="hidden md:inline">Dodaj ofertę</span>
                     </button>
                 `;
+            } else if (tabName === 'sent') {
+                headerTitle.textContent = 'wysłane oferty';
+                headerActions.innerHTML = '';
+                // Load sent offers if not already loaded
+                if (sentOffers.length === 0) {
+                    loadSentOffers();
+                }
             } else if (tabName === 'codes') {
                 headerTitle.textContent = 'kody rabatowe';
                 headerActions.innerHTML = ''; // Actions are in the iframe
@@ -399,6 +476,14 @@
             document.getElementById('offers-count').textContent = activeCount;
             const offersMobile = document.getElementById('offers-count-mobile');
             if (offersMobile) offersMobile.textContent = activeCount;
+
+            // Sent offers count
+            const { count: sentCount } = await supabaseClient
+                .from('client_offers')
+                .select('*', { count: 'exact', head: true });
+            document.getElementById('sent-count').textContent = sentCount || 0;
+            const sentMobile = document.getElementById('sent-count-mobile');
+            if (sentMobile) sentMobile.textContent = sentCount || 0;
 
             // Discount codes count
             const { count: codesCount } = await supabaseClient
@@ -863,12 +948,200 @@
             if (e.key === 'Escape') closeModal();
         });
 
+        // =============================================
+        // SENT OFFERS FUNCTIONS
+        // =============================================
+
+        async function loadSentOffers() {
+            document.getElementById('sent-loading').classList.remove('hidden');
+            document.getElementById('sent-list').innerHTML = '';
+            document.getElementById('sent-empty').classList.add('hidden');
+
+            // Fetch client_offers with lead data
+            const { data: clientOffers, error } = await supabaseClient
+                .from('client_offers')
+                .select(`
+                    id,
+                    lead_id,
+                    offer_id,
+                    offer_type,
+                    custom_price,
+                    view_count,
+                    view_history,
+                    valid_until,
+                    created_at,
+                    leads!inner(id, name, email, company, phone),
+                    offers!inner(id, name, price)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading sent offers:', error);
+                document.getElementById('sent-loading').classList.add('hidden');
+                return;
+            }
+
+            // Fetch orders to check who bought
+            const leadEmails = [...new Set(clientOffers.map(co => co.leads?.email).filter(Boolean))];
+            let ordersMap = {};
+
+            if (leadEmails.length > 0) {
+                const { data: orders } = await supabaseClient
+                    .from('orders')
+                    .select('customer_email, status, created_at')
+                    .in('customer_email', leadEmails)
+                    .eq('status', 'paid');
+
+                // Map email -> order info
+                (orders || []).forEach(order => {
+                    ordersMap[order.customer_email] = order;
+                });
+            }
+
+            // Enrich data with purchase status
+            sentOffers = clientOffers.map(co => ({
+                ...co,
+                hasPurchased: !!ordersMap[co.leads?.email],
+                purchaseDate: ordersMap[co.leads?.email]?.created_at
+            }));
+
+            document.getElementById('sent-loading').classList.add('hidden');
+            renderSentOffers();
+            updateSentStats();
+        }
+
+        function updateSentStats() {
+            const total = sentOffers.length;
+            const bought = sentOffers.filter(o => o.hasPurchased).length;
+            const notBought = total - bought;
+            const conversion = total > 0 ? Math.round((bought / total) * 100) : 0;
+
+            document.getElementById('sent-total').textContent = total;
+            document.getElementById('sent-bought').textContent = bought;
+            document.getElementById('sent-not-bought').textContent = notBought;
+            document.getElementById('sent-conversion').textContent = `${conversion}%`;
+        }
+
+        function filterSentOffers() {
+            sentOffersFilter = document.getElementById('sent-filter').value;
+            renderSentOffers();
+        }
+
+        function getLeadPath(leadId) {
+            const base = Sidebar.getBasePath();
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            return isLocal ? `${base}/lead.html?id=${leadId}` : `/lead?id=${leadId}`;
+        }
+
+        function renderSentOffers() {
+            const list = document.getElementById('sent-list');
+            const emptyState = document.getElementById('sent-empty');
+
+            // Filter
+            let filtered = sentOffers;
+            if (sentOffersFilter === 'bought') {
+                filtered = sentOffers.filter(o => o.hasPurchased);
+            } else if (sentOffersFilter === 'not-bought') {
+                filtered = sentOffers.filter(o => !o.hasPurchased);
+            }
+
+            if (filtered.length === 0) {
+                list.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            list.innerHTML = filtered.map(so => {
+                const lead = so.leads || {};
+                const offer = so.offers || {};
+                const viewCount = so.view_count || (so.view_history?.length || 0);
+                const price = so.custom_price || offer.price || 0;
+                const createdDate = new Date(so.created_at).toLocaleDateString('pl-PL');
+                const validUntil = new Date(so.valid_until);
+                const isExpired = validUntil < new Date();
+
+                // Status badge
+                let statusBadge;
+                if (so.hasPurchased) {
+                    statusBadge = `<span class="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        <i class="ph ph-check-circle mr-1"></i>Kupił
+                    </span>`;
+                } else if (isExpired) {
+                    statusBadge = `<span class="px-2 py-1 text-xs rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                        <i class="ph ph-clock mr-1"></i>Wygasła
+                    </span>`;
+                } else {
+                    statusBadge = `<span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        <i class="ph ph-hourglass mr-1"></i>Oczekuje
+                    </span>`;
+                }
+
+                // Offer type badge
+                const offerTypeBadge = so.offer_type === 'starter'
+                    ? '<span class="px-1.5 py-0.5 text-[10px] rounded bg-blue-500/20 text-blue-400">starter</span>'
+                    : '<span class="px-1.5 py-0.5 text-[10px] rounded bg-purple-500/20 text-purple-400">full</span>';
+
+                return `
+                <div class="bg-zinc-900/40 border border-white/5 rounded-lg p-4 hover:border-white/10 transition-all">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <!-- Lead info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <a href="${getLeadPath(lead.id)}" class="font-medium text-white hover:text-amber-400 transition-colors truncate">
+                                    ${lead.name || lead.company || lead.email || 'Bez nazwy'}
+                                </a>
+                                ${statusBadge}
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                                <span class="flex items-center gap-1">
+                                    <i class="ph ph-envelope"></i>
+                                    ${lead.email || '-'}
+                                </span>
+                                ${lead.phone ? `
+                                    <span class="flex items-center gap-1">
+                                        <i class="ph ph-phone"></i>
+                                        ${lead.phone}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Offer info -->
+                        <div class="flex items-center gap-4 text-sm">
+                            <div class="text-center">
+                                <div class="flex items-center gap-1.5 text-zinc-400">
+                                    <i class="ph ph-package"></i>
+                                    <span>${offer.name || 'Oferta'}</span>
+                                    ${offerTypeBadge}
+                                </div>
+                                <div class="text-white font-mono font-semibold">${formatPrice(price)}</div>
+                            </div>
+
+                            <div class="text-center px-3 border-l border-white/5">
+                                <div class="text-zinc-500 text-xs">Otwarć</div>
+                                <div class="text-white font-mono ${viewCount > 0 ? 'text-emerald-400' : ''}">${viewCount}</div>
+                            </div>
+
+                            <div class="text-center px-3 border-l border-white/5">
+                                <div class="text-zinc-500 text-xs">Wysłano</div>
+                                <div class="text-zinc-400 font-mono text-xs">${createdDate}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
         // Make functions available globally
         window.openAddModal = openAddModal;
         window.editOffer = editOffer;
         window.toggleActive = toggleActive;
         window.getOfferPath = getOfferPath;
         window.switchTab = switchTab;
+        window.filterSentOffers = filterSentOffers;
 
         async function init() {
             const session = await checkAuth();
@@ -890,6 +1163,8 @@
                 const tab = params.get('tab');
                 if (tab === 'codes') {
                     switchTab('codes');
+                } else if (tab === 'sent') {
+                    switchTab('sent');
                 }
             }
         }
