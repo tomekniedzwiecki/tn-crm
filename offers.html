@@ -250,12 +250,60 @@
                         </div>
                     </div>
 
-                    <!-- Insights row -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-                        <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
-                            <div class="text-lg font-semibold text-blue-400" id="stat-avg-days">-</div>
-                            <div class="text-zinc-500 text-[10px] font-mono">śr. dni do zakupu</div>
+                    <!-- Time to purchase breakdown -->
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-4 mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm text-zinc-400 font-medium flex items-center gap-2">
+                                <i class="ph ph-clock-countdown text-blue-400"></i>
+                                Czas od oferty do zakupu
+                            </div>
+                            <div class="flex items-center gap-4 text-xs">
+                                <span class="text-zinc-500">mediana: <span class="text-blue-400 font-semibold" id="stat-median-days">-</span></span>
+                                <span class="text-zinc-500">średnia: <span class="text-zinc-300 font-semibold" id="stat-avg-days">-</span></span>
+                                <span class="text-zinc-500">min/max: <span class="text-zinc-400" id="stat-minmax-days">-</span></span>
+                            </div>
                         </div>
+                        <div class="grid grid-cols-5 gap-2" id="days-distribution">
+                            <div class="text-center">
+                                <div class="h-16 bg-zinc-800 rounded relative overflow-hidden mb-1">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-emerald-500/50 transition-all" id="bar-0-1" style="height: 0%"></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500">0-1 dni</div>
+                                <div class="text-xs text-emerald-400 font-mono" id="count-0-1">0</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="h-16 bg-zinc-800 rounded relative overflow-hidden mb-1">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-green-500/50 transition-all" id="bar-2-3" style="height: 0%"></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500">2-3 dni</div>
+                                <div class="text-xs text-green-400 font-mono" id="count-2-3">0</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="h-16 bg-zinc-800 rounded relative overflow-hidden mb-1">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-yellow-500/50 transition-all" id="bar-4-7" style="height: 0%"></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500">4-7 dni</div>
+                                <div class="text-xs text-yellow-400 font-mono" id="count-4-7">0</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="h-16 bg-zinc-800 rounded relative overflow-hidden mb-1">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-orange-500/50 transition-all" id="bar-8-14" style="height: 0%"></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500">8-14 dni</div>
+                                <div class="text-xs text-orange-400 font-mono" id="count-8-14">0</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="h-16 bg-zinc-800 rounded relative overflow-hidden mb-1">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-red-500/50 transition-all" id="bar-15plus" style="height: 0%"></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500">15+ dni</div>
+                                <div class="text-xs text-red-400 font-mono" id="count-15plus">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insights row -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                         <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3">
                             <div class="text-lg font-semibold text-emerald-400" id="stat-views-bought">-</div>
                             <div class="text-zinc-500 text-[10px] font-mono">śr. otwarć (kupili)</div>
@@ -1083,7 +1131,7 @@
             const bought = sentOffers.filter(o => o.hasPurchased);
             const notBought = sentOffers.filter(o => !o.hasPurchased);
 
-            // Average days to purchase
+            // Days to purchase calculation
             const daysToP = bought
                 .filter(o => o.purchaseDate)
                 .map(o => {
@@ -1091,11 +1139,48 @@
                     const purchaseDate = new Date(o.purchaseDate);
                     return Math.round((purchaseDate - offerDate) / (1000 * 60 * 60 * 24));
                 })
-                .filter(d => d >= 0);
+                .filter(d => d >= 0)
+                .sort((a, b) => a - b);
+
+            // Average
             const avgDays = daysToP.length > 0
                 ? Math.round(daysToP.reduce((a, b) => a + b, 0) / daysToP.length)
-                : '-';
-            document.getElementById('stat-avg-days').textContent = avgDays !== '-' ? `${avgDays} dni` : '-';
+                : null;
+            document.getElementById('stat-avg-days').textContent = avgDays !== null ? `${avgDays} dni` : '-';
+
+            // Median
+            let medianDays = null;
+            if (daysToP.length > 0) {
+                const mid = Math.floor(daysToP.length / 2);
+                medianDays = daysToP.length % 2 === 0
+                    ? Math.round((daysToP[mid - 1] + daysToP[mid]) / 2)
+                    : daysToP[mid];
+            }
+            document.getElementById('stat-median-days').textContent = medianDays !== null ? `${medianDays} dni` : '-';
+
+            // Min/Max
+            const minDays = daysToP.length > 0 ? daysToP[0] : null;
+            const maxDays = daysToP.length > 0 ? daysToP[daysToP.length - 1] : null;
+            document.getElementById('stat-minmax-days').textContent = minDays !== null ? `${minDays}-${maxDays} dni` : '-';
+
+            // Distribution buckets
+            const buckets = { '0-1': 0, '2-3': 0, '4-7': 0, '8-14': 0, '15plus': 0 };
+            daysToP.forEach(d => {
+                if (d <= 1) buckets['0-1']++;
+                else if (d <= 3) buckets['2-3']++;
+                else if (d <= 7) buckets['4-7']++;
+                else if (d <= 14) buckets['8-14']++;
+                else buckets['15plus']++;
+            });
+
+            const maxBucket = Math.max(...Object.values(buckets), 1);
+            Object.entries(buckets).forEach(([key, count]) => {
+                const barId = `bar-${key}`;
+                const countId = `count-${key}`;
+                const height = (count / maxBucket) * 100;
+                document.getElementById(barId).style.height = `${height}%`;
+                document.getElementById(countId).textContent = count;
+            });
 
             // Average views for buyers vs non-buyers
             const viewsBought = bought.map(o => o.view_count || (o.view_history?.length || 0));
