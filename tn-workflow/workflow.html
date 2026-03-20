@@ -10067,9 +10067,22 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         async function generateMockupFromPrompt(index) {
+            console.log('[MOCKUP GEN] Starting for index:', index);
+            console.log('[MOCKUP GEN] brandingItems count:', brandingItems.length);
+            console.log('[MOCKUP GEN] ai_prompt items:', brandingItems.filter(b => b.type === 'ai_prompt').length);
+
             const item = getMockupPromptByIndex(index);
+            console.log('[MOCKUP GEN] Got item:', item ? { label: item.label, promptLength: item.prompt?.length } : null);
+
             if (!item) {
                 showToast('Nie znaleziono promptu', 'error');
+                return;
+            }
+
+            // Validate prompt is not empty
+            if (!item.prompt || item.prompt.trim().length === 0) {
+                showToast('Prompt jest pusty - sprawdź dane brandingu', 'error');
+                console.error('[MOCKUP GEN] Empty prompt for mockup:', item);
                 return;
             }
 
