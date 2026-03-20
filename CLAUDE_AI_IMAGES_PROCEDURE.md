@@ -287,36 +287,3 @@ https://tn-crm.vercel.app/landing-pages/[nazwa]/
 8. Deploy + link
 ```
 
----
-
-## Szablon do bazy danych
-
-Wstaw ten szablon do tabeli `ai_prompt_templates` w Supabase:
-
-```sql
-INSERT INTO ai_prompt_templates (template_key, name, content, description)
-VALUES (
-  'ai_images',
-  'Generowanie grafik AI',
-  'Wygeneruj grafiki AI dla landing page "{{product_name}}"
-
-== DANE WORKFLOW ==
-- Workflow ID: {{workflow_id}}
-- Klient: {{customer_name}}
-
-== ZADANIE ==
-1. Przeczytaj plik CLAUDE_AI_IMAGES_PROCEDURE.md
-2. Pobierz dane workflow przez edge function get-workflow-data
-3. Przeanalizuj raporty, żeby zrozumieć grupę docelową
-4. Przeczytaj landing page i określ które sekcje potrzebują obrazów (Hero ZAWSZE)
-5. Wygeneruj obrazy używając reference_image_url produktu
-6. Zaktualizuj HTML i deploy
-
-WAŻNE: Każdy obraz musi pokazywać DOKŁADNIE ten sam produkt (spójność) i być osadzony w realiach prawdziwych klientów.',
-  'Prompt do wygenerowania grafik AI dla landing page'
-)
-ON CONFLICT (template_key) DO UPDATE SET
-  content = EXCLUDED.content,
-  name = EXCLUDED.name,
-  description = EXCLUDED.description;
-```
