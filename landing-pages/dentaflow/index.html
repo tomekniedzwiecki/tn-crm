@@ -501,93 +501,81 @@
     .bento {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 20px; max-width: 1200px; margin: 0 auto;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
     }
     .bento-card {
       background: #fff;
       border: 1px solid rgba(0,180,166,0.08);
       border-radius: 24px;
-      position: relative; overflow: hidden; cursor: default;
-      transition: border-color 0.4s, box-shadow 0.4s;
-      display: flex; flex-direction: column;
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
     .bento-card:hover {
       border-color: rgba(0,180,166,0.2);
       box-shadow: 0 8px 40px rgba(0,180,166,0.06);
     }
-    .bento-card .spotlight {
-      position: absolute; width: 300px; height: 300px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,180,166,0.06) 0%, transparent 70%);
-      pointer-events: none; opacity: 0; transition: opacity 0.4s;
-      transform: translate(-50%, -50%); z-index: 3;
-    }
-    .bento-card:hover .spotlight { opacity: 1; }
-    .bento-card-img {
-      overflow: hidden;
-    }
     .bento-card-img img {
       width: 100%;
-      aspect-ratio: 16/10;
+      height: 220px;
       object-fit: cover;
       display: block;
     }
-    .bento-card-img .img-placeholder {
-      width: 100%; aspect-ratio: 16/10; border-radius: 0; border: none;
-      border-bottom: 1px solid rgba(0,180,166,0.06);
+    .bento-card-body {
+      padding: 28px;
     }
-    .bento-card-body { padding: 32px; flex: 1; }
     .bento-card-body .icon-box {
       width: 48px; height: 48px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 20px; font-size: 20px;
+      margin-bottom: 16px;
     }
     .bento-card-body h3 {
       font-family: var(--font-heading);
-      font-size: 22px; font-weight: 700; margin-bottom: 10px;
+      font-size: 20px; font-weight: 700; margin-bottom: 10px;
       color: var(--neutral-dark);
     }
     .bento-card-body p {
-      font-size: 14px; color: var(--neutral-mid); line-height: 1.8;
+      font-size: 14px; color: var(--neutral-mid); line-height: 1.7;
     }
-    .bento-card:nth-child(1) {
+    /* Hero card - full width */
+    .bento-card.bento-hero {
       grid-column: span 2;
-      flex-direction: row;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
     }
-    .bento-card:nth-child(1) .bento-card-img {
-      flex: 0 0 45%;
-      max-width: 45%;
-    }
-    .bento-card:nth-child(1) .bento-card-img img {
+    .bento-card.bento-hero .bento-card-img img {
       height: 100%;
-      aspect-ratio: auto;
+      min-height: 320px;
       border-radius: 24px 0 0 24px;
     }
-    .bento-card:nth-child(1) .bento-card-body {
-      padding: 48px;
+    .bento-card.bento-hero .bento-card-body {
+      padding: 40px;
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
-    .bento-card:nth-child(1) .bento-card-body h3 { font-size: 28px; }
-    .bento-card:nth-child(1) .bento-card-body p { font-size: 16px; max-width: 640px; }
+    .bento-card.bento-hero .bento-card-body h3 { font-size: 26px; }
+    .bento-card.bento-hero .bento-card-body p { font-size: 15px; }
     .icon-teal { background: var(--primary-soft); color: var(--primary); }
     .icon-ocean { background: var(--secondary-soft); color: var(--secondary); }
     .icon-mint { background: var(--accent-soft); color: var(--accent); }
     .icon-gold { background: rgba(212,165,116,0.12); color: var(--gold); }
-    @media (max-width: 768px) {
-      .bento { grid-template-columns: 1fr; }
-      .bento-card:nth-child(1) {
-        grid-column: span 1;
-        flex-direction: column;
+    @media (max-width: 900px) {
+      .bento-card.bento-hero {
+        grid-column: span 2;
+        grid-template-columns: 1fr;
       }
-      .bento-card:nth-child(1) .bento-card-img {
-        flex: none;
-        max-width: 100%;
-      }
-      .bento-card:nth-child(1) .bento-card-img img {
-        aspect-ratio: 16/10;
+      .bento-card.bento-hero .bento-card-img img {
+        height: 240px;
+        min-height: auto;
         border-radius: 24px 24px 0 0;
       }
+    }
+    @media (max-width: 768px) {
+      .bento { grid-template-columns: 1fr; }
+      .bento-card.bento-hero { grid-column: span 1; }
+      .bento-card-img img { height: 200px; }
     }
 
     /* ═══ ROI CALCULATOR ═══ */
@@ -1171,8 +1159,7 @@
     </div>
     <div class="bento container">
       <!-- Tile 1: Hero (full width) -->
-      <div class="bento-card fade-in">
-        <div class="spotlight"></div>
+      <div class="bento-card bento-hero fade-in">
         <div class="bento-card-img">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994499009_0.jpg" alt="Zbiornik 800 ml napełniany wodą">
         </div>
@@ -1186,7 +1173,6 @@
       </div>
       <!-- Tile 2: Moc PSI -->
       <div class="bento-card fade-in delay-1">
-        <div class="spotlight"></div>
         <div class="bento-card-img">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994242762_0.jpg" alt="Regulator ciśnienia 10 stopni">
         </div>
@@ -1200,7 +1186,6 @@
       </div>
       <!-- Tile 3: 5 Dysz -->
       <div class="bento-card fade-in delay-2">
-        <div class="spotlight"></div>
         <div class="bento-card-img">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994336883_0.jpg" alt="5 wymiennych dysz do irygatora">
         </div>
@@ -1214,7 +1199,6 @@
       </div>
       <!-- Tile 4: Pulsacja -->
       <div class="bento-card fade-in delay-3">
-        <div class="spotlight"></div>
         <div class="bento-card-img">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994285274_0.jpg" alt="Strumień wody 1700 impulsów na minutę">
         </div>
