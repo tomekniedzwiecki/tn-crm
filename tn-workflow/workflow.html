@@ -7019,14 +7019,20 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         async function generateLegalDocuments() {
             const data = getLegalFormData();
 
-            // Validate required fields
-            if (!data.COMPANY_NAME || !data.NIP || !data.COMPANY_ADDRESS || !data.EMAIL || !data.PHONE) {
-                showToast('Wypełnij wszystkie wymagane pola (*)', 'error');
-                return;
-            }
+            // Validate required fields with specific messages
+            const requiredFields = [
+                { key: 'COMPANY_NAME', label: 'Nazwa firmy' },
+                { key: 'NIP', label: 'NIP' },
+                { key: 'COMPANY_ADDRESS', label: 'Adres firmy' },
+                { key: 'EMAIL', label: 'Email' },
+                { key: 'PHONE', label: 'Telefon' },
+                { key: 'DOMAIN', label: 'Domena (zakładka "Strona sprzedażowa")' }
+            ];
 
-            if (!data.DOMAIN) {
-                showToast('Najpierw podaj domenę w zakładce "Strona sprzedażowa"', 'error');
+            const missingFields = requiredFields.filter(f => !data[f.key]).map(f => f.label);
+
+            if (missingFields.length > 0) {
+                showToast(`Brakuje: ${missingFields.join(', ')}`, 'error');
                 return;
             }
 
