@@ -460,8 +460,10 @@
                 }
 
                 order._lead = leadData;
+                // Kwota netto (bez VAT 23%)
+                order._amountNetto = (parseFloat(order.amount) || 0) / 1.23;
                 byPerson[key].orders.push(order);
-                byPerson[key].total += parseFloat(order.amount) || 0;
+                byPerson[key].total += order._amountNetto;
             }
 
             // Render
@@ -604,7 +606,7 @@
                                                     <div class="text-zinc-600 text-xs truncate max-w-[250px]">${o.description || o.order_number || ''}</div>
                                                 </td>
                                                 <td class="px-5 py-3 text-right">
-                                                    <div class="text-white font-mono text-sm">${fmt(parseFloat(o.amount))}</div>
+                                                    <div class="text-white font-mono text-sm">${fmt(o._amountNetto)}</div>
                                                     <div class="text-zinc-600 text-[10px]">${fmtDate(o.paid_at)}</div>
                                                 </td>
                                             </tr>
