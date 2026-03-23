@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032301';
+        const APP_VERSION = '2026032302';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3934,9 +3934,12 @@
         let clientContractHtml = null;
 
         async function prepareContractHtml() {
-            if (clientContractHtml) return;
+            if (clientContractHtml) return true;
             const templateUrl = CONTRACT_TEMPLATES[workflow.offer_id];
-            if (!templateUrl) return;
+            if (!templateUrl) {
+                console.error('Brak szablonu umowy dla offer_id:', workflow.offer_id);
+                return false;
+            }
             try {
                 const response = await fetch(templateUrl);
                 if (!response.ok) throw new Error('Nie mozna pobrac szablonu');
@@ -3981,24 +3984,44 @@
                 html = html.replace(/<title>[^<]*<\/title>/, `<title>${pdfTitle}</title>`);
 
                 clientContractHtml = html;
+                return true;
             } catch (err) {
                 console.error('Error preparing contract:', err);
+                return false;
             }
         }
 
-        function generateAndDownloadContract() {
-            if (!clientContractHtml) {
-                showToast('Umowa nie jest jeszcze gotowa, spróbuj ponownie', 'error');
-                return;
+        async function generateAndDownloadContract() {
+            const btn = event?.target?.closest('button');
+            const originalHtml = btn?.innerHTML;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Przygotowuję...';
             }
-            const blob = new Blob([clientContractHtml], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const win = window.open(url, '_blank');
-            if (win) {
-                win.onload = () => { URL.revokeObjectURL(url); win.print(); };
-            } else {
-                URL.revokeObjectURL(url);
-                showToast('Odblokuj wyskakujące okna w przeglądarce', 'error');
+
+            try {
+                if (!clientContractHtml) {
+                    const success = await prepareContractHtml();
+                    if (!success || !clientContractHtml) {
+                        showToast('Nie można przygotować umowy. Odśwież stronę i spróbuj ponownie.', 'error');
+                        return;
+                    }
+                }
+
+                const blob = new Blob([clientContractHtml], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (win) {
+                    win.onload = () => { URL.revokeObjectURL(url); win.print(); };
+                } else {
+                    URL.revokeObjectURL(url);
+                    showToast('Odblokuj wyskakujące okna w przeglądarce', 'error');
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
             }
         }
 
