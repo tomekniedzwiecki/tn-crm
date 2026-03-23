@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032016';
+        const APP_VERSION = '2026032301';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -8034,7 +8034,9 @@
             } else {
                 if (gatewayIcon) gatewayIcon.innerHTML = '<span class="text-xl font-bold text-[#635bff]">S</span>';
                 if (gatewayTitle) gatewayTitle.textContent = 'Stripe';
-                if (gatewayDesc) gatewayDesc.textContent = 'Bramka płatności dla osób prywatnych. Łatwa rejestracja bez firmy.';
+                if (gatewayDesc) gatewayDesc.innerHTML = `
+                    Bramka płatności dla osób prywatnych. <strong class="text-amber-400">Wymaga aktywacji konta produkcyjnego</strong> — bez tego nie można przyjmować prawdziwych płatności.
+                `;
 
                 // Update registration link
                 const registerLink = document.getElementById('pg-register-link');
@@ -8043,7 +8045,20 @@
                 if (registerBtnText) registerBtnText.textContent = 'Załóż konto Stripe';
 
                 const registerDesc = document.getElementById('pg-register-desc');
-                if (registerDesc) registerDesc.textContent = 'Przejdź do Stripe i zarejestruj konto. Potrzebujesz tylko podstawowych danych osobowych.';
+                if (registerDesc) registerDesc.innerHTML = `
+                    <strong class="text-white">WAŻNE: Po rejestracji musisz aktywować konto produkcyjne!</strong><br><br>
+                    <span class="text-[#888]">Kroki do wykonania:</span><br>
+                    <span class="text-[#aaa]">1.</span> Zarejestruj się i potwierdź email<br>
+                    <span class="text-[#aaa]">2.</span> Kliknij banner <span class="text-amber-400">"Activate your account"</span> lub przejdź do Settings → Account details<br>
+                    <span class="text-[#aaa]">3.</span> Wypełnij wszystkie wymagane dane:<br>
+                    <span class="pl-4 text-[#777]">• Dane osobowe (imię, nazwisko, data urodzenia, adres)</span><br>
+                    <span class="pl-4 text-[#777]">• Numer telefonu</span><br>
+                    <span class="pl-4 text-[#777]">• Dokument tożsamości (Stripe może poprosić o zdjęcie)</span><br>
+                    <span class="pl-4 text-[#777]">• Numer konta bankowego (IBAN) do wypłat</span><br>
+                    <span class="text-[#aaa]">4.</span> Poczekaj na weryfikację (zwykle 1-2 dni robocze)<br>
+                    <span class="text-[#aaa]">5.</span> Gdy zobaczysz <span class="text-emerald-400">"Your account is activated"</span> — konto jest gotowe!<br><br>
+                    <span class="text-amber-400/80 text-[12px]">⚠️ Bez aktywacji konto pozostaje w trybie testowym i nie może przyjmować prawdziwych płatności.</span>
+                `;
             }
 
             // Check if credentials already provided
