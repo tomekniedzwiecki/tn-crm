@@ -1439,26 +1439,66 @@
             applyFilters();
         });
 
-        // Export
-        document.getElementById('export-btn').addEventListener('click', () => {
-            const csv = [
-                ['Email', 'Status', 'Źródło', 'Kampania', 'Telefon', 'Data'].join(','),
-                ...filteredLeads.map(l => [
-                    l.email,
-                    l.status || 'new',
-                    getSource(l).name,
-                    l.utm_campaign || '',
-                    l.phone || '',
-                    l.created_at
-                ].map(v => `"${v}"`).join(','))
-            ].join('\n');
+        // Export - fetch ALL leads with pagination (Supabase limit is 1000)
+        document.getElementById('export-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('export-btn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Pobieranie...';
 
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
+            try {
+                // Fetch all leads with pagination
+                const allLeads = [];
+                const pageSize = 1000;
+                let page = 0;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await supabaseClient
+                        .from('leads')
+                        .select('email, status, lead_source, utm_source, utm_campaign, phone, created_at')
+                        .range(page * pageSize, (page + 1) * pageSize - 1)
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        allLeads.push(...data);
+                        page++;
+                        btn.innerHTML = `<i class="ph ph-circle-notch animate-spin"></i> ${allLeads.length} leadów...`;
+                    }
+
+                    hasMore = data && data.length === pageSize;
+                }
+
+                // Generate CSV
+                const csv = [
+                    ['Email', 'Status', 'Źródło', 'Kampania', 'Telefon', 'Data'].join(','),
+                    ...allLeads.map(l => [
+                        l.email || '',
+                        l.status || 'new',
+                        l.lead_source || l.utm_source || 'direct',
+                        l.utm_campaign || '',
+                        l.phone || '',
+                        l.created_at || ''
+                    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+
+                showToast(`Wyeksportowano ${allLeads.length} leadów`, 'success');
+            } catch (err) {
+                console.error('Export error:', err);
+                showToast('Błąd eksportu: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         });
 
         // Add Lead Modal

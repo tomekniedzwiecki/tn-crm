@@ -26,10 +26,40 @@ Deno.serve(async (req) => {
     const body: TriggerRequest = await req.json()
     console.log('[automation-trigger] Received trigger:', JSON.stringify(body))
 
-    const { trigger_type, entity_type, entity_id, context, filters = {} } = body
+    const { trigger_type, entity_type, entity_id, context = {}, filters = {} } = body
 
     if (!trigger_type || !entity_type || !entity_id) {
       throw new Error('Missing required fields: trigger_type, entity_type, entity_id')
+    }
+
+    // Auto-fetch entity data if not provided in context
+    let enrichedContext = { ...context }
+
+    if (entity_type === 'workflow' && !context.email) {
+      // Fetch workflow data to get customer email, name, etc.
+      const { data: workflow } = await supabase
+        .from('workflows')
+        .select('customer_email, customer_name, customer_company, offer_name, unique_token, amount')
+        .eq('id', entity_id)
+        .single()
+
+      if (workflow) {
+        const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć'
+        const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
+
+        enrichedContext = {
+          ...enrichedContext,
+          email: workflow.customer_email,
+          clientName,
+          customer_name: workflow.customer_name,
+          offerName: workflow.offer_name,
+          amount: workflow.amount,
+          projectUrl
+        }
+        console.log(`[automation-trigger] Enriched context with workflow data, email: ${workflow.customer_email}`)
+      } else {
+        console.warn(`[automation-trigger] Could not fetch workflow ${entity_id}`)
+      }
     }
 
     // Check if automations are globally enabled
@@ -71,7 +101,7 @@ Deno.serve(async (req) => {
 
       // Use UPSERT to prevent race condition duplicates
       const executionContext = {
-        ...context,
+        ...enrichedContext,
         triggered_at: new Date().toISOString(),
         trigger_type
       }
