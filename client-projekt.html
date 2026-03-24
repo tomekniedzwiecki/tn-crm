@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032402';
+        const APP_VERSION = '2026032403';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4366,8 +4366,8 @@
                 case 1: return true;
                 case 2: return videoData && videoData.is_active;
                 case 3: return takeDropData && takeDropData.is_active;
-                case 4:
-                case 5: return false;
+                case 4: return takeDropData && takeDropData.test_accepted;
+                case 5: return false; // TODO: implement when Etap 5 is ready
                 default: return false;
             }
         }
@@ -4392,8 +4392,9 @@
                     const hasVideos = (videoData.video_links?.length || 0) > 0;
                     return videoData.stage_accepted && hasAllProfiles && hasVideos;
                 case 3:
-                    return takeDropData && takeDropData.account_created;
+                    return takeDropData && takeDropData.test_accepted;
                 case 4:
+                    return adsData && adsData.budget_funded;
                 case 5:
                     return false;
                 default:
@@ -7761,11 +7762,6 @@
                 // Project screen IDs (legacy)
                 const adsDesktop = document.getElementById('ads-stage-desktop');
                 const adsMobile = document.getElementById('ads-stage-mobile');
-
-                console.log('[Etap4 Debug] takeDropData:', takeDropData);
-                console.log('[Etap4 Debug] test_accepted:', takeDropData?.test_accepted);
-                console.log('[Etap4 Debug] dashSidebarEtap4 element:', dashSidebarEtap4);
-                console.log('[Etap4 Debug] dashMobileEtap4 element:', dashMobileEtap4);
 
                 if (takeDropData && takeDropData.test_accepted) {
                     // Show dashboard Etap 4
