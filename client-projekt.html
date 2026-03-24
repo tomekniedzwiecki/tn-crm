@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032302';
+        const APP_VERSION = '2026032401';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1488,6 +1488,20 @@
                             <i id="dash-nav-check-test-sklepu" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                     </div>
+
+                    <div id="dash-sidebar-etap4" class="hidden">
+                        <div class="dash-nav-section">Etap 4</div>
+                        <div class="dash-nav-item" onclick="switchToDashTab('konto-reklamowe')">
+                            <i class="ph ph-megaphone-simple"></i>
+                            <span>Konto reklamowe</span>
+                            <i id="dash-nav-check-konto-reklamowe" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                        <div id="dash-nav-budzet" class="dash-nav-item hidden" onclick="switchToDashTab('budzet')">
+                            <i class="ph ph-wallet"></i>
+                            <span>Budżet</span>
+                            <i id="dash-nav-check-budzet" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                    </div>
                 </nav>
 
                 <div class="dash-sidebar-footer">
@@ -1587,6 +1601,20 @@
                                 <i class="ph ph-magnifying-glass"></i>
                                 <span>Test</span>
                                 <i id="dash-nav-check-test-sklepu-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                        </div>
+
+                        <div id="dash-mobile-etap4" class="hidden">
+                            <div class="dash-nav-section">Etap 4</div>
+                            <div class="dash-nav-item" onclick="switchToDashTab('konto-reklamowe');toggleDashMobileMenu()">
+                                <i class="ph ph-megaphone-simple"></i>
+                                <span>Konto reklamowe</span>
+                                <i id="dash-nav-check-konto-reklamowe-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-nav-budzet-mobile" class="dash-nav-item hidden" onclick="switchToDashTab('budzet');toggleDashMobileMenu()">
+                                <i class="ph ph-wallet"></i>
+                                <span>Budżet</span>
+                                <i id="dash-nav-check-budzet-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -5532,20 +5560,36 @@
 
             // Show/hide Etap 4 (Reklamy) nav section when test_accepted
             const hasTestAccepted = takeDropData?.test_accepted;
+            // Dashboard screen IDs
+            document.getElementById('dash-sidebar-etap4')?.classList.toggle('hidden', !hasTestAccepted);
+            document.getElementById('dash-mobile-etap4')?.classList.toggle('hidden', !hasTestAccepted);
+            // Project screen IDs (legacy)
             document.getElementById('ads-stage-desktop')?.classList.toggle('hidden', !hasTestAccepted);
             document.getElementById('ads-stage-mobile')?.classList.toggle('hidden', !hasTestAccepted);
 
             // Show/hide Budżet nav item (only after partner_access_granted)
             const hasPartnerAccess = adsData?.partner_access_granted;
+            // Dashboard screen IDs
+            document.getElementById('dash-nav-budzet')?.classList.toggle('hidden', !hasPartnerAccess);
+            document.getElementById('dash-nav-budzet-mobile')?.classList.toggle('hidden', !hasPartnerAccess);
+            // Project screen IDs (legacy)
             document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasPartnerAccess);
             document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasPartnerAccess);
 
             // Update Konto reklamowe checkmark (green when partner_access_granted)
+            // Dashboard screen IDs
+            document.getElementById('dash-nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasPartnerAccess);
+            document.getElementById('dash-nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasPartnerAccess);
+            // Project screen IDs (legacy)
             document.getElementById('nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasPartnerAccess);
             document.getElementById('nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasPartnerAccess);
 
             // Update Budżet checkmark (green when budget_funded)
             const hasBudgetFunded = adsData?.budget_funded;
+            // Dashboard screen IDs
+            document.getElementById('dash-nav-check-budzet')?.classList.toggle('hidden', !hasBudgetFunded);
+            document.getElementById('dash-nav-check-budzet-mobile')?.classList.toggle('hidden', !hasBudgetFunded);
+            // Project screen IDs (legacy)
             document.getElementById('nav-check-budzet')?.classList.toggle('hidden', !hasBudgetFunded);
             document.getElementById('nav-check-budzet-mobile')?.classList.toggle('hidden', !hasBudgetFunded);
 
@@ -7711,10 +7755,18 @@
                 }
 
                 // Show/hide Etap 4 (Ads) based on test_accepted
+                // Dashboard screen IDs
+                const dashSidebarEtap4 = document.getElementById('dash-sidebar-etap4');
+                const dashMobileEtap4 = document.getElementById('dash-mobile-etap4');
+                // Project screen IDs (legacy)
                 const adsDesktop = document.getElementById('ads-stage-desktop');
                 const adsMobile = document.getElementById('ads-stage-mobile');
 
                 if (takeDropData && takeDropData.test_accepted) {
+                    // Show dashboard Etap 4
+                    if (dashSidebarEtap4) dashSidebarEtap4.classList.remove('hidden');
+                    if (dashMobileEtap4) dashMobileEtap4.classList.remove('hidden');
+                    // Show project screen Etap 4 (legacy)
                     if (adsDesktop) adsDesktop.classList.remove('hidden');
                     if (adsMobile) adsMobile.classList.remove('hidden');
 
@@ -7730,6 +7782,10 @@
                         console.error('Error loading adsData:', e);
                     }
                 } else {
+                    // Hide dashboard Etap 4
+                    if (dashSidebarEtap4) dashSidebarEtap4.classList.add('hidden');
+                    if (dashMobileEtap4) dashMobileEtap4.classList.add('hidden');
+                    // Hide project screen Etap 4 (legacy)
                     if (adsDesktop) adsDesktop.classList.add('hidden');
                     if (adsMobile) adsMobile.classList.add('hidden');
                 }
@@ -8291,6 +8347,12 @@
                     createConfetti();
 
                     // Show Etap 4 navigation
+                    // Dashboard screen IDs
+                    const dashSidebarEtap4 = document.getElementById('dash-sidebar-etap4');
+                    const dashMobileEtap4 = document.getElementById('dash-mobile-etap4');
+                    if (dashSidebarEtap4) dashSidebarEtap4.classList.remove('hidden');
+                    if (dashMobileEtap4) dashMobileEtap4.classList.remove('hidden');
+                    // Project screen IDs (legacy)
                     const adsDesktop = document.getElementById('ads-stage-desktop');
                     const adsMobile = document.getElementById('ads-stage-mobile');
                     if (adsDesktop) adsDesktop.classList.remove('hidden');
