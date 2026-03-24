@@ -1476,7 +1476,7 @@
                 while (hasMore) {
                     const { data, error } = await supabaseClient
                         .from('leads')
-                        .select('email, status, lead_source, utm_source, utm_campaign, phone, created_at')
+                        .select('email, status, lead_source, gad_source, campaignid, phone, created_at')
                         .range(page * pageSize, (page + 1) * pageSize - 1)
                         .order('created_at', { ascending: false });
 
@@ -1497,8 +1497,8 @@
                     ...allLeads.map(l => [
                         l.email || '',
                         l.status || 'new',
-                        l.lead_source || l.utm_source || 'direct',
-                        l.utm_campaign || '',
+                        l.lead_source || l.gad_source || 'direct',
+                        l.campaignid || '',
                         l.phone || '',
                         l.created_at || ''
                     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -1511,10 +1511,10 @@
                 a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`;
                 a.click();
 
-                showToast(`Wyeksportowano ${allLeads.length} leadów`, 'success');
+                alert(`Wyeksportowano ${allLeads.length} leadów`);
             } catch (err) {
                 console.error('Export error:', err);
-                showToast('Błąd eksportu: ' + err.message, 'error');
+                alert('Błąd eksportu: ' + err.message);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
