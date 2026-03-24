@@ -11,7 +11,7 @@ Użytkownik mówi: "Zrób lead magnet dla workflow X", "Wygeneruj lead magnet", 
 **Interaktywny lead magnet HTML** — prezentacja slajdowa z:
 - Gate screen (formularz email przed contentem)
 - 5-7 slajdów z wartościowym contentem
-- CTA do kasy na końcu
+- CTA do landing page na końcu (+ link do koszyka jako alternatywa)
 - Responsive design (mobile + desktop)
 - Swipe/keyboard navigation
 
@@ -283,14 +283,14 @@ NAGŁÓWEK: [Tytuł lead magnetu]
 PODTYTUŁ: "Pobierz darmowy poradnik i dowiedz się [obietnica]"
 
 POLA:
-- Imię (wymagane)
-- Email (wymagane)
-- [Opcjonalnie: Telefon - jeśli planujesz SMS/WhatsApp]
+- Email (wymagane) — TYLKO EMAIL, bez imienia!
 
-PRZYCISK: "Pobierz darmowy poradnik →"
+PRZYCISK: "Pokaż →" lub "Wyślij mi poradnik →"
 
-POD FORMULARZEM: "Żadnego spamu. Możesz wypisać się w każdej chwili."
+POD FORMULARZEM: "Bez spamu. 3 min czytania."
 ```
+
+**WAŻNE:** Im mniej pól, tym wyższa konwersja. Samo email wystarcza.
 
 #### B) Popup copy (na landing page)
 
@@ -522,12 +522,11 @@ NAGŁÓWEK: Pobierz darmowy poradnik
 PODTYTUŁ: "5 mitów o wodzie wodorowej które powstrzymują Cię przed lepszym zdrowiem"
 
 POLA:
-- Imię (wymagane)
 - Email (wymagane)
 
-PRZYCISK: "Wyślij mi poradnik →"
+PRZYCISK: "Pokaż →"
 
-POD FORMULARZEM: "Dołączysz do 2,847 osób które już go pobrały. Bez spamu."
+POD FORMULARZEM: "Bez spamu. 3 min czytania."
 ```
 
 ### Email sequence
@@ -607,10 +606,14 @@ Env: c:\repos_tn\tn-crm\.env
 ## Checklist przed oddaniem
 
 - [ ] Interaktywny HTML (`interactive.html`) działa na mobile i desktop
-- [ ] Gate screen zbiera email (podpięty do `lead-upsert`)
+- [ ] Gate screen zbiera TYLKO email (podpięty do `lead-upsert`)
+- [ ] Gate screen ma benefits list ("W 3 minuty dowiesz się...")
 - [ ] 5-7 slajdów z wartościowym contentem
-- [ ] CTA do kasy na ostatnim slajdzie
-- [ ] Branding zgodny z workflow (kolory, logo, fonty)
+- [ ] Myth box (czerwony) + Truth box (zielony) — wyraźnie oddzielone
+- [ ] Badge "MIT" (bez "Nieprawda", bez przekreślenia tytułu)
+- [ ] CTA do landing page na ostatnim slajdzie (+ alternatywny link do koszyka)
+- [ ] Logo z fixed height + object-fit: contain
+- [ ] Branding zgodny z workflow (kolory, fonty)
 - [ ] Email sequence outline (5 emaili)
 
 ---
@@ -620,10 +623,10 @@ Env: c:\repos_tn\tn-crm\.env
 ### Struktura slajdów (8 slajdów)
 
 ```
-0. INTRO      — Tytuł + "Zaczynamy" button
-1-5. MITY     — 5 slajdów z mitami (format: quote → prawda → pro tip)
+0. INTRO      — Tytuł + "Pokaż pierwszy mit" button
+1-5. MITY     — 5 slajdów z mitami (MYTH BOX + TRUTH BOX)
 6. SUMMARY    — Podsumowanie + checklist
-7. CTA        — Przycisk do kasy + features
+7. CTA        — Przycisk do landing page + alternatywny link do koszyka
 ```
 
 ### Jak analizować produkt
@@ -654,39 +657,47 @@ Env: c:\repos_tn\tn-crm\.env
 
 Każdy slajd z mitem ma wyraźnie oddzielone dwie sekcje:
 
-1. **MYTH BOX** (czerwony, przekreślony):
+1. **MYTH BOX** (czerwony):
    - Czerwone tło, czerwona ramka
-   - Badge "❌ MIT — Nieprawda!"
-   - Tytuł mitu przekreślony (`text-decoration: line-through`)
+   - Badge "MIT" z ikoną X (SVG)
+   - Tytuł mitu w cudzysłowie (BEZ przekreślenia!)
    - Cytowana obiekcja (italic)
 
-2. **TRUTH BOX** (zielony, potwierdzony):
+2. **TRUTH BOX** (zielony):
    - Zielone tło, zielona ramka
-   - Badge "✓ Prawda"
+   - Badge "Prawda" z ikoną checkmark (SVG)
    - Fakty obalające mit
    - Lista korzyści (jeśli pasuje)
-   - Pro tip (opcjonalnie)
 
 ```html
 <!-- Struktura HTML mitu -->
 <div class="myth-box">
-  <span class="myth-box-label">❌ MIT — Nieprawda!</span>
-  <h2 class="myth-title">"[Cytat mitu - przekreślony]"</h2>
+  <span class="myth-box-label">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+    MIT
+  </span>
+  <h2 class="myth-title">"Cytat mitu"</h2>
   <p class="myth-quote">"Typowa obiekcja w cudzysłowie"</p>
 </div>
 
 <div class="truth-box">
-  <span class="truth-box-label">✓ Prawda</span>
+  <span class="truth-box-label">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+    Prawda
+  </span>
   <p>2-3 zdania obalające mit z faktami/liczbami.</p>
   <ul>
     <li>Korzyść 1</li>
     <li>Korzyść 2</li>
   </ul>
-  <div class="pro-tip">💡 Praktyczna rada</div>
 </div>
 ```
 
-**Dlaczego tak?** Bez wizualnego rozróżnienia użytkownik może pomyśleć że mit jest prawdą. Czerwony box + przekreślenie = "to jest fałsz", zielony box = "to jest prawda".
+**Dlaczego tak?** Czerwony box z "MIT" = fałsz, zielony box z "Prawda" = prawda. Samo rozróżnienie kolorami i etykietami wystarcza — bez przekreślenia tekstu.
 
 ### Placeholdery do zastąpienia
 
@@ -697,7 +708,8 @@ W szablonie HTML znajdź i zamień:
 | `{{LOGO_URL}}` | `workflow_branding` type=`logo` |
 | `{{BRAND_NAME}}` | `workflow_branding` type=`brand_info` → name |
 | `{{PRIMARY_COLOR}}` | `workflow_branding` type=`color` role=`primary` |
-| `{{CHECKOUT_URL}}` | `landing-pages/[marka]/index.html` → href z CTA |
+| `{{LANDING_URL}}` | `https://[marka].pl` — główny CTA |
+| `{{CHECKOUT_URL}}` | `https://[marka].pl/checkout?products=...` — alternatywny link |
 | `{{PRODUCT_FEATURES}}` | Z raportów lub landing page |
 
 ### Przykład: Kategoria → Mity
@@ -731,10 +743,11 @@ lead-magnets/oravibe/interactive.html
 ```
 
 Skopiuj strukturę HTML i zamień:
-- Treść slajdów
+- Treść slajdów (mity + prawdy)
 - Kolory CSS variables
-- Logo i linki
-- Checkout URL
+- Logo URL
+- Landing page URL (główny CTA)
+- Checkout URL (alternatywny link)
 
 ---
 
@@ -760,7 +773,6 @@ fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/lead-upsert', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     email: data.get('email'),
-    name: data.get('name'),
     lead_source: 'lead_magnet_[nazwa]',
     notes: 'Interaktywny poradnik: [tytuł]'
   })
@@ -768,3 +780,95 @@ fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/lead-upsert', {
 ```
 
 LocalStorage key: `[nazwa]_lead` — zapobiega ponownemu pytaniu.
+
+---
+
+## Gate screen — struktura
+
+Gate screen zbiera email PRZED pokazaniem contentu. Struktura:
+
+```html
+<div class="gate-screen">
+  <!-- Logo z fixed height -->
+  <img src="{{LOGO_URL}}" alt="Logo" class="gate-logo">
+
+  <h1 class="gate-title">{{TYTUŁ LEAD MAGNETU}}</h1>
+  <p class="gate-subtitle">Darmowy poradnik który zmieni Twoje podejście do [temat]</p>
+
+  <!-- Benefits list — zwiększa perceived value -->
+  <div class="gate-benefits">
+    <div class="gate-benefits-title">W 3 minuty dowiesz się:</div>
+    <div class="gate-benefit">
+      <svg><!-- checkmark --></svg>
+      <span>Benefit 1</span>
+    </div>
+    <div class="gate-benefit">
+      <svg><!-- checkmark --></svg>
+      <span>Benefit 2</span>
+    </div>
+    <div class="gate-benefit">
+      <svg><!-- checkmark --></svg>
+      <span>Benefit 3</span>
+    </div>
+  </div>
+
+  <!-- Formularz — TYLKO EMAIL -->
+  <form class="gate-form" id="gateForm">
+    <input type="email" name="email" placeholder="Twój email" required>
+    <button type="submit">Pokaż →</button>
+  </form>
+
+  <!-- Trust indicators -->
+  <div class="gate-trust">
+    <span>Bez spamu</span>
+    <span>•</span>
+    <span>3 min czytania</span>
+  </div>
+</div>
+```
+
+**WAŻNE:** Formularz ma TYLKO pole email — bez imienia. Prostsze = wyższa konwersja.
+
+---
+
+## Logo handling
+
+Logo często ma za dużo pustej przestrzeni w pliku. Rozwiązanie:
+
+```css
+/* Gate screen logo */
+.gate-logo {
+  width: 200px;
+  height: 60px;
+  object-fit: contain;
+}
+
+/* Header logo (mniejsze) */
+.header-logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Slide intro logo */
+.slide-intro .slide-logo {
+  width: 240px;
+  height: 70px;
+  object-fit: contain;
+}
+```
+
+**`object-fit: contain`** + fixed height = logo dopasowuje się do przestrzeni, pusta przestrzeń z pliku jest "przycięta".
+
+---
+
+## CTA na końcu
+
+CTA prowadzi do **landing page** (nie bezpośrednio do koszyka):
+
+```html
+<a href="https://[marka].pl" class="cta-button">Zobacz [Nazwa produktu]</a>
+<a href="https://[marka].pl/checkout?products=..." class="cta-link">lub przejdź od razu do zamówienia</a>
+```
+
+Dlaczego landing page najpierw? Użytkownik może chcieć więcej info przed zakupem.
