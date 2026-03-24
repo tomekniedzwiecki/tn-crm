@@ -2,61 +2,249 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>5 mitów o kamerach inspekcyjnych | InnerScan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap&subset=latin-ext" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap&subset=latin-ext" rel="stylesheet">
   <style>
+    /* ===== VARIABLES ===== */
     :root {
       --primary: #00D4FF;
       --primary-dark: #00A8CC;
-      --secondary: #0A1628;
       --accent: #FF6B35;
-      --bg-dark: #0A1628;
-      --bg-darker: #050D17;
-      --text-light: #E2E8F0;
+      --text: #0A1628;
+      --text-secondary: #4A5568;
       --text-muted: #94A3B8;
+      --bg: #ffffff;
+      --bg-subtle: #f8fafc;
+      --border: #e2e8f0;
+      --success: #22C55E;
       --myth-red: #EF4444;
-      --myth-red-bg: rgba(239, 68, 68, 0.1);
+      --myth-red-bg: rgba(239, 68, 68, 0.08);
       --truth-green: #22C55E;
-      --truth-green-bg: rgba(34, 197, 94, 0.1);
+      --truth-green-bg: rgba(34, 197, 94, 0.08);
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-snap-type: y mandatory;
-      scroll-behavior: smooth;
-    }
-
+    /* ===== RESET ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-snap-type: y mandatory; height: 100%; overflow-y: scroll; }
     body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg-dark);
-      color: var(--text-light);
-      overflow-x: hidden;
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      height: 100%;
+      -webkit-font-smoothing: antialiased;
     }
 
     h1, h2, h3, h4 {
       font-family: 'Space Grotesk', sans-serif;
     }
 
-    /* Header */
+    /* ===== GATE SCREEN ===== */
+    .gate {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.5s, visibility 0.5s;
+    }
+    .gate.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+    .gate-inner {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 24px;
+      text-align: center;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .gate-logo {
+      height: 56px;
+      width: auto;
+      object-fit: contain;
+      margin-bottom: 24px;
+    }
+
+    .gate-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,168,204,0.1));
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 16px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    .gate h1 {
+      font-size: clamp(26px, 6vw, 36px);
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+    .gate h1 span {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gate-subtitle {
+      color: var(--text-secondary);
+      font-size: 17px;
+      margin-bottom: 28px;
+      max-width: 400px;
+    }
+
+    .gate-benefits {
+      background: var(--bg-subtle);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      text-align: left;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .gate-benefits-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .gate-benefit {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .gate-benefit:last-child {
+      margin-bottom: 0;
+    }
+
+    .gate-benefit svg {
+      width: 20px;
+      height: 20px;
+      color: var(--success);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .gate-form {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .gate-form input {
+      flex: 1;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .gate-form input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+    }
+
+    .gate-form button {
+      padding: 16px 28px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+
+    .gate-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,212,255,0.3);
+    }
+
+    .gate-trust {
+      display: flex;
+      gap: 16px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .gate-trust span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gate-trust svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ===== SLIDES (SCROLL-SNAP) ===== */
+    .slides {
+      scroll-snap-type: y mandatory;
+    }
+
+    .slide {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 80px 24px 60px;
+      position: relative;
+    }
+
+    .slide-content {
+      max-width: 640px;
+      width: 100%;
+    }
+
+    /* ===== HEADER (FIXED) ===== */
     .header {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      z-index: 100;
-      padding: 16px 24px;
-      background: linear-gradient(to bottom, var(--bg-darker) 0%, transparent 100%);
+      height: 64px;
+      padding: 0 32px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
     }
 
     .header-logo {
@@ -67,276 +255,140 @@
 
     .header-progress {
       display: flex;
-      gap: 6px;
+      align-items: center;
+      gap: 16px;
     }
 
-    .progress-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      opacity: 0.3;
-      transition: all 0.3s ease;
+    .progress-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
     }
 
-    .progress-dot.active {
-      background: var(--primary);
-      opacity: 1;
+    .progress-bar {
+      width: 100px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
     }
 
-    /* Gate Screen */
-    .gate-screen {
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    /* ===== DOT NAVIGATION (RIGHT SIDE) ===== */
+    .dot-nav {
       position: fixed;
-      inset: 0;
-      z-index: 1000;
-      background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 50%, #0D1F35 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
-    }
-
-    .gate-screen.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .gate-logo {
-      width: 200px;
-      height: 60px;
-      object-fit: contain;
-      margin-bottom: 24px;
-    }
-
-    .gate-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(0, 212, 255, 0.1);
-      border: 1px solid rgba(0, 212, 255, 0.3);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      color: var(--primary);
-      margin-bottom: 20px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .gate-title {
-      font-size: clamp(1.75rem, 5vw, 2.5rem);
-      font-weight: 700;
-      line-height: 1.2;
-      margin-bottom: 12px;
-      max-width: 500px;
-    }
-
-    .gate-title span {
-      color: var(--primary);
-    }
-
-    .gate-subtitle {
-      font-size: 1rem;
-      color: var(--text-muted);
-      margin-bottom: 28px;
-      max-width: 400px;
-    }
-
-    .gate-benefits {
-      background: rgba(0, 212, 255, 0.05);
-      border: 1px solid rgba(0, 212, 255, 0.15);
-      border-radius: 16px;
-      padding: 20px 24px;
-      margin-bottom: 28px;
-      max-width: 380px;
-      width: 100%;
-      text-align: left;
-    }
-
-    .gate-benefits-title {
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 14px;
-      color: var(--text-light);
-    }
-
-    .gate-benefit {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .gate-benefit:last-child {
-      margin-bottom: 0;
-    }
-
-    .gate-benefit svg {
-      flex-shrink: 0;
-      margin-top: 2px;
-      color: var(--primary);
-    }
-
-    .gate-form {
+      right: 32px;
+      top: 50%;
+      transform: translateY(-50%);
       display: flex;
       flex-direction: column;
       gap: 12px;
-      width: 100%;
-      max-width: 340px;
+      z-index: 100;
     }
 
-    .gate-form input {
-      width: 100%;
-      padding: 14px 18px;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.05);
-      color: white;
-      font-size: 16px;
-      outline: none;
-      transition: border-color 0.2s;
+    .dot-nav button {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 0;
     }
 
-    .gate-form input:focus {
+    .dot-nav button.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: scale(1.2);
+    }
+
+    .dot-nav button:hover:not(.active) {
       border-color: var(--primary);
     }
 
-    .gate-form input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .gate-form button {
-      width: 100%;
-      padding: 14px 24px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: var(--bg-dark);
-      font-weight: 600;
-      font-size: 16px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .gate-form button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 212, 255, 0.3);
-    }
-
-    .gate-trust {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    /* Slides Container */
-    .slides-container {
-      height: 100vh;
-      overflow-y: scroll;
-      scroll-snap-type: y mandatory;
-    }
-
-    .slide {
-      min-height: 100vh;
-      scroll-snap-align: start;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 80px 24px 40px;
-      position: relative;
-    }
-
-    /* Slide Intro */
+    /* ===== SLIDE: INTRO ===== */
     .slide-intro {
       text-align: center;
-      background: linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+      background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg) 100%);
     }
 
     .slide-intro .slide-logo {
-      width: 240px;
-      height: 70px;
+      height: 64px;
+      width: auto;
       object-fit: contain;
       margin-bottom: 32px;
     }
 
     .slide-intro h1 {
-      font-size: clamp(2rem, 6vw, 3rem);
+      font-size: clamp(32px, 6vw, 52px);
       font-weight: 700;
-      line-height: 1.2;
-      margin-bottom: 16px;
-      max-width: 600px;
+      line-height: 1.15;
+      margin-bottom: 20px;
     }
-
     .slide-intro h1 span {
-      color: var(--primary);
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .slide-intro p {
-      font-size: 1.125rem;
-      color: var(--text-muted);
-      margin-bottom: 40px;
+      color: var(--text-secondary);
+      font-size: 18px;
       max-width: 500px;
+      margin: 0 auto 36px;
     }
 
     .start-button {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 16px 32px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: var(--bg-dark);
+      gap: 10px;
+      padding: 18px 36px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
       font-weight: 600;
-      font-size: 1rem;
+      font-size: 17px;
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .start-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 212, 255, 0.3);
+      box-shadow: 0 12px 32px rgba(0,212,255,0.3);
     }
 
-    /* Myth Slides */
+    /* ===== SLIDE: MYTH ===== */
     .slide-myth {
-      background: var(--bg-dark);
-      padding-top: 100px;
+      background: var(--bg);
     }
 
     .myth-number {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 48px;
-      height: 48px;
-      background: rgba(0, 212, 255, 0.1);
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,168,204,0.1));
       border: 2px solid var(--primary);
       border-radius: 50%;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.25rem;
+      font-size: 24px;
       font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 24px;
-    }
-
-    .myth-content {
-      max-width: 560px;
-      width: 100%;
+      color: var(--primary-dark);
+      margin-bottom: 28px;
     }
 
     .myth-box {
       background: var(--myth-red-bg);
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      border: 1px solid rgba(239, 68, 68, 0.2);
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 20px;
@@ -346,7 +398,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.15);
       padding: 6px 12px;
       border-radius: 8px;
       font-size: 12px;
@@ -358,21 +410,21 @@
     }
 
     .myth-title {
-      font-size: clamp(1.25rem, 4vw, 1.5rem);
+      font-size: clamp(20px, 4vw, 26px);
       font-weight: 600;
-      color: var(--text-light);
+      color: var(--text);
       margin-bottom: 8px;
     }
 
     .myth-quote {
-      font-size: 0.95rem;
-      color: var(--text-muted);
+      font-size: 15px;
+      color: var(--text-secondary);
       font-style: italic;
     }
 
     .truth-box {
       background: var(--truth-green-bg);
-      border: 1px solid rgba(34, 197, 94, 0.3);
+      border: 1px solid rgba(34, 197, 94, 0.2);
       border-radius: 16px;
       padding: 24px;
     }
@@ -381,7 +433,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(34, 197, 94, 0.2);
+      background: rgba(34, 197, 94, 0.15);
       padding: 6px 12px;
       border-radius: 8px;
       font-size: 12px;
@@ -393,10 +445,10 @@
     }
 
     .truth-box p {
-      font-size: 1rem;
+      font-size: 16px;
       line-height: 1.6;
-      color: var(--text-light);
-      margin-bottom: 12px;
+      color: var(--text);
+      margin-bottom: 16px;
     }
 
     .truth-box ul {
@@ -408,10 +460,10 @@
     .truth-box li {
       display: flex;
       align-items: flex-start;
-      gap: 10px;
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      gap: 12px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
     }
 
     .truth-box li:last-child {
@@ -424,16 +476,16 @@
       color: var(--truth-green);
     }
 
-    /* Summary Slide */
+    /* ===== SLIDE: SUMMARY ===== */
     .slide-summary {
-      background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
       text-align: center;
+      background: linear-gradient(180deg, var(--bg) 0%, var(--bg-subtle) 100%);
     }
 
     .summary-icon {
       width: 80px;
       height: 80px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -444,37 +496,39 @@
     .summary-icon svg {
       width: 40px;
       height: 40px;
-      color: var(--bg-dark);
+      color: white;
     }
 
     .slide-summary h2 {
-      font-size: clamp(1.75rem, 5vw, 2.25rem);
+      font-size: clamp(28px, 5vw, 36px);
       font-weight: 700;
       margin-bottom: 16px;
     }
 
     .slide-summary > p {
-      font-size: 1rem;
-      color: var(--text-muted);
+      font-size: 17px;
+      color: var(--text-secondary);
       margin-bottom: 32px;
       max-width: 500px;
     }
 
     .summary-checklist {
-      background: rgba(0, 212, 255, 0.05);
-      border: 1px solid rgba(0, 212, 255, 0.15);
+      background: var(--bg);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px;
       max-width: 400px;
       text-align: left;
-      margin-bottom: 24px;
+      margin: 0 auto;
     }
 
     .summary-checklist h3 {
-      font-size: 1rem;
+      font-size: 14px;
       font-weight: 600;
       margin-bottom: 16px;
-      color: var(--primary);
+      color: var(--primary-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .checklist-item {
@@ -482,8 +536,8 @@
       align-items: flex-start;
       gap: 12px;
       margin-bottom: 12px;
-      font-size: 0.95rem;
-      color: var(--text-light);
+      font-size: 15px;
+      color: var(--text);
     }
 
     .checklist-item:last-child {
@@ -496,41 +550,41 @@
       color: var(--primary);
     }
 
-    /* CTA Slide */
+    /* ===== SLIDE: CTA ===== */
     .slide-cta {
-      background: linear-gradient(180deg, var(--bg-darker) 0%, #0D1F35 100%);
       text-align: center;
+      background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg) 100%);
     }
 
     .cta-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(255, 107, 53, 0.1);
-      border: 1px solid rgba(255, 107, 53, 0.3);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
+      gap: 8px;
+      background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.08));
       color: var(--accent);
-      margin-bottom: 24px;
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
+      padding: 8px 16px;
+      border-radius: 100px;
+      margin-bottom: 24px;
     }
 
     .slide-cta h2 {
-      font-size: clamp(1.75rem, 5vw, 2.5rem);
+      font-size: clamp(28px, 5vw, 40px);
       font-weight: 700;
       margin-bottom: 12px;
-      max-width: 500px;
     }
-
     .slide-cta h2 span {
-      color: var(--primary);
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .slide-cta > p {
-      font-size: 1rem;
-      color: var(--text-muted);
+      font-size: 17px;
+      color: var(--text-secondary);
       margin-bottom: 32px;
       max-width: 450px;
     }
@@ -539,7 +593,7 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 16px;
+      gap: 12px;
       margin-bottom: 32px;
       max-width: 500px;
     }
@@ -548,11 +602,12 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(0, 212, 255, 0.1);
+      background: var(--bg);
+      border: 1px solid var(--border);
       padding: 10px 16px;
       border-radius: 10px;
       font-size: 14px;
-      color: var(--text-light);
+      color: var(--text);
     }
 
     .cta-feature svg {
@@ -563,11 +618,11 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 18px 40px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: var(--bg-dark);
+      padding: 20px 44px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
       font-weight: 700;
-      font-size: 1.125rem;
+      font-size: 18px;
       text-decoration: none;
       border-radius: 14px;
       transition: transform 0.2s, box-shadow 0.2s;
@@ -576,7 +631,7 @@
 
     .cta-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(0, 212, 255, 0.4);
+      box-shadow: 0 12px 32px rgba(0,212,255,0.4);
     }
 
     .cta-link {
@@ -588,61 +643,38 @@
     }
 
     .cta-link:hover {
-      color: var(--primary);
+      color: var(--primary-dark);
     }
 
-    /* Dot Navigation */
-    .dot-nav {
-      position: fixed;
-      right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 90;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .dot-nav-item {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      opacity: 0.3;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .dot-nav-item.active {
-      background: var(--primary);
-      opacity: 1;
-      transform: scale(1.2);
-    }
-
-    .dot-nav-item:hover {
-      opacity: 0.7;
-    }
-
-    /* Mobile */
+    /* ===== MOBILE ===== */
     @media (max-width: 640px) {
       .header {
-        padding: 12px 16px;
+        padding: 0 16px;
+        height: 56px;
       }
 
       .header-logo {
         height: 28px;
       }
 
+      .progress-bar {
+        width: 60px;
+      }
+
       .slide {
-        padding: 70px 16px 32px;
+        padding: 70px 16px 40px;
       }
 
-      .gate-screen {
-        padding: 20px;
+      .gate-inner {
+        padding: 32px 20px;
       }
 
-      .gate-benefits {
-        padding: 16px 20px;
+      .gate-form {
+        flex-direction: column;
+      }
+
+      .gate-form button {
+        width: 100%;
       }
 
       .myth-box, .truth-box {
@@ -651,6 +683,12 @@
 
       .dot-nav {
         right: 12px;
+        gap: 10px;
+      }
+
+      .dot-nav button {
+        width: 10px;
+        height: 10px;
       }
 
       .cta-features {
@@ -662,101 +700,111 @@
 </head>
 <body>
   <!-- Gate Screen -->
-  <div class="gate-screen" id="gateScreen">
-    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/branding/777a86c6-78a2-408f-91af-da4732ed7636/logo_main_1772108939541.jpg" alt="InnerScan" class="gate-logo">
+  <div class="gate" id="gate">
+    <div class="gate-inner">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/innerscan/logo.png" alt="InnerScan" class="gate-logo">
 
-    <div class="gate-badge">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 16v-4M12 8h.01"/>
-      </svg>
-      Darmowy poradnik
-    </div>
-
-    <h1 class="gate-title">5 mitów o <span>kamerach inspekcyjnych</span></h1>
-    <p class="gate-subtitle">Które kosztują Cię czas, nerwy i pieniądze na niepotrzebne wizyty fachowców</p>
-
-    <div class="gate-benefits">
-      <div class="gate-benefits-title">W 3 minuty dowiesz się:</div>
-      <div class="gate-benefit">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="20 6 9 17 4 12"/>
+      <div class="gate-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 16v-4M12 8h.01"/>
         </svg>
-        <span>Dlaczego telefon z latarką to za mało (nawet z aplikacją)</span>
+        Darmowy poradnik
       </div>
-      <div class="gate-benefit">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-        <span>Co odróżnia profesjonalną kamerę od zabawki z Allegro</span>
-      </div>
-      <div class="gate-benefit">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-        <span>Ile możesz zaoszczędzić diagnozując problemy samodzielnie</span>
-      </div>
-    </div>
 
-    <form class="gate-form" id="gateForm">
-      <input type="email" name="email" placeholder="Twój email" required>
-      <button type="submit">Pokaż</button>
-    </form>
+      <h1>5 mitów o <span>kamerach inspekcyjnych</span></h1>
+      <p class="gate-subtitle">Które kosztują Cię czas, nerwy i pieniądze na niepotrzebne wizyty fachowców</p>
 
-    <div class="gate-trust">
-      <span>Bez spamu</span>
-      <span>•</span>
-      <span>3 min czytania</span>
+      <div class="gate-benefits">
+        <div class="gate-benefits-title">W 3 minuty dowiesz się:</div>
+        <div class="gate-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Dlaczego telefon z latarką to za mało (nawet z aplikacją)</span>
+        </div>
+        <div class="gate-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Co odróżnia profesjonalną kamerę od zabawki z Allegro</span>
+        </div>
+        <div class="gate-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Ile możesz zaoszczędzić diagnozując problemy samodzielnie</span>
+        </div>
+      </div>
+
+      <form class="gate-form" id="gateForm">
+        <input type="email" name="email" placeholder="Twój email" required>
+        <button type="submit">Pokaż</button>
+      </form>
+
+      <div class="gate-trust">
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Bez spamu
+        </span>
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          3 min czytania
+        </span>
+      </div>
     </div>
   </div>
 
   <!-- Header -->
   <header class="header">
-    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/branding/777a86c6-78a2-408f-91af-da4732ed7636/logo_main_1772108939541.jpg" alt="InnerScan" class="header-logo">
-    <div class="header-progress" id="headerProgress">
-      <div class="progress-dot active"></div>
-      <div class="progress-dot"></div>
-      <div class="progress-dot"></div>
-      <div class="progress-dot"></div>
-      <div class="progress-dot"></div>
-      <div class="progress-dot"></div>
-      <div class="progress-dot"></div>
-      <div class="progress-dot"></div>
+    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/innerscan/logo.png" alt="InnerScan" class="header-logo">
+    <div class="header-progress">
+      <span class="progress-text" id="progressText">1 z 8</span>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 12.5%"></div>
+      </div>
     </div>
   </header>
 
-  <!-- Dot Navigation -->
+  <!-- Dot Navigation (right side only) -->
   <nav class="dot-nav" id="dotNav">
-    <div class="dot-nav-item active" data-slide="0"></div>
-    <div class="dot-nav-item" data-slide="1"></div>
-    <div class="dot-nav-item" data-slide="2"></div>
-    <div class="dot-nav-item" data-slide="3"></div>
-    <div class="dot-nav-item" data-slide="4"></div>
-    <div class="dot-nav-item" data-slide="5"></div>
-    <div class="dot-nav-item" data-slide="6"></div>
-    <div class="dot-nav-item" data-slide="7"></div>
+    <button class="active" data-slide="0"></button>
+    <button data-slide="1"></button>
+    <button data-slide="2"></button>
+    <button data-slide="3"></button>
+    <button data-slide="4"></button>
+    <button data-slide="5"></button>
+    <button data-slide="6"></button>
+    <button data-slide="7"></button>
   </nav>
 
   <!-- Slides -->
-  <div class="slides-container" id="slidesContainer">
+  <main class="slides">
 
     <!-- Slide 0: Intro -->
     <section class="slide slide-intro" data-slide="0">
-      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/branding/777a86c6-78a2-408f-91af-da4732ed7636/logo_main_1772108939541.jpg" alt="InnerScan" class="slide-logo">
-      <h1>5 mitów o <span>kamerach inspekcyjnych</span></h1>
-      <p>Które powstrzymują majsterkowiczów przed samodzielną diagnostyką i kosztują ich setki złotych na zbędne wizyty fachowców.</p>
-      <button class="start-button" id="startButton">
-        Pokaż pierwszy mit
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M19 12l-7 7-7-7"/>
-        </svg>
-      </button>
+      <div class="slide-content" style="text-align: center;">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/innerscan/logo.png" alt="InnerScan" class="slide-logo">
+        <h1>5 mitów o <span>kamerach inspekcyjnych</span></h1>
+        <p>Które powstrzymują majsterkowiczów przed samodzielną diagnostyką i kosztują ich setki złotych na zbędne wizyty fachowców.</p>
+        <button class="start-button" id="startButton">
+          Pokaż pierwszy mit
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+        </button>
+      </div>
     </section>
 
     <!-- Slide 1: Mit 1 -->
     <section class="slide slide-myth" data-slide="1">
-      <div class="myth-number">1</div>
-      <div class="myth-content">
+      <div class="slide-content">
+        <div class="myth-number">1</div>
         <div class="myth-box">
           <span class="myth-box-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -777,15 +825,15 @@
           <p>Telefon nie wejdzie do rury o średnicy 3 cm. Nie zajrzysz nim za ścianę. Nie obejrzysz silnika od środka. Elastyczny przewód kamery inspekcyjnej dociera tam, gdzie żaden smartfon nie ma szans.</p>
           <ul>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Przewód 1-5 metrów dociera w głębokie miejsca
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Wbudowane LED oświetla nawet całkowitą ciemność
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Wodoodporność IP67 pozwala na inspekcję w rurach
             </li>
           </ul>
@@ -795,8 +843,8 @@
 
     <!-- Slide 2: Mit 2 -->
     <section class="slide slide-myth" data-slide="2">
-      <div class="myth-number">2</div>
-      <div class="myth-content">
+      <div class="slide-content">
+        <div class="myth-number">2</div>
         <div class="myth-box">
           <span class="myth-box-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -817,15 +865,15 @@
           <p>Tanie kamery mają rozdzielczość 640x480 — jak telefon z 2005 roku. Nie zobaczysz na nich pęknięcia rury ani korozji. Profesjonalna kamera HD pokazuje detale, które decydują o prawidłowej diagnozie.</p>
           <ul>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               HD 1080p vs VGA — różnica jak dzień i noc
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Dual Lens (0° + 90°) pokazuje widok prosty i boczny
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Ekran IPS 4.3" — bez łączenia z telefonem
             </li>
           </ul>
@@ -835,8 +883,8 @@
 
     <!-- Slide 3: Mit 3 -->
     <section class="slide slide-myth" data-slide="3">
-      <div class="myth-number">3</div>
-      <div class="myth-content">
+      <div class="slide-content">
+        <div class="myth-number">3</div>
         <div class="myth-box">
           <span class="myth-box-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -857,15 +905,15 @@
           <p>Nowoczesne kamery są Plug & Play — włączasz i działasz. Żadnych aplikacji, konfiguracji, parowania. Jeśli umiesz włączyć telewizor, obsłużysz kamerę inspekcyjną.</p>
           <ul>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Sprawdzisz odpływ w zlewie zanim wezwiesz hydraulika
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Obejrzysz silnik samochodu bez wizyty w warsztacie
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Znajdziesz zgubione przedmioty za meblami, w szczelinach
             </li>
           </ul>
@@ -875,8 +923,8 @@
 
     <!-- Slide 4: Mit 4 -->
     <section class="slide slide-myth" data-slide="4">
-      <div class="myth-number">4</div>
-      <div class="myth-content">
+      <div class="slide-content">
+        <div class="myth-number">4</div>
         <div class="myth-box">
           <span class="myth-box-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -897,15 +945,15 @@
           <p>Tanie kamery psują się po kilku użyciach, mają słabe LED-y i obraz jak przez mgłę. Jedna wizyta hydraulika kosztuje 150-300 zł. Profesjonalna kamera zwraca się po pierwszym unikniętym wezwaniu.</p>
           <ul>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Wizyta hydraulika: 150-300 zł (dojazd + diagnoza)
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Wizyta mechanika: 100-200 zł (sam przegląd)
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Dobra kamera służy latami, nie miesiącami
             </li>
           </ul>
@@ -915,8 +963,8 @@
 
     <!-- Slide 5: Mit 5 -->
     <section class="slide slide-myth" data-slide="5">
-      <div class="myth-number">5</div>
-      <div class="myth-content">
+      <div class="slide-content">
+        <div class="myth-number">5</div>
         <div class="myth-box">
           <span class="myth-box-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -937,15 +985,15 @@
           <p>Fachowiec przyjedzie za 2-3 dni. Albo za tydzień. A Ty w tym czasie nie możesz korzystać z łazienki. Własna kamera = diagnoza w 5 minut. Nawet jeśli i tak wezwiesz fachowca — będziesz wiedział co mu powiedzieć.</p>
           <ul>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Diagnoza teraz, nie za tydzień
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Często problem da się naprawić samemu
             </li>
             <li>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Fachowiec nie nabije Cię na "pełną diagnostykę"
             </li>
           </ul>
@@ -955,124 +1003,124 @@
 
     <!-- Slide 6: Summary -->
     <section class="slide slide-summary" data-slide="6">
-      <div class="summary-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-      </div>
-      <h2>Teraz już wiesz</h2>
-      <p>Kamera inspekcyjna to nie gadżet — to narzędzie które oszczędza czas, nerwy i pieniądze każdemu majsterkowiczowi.</p>
+      <div class="slide-content" style="text-align: center;">
+        <div class="summary-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h2>Teraz już wiesz</h2>
+        <p>Kamera inspekcyjna to nie gadżet — to narzędzie które oszczędza czas, nerwy i pieniądze każdemu majsterkowiczowi.</p>
 
-      <div class="summary-checklist">
-        <h3>Na co zwrócić uwagę przy zakupie:</h3>
-        <div class="checklist-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span>Rozdzielczość HD (min. 1080p)</span>
-        </div>
-        <div class="checklist-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span>Dual Lens (widok prosty + boczny 90°)</span>
-        </div>
-        <div class="checklist-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span>Wbudowany ekran (bez telefonu)</span>
-        </div>
-        <div class="checklist-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span>Wodoodporność IP67</span>
-        </div>
-        <div class="checklist-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span>Regulowane oświetlenie LED</span>
+        <div class="summary-checklist">
+          <h3>Na co zwrócić uwagę przy zakupie</h3>
+          <div class="checklist-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Rozdzielczość HD (min. 1080p)</span>
+          </div>
+          <div class="checklist-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Dual Lens (widok prosty + boczny 90°)</span>
+          </div>
+          <div class="checklist-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Wbudowany ekran (bez telefonu)</span>
+          </div>
+          <div class="checklist-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Wodoodporność IP67</span>
+          </div>
+          <div class="checklist-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Regulowane oświetlenie LED</span>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Slide 7: CTA -->
     <section class="slide slide-cta" data-slide="7">
-      <div class="cta-badge">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 6v6l4 2"/>
-        </svg>
-        Zobacz więcej. Napraw szybciej.
-      </div>
+      <div class="slide-content" style="text-align: center;">
+        <div class="cta-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          Zobacz więcej. Napraw szybciej.
+        </div>
 
-      <h2>Poznaj <span>InnerScan</span></h2>
-      <p>Profesjonalna kamera inspekcyjna z podwójnym obiektywem Dual Lens i ekranem IPS 4.3" — wszystko czego potrzebujesz do samodzielnej diagnostyki.</p>
+        <h2>Poznaj <span>InnerScan</span></h2>
+        <p>Profesjonalna kamera inspekcyjna z podwójnym obiektywem Dual Lens i ekranem IPS 4.3" — wszystko czego potrzebujesz do samodzielnej diagnostyki.</p>
 
-      <div class="cta-features">
-        <div class="cta-feature">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-          </svg>
-          Dual Lens 0° + 90°
+        <div class="cta-features">
+          <div class="cta-feature">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+            </svg>
+            Dual Lens 0° + 90°
+          </div>
+          <div class="cta-feature">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <path d="M8 21h8M12 17v4"/>
+            </svg>
+            Ekran IPS 4.3"
+          </div>
+          <div class="cta-feature">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+            </svg>
+            IP67 wodoodporność
+          </div>
+          <div class="cta-feature">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            Plug & Play
+          </div>
         </div>
-        <div class="cta-feature">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <path d="M8 21h8M12 17v4"/>
-          </svg>
-          Ekran IPS 4.3"
-        </div>
-        <div class="cta-feature">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-          </svg>
-          IP67 wodoodporność
-        </div>
-        <div class="cta-feature">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+        <a href="https://tn-crm.vercel.app/innerscan" class="cta-button">
+          Zobacz InnerScan
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-          Plug & Play
-        </div>
+        </a>
+        <a href="https://tn-crm.vercel.app/innerscan#checkout" class="cta-link">lub przejdź od razu do zamówienia</a>
       </div>
-
-      <a href="https://tn-crm.vercel.app/innerscan" class="cta-button">
-        Zobacz InnerScan
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </a>
-      <a href="https://tn-crm.vercel.app/innerscan#checkout" class="cta-link">lub przejdź od razu do zamówienia</a>
     </section>
 
-  </div>
+  </main>
 
   <script>
     // Gate screen logic
-    const gateScreen = document.getElementById('gateScreen');
+    const gate = document.getElementById('gate');
     const gateForm = document.getElementById('gateForm');
-    const slidesContainer = document.getElementById('slidesContainer');
     const STORAGE_KEY = 'innerscan_lead';
 
     // Check if already submitted
     if (localStorage.getItem(STORAGE_KEY)) {
-      gateScreen.classList.add('hidden');
+      gate.classList.add('hidden');
     }
 
     gateForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const data = new FormData(gateForm);
-      const email = data.get('email');
+      const email = new FormData(gateForm).get('email');
 
-      // Save to localStorage
       localStorage.setItem(STORAGE_KEY, email);
 
-      // Send to lead-upsert
       try {
         await fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/lead-upsert', {
           method: 'POST',
@@ -1087,35 +1135,33 @@
         console.error('Lead capture error:', err);
       }
 
-      // Hide gate
-      gateScreen.classList.add('hidden');
+      gate.classList.add('hidden');
     });
 
     // Start button
-    const startButton = document.getElementById('startButton');
-    startButton.addEventListener('click', () => {
-      const slide1 = document.querySelector('[data-slide="1"]');
-      slide1.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('startButton').addEventListener('click', () => {
+      document.querySelector('[data-slide="1"]').scrollIntoView({ behavior: 'smooth' });
     });
 
-    // Intersection Observer for slide tracking
+    // Slide tracking
     const slides = document.querySelectorAll('.slide');
-    const progressDots = document.querySelectorAll('.progress-dot');
-    const navDots = document.querySelectorAll('.dot-nav-item');
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
+    const dotButtons = document.querySelectorAll('.dot-nav button');
+    const totalSlides = slides.length;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const slideIndex = parseInt(entry.target.dataset.slide);
+          const index = parseInt(entry.target.dataset.slide);
 
-          // Update progress dots
-          progressDots.forEach((dot, i) => {
-            dot.classList.toggle('active', i <= slideIndex);
-          });
+          // Update progress
+          progressText.textContent = `${index + 1} z ${totalSlides}`;
+          progressFill.style.width = `${((index + 1) / totalSlides) * 100}%`;
 
-          // Update nav dots
-          navDots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === slideIndex);
+          // Update dots
+          dotButtons.forEach((btn, i) => {
+            btn.classList.toggle('active', i === index);
           });
         }
       });
@@ -1124,11 +1170,10 @@
     slides.forEach(slide => observer.observe(slide));
 
     // Dot navigation click
-    navDots.forEach(dot => {
-      dot.addEventListener('click', () => {
-        const slideIndex = dot.dataset.slide;
-        const targetSlide = document.querySelector(`[data-slide="${slideIndex}"]`);
-        targetSlide.scrollIntoView({ behavior: 'smooth' });
+    dotButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const slideIndex = btn.dataset.slide;
+        document.querySelector(`[data-slide="${slideIndex}"]`).scrollIntoView({ behavior: 'smooth' });
       });
     });
   </script>

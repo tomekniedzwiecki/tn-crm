@@ -831,34 +831,127 @@ Gate screen zbiera email PRZED pokazaniem contentu. Struktura:
 
 ---
 
-## Logo handling
+## Motyw (JASNY, nie ciemny!)
 
-Logo często ma za dużo pustej przestrzeni w pliku. Rozwiązanie:
+Lead magnety używają **jasnego motywu** (białe tło), NIE ciemnego:
 
 ```css
-/* Gate screen logo */
-.gate-logo {
-  width: 200px;
-  height: 60px;
-  object-fit: contain;
-}
-
-/* Header logo (mniejsze) */
-.header-logo {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-}
-
-/* Slide intro logo */
-.slide-intro .slide-logo {
-  width: 240px;
-  height: 70px;
-  object-fit: contain;
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f8fafc;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --primary: #00D4FF;      /* Z brandingu */
+  --primary-dark: #00A8CC;
 }
 ```
 
-**`object-fit: contain`** + fixed height = logo dopasowuje się do przestrzeni, pusta przestrzeń z pliku jest "przycięta".
+Kolory `--primary` i `--primary-dark` bierzemy z brandingu workflow.
+
+---
+
+## Header — progress bar, NIE kropki
+
+Header zawiera:
+- Logo po lewej
+- Progress bar + tekst "1 z 8" po prawej
+
+**NIE używaj kropek w headerze** — kropki są tylko w nawigacji po prawej stronie.
+
+```html
+<header class="header">
+  <img src="{{LOGO_URL}}" alt="Logo" class="header-logo">
+  <div class="header-progress">
+    <span class="progress-text" id="progressText">1 z 8</span>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 12.5%"></div>
+    </div>
+  </div>
+</header>
+```
+
+```css
+.progress-text { font-size: 14px; font-weight: 500; color: var(--text-muted); }
+.progress-bar { width: 100px; height: 6px; background: var(--border); border-radius: 3px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); }
+```
+
+---
+
+## Dot navigation — tylko po prawej stronie
+
+Nawigacja kropkowa jest **TYLKO** po prawej stronie ekranu (pozycja fixed):
+
+```html
+<nav class="dot-nav" id="dotNav">
+  <button class="active" data-slide="0"></button>
+  <button data-slide="1"></button>
+  <!-- ... -->
+</nav>
+```
+
+```css
+.dot-nav {
+  position: fixed;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+```
+
+---
+
+## Logo handling
+
+Logo z `workflow_branding` ma duże białe marginesy (1024x1024). **ZAWSZE przytnij** przed użyciem!
+
+### Krok 1: Pobierz i przytnij logo
+
+```bash
+cd /c/repos_tn/tn-crm && mkdir -p lead-magnets/[nazwa]
+
+# Pobierz logo z Supabase
+curl -s "[LOGO_URL_Z_WORKFLOW_BRANDING]" -o lead-magnets/[nazwa]/logo_original.jpg
+
+# Przytnij marginesy
+node -e "
+const sharp = require('sharp');
+sharp('lead-magnets/[nazwa]/logo_original.jpg')
+  .trim()
+  .png()
+  .toFile('lead-magnets/[nazwa]/logo.png')
+  .then(info => console.log('Logo przycięte:', info.width, 'x', info.height));
+"
+```
+
+### Krok 2: Upload do Supabase Storage
+
+```bash
+source .env && curl -X PUT "https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/attachments/landing/[nazwa]/logo.png" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+  -H "Content-Type: image/png" \
+  -H "x-upsert: true" \
+  --data-binary @"lead-magnets/[nazwa]/logo.png"
+```
+
+### Krok 3: Użyj pełnego URL w HTML
+
+```html
+<img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/[nazwa]/logo.png" alt="Logo">
+```
+
+### CSS dla logo (po przycięciu)
+
+```css
+.gate-logo { height: 56px; width: auto; object-fit: contain; }
+.header-logo { height: 36px; width: auto; object-fit: contain; }
+.slide-intro .slide-logo { height: 64px; width: auto; object-fit: contain; }
+```
+
+**Po przycięciu** używamy `height: auto` zamiast fixed height — logo samo się dopasuje.
 
 ---
 
