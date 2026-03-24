@@ -506,39 +506,61 @@ Po analizie wypisz:
 
 ---
 
-## Format SQL wyjściowego
+## Wstawianie do bazy przez API
 
-> **WAŻNE**: Używaj `$$` delimitera zamiast pojedynczych apostrofów `'` dla JSON-a. Apostrofy w tekście scenariuszy (np. "what's this") powodują błędy SQL.
+> **WAŻNE**: NIE generuj SQL! Wstawiaj dane BEZPOŚREDNIO przez Supabase REST API używając curl.
 
-```sql
-INSERT INTO workflow_video (workflow_id, video_scenarios, is_active, activated_at)
-VALUES ('152f445f-b318-4e97-ba13-b9d901814ee8', $$[
-  {"id": "scenario_1", "showFace": true, ...},
-  {"id": "scenario_2", "showFace": true, ...},
-  {"id": "scenario_3", "showFace": true, ...},
-  {"id": "scenario_4", "showFace": true, ...},
-  {"id": "scenario_5", "showFace": true, ...},
-  {"id": "scenario_6", "showFace": false, ...},
-  {"id": "scenario_7", "showFace": false, ...},
-  {"id": "scenario_8", "showFace": false, ...},
-  {"id": "scenario_9", "showFace": false, ...},
-  {"id": "scenario_10", "showFace": false, ...}
-]$$::jsonb, true, NOW())
-ON CONFLICT (workflow_id) DO UPDATE SET
-  video_scenarios = EXCLUDED.video_scenarios,
-  is_active = true,
-  activated_at = COALESCE(workflow_video.activated_at, NOW());
+### Krok 1: Przygotuj JSON ze scenariuszami
+
+Zapisz scenariusze do pliku tymczasowego `c:/tmp/video_scenarios.json`:
+
+```json
+{
+  "workflow_id": "[WORKFLOW_ID]",
+  "video_scenarios": [
+    {"id": "scenario_1", "type": "POV Drama", "showFace": true, "title": "...", "hook": "...", "action": "...", "ending": "...", "duration": "15-20 sek", "tip": "...", "soundTip": "...", "textOverlay": "..."},
+    {"id": "scenario_2", "showFace": true, ...},
+    ...
+    {"id": "scenario_10", "showFace": false, ...}
+  ],
+  "is_active": true,
+  "activated_at": "2026-03-20T12:00:00Z"
+}
 ```
 
-> **UWAGA**: Zapytanie automatycznie włącza widoczność zakładki Video dla klienta (`is_active = true`).
+### Krok 2: Wstaw przez UPSERT (POST z resolution=merge-duplicates)
 
-### Jak wykonać SQL
+```bash
+curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: resolution=merge-duplicates,return=minimal" \
+  -d @c:/tmp/video_scenarios.json
+```
 
-**Wykonaj ręcznie przez Supabase SQL Editor** — curl/REST API nie działa dobrze z polskimi znakami i cudzysłowami w JSON.
+> **UWAGA**: Nagłówek `Prefer: resolution=merge-duplicates` powoduje UPSERT — jeśli rekord istnieje, zostanie zaktualizowany.
 
-1. Otwórz: https://supabase.com/dashboard/project/yxmavwkwnfuphjqbelws/sql/new
-2. Wklej wygenerowany SQL
-3. Kliknij "Run"
+### Alternatywnie: PATCH jeśli rekord już istnieje
+
+```bash
+curl -s -X PATCH "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflow_id=eq.[WORKFLOW_ID]" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=minimal" \
+  -d @c:/tmp/video_scenarios.json
+```
+
+### Krok 3: Weryfikacja
+
+```bash
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflow_id=eq.[WORKFLOW_ID]&select=workflow_id,is_active,video_scenarios" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]"
+```
+
+Po wstawieniu poinformuj użytkownika: "Gotowe! Odśwież stronę workflow — zakładka Video powinna być aktywna."
 
 ---
 

@@ -16,7 +16,9 @@ Uzytkownik mowi np.: "Zrob branding dla workflow X", "Wygeneruj branding", "Wype
 
 ## Co generuje
 
-Gotowy SQL do wklejenia w Supabase SQL Editor. SQL zawiera:
+**WSTAWIA BEZPOŚREDNIO DO BAZY** przez Supabase REST API (curl). NIE generuje SQL do ręcznego wklejania!
+
+Dane wstawiane do tabeli `workflow_branding`:
 
 1. **DELETE** istniejacych danych brandingowych (brand_info, color, font, ai_prompt) dla danego workflow
 2. **Brand Info** — INSERT type='brand_info':
@@ -107,7 +109,7 @@ Na koncu **Top 3** z rekomendacja.
 - Styl polski: bezposredni, fachowy (np. Wglad, Fachownik, Szperacz)
 - Styl angielski: nowoczesne DTC brandy (np. VisiCore, DualEye, LensGo)
 
-**CZEKAJ NA ODPOWIEDZ** uzytkownika z wybrana nazwa/domena zanim wygenerujesz SQL!
+**CZEKAJ NA ODPOWIEDZ** uzytkownika z wybrana nazwa/domena zanim wstawisz dane do bazy!
 
 ### Krok 3: Tagline
 
@@ -661,56 +663,89 @@ JAKOŚĆ: Fotorealistyczny render, jakość sesji komercyjnej
 
 ---
 
-## Format SQL wyjsciowego
+## Wstawianie do bazy przez API
 
-```sql
--- [NAZWA MARKI] Branding Data for workflow [WORKFLOW_ID]
--- Uruchom w Supabase SQL Editor
+> **WAŻNE**: NIE generuj SQL! Wstawiaj dane BEZPOŚREDNIO przez Supabase REST API używając curl.
 
--- Wyczysc istniejace dane brandingowe
-DELETE FROM workflow_branding
-WHERE workflow_id = '[WORKFLOW_ID]'
-  AND type IN ('brand_info', 'color', 'font', 'ai_prompt');
+### Krok 1: Usuń istniejące dane brandingowe
 
--- 1. BRAND INFO
-INSERT INTO workflow_branding (workflow_id, type, title, value, sort_order) VALUES (
-  '[WORKFLOW_ID]',
-  'brand_info',
-  '[NAZWA]',
-  '{"name":"[NAZWA]","tagline":"[TAGLINE]","description":"[OPIS]"}',
-  0
-);
-
--- 2. KOLORY
-INSERT INTO workflow_branding (workflow_id, type, title, value, notes, sort_order) VALUES
-  ('[WID]', 'color', '[NAME]', '[HEX]', '{"role":"primary"}',   0),
-  ('[WID]', 'color', '[NAME]', '[HEX]', '{"role":"secondary"}', 1),
-  ('[WID]', 'color', '[NAME]', '[HEX]', '{"role":"accent"}',    2),
-  ('[WID]', 'color', '[NAME]', '[HEX]', '{"role":"neutral"}',   3),
-  ('[WID]', 'color', '[NAME]', '[HEX]', '{"role":"neutral"}',   4),
-  ('[WID]', 'color', '[NAME]', '[HEX]', '{"role":"neutral"}',   5);
-
--- 3. FONTY
-INSERT INTO workflow_branding (workflow_id, type, title, value, notes, sort_order) VALUES
-  ('[WID]', 'font', '[FONT]', 'heading', '{"role":"heading","weights":["500","700"]}', 0),
-  ('[WID]', 'font', '[FONT]', 'body',    '{"role":"body","weights":["400","500","600","700"]}', 1),
-  ('[WID]', 'font', '[FONT]', 'accent',  '{"role":"accent","weights":["400","700"]}', 2);
-
--- 4. AI PROMPTS - LOGO
-INSERT INTO workflow_branding (workflow_id, type, title, value, notes, sort_order) VALUES
-  ('[WID]', 'ai_prompt', 'Logo główne na ciemnym tle', '[PEŁNY PROMPT]', '{"category":"logo"}', 0),
-  ('[WID]', 'ai_prompt', 'Logo na jasnym tle', '[PEŁNY PROMPT]', '{"category":"logo"}', 1),
-  ('[WID]', 'ai_prompt', 'Logo monochromatyczne', '[PEŁNY PROMPT]', '{"category":"logo"}', 2),
-  ('[WID]', 'ai_prompt', 'Favicon / ikona aplikacji', '[PEŁNY PROMPT]', '{"category":"logo"}', 3),
-  ('[WID]', 'ai_prompt', 'Combo mark (ikona + wordmark)', '[PEŁNY PROMPT]', '{"category":"logo"}', 4),
-  ('[WID]', 'ai_prompt', 'Animacja logo (storyboard)', '[PEŁNY PROMPT]', '{"category":"logo"}', 5);
-
--- 5. AI PROMPTS - MOCKUPY
-INSERT INTO workflow_branding (workflow_id, type, title, value, notes, sort_order) VALUES
-  ('[WID]', 'ai_prompt', 'Opakowanie główne', '[PEŁNY PROMPT]', '{"category":"mockup"}', 10),
-  ('[WID]', 'ai_prompt', 'Koszulka z logo', '[PEŁNY PROMPT]', '{"category":"mockup"}', 11),
-  -- ... kolejne mockupy z sort_order 12, 13, 14...
+```bash
+curl -s -X DELETE "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.[WORKFLOW_ID]&type=in.(brand_info,color,font,ai_prompt)" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]"
 ```
+
+### Krok 2: Przygotuj JSON i wstaw przez POST
+
+Dla każdego typu danych (brand_info, colors, fonts, ai_prompts):
+1. Zapisz JSON do pliku tymczasowego: `c:/tmp/branding_[typ].json`
+2. Wyślij przez curl z `-d @plik.json`
+
+```bash
+# Przykład wstawiania kolorów
+curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=minimal" \
+  -d @c:/tmp/branding_colors.json
+```
+
+### Format JSON dla każdego typu
+
+**brand_info** (pojedynczy obiekt):
+```json
+{
+  "workflow_id": "[WORKFLOW_ID]",
+  "type": "brand_info",
+  "title": "[NAZWA]",
+  "value": "{\"name\":\"[NAZWA]\",\"tagline\":\"[TAGLINE]\",\"description\":\"[OPIS]\"}",
+  "sort_order": 0
+}
+```
+
+**colors** (tablica 6 obiektów):
+```json
+[
+  {"workflow_id": "[WID]", "type": "color", "title": "[NAME]", "value": "[HEX]", "notes": "{\"role\":\"primary\"}", "sort_order": 0},
+  {"workflow_id": "[WID]", "type": "color", "title": "[NAME]", "value": "[HEX]", "notes": "{\"role\":\"secondary\"}", "sort_order": 1},
+  {"workflow_id": "[WID]", "type": "color", "title": "[NAME]", "value": "[HEX]", "notes": "{\"role\":\"accent\"}", "sort_order": 2},
+  {"workflow_id": "[WID]", "type": "color", "title": "[NAME]", "value": "[HEX]", "notes": "{\"role\":\"neutral\"}", "sort_order": 3},
+  {"workflow_id": "[WID]", "type": "color", "title": "[NAME]", "value": "[HEX]", "notes": "{\"role\":\"neutral\"}", "sort_order": 4},
+  {"workflow_id": "[WID]", "type": "color", "title": "[NAME]", "value": "[HEX]", "notes": "{\"role\":\"neutral\"}", "sort_order": 5}
+]
+```
+
+**fonts** (tablica 3 obiektów):
+```json
+[
+  {"workflow_id": "[WID]", "type": "font", "title": "[FONT]", "value": "heading", "notes": "{\"role\":\"heading\",\"weights\":[\"500\",\"700\"]}", "sort_order": 0},
+  {"workflow_id": "[WID]", "type": "font", "title": "[FONT]", "value": "body", "notes": "{\"role\":\"body\",\"weights\":[\"400\",\"500\",\"600\",\"700\"]}", "sort_order": 1},
+  {"workflow_id": "[WID]", "type": "font", "title": "[FONT]", "value": "accent", "notes": "{\"role\":\"accent\",\"weights\":[\"400\",\"700\"]}", "sort_order": 2}
+]
+```
+
+**ai_prompts** (tablica 16 obiektów — 6 logo + 10 mockupów):
+```json
+[
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo główne na białym tle", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"logo\"}", "sort_order": 0},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo na ciemnym tle", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"logo\"}", "sort_order": 1},
+  ...
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Koszulka — [kontekst]", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"mockup\"}", "sort_order": 10},
+  ...
+]
+```
+
+### Kolejność wstawiania
+
+1. DELETE istniejących danych
+2. POST brand_info (z pliku JSON)
+3. POST colors (z pliku JSON)
+4. POST fonts (z pliku JSON)
+5. POST ai_prompts logo (z pliku JSON)
+6. POST ai_prompts mockupy (z pliku JSON)
+
+Po każdym POST sprawdź czy zwróciło pustą odpowiedź (sukces) lub błąd JSON.
 
 ---
 
@@ -723,13 +758,12 @@ Claude:
 3. Szuka raportu typu `report_pdf` (glowna analiza) oraz `report_infographic` (PNG do podgladu)
 4. Pobiera infografike PNG przez curl i odczytuje ja narzedziem Read (obraz zawiera kluczowe info)
 5. Analizuje produkt na podstawie infografiki i nazw plikow raportow
-6. Proponuje 3 nazwy marki z domenami i **CZEKA NA WYBOR UZYTKOWNIKA**
-7. Po wyborze generuje pelny SQL z:
-   - brand info
-   - kolorami
-   - fontami
-   - **promptami AI (logo + mockupy) jako INSERT do bazy**
-8. Daje uzytkownikowi SQL do wklejenia w Supabase SQL Editor
+6. Proponuje 10 nazw marki z domenami i **CZEKA NA WYBOR UZYTKOWNIKA**
+7. Po wyborze:
+   - Przygotowuje dane (brand info, kolory, fonty, prompty)
+   - **WSTAWIA BEZPOSREDNIO DO BAZY** przez curl (DELETE + POST)
+   - Weryfikuje czy dane sa w bazie
+8. Informuje uzytkownika: "Gotowe! Odśwież stronę workflow."
 
 ---
 

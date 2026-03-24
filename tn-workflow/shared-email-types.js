@@ -27,7 +27,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     video: {
         label: 'Etap 2 - Video',
         description: 'Maile związane z nagraniami video',
-        templates: ['video_activated']
+        templates: ['video_activated', 'scenarios_shared']
     },
     takedrop: {
         label: 'Etap 3 - Konfiguracja sklepu',
@@ -126,6 +126,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         icon: 'ph-video-camera',
         color: 'cyan'
     },
+    'scenarios_shared': {
+        name: 'Scenariusze udostępnione',
+        description: 'Wysyłany gdy admin udostępni scenariusze video',
+        icon: 'ph-film-script',
+        color: 'cyan'
+    },
     'takedrop_activated': {
         name: 'Aktywuj TakeDrop',
         description: 'Wysyłany gdy admin aktywuje zakładkę TakeDrop',
@@ -221,6 +227,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'branding_delivered', label: 'Branding dostarczony' },
         { value: 'sales_page_shared', label: 'Sales page udostępniony' },
         { value: 'video_activated', label: 'Aktywuj Video' },
+        { value: 'scenarios_shared', label: 'Scenariusze udostępnione' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
@@ -254,6 +261,7 @@ const TRIGGER_DEFINITIONS = {
     sales_page_shared: { label: 'Sales page udostępniony', icon: 'ph-globe', color: 'purple' },
     // Etap 2 - Video
     video_activated: { label: 'Aktywuj Video', icon: 'ph-video-camera', color: 'cyan' },
+    scenarios_shared: { label: 'Scenariusze udostępnione', icon: 'ph-film-script', color: 'cyan' },
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },

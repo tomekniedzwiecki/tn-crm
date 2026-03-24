@@ -40,12 +40,13 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
 
 Kiedy uzytkownik mowi "zrob branding dla workflow X":
 1. Przeczytaj `CLAUDE_BRANDING_PROCEDURE.md`
-2. Pobierz dane workflow i produktu
+2. Pobierz dane workflow i produktu (raporty PDF, infografiki)
 3. Przeanalizuj produkt (nazwa, opis, raporty)
-4. Wygeneruj: nazwe marki, tagline, opis, 6 kolorow, 3 fonty
-5. Daj SQL do wklejenia w Supabase SQL Editor
+4. Zaproponuj 10 nazw marki z wolnymi domenami .pl
+5. Po wyborze uzytkownika wygeneruj: tagline, opis, 6 kolorow, 3 fonty, 16 promptow AI
+6. **WSTAW BEZPOSREDNIO DO BAZY** przez Supabase REST API (curl) — NIE generuj SQL!
 
-Prompty logo/mockupow generuja sie automatycznie w UI (`generateBrandingPrompts()` w tn-workflow/workflow.html).
+Dane wstawiane: brand_info, colors, fonts, ai_prompts (6 logo + 10 mockupow).
 
 ### Generowanie landing page
 **Plik:** `CLAUDE_LANDING_PROCEDURE.md`
