@@ -34,11 +34,6 @@ const EMAIL_TEMPLATE_CATEGORIES = {
         description: 'Maile związane z konfiguracją TakeDrop',
         templates: ['takedrop_activated', 'landing_page_connected', 'test_ready']
     },
-    reklamy: {
-        label: 'Etap 4 - Reklamy',
-        description: 'Maile związane z kampaniami reklamowymi',
-        templates: ['ads_activated', 'partner_step_completed', 'ads_completed']
-    },
 };
 
 const EMAIL_TEMPLATE_DEFINITIONS = {
@@ -149,26 +144,7 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy sklep jest gotowy do testów przez klienta',
         icon: 'ph-browser',
         color: 'cyan'
-    },
-    // Etap 4 - Reklamy
-    'ads_activated': {
-        name: 'Etap 4 aktywowany',
-        description: 'Wysyłany gdy klient zaakceptuje test sklepu',
-        icon: 'ph-megaphone-simple',
-        color: 'rose'
-    },
-    'partner_step_completed': {
-        name: 'Partner dodany',
-        description: 'Wysyłany gdy admin potwierdzi dostęp do konta reklamowego',
-        icon: 'ph-handshake',
-        color: 'emerald'
-    },
-    'ads_completed': {
-        name: 'Budżet doładowany',
-        description: 'Wysyłany gdy klient doładuje konto reklamowe',
-        icon: 'ph-wallet',
-        color: 'violet'
-    },
+    }
 };
 
 // Flat version for backward compatibility
@@ -219,10 +195,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'scenarios_shared', label: 'Scenariusze udostępnione' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
-        { value: 'test_ready', label: 'Test sklepu gotowy' },
-        { value: 'ads_activated', label: 'Etap 4 aktywowany' },
-        { value: 'partner_step_completed', label: 'Partner dodany' },
-        { value: 'ads_completed', label: 'Budżet doładowany' }
+        { value: 'test_ready', label: 'Test sklepu gotowy' }
     ]
 };
 
@@ -252,9 +225,5 @@ const TRIGGER_DEFINITIONS = {
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
-    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
-    // Etap 4 - Reklamy
-    ads_activated: { label: 'Etap 4 aktywowany', icon: 'ph-megaphone-simple', color: 'rose' },
-    partner_step_completed: { label: 'Partner dodany', icon: 'ph-handshake', color: 'emerald' },
-    ads_completed: { label: 'Budżet doładowany', icon: 'ph-wallet', color: 'violet' }
+    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' }
 };
