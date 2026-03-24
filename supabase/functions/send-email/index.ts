@@ -45,9 +45,7 @@ const VALID_EMAIL_TYPES = [
   'test_ready',
   // Etap 4 - Reklamy
   'ads_activated',
-  'partner_access_granted',
   'partner_step_completed',
-  'budget_funded',
   'ads_completed',
   'direct'
 ]
@@ -75,11 +73,9 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   takedrop_activated: 'Załóż konto na platformie sklepowej',
   takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 3!',
   // Etap 4 - Reklamy
-  ads_activated: 'Czas na reklamy! Dodaj mnie jako partnera w Meta',
-  partner_access_granted: 'Klient udostępnił konto reklamowe - {{brandName}}',
-  partner_step_completed: 'Świetnie! Teraz doładuj konto reklamowe',
-  budget_funded: 'Klient doładował konto reklamowe - {{brandName}}',
-  ads_completed: 'Wszystko gotowe! Uruchamiam reklamy'
+  ads_activated: 'Ruszamy z reklamami — etap 4 aktywowany!',
+  partner_step_completed: 'Konto reklamowe gotowe!',
+  ads_completed: 'Budżet doładowany — zaczynamy kampanię!'
 }
 
 // Offer flow email types (use special reply-to)
