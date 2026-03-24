@@ -152,7 +152,7 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
     },
     // Etap 4 - Reklamy
     'ads_activated': {
-        name: 'Etap 4 aktywowany',
+        name: 'Konfiguracja konta reklamowego',
         description: 'Wysyłany gdy admin oznaczy testy jako zakończone',
         icon: 'ph-megaphone-simple',
         color: 'rose'
@@ -208,7 +208,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
-        { value: 'ads_activated', label: 'Etap 4 aktywowany' }
+        { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' }
     ]
 };
 
@@ -240,5 +240,5 @@ const TRIGGER_DEFINITIONS = {
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
     test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
     // Etap 4 - Reklamy
-    ads_activated: { label: 'Etap 4 aktywowany', icon: 'ph-megaphone-simple', color: 'rose' }
+    ads_activated: { label: 'Konfiguracja konta reklamowego', icon: 'ph-megaphone-simple', color: 'rose' }
 };
