@@ -34,6 +34,11 @@ const EMAIL_TEMPLATE_CATEGORIES = {
         description: 'Maile związane z konfiguracją TakeDrop',
         templates: ['takedrop_activated', 'landing_page_connected', 'test_ready']
     },
+    reklamy: {
+        label: 'Etap 4 - Reklamy',
+        description: 'Maile związane z kampaniami reklamowymi',
+        templates: ['ads_activated']
+    }
 };
 
 const EMAIL_TEMPLATE_DEFINITIONS = {
@@ -144,6 +149,13 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy sklep jest gotowy do testów przez klienta',
         icon: 'ph-browser',
         color: 'cyan'
+    },
+    // Etap 4 - Reklamy
+    'ads_activated': {
+        name: 'Etap 4 aktywowany',
+        description: 'Wysyłany gdy admin oznaczy testy jako zakończone',
+        icon: 'ph-megaphone-simple',
+        color: 'rose'
     }
 };
 
@@ -195,7 +207,8 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'scenarios_shared', label: 'Scenariusze udostępnione' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
-        { value: 'test_ready', label: 'Test sklepu gotowy' }
+        { value: 'test_ready', label: 'Test sklepu gotowy' },
+        { value: 'ads_activated', label: 'Etap 4 aktywowany' }
     ]
 };
 
@@ -225,5 +238,7 @@ const TRIGGER_DEFINITIONS = {
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
-    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' }
+    test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
+    // Etap 4 - Reklamy
+    ads_activated: { label: 'Etap 4 aktywowany', icon: 'ph-megaphone-simple', color: 'rose' }
 };
