@@ -584,6 +584,117 @@ async function processActionStep(
     }
   }
 
+  // Activate TakeDrop visibility for client
+  if (action_type === 'activate_takedrop') {
+    console.log(`[automation-executor] Activating TakeDrop for workflow`)
+
+    const workflowId = execution.entity_id
+
+    if (execution.entity_type !== 'workflow') {
+      throw new Error('activate_takedrop action requires entity_type=workflow')
+    }
+
+    // Check if TakeDrop record exists
+    const { data: takedrop } = await supabase
+      .from('workflow_takedrop')
+      .select('id, is_active')
+      .eq('workflow_id', workflowId)
+      .single()
+
+    if (takedrop?.is_active) {
+      console.log(`[automation-executor] TakeDrop already active for ${workflowId}, skipping`)
+      return {
+        log: {
+          timestamp,
+          action: 'activate_takedrop',
+          skipped: true,
+          reason: 'already_active'
+        }
+      }
+    }
+
+    const now = new Date().toISOString()
+
+    if (takedrop) {
+      // Update existing record
+      const { error: updateError } = await supabase
+        .from('workflow_takedrop')
+        .update({ is_active: true, activated_at: now })
+        .eq('workflow_id', workflowId)
+
+      if (updateError) {
+        throw new Error(`Failed to update workflow_takedrop: ${updateError.message}`)
+      }
+    } else {
+      // Create new record
+      const { error: insertError } = await supabase
+        .from('workflow_takedrop')
+        .insert({ workflow_id: workflowId, is_active: true, activated_at: now })
+
+      if (insertError) {
+        throw new Error(`Failed to create workflow_takedrop: ${insertError.message}`)
+      }
+    }
+
+    // Log activity
+    await supabase
+      .from('workflow_activities')
+      .insert({
+        workflow_id: workflowId,
+        action: 'takedrop_activated',
+        description: 'Etap TakeDrop aktywowany automatycznie (3 nagrania)',
+        metadata: { auto: true, automation_execution_id: execution.id }
+      })
+
+    // Trigger takedrop_activated for email notification
+    const { data: workflow } = await supabase
+      .from('workflows')
+      .select('customer_email, customer_name, unique_token')
+      .eq('id', workflowId)
+      .single()
+
+    if (workflow) {
+      const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć'
+      const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
+
+      try {
+        await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/automation-trigger`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({
+              trigger_type: 'takedrop_activated',
+              entity_type: 'workflow',
+              entity_id: workflowId,
+              context: {
+                email: workflow.customer_email,
+                clientName,
+                projectUrl
+              }
+            })
+          }
+        )
+      } catch (triggerError) {
+        console.error(`[automation-executor] Failed to trigger takedrop_activated:`, triggerError)
+      }
+    }
+
+    console.log(`[automation-executor] TakeDrop activated successfully for ${workflowId}`)
+
+    return {
+      log: {
+        timestamp,
+        action: 'activate_takedrop',
+        workflow_id: workflowId,
+        success: true
+      }
+    }
+  }
+
   throw new Error(`Unknown action type: ${action_type}`)
 }
 

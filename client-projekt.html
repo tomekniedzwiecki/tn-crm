@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032501';
+        const APP_VERSION = '2026032502';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -8047,6 +8047,36 @@
                 renderVideoRecordings();
                 updateVideoNavigation();
                 showToast(`Dodano do ${platform.name}`, 'success');
+
+                // Trigger automation when 3rd video is added
+                if (links.length === 3) {
+                    console.log('[client] 3 videos reached, triggering video_recordings_complete');
+                    try {
+                        await fetch(
+                            `${supabaseUrl}/functions/v1/automation-trigger`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${supabaseAnonKey}`
+                                },
+                                body: JSON.stringify({
+                                    trigger_type: 'video_recordings_complete',
+                                    entity_type: 'workflow',
+                                    entity_id: workflow.id,
+                                    context: {
+                                        email: workflow.customer_email,
+                                        clientName: workflow.customer_name?.split(' ')[0] || 'Cześć',
+                                        projectUrl: `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`,
+                                        videoCount: 3
+                                    }
+                                })
+                            }
+                        );
+                    } catch (triggerErr) {
+                        console.error('[client] Failed to trigger automation:', triggerErr);
+                    }
+                }
             } catch (err) {
                 console.error('Error adding link:', err);
                 showToast('Błąd dodawania', 'error');
