@@ -753,7 +753,7 @@
             const isVideoSkipped = w.video_stage?.skipped || false;
             const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
             if (w.takedrop_stage?.test_accepted) return 4;
-            if (w.takedrop_stage?.is_active || videoLinks.length >= 4 || isVideoSkipped || isVideoAccepted) return 3;
+            if (w.takedrop_stage?.is_active || videoLinks.length >= 3 || isVideoSkipped || isVideoAccepted) return 3;
             if (w.video_stage?.is_active) return 2;
             return 1;
         }
@@ -841,7 +841,7 @@
                     const isVideoSkipped = w.video_stage?.skipped || false;
                     const videoLinks = w.video_stage?.video_links || [];
                     // Video ukończone = pominięte LUB ma 4+ nagrań (nie polegamy na stage_accepted)
-                    const isVideoComplete = isVideoSkipped || videoLinks.length >= 4;
+                    const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
                     const isEtap1Complete = !!w.sales_page_shared_at;
 
                     statusStageMatch = Array.from(selectedStatusStages).every(stage => {
@@ -996,7 +996,7 @@
                 const isVideoSkipped = w.video_stage?.skipped || false;
                 const videoLinks = w.video_stage?.video_links || [];
                 // Video ukończone = pominięte LUB ma 4+ nagrań (nie polegamy na stage_accepted)
-                const isVideoComplete = isVideoSkipped || videoLinks.length >= 4;
+                const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
                 const isEtap1Complete = !!w.sales_page_shared_at;
 
                 // "takedrop" = Etap 1 ukończony + video ukończone + (TD nie aktywny LUB aktywny ale konto nie założone)
@@ -1175,10 +1175,10 @@
                 case 'profile':
                     const profiles = w.video_stage?.social_profiles || {};
                     const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
-                    return profileCount === 3;
+                    return profileCount >= 1; // ukończone gdy dodał chociaż 1 profil
                 case 'nagrania':
                     const videoLinks = w.video_stage?.video_links || [];
-                    return videoLinks.length > 0;
+                    return videoLinks.length >= 3; // ukończone gdy ma 3+ nagrań
                 case 'takedrop':
                     return !!w.takedrop_stage?.account_created;
                 case 'landing':
@@ -1216,13 +1216,20 @@
 
                 const profiles = w.video_stage?.social_profiles || {};
                 const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
-                if (profileCount < 3) return 'profile';
-
                 const videoLinks = w.video_stage?.video_links || [];
-                if (videoLinks.length < 4) return 'nagrania';
+
+                // Video ukończone gdy ma 3+ nagrań - przejdź do etapu 3
+                if (videoLinks.length >= 3) {
+                    // kontynuuj do etapu 3 poniżej
+                } else {
+                    // Profile: ma scenariusze ale 0 profili
+                    if (profileCount === 0) return 'profile';
+                    // Nagrania: ma ≥1 profil, <3 video
+                    return 'nagrania';
+                }
             }
 
-            // Etap 3: TakeDrop (minimum 4 nagrania LUB video pominięte = etap 2 ukończony)
+            // Etap 3: TakeDrop (minimum 3 nagrania LUB video pominięte = etap 2 ukończony)
             // Jeśli TakeDrop nie aktywny - admin musi włączyć
             // Jeśli TakeDrop aktywny ale konto nie założone - klient musi założyć
             if (!w.takedrop_stage?.is_active) return 'takedrop';
@@ -1333,7 +1340,7 @@
 
             // TakeDrop - pokazuj gdy etap 3 (4+ nagrań LUB video pominięte/zatwierdzone)
             const videoLinks = w.video_stage?.video_links || [];
-            if (videoLinks.length >= 4 || isVideoSkipped || isVideoAccepted) {
+            if (videoLinks.length >= 3 || isVideoSkipped || isVideoAccepted) {
                 if (w.takedrop_stage?.account_created) {
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
                 } else if (w.takedrop_stage?.is_active) {
@@ -1751,7 +1758,6 @@
                 const hasScenarios = scenarios.length > 0;
                 const profiles = v?.social_profiles || {};
                 const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
-                const hasAllProfiles = profileCount === 3;
                 const videoLinks = v?.video_links || [];
                 const hasVideoLinks = videoLinks.length > 0;
 
@@ -1761,22 +1767,19 @@
                 let icon = 'ph ph-hourglass text-amber-400';
                 let isClientTask = false;
 
-                if (isShared || hasVideoLinks) {
+                // Nowa logika: Profile (0 profili) → Nagrania (≥1 profil, <3 video) → Konto TD (≥3 video)
+                if (profileCount >= 1) {
+                    // Ma profil, więc jest w etapie nagrań
                     stepName = 'Nagrania';
                     stepKey = null; // no deadline
-                    status = hasVideoLinks ? `${videoLinks.length} nagrań` : 'Oczekuje';
-                    icon = hasVideoLinks ? 'ph-fill ph-check-circle text-emerald-400' : 'ph ph-hourglass text-amber-400';
-                    isClientTask = true;
-                } else if (hasAllProfiles) {
-                    stepName = 'Nagrania';
-                    stepKey = null; // no deadline
-                    status = 'Oczekuje na nagrania';
-                    icon = 'ph ph-video text-amber-400';
+                    status = hasVideoLinks ? `${videoLinks.length}/3 nagrań` : 'Oczekuje na nagrania';
+                    icon = hasVideoLinks ? 'ph ph-video text-amber-400' : 'ph ph-hourglass text-amber-400';
                     isClientTask = true;
                 } else if (hasScenarios) {
+                    // Ma scenariusze ale 0 profili
                     stepName = 'Profile';
                     stepKey = null; // no deadline
-                    status = profileCount > 0 ? `${profileCount}/3 profili` : 'Oczekuje na profile';
+                    status = 'Oczekuje na profile';
                     icon = 'ph ph-user-circle text-amber-400';
                     isClientTask = true;
                 } else {
