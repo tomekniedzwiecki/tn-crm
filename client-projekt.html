@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032502';
+        const APP_VERSION = '2026032503';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4759,30 +4759,49 @@
             const profiles = videoData?.social_profiles || {};
             const filledCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
 
-            if (filledCount < 3) {
+            if (filledCount < 1) {
+                // Brak profili - wymaga akcji
                 box.classList.add('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Profile</span>
+                            <span class="flex items-center gap-1.5 text-rose-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                Wymaga akcji
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <div class="flex gap-4 mb-4">
+                                <i class="ph ph-tiktok-logo text-4xl text-[#444]"></i>
+                                <i class="ph ph-youtube-logo text-4xl text-[#444]"></i>
+                                <i class="ph ph-instagram-logo text-4xl text-[#444]"></i>
+                            </div>
+                            <h3 class="text-white text-lg font-medium">Dodaj profile</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Podaj linki do social media</p>
+                        </div>
+                    </div>
+                `;
+            } else if (filledCount < 3) {
+                // Ma niektóre profile - w trakcie
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
                             <span class="text-[#666] text-xs uppercase tracking-wide">Profile</span>
                             <span class="flex items-center gap-1.5 text-amber-500 text-xs">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                 ${filledCount}/3
                             </span>
                         </div>
-                        <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 mb-3">
-                            <div class="flex items-center gap-2">
-                                <i class="ph ph-hand-pointing text-cyan-400 text-lg"></i>
-                                <span class="text-cyan-400 text-xs font-medium">Twoja kolej!</span>
-                            </div>
-                        </div>
                         <div class="flex-1 flex flex-col items-center justify-center">
-                            <div class="flex gap-3 mb-3">
-                                <i class="ph ${profiles.tiktok ? 'ph-fill' : ''} ph-tiktok-logo text-2xl ${profiles.tiktok ? 'text-emerald-500' : 'text-[#444]'}"></i>
-                                <i class="ph ${profiles.youtube ? 'ph-fill' : ''} ph-youtube-logo text-2xl ${profiles.youtube ? 'text-emerald-500' : 'text-[#444]'}"></i>
-                                <i class="ph ${profiles.instagram ? 'ph-fill' : ''} ph-instagram-logo text-2xl ${profiles.instagram ? 'text-emerald-500' : 'text-[#444]'}"></i>
+                            <div class="flex gap-4 mb-4">
+                                <i class="ph ${profiles.tiktok ? 'ph-fill' : ''} ph-tiktok-logo text-4xl ${profiles.tiktok ? 'text-emerald-500' : 'text-[#444]'}"></i>
+                                <i class="ph ${profiles.youtube ? 'ph-fill' : ''} ph-youtube-logo text-4xl ${profiles.youtube ? 'text-emerald-500' : 'text-[#444]'}"></i>
+                                <i class="ph ${profiles.instagram ? 'ph-fill' : ''} ph-instagram-logo text-4xl ${profiles.instagram ? 'text-emerald-500' : 'text-[#444]'}"></i>
                             </div>
-                            <h3 class="text-white text-sm font-medium text-center">Dodaj linki do profili</h3>
+                            <h3 class="text-white text-lg font-medium">Uzupełnij profile</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Dodaj pozostałe platformy</p>
                         </div>
                     </div>
                 `;
@@ -4816,31 +4835,76 @@
             if (!box || !content) return;
 
             const videoCount = videoData?.video_links?.length || 0;
+            const profiles = videoData?.social_profiles || {};
+            const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
 
-            if (videoCount < 3) {
+            if (profileCount < 1) {
+                // Zablokowane - najpierw dodaj profil
+                box.classList.remove('bento-action');
+                box.style.pointerEvents = 'none';
+                box.style.opacity = '0.5';
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Nagrania</span>
+                            <span class="flex items-center gap-1.5 text-zinc-600 text-xs">
+                                <i class="ph ph-lock-simple"></i>
+                                Zablokowane
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-lock text-4xl text-zinc-700 mb-4"></i>
+                            <h3 class="text-zinc-500 text-lg font-medium">Najpierw dodaj profil</h3>
+                            <p class="text-zinc-600 text-sm text-center mt-2">Uzupełnij profile social media</p>
+                        </div>
+                    </div>
+                `;
+            } else if (videoCount < 1) {
+                // Brak nagrań - wymaga akcji
+                box.style.pointerEvents = '';
+                box.style.opacity = '';
                 box.classList.add('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Nagrania</span>
+                            <span class="flex items-center gap-1.5 text-rose-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                Wymaga akcji
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-video-camera text-5xl text-rose-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Prześlij nagrania</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Nagraj video wg scenariuszy</p>
+                        </div>
+                    </div>
+                `;
+            } else if (videoCount < 3) {
+                // W trakcie - ma nagrania ale <3
+                box.style.pointerEvents = '';
+                box.style.opacity = '';
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
                             <span class="text-[#666] text-xs uppercase tracking-wide">Nagrania</span>
                             <span class="flex items-center gap-1.5 text-amber-500 text-xs">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                 ${videoCount}/3
                             </span>
                         </div>
-                        <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 mb-3">
-                            <div class="flex items-center gap-2">
-                                <i class="ph ph-hand-pointing text-cyan-400 text-lg"></i>
-                                <span class="text-cyan-400 text-xs font-medium">Twoja kolej!</span>
-                            </div>
-                        </div>
                         <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph ph-video-camera text-3xl text-[#444] mb-2"></i>
-                            <h3 class="text-white text-sm font-medium text-center">Prześlij nagrania</h3>
+                            <span class="text-5xl font-bold text-amber-400">${videoCount}</span>
+                            <h3 class="text-white text-lg font-medium mt-2">Dodaj więcej</h3>
+                            <p class="text-[#666] text-sm text-center mt-1">Potrzebujesz minimum 3</p>
                         </div>
                     </div>
                 `;
             } else {
+                // Gotowe - 3+ nagrań
+                box.style.pointerEvents = '';
+                box.style.opacity = '';
                 box.classList.remove('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
@@ -4852,8 +4916,9 @@
                             </span>
                         </div>
                         <div class="flex-1 flex flex-col items-center justify-center">
-                            <span class="text-4xl font-bold text-white">${videoCount}</span>
-                            <span class="text-[#666] text-sm">${videoCount === 1 ? 'nagranie' : 'nagrań'}</span>
+                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">${videoCount} nagrań</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Etap video ukończony</p>
                         </div>
                     </div>
                 `;
@@ -5790,6 +5855,16 @@
         }
 
         function switchToDashTab(tabName) {
+            // Block navigation to video-recordings if no social profiles
+            if (tabName === 'video-recordings') {
+                const profiles = videoData?.social_profiles || {};
+                const profileCount = [profiles.tiktok, profiles.youtube, profiles.instagram].filter(Boolean).length;
+                if (profileCount < 1) {
+                    showToast('Najpierw dodaj profil społecznościowy', 'error');
+                    return;
+                }
+            }
+
             // Switch from dashboard to project screen with specific tab
             isDashboardMode = false;
             document.getElementById('dashboard-screen').classList.add('hidden');
