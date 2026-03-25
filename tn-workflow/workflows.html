@@ -747,14 +747,15 @@
         function getWorkflowStage(w) {
             // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop, 4 = Ads
             // Etap 4 = test_accepted (Etap 3 zakończony)
-            // Etap 3 = TakeDrop aktywny LUB 4+ nagrań (etap 2 ukończony) LUB etap 2 pominięty/zatwierdzony
+            // Etap 3 = video ukończone (≥3 nagrań LUB skipped) LUB takedrop aktywny
+            // Etap 2 = video aktywne ALE nie ukończone
             const videoLinks = w.video_stage?.video_links || [];
             const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
+            const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
             if (w.takedrop_stage?.test_accepted) return 4;
-            if (w.takedrop_stage?.is_active || videoLinks.length >= 3 || isVideoSkipped || isVideoAccepted) return 3;
-            if (w.video_stage?.is_active) return 2;
+            if (w.takedrop_stage?.is_active || isVideoComplete) return 3;
+            if (isVideoActive) return 2;
             return 1;
         }
 
@@ -1318,18 +1319,21 @@
                 items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Strona</span>`);
             }
 
-            // Scenariusz - tylko gdy etap 1 ukończony (strona udostępniona)
+            // Video/Scenariusz - tylko gdy etap 1 ukończony (strona udostępniona)
             const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = isVideoActive && (w.video_stage?.stage_accepted || false);
             if (w.sales_page_shared_at) {
+                const videoLinksProgress = w.video_stage?.video_links || [];
+                const hasEnoughVideos = videoLinksProgress.length >= 3;
+
                 if (isVideoSkipped) {
                     // Pominięty - czerwony X
                     items.push(`<span class="flex items-center gap-1 text-red-400"><i class="ph-fill ph-x-circle text-[10px]"></i>Video</span>`);
-                } else if (isVideoAccepted) {
-                    // Zatwierdzony - zielony check
+                } else if (hasEnoughVideos) {
+                    // Ukończone (≥3 nagrań) - zielony check
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Video</span>`);
                 } else {
+                    // Etap video w trakcie - pokaż postęp scenariuszy
                     const scenarios = w.video_stage?.video_scenarios;
                     const hasScenarios = scenarios && Array.isArray(scenarios) && scenarios.length > 0;
                     if (hasScenarios) {
@@ -1338,9 +1342,10 @@
                 }
             }
 
-            // TakeDrop - pokazuj gdy etap 3 (4+ nagrań LUB video pominięte/zatwierdzone)
+            // TakeDrop - pokazuj gdy video ukończone (≥3 nagrań LUB pominięte)
             const videoLinks = w.video_stage?.video_links || [];
-            if (videoLinks.length >= 3 || isVideoSkipped || isVideoAccepted) {
+            const isVideoComplete = videoLinks.length >= 3 || isVideoSkipped;
+            if (isVideoComplete) {
                 if (w.takedrop_stage?.account_created) {
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
                 } else if (w.takedrop_stage?.is_active) {
@@ -1458,17 +1463,20 @@
             let s2Label = 'Etap 2';
             const hasVideo = w.video_stage?.is_active;
             const isVideoSkipped = w.video_stage?.skipped || false;
-            const isVideoAccepted = hasVideo && (w.video_stage?.stage_accepted || false);
+            const videoLinksTimeline = w.video_stage?.video_links || [];
+            const isVideoCompleteTimeline = isVideoSkipped || videoLinksTimeline.length >= 3;
             if (isVideoSkipped) {
                 // Pominięty - czerwony
                 s2Class = 'bg-red-500';
-            } else if (isVideoAccepted) {
-                // Zatwierdzony - zielony
+            } else if (isVideoCompleteTimeline) {
+                // Ukończony (≥3 nagrań) - zielony
                 s2Class = 'bg-emerald-500';
             } else if (currentStage === 2) {
+                // W trakcie
                 s2Class = 'bg-amber-500';
-            } else if (currentStage === 3 || (hasVideo && w.video_stage?.video_shared)) {
-                s2Class = 'bg-emerald-500';
+            } else if (currentStage >= 3) {
+                // Etap 3+ ale video nie ukończone - zostaje amber
+                s2Class = 'bg-amber-500';
             }
 
             // Stage 3 status
