@@ -294,6 +294,11 @@
                                 <i class="ph ph-wallet"></i> Budżet
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
+                            <button onclick="toggleStatusStage('campaign')" data-stage="campaign"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-rocket-launch"></i> Kampania
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
                         </div>
                     </div>
                     <!-- Owner Filter -->
@@ -706,7 +711,7 @@
             const [videoRes, takedropRes, adsRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, budget_funded').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, budget_funded, campaign_launched').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -881,6 +886,10 @@
                         if (stage === 'budget') {
                             return w.ads_stage?.partner_access_granted && !w.ads_stage?.budget_funded;
                         }
+                        // "campaign" = budget funded ALE kampania NIE uruchomiona
+                        if (stage === 'campaign') {
+                            return w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched;
+                        }
                         // Other stages = next step
                         return nextStep === stage;
                     });
@@ -986,7 +995,7 @@
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
                 takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
-                ad_account: 0, budget: 0
+                ad_account: 0, budget: 0, campaign: 0
             };
 
             // Only count active workflows
@@ -1043,12 +1052,17 @@
                     counts.budget++;
                     continue;
                 }
+                // "campaign" = budget funded ALE kampania NIE uruchomiona
+                if (w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched) {
+                    counts.campaign++;
+                    continue;
+                }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
-                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account/budget - these are handled above with exact filter logic
+                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account/budget/campaign - these are handled above with exact filter logic
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }
@@ -1152,6 +1166,11 @@
                 return hasLegalData; // true = admin generuje dokumenty, false = klient wypełnia formularz
             }
 
+            // Etap 4: ad_account i budget = klient, campaign = admin
+            if (nextStep === 'ad_account') return false; // klient dodaje partnera
+            if (nextStep === 'budget') return false; // klient doładowuje budżet
+            if (nextStep === 'campaign') return true; // admin uruchamia kampanię
+
             if (adminTasks.includes(nextStep)) return true;
             if (clientTasks.includes(nextStep)) return false;
             return null;
@@ -1189,6 +1208,16 @@
                     return !!(w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0);
                 case 'legal':
                     return !!w.takedrop_stage?.legal_documents_ready;
+                case 'payment_gateway':
+                    return !!w.takedrop_stage?.payment_gateway_ready;
+                case 'test':
+                    return !!w.takedrop_stage?.test_accepted;
+                case 'ad_account':
+                    return !!w.ads_stage?.partner_access_granted;
+                case 'budget':
+                    return !!w.ads_stage?.budget_funded;
+                case 'campaign':
+                    return !!w.ads_stage?.campaign_launched;
                 default:
                     return false;
             }
@@ -1247,6 +1276,16 @@
 
             // Test sklepu (wyświetlaj tylko jeśli bramka gotowa)
             if (!w.takedrop_stage?.test_accepted) return 'test';
+
+            // Etap 4: Reklamy
+            // Konto reklamowe (partner access)
+            if (!w.ads_stage?.partner_access_granted) return 'ad_account';
+
+            // Budżet reklamowy
+            if (!w.ads_stage?.budget_funded) return 'budget';
+
+            // Kampania uruchomiona
+            if (!w.ads_stage?.campaign_launched) return 'campaign';
 
             return null; // all done
         }
@@ -1393,6 +1432,34 @@
                 } else {
                     // Klient ma przetestować sklep
                     items.push(`<span class="flex items-center gap-1 text-cyan-400"><i class="ph ph-circle-notch text-[10px]"></i>Test</span>`);
+                }
+            }
+
+            // Etap 4: Reklamy - pokazuj gdy test zaakceptowany
+            if (w.takedrop_stage?.test_accepted) {
+                // Konto reklamowe
+                if (w.ads_stage?.partner_access_granted) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Konto</span>`);
+                } else {
+                    items.push(`<span class="flex items-center gap-1 text-cyan-400"><i class="ph ph-circle-notch text-[10px]"></i>Konto</span>`);
+                }
+
+                // Budżet - pokazuj gdy konto gotowe
+                if (w.ads_stage?.partner_access_granted) {
+                    if (w.ads_stage?.budget_funded) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Budżet</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-cyan-400"><i class="ph ph-circle-notch text-[10px]"></i>Budżet</span>`);
+                    }
+                }
+
+                // Kampania - pokazuj gdy budżet gotowy
+                if (w.ads_stage?.budget_funded) {
+                    if (w.ads_stage?.campaign_launched) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Kampania</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Kampania</span>`);
+                    }
                 }
             }
 
@@ -1595,6 +1662,56 @@
         function renderCurrentWork(w) {
             const stage = getWorkflowStage(w);
             const progressPercent = w.progress_percent || 0;
+
+            // Etap 4: Reklamy
+            if (stage === 4) {
+                const ads = w.ads_stage;
+                const nextStep = getNextStep(w);
+
+                let stepName = 'Reklamy';
+                let status = 'W trakcie';
+                let icon = 'ph ph-megaphone-simple text-amber-400';
+                let isClientTask = false;
+
+                if (nextStep === 'ad_account') {
+                    stepName = 'Konto reklamowe';
+                    status = 'Czekam na dostęp';
+                    icon = 'ph ph-megaphone-simple text-amber-400';
+                    isClientTask = true;
+                } else if (nextStep === 'budget') {
+                    stepName = 'Budżet reklamowy';
+                    status = 'Czekam na doładowanie';
+                    icon = 'ph ph-wallet text-amber-400';
+                    isClientTask = true;
+                } else if (nextStep === 'campaign') {
+                    stepName = 'Kampania';
+                    status = 'Do uruchomienia';
+                    icon = 'ph ph-rocket-launch text-cyan-400';
+                    isClientTask = false;
+                } else {
+                    // Wszystko ukończone
+                    stepName = 'Reklamy';
+                    status = 'Kampania aktywna';
+                    icon = 'ph-fill ph-check-circle text-emerald-400';
+                    isClientTask = false;
+                }
+
+                const ownerBadge = isClientTask
+                    ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                    : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
+                return `
+                    <div class="py-2">
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <i class="${icon}"></i>
+                            <span class="text-white font-medium">${stepName}</span>
+                            ${ownerBadge}
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400">${status}</span>
+                        </div>
+                    </div>
+                `;
+            }
 
             if (stage === 3) {
                 const td = w.takedrop_stage;
