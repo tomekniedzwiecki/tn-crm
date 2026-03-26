@@ -1933,6 +1933,9 @@
                                 ${leadLink}
                                 ${workflowLink}
                                 ${scheduleLink}
+                                <button onclick="deleteSchedule('${schedule.id}', '${schedule.clientName.replace(/'/g, "\\'")}')" class="text-red-400/60 hover:text-red-400 transition-colors" title="Usuń harmonogram">
+                                    <i class="ph ph-trash"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -1961,6 +1964,44 @@
             }).join('');
         }
 
+        async function deleteSchedule(scheduleId, clientName) {
+            if (!confirm(`Czy na pewno chcesz usunąć harmonogram dla "${clientName}"?\n\nTa operacja jest nieodwracalna.`)) {
+                return;
+            }
+
+            try {
+                // Delete installments first (foreign key)
+                await supabaseClient
+                    .from('payment_installments')
+                    .delete()
+                    .eq('schedule_id', scheduleId);
+
+                // Delete schedule
+                const { error } = await supabaseClient
+                    .from('payment_schedules')
+                    .delete()
+                    .eq('id', scheduleId);
+
+                if (error) throw error;
+
+                // Remove from local array and re-render
+                paymentSchedules = paymentSchedules.filter(s => s.id !== scheduleId);
+                updateSchedulesStats();
+                filterSchedules();
+
+                // Show toast
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-enter';
+                toast.innerHTML = '<i class="ph ph-check mr-2"></i>Harmonogram usunięty';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+            } catch (err) {
+                console.error('Error deleting schedule:', err);
+                alert('Błąd podczas usuwania harmonogramu');
+            }
+        }
+
         // Make functions available globally
         window.openAddModal = openAddModal;
         window.editOffer = editOffer;
@@ -1970,6 +2011,7 @@
         window.filterSentOffers = filterSentOffers;
         window.resetSentFilters = resetSentFilters;
         window.filterSchedules = filterSchedules;
+        window.deleteSchedule = deleteSchedule;
 
         async function init() {
             const session = await checkAuth();
