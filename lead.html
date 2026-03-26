@@ -634,212 +634,168 @@
                             </div>
                         </div>
 
-                        <!-- Deal Info -->
-                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 sm:p-5">
-                            <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
-                                <i class="ph ph-currency-circle-dollar text-zinc-500"></i>
-                                Informacje o dealu
-                            </h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div class="sm:col-span-2">
-                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Oferta</label>
-                                    <select id="field-offer" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
-                                        <option value="">— Wybierz ofertę —</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Wartość (PLN)</label>
-                                    <input type="number" id="field-value" placeholder="0" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white">
-                                </div>
-                                <div>
-                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przewidywane zamknięcie</label>
-                                    <input type="date" id="field-expected-close" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer" onclick="this.showPicker()">
-                                </div>
-                                <div class="sm:col-span-2">
-                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przypisano do</label>
-                                    <select id="field-assigned-to" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
-                                        <option value="">Nie przypisano</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Oferta dla klienta - COMBINED SECTION -->
-                        <div id="client-offer-section" class="bg-zinc-900/40 rounded-lg border border-amber-500/20 p-4 sm:p-5 hidden">
-                            <div class="flex items-center justify-between mb-5">
+                        <!-- Deal & Oferta - Combined Section -->
+                        <div id="client-offer-section" class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden hidden">
+                            <!-- Header -->
+                            <div class="px-4 py-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-white/5 flex items-center justify-between">
                                 <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                    <i class="ph ph-storefront text-amber-400"></i>
-                                    Oferta dla klienta
+                                    <i class="ph ph-handshake text-amber-400"></i>
+                                    Deal
                                 </h3>
+                                <span id="offer-price-badge" class="text-sm font-semibold text-amber-400">0 zł</span>
                             </div>
 
-                            <!-- ===== OFFER NOT GENERATED YET ===== -->
-                            <div id="client-offer-empty">
-                                <!-- Row 1: Offer type & validity -->
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                                    <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Typ oferty</label>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <label class="offer-type-option selected cursor-pointer" data-type="starter">
-                                                <input type="radio" name="offer-type" value="starter" checked class="sr-only">
-                                                <div class="flex items-center gap-2 p-2.5 rounded-lg border border-white/10 bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
-                                                    <i class="ph ph-rocket text-emerald-400"></i>
-                                                    <div>
-                                                        <div class="text-xs font-medium text-white">Startowy</div>
-                                                        <div class="text-[9px] text-zinc-500">Bez umowy</div>
-                                                    </div>
-                                                </div>
-                                            </label>
-                                            <label class="offer-type-option cursor-pointer" data-type="full">
-                                                <input type="radio" name="offer-type" value="full" class="sr-only">
-                                                <div class="flex items-center gap-2 p-2.5 rounded-lg border border-white/10 bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
-                                                    <i class="ph ph-package text-amber-400"></i>
-                                                    <div>
-                                                        <div class="text-xs font-medium text-white">Pełen pakiet</div>
-                                                        <div class="text-[9px] text-zinc-500">Z umową</div>
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        </div>
+                            <div class="p-4">
+                                <!-- Row 1: Offer + Price + Assigned -->
+                                <div class="grid grid-cols-6 gap-3 mb-4">
+                                    <div class="col-span-2">
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Oferta</label>
+                                        <select id="field-offer" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer">
+                                            <option value="">— Wybierz —</option>
+                                        </select>
                                     </div>
                                     <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Ważność oferty</label>
-                                        <input type="date" id="client-offer-valid-until" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer" onclick="this.showPicker()">
-                                    </div>
-                                </div>
-
-                                <!-- Row 2: Price + Payment toggle -->
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                                    <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Cena indywidualna (opcjonalne)</label>
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Cena</label>
                                         <div class="relative">
-                                            <input type="number" id="client-offer-custom-price" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white pr-16" placeholder="Cena z oferty" min="0" step="1">
-                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">PLN</span>
+                                            <input type="number" id="field-value" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white pr-8" placeholder="auto" min="0" step="1">
+                                            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 text-[10px]">zł</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Płatność</label>
-                                        <label class="flex items-center gap-3 h-[42px] px-3 rounded-lg border border-white/10 bg-zinc-800/50 cursor-pointer hover:bg-zinc-800 transition-colors">
-                                            <input type="checkbox" id="enable-payment-schedule" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-zinc-700 rounded-full peer-checked:bg-amber-500/40 transition-colors relative border border-white/10 peer-checked:border-amber-500/50 shrink-0">
-                                                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-zinc-500 rounded-full peer-checked:translate-x-4 peer-checked:bg-amber-400 transition-all"></div>
-                                            </div>
-                                            <span class="text-sm text-zinc-400 peer-checked:text-amber-400 transition-colors">Ratalna</span>
-                                        </label>
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Zamknięcie</label>
+                                        <input type="date" id="field-expected-close" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Przypisany</label>
+                                        <select id="field-assigned-to" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer">
+                                            <option value="">Nie przypisano</option>
+                                        </select>
                                     </div>
                                 </div>
 
-                                <!-- Payment Schedule Config (shows when toggle enabled) -->
-                                <div id="payment-schedule-config" class="hidden mb-5 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
-                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                                        <div>
-                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Liczba rat</label>
-                                            <select id="installments-count" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer">
-                                                <option value="2">2</option>
-                                                <option value="3">3</option>
-                                                <option value="4" selected>4</option>
-                                                <option value="5">5</option>
-                                                <option value="6">6</option>
-                                                <option value="10">10</option>
-                                                <option value="12">12</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Odstęp</label>
-                                            <select id="installments-interval" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer">
-                                                <option value="7">tydzień</option>
-                                                <option value="14">2 tyg.</option>
-                                                <option value="30" selected>miesiąc</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Data 1. raty</label>
-                                            <input type="date" id="first-installment-date" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
-                                        </div>
-                                        <div>
-                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                                                1. rata <span class="text-amber-500/70">(wyższa)</span>
-                                            </label>
-                                            <div class="relative">
-                                                <input type="number" id="first-installment-amount" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white pr-10" placeholder="auto" min="0" step="100">
-                                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 text-[10px]">zł</span>
+                                <!-- Offer Link Generator Section -->
+                                <div class="border-t border-white/5 pt-4">
+                                    <!-- ===== FORM: Create offer ===== -->
+                                    <div id="client-offer-empty">
+                                        <!-- Row: Type + Validity + Payment mode -->
+                                        <div class="grid grid-cols-3 gap-3 mb-4">
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Typ oferty</label>
+                                                <select id="offer-type-select" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer">
+                                                    <option value="starter">Startowy (bez umowy)</option>
+                                                    <option value="full">Pełen pakiet (z umową)</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Ważność</label>
+                                                <input type="date" id="client-offer-valid-until" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                                            </div>
+                                            <div>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Płatność</label>
+                                                <label class="flex items-center justify-between h-[34px] px-3 rounded-lg border border-white/10 bg-zinc-800/50 cursor-pointer hover:bg-zinc-800 transition-colors">
+                                                    <span class="text-xs text-zinc-400" id="payment-mode-label">Jednorazowa</span>
+                                                    <input type="checkbox" id="enable-payment-schedule" class="sr-only peer">
+                                                    <div class="w-8 h-4 bg-zinc-700 rounded-full peer-checked:bg-amber-500/50 transition-colors relative border border-white/5 peer-checked:border-amber-500/50 shrink-0">
+                                                        <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-zinc-500 rounded-full peer-checked:translate-x-4 peer-checked:bg-amber-400 transition-all"></div>
+                                                    </div>
+                                                </label>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Preview -->
-                                    <div class="bg-zinc-950/50 rounded-lg p-3 border border-white/5">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Podgląd rat</span>
-                                            <span class="text-xs text-amber-400 font-medium"><span id="schedule-total-display">0</span> zł łącznie</span>
+                                        <!-- Payment Schedule Config (compact) -->
+                                        <div id="payment-schedule-config" class="hidden mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                                <div>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Rat</label>
+                                                    <select id="installments-count" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer">
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4" selected>4</option>
+                                                        <option value="5">5</option>
+                                                        <option value="6">6</option>
+                                                        <option value="10">10</option>
+                                                        <option value="12">12</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Co</label>
+                                                    <select id="installments-interval" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer">
+                                                        <option value="7">7 dni</option>
+                                                        <option value="14">14 dni</option>
+                                                        <option value="30" selected>30 dni</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Start</label>
+                                                    <input type="date" id="first-installment-date" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer" onclick="this.showPicker()">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">1. rata</label>
+                                                    <div class="relative">
+                                                        <input type="number" id="first-installment-amount" class="input-field w-full rounded px-2 py-1.5 text-xs text-white pr-6" placeholder="=" min="0" step="100">
+                                                        <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-600 text-[9px]">zł</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Inline preview -->
+                                            <div class="flex items-center justify-between text-[10px] text-zinc-400 bg-zinc-900/50 rounded px-2 py-1.5">
+                                                <div id="installments-preview" class="flex gap-2 overflow-x-auto"></div>
+                                                <span class="text-amber-400 font-medium whitespace-nowrap ml-2">= <span id="schedule-total-display">0</span> zł</span>
+                                            </div>
                                         </div>
-                                        <div id="installments-preview" class="space-y-1">
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <!-- Generate Button -->
-                                <button id="generate-client-offer-btn" class="w-full bg-amber-500 hover:bg-amber-400 text-black px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                                    <i class="ph ph-magic-wand"></i>
-                                    Wygeneruj ofertę
-                                </button>
-                            </div>
-
-                            <!-- ===== OFFER EXISTS ===== -->
-                            <div id="client-offer-exists" class="hidden">
-                                <!-- URL with copy and open -->
-                                <div class="flex items-center gap-2 mb-4">
-                                    <input type="text" id="client-offer-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700 rounded-lg px-3 py-2.5 text-xs text-zinc-300 font-mono truncate">
-                                    <button onclick="copyOfferUrl()" class="p-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-white/10" title="Kopiuj link">
-                                        <i class="ph ph-copy text-zinc-400"></i>
-                                    </button>
-                                    <button onclick="openOfferPreview()" class="p-2.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors border border-amber-500/30" title="Otwórz ofertę">
-                                        <i class="ph ph-arrow-square-out text-amber-400"></i>
-                                    </button>
-                                </div>
-
-                                <!-- Stats -->
-                                <div class="flex items-center gap-4 mb-4 text-xs">
-                                    <div class="flex items-center gap-2 text-zinc-400">
-                                        <i class="ph ph-calendar text-amber-400"></i>
-                                        <span>Ważna do:</span>
-                                        <span id="client-offer-valid-display" class="text-white font-medium">-</span>
-                                    </div>
-                                    <div class="relative">
-                                        <button onclick="toggleViewHistory()" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group">
-                                            <i class="ph ph-eye text-cyan-400"></i>
-                                            <span>Wyświetlenia:</span>
-                                            <span id="client-offer-views" class="text-white font-medium group-hover:text-cyan-400">0</span>
-                                            <i class="ph ph-caret-down text-[10px] text-zinc-500 group-hover:text-white"></i>
+                                        <!-- Generate Button -->
+                                        <button id="generate-client-offer-btn" class="w-full bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                                            <i class="ph ph-link-simple"></i>
+                                            Generuj link do oferty
                                         </button>
-                                        <!-- View History Dropdown -->
-                                        <div id="view-history-dropdown" class="hidden absolute top-full left-0 mt-2 w-56 bg-zinc-900 border border-white/10 rounded-lg shadow-xl z-20 overflow-hidden">
-                                            <div class="px-3 py-2 border-b border-white/5 bg-zinc-950/50">
-                                                <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Historia wyświetleń</span>
+                                    </div>
+
+                                    <!-- ===== RESULT: Offer exists ===== -->
+                                    <div id="client-offer-exists" class="hidden">
+                                        <!-- Link row -->
+                                        <div class="flex items-center gap-1.5 mb-3">
+                                            <input type="text" id="client-offer-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700/50 rounded-lg px-2.5 py-2 text-[11px] text-zinc-300 font-mono truncate">
+                                            <button onclick="copyOfferUrl()" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors" title="Kopiuj">
+                                                <i class="ph ph-copy text-zinc-400 text-sm"></i>
+                                            </button>
+                                            <button onclick="openOfferPreview()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Otwórz">
+                                                <i class="ph ph-arrow-square-out text-amber-400 text-sm"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Stats row -->
+                                        <div class="flex items-center justify-between text-[11px] text-zinc-500 mb-3 px-1">
+                                            <div class="flex items-center gap-3">
+                                                <span><i class="ph ph-calendar text-amber-400/70 mr-1"></i>do <span id="client-offer-valid-display" class="text-zinc-300">-</span></span>
+                                                <span class="relative">
+                                                    <button onclick="toggleViewHistory()" class="hover:text-white transition-colors">
+                                                        <i class="ph ph-eye text-cyan-400/70 mr-1"></i><span id="client-offer-views" class="text-zinc-300">0</span> wyśw.
+                                                    </button>
+                                                    <div id="view-history-dropdown" class="hidden absolute top-full left-0 mt-1 w-48 bg-zinc-900 border border-white/10 rounded-lg shadow-xl z-20 overflow-hidden">
+                                                        <div class="px-2 py-1.5 border-b border-white/5 bg-zinc-950/50 text-[9px] font-mono text-zinc-600 uppercase">Historia</div>
+                                                        <div id="view-history-list" class="max-h-32 overflow-y-auto"></div>
+                                                    </div>
+                                                </span>
                                             </div>
-                                            <div id="view-history-list" class="max-h-48 overflow-y-auto">
-                                            </div>
+                                            <button onclick="deleteClientOffer()" class="text-red-400/50 hover:text-red-400 transition-colors" title="Usuń">
+                                                <i class="ph ph-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Actions -->
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <button onclick="openOfferPreview()" class="bg-zinc-800 hover:bg-zinc-700 text-white px-2 py-2 rounded-lg text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 border border-white/5">
+                                                <i class="ph ph-eye"></i>Podgląd
+                                            </button>
+                                            <button onclick="downloadProformaFromCRM()" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-2 py-2 rounded-lg text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 border border-blue-500/20">
+                                                <i class="ph ph-file-pdf"></i>Proforma
+                                            </button>
+                                            <button onclick="createDiscountCodeForOffer()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 px-2 py-2 rounded-lg text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 border border-purple-500/20">
+                                                <i class="ph ph-ticket"></i>Rabat
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Actions -->
-                                <div class="flex gap-2">
-                                    <button onclick="openOfferPreview()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-white/10">
-                                        <i class="ph ph-arrow-square-out"></i>
-                                        Podgląd
-                                    </button>
-                                    <button onclick="downloadProformaFromCRM()" class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-blue-500/30">
-                                        <i class="ph ph-file-pdf"></i>
-                                        Proforma
-                                    </button>
-                                    <button onclick="createDiscountCodeForOffer()" class="flex-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-purple-500/30" title="Kod rabatowy">
-                                        <i class="ph ph-ticket"></i>
-                                        Rabat
-                                    </button>
-                                    <button onclick="deleteClientOffer()" class="px-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20 flex items-center justify-center">
-                                        <i class="ph ph-trash"></i>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -3612,6 +3568,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const enableToggle = document.getElementById('enable-payment-schedule');
             const configSection = document.getElementById('payment-schedule-config');
             const firstDateInput = document.getElementById('first-installment-date');
+            const paymentModeLabel = document.getElementById('payment-mode-label');
 
             if (!enableToggle) return;
 
@@ -3620,33 +3577,47 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             tomorrow.setDate(tomorrow.getDate() + 1);
             if (firstDateInput) firstDateInput.value = tomorrow.toISOString().split('T')[0];
 
-            // Toggle config visibility
+            // Toggle config visibility and update label
             enableToggle.addEventListener('change', () => {
                 if (configSection) {
                     if (enableToggle.checked) {
                         configSection.classList.remove('hidden');
+                        if (paymentModeLabel) paymentModeLabel.textContent = 'Ratalna';
                         updateInstallmentsPreview();
                     } else {
                         configSection.classList.add('hidden');
+                        if (paymentModeLabel) paymentModeLabel.textContent = 'Jednorazowa';
                     }
                 }
             });
 
-            // Update preview on any change
-            ['installments-count', 'installments-interval', 'first-installment-date', 'first-installment-amount', 'client-offer-custom-price'].forEach(id => {
+            // Update preview and price badge on any change
+            ['installments-count', 'installments-interval', 'first-installment-date', 'first-installment-amount', 'field-value'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.addEventListener('change', updateInstallmentsPreview);
-                    el.addEventListener('input', updateInstallmentsPreview);
+                    el.addEventListener('change', () => { updateInstallmentsPreview(); updatePriceBadge(); });
+                    el.addEventListener('input', () => { updateInstallmentsPreview(); updatePriceBadge(); });
                 }
             });
 
-            // Update preview when offer changes
-            document.getElementById('field-offer')?.addEventListener('change', updateInstallmentsPreview);
+            // Update preview and price badge when offer changes
+            document.getElementById('field-offer')?.addEventListener('change', () => {
+                updateInstallmentsPreview();
+                updatePriceBadge();
+            });
+        }
+
+        function updatePriceBadge() {
+            const badge = document.getElementById('offer-price-badge');
+            const totalAmount = getSchedulePrice();
+            if (badge) {
+                badge.textContent = totalAmount ? totalAmount.toLocaleString('pl-PL') + ' zł' : '0 zł';
+            }
         }
 
         function getSchedulePrice() {
-            const customPrice = parseFloat(document.getElementById('client-offer-custom-price')?.value);
+            // Use field-value (custom price) if set, otherwise offer price
+            const customPrice = parseFloat(document.getElementById('field-value')?.value);
             if (customPrice && customPrice > 0) return customPrice;
 
             const offerId = document.getElementById('field-offer')?.value;
@@ -3701,7 +3672,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (totalDisplay) totalDisplay.textContent = totalAmount ? totalAmount.toLocaleString('pl-PL') : '0';
 
             if (!totalAmount || !firstDateStr) {
-                previewContainer.innerHTML = '<p class="text-zinc-600 text-[11px] text-center py-1">Ustaw cenę</p>';
+                previewContainer.innerHTML = '<span class="text-zinc-600">Ustaw cenę</span>';
                 return;
             }
 
@@ -3709,23 +3680,13 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const firstDate = new Date(firstDateStr);
             const firstCustomAmount = parseFloat(document.getElementById('first-installment-amount')?.value) || 0;
 
-            let html = '<div class="grid grid-cols-2 gap-x-4 gap-y-1">';
+            // Compact inline preview (horizontal pills)
+            let html = '';
             installments.forEach((inst, idx) => {
-                const date = new Date(firstDate);
-                date.setDate(date.getDate() + (idx * interval));
                 const isHigher = idx === 0 && firstCustomAmount > 0;
-
-                html += `
-                    <div class="flex items-center justify-between text-[11px] py-0.5">
-                        <span class="${isHigher ? 'text-amber-400' : 'text-zinc-500'}">
-                            ${inst.number}. ${date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
-                        </span>
-                        <span class="${isHigher ? 'text-amber-400 font-semibold' : 'text-zinc-300'}">${inst.amount.toLocaleString('pl-PL')} zł</span>
-                    </div>
-                `;
+                html += `<span class="whitespace-nowrap ${isHigher ? 'text-amber-400 font-medium' : ''}">${inst.amount.toLocaleString('pl-PL')}</span>`;
+                if (idx < installments.length - 1) html += '<span class="text-zinc-600">+</span>';
             });
-            html += '</div>';
-
             previewContainer.innerHTML = html;
         }
 
@@ -3825,10 +3786,10 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
 
             // Get selected offer type
-            const offerType = document.querySelector('input[name="offer-type"]:checked')?.value || 'starter';
+            const offerType = document.getElementById('offer-type-select')?.value || 'starter';
 
-            // Get custom price (optional)
-            const customPriceInput = document.getElementById('client-offer-custom-price').value;
+            // Get custom price from field-value (optional)
+            const customPriceInput = document.getElementById('field-value')?.value;
             const customPrice = customPriceInput ? parseFloat(customPriceInput) : null;
 
             const token = generateToken();
@@ -3858,7 +3819,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 .single();
 
             btn.disabled = false;
-            btn.innerHTML = '<i class="ph ph-magic-wand"></i> Wygeneruj link';
+            btn.innerHTML = '<i class="ph ph-link-simple"></i> Generuj link do oferty';
 
             if (error) {
                 console.error('Error generating offer:', error);
