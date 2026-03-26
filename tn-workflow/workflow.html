@@ -8952,6 +8952,36 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 const adresParts = [workflow.client_street, [workflow.client_postal_code, workflow.client_city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
                 const firmaLinia = workflow.customer_company ? (' / ' + workflow.customer_company) : '';
 
+                // Generate payment terms based on schedule
+                let warunkiPlatnosci = '<p>2. Wynagrodzenie płatne jest jednorazowo, przed rozpoczęciem Etapu 1.</p>';
+                let nrPunktKonto = '3';
+
+                if (paymentSchedule && paymentInstallments?.length > 0) {
+                    const installmentsRows = paymentInstallments.map((inst, idx) => {
+                        const dueDate = new Date(inst.due_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+                        return `<tr><td style="padding: 6px 12px; border: 1px solid #ddd;">Rata ${inst.installment_number}</td><td style="padding: 6px 12px; border: 1px solid #ddd; text-align: right;"><strong>${parseFloat(inst.amount).toLocaleString('pl-PL')} zł</strong></td><td style="padding: 6px 12px; border: 1px solid #ddd;">${dueDate}</td></tr>`;
+                    }).join('');
+
+                    warunkiPlatnosci = `
+                        <p>2. Wynagrodzenie płatne jest w ratach, zgodnie z poniższym harmonogramem:</p>
+                        <table style="width: 100%; border-collapse: collapse; margin: 12px 0 16px 0; font-size: 13px;">
+                            <thead>
+                                <tr style="background: #f5f5f5;">
+                                    <th style="padding: 8px 12px; border: 1px solid #ddd; text-align: left;">Rata</th>
+                                    <th style="padding: 8px 12px; border: 1px solid #ddd; text-align: right;">Kwota</th>
+                                    <th style="padding: 8px 12px; border: 1px solid #ddd; text-align: left;">Termin płatności</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${installmentsRows}
+                            </tbody>
+                        </table>
+                        <p>3. Zleceniodawca zobowiązuje się do terminowego regulowania płatności zgodnie z powyższym harmonogramem. Brak wpłaty w terminie może skutkować wstrzymaniem prac do momentu uregulowania zaległości.</p>
+                        <p>4. W przypadku opóźnienia w płatności przekraczającego 14 dni, Wykonawca zastrzega sobie prawo do naliczenia odsetek ustawowych za opóźnienie oraz do odstąpienia od Umowy po bezskutecznym wezwaniu do zapłaty.</p>
+                    `;
+                    nrPunktKonto = '5';
+                }
+
                 const variables = {
                     '{{imie_nazwisko}}': workflow.customer_name || '',
                     '{{firma}}': workflow.customer_company || '',
@@ -8974,7 +9004,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     '{{cena}}': formatPrice(workflow.amount),
                     '{{data}}': today,
                     '{{data_dzis}}': today,
-                    '{{data_rozpoczecia}}': startDate
+                    '{{data_rozpoczecia}}': startDate,
+                    '{{warunki_platnosci}}': warunkiPlatnosci,
+                    '{{nr_punkt_konto}}': nrPunktKonto
                 };
 
                 Object.entries(variables).forEach(([key, value]) => {
