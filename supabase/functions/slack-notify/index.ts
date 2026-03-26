@@ -56,6 +56,11 @@ Deno.serve(async (req) => {
         message = formatProformaMessage(data)
         break
 
+      case 'schedule_viewed':
+        webhookUrl = webhookActivity
+        message = formatScheduleViewedMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -478,6 +483,113 @@ function formatOfferViewedMessage(data: {
         type: 'mrkdwn',
         text: historyText
       }
+    })
+  }
+
+  // Timestamp
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
+      }
+    ]
+  })
+
+  return { blocks }
+}
+
+function formatScheduleViewedMessage(data: {
+  lead_name?: string
+  lead_email: string
+  lead_phone?: string
+  lead_company?: string
+  lead_id?: string
+  schedule_id: string
+  total_amount: number
+  paid_amount: number
+  installments_total: number
+  installments_paid: number
+}) {
+  const displayName = data.lead_company || data.lead_name || data.lead_email
+  const progressPercent = data.total_amount > 0 ? Math.round((data.paid_amount / data.total_amount) * 100) : 0
+  const remaining = data.total_amount - data.paid_amount
+
+  const fields = [
+    { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
+    { type: 'mrkdwn', text: `*Postęp:*\n${data.installments_paid}/${data.installments_total} rat (${progressPercent}%)` }
+  ]
+
+  if (data.total_amount) {
+    fields.push({ type: 'mrkdwn', text: `*Suma:*\n${data.total_amount.toLocaleString('pl-PL')} PLN` })
+  }
+
+  if (remaining > 0) {
+    fields.push({ type: 'mrkdwn', text: `*Pozostało:*\n${remaining.toLocaleString('pl-PL')} PLN` })
+  }
+
+  if (data.lead_phone) {
+    fields.push({ type: 'mrkdwn', text: `*Telefon:*\n${data.lead_phone}` })
+  }
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: '📅 Klient otworzył harmonogram płatności',
+        emoji: true
+      }
+    },
+    {
+      type: 'section',
+      fields: fields
+    }
+  ]
+
+  // Action buttons
+  const actionElements: any[] = []
+
+  if (data.lead_id) {
+    actionElements.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: '📋 Zobacz lead',
+        emoji: true
+      },
+      url: `https://crm.tomekniedzwiecki.pl/lead?id=${data.lead_id}`,
+      action_id: 'view_lead'
+    })
+  }
+
+  if (data.lead_phone) {
+    let waPhone = data.lead_phone.replace(/[\s\-\(\)]/g, '')
+    if (waPhone.startsWith('0')) {
+      waPhone = '48' + waPhone.substring(1)
+    }
+    if (!waPhone.startsWith('+') && !waPhone.startsWith('48')) {
+      waPhone = '48' + waPhone
+    }
+    waPhone = waPhone.replace('+', '')
+
+    actionElements.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: '💬 WhatsApp',
+        emoji: true
+      },
+      url: `https://wa.me/${waPhone}`,
+      action_id: 'whatsapp'
+    })
+  }
+
+  if (actionElements.length > 0) {
+    blocks.push({
+      type: 'actions',
+      elements: actionElements
     })
   }
 

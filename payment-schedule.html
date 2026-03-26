@@ -41,6 +41,16 @@
             -webkit-backdrop-filter: blur(12px);
         }
 
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
         .installment-card {
             transition: all 0.2s ease;
         }
@@ -50,9 +60,6 @@
         .installment-card.paid {
             border-color: rgba(34, 197, 94, 0.3);
             background: rgba(34, 197, 94, 0.05);
-        }
-        .installment-card.pending {
-            border-color: rgba(255, 255, 255, 0.1);
         }
         .installment-card.current {
             border-color: rgba(251, 191, 36, 0.5);
@@ -71,6 +78,13 @@
         .pulse-glow {
             animation: pulse-glow 2s ease-in-out infinite;
         }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.3s ease-in-out; }
     </style>
 </head>
 <body class="min-h-screen font-sans text-sm tracking-tight antialiased">
@@ -78,7 +92,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="min-h-screen flex items-center justify-center px-4">
         <div class="text-center">
-            <div class="w-12 h-12 border-2 border-zinc-700 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+            <div class="w-12 h-12 border-2 border-zinc-700 border-t-amber-400 rounded-full animate-spin mx-auto mb-4"></div>
             <p class="text-zinc-400">Wczytywanie harmonogramu...</p>
         </div>
     </div>
@@ -86,21 +100,73 @@
     <!-- Not Found Screen -->
     <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
         <div class="w-full max-w-md text-center animate-enter">
-            <div class="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="ph ph-question text-4xl text-zinc-400"></i>
+            <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+                <i class="ph ph-calendar-x text-4xl text-zinc-500"></i>
             </div>
             <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono harmonogramu</h1>
             <p class="text-zinc-400">Ten link jest nieprawidłowy lub harmonogram został usunięty.</p>
         </div>
     </div>
 
-    <!-- Main Content -->
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md animate-enter">
+            <div class="glass-card rounded-2xl border border-white/10 p-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center border border-amber-500/20">
+                        <i class="ph ph-calendar-check text-3xl text-amber-400"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white mb-2">Harmonogram płatności</h1>
+                    <p class="text-zinc-500 text-sm">Podaj swój adres e-mail, aby zobaczyć harmonogram</p>
+                </div>
+
+                <!-- Client Preview Card -->
+                <div id="login-client-preview" class="bg-zinc-900/50 rounded-xl p-4 mb-6 border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-user text-amber-400"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div id="login-client-name" class="text-white font-medium truncate">-</div>
+                            <div class="flex items-center gap-2 text-xs text-zinc-500">
+                                <span id="login-installments-info">- rat</span>
+                                <span class="text-zinc-700">|</span>
+                                <span id="login-total-amount">- zł</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Input -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-zinc-500 text-xs font-mono uppercase tracking-wider mb-2">Adres e-mail</label>
+                        <input type="email" id="email-input" placeholder="twoj@email.pl"
+                            class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                            onkeypress="if(event.key === 'Enter') verifyEmail()">
+                    </div>
+                    <div id="login-error" class="hidden text-red-400 text-sm text-center"></div>
+                    <button onclick="verifyEmail()" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-6 py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/20">
+                        Pokaż harmonogram
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <p class="text-center text-zinc-600 text-xs mt-6">
+                Powered by <span class="text-zinc-500">TN Digital</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Schedule Screen -->
     <div id="main-screen" class="hidden">
         <!-- Header -->
         <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
             <div class="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center border border-amber-500/20">
                         <i class="ph ph-calendar-check text-xl text-amber-400"></i>
                     </div>
                     <div>
@@ -108,33 +174,56 @@
                         <div id="header-project" class="text-zinc-500 text-xs">-</div>
                     </div>
                 </div>
-                <div class="text-right">
-                    <div id="header-client" class="text-white font-medium text-sm">-</div>
-                </div>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+
+            <!-- Client Info Card -->
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mb-6 animate-enter">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center border border-amber-500/20 flex-shrink-0">
+                        <i class="ph ph-user text-2xl text-amber-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div id="client-display-name" class="text-xl font-bold text-white mb-1">-</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                            <div id="client-email-row" class="flex items-center gap-2">
+                                <i class="ph ph-envelope text-zinc-600"></i>
+                                <span id="client-email" class="text-zinc-400 truncate">-</span>
+                            </div>
+                            <div id="client-phone-row" class="hidden flex items-center gap-2">
+                                <i class="ph ph-phone text-zinc-600"></i>
+                                <span id="client-phone" class="text-zinc-400">-</span>
+                            </div>
+                            <div id="client-company-row" class="hidden flex items-center gap-2">
+                                <i class="ph ph-buildings text-zinc-600"></i>
+                                <span id="client-company" class="text-zinc-400">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Summary Card -->
-            <div class="glass-card rounded-2xl border border-white/10 p-6 mb-8 animate-enter">
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mb-6 animate-enter" style="animation-delay: 0.1s">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                    <div>
-                        <div class="text-zinc-500 text-xs mb-1">Łącznie do zapłaty</div>
-                        <div id="total-amount" class="text-2xl font-bold text-white">-</div>
+                    <div class="text-center sm:text-left">
+                        <div class="text-zinc-500 text-xs mb-1">Suma</div>
+                        <div id="total-amount" class="text-xl sm:text-2xl font-bold text-white">-</div>
                     </div>
-                    <div>
-                        <div class="text-zinc-500 text-xs mb-1">Opłacono</div>
-                        <div id="paid-amount" class="text-2xl font-bold text-green-400">-</div>
+                    <div class="text-center sm:text-left">
+                        <div class="text-zinc-500 text-xs mb-1">Wpłacono</div>
+                        <div id="paid-amount" class="text-xl sm:text-2xl font-bold text-emerald-400">-</div>
                     </div>
-                    <div>
+                    <div class="text-center sm:text-left">
                         <div class="text-zinc-500 text-xs mb-1">Pozostało</div>
-                        <div id="remaining-amount" class="text-2xl font-bold text-amber-400">-</div>
+                        <div id="remaining-amount" class="text-xl sm:text-2xl font-bold text-amber-400">-</div>
                     </div>
-                    <div>
-                        <div class="text-zinc-500 text-xs mb-1">Liczba rat</div>
-                        <div id="installments-count" class="text-2xl font-bold text-white">-</div>
+                    <div class="text-center sm:text-left">
+                        <div class="text-zinc-500 text-xs mb-1">Rat</div>
+                        <div id="installments-count" class="text-xl sm:text-2xl font-bold text-white">-</div>
                     </div>
                 </div>
 
@@ -142,25 +231,31 @@
                 <div class="mt-6">
                     <div class="flex items-center justify-between text-xs mb-2">
                         <span class="text-zinc-500">Postęp płatności</span>
-                        <span id="progress-percent" class="text-zinc-400">0%</span>
+                        <span id="progress-percent" class="text-zinc-400 font-medium">0%</span>
                     </div>
-                    <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div id="progress-bar" class="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    <div class="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-500" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
 
+            <!-- Section Title -->
+            <div class="flex items-center gap-2 mb-4 px-1 animate-enter" style="animation-delay: 0.15s">
+                <i class="ph ph-list-numbers text-amber-400"></i>
+                <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Lista rat</span>
+            </div>
+
             <!-- Installments List -->
-            <div class="space-y-4" id="installments-container">
+            <div class="space-y-3" id="installments-container">
                 <!-- Installments will be rendered here -->
             </div>
 
             <!-- Contact Section -->
-            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mt-8 animate-enter">
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mt-8 animate-enter" style="animation-delay: 0.3s">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h3 class="text-base font-semibold text-white mb-1">Masz pytania dotyczące płatności?</h3>
-                        <p class="text-zinc-400 text-sm">Skontaktuj się z nami, chętnie pomożemy.</p>
+                        <h3 class="text-base font-semibold text-white mb-1">Masz pytania?</h3>
+                        <p class="text-zinc-400 text-sm">Skontaktuj się z nami w sprawie płatności.</p>
                     </div>
                     <div class="flex gap-2">
                         <a href="mailto:kontakt@tn.digital" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
@@ -188,7 +283,7 @@
     </div>
 
     <!-- Success Toast -->
-    <div id="success-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <div id="success-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
         <div class="flex items-center gap-2">
             <i class="ph ph-check-circle text-xl"></i>
             <span>Płatność została zarejestrowana!</span>
@@ -202,9 +297,11 @@
 
         let workflow = null;
         let schedule = null;
+        let lead = null;
         let installments = [];
 
-        // Format currency
+        // ============ HELPERS ============
+
         function formatCurrency(amount) {
             return new Intl.NumberFormat('pl-PL', {
                 minimumFractionDigits: 0,
@@ -212,8 +309,8 @@
             }).format(amount) + ' zł';
         }
 
-        // Format date
         function formatDate(dateStr) {
+            if (!dateStr) return '-';
             const date = new Date(dateStr);
             return date.toLocaleDateString('pl-PL', {
                 day: 'numeric',
@@ -222,7 +319,6 @@
             });
         }
 
-        // Check if date is in the past
         function isPastDue(dateStr) {
             const date = new Date(dateStr);
             const today = new Date();
@@ -230,139 +326,32 @@
             return date < today;
         }
 
-        // Find current installment (first unpaid)
-        function findCurrentInstallment() {
-            return installments.find(i => i.status === 'pending' || i.status === 'overdue');
-        }
-
-        // Render installments
-        function renderInstallments() {
-            const container = document.getElementById('installments-container');
-            const currentInstallment = findCurrentInstallment();
-
-            container.innerHTML = installments.map((inst, index) => {
-                const isPaid = inst.status === 'paid';
-                const isOverdue = inst.status === 'overdue' || (inst.status === 'pending' && isPastDue(inst.due_date));
-                const isCurrent = currentInstallment && inst.id === currentInstallment.id;
-
-                let statusClass = 'pending';
-                let statusIcon = 'ph-circle';
-                let statusText = 'Oczekuje';
-                let statusColor = 'text-zinc-400';
-
-                if (isPaid) {
-                    statusClass = 'paid';
-                    statusIcon = 'ph-check-circle';
-                    statusText = 'Opłacona';
-                    statusColor = 'text-green-400';
-                } else if (isOverdue) {
-                    statusClass = 'overdue';
-                    statusIcon = 'ph-warning-circle';
-                    statusText = 'Zaległa';
-                    statusColor = 'text-red-400';
-                } else if (isCurrent) {
-                    statusClass = 'current';
-                    statusIcon = 'ph-arrow-right';
-                    statusText = 'Do opłacenia';
-                    statusColor = 'text-amber-400';
-                }
-
-                return `
-                    <div class="installment-card glass-card rounded-xl border p-5 ${statusClass} animate-enter" style="animation-delay: ${index * 0.1}s">
-                        <div class="flex items-center justify-between gap-4">
-                            <!-- Left: Number & Status -->
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl flex items-center justify-center ${isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : isCurrent ? 'bg-amber-500/20' : 'bg-zinc-800'}">
-                                    <span class="font-bold text-lg ${isPaid ? 'text-green-400' : isOverdue ? 'text-red-400' : isCurrent ? 'text-amber-400' : 'text-zinc-400'}">${inst.installment_number}</span>
-                                </div>
-                                <div>
-                                    <div class="font-semibold text-white mb-0.5">Rata ${inst.installment_number} z ${installments.length}</div>
-                                    <div class="flex items-center gap-2 text-sm">
-                                        <i class="${statusIcon} ${statusColor}"></i>
-                                        <span class="${statusColor}">${statusText}</span>
-                                        ${isPaid && inst.paid_at ? `<span class="text-zinc-600">• ${formatDate(inst.paid_at)}</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Right: Amount & Date & Action -->
-                            <div class="text-right flex items-center gap-4">
-                                <div>
-                                    <div class="font-bold text-white text-lg">${formatCurrency(inst.amount)}</div>
-                                    <div class="text-zinc-500 text-xs">
-                                        ${isPaid ? 'Opłacono' : `Termin: ${formatDate(inst.due_date)}`}
-                                    </div>
-                                </div>
-                                ${!isPaid ? `
-                                    <button onclick="payInstallment('${inst.id}')"
-                                            class="${isCurrent || isOverdue ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-lg shadow-amber-500/20' : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10'}
-                                                   px-4 py-2.5 rounded-lg font-semibold transition-all text-sm whitespace-nowrap
-                                                   ${isCurrent ? 'pulse-glow' : ''}">
-                                        <i class="ph ph-credit-card mr-1"></i>
-                                        Opłać
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Update summary
-        function updateSummary() {
-            const total = schedule.total_amount;
-            const paid = installments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
-            const remaining = total - paid;
-            const paidCount = installments.filter(i => i.status === 'paid').length;
-            const progressPercent = Math.round((paid / total) * 100);
-
-            document.getElementById('total-amount').textContent = formatCurrency(total);
-            document.getElementById('paid-amount').textContent = formatCurrency(paid);
-            document.getElementById('remaining-amount').textContent = formatCurrency(remaining);
-            document.getElementById('installments-count').textContent = `${paidCount}/${installments.length}`;
-            document.getElementById('progress-percent').textContent = `${progressPercent}%`;
-            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
-        }
-
-        // Pay installment - redirect to checkout
-        function payInstallment(installmentId) {
-            const inst = installments.find(i => i.id === installmentId);
-            if (!inst) return;
-
-            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
-
-            // Build checkout URL
-            const params = new URLSearchParams({
-                amount: inst.amount.toFixed(2),
-                description: `Rata ${inst.installment_number}/${installments.length}`,
-                installment_id: installmentId,
-                schedule_id: schedule.id,
-                skip_workflow: 'true'
+        function showScreen(screenId) {
+            ['loading-screen', 'not-found-screen', 'login-screen', 'main-screen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
             });
-
-            // Add lead_id or workflow_id
-            if (workflow?.id) {
-                params.set('workflow_id', workflow.id);
-            }
-            if (workflow?.lead?.id || schedule?.lead_id) {
-                params.set('lead_id', workflow?.lead?.id || schedule?.lead_id);
-            }
-
-            window.location.href = `${window.location.origin}${checkoutPath}?${params.toString()}`;
+            document.getElementById(screenId).classList.remove('hidden');
         }
 
-        // Show success toast
-        function showSuccessToast() {
-            const toast = document.getElementById('success-toast');
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 5000);
+        // ============ SLACK NOTIFICATIONS ============
+
+        async function sendSlackNotification(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/slack-notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Slack notification error:', err);
+            }
         }
 
-        // Initialize
+        // ============ INIT & LOAD ============
+
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
@@ -370,8 +359,7 @@
             const paymentSuccess = urlParams.get('payment') === 'success';
 
             if (!token && !scheduleId) {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('not-found-screen').classList.remove('hidden');
+                showScreen('not-found-screen');
                 return;
             }
 
@@ -393,25 +381,14 @@
                     }
 
                     schedule = scheduleData;
-                    workflow = scheduleData.workflow || {
-                        id: null,
-                        offer_name: 'Płatność ratalna',
-                        lead: scheduleData.lead
-                    };
-                    if (!workflow.lead && scheduleData.lead) {
-                        workflow.lead = scheduleData.lead;
-                    }
+                    lead = scheduleData.lead;
+                    workflow = scheduleData.workflow;
                 }
-                // Option 2: Load by workflow token (existing behavior)
+                // Option 2: Load by workflow token
                 else if (token) {
-                    // Fetch workflow by token
                     const { data: workflowData, error: workflowError } = await supabaseClient
                         .from('workflows')
-                        .select(`
-                            *,
-                            lead:leads(*),
-                            order:orders(*)
-                        `)
+                        .select(`*, lead:leads(*)`)
                         .eq('unique_token', token)
                         .single();
 
@@ -420,8 +397,8 @@
                     }
 
                     workflow = workflowData;
+                    lead = workflowData.lead;
 
-                    // Fetch payment schedule for workflow
                     const { data: scheduleData, error: scheduleError } = await supabaseClient
                         .from('payment_schedules')
                         .select('*')
@@ -436,33 +413,27 @@
                 }
 
                 // Fetch installments
-                const { data: installmentsData, error: installmentsError } = await supabaseClient
+                const { data: installmentsData } = await supabaseClient
                     .from('payment_installments')
                     .select('*')
                     .eq('schedule_id', schedule.id)
                     .order('installment_number', { ascending: true });
 
-                if (installmentsError) {
-                    throw new Error('Failed to fetch installments');
-                }
-
                 installments = installmentsData || [];
 
-                // Update UI
-                document.getElementById('header-project').textContent = workflow.offer_name || 'Projekt';
-                document.getElementById('header-client').textContent = workflow.lead?.name || workflow.lead?.email || '-';
+                if (!lead) {
+                    throw new Error('Lead data not found');
+                }
 
-                updateSummary();
-                renderInstallments();
+                // Update login screen preview
+                updateLoginPreview();
 
-                // Show main screen
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('main-screen').classList.remove('hidden');
+                // Show login screen
+                showScreen('login-screen');
 
-                // Show success toast if redirected from successful payment
+                // Handle payment success toast after login
                 if (paymentSuccess) {
-                    showSuccessToast();
-                    // Clean up URL
+                    sessionStorage.setItem('show_payment_success', 'true');
                     const cleanUrl = new URL(window.location.href);
                     cleanUrl.searchParams.delete('payment');
                     window.history.replaceState({}, '', cleanUrl.toString());
@@ -470,12 +441,229 @@
 
             } catch (error) {
                 console.error('Init error:', error);
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('not-found-screen').classList.remove('hidden');
+                showScreen('not-found-screen');
             }
         }
 
-        // Start
+        function updateLoginPreview() {
+            const displayName = lead.company || lead.name || lead.email;
+            document.getElementById('login-client-name').textContent = displayName;
+            document.getElementById('login-installments-info').textContent = `${installments.length} rat`;
+            document.getElementById('login-total-amount').textContent = formatCurrency(schedule.total_amount);
+        }
+
+        // ============ EMAIL VERIFICATION ============
+
+        async function verifyEmail() {
+            const emailInput = document.getElementById('email-input');
+            const email = emailInput.value.trim().toLowerCase();
+            const errorDiv = document.getElementById('login-error');
+
+            errorDiv.classList.add('hidden');
+            emailInput.classList.remove('border-red-500');
+
+            if (!email) {
+                errorDiv.textContent = 'Wprowadź adres e-mail';
+                errorDiv.classList.remove('hidden');
+                emailInput.classList.add('shake');
+                setTimeout(() => emailInput.classList.remove('shake'), 300);
+                return;
+            }
+
+            if (email !== lead.email.toLowerCase()) {
+                errorDiv.textContent = 'Nieprawidłowy adres e-mail';
+                errorDiv.classList.remove('hidden');
+                emailInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => emailInput.classList.remove('shake'), 300);
+                return;
+            }
+
+            // Send Slack notification about schedule view
+            const paidCount = installments.filter(i => i.status === 'paid').length;
+            const paidAmount = installments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+
+            sendSlackNotification('schedule_viewed', {
+                lead_name: lead.name,
+                lead_email: lead.email,
+                lead_phone: lead.phone,
+                lead_company: lead.company,
+                lead_id: lead.id,
+                schedule_id: schedule.id,
+                total_amount: schedule.total_amount,
+                paid_amount: paidAmount,
+                installments_total: installments.length,
+                installments_paid: paidCount
+            });
+
+            // Render and show main screen
+            renderSchedule();
+            showScreen('main-screen');
+
+            // Show success toast if redirected from payment
+            if (sessionStorage.getItem('show_payment_success')) {
+                sessionStorage.removeItem('show_payment_success');
+                setTimeout(showSuccessToast, 500);
+            }
+        }
+
+        // ============ RENDER ============
+
+        function renderSchedule() {
+            // Client info
+            const displayName = lead.company || lead.name || lead.email;
+            document.getElementById('client-display-name').textContent = displayName;
+            document.getElementById('client-email').textContent = lead.email;
+
+            if (lead.phone) {
+                document.getElementById('client-phone').textContent = lead.phone;
+                document.getElementById('client-phone-row').classList.remove('hidden');
+            }
+            if (lead.company && lead.name) {
+                document.getElementById('client-company').textContent = lead.company;
+                document.getElementById('client-company-row').classList.remove('hidden');
+            }
+
+            // Header
+            document.getElementById('header-project').textContent = workflow?.offer_name || 'Płatność ratalna';
+
+            // Summary
+            updateSummary();
+
+            // Installments
+            renderInstallments();
+        }
+
+        function updateSummary() {
+            const total = parseFloat(schedule.total_amount) || 0;
+            const paid = installments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+            const remaining = total - paid;
+            const paidCount = installments.filter(i => i.status === 'paid').length;
+            const progressPercent = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+            document.getElementById('total-amount').textContent = formatCurrency(total);
+            document.getElementById('paid-amount').textContent = formatCurrency(paid);
+            document.getElementById('remaining-amount').textContent = formatCurrency(remaining);
+            document.getElementById('installments-count').textContent = `${paidCount}/${installments.length}`;
+            document.getElementById('progress-percent').textContent = `${progressPercent}%`;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+        }
+
+        function renderInstallments() {
+            const container = document.getElementById('installments-container');
+            const currentInstallment = installments.find(i => i.status === 'pending' || i.status === 'overdue');
+
+            container.innerHTML = installments.map((inst, index) => {
+                const isPaid = inst.status === 'paid';
+                const isOverdue = inst.status === 'overdue' || (inst.status === 'pending' && isPastDue(inst.due_date));
+                const isCurrent = currentInstallment && inst.id === currentInstallment.id;
+
+                let statusClass = '';
+                let statusBadge = '';
+                let numberBg = 'bg-zinc-800 text-zinc-400';
+
+                if (isPaid) {
+                    statusClass = 'paid';
+                    statusBadge = `<span class="px-2 py-1 rounded-md text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <i class="ph ph-check"></i>Opłacona
+                    </span>`;
+                    numberBg = 'bg-emerald-500/20 text-emerald-400';
+                } else if (isOverdue) {
+                    statusClass = 'overdue';
+                    statusBadge = `<span class="px-2 py-1 rounded-md text-xs bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
+                        <i class="ph ph-warning"></i>Zaległa
+                    </span>`;
+                    numberBg = 'bg-red-500/20 text-red-400';
+                } else if (isCurrent) {
+                    statusClass = 'current';
+                    statusBadge = `<span class="px-2 py-1 rounded-md text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                        <i class="ph ph-arrow-right"></i>Do zapłaty
+                    </span>`;
+                    numberBg = 'bg-amber-500/20 text-amber-400';
+                } else {
+                    statusBadge = `<span class="px-2 py-1 rounded-md text-xs bg-zinc-800 text-zinc-500 border border-white/5 flex items-center gap-1">
+                        <i class="ph ph-clock"></i>Oczekuje
+                    </span>`;
+                }
+
+                const payButton = !isPaid ? `
+                    <button onclick="payInstallment('${inst.id}')"
+                            class="${isCurrent || isOverdue
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-lg shadow-amber-500/20'
+                                : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10'}
+                                   px-4 py-2.5 rounded-lg font-semibold transition-all text-sm whitespace-nowrap
+                                   ${isCurrent ? 'pulse-glow' : ''}">
+                        <i class="ph ph-credit-card mr-1.5"></i>
+                        Opłać
+                    </button>
+                ` : '';
+
+                return `
+                    <div class="installment-card glass-card rounded-xl border border-white/10 p-4 sm:p-5 ${statusClass} animate-enter" style="animation-delay: ${0.2 + index * 0.05}s">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <!-- Left: Number, Info, Status -->
+                            <div class="flex items-center gap-4">
+                                <div class="w-11 h-11 rounded-xl flex items-center justify-center ${numberBg} flex-shrink-0">
+                                    ${isPaid
+                                        ? '<i class="ph ph-check text-lg"></i>'
+                                        : `<span class="font-bold text-base">${inst.installment_number}</span>`}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-bold text-white text-lg">${formatCurrency(inst.amount)}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <div class="text-zinc-500 text-sm">
+                                        ${isPaid && inst.paid_at
+                                            ? `Opłacono: ${formatDate(inst.paid_at)}`
+                                            : `Termin: ${formatDate(inst.due_date)}`}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Action -->
+                            ${payButton ? `<div class="sm:flex-shrink-0">${payButton}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============ PAYMENT ============
+
+        function payInstallment(installmentId) {
+            const inst = installments.find(i => i.id === installmentId);
+            if (!inst) return;
+
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
+
+            const params = new URLSearchParams({
+                amount: inst.amount.toFixed(2),
+                description: `Rata ${inst.installment_number}/${installments.length}`,
+                installment_id: installmentId,
+                schedule_id: schedule.id,
+                skip_workflow: 'true'
+            });
+
+            if (workflow?.id) {
+                params.set('workflow_id', workflow.id);
+            }
+            if (lead?.id) {
+                params.set('lead_id', lead.id);
+            }
+
+            window.location.href = `${window.location.origin}${checkoutPath}?${params.toString()}`;
+        }
+
+        function showSuccessToast() {
+            const toast = document.getElementById('success-toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 5000);
+        }
+
+        // ============ START ============
         init();
     </script>
 </body>
