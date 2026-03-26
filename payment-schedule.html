@@ -330,13 +330,27 @@
             const inst = installments.find(i => i.id === installmentId);
             if (!inst) return;
 
-            // Build checkout URL with installment parameters
-            const checkoutUrl = new URL('/checkout/', window.location.origin);
-            checkoutUrl.searchParams.set('installment_id', installmentId);
-            checkoutUrl.searchParams.set('workflow_id', workflow.id);
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
 
-            // Redirect to checkout
-            window.location.href = checkoutUrl.toString();
+            // Build checkout URL
+            const params = new URLSearchParams({
+                amount: inst.amount.toFixed(2),
+                description: `Rata ${inst.installment_number}/${installments.length}`,
+                installment_id: installmentId,
+                schedule_id: schedule.id,
+                skip_workflow: 'true'
+            });
+
+            // Add lead_id or workflow_id
+            if (workflow?.id) {
+                params.set('workflow_id', workflow.id);
+            }
+            if (workflow?.lead?.id || schedule?.lead_id) {
+                params.set('lead_id', workflow?.lead?.id || schedule?.lead_id);
+            }
+
+            window.location.href = `${window.location.origin}${checkoutPath}?${params.toString()}`;
         }
 
         // Show success toast
@@ -352,44 +366,74 @@
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
+            const scheduleId = urlParams.get('schedule');
             const paymentSuccess = urlParams.get('payment') === 'success';
 
-            if (!token) {
+            if (!token && !scheduleId) {
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('not-found-screen').classList.remove('hidden');
                 return;
             }
 
             try {
-                // Fetch workflow by token
-                const { data: workflowData, error: workflowError } = await supabaseClient
-                    .from('workflows')
-                    .select(`
-                        *,
-                        lead:leads(*),
-                        order:orders(*)
-                    `)
-                    .eq('unique_token', token)
-                    .single();
+                // Option 1: Load by schedule ID (for lead-based schedules)
+                if (scheduleId) {
+                    const { data: scheduleData, error: scheduleError } = await supabaseClient
+                        .from('payment_schedules')
+                        .select(`
+                            *,
+                            lead:leads(*),
+                            workflow:workflows(*)
+                        `)
+                        .eq('id', scheduleId)
+                        .single();
 
-                if (workflowError || !workflowData) {
-                    throw new Error('Workflow not found');
+                    if (scheduleError || !scheduleData) {
+                        throw new Error('Payment schedule not found');
+                    }
+
+                    schedule = scheduleData;
+                    workflow = scheduleData.workflow || {
+                        id: null,
+                        offer_name: 'Płatność ratalna',
+                        lead: scheduleData.lead
+                    };
+                    if (!workflow.lead && scheduleData.lead) {
+                        workflow.lead = scheduleData.lead;
+                    }
                 }
+                // Option 2: Load by workflow token (existing behavior)
+                else if (token) {
+                    // Fetch workflow by token
+                    const { data: workflowData, error: workflowError } = await supabaseClient
+                        .from('workflows')
+                        .select(`
+                            *,
+                            lead:leads(*),
+                            order:orders(*)
+                        `)
+                        .eq('unique_token', token)
+                        .single();
 
-                workflow = workflowData;
+                    if (workflowError || !workflowData) {
+                        throw new Error('Workflow not found');
+                    }
 
-                // Fetch payment schedule
-                const { data: scheduleData, error: scheduleError } = await supabaseClient
-                    .from('payment_schedules')
-                    .select('*')
-                    .eq('workflow_id', workflow.id)
-                    .single();
+                    workflow = workflowData;
 
-                if (scheduleError || !scheduleData) {
-                    throw new Error('Payment schedule not found');
+                    // Fetch payment schedule for workflow
+                    const { data: scheduleData, error: scheduleError } = await supabaseClient
+                        .from('payment_schedules')
+                        .select('*')
+                        .eq('workflow_id', workflow.id)
+                        .single();
+
+                    if (scheduleError || !scheduleData) {
+                        throw new Error('Payment schedule not found');
+                    }
+
+                    schedule = scheduleData;
                 }
-
-                schedule = scheduleData;
 
                 // Fetch installments
                 const { data: installmentsData, error: installmentsError } = await supabaseClient

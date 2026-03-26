@@ -879,6 +879,23 @@
                                                 <i class="ph ph-ticket"></i>Rabat
                                             </button>
                                         </div>
+
+                                        <!-- Payment Schedule Link (if exists) -->
+                                        <div id="payment-schedule-link-section" class="hidden mt-4 pt-4 border-t border-white/5">
+                                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2">
+                                                <i class="ph ph-calendar-check text-amber-400"></i>
+                                                <span class="font-mono uppercase">Harmonogram płatności</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <input type="text" id="payment-schedule-url" readonly class="flex-1 bg-zinc-900/80 border border-amber-500/30 rounded-lg px-2.5 py-2 text-[11px] text-zinc-300 font-mono truncate">
+                                                <button onclick="copyScheduleUrl()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Kopiuj">
+                                                    <i class="ph ph-copy text-amber-400 text-sm"></i>
+                                                </button>
+                                                <button onclick="openSchedulePreview()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Otwórz">
+                                                    <i class="ph ph-arrow-square-out text-amber-400 text-sm"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -3497,6 +3514,9 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 const validDate = new Date(clientOffer.valid_until);
                 document.getElementById('client-offer-valid-display').textContent = validDate.toLocaleDateString('pl-PL');
                 document.getElementById('client-offer-views').textContent = clientOffer.view_count || 0;
+
+                // Load payment schedule link if exists
+                loadExistingSchedule();
             } else {
                 // Show empty state - form to generate
                 emptyState.classList.remove('hidden');
@@ -3839,6 +3859,69 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
         }
 
+        let currentScheduleId = null;
+
+        function showPaymentScheduleLink(scheduleId) {
+            currentScheduleId = scheduleId;
+            const section = document.getElementById('payment-schedule-link-section');
+            const urlInput = document.getElementById('payment-schedule-url');
+
+            if (!section || !urlInput) return;
+
+            const baseUrl = window.location.origin;
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const schedulePath = isLocal ? '/payment-schedule.html' : '/payment-schedule';
+            const scheduleUrl = `${baseUrl}${schedulePath}?schedule=${scheduleId}`;
+
+            urlInput.value = scheduleUrl;
+            section.classList.remove('hidden');
+        }
+
+        function copyScheduleUrl() {
+            const urlInput = document.getElementById('payment-schedule-url');
+            if (!urlInput) return;
+
+            urlInput.select();
+            document.execCommand('copy');
+
+            // Show feedback
+            const btn = urlInput.nextElementSibling;
+            const icon = btn.querySelector('i');
+            icon.classList.remove('ph-copy');
+            icon.classList.add('ph-check');
+
+            setTimeout(() => {
+                icon.classList.remove('ph-check');
+                icon.classList.add('ph-copy');
+            }, 2000);
+        }
+
+        function openSchedulePreview() {
+            const url = document.getElementById('payment-schedule-url')?.value;
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        // Load existing schedule for lead
+        async function loadExistingSchedule() {
+            if (!lead?.id) return;
+
+            try {
+                const { data: scheduleData } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('id')
+                    .eq('lead_id', lead.id)
+                    .single();
+
+                if (scheduleData) {
+                    showPaymentScheduleLink(scheduleData.id);
+                }
+            } catch (err) {
+                // No schedule exists - that's fine
+            }
+        }
+
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(initPaymentScheduleUI, 100);
@@ -3906,8 +3989,12 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
             // Create payment schedule if enabled
             const scheduleData = getPaymentScheduleData();
+            let createdSchedule = null;
             if (scheduleData) {
-                await createPaymentScheduleForLead(lead.id);
+                createdSchedule = await createPaymentScheduleForLead(lead.id);
+                if (createdSchedule) {
+                    showPaymentScheduleLink(createdSchedule.id);
+                }
             }
 
             // Log to audit
