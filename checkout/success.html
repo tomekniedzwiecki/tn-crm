@@ -330,24 +330,24 @@
                     .single();
 
                 // Check if this is an installment payment
-                if (order?.installment_id && order?.workflow_id) {
-                    // Fetch workflow token for redirect
-                    const { data: workflow } = await supabaseClient
-                        .from('workflows')
-                        .select('unique_token')
-                        .eq('id', order.workflow_id)
+                if (order?.installment_id) {
+                    // Fetch schedule_id from installment
+                    const { data: installment } = await supabaseClient
+                        .from('payment_installments')
+                        .select('schedule_id')
+                        .eq('id', order.installment_id)
                         .single();
 
-                    if (workflow?.unique_token) {
+                    if (installment?.schedule_id) {
                         // Show installment-specific UI
                         document.getElementById('whats-next-standard').classList.add('hidden');
                         document.getElementById('whats-next-installment').classList.remove('hidden');
                         document.getElementById('actions-standard').classList.add('hidden');
                         document.getElementById('actions-installment').classList.remove('hidden');
 
-                        // Set schedule link
+                        // Set schedule link using schedule_id (works for both lead and workflow schedules)
                         document.getElementById('schedule-link').href =
-                            `/payment-schedule.html?token=${workflow.unique_token}&payment=success`;
+                            `/payment-schedule?schedule=${installment.schedule_id}&payment=success`;
                     }
                 }
 
