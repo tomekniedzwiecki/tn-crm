@@ -1130,10 +1130,64 @@
                 orderData
             );
 
+            // If order marked as paid, sync with payment installments
+            if (orderData.status === 'paid' && result.data.workflow_id) {
+                await syncOrderWithInstallment(result.data);
+            }
+
             closeOrderModal();
             loadOrders();
             showToast(isEdit ? 'Zamówienie zaktualizowane' : 'Zamówienie utworzone');
         });
+
+        // Sync paid order with payment installment
+        async function syncOrderWithInstallment(order) {
+            if (!order.workflow_id || order.status !== 'paid') return;
+
+            try {
+                // Find payment schedule for this workflow
+                const { data: schedule } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('id')
+                    .eq('workflow_id', order.workflow_id)
+                    .single();
+
+                if (!schedule) return; // No schedule for this workflow
+
+                // Find first unpaid installment, prefer matching amount
+                const { data: installments } = await supabaseClient
+                    .from('payment_installments')
+                    .select('id, amount, status')
+                    .eq('schedule_id', schedule.id)
+                    .eq('status', 'pending')
+                    .order('installment_number', { ascending: true });
+
+                if (!installments || installments.length === 0) return;
+
+                // Try to find installment with matching amount, otherwise take first
+                const orderAmount = parseFloat(order.amount);
+                let targetInstallment = installments.find(i => Math.abs(parseFloat(i.amount) - orderAmount) < 0.01);
+                if (!targetInstallment) {
+                    targetInstallment = installments[0];
+                }
+
+                // Mark installment as paid
+                const { error } = await supabaseClient
+                    .from('payment_installments')
+                    .update({
+                        status: 'paid',
+                        paid_at: order.paid_at || new Date().toISOString(),
+                        order_id: order.id
+                    })
+                    .eq('id', targetInstallment.id);
+
+                if (!error) {
+                    console.log('[orders] Synced order with installment:', targetInstallment.id);
+                }
+            } catch (err) {
+                console.error('[orders] Error syncing with installment:', err);
+            }
+        }
 
         // Pay with Tpay
         async function payWithTpay(orderId) {
