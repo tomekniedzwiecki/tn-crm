@@ -446,8 +446,19 @@
 
                 installments = installmentsData || [];
 
-                if (!lead) {
-                    throw new Error('Lead data not found');
+                // If no lead but we have workflow, create pseudo-lead from workflow customer data
+                if (!lead && workflow) {
+                    lead = {
+                        id: null,
+                        name: workflow.customer_name,
+                        email: workflow.customer_email,
+                        phone: workflow.customer_phone,
+                        company: workflow.customer_company
+                    };
+                }
+
+                if (!lead || !lead.email) {
+                    throw new Error('Client data not found');
                 }
 
                 // Update login screen preview
