@@ -866,6 +866,55 @@
                                         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">PLN</span>
                                     </div>
                                 </div>
+
+                                <!-- Payment Schedule Toggle -->
+                                <div class="mb-4">
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <input type="checkbox" id="enable-payment-schedule" class="sr-only peer">
+                                        <div class="w-10 h-5 bg-zinc-800 rounded-full peer-checked:bg-amber-500/30 transition-colors relative border border-white/10 peer-checked:border-amber-500/50">
+                                            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-zinc-500 rounded-full peer-checked:translate-x-5 peer-checked:bg-amber-400 transition-all"></div>
+                                        </div>
+                                        <span class="text-zinc-400 text-xs group-hover:text-white transition-colors">Harmonogram płatności ratalnych</span>
+                                    </label>
+                                </div>
+
+                                <!-- Payment Schedule Section (hidden by default) -->
+                                <div id="payment-schedule-section" class="hidden mb-4 p-4 bg-zinc-900/50 rounded-lg border border-amber-500/20">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <i class="ph ph-calendar-check text-amber-400"></i>
+                                        <span class="text-xs font-medium text-white">Konfiguracja rat</span>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3 mb-3">
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Liczba rat</label>
+                                            <select id="installments-count" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                                                <option value="2">2 raty</option>
+                                                <option value="3">3 raty</option>
+                                                <option value="4" selected>4 raty</option>
+                                                <option value="6">6 rat</option>
+                                                <option value="12">12 rat</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Odstęp między ratami</label>
+                                            <select id="installments-interval" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
+                                                <option value="7">Tygodniowo</option>
+                                                <option value="14">Co 2 tygodnie</option>
+                                                <option value="30" selected>Miesięcznie</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Data pierwszej raty</label>
+                                        <input type="date" id="first-installment-date" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                                    </div>
+
+                                    <div id="installments-preview" class="space-y-2 mt-3 pt-3 border-t border-white/5">
+                                    </div>
+                                </div>
+
                                 <button id="generate-client-offer-btn" class="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-amber-500/30">
                                     <i class="ph ph-magic-wand"></i>
                                     Wygeneruj link
@@ -3545,6 +3594,179 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
         }
 
+        // ============ PAYMENT SCHEDULE FUNCTIONS ============
+
+        function initPaymentScheduleUI() {
+            const enableToggle = document.getElementById('enable-payment-schedule');
+            const scheduleSection = document.getElementById('payment-schedule-section');
+            const firstDateInput = document.getElementById('first-installment-date');
+
+            if (!enableToggle || !scheduleSection) return;
+
+            // Set default first date (tomorrow)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            firstDateInput.value = tomorrow.toISOString().split('T')[0];
+
+            // Toggle visibility
+            enableToggle.addEventListener('change', () => {
+                if (enableToggle.checked) {
+                    scheduleSection.classList.remove('hidden');
+                    updateInstallmentsPreview();
+                } else {
+                    scheduleSection.classList.add('hidden');
+                }
+            });
+
+            // Update preview on any change
+            ['installments-count', 'installments-interval', 'first-installment-date', 'client-offer-custom-price'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', updateInstallmentsPreview);
+                    el.addEventListener('input', updateInstallmentsPreview);
+                }
+            });
+
+            // Also update when offer changes (to get price)
+            document.getElementById('field-offer')?.addEventListener('change', updateInstallmentsPreview);
+        }
+
+        function getSchedulePrice() {
+            const customPrice = parseFloat(document.getElementById('client-offer-custom-price')?.value);
+            if (customPrice && customPrice > 0) return customPrice;
+
+            const offerId = document.getElementById('field-offer')?.value;
+            const selectedOffer = offers.find(o => o.id === offerId);
+            return selectedOffer?.price || 0;
+        }
+
+        function updateInstallmentsPreview() {
+            const previewContainer = document.getElementById('installments-preview');
+            if (!previewContainer) return;
+
+            const count = parseInt(document.getElementById('installments-count')?.value) || 4;
+            const interval = parseInt(document.getElementById('installments-interval')?.value) || 30;
+            const firstDateStr = document.getElementById('first-installment-date')?.value;
+            const totalAmount = getSchedulePrice();
+
+            if (!totalAmount || !firstDateStr) {
+                previewContainer.innerHTML = '<p class="text-zinc-500 text-xs">Wybierz ofertę i datę pierwszej raty</p>';
+                return;
+            }
+
+            const installmentAmount = Math.round(totalAmount / count);
+            const lastInstallmentAmount = totalAmount - (installmentAmount * (count - 1));
+            const firstDate = new Date(firstDateStr);
+
+            let html = '<div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Podgląd harmonogramu</div>';
+
+            for (let i = 0; i < count; i++) {
+                const date = new Date(firstDate);
+                date.setDate(date.getDate() + (i * interval));
+                const amount = (i === count - 1) ? lastInstallmentAmount : installmentAmount;
+
+                html += `
+                    <div class="flex items-center justify-between py-1.5 ${i > 0 ? 'border-t border-white/5' : ''}">
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
+                            <span class="text-xs text-zinc-400">${date.toLocaleDateString('pl-PL')}</span>
+                        </div>
+                        <span class="text-xs font-medium text-white">${amount.toLocaleString('pl-PL')} zł</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="flex items-center justify-between pt-2 mt-2 border-t border-amber-500/30">
+                    <span class="text-xs text-amber-400 font-medium">Razem</span>
+                    <span class="text-sm font-bold text-amber-400">${totalAmount.toLocaleString('pl-PL')} zł</span>
+                </div>
+            `;
+
+            previewContainer.innerHTML = html;
+        }
+
+        function getPaymentScheduleData() {
+            const enabled = document.getElementById('enable-payment-schedule')?.checked;
+            if (!enabled) return null;
+
+            const count = parseInt(document.getElementById('installments-count')?.value) || 4;
+            const interval = parseInt(document.getElementById('installments-interval')?.value) || 30;
+            const firstDateStr = document.getElementById('first-installment-date')?.value;
+            const totalAmount = getSchedulePrice();
+
+            if (!totalAmount || !firstDateStr) return null;
+
+            const installmentAmount = Math.round(totalAmount / count);
+            const lastInstallmentAmount = totalAmount - (installmentAmount * (count - 1));
+            const firstDate = new Date(firstDateStr);
+
+            const installments = [];
+            for (let i = 0; i < count; i++) {
+                const date = new Date(firstDate);
+                date.setDate(date.getDate() + (i * interval));
+                installments.push({
+                    installment_number: i + 1,
+                    amount: (i === count - 1) ? lastInstallmentAmount : installmentAmount,
+                    due_date: date.toISOString().split('T')[0]
+                });
+            }
+
+            return {
+                total_amount: totalAmount,
+                installments_count: count,
+                installments
+            };
+        }
+
+        async function createPaymentScheduleForLead(leadId) {
+            const scheduleData = getPaymentScheduleData();
+            if (!scheduleData) return null;
+
+            try {
+                // Create schedule
+                const { data: schedule, error: scheduleError } = await supabaseClient
+                    .from('payment_schedules')
+                    .insert({
+                        lead_id: leadId,
+                        total_amount: scheduleData.total_amount,
+                        installments_count: scheduleData.installments_count,
+                        created_by: currentMember?.id
+                    })
+                    .select()
+                    .single();
+
+                if (scheduleError) throw scheduleError;
+
+                // Create installments
+                const installmentsData = scheduleData.installments.map(inst => ({
+                    schedule_id: schedule.id,
+                    installment_number: inst.installment_number,
+                    amount: inst.amount,
+                    due_date: inst.due_date,
+                    status: 'pending'
+                }));
+
+                const { error: installmentsError } = await supabaseClient
+                    .from('payment_installments')
+                    .insert(installmentsData);
+
+                if (installmentsError) throw installmentsError;
+
+                console.log('[lead] Payment schedule created:', schedule.id);
+                return schedule;
+
+            } catch (err) {
+                console.error('[lead] Error creating payment schedule:', err);
+                return null;
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initPaymentScheduleUI, 100);
+        });
+
         async function generateClientOffer() {
             if (!lead || !currentMember) return;
 
@@ -3605,11 +3827,18 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             clientOffer = data;
             updateClientOfferSection();
 
+            // Create payment schedule if enabled
+            const scheduleData = getPaymentScheduleData();
+            if (scheduleData) {
+                await createPaymentScheduleForLead(lead.id);
+            }
+
             // Log to audit
             logAuditActivity('create', 'client_offer', data.id, lead.email, null, {
                 offer_id: offerId,
                 valid_until: validUntil,
-                token: token
+                token: token,
+                has_payment_schedule: !!scheduleData
             });
 
             // Send first email immediately + schedule follow-up emails

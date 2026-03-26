@@ -609,6 +609,78 @@
                     <div id="pending-actions-card" class="hidden"></div>
                     <div id="pending-actions-list" class="hidden"></div>
 
+                    <!-- Payment Schedule Card -->
+                    <div id="payment-schedule-card" class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-2xl overflow-hidden mb-5">
+                        <div class="flex items-center justify-between px-5 py-4 border-b border-[#1a1a1a]">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                    <i class="ph ph-calendar-check text-amber-400 text-[18px]"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold text-[14px]">Harmonogram płatności</h3>
+                                    <p id="schedule-status-text" class="text-[#555] text-[11px]">Brak harmonogramu</p>
+                                </div>
+                            </div>
+                            <div id="schedule-actions" class="flex items-center gap-2">
+                                <button id="create-schedule-btn" onclick="openCreateScheduleModal()" class="h-8 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5 border border-amber-500/30">
+                                    <i class="ph ph-plus text-[14px]"></i>
+                                    Utwórz harmonogram
+                                </button>
+                                <button id="copy-schedule-link-btn" onclick="copyScheduleLink()" class="hidden h-8 px-3 bg-white/5 hover:bg-white/10 text-[#888] hover:text-white text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-link text-[14px]"></i>
+                                    Kopiuj link
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Schedule Content (hidden when no schedule) -->
+                        <div id="schedule-content" class="hidden p-5">
+                            <!-- Summary -->
+                            <div class="grid grid-cols-4 gap-4 mb-5 pb-5 border-b border-[#1a1a1a]">
+                                <div>
+                                    <div class="text-[#555] text-[10px] font-medium uppercase tracking-wider mb-1">Razem</div>
+                                    <div id="schedule-total" class="text-white text-[15px] font-semibold font-mono">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-[#555] text-[10px] font-medium uppercase tracking-wider mb-1">Opłacono</div>
+                                    <div id="schedule-paid" class="text-emerald-400 text-[15px] font-semibold font-mono">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-[#555] text-[10px] font-medium uppercase tracking-wider mb-1">Pozostało</div>
+                                    <div id="schedule-remaining" class="text-amber-400 text-[15px] font-semibold font-mono">-</div>
+                                </div>
+                                <div>
+                                    <div class="text-[#555] text-[10px] font-medium uppercase tracking-wider mb-1">Status</div>
+                                    <div id="schedule-status-badge" class="text-[12px] font-medium">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Installments List -->
+                            <div id="installments-list" class="space-y-2">
+                                <!-- Installments rendered here by JS -->
+                            </div>
+
+                            <!-- Delete Schedule -->
+                            <div class="mt-5 pt-5 border-t border-[#1a1a1a] flex justify-end">
+                                <button onclick="deleteSchedule()" class="text-[11px] text-red-400/60 hover:text-red-400 transition-colors flex items-center gap-1">
+                                    <i class="ph ph-trash text-[12px]"></i>
+                                    Usuń harmonogram
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="schedule-empty" class="p-5">
+                            <div class="flex flex-col items-center justify-center py-6 text-center">
+                                <div class="w-12 h-12 rounded-full bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-3">
+                                    <i class="ph ph-calendar-blank text-[20px] text-[#333]"></i>
+                                </div>
+                                <div class="text-[#444] text-[13px] mb-1">Brak harmonogramu płatności</div>
+                                <div class="text-[#333] text-[11px]">Kliknij "Utwórz harmonogram" aby rozbić płatność na raty</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Unified Activity Box -->
                     <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden">
                         <!-- Tabs Header -->
@@ -1054,18 +1126,23 @@
                         <div class="mb-10">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider">Logo</h4>
+                                <button onclick="generateAllLogos()" id="generate-all-logos-btn" class="text-pink-400 hover:text-pink-300 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 transition-colors">
+                                    <i class="ph ph-magic-wand"></i>
+                                    <span>Generuj wszystkie (5)</span>
+                                </button>
                             </div>
-                            <!-- Logo AI Prompt - visible by default -->
-                            <div id="logo-prompt-box" class="mb-4 bg-gradient-to-r from-pink-500/10 to-transparent border border-pink-500/20 rounded-lg p-3">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <i class="ph ph-magic-wand text-pink-400 text-sm shrink-0"></i>
-                                        <span class="text-zinc-400 text-xs truncate">Prompt: Logo na jasnym tle</span>
-                                    </div>
-                                    <button onclick="copyLogoPrompt()" id="logo-prompt-copy-btn" class="shrink-0 text-xs text-pink-400 hover:text-pink-300 flex items-center gap-1.5 px-2.5 py-1 rounded bg-pink-500/10 hover:bg-pink-500/20 transition-colors">
-                                        <i class="ph ph-copy" id="logo-prompt-copy-icon"></i>
-                                        <span id="logo-prompt-copy-text">Kopiuj</span>
-                                    </button>
+                            <!-- Logo AI Prompts - chips like mockups -->
+                            <div id="logo-prompts-container" class="mb-4">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="ph ph-sparkle text-pink-400 text-sm"></i>
+                                    <span class="text-zinc-500 text-xs">Kliknij prompt aby wygenerować logo (Shift+klik = kopiuj)</span>
+                                </div>
+                                <div id="logo-prompts-chips" class="flex flex-wrap gap-2">
+                                    <!-- Logo prompt chips rendered by JS -->
+                                </div>
+                                <div id="logo-queue-status" class="mt-2 text-xs text-zinc-500 hidden">
+                                    <i class="ph ph-spinner-gap animate-spin"></i>
+                                    <span id="logo-queue-text">Generowanie...</span>
                                 </div>
                             </div>
                             <!-- Logo grid - items + dropzone rendered by JS -->
@@ -4123,6 +4200,7 @@
             loadLastAdminAction();
             loadEmailHistory();
             loadComments();
+            loadPaymentSchedule();
         }
 
         async function updateNavChecks() {
@@ -4897,6 +4975,338 @@
             } catch (err) {
                 console.error('Save amount error:', err);
                 showToast('Błąd zapisu kwoty', 'error');
+            }
+        }
+
+        // ============ PAYMENT SCHEDULE ============
+
+        let paymentSchedule = null;
+        let paymentInstallments = [];
+
+        async function loadPaymentSchedule() {
+            try {
+                const { data: schedule, error: scheduleError } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .single();
+
+                if (scheduleError && scheduleError.code !== 'PGRST116') {
+                    console.error('Error loading schedule:', scheduleError);
+                    return;
+                }
+
+                if (schedule) {
+                    paymentSchedule = schedule;
+
+                    const { data: installments, error: installmentsError } = await supabaseClient
+                        .from('payment_installments')
+                        .select('*')
+                        .eq('schedule_id', schedule.id)
+                        .order('installment_number', { ascending: true });
+
+                    if (!installmentsError) {
+                        paymentInstallments = installments || [];
+                    }
+                }
+
+                renderPaymentSchedule();
+            } catch (e) {
+                console.error('Load payment schedule error:', e);
+            }
+        }
+
+        function renderPaymentSchedule() {
+            const card = document.getElementById('payment-schedule-card');
+            const content = document.getElementById('schedule-content');
+            const empty = document.getElementById('schedule-empty');
+            const createBtn = document.getElementById('create-schedule-btn');
+            const copyBtn = document.getElementById('copy-schedule-link-btn');
+            const statusText = document.getElementById('schedule-status-text');
+
+            if (!paymentSchedule || paymentInstallments.length === 0) {
+                content.classList.add('hidden');
+                empty.classList.remove('hidden');
+                createBtn.classList.remove('hidden');
+                copyBtn.classList.add('hidden');
+                statusText.textContent = 'Brak harmonogramu';
+                return;
+            }
+
+            // Has schedule
+            content.classList.remove('hidden');
+            empty.classList.add('hidden');
+            createBtn.classList.add('hidden');
+            copyBtn.classList.remove('hidden');
+
+            // Calculate stats
+            const total = parseFloat(paymentSchedule.total_amount);
+            const paid = paymentInstallments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+            const remaining = total - paid;
+            const paidCount = paymentInstallments.filter(i => i.status === 'paid').length;
+
+            document.getElementById('schedule-total').textContent = formatPrice(total);
+            document.getElementById('schedule-paid').textContent = formatPrice(paid);
+            document.getElementById('schedule-remaining').textContent = formatPrice(remaining);
+
+            // Status badge
+            const statusBadge = document.getElementById('schedule-status-badge');
+            if (paidCount === paymentInstallments.length) {
+                statusBadge.innerHTML = '<span class="text-emerald-400">Opłacone</span>';
+                statusText.textContent = `Opłacone w całości`;
+            } else if (paidCount > 0) {
+                statusBadge.innerHTML = `<span class="text-amber-400">${paidCount}/${paymentInstallments.length}</span>`;
+                statusText.textContent = `${paidCount} z ${paymentInstallments.length} rat opłaconych`;
+            } else {
+                statusBadge.innerHTML = '<span class="text-[#555]">Oczekuje</span>';
+                statusText.textContent = `${paymentInstallments.length} rat do opłacenia`;
+            }
+
+            // Render installments
+            const listEl = document.getElementById('installments-list');
+            listEl.innerHTML = paymentInstallments.map(inst => {
+                const isPaid = inst.status === 'paid';
+                const isOverdue = inst.status === 'overdue' || (inst.status === 'pending' && new Date(inst.due_date) < new Date());
+
+                let statusClass = 'text-[#555]';
+                let statusIcon = 'ph-circle';
+                let bgClass = 'bg-[#111]';
+
+                if (isPaid) {
+                    statusClass = 'text-emerald-400';
+                    statusIcon = 'ph-check-circle';
+                    bgClass = 'bg-emerald-500/5 border-emerald-500/20';
+                } else if (isOverdue) {
+                    statusClass = 'text-red-400';
+                    statusIcon = 'ph-warning-circle';
+                    bgClass = 'bg-red-500/5 border-red-500/20';
+                }
+
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-lg border border-[#1a1a1a] ${bgClass}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg ${isPaid ? 'bg-emerald-500/20' : isOverdue ? 'bg-red-500/20' : 'bg-[#1a1a1a]'} flex items-center justify-center">
+                                <span class="text-[12px] font-bold ${statusClass}">${inst.installment_number}</span>
+                            </div>
+                            <div>
+                                <div class="text-white text-[13px] font-medium">Rata ${inst.installment_number}</div>
+                                <div class="flex items-center gap-2 text-[11px]">
+                                    <i class="${statusIcon} ${statusClass}"></i>
+                                    <span class="${statusClass}">${isPaid ? 'Opłacona' : isOverdue ? 'Zaległa' : 'Oczekuje'}</span>
+                                    <span class="text-[#444]">·</span>
+                                    <span class="text-[#555]">${formatDateShort(inst.due_date)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-white font-mono text-[13px] font-medium">${formatPrice(inst.amount)}</span>
+                            ${!isPaid ? `
+                                <button onclick="markInstallmentPaid('${inst.id}')" class="h-7 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[11px] rounded-lg transition-colors border border-emerald-500/20" title="Oznacz jako opłaconą">
+                                    <i class="ph ph-check"></i>
+                                </button>
+                                <button onclick="copyInstallmentLink('${inst.id}')" class="h-7 px-2 bg-white/5 hover:bg-white/10 text-[#888] hover:text-white text-[11px] rounded-lg transition-colors" title="Kopiuj link do płatności">
+                                    <i class="ph ph-link"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatDateShort(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function openCreateScheduleModal() {
+            // Set default values
+            document.getElementById('schedule-total-amount').value = workflow.amount || 0;
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('schedule-first-date').value = tomorrow.toISOString().split('T')[0];
+
+            // Add event listeners for preview
+            ['schedule-total-amount', 'schedule-installments-count', 'schedule-interval', 'schedule-first-date'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateSchedulePreview);
+                document.getElementById(id).addEventListener('change', updateSchedulePreview);
+            });
+
+            updateSchedulePreview();
+            document.getElementById('create-schedule-modal').classList.remove('hidden');
+        }
+
+        function closeCreateScheduleModal() {
+            document.getElementById('create-schedule-modal').classList.add('hidden');
+        }
+
+        function updateSchedulePreview() {
+            const total = parseFloat(document.getElementById('schedule-total-amount').value) || 0;
+            const count = parseInt(document.getElementById('schedule-installments-count').value) || 4;
+            const interval = parseInt(document.getElementById('schedule-interval').value) || 30;
+            const firstDateStr = document.getElementById('schedule-first-date').value;
+
+            const previewEl = document.getElementById('schedule-preview');
+
+            if (!total || !firstDateStr) {
+                previewEl.innerHTML = '<p class="text-[#444] text-[12px]">Wprowadź kwotę i datę</p>';
+                return;
+            }
+
+            const installmentAmount = Math.round(total / count);
+            const lastAmount = total - (installmentAmount * (count - 1));
+            const firstDate = new Date(firstDateStr);
+
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                const date = new Date(firstDate);
+                date.setDate(date.getDate() + (i * interval));
+                const amount = (i === count - 1) ? lastAmount : installmentAmount;
+
+                html += `
+                    <div class="flex items-center justify-between py-1.5 ${i > 0 ? 'border-t border-[#1a1a1a]' : ''}">
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
+                            <span class="text-[12px] text-[#888]">${date.toLocaleDateString('pl-PL')}</span>
+                        </div>
+                        <span class="text-[12px] font-medium text-white font-mono">${amount.toLocaleString('pl-PL')} zł</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="flex items-center justify-between pt-2 mt-2 border-t border-amber-500/30">
+                    <span class="text-[11px] text-amber-400 font-medium">Razem</span>
+                    <span class="text-[13px] font-bold text-amber-400 font-mono">${total.toLocaleString('pl-PL')} zł</span>
+                </div>
+            `;
+
+            previewEl.innerHTML = html;
+        }
+
+        async function savePaymentSchedule() {
+            const total = parseFloat(document.getElementById('schedule-total-amount').value) || 0;
+            const count = parseInt(document.getElementById('schedule-installments-count').value) || 4;
+            const interval = parseInt(document.getElementById('schedule-interval').value) || 30;
+            const firstDateStr = document.getElementById('schedule-first-date').value;
+
+            if (!total || !firstDateStr) {
+                showToast('Wprowadź kwotę i datę', 'error');
+                return;
+            }
+
+            try {
+                // Create schedule
+                const { data: schedule, error: scheduleError } = await supabaseClient
+                    .from('payment_schedules')
+                    .insert({
+                        workflow_id: workflow.id,
+                        total_amount: total,
+                        installments_count: count,
+                        created_by: currentMember?.id
+                    })
+                    .select()
+                    .single();
+
+                if (scheduleError) throw scheduleError;
+
+                // Create installments
+                const installmentAmount = Math.round(total / count);
+                const lastAmount = total - (installmentAmount * (count - 1));
+                const firstDate = new Date(firstDateStr);
+
+                const installmentsData = [];
+                for (let i = 0; i < count; i++) {
+                    const date = new Date(firstDate);
+                    date.setDate(date.getDate() + (i * interval));
+
+                    installmentsData.push({
+                        schedule_id: schedule.id,
+                        installment_number: i + 1,
+                        amount: (i === count - 1) ? lastAmount : installmentAmount,
+                        due_date: date.toISOString().split('T')[0],
+                        status: 'pending'
+                    });
+                }
+
+                const { error: installmentsError } = await supabaseClient
+                    .from('payment_installments')
+                    .insert(installmentsData);
+
+                if (installmentsError) throw installmentsError;
+
+                showToast('Harmonogram utworzony', 'success');
+                closeCreateScheduleModal();
+                await loadPaymentSchedule();
+
+            } catch (err) {
+                console.error('Save schedule error:', err);
+                showToast('Błąd tworzenia harmonogramu', 'error');
+            }
+        }
+
+        async function markInstallmentPaid(installmentId) {
+            if (!confirm('Oznaczyć tę ratę jako opłaconą?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('payment_installments')
+                    .update({
+                        status: 'paid',
+                        paid_at: new Date().toISOString()
+                    })
+                    .eq('id', installmentId);
+
+                if (error) throw error;
+
+                showToast('Rata oznaczona jako opłacona', 'success');
+                await loadPaymentSchedule();
+
+            } catch (err) {
+                console.error('Mark paid error:', err);
+                showToast('Błąd oznaczania raty', 'error');
+            }
+        }
+
+        function copyScheduleLink() {
+            const url = `${window.location.origin}/payment-schedule.html?token=${workflow.unique_token}`;
+            navigator.clipboard.writeText(url);
+            showToast('Link skopiowany', 'success');
+        }
+
+        function copyInstallmentLink(installmentId) {
+            const url = `${window.location.origin}/checkout/?installment_id=${installmentId}&workflow_id=${workflow.id}`;
+            navigator.clipboard.writeText(url);
+            showToast('Link do płatności skopiowany', 'success');
+        }
+
+        async function deleteSchedule() {
+            if (!paymentSchedule) return;
+
+            const paidCount = paymentInstallments.filter(i => i.status === 'paid').length;
+            if (paidCount > 0) {
+                if (!confirm(`Uwaga: ${paidCount} rat jest już opłaconych. Czy na pewno usunąć harmonogram?`)) return;
+            } else {
+                if (!confirm('Czy na pewno usunąć harmonogram płatności?')) return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('payment_schedules')
+                    .delete()
+                    .eq('id', paymentSchedule.id);
+
+                if (error) throw error;
+
+                paymentSchedule = null;
+                paymentInstallments = [];
+                showToast('Harmonogram usunięty', 'success');
+                renderPaymentSchedule();
+
+            } catch (err) {
+                console.error('Delete schedule error:', err);
+                showToast('Błąd usuwania harmonogramu', 'error');
             }
         }
 
@@ -9018,13 +9428,18 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (logosGrid) {
                 const logoItems = logos.map(l => {
                     const meta = parseNotes(l.notes);
+                    const isMain = meta.is_main === true;
                     const bgClass = meta.variant === 'light' ? 'bg-white' : 'bg-zinc-900';
+                    const mainBadge = isMain ? `<span class="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Główne</span>` : '';
+                    const setMainBtn = !isMain ? `<button onclick="event.stopPropagation(); setMainLogo('${l.id}')" class="absolute top-2 left-2 bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700 text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Ustaw główne</button>` : '';
                     return `
                     <div class="relative group">
-                        <div class="${bgClass} border border-white/5 rounded-lg p-4 aspect-square flex items-center justify-center cursor-pointer" onclick="openImageLightbox('${l.file_url}')">
+                        <div class="${bgClass} border ${isMain ? 'border-emerald-500/50 ring-2 ring-emerald-500/20' : 'border-white/5'} rounded-lg p-4 aspect-square flex items-center justify-center cursor-pointer" onclick="openImageLightbox('${l.file_url}')">
                             <img src="${l.file_url}" alt="${l.title}" class="max-w-full max-h-full object-contain">
                         </div>
-                        <button onclick="deleteBrandingItem('${l.id}')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        ${mainBadge}
+                        ${setMainBtn}
+                        <button onclick="event.stopPropagation(); deleteBrandingItem('${l.id}')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <i class="ph ph-x text-xs"></i>
                         </button>
                     </div>`;
@@ -9142,6 +9557,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     </div>`;
                 mockupsGrid.innerHTML = mockupItems + dropzone;
             }
+
+            // Render logo prompts inline
+            renderLogoPromptsInline();
 
             // Render mockup prompts inline
             renderMockupPromptsInline();
@@ -10052,16 +10470,189 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         // =============================================
+        // LOGO GENERATION QUEUE SYSTEM
+        // =============================================
+        const logoQueue = [];
+        let isProcessingLogoQueue = false;
+        const logoGeneratingSet = new Set();
+        const logoQueuedSet = new Set();
+        const usedLogoPrompts = new Set();
+
+        function getLogoPromptByIndex(index) {
+            const logoPrompts = brandingItems
+                .filter(b => b.type === 'ai_prompt' && parseNotes(b.notes).category === 'logo')
+                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+            return logoPrompts[index] ? { label: logoPrompts[index].title, prompt: logoPrompts[index].value, index } : null;
+        }
+
+        function updateLogoChipStatus(index, status) {
+            const chip = document.getElementById(`logo-prompt-chip-${index}`);
+            if (!chip) return;
+            const icon = chip.querySelector('i');
+            const base = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all border';
+            const styles = {
+                generating: ['bg-amber-500/20 text-amber-400 border-amber-500/30 cursor-wait', 'ph ph-spinner-gap animate-spin text-[10px]'],
+                queued: ['bg-blue-500/20 text-blue-400 border-blue-500/30 cursor-wait', 'ph ph-clock text-[10px]'],
+                done: ['bg-emerald-500/20 text-emerald-400 border-emerald-500/30', 'ph ph-check text-[10px]'],
+                error: ['bg-red-500/20 text-red-400 border-red-500/30', 'ph ph-x text-[10px]']
+            };
+            if (styles[status]) {
+                chip.className = `${base} ${styles[status][0]}`;
+                icon.className = styles[status][1];
+            }
+        }
+
+        function updateLogoQueueStatus() {
+            const statusEl = document.getElementById('logo-queue-status');
+            const textEl = document.getElementById('logo-queue-text');
+            if (!statusEl || !textEl) return;
+            if (logoQueuedSet.size > 0 || logoGeneratingSet.size > 0) {
+                statusEl.classList.remove('hidden');
+                textEl.textContent = `Generowanie: ${logoGeneratingSet.size}, w kolejce: ${logoQueuedSet.size}`;
+            } else {
+                statusEl.classList.add('hidden');
+            }
+        }
+
+        async function processLogoQueue() {
+            if (isProcessingLogoQueue || logoQueue.length === 0) return;
+            isProcessingLogoQueue = true;
+            updateLogoQueueStatus();
+
+            while (logoQueue.length > 0) {
+                const { index, label, prompt } = logoQueue.shift();
+                logoQueuedSet.delete(label);
+                logoGeneratingSet.add(label);
+                updateLogoChipStatus(index, 'generating');
+                updateLogoQueueStatus();
+
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('generate-image', {
+                        body: { prompt, count: 1, workflow_id: workflow.id, type: 'logo' }
+                    });
+                    if (error) throw error;
+                    if (!data?.images?.length) throw new Error('Brak obrazów');
+
+                    const existingLogos = brandingItems.filter(b => b.type === 'logo');
+                    await supabaseClient.from('workflow_branding').insert({
+                        workflow_id: workflow.id, type: 'logo', title: label,
+                        file_url: data.images[0].url,
+                        notes: JSON.stringify({ variant: 'light', is_main: existingLogos.length === 0 }),
+                        sort_order: existingLogos.length
+                    });
+
+                    usedLogoPrompts.add(label);
+                    logoGeneratingSet.delete(label);
+                    updateLogoChipStatus(index, 'done');
+                    await loadBranding();
+                    showToast(`Wygenerowano: ${label}`, 'success');
+                } catch (err) {
+                    console.error('Logo generation error:', err);
+                    logoGeneratingSet.delete(label);
+                    updateLogoChipStatus(index, 'error');
+                    showToast(`Błąd: ${label}`, 'error');
+                }
+            }
+            isProcessingLogoQueue = false;
+            updateLogoQueueStatus();
+        }
+
+        async function generateLogoFromPrompt(index) {
+            const item = getLogoPromptByIndex(index);
+            if (!item?.prompt?.trim()) { showToast('Brak promptu', 'error'); return; }
+            if (logoGeneratingSet.has(item.label) || logoQueuedSet.has(item.label)) { showToast('Już w kolejce', 'info'); return; }
+            if (usedLogoPrompts.has(item.label) && !confirm(`Logo "${item.label}" istnieje. Wygenerować ponownie?`)) return;
+
+            logoQueuedSet.add(item.label);
+            logoQueue.push({ index, label: item.label, prompt: item.prompt });
+            updateLogoChipStatus(index, 'queued');
+            showToast(`W kolejce: ${item.label}`, 'info');
+            processLogoQueue();
+        }
+        window.generateLogoFromPrompt = generateLogoFromPrompt;
+
+        function handleLogoPromptClick(event, index) {
+            event.shiftKey ? copyLogoPromptInline(index) : generateLogoFromPrompt(index);
+        }
+        window.handleLogoPromptClick = handleLogoPromptClick;
+
+        function copyLogoPromptInline(index) {
+            const item = getLogoPromptByIndex(index);
+            if (item) { navigator.clipboard.writeText(item.prompt); showToast('Prompt skopiowany', 'success'); }
+        }
+        window.copyLogoPromptInline = copyLogoPromptInline;
+
+        async function generateAllLogos() {
+            const logoPrompts = brandingItems
+                .filter(b => b.type === 'ai_prompt' && parseNotes(b.notes).category === 'logo')
+                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+            if (!logoPrompts.length) { showToast('Brak promptów logo - wygeneruj branding', 'error'); return; }
+
+            let added = 0;
+            logoPrompts.forEach((p, i) => {
+                if (!logoGeneratingSet.has(p.title) && !logoQueuedSet.has(p.title) && !usedLogoPrompts.has(p.title)) {
+                    logoQueuedSet.add(p.title);
+                    logoQueue.push({ index: i, label: p.title, prompt: p.value });
+                    updateLogoChipStatus(i, 'queued');
+                    added++;
+                }
+            });
+            added > 0 ? (showToast(`Dodano ${added} logo do kolejki`, 'info'), processLogoQueue()) : showToast('Wszystkie logo wygenerowane', 'info');
+        }
+        window.generateAllLogos = generateAllLogos;
+
+        async function setMainLogo(logoId) {
+            const logos = brandingItems.filter(b => b.type === 'logo');
+            for (const logo of logos) {
+                const meta = parseNotes(logo.notes);
+                if (meta.is_main) await supabaseClient.from('workflow_branding').update({ notes: JSON.stringify({ ...meta, is_main: false }) }).eq('id', logo.id);
+            }
+            const selected = logos.find(l => l.id === logoId);
+            if (selected) {
+                const meta = parseNotes(selected.notes);
+                await supabaseClient.from('workflow_branding').update({ notes: JSON.stringify({ ...meta, is_main: true }) }).eq('id', logoId);
+            }
+            await loadBranding();
+            showToast('Logo główne ustawione', 'success');
+        }
+        window.setMainLogo = setMainLogo;
+
+        function renderLogoPromptsInline() {
+            const container = document.getElementById('logo-prompts-chips');
+            if (!container) return;
+            const list = brandingItems
+                .filter(b => b.type === 'ai_prompt' && parseNotes(b.notes).category === 'logo')
+                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                .map((p, i) => ({ label: p.title, prompt: p.value, index: i }));
+
+            const btn = document.getElementById('generate-all-logos-btn');
+            if (!list.length) { container.innerHTML = '<p class="text-zinc-600 text-xs">Brak promptów logo - wygeneruj branding</p>'; btn?.classList.add('hidden'); return; }
+            btn?.classList.remove('hidden');
+
+            container.innerHTML = list.map((item, i) => {
+                const isGen = logoGeneratingSet.has(item.label), isQ = logoQueuedSet.has(item.label), isUsed = usedLogoPrompts.has(item.label);
+                let chipClass, iconClass;
+                if (isGen) { chipClass = 'bg-amber-500/20 text-amber-400 border-amber-500/30 cursor-wait'; iconClass = 'ph ph-spinner-gap animate-spin'; }
+                else if (isQ) { chipClass = 'bg-blue-500/20 text-blue-400 border-blue-500/30 cursor-wait'; iconClass = 'ph ph-clock'; }
+                else if (isUsed) { chipClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'; iconClass = 'ph ph-check'; }
+                else { chipClass = 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700/50 border-zinc-700/50'; iconClass = 'ph ph-sparkle'; }
+                return `<button onclick="handleLogoPromptClick(event, ${i})" id="logo-prompt-chip-${i}" data-label="${item.label}" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all border ${chipClass}" title="${item.label} (Shift+klik = kopiuj)"><i class="${iconClass} text-[10px]"></i><span class="truncate max-w-[180px]">${item.label}</span></button>`;
+            }).join('');
+        }
+        window.renderLogoPromptsInline = renderLogoPromptsInline;
+
+        // =============================================
         // MOCKUP GENERATION QUEUE SYSTEM
         // =============================================
         const mockupQueue = [];
         let isProcessingMockupQueue = false;
-        const mockupGeneratingSet = new Set(); // Currently generating
-        const mockupQueuedSet = new Set(); // Waiting in queue
+        const mockupGeneratingSet = new Set();
+        const mockupQueuedSet = new Set();
 
         function getLogoUrl() {
-            const logo = brandingItems.find(b => b.type === 'logo' && b.file_url);
-            return logo?.file_url || null;
+            const mainLogo = brandingItems.find(b => b.type === 'logo' && b.file_url && parseNotes(b.notes).is_main === true);
+            if (mainLogo) return mainLogo.file_url;
+            return brandingItems.find(b => b.type === 'logo' && b.file_url)?.file_url || null;
         }
 
         function getProductImageUrl() {
@@ -12071,6 +12662,73 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 </button>
                 <button onclick="saveAmount()" class="flex-1 h-9 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-[13px] font-medium rounded-lg transition-colors">
                     Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Payment Schedule Modal -->
+    <div id="create-schedule-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+        <div class="bg-[#0d0d0d] border border-amber-500/30 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 bg-amber-500/10 rounded-full flex items-center justify-center">
+                    <i class="ph ph-calendar-check text-amber-400 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-white font-semibold text-[15px]">Utwórz harmonogram płatności</h3>
+                    <p class="text-[#555] text-[11px]">Rozbij płatność na raty</p>
+                </div>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="mb-4">
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Kwota całkowita (PLN)</label>
+                <input type="number" id="schedule-total-amount" step="1" min="0" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px] font-mono" placeholder="0">
+            </div>
+
+            <!-- Configuration -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Liczba rat</label>
+                    <select id="schedule-installments-count" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
+                        <option value="2">2 raty</option>
+                        <option value="3">3 raty</option>
+                        <option value="4" selected>4 raty</option>
+                        <option value="6">6 rat</option>
+                        <option value="12">12 rat</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Odstęp</label>
+                    <select id="schedule-interval" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
+                        <option value="7">Tygodniowo</option>
+                        <option value="14">Co 2 tygodnie</option>
+                        <option value="30" selected>Miesięcznie</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- First Date -->
+            <div class="mb-4">
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Data pierwszej raty</label>
+                <input type="date" id="schedule-first-date" class="w-full bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]">
+            </div>
+
+            <!-- Preview -->
+            <div class="mb-5 p-4 bg-[#111] rounded-lg border border-[#1a1a1a]">
+                <div class="text-[#555] text-[10px] font-medium uppercase tracking-wider mb-3">Podgląd harmonogramu</div>
+                <div id="schedule-preview" class="space-y-2">
+                    <!-- Preview rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3">
+                <button onclick="closeCreateScheduleModal()" class="flex-1 h-10 bg-transparent border border-[#262626] text-[#888] hover:text-white text-[13px] rounded-lg transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="savePaymentSchedule()" class="flex-1 h-10 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 text-[13px] font-medium rounded-lg transition-colors">
+                    Utwórz harmonogram
                 </button>
             </div>
         </div>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonogram płatności</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+
+        .glass-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .installment-card {
+            transition: all 0.2s ease;
+        }
+        .installment-card:hover {
+            transform: translateX(4px);
+        }
+        .installment-card.paid {
+            border-color: rgba(34, 197, 94, 0.3);
+            background: rgba(34, 197, 94, 0.05);
+        }
+        .installment-card.pending {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .installment-card.current {
+            border-color: rgba(251, 191, 36, 0.5);
+            background: rgba(251, 191, 36, 0.05);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.1);
+        }
+        .installment-card.overdue {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); }
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="text-center">
+            <div class="w-12 h-12 border-2 border-zinc-700 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-zinc-400">Wczytywanie harmonogramu...</p>
+        </div>
+    </div>
+
+    <!-- Not Found Screen -->
+    <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md text-center animate-enter">
+            <div class="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-question text-4xl text-zinc-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono harmonogramu</h1>
+            <p class="text-zinc-400">Ten link jest nieprawidłowy lub harmonogram został usunięty.</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-screen" class="hidden">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                        <i class="ph ph-calendar-check text-xl text-amber-400"></i>
+                    </div>
+                    <div>
+                        <div class="text-white font-semibold">Harmonogram płatności</div>
+                        <div id="header-project" class="text-zinc-500 text-xs">-</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div id="header-client" class="text-white font-medium text-sm">-</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+            <!-- Summary Card -->
+            <div class="glass-card rounded-2xl border border-white/10 p-6 mb-8 animate-enter">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+                    <div>
+                        <div class="text-zinc-500 text-xs mb-1">Łącznie do zapłaty</div>
+                        <div id="total-amount" class="text-2xl font-bold text-white">-</div>
+                    </div>
+                    <div>
+                        <div class="text-zinc-500 text-xs mb-1">Opłacono</div>
+                        <div id="paid-amount" class="text-2xl font-bold text-green-400">-</div>
+                    </div>
+                    <div>
+                        <div class="text-zinc-500 text-xs mb-1">Pozostało</div>
+                        <div id="remaining-amount" class="text-2xl font-bold text-amber-400">-</div>
+                    </div>
+                    <div>
+                        <div class="text-zinc-500 text-xs mb-1">Liczba rat</div>
+                        <div id="installments-count" class="text-2xl font-bold text-white">-</div>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="mt-6">
+                    <div class="flex items-center justify-between text-xs mb-2">
+                        <span class="text-zinc-500">Postęp płatności</span>
+                        <span id="progress-percent" class="text-zinc-400">0%</span>
+                    </div>
+                    <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Installments List -->
+            <div class="space-y-4" id="installments-container">
+                <!-- Installments will be rendered here -->
+            </div>
+
+            <!-- Contact Section -->
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mt-8 animate-enter">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-white mb-1">Masz pytania dotyczące płatności?</h3>
+                        <p class="text-zinc-400 text-sm">Skontaktuj się z nami, chętnie pomożemy.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="mailto:kontakt@tn.digital" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                            <i class="ph ph-envelope"></i>
+                            Email
+                        </a>
+                        <a href="https://wa.me/48533308623" target="_blank" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                            <i class="ph ph-whatsapp-logo"></i>
+                            WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/5 mt-12">
+            <div class="max-w-3xl mx-auto px-6 py-8 text-center">
+                <p class="text-zinc-600 text-sm">
+                    Powered by <span class="text-zinc-400">TN Digital</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Success Toast -->
+    <div id="success-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="flex items-center gap-2">
+            <i class="ph ph-check-circle text-xl"></i>
+            <span>Płatność została zarejestrowana!</span>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let workflow = null;
+        let schedule = null;
+        let installments = [];
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('pl-PL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount) + ' zł';
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        // Check if date is in the past
+        function isPastDue(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return date < today;
+        }
+
+        // Find current installment (first unpaid)
+        function findCurrentInstallment() {
+            return installments.find(i => i.status === 'pending' || i.status === 'overdue');
+        }
+
+        // Render installments
+        function renderInstallments() {
+            const container = document.getElementById('installments-container');
+            const currentInstallment = findCurrentInstallment();
+
+            container.innerHTML = installments.map((inst, index) => {
+                const isPaid = inst.status === 'paid';
+                const isOverdue = inst.status === 'overdue' || (inst.status === 'pending' && isPastDue(inst.due_date));
+                const isCurrent = currentInstallment && inst.id === currentInstallment.id;
+
+                let statusClass = 'pending';
+                let statusIcon = 'ph-circle';
+                let statusText = 'Oczekuje';
+                let statusColor = 'text-zinc-400';
+
+                if (isPaid) {
+                    statusClass = 'paid';
+                    statusIcon = 'ph-check-circle';
+                    statusText = 'Opłacona';
+                    statusColor = 'text-green-400';
+                } else if (isOverdue) {
+                    statusClass = 'overdue';
+                    statusIcon = 'ph-warning-circle';
+                    statusText = 'Zaległa';
+                    statusColor = 'text-red-400';
+                } else if (isCurrent) {
+                    statusClass = 'current';
+                    statusIcon = 'ph-arrow-right';
+                    statusText = 'Do opłacenia';
+                    statusColor = 'text-amber-400';
+                }
+
+                return `
+                    <div class="installment-card glass-card rounded-xl border p-5 ${statusClass} animate-enter" style="animation-delay: ${index * 0.1}s">
+                        <div class="flex items-center justify-between gap-4">
+                            <!-- Left: Number & Status -->
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center ${isPaid ? 'bg-green-500/20' : isOverdue ? 'bg-red-500/20' : isCurrent ? 'bg-amber-500/20' : 'bg-zinc-800'}">
+                                    <span class="font-bold text-lg ${isPaid ? 'text-green-400' : isOverdue ? 'text-red-400' : isCurrent ? 'text-amber-400' : 'text-zinc-400'}">${inst.installment_number}</span>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-white mb-0.5">Rata ${inst.installment_number} z ${installments.length}</div>
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <i class="${statusIcon} ${statusColor}"></i>
+                                        <span class="${statusColor}">${statusText}</span>
+                                        ${isPaid && inst.paid_at ? `<span class="text-zinc-600">• ${formatDate(inst.paid_at)}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Amount & Date & Action -->
+                            <div class="text-right flex items-center gap-4">
+                                <div>
+                                    <div class="font-bold text-white text-lg">${formatCurrency(inst.amount)}</div>
+                                    <div class="text-zinc-500 text-xs">
+                                        ${isPaid ? 'Opłacono' : `Termin: ${formatDate(inst.due_date)}`}
+                                    </div>
+                                </div>
+                                ${!isPaid ? `
+                                    <button onclick="payInstallment('${inst.id}')"
+                                            class="${isCurrent || isOverdue ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-lg shadow-amber-500/20' : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10'}
+                                                   px-4 py-2.5 rounded-lg font-semibold transition-all text-sm whitespace-nowrap
+                                                   ${isCurrent ? 'pulse-glow' : ''}">
+                                        <i class="ph ph-credit-card mr-1"></i>
+                                        Opłać
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update summary
+        function updateSummary() {
+            const total = schedule.total_amount;
+            const paid = installments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+            const remaining = total - paid;
+            const paidCount = installments.filter(i => i.status === 'paid').length;
+            const progressPercent = Math.round((paid / total) * 100);
+
+            document.getElementById('total-amount').textContent = formatCurrency(total);
+            document.getElementById('paid-amount').textContent = formatCurrency(paid);
+            document.getElementById('remaining-amount').textContent = formatCurrency(remaining);
+            document.getElementById('installments-count').textContent = `${paidCount}/${installments.length}`;
+            document.getElementById('progress-percent').textContent = `${progressPercent}%`;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+        }
+
+        // Pay installment - redirect to checkout
+        function payInstallment(installmentId) {
+            const inst = installments.find(i => i.id === installmentId);
+            if (!inst) return;
+
+            // Build checkout URL with installment parameters
+            const checkoutUrl = new URL('/checkout/', window.location.origin);
+            checkoutUrl.searchParams.set('installment_id', installmentId);
+            checkoutUrl.searchParams.set('workflow_id', workflow.id);
+
+            // Redirect to checkout
+            window.location.href = checkoutUrl.toString();
+        }
+
+        // Show success toast
+        function showSuccessToast() {
+            const toast = document.getElementById('success-toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 5000);
+        }
+
+        // Initialize
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const paymentSuccess = urlParams.get('payment') === 'success';
+
+            if (!token) {
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('not-found-screen').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // Fetch workflow by token
+                const { data: workflowData, error: workflowError } = await supabaseClient
+                    .from('workflows')
+                    .select(`
+                        *,
+                        lead:leads(*),
+                        order:orders(*)
+                    `)
+                    .eq('unique_token', token)
+                    .single();
+
+                if (workflowError || !workflowData) {
+                    throw new Error('Workflow not found');
+                }
+
+                workflow = workflowData;
+
+                // Fetch payment schedule
+                const { data: scheduleData, error: scheduleError } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .single();
+
+                if (scheduleError || !scheduleData) {
+                    throw new Error('Payment schedule not found');
+                }
+
+                schedule = scheduleData;
+
+                // Fetch installments
+                const { data: installmentsData, error: installmentsError } = await supabaseClient
+                    .from('payment_installments')
+                    .select('*')
+                    .eq('schedule_id', schedule.id)
+                    .order('installment_number', { ascending: true });
+
+                if (installmentsError) {
+                    throw new Error('Failed to fetch installments');
+                }
+
+                installments = installmentsData || [];
+
+                // Update UI
+                document.getElementById('header-project').textContent = workflow.offer_name || 'Projekt';
+                document.getElementById('header-client').textContent = workflow.lead?.name || workflow.lead?.email || '-';
+
+                updateSummary();
+                renderInstallments();
+
+                // Show main screen
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('main-screen').classList.remove('hidden');
+
+                // Show success toast if redirected from successful payment
+                if (paymentSuccess) {
+                    showSuccessToast();
+                    // Clean up URL
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('payment');
+                    window.history.replaceState({}, '', cleanUrl.toString());
+                }
+
+            } catch (error) {
+                console.error('Init error:', error);
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('not-found-screen').classList.remove('hidden');
+            }
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>

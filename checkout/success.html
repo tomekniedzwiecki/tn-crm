@@ -202,8 +202,8 @@
                     </div>
                 </div>
 
-                <!-- What's Next -->
-                <div class="text-left bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 fade-up fade-up-3">
+                <!-- What's Next - Standard -->
+                <div id="whats-next-standard" class="text-left bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 fade-up fade-up-3">
                     <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
                             <i class="ph-duotone ph-envelope text-xl text-emerald-400"></i>
@@ -217,12 +217,42 @@
                     </div>
                 </div>
 
-                <!-- Actions -->
-                <div class="space-y-3 fade-up fade-up-4">
+                <!-- What's Next - Installment -->
+                <div id="whats-next-installment" class="hidden text-left bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 fade-up fade-up-3">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-duotone ph-check-circle text-xl text-emerald-400"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-white text-sm">Rata opłacona!</p>
+                            <p class="text-zinc-400 text-sm mt-1 leading-relaxed">
+                                Płatność została zarejestrowana. Możesz sprawdzić status pozostałych rat w harmonogramie.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions - Standard -->
+                <div id="actions-standard" class="space-y-3 fade-up fade-up-4">
                     <a href="https://tomekniedzwiecki.pl"
                        class="success-btn block w-full text-white px-5 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
                         <i class="ph ph-house"></i>
                         Wróć na stronę główną
+                    </a>
+
+                    <a href="mailto:ceo@tomekniedzwiecki.pl"
+                       class="block w-full text-zinc-500 hover:text-zinc-300 px-5 py-2.5 text-sm font-medium transition-colors">
+                        <i class="ph ph-question mr-1"></i>
+                        Masz pytania?
+                    </a>
+                </div>
+
+                <!-- Actions - Installment -->
+                <div id="actions-installment" class="hidden space-y-3 fade-up fade-up-4">
+                    <a id="schedule-link" href="#"
+                       class="success-btn block w-full text-white px-5 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+                        <i class="ph ph-calendar-check"></i>
+                        Wróć do harmonogramu
                     </a>
 
                     <a href="mailto:ceo@tomekniedzwiecki.pl"
@@ -295,9 +325,31 @@
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 const { data: order } = await supabaseClient
                     .from('orders')
-                    .select('id, order_number, amount, description, status')
+                    .select('id, order_number, amount, description, status, installment_id, workflow_id')
                     .eq('id', orderId)
                     .single();
+
+                // Check if this is an installment payment
+                if (order?.installment_id && order?.workflow_id) {
+                    // Fetch workflow token for redirect
+                    const { data: workflow } = await supabaseClient
+                        .from('workflows')
+                        .select('unique_token')
+                        .eq('id', order.workflow_id)
+                        .single();
+
+                    if (workflow?.unique_token) {
+                        // Show installment-specific UI
+                        document.getElementById('whats-next-standard').classList.add('hidden');
+                        document.getElementById('whats-next-installment').classList.remove('hidden');
+                        document.getElementById('actions-standard').classList.add('hidden');
+                        document.getElementById('actions-installment').classList.remove('hidden');
+
+                        // Set schedule link
+                        document.getElementById('schedule-link').href =
+                            `/payment-schedule.html?token=${workflow.unique_token}&payment=success`;
+                    }
+                }
 
                 if (order?.order_number) {
                     document.getElementById('order-number').textContent = order.order_number;

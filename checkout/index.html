@@ -835,6 +835,11 @@
         let upgradeWorkflowId = null;
         let upgradeToOfferId = null;
 
+        // Installment payment state (płatność raty - nie tworzy nowego workflow)
+        let installmentId = null;
+        let installmentWorkflowId = null;
+        let installmentData = null;
+
         // Discount code state
         let appliedDiscount = null; // { id, code, target_price, discount_amount, discount_percent }
 
@@ -1357,6 +1362,86 @@
             upgradeWorkflowId = params.get('upgrade_workflow_id');
             upgradeToOfferId = params.get('upgrade_to_offer_id');
 
+            // Installment payment params (płatność raty)
+            installmentId = params.get('installment_id');
+            installmentWorkflowId = params.get('workflow_id');
+
+            // Handle installment payment mode
+            if (installmentId && installmentWorkflowId) {
+                try {
+                    // Fetch installment data with schedule and workflow
+                    const { data: instData, error: instError } = await supabaseClient
+                        .from('payment_installments')
+                        .select(`
+                            *,
+                            schedule:payment_schedules(
+                                *,
+                                workflow:workflows(
+                                    id,
+                                    offer_name,
+                                    lead:leads(id, email, phone, name, company, nip)
+                                )
+                            )
+                        `)
+                        .eq('id', installmentId)
+                        .single();
+
+                    if (instError || !instData) {
+                        showErrorState('Nie znaleziono raty do opłacenia.');
+                        return;
+                    }
+
+                    // Verify workflow matches
+                    if (instData.schedule?.workflow?.id !== installmentWorkflowId) {
+                        showErrorState('Nieprawidłowy link do płatności.');
+                        return;
+                    }
+
+                    // Check if already paid
+                    if (instData.status === 'paid') {
+                        showErrorState('Ta rata została już opłacona.');
+                        return;
+                    }
+
+                    installmentData = instData;
+                    isCustomPayment = true; // Reuse custom payment flag to skip workflow creation
+
+                    const workflow = instData.schedule.workflow;
+                    const lead = workflow.lead;
+
+                    // Create virtual offer for installment
+                    currentOffer = {
+                        id: null,
+                        name: `Rata ${instData.installment_number}/${instData.schedule.installments_count} - ${workflow.offer_name}`,
+                        description: `Harmonogram płatności - ${workflow.offer_name}`,
+                        price: parseFloat(instData.amount)
+                    };
+
+                    setupOfferDisplay(currentOffer);
+
+                    // Pre-fill customer data from lead
+                    if (lead) {
+                        if (lead.email) document.getElementById('customer-email').value = lead.email;
+                        if (lead.phone) document.getElementById('customer-phone').value = lead.phone;
+                        if (lead.name) document.getElementById('customer-name').value = lead.name;
+                        if (lead.company) document.getElementById('customer-company').value = lead.company;
+                        if (lead.nip) document.getElementById('customer-nip').value = lead.nip;
+                    }
+
+                    // Hide discount code section for installment payments
+                    document.getElementById('discount-code-section').style.display = 'none';
+
+                    showCheckout();
+
+                    console.log('[checkout] Installment payment mode:', instData.installment_number, 'of', instData.schedule.installments_count);
+                    return;
+                } catch (e) {
+                    console.error('[checkout] Installment load error:', e);
+                    showErrorState('Wystąpił błąd. Spróbuj odświeżyć stronę.');
+                    return;
+                }
+            }
+
             if (customAmount && customDescription && !offerId) {
                 // Custom payment mode
                 isCustomPayment = true;
@@ -1678,6 +1763,15 @@
                         orderData.upgrade_to_offer_id = upgradeToOfferId;
                         orderData.skip_workflow = true; // Don't create new workflow
                         orderData.notes += ' | Upgrade workflow';
+                    }
+
+                    // Installment payment - link to existing workflow and installment
+                    if (installmentId && installmentWorkflowId && installmentData) {
+                        orderData.installment_id = installmentId;
+                        orderData.workflow_id = installmentWorkflowId;
+                        orderData.skip_workflow = true; // Don't create new workflow
+                        orderData.lead_id = installmentData.schedule?.workflow?.lead?.id || null;
+                        orderData.notes += ` | Rata ${installmentData.installment_number}/${installmentData.schedule.installments_count}`;
                     }
 
                     const { data: newOrder, error: orderError } = await supabaseClient

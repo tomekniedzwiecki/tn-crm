@@ -752,6 +752,33 @@ Deno.serve(async (req) => {
       console.log('[tpay-webhook] Order updated successfully')
     }
 
+    // Update installment status if this is an installment payment
+    if (newStatus === 'paid' && order.installment_id) {
+      try {
+        console.log('[tpay-webhook] Updating installment:', order.installment_id)
+
+        const { error: installmentError } = await supabase
+          .from('payment_installments')
+          .update({
+            status: 'paid',
+            paid_at: paidAt,
+            order_id: order.id
+          })
+          .eq('id', order.installment_id)
+
+        if (installmentError) {
+          console.error('[tpay-webhook] Failed to update installment:', installmentError)
+        } else {
+          console.log('[tpay-webhook] Installment marked as paid')
+
+          // Note: The trigger update_workflow_payment_status() will automatically
+          // update the workflow.payment_status based on all installments
+        }
+      } catch (instError) {
+        console.error('[tpay-webhook] Installment update error:', instError)
+      }
+    }
+
     // Log to audit if status changed
     if (newStatus !== order.status) {
       try {
