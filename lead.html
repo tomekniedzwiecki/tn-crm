@@ -886,7 +886,7 @@
                                                 <i class="ph ph-calendar-check text-amber-400"></i>
                                                 <span class="font-mono uppercase">Harmonogram płatności</span>
                                             </div>
-                                            <div class="flex items-center gap-1.5">
+                                            <div class="flex items-center gap-1.5 mb-3">
                                                 <input type="text" id="payment-schedule-url" readonly class="flex-1 bg-zinc-900/80 border border-amber-500/30 rounded-lg px-2.5 py-2 text-[11px] text-zinc-300 font-mono truncate">
                                                 <button onclick="copyScheduleUrl()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Kopiuj">
                                                     <i class="ph ph-copy text-amber-400 text-sm"></i>
@@ -894,6 +894,10 @@
                                                 <button onclick="openSchedulePreview()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Otwórz">
                                                     <i class="ph ph-arrow-square-out text-amber-400 text-sm"></i>
                                                 </button>
+                                            </div>
+                                            <!-- Installments List for Admin -->
+                                            <div id="admin-installments-list" class="space-y-1.5 max-h-[200px] overflow-y-auto">
+                                                <!-- Rendered by JS -->
                                             </div>
                                         </div>
                                     </div>
@@ -3928,9 +3932,87 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
                 if (scheduleData) {
                     showPaymentScheduleLink(scheduleData.id);
+                    loadAdminInstallmentsList(scheduleData.id);
                 }
             } catch (err) {
                 // No schedule exists - that's fine
+            }
+        }
+
+        // Load installments for admin panel
+        async function loadAdminInstallmentsList(scheduleId) {
+            const container = document.getElementById('admin-installments-list');
+            if (!container) return;
+
+            try {
+                const { data: installments, error } = await supabaseClient
+                    .from('payment_installments')
+                    .select('*')
+                    .eq('schedule_id', scheduleId)
+                    .order('installment_number', { ascending: true });
+
+                if (error) throw error;
+
+                if (!installments || installments.length === 0) {
+                    container.innerHTML = '<p class="text-zinc-600 text-[10px] text-center py-2">Brak rat</p>';
+                    return;
+                }
+
+                container.innerHTML = installments.map(inst => {
+                    const isPaid = inst.status === 'paid';
+                    const dueDate = new Date(inst.due_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                    const paidDate = inst.paid_at ? new Date(inst.paid_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }) : null;
+
+                    return `
+                        <div class="flex items-center gap-2 p-2 rounded-lg ${isPaid ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-zinc-800/50 border border-white/5'}">
+                            <span class="w-5 h-5 rounded-full ${isPaid ? 'bg-emerald-500/30 text-emerald-400' : 'bg-zinc-700 text-zinc-500'} text-[10px] font-bold flex items-center justify-center shrink-0">
+                                ${isPaid ? '<i class="ph ph-check text-xs"></i>' : inst.installment_number}
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <span class="text-[11px] ${isPaid ? 'text-emerald-400' : 'text-white'} font-medium">${parseFloat(inst.amount).toLocaleString('pl-PL')} zł</span>
+                                <span class="text-[10px] text-zinc-600 ml-1.5">
+                                    ${isPaid && paidDate ? `opł. ${paidDate}` : `do ${dueDate}`}
+                                </span>
+                            </div>
+                            <button onclick="toggleInstallmentStatus('${inst.id}', ${isPaid})"
+                                    class="p-1.5 rounded-md transition-colors ${isPaid ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400' : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400'}"
+                                    title="${isPaid ? 'Oznacz jako nieopłacone' : 'Oznacz jako opłacone'}">
+                                <i class="ph ${isPaid ? 'ph-x' : 'ph-check'} text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Error loading installments:', err);
+                container.innerHTML = '<p class="text-red-400 text-[10px] text-center py-2">Błąd ładowania</p>';
+            }
+        }
+
+        // Toggle installment paid/unpaid status
+        async function toggleInstallmentStatus(installmentId, currentlyPaid) {
+            try {
+                const newStatus = currentlyPaid ? 'pending' : 'paid';
+                const updateData = {
+                    status: newStatus,
+                    paid_at: currentlyPaid ? null : new Date().toISOString()
+                };
+
+                const { error } = await supabaseClient
+                    .from('payment_installments')
+                    .update(updateData)
+                    .eq('id', installmentId);
+
+                if (error) throw error;
+
+                // Reload the list
+                if (currentScheduleId) {
+                    loadAdminInstallmentsList(currentScheduleId);
+                }
+
+                showToast(currentlyPaid ? 'Rata oznaczona jako nieopłacona' : 'Rata oznaczona jako opłacona', 'success');
+            } catch (err) {
+                console.error('Error toggling installment:', err);
+                showToast('Błąd aktualizacji raty', 'error');
             }
         }
 
