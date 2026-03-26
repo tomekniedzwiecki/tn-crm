@@ -1379,6 +1379,39 @@
         </div>
     </div>
 
+    <!-- Delete Offer Modal -->
+    <div id="delete-offer-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDeleteOfferModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-red-500/20">
+                        <i class="ph ph-warning text-2xl text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white text-center mb-2">Usuń ofertę</h3>
+                    <p class="text-zinc-400 text-sm text-center mb-2">Czy na pewno chcesz usunąć wygenerowaną ofertę?</p>
+                    <p id="delete-offer-schedule-warning" class="text-amber-400 text-sm text-center mb-6 hidden">
+                        <i class="ph ph-calendar-check mr-1"></i>
+                        Ten lead ma aktywny harmonogram płatności.
+                    </p>
+                    <div class="space-y-2">
+                        <button id="delete-offer-with-schedule" onclick="confirmDeleteOffer(true)" class="w-full px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-trash"></i>
+                            Usuń ofertę i harmonogram
+                        </button>
+                        <button id="delete-offer-only" onclick="confirmDeleteOffer(false)" class="w-full px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-amber-400 text-sm font-medium transition-colors flex items-center justify-center gap-2 hidden">
+                            <i class="ph ph-calendar-check"></i>
+                            Usuń ofertę, zostaw harmonogram
+                        </button>
+                        <button onclick="closeDeleteOfferModal()" class="w-full px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-zinc-300 text-sm font-medium transition-colors">
+                            Anuluj
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- View History Modal -->
     <div id="view-history-modal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeViewHistoryModal()"></div>
@@ -4348,71 +4381,103 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             window.open(url, '_blank');
         }
 
+        let hasScheduleForOffer = false;
+
         async function deleteClientOffer() {
             if (!clientOffer) return;
 
-            showConfirmModal({
-                title: 'Usuń ofertę',
-                message: 'Czy na pewno chcesz usunąć wygenerowaną ofertę? Link przestanie działać. Harmonogram płatności również zostanie usunięty.',
-                theme: 'lost',
-                onConfirm: async () => {
-                    // First delete payment schedules and installments for this lead
-                    if (lead?.id) {
-                        // Get all schedules for this lead
-                        const { data: schedules } = await supabaseClient
-                            .from('payment_schedules')
-                            .select('id')
-                            .eq('lead_id', lead.id);
+            // Check if lead has payment schedule
+            hasScheduleForOffer = false;
+            if (lead?.id) {
+                const { data: schedules } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('id')
+                    .eq('lead_id', lead.id);
+                hasScheduleForOffer = schedules && schedules.length > 0;
+            }
 
-                        if (schedules && schedules.length > 0) {
-                            const scheduleIds = schedules.map(s => s.id);
+            // Show appropriate options in modal
+            const warningEl = document.getElementById('delete-offer-schedule-warning');
+            const deleteOnlyBtn = document.getElementById('delete-offer-only');
+            const deleteWithScheduleBtn = document.getElementById('delete-offer-with-schedule');
 
-                            // Delete installments first (foreign key)
-                            await supabaseClient
-                                .from('payment_installments')
-                                .delete()
-                                .in('schedule_id', scheduleIds);
+            if (hasScheduleForOffer) {
+                warningEl.classList.remove('hidden');
+                deleteOnlyBtn.classList.remove('hidden');
+                deleteWithScheduleBtn.innerHTML = '<i class="ph ph-trash"></i> Usuń ofertę i harmonogram';
+            } else {
+                warningEl.classList.add('hidden');
+                deleteOnlyBtn.classList.add('hidden');
+                deleteWithScheduleBtn.innerHTML = '<i class="ph ph-trash"></i> Usuń ofertę';
+            }
 
-                            // Delete schedules
-                            await supabaseClient
-                                .from('payment_schedules')
-                                .delete()
-                                .eq('lead_id', lead.id);
-                        }
-                    }
+            document.getElementById('delete-offer-modal').classList.remove('hidden');
+        }
 
-                    // Delete the offer
-                    const { error } = await supabaseClient
-                        .from('client_offers')
+        function closeDeleteOfferModal() {
+            document.getElementById('delete-offer-modal').classList.add('hidden');
+        }
+
+        async function confirmDeleteOffer(deleteSchedule) {
+            closeDeleteOfferModal();
+
+            // Delete schedule if requested
+            if (deleteSchedule && lead?.id) {
+                const { data: schedules } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('id')
+                    .eq('lead_id', lead.id);
+
+                if (schedules && schedules.length > 0) {
+                    const scheduleIds = schedules.map(s => s.id);
+
+                    await supabaseClient
+                        .from('payment_installments')
                         .delete()
-                        .eq('id', clientOffer.id);
+                        .in('schedule_id', scheduleIds);
 
-                    if (error) {
-                        console.error('Error deleting offer:', error);
-                        alert('Błąd podczas usuwania oferty');
-                        return;
-                    }
-
-                    // Log to audit
-                    logAuditActivity('delete', 'client_offer', clientOffer.id, lead.email, {
-                        token: clientOffer.unique_token,
-                        valid_until: clientOffer.valid_until
-                    }, null);
-
-                    clientOffer = null;
-                    updateClientOfferSection();
-
-                    // Hide sidebar schedule section
-                    const sidebarSection = document.getElementById('sidebar-schedule-section');
-                    if (sidebarSection) sidebarSection.classList.add('hidden');
-
-                    // Hide payment schedule link section
-                    const scheduleSection = document.getElementById('payment-schedule-link-section');
-                    if (scheduleSection) scheduleSection.classList.add('hidden');
-
-                    showToast('Oferta i harmonogram usunięte', 'success');
+                    await supabaseClient
+                        .from('payment_schedules')
+                        .delete()
+                        .eq('lead_id', lead.id);
                 }
-            });
+            }
+
+            // Delete the offer
+            const { error } = await supabaseClient
+                .from('client_offers')
+                .delete()
+                .eq('id', clientOffer.id);
+
+            if (error) {
+                console.error('Error deleting offer:', error);
+                showToast('Błąd podczas usuwania oferty', 'error');
+                return;
+            }
+
+            // Log to audit
+            logAuditActivity('delete', 'client_offer', clientOffer.id, lead.email, {
+                token: clientOffer.unique_token,
+                valid_until: clientOffer.valid_until,
+                schedule_deleted: deleteSchedule
+            }, null);
+
+            clientOffer = null;
+            updateClientOfferSection();
+
+            if (deleteSchedule) {
+                // Hide sidebar schedule section
+                const sidebarSection = document.getElementById('sidebar-schedule-section');
+                if (sidebarSection) sidebarSection.classList.add('hidden');
+
+                // Hide payment schedule link section
+                const scheduleSection = document.getElementById('payment-schedule-link-section');
+                if (scheduleSection) scheduleSection.classList.add('hidden');
+
+                showToast('Oferta i harmonogram usunięte', 'success');
+            } else {
+                showToast('Oferta usunięta, harmonogram zachowany', 'success');
+            }
         }
 
         // ============ CUSTOM PAYMENT LINK FUNCTIONS ============
