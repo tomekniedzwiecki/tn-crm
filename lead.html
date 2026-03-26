@@ -3959,18 +3959,31 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (!lead?.id) return;
 
             try {
-                const { data: scheduleData } = await supabaseClient
+                // First try by lead_id
+                let { data: schedules } = await supabaseClient
                     .from('payment_schedules')
-                    .select('id, total_amount')
+                    .select('id, total_amount, created_at')
                     .eq('lead_id', lead.id)
-                    .single();
+                    .order('created_at', { ascending: false });
 
-                if (scheduleData) {
+                // If no schedule found by lead_id, try by workflow_id
+                if ((!schedules || schedules.length === 0) && leadWorkflowId) {
+                    const { data: workflowSchedules } = await supabaseClient
+                        .from('payment_schedules')
+                        .select('id, total_amount, created_at')
+                        .eq('workflow_id', leadWorkflowId)
+                        .order('created_at', { ascending: false });
+                    schedules = workflowSchedules;
+                }
+
+                // Use the most recent schedule
+                if (schedules && schedules.length > 0) {
+                    const scheduleData = schedules[0];
                     showPaymentScheduleLink(scheduleData.id);
                     loadSidebarSchedule(scheduleData);
                 }
             } catch (err) {
-                // No schedule exists - that's fine
+                console.error('Error loading schedule:', err);
             }
         }
 
