@@ -180,67 +180,72 @@
         <!-- Main Content -->
         <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
 
-            <!-- Client Info Card -->
-            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mb-6 animate-enter">
-                <div class="flex items-start gap-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center border border-amber-500/20 flex-shrink-0">
-                        <i class="ph ph-user text-2xl text-amber-400"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div id="client-display-name" class="text-xl font-bold text-white mb-1">-</div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                            <div id="client-email-row" class="flex items-center gap-2">
-                                <i class="ph ph-envelope text-zinc-600"></i>
-                                <span id="client-email" class="text-zinc-400 truncate">-</span>
-                            </div>
-                            <div id="client-phone-row" class="hidden flex items-center gap-2">
-                                <i class="ph ph-phone text-zinc-600"></i>
-                                <span id="client-phone" class="text-zinc-400">-</span>
-                            </div>
-                            <div id="client-company-row" class="hidden flex items-center gap-2">
-                                <i class="ph ph-buildings text-zinc-600"></i>
-                                <span id="client-company" class="text-zinc-400">-</span>
-                            </div>
+            <!-- Combined Hero Card -->
+            <div class="glass-card rounded-2xl border border-white/10 overflow-hidden mb-6 animate-enter">
+                <!-- Top: Client + Progress Ring -->
+                <div class="p-5 sm:p-6 flex items-center gap-4 sm:gap-5">
+                    <!-- Progress Ring with Initials -->
+                    <div class="relative flex-shrink-0">
+                        <svg class="w-16 h-16 sm:w-20 sm:h-20 -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="#27272a" stroke-width="8"/>
+                            <circle id="progress-ring" cx="50" cy="50" r="42" fill="none" stroke="url(#progressGradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" class="transition-all duration-700"/>
+                            <defs>
+                                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#10b981"/>
+                                    <stop offset="100%" stop-color="#34d399"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="client-initials" class="text-lg sm:text-xl font-bold text-amber-400">-</span>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Summary Card -->
-            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mb-6 animate-enter" style="animation-delay: 0.1s">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                    <div class="text-center sm:text-left">
-                        <div class="text-zinc-500 text-xs mb-1">Suma</div>
-                        <div id="total-amount" class="text-xl sm:text-2xl font-bold text-white">-</div>
+                    <!-- Client Info -->
+                    <div class="flex-1 min-w-0">
+                        <div id="client-display-name" class="text-lg sm:text-xl font-bold text-white mb-0.5 truncate">-</div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-zinc-500">
+                            <span id="client-email" class="truncate">-</span>
+                            <span id="client-phone-row" class="hidden">
+                                <span class="text-zinc-700">|</span>
+                                <span id="client-phone" class="ml-3">-</span>
+                            </span>
+                        </div>
+                        <div id="client-company-row" class="hidden text-xs text-zinc-600 mt-0.5">
+                            <i class="ph ph-buildings mr-1"></i><span id="client-company">-</span>
+                        </div>
                     </div>
-                    <div class="text-center sm:text-left">
-                        <div class="text-zinc-500 text-xs mb-1">Wpłacono</div>
-                        <div id="paid-amount" class="text-xl sm:text-2xl font-bold text-emerald-400">-</div>
-                    </div>
-                    <div class="text-center sm:text-left">
-                        <div class="text-zinc-500 text-xs mb-1">Pozostało</div>
-                        <div id="remaining-amount" class="text-xl sm:text-2xl font-bold text-amber-400">-</div>
-                    </div>
-                    <div class="text-center sm:text-left">
-                        <div class="text-zinc-500 text-xs mb-1">Rat</div>
-                        <div id="installments-count" class="text-xl sm:text-2xl font-bold text-white">-</div>
+
+                    <!-- Progress Percent -->
+                    <div class="text-right flex-shrink-0">
+                        <div id="progress-percent" class="text-2xl sm:text-3xl font-bold text-white">0%</div>
+                        <div class="text-zinc-500 text-xs">opłacono</div>
                     </div>
                 </div>
 
-                <!-- Progress bar -->
-                <div class="mt-6">
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="text-zinc-500">Postęp płatności</span>
-                        <span id="progress-percent" class="text-zinc-400 font-medium">0%</span>
+                <!-- Bottom: Stats Grid -->
+                <div class="grid grid-cols-4 border-t border-white/5">
+                    <div class="p-3 sm:p-4 text-center border-r border-white/5">
+                        <div class="text-[10px] sm:text-xs text-zinc-600 uppercase tracking-wider mb-1">Suma</div>
+                        <div id="total-amount" class="text-sm sm:text-lg font-bold text-white">-</div>
                     </div>
-                    <div class="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
-                        <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    <div class="p-3 sm:p-4 text-center border-r border-white/5">
+                        <div class="text-[10px] sm:text-xs text-zinc-600 uppercase tracking-wider mb-1">Wpłacono</div>
+                        <div id="paid-amount" class="text-sm sm:text-lg font-bold text-emerald-400">-</div>
+                    </div>
+                    <div class="p-3 sm:p-4 text-center border-r border-white/5">
+                        <div class="text-[10px] sm:text-xs text-zinc-600 uppercase tracking-wider mb-1">Pozostało</div>
+                        <div id="remaining-amount" class="text-sm sm:text-lg font-bold text-amber-400">-</div>
+                    </div>
+                    <div class="p-3 sm:p-4 text-center">
+                        <div class="text-[10px] sm:text-xs text-zinc-600 uppercase tracking-wider mb-1">Rat</div>
+                        <div id="installments-count" class="text-sm sm:text-lg font-bold text-white">-</div>
                     </div>
                 </div>
             </div>
 
             <!-- Section Title -->
-            <div class="flex items-center gap-2 mb-4 px-1 animate-enter" style="animation-delay: 0.15s">
+            <div class="flex items-center gap-2 mb-4 px-1 animate-enter" style="animation-delay: 0.1s">
                 <i class="ph ph-list-numbers text-amber-400"></i>
                 <span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">Lista rat</span>
             </div>
@@ -301,6 +306,32 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(amount) + ' zł';
+        }
+
+        function getInitials(name, company) {
+            // Prefer name, fallback to company
+            const source = name || company || '';
+            if (!source) return '?';
+
+            const words = source.trim().split(/\s+/);
+            if (words.length >= 2) {
+                return (words[0][0] + words[1][0]).toUpperCase();
+            }
+            return source.substring(0, 2).toUpperCase();
+        }
+
+        function updateProgressRing(percent) {
+            const ring = document.getElementById('progress-ring');
+            if (!ring) return;
+
+            // Circle circumference = 2 * PI * r = 2 * 3.14159 * 42 ≈ 264
+            const circumference = 264;
+            const offset = circumference - (percent / 100) * circumference;
+
+            // Animate after small delay for visual effect
+            setTimeout(() => {
+                ring.style.strokeDashoffset = offset;
+            }, 100);
         }
 
         function formatDate(dateStr) {
@@ -508,6 +539,10 @@
             document.getElementById('client-display-name').textContent = displayName;
             document.getElementById('client-email').textContent = lead.email;
 
+            // Client initials for progress ring
+            const initials = getInitials(lead.name, lead.company);
+            document.getElementById('client-initials').textContent = initials;
+
             if (lead.phone) {
                 document.getElementById('client-phone').textContent = lead.phone;
                 document.getElementById('client-phone-row').classList.remove('hidden');
@@ -539,7 +574,9 @@
             document.getElementById('remaining-amount').textContent = formatCurrency(remaining);
             document.getElementById('installments-count').textContent = `${paidCount}/${installments.length}`;
             document.getElementById('progress-percent').textContent = `${progressPercent}%`;
-            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            // Update SVG progress ring
+            updateProgressRing(progressPercent);
         }
 
         function renderInstallments() {
