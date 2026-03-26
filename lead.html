@@ -4353,9 +4353,35 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
             showConfirmModal({
                 title: 'Usuń ofertę',
-                message: 'Czy na pewno chcesz usunąć wygenerowaną ofertę? Link przestanie działać.',
+                message: 'Czy na pewno chcesz usunąć wygenerowaną ofertę? Link przestanie działać. Harmonogram płatności również zostanie usunięty.',
                 theme: 'lost',
                 onConfirm: async () => {
+                    // First delete payment schedules and installments for this lead
+                    if (lead?.id) {
+                        // Get all schedules for this lead
+                        const { data: schedules } = await supabaseClient
+                            .from('payment_schedules')
+                            .select('id')
+                            .eq('lead_id', lead.id);
+
+                        if (schedules && schedules.length > 0) {
+                            const scheduleIds = schedules.map(s => s.id);
+
+                            // Delete installments first (foreign key)
+                            await supabaseClient
+                                .from('payment_installments')
+                                .delete()
+                                .in('schedule_id', scheduleIds);
+
+                            // Delete schedules
+                            await supabaseClient
+                                .from('payment_schedules')
+                                .delete()
+                                .eq('lead_id', lead.id);
+                        }
+                    }
+
+                    // Delete the offer
                     const { error } = await supabaseClient
                         .from('client_offers')
                         .delete()
@@ -4375,6 +4401,16 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
                     clientOffer = null;
                     updateClientOfferSection();
+
+                    // Hide sidebar schedule section
+                    const sidebarSection = document.getElementById('sidebar-schedule-section');
+                    if (sidebarSection) sidebarSection.classList.add('hidden');
+
+                    // Hide payment schedule link section
+                    const scheduleSection = document.getElementById('payment-schedule-link-section');
+                    if (scheduleSection) scheduleSection.classList.add('hidden');
+
+                    showToast('Oferta i harmonogram usunięte', 'success');
                 }
             });
         }
