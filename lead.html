@@ -723,8 +723,9 @@
                                             <input type="checkbox" id="enable-payment-schedule" class="hidden">
                                         </div>
 
-                                        <!-- Payment Schedule Config (compact) -->
+                                        <!-- Payment Schedule Config -->
                                         <div id="payment-schedule-config" class="hidden mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                            <!-- Quick settings row -->
                                             <div class="grid grid-cols-4 gap-2 mb-3">
                                                 <div>
                                                     <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Rat</label>
@@ -739,11 +740,11 @@
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Co</label>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Domyślnie co</label>
                                                     <select id="installments-interval" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer">
-                                                        <option value="7">7 dni</option>
                                                         <option value="14">14 dni</option>
                                                         <option value="30" selected>30 dni</option>
+                                                        <option value="60">60 dni</option>
                                                     </select>
                                                 </div>
                                                 <div>
@@ -758,10 +759,13 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <!-- Inline preview -->
-                                            <div class="flex items-center justify-between text-[10px] text-zinc-400 bg-zinc-900/50 rounded px-2 py-1.5">
-                                                <div id="installments-preview" class="flex gap-2 overflow-x-auto"></div>
-                                                <span class="text-amber-400 font-medium whitespace-nowrap ml-2">= <span id="schedule-total-display">0</span> zł</span>
+                                            <!-- Editable installments list -->
+                                            <div class="bg-zinc-900/50 rounded p-2">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <span class="text-[9px] text-zinc-500 uppercase tracking-wider">Harmonogram rat</span>
+                                                    <span class="text-xs text-amber-400 font-medium">Suma: <span id="schedule-total-display">0</span> zł</span>
+                                                </div>
+                                                <div id="installments-preview" class="space-y-1.5"></div>
                                             </div>
                                         </div>
 
@@ -3694,7 +3698,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (totalDisplay) totalDisplay.textContent = totalAmount ? totalAmount.toLocaleString('pl-PL') : '0';
 
             if (!totalAmount || !firstDateStr) {
-                previewContainer.innerHTML = '<span class="text-zinc-600">Ustaw cenę</span>';
+                previewContainer.innerHTML = '<p class="text-zinc-600 text-[10px] text-center py-2">Ustaw cenę i datę startu</p>';
                 return;
             }
 
@@ -3702,12 +3706,30 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const firstDate = new Date(firstDateStr);
             const firstCustomAmount = parseFloat(document.getElementById('first-installment-amount')?.value) || 0;
 
-            // Compact inline preview (horizontal pills)
+            // Render editable installments list
             let html = '';
             installments.forEach((inst, idx) => {
-                const isHigher = idx === 0 && firstCustomAmount > 0;
-                html += `<span class="whitespace-nowrap ${isHigher ? 'text-amber-400 font-medium' : ''}">${inst.amount.toLocaleString('pl-PL')}</span>`;
-                if (idx < installments.length - 1) html += '<span class="text-zinc-600">+</span>';
+                const date = new Date(firstDate);
+                date.setDate(date.getDate() + (idx * interval));
+                const dateStr = date.toISOString().split('T')[0];
+                const isFirst = idx === 0;
+                const isHigher = isFirst && firstCustomAmount > 0;
+
+                // Check if there's already a custom date set for this installment
+                const existingInput = document.getElementById(`installment-date-${idx}`);
+                const customDate = existingInput?.value || dateStr;
+
+                html += `
+                    <div class="flex items-center gap-2 ${idx > 0 ? 'pt-1.5 border-t border-white/5' : ''}">
+                        <span class="w-5 h-5 rounded-full ${isHigher ? 'bg-amber-500/30 text-amber-300' : 'bg-zinc-800 text-zinc-500'} text-[10px] font-bold flex items-center justify-center shrink-0">${inst.number}</span>
+                        <input type="date"
+                            id="installment-date-${idx}"
+                            value="${customDate}"
+                            class="flex-1 bg-zinc-800/50 border border-white/5 rounded px-2 py-1 text-[11px] text-white cursor-pointer hover:border-amber-500/30 focus:border-amber-500/50 focus:outline-none transition-colors"
+                            onclick="this.showPicker()">
+                        <span class="text-[11px] ${isHigher ? 'text-amber-400 font-semibold' : 'text-zinc-300'} w-20 text-right">${inst.amount.toLocaleString('pl-PL')} zł</span>
+                    </div>
+                `;
             });
             previewContainer.innerHTML = html;
         }
@@ -3718,22 +3740,31 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             // Not enabled = no schedule
             if (!enabled) return null;
 
-            const interval = parseInt(document.getElementById('installments-interval')?.value) || 30;
-            const firstDateStr = document.getElementById('first-installment-date')?.value;
             const totalAmount = getSchedulePrice();
+            const firstDateStr = document.getElementById('first-installment-date')?.value;
 
             if (!totalAmount || !firstDateStr) return null;
 
             const calculatedInstallments = calculateInstallments();
-            const firstDate = new Date(firstDateStr);
 
+            // Read custom dates from inputs (if they exist)
             const installments = calculatedInstallments.map((inst, idx) => {
-                const date = new Date(firstDate);
-                date.setDate(date.getDate() + (idx * interval));
+                const dateInput = document.getElementById(`installment-date-${idx}`);
+                const customDate = dateInput?.value;
+
+                // Fallback to calculated date if no custom date
+                let dueDate = customDate;
+                if (!dueDate) {
+                    const interval = parseInt(document.getElementById('installments-interval')?.value) || 30;
+                    const firstDate = new Date(firstDateStr);
+                    firstDate.setDate(firstDate.getDate() + (idx * interval));
+                    dueDate = firstDate.toISOString().split('T')[0];
+                }
+
                 return {
                     installment_number: inst.number,
                     amount: inst.amount,
-                    due_date: date.toISOString().split('T')[0]
+                    due_date: dueDate
                 };
             });
 
