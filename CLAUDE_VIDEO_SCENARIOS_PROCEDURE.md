@@ -297,6 +297,64 @@ Użytkownik mówi: "Wygeneruj scenariusze video dla workflow X"
 
 ---
 
+## ⚠️ KROK 0: OKREŚL PŁEĆ NAGRYWAJĄCEGO (OBOWIĄZKOWE!)
+
+> **KRYTYCZNE:** Zanim napiszesz jakikolwiek scenariusz, sprawdź `customer_name` z workflow i określ płeć klienta. Scenariusze MUSZĄ być dostosowane do osoby która będzie je nagrywać!
+
+### Jak określić płeć po polskim imieniu:
+
+| Końcówka/wzorzec | Płeć | Przykłady |
+|------------------|------|-----------|
+| `-a` (większość) | Kobieta | Anna, Katarzyna, Magda, Ewa, Joanna, Agnieszka, Monika |
+| `-ek`, `-usz`, `-aw`, `-an` | Mężczyzna | Marek, Łukasz, Tomasz, Sławek, Jan, Damian |
+| `-eł`, `-ał`, `-ił` | Mężczyzna | Paweł, Michał, Kamil, Rafał |
+| Wyjątki kobiece bez `-a` | Kobieta | Dagmara→Daga, Małgorzata→Gosia |
+
+### Popularne polskie imiona:
+
+**Męskie:** Adam, Andrzej, Bartek, Damian, Daniel, Dawid, Dominik, Filip, Grzegorz, Jakub, Jan, Kamil, Karol, Krzysztof, Łukasz, Maciej, Marcin, Marek, Mateusz, Michał, Paweł, Piotr, Rafał, Robert, Sebastian, Szymon, Tomasz, Wojciech
+
+**Żeńskie:** Agnieszka, Aleksandra, Alicja, Anna, Barbara, Beata, Dorota, Ewa, Iwona, Joanna, Justyna, Karolina, Katarzyna, Kinga, Magda, Małgorzata, Maria, Marta, Monika, Natalia, Patrycja, Paulina, Renata, Sylwia, Weronika, Zuzanna
+
+### Jak dostosować scenariusze:
+
+| Element | Kobieta | Mężczyzna |
+|---------|---------|-----------|
+| **Perspektywa beauty/anti-aging** | Bezpośrednia ("Ja używam...") | Pośrednia ("Kupiłem żonie...", "Moja partnerka...") LUB biohacker angle |
+| **Hook emocjonalny** | "koleżanki pytają", "kobiety 30+" | "kumple myśleli że zwariowałem", "faceci którzy rozumieją" |
+| **Rant** | "smarowałam się kremami" | "ćwiczyłem jak wariat a efektów brak" |
+| **Ekskluzywność** | "Ten post dla kobiet które rozumieją" | "Ten post dla facetów którzy ogarniają" |
+| **Storytime** | "Mama/koleżanka myślała..." | "Żona myślała że zwariowałem...", "Kumple się śmiali..." |
+
+### Męskie angle'e dla produktów wellness/beauty:
+
+1. **Biohacker** — optymalizacja, performance, nauka, dane
+2. **Sportowiec** — regeneracja, wydajność, energia po treningu
+3. **Produktywność** — focus, energia w pracy, przewaga konkurencyjna
+4. **Prezent dla niej** — "kupiłem żonie i sam zacząłem używać"
+5. **Sceptyk przekonany** — "myślałem że ściema, ale..."
+
+### Proporcje scenariuszy:
+
+| Płeć klienta | Scenariusze bezpośrednie | Scenariusze "dla partnera/ki" |
+|--------------|--------------------------|------------------------------|
+| Kobieta | 8-10 (większość) | 0-2 |
+| Mężczyzna (produkt unisex) | 6-8 | 2-4 |
+| Mężczyzna (produkt typowo kobiecy) | 3-4 (biohacker angle) | 6-7 ("dla niej") |
+
+### Przykład — produkt anti-aging, klient: Łukasz (mężczyzna)
+
+**Zamiast:** "Piętnaście lat smarowałam się kremami..."
+**Napisz:** "Żona wydała fortunę na kremy. Ja znalazłem coś co działa od środka..."
+
+**Zamiast:** "Koleżanki pytają co bierzesz"
+**Napisz:** "Kumple pytają skąd mam tyle energii na siłowni"
+
+**Zamiast:** "Ten post dla kobiet 30+"
+**Napisz:** "Ten post dla facetów którzy ogarniają zdrowie"
+
+---
+
 ## Proces generowania
 
 ### Krok 1: Pobierz WSZYSTKIE dane o produkcie

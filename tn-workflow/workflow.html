@@ -8956,7 +8956,13 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 let warunkiPlatnosci = '<p>2. Wynagrodzenie płatne jest jednorazowo, przed rozpoczęciem Etapu 1.</p>';
                 let nrPunktKonto = '3';
 
+                // Calculate total amount - use sum of installments if schedule exists, otherwise workflow.amount
+                let totalAmount = workflow.amount || 0;
+
                 if (paymentSchedule && paymentInstallments?.length > 0) {
+                    // Sum all installments for total amount
+                    totalAmount = paymentInstallments.reduce((sum, inst) => sum + parseFloat(inst.amount || 0), 0);
+
                     const installmentsRows = paymentInstallments.map((inst, idx) => {
                         const dueDate = new Date(inst.due_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
                         return `<tr><td style="padding: 6px 12px; border: 1px solid #ddd;">Rata ${inst.installment_number}</td><td style="padding: 6px 12px; border: 1px solid #ddd; text-align: right;"><strong>${parseFloat(inst.amount).toLocaleString('pl-PL')} zł</strong></td><td style="padding: 6px 12px; border: 1px solid #ddd;">${dueDate}</td></tr>`;
@@ -9000,8 +9006,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     '{{email}}': workflow.customer_email || '',
                     '{{telefon}}': workflow.customer_phone || '',
                     '{{nazwa_oferty}}': workflow.offer_name || '',
-                    '{{kwota}}': formatPrice(workflow.amount),
-                    '{{cena}}': formatPrice(workflow.amount),
+                    '{{kwota}}': formatPrice(totalAmount),
+                    '{{cena}}': formatPrice(totalAmount),
                     '{{data}}': today,
                     '{{data_dzis}}': today,
                     '{{data_rozpoczecia}}': startDate,

@@ -38,7 +38,7 @@ Dane wstawiane do tabeli `workflow_branding`:
    - `title` = nazwa promptu (np. "Logo główne na ciemnym tle")
    - `value` = pełna treść promptu
    - `notes` = JSON `{"category":"logo|mockup"}`
-   - Minimum 6 promptów logo + 10 promptów mockupów
+   - Minimum 5 promptów logo + 10 promptów mockupów (razem 15)
 
 ## Proces myslenia (jak generowac)
 
@@ -299,21 +299,84 @@ To logo musi wyglądać jakby kosztowało $15,000 od agencji brandingowej.
 | **Masażer** | ręka, mięśnie | fale koncentryczne, pulsowanie |
 | **Odkurzacz** | odkurzacz, dom | spirala ruchu, wir, ścieżka |
 
-#### 6 wariantów logo do wygenerowania:
+#### 5 wariantów logo do wygenerowania (OBOWIĄZKOWE):
 
-Dla każdego wariantu użyj tego samego szablonu, zmieniając tylko sekcję DELIVERABLE:
+> **WAŻNE**: Po wstawieniu brandingu do bazy, system automatycznie wygeneruje wszystkie 5 logo.
+> Wszystkie logo mają: sygnet PO LEWEJ, wordmark PO PRAWEJ, BIAŁE TŁO, format KWADRATOWY 1024x1024px.
 
-1. **Logo główne** — na białym tle (#FFFFFF), pełne kolory
-2. **Logo alternatywne** — na ciemnym tle (#1A1A2E), dostosowane kontrasty
-3. **Logo monochromatyczne** — wersja czarna (#000000) na białym tle
-4. **Favicon/ikona** — sam sygnet bez tekstu, na białym tle, musi działać w 32x32px
-5. **Combo mark poziomy** — sygnet + wordmark w jednej linii, proporcje 4:1
-6. **Animacja (storyboard)** — 6 klatek w gridzie 2x3 pokazujących budowanie logo
+**Prompt 1 — Minimalistyczne (krótki prompt):**
+```
+Logo for "[NAZWA]" brand. Left side: geometric symbol representing [CECHA PRODUKTU]. Right side: "[NAZWA]" in clean sans-serif. Colors: symbol in [PRIMARY HEX], text in dark gray. White background. Square format 1024x1024px. Modern, minimal, professional.
+```
 
-> **ZASADA UKŁADU:**
+**Prompt 2 — Premium z negatywną przestrzenią (długi prompt):**
+```
+Design a premium logo for Polish brand "[NAZWA]" — [krótki opis produktu].
+
+LAYOUT: Horizontal combo mark. Symbol (signet) on LEFT, wordmark on RIGHT, in one line.
+SYMBOL: Use negative space to hide a subtle reference to [ELEMENT PRODUKTU] within the first letter or geometric shape. Think FedEx arrow, Toblerone bear. Abstract, not literal.
+WORDMARK: "[NAZWA]" in custom geometric sans-serif. High x-height, optically balanced tracking.
+COLORS: Symbol in [PRIMARY HEX] ([nazwa koloru]). Wordmark in [NEUTRAL DARK HEX].
+STYLE: Apple/Dyson level. Clean lines, no gradients, no effects. Must work at 32x32px.
+
+White background (#FFFFFF). Square format 1024x1024px. Centered composition with breathing room.
+This logo should look like it cost $15,000 from a top branding agency.
+```
+
+**Prompt 3 — Geometryczny sygnet (średni prompt):**
+```
+Logo for "[NAZWA]" — [kategoria produktu] brand.
+
+Create a logo with geometric symbol on the left and wordmark on the right.
+Symbol: Built on a grid system using circles and lines. Abstract representation of [CECHA PRODUKTU] — movement, precision, or energy. No literal icons.
+Wordmark: "[NAZWA]" in bold geometric sans-serif font.
+Color: Symbol [PRIMARY HEX], text [NEUTRAL DARK HEX].
+
+White background. Square 1024x1024px. Clean, modern, premium quality.
+```
+
+**Prompt 4 — Typograficzny akcent (krótki prompt):**
+```
+Minimalist logo: "[NAZWA]" wordmark with integrated symbol on the left side. The symbol should be derived from letterforms — perhaps a stylized first letter with [CECHA PRODUKTU] suggestion. Primary color [PRIMARY HEX] for symbol, dark text. White background, square 1024x1024px. Tech-forward, contemporary.
+```
+
+**Prompt 5 — Dynamiczny i nowoczesny (długi prompt):**
+```
+Create a modern, dynamic logo for "[NAZWA]" brand in the [KATEGORIA] category.
+
+COMPOSITION:
+- Left: Bold graphic symbol suggesting [EMOCJE MARKI: np. speed, precision, energy]
+- Right: "[NAZWA]" wordmark in contemporary sans-serif
+- Horizontal alignment, single line
+
+SYMBOL REQUIREMENTS:
+- Abstract geometric form, NOT a literal representation of the product
+- Should convey [EMOCJE: np. motion, trust, innovation]
+- Works perfectly at small sizes (favicon)
+- Built with mathematical precision (golden ratio or √2 proportions)
+
+TYPOGRAPHY:
+- Custom feel, not a standard Google Font look
+- Consider unique ligature or modified letterforms
+- Balanced kerning, strong presence
+
+COLORS:
+- Symbol: [PRIMARY HEX] ([nazwa koloru])
+- Wordmark: [NEUTRAL DARK HEX] ([nazwa])
+
+TECHNICAL:
+- White background (#FFFFFF)
+- Square format: 1024x1024px
+- Flat design, no shadows, no gradients
+- Must scale from 16x16px to billboard
+
+Reference style: Stripe, Linear, Vercel, Notion — modern tech minimalism.
+```
+
+> **ZASADA UKŁADU (WSZYSTKIE WARIANTY):**
 > Sygnet (ikona) ZAWSZE po LEWEJ, wordmark po PRAWEJ, w tej samej linii.
 > Układ: `[SYGNET] [NAZWA MARKI]` — nigdy odwrotnie, nigdy pionowo.
-> Wyjątek: favicon (wariant 4) — sam sygnet.
+> ZAWSZE białe tło. ZAWSZE kwadrat 1024x1024px.
 
 ---
 
@@ -725,16 +788,20 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_brand
 ]
 ```
 
-**ai_prompts** (tablica 16 obiektów — 6 logo + 10 mockupów):
+**ai_prompts** (tablica 15 obiektów — 5 logo + 10 mockupów):
 ```json
 [
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo główne na białym tle", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"logo\"}", "sort_order": 0},
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo na ciemnym tle", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"logo\"}", "sort_order": 1},
-  ...
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Koszulka — [kontekst]", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"mockup\"}", "sort_order": 10},
-  ...
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo minimalistyczne", "value": "[KRÓTKI PROMPT 1]", "notes": "{\"category\":\"logo\"}", "sort_order": 0},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo premium", "value": "[DŁUGI PROMPT 2]", "notes": "{\"category\":\"logo\"}", "sort_order": 1},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo geometryczne", "value": "[ŚREDNI PROMPT 3]", "notes": "{\"category\":\"logo\"}", "sort_order": 2},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo typograficzne", "value": "[KRÓTKI PROMPT 4]", "notes": "{\"category\":\"logo\"}", "sort_order": 3},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo dynamiczne", "value": "[DŁUGI PROMPT 5]", "notes": "{\"category\":\"logo\"}", "sort_order": 4},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Koszulka — [kontekst]", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"mockup\"}", "sort_order": 5},
+  ...pozostałe 9 mockupów z sort_order 6-14...
 ]
 ```
+
+> **WAŻNE**: Każdy prompt logo musi być kompletny i samodzielny. Użyj szablonów z sekcji "5 wariantów logo do wygenerowania" powyżej, podstawiając dane marki (nazwa, kolory, cechy produktu).
 
 ### Kolejność wstawiania
 
@@ -763,7 +830,12 @@ Claude:
    - Przygotowuje dane (brand info, kolory, fonty, prompty)
    - **WSTAWIA BEZPOSREDNIO DO BAZY** przez curl (DELETE + POST)
    - Weryfikuje czy dane sa w bazie
-8. Informuje uzytkownika: "Gotowe! Odśwież stronę workflow."
+8. Informuje użytkownika: "Gotowe! Odśwież stronę workflow i kliknij 'Generuj wszystkie (5)' w sekcji Logo, aby automatycznie wygenerować 5 wersji logo."
+
+> **UWAGA O AUTOMATYCZNYM GENEROWANIU LOGO:**
+> Po wstawieniu brandingu, użytkownik może kliknąć przycisk "Generuj wszystkie (5)" w sekcji Logo na stronie workflow.
+> System automatycznie wygeneruje 5 wersji logo używając promptów zapisanych w bazie.
+> Pierwsze wygenerowane logo zostanie automatycznie oznaczone jako "Główne" i będzie używane do mockupów.
 
 ---
 
