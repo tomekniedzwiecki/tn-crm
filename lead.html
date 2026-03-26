@@ -708,76 +708,72 @@
                                     </div>
                                 </div>
 
-                                <!-- Row 2: Price -->
-                                <div class="mb-5">
-                                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Cena indywidualna (opcjonalne)</label>
-                                    <div class="relative">
-                                        <input type="number" id="client-offer-custom-price" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white pr-16" placeholder="Domyślna cena z wybranej oferty" min="0" step="1">
-                                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">PLN</span>
+                                <!-- Row 2: Price + Payment toggle -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                                    <div>
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Cena indywidualna (opcjonalne)</label>
+                                        <div class="relative">
+                                            <input type="number" id="client-offer-custom-price" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white pr-16" placeholder="Cena z oferty" min="0" step="1">
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">PLN</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Płatność</label>
+                                        <label class="flex items-center gap-3 h-[42px] px-3 rounded-lg border border-white/10 bg-zinc-800/50 cursor-pointer hover:bg-zinc-800 transition-colors">
+                                            <input type="checkbox" id="enable-payment-schedule" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-zinc-700 rounded-full peer-checked:bg-amber-500/40 transition-colors relative border border-white/10 peer-checked:border-amber-500/50 shrink-0">
+                                                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-zinc-500 rounded-full peer-checked:translate-x-4 peer-checked:bg-amber-400 transition-all"></div>
+                                            </div>
+                                            <span class="text-sm text-zinc-400 peer-checked:text-amber-400 transition-colors">Ratalna</span>
+                                        </label>
                                     </div>
                                 </div>
 
-                                <!-- Payment Schedule Section -->
-                                <div id="payment-schedule-card" class="hidden mb-5">
-                                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
-                                        <div class="flex items-center gap-2">
-                                            <i class="ph ph-calendar-check text-amber-400"></i>
-                                            <span class="text-xs font-medium text-white">Płatność ratalna</span>
+                                <!-- Payment Schedule Config (shows when toggle enabled) -->
+                                <div id="payment-schedule-config" class="hidden mb-5 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Liczba rat</label>
+                                            <select id="installments-count" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer">
+                                                <option value="2">2</option>
+                                                <option value="3">3</option>
+                                                <option value="4" selected>4</option>
+                                                <option value="5">5</option>
+                                                <option value="6">6</option>
+                                                <option value="10">10</option>
+                                                <option value="12">12</option>
+                                            </select>
                                         </div>
-                                        <label class="flex items-center gap-2 cursor-pointer group">
-                                            <span class="text-zinc-600 text-[10px] uppercase tracking-wider">Włącz</span>
-                                            <input type="checkbox" id="enable-payment-schedule" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-zinc-800 rounded-full peer-checked:bg-amber-500/30 transition-colors relative border border-white/10 peer-checked:border-amber-500/50">
-                                                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-zinc-500 rounded-full peer-checked:translate-x-5 peer-checked:bg-amber-400 transition-all"></div>
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Odstęp</label>
+                                            <select id="installments-interval" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer">
+                                                <option value="7">tydzień</option>
+                                                <option value="14">2 tyg.</option>
+                                                <option value="30" selected>miesiąc</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Data 1. raty</label>
+                                            <input type="date" id="first-installment-date" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                                        </div>
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                                                1. rata <span class="text-amber-500/70">(wyższa)</span>
+                                            </label>
+                                            <div class="relative">
+                                                <input type="number" id="first-installment-amount" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white pr-10" placeholder="auto" min="0" step="100">
+                                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 text-[10px]">zł</span>
                                             </div>
-                                        </label>
+                                        </div>
                                     </div>
 
-                                    <div id="payment-schedule-config" class="hidden">
-                                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Liczba rat</label>
-                                                <select id="installments-count" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer">
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4" selected>4</option>
-                                                    <option value="5">5</option>
-                                                    <option value="6">6</option>
-                                                    <option value="10">10</option>
-                                                    <option value="12">12</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Odstęp</label>
-                                                <select id="installments-interval" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer">
-                                                    <option value="7">tydzień</option>
-                                                    <option value="14">2 tyg.</option>
-                                                    <option value="30" selected>miesiąc</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Data 1. raty</label>
-                                                <input type="date" id="first-installment-date" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
-                                            </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                                                    1. rata <span class="text-amber-500/70">(wyższa)</span>
-                                                </label>
-                                                <div class="relative">
-                                                    <input type="number" id="first-installment-amount" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white pr-10" placeholder="auto" min="0" step="100">
-                                                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 text-[10px]">zł</span>
-                                                </div>
-                                            </div>
+                                    <!-- Preview -->
+                                    <div class="bg-zinc-950/50 rounded-lg p-3 border border-white/5">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Podgląd rat</span>
+                                            <span class="text-xs text-amber-400 font-medium"><span id="schedule-total-display">0</span> zł łącznie</span>
                                         </div>
-
-                                        <!-- Preview -->
-                                        <div class="bg-zinc-950/50 rounded-lg p-3 border border-white/5">
-                                            <div class="flex items-center justify-between mb-2">
-                                                <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Podgląd rat</span>
-                                                <span class="text-xs text-amber-400 font-medium"><span id="schedule-total-display">0</span> zł łącznie</span>
-                                            </div>
-                                            <div id="installments-preview" class="space-y-1">
-                                            </div>
+                                        <div id="installments-preview" class="space-y-1">
                                         </div>
                                     </div>
                                 </div>
@@ -3613,7 +3609,6 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
         // ============ PAYMENT SCHEDULE FUNCTIONS ============
 
         function initPaymentScheduleUI() {
-            const scheduleCard = document.getElementById('payment-schedule-card');
             const enableToggle = document.getElementById('enable-payment-schedule');
             const configSection = document.getElementById('payment-schedule-config');
             const firstDateInput = document.getElementById('first-installment-date');
@@ -3646,32 +3641,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 }
             });
 
-            // Show payment schedule card when offer has price
-            document.getElementById('field-offer')?.addEventListener('change', () => {
-                updatePaymentScheduleVisibility();
-                updateInstallmentsPreview();
-            });
-
-            // Also listen to custom price changes
-            document.getElementById('client-offer-custom-price')?.addEventListener('input', () => {
-                updatePaymentScheduleVisibility();
-                updateInstallmentsPreview();
-            });
-        }
-
-        function updatePaymentScheduleVisibility() {
-            const scheduleCard = document.getElementById('payment-schedule-card');
-            const totalAmount = getSchedulePrice();
-            const totalDisplay = document.getElementById('schedule-total-display');
-
-            if (scheduleCard) {
-                if (totalAmount > 0) {
-                    scheduleCard.classList.remove('hidden');
-                    if (totalDisplay) totalDisplay.textContent = totalAmount.toLocaleString('pl-PL');
-                } else {
-                    scheduleCard.classList.add('hidden');
-                }
-            }
+            // Update preview when offer changes
+            document.getElementById('field-offer')?.addEventListener('change', updateInstallmentsPreview);
         }
 
         function getSchedulePrice() {
@@ -3760,10 +3731,9 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         function getPaymentScheduleData() {
             const enabled = document.getElementById('enable-payment-schedule')?.checked;
-            const scheduleCard = document.getElementById('payment-schedule-card');
 
-            // Not enabled or card hidden = no schedule
-            if (!enabled || scheduleCard?.classList.contains('hidden')) return null;
+            // Not enabled = no schedule
+            if (!enabled) return null;
 
             const interval = parseInt(document.getElementById('installments-interval')?.value) || 30;
             const firstDateStr = document.getElementById('first-installment-date')?.value;
