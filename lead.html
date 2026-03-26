@@ -1032,6 +1032,43 @@
                             </button>
                         </div>
 
+                        <!-- Payment Schedule Overview -->
+                        <div id="sidebar-schedule-section" class="hidden bg-zinc-900/40 rounded-lg border border-amber-500/20 p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                    <i class="ph ph-calendar-check text-amber-400"></i>
+                                    Harmonogram rat
+                                </h3>
+                                <button onclick="copySidebarScheduleUrl()" class="text-zinc-500 hover:text-amber-400 transition-colors" title="Kopiuj link">
+                                    <i class="ph ph-copy text-sm"></i>
+                                </button>
+                            </div>
+                            <!-- Summary -->
+                            <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                                <div class="bg-zinc-800/50 rounded-lg p-2">
+                                    <div class="text-[10px] text-zinc-500 uppercase">Suma</div>
+                                    <div id="sidebar-schedule-total" class="text-sm font-bold text-white">-</div>
+                                </div>
+                                <div class="bg-zinc-800/50 rounded-lg p-2">
+                                    <div class="text-[10px] text-zinc-500 uppercase">Wpłacono</div>
+                                    <div id="sidebar-schedule-paid" class="text-sm font-bold text-emerald-400">-</div>
+                                </div>
+                                <div class="bg-zinc-800/50 rounded-lg p-2">
+                                    <div class="text-[10px] text-zinc-500 uppercase">Pozostało</div>
+                                    <div id="sidebar-schedule-remaining" class="text-sm font-bold text-amber-400">-</div>
+                                </div>
+                            </div>
+                            <!-- Installments List -->
+                            <div id="sidebar-installments-list" class="space-y-1.5 max-h-[180px] overflow-y-auto">
+                                <!-- Rendered by JS -->
+                            </div>
+                            <!-- Open full view -->
+                            <button onclick="openSchedulePreview()" class="w-full mt-3 text-zinc-500 hover:text-white text-xs flex items-center justify-center gap-1 transition-colors">
+                                <i class="ph ph-arrow-square-out"></i>
+                                Otwórz pełny widok
+                            </button>
+                        </div>
+
                         <!-- Scheduled Meetings -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 sm:p-5">
                             <div class="flex items-center justify-between mb-4">
@@ -3926,16 +3963,81 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             try {
                 const { data: scheduleData } = await supabaseClient
                     .from('payment_schedules')
-                    .select('id')
+                    .select('id, total_amount')
                     .eq('lead_id', lead.id)
                     .single();
 
                 if (scheduleData) {
                     showPaymentScheduleLink(scheduleData.id);
                     loadAdminInstallmentsList(scheduleData.id);
+                    loadSidebarSchedule(scheduleData);
                 }
             } catch (err) {
                 // No schedule exists - that's fine
+            }
+        }
+
+        // Load schedule overview in sidebar
+        async function loadSidebarSchedule(schedule) {
+            const section = document.getElementById('sidebar-schedule-section');
+            if (!section) return;
+
+            try {
+                const { data: installments } = await supabaseClient
+                    .from('payment_installments')
+                    .select('*')
+                    .eq('schedule_id', schedule.id)
+                    .order('installment_number', { ascending: true });
+
+                if (!installments || installments.length === 0) return;
+
+                // Show section
+                section.classList.remove('hidden');
+
+                // Calculate summary
+                const total = parseFloat(schedule.total_amount) || 0;
+                const paid = installments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+                const remaining = total - paid;
+
+                // Update summary
+                document.getElementById('sidebar-schedule-total').textContent = total.toLocaleString('pl-PL') + ' zł';
+                document.getElementById('sidebar-schedule-paid').textContent = paid.toLocaleString('pl-PL') + ' zł';
+                document.getElementById('sidebar-schedule-remaining').textContent = remaining.toLocaleString('pl-PL') + ' zł';
+
+                // Render installments
+                const container = document.getElementById('sidebar-installments-list');
+                container.innerHTML = installments.map(inst => {
+                    const isPaid = inst.status === 'paid';
+                    const dueDate = new Date(inst.due_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+
+                    return `
+                        <div class="flex items-center gap-2 p-2 rounded-lg ${isPaid ? 'bg-emerald-500/10' : 'bg-zinc-800/50'}">
+                            <span class="w-5 h-5 rounded-full ${isPaid ? 'bg-emerald-500/30 text-emerald-400' : 'bg-zinc-700 text-zinc-500'} text-[10px] font-bold flex items-center justify-center shrink-0">
+                                ${isPaid ? '<i class="ph ph-check text-xs"></i>' : inst.installment_number}
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <span class="text-[11px] ${isPaid ? 'text-emerald-400' : 'text-white'} font-medium">${parseFloat(inst.amount).toLocaleString('pl-PL')} zł</span>
+                                <span class="text-[10px] text-zinc-600 ml-1">${isPaid ? 'opł.' : dueDate}</span>
+                            </div>
+                            <button onclick="toggleInstallmentStatus('${inst.id}', ${isPaid})"
+                                    class="p-1 rounded transition-colors ${isPaid ? 'text-zinc-600 hover:text-red-400' : 'text-zinc-600 hover:text-emerald-400'}"
+                                    title="${isPaid ? 'Cofnij' : 'Oznacz jako opłacone'}">
+                                <i class="ph ${isPaid ? 'ph-x' : 'ph-check'} text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error loading sidebar schedule:', err);
+            }
+        }
+
+        function copySidebarScheduleUrl() {
+            const urlInput = document.getElementById('payment-schedule-url');
+            if (urlInput?.value) {
+                navigator.clipboard.writeText(urlInput.value);
+                showToast('Link skopiowany', 'success');
             }
         }
 
@@ -4004,10 +4106,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
                 if (error) throw error;
 
-                // Reload the list
-                if (currentScheduleId) {
-                    loadAdminInstallmentsList(currentScheduleId);
-                }
+                // Reload both the admin list and sidebar
+                loadExistingSchedule();
 
                 showToast(currentlyPaid ? 'Rata oznaczona jako nieopłacona' : 'Rata oznaczona jako opłacona', 'success');
             } catch (err) {
