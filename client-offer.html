@@ -271,10 +271,25 @@
                     </button>
                 </div>
 
-                <!-- Installment info -->
-                <div class="mt-4 flex items-center gap-2 text-zinc-400 text-xs sm:text-sm">
+                <!-- Installment info (default) -->
+                <div id="installments-default-info" class="mt-4 flex items-center gap-2 text-zinc-400 text-xs sm:text-sm">
                     <i class="ph ph-split text-amber-400"></i>
                     <span>Możliwość rozłożenia na <strong class="text-white">raty 0%</strong> — wybierzesz przy płatności</span>
+                </div>
+
+                <!-- Payment Schedule (if exists) -->
+                <div id="payment-schedule-section" class="hidden mt-5 pt-5 border-t border-white/10">
+                    <div class="flex items-center gap-2 text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-3">
+                        <i class="ph ph-calendar-check text-amber-400"></i>
+                        <span>Harmonogram płatności ratalnych</span>
+                    </div>
+                    <div id="payment-schedule-list" class="space-y-2">
+                        <!-- Installments rendered here -->
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-sm">
+                        <span class="text-zinc-500">Suma:</span>
+                        <span id="schedule-total" class="text-white font-semibold">-</span>
+                    </div>
                 </div>
             </div>
 
@@ -354,6 +369,7 @@
         let clientOffer = null;
         let offer = null;
         let lead = null;
+        let paymentSchedule = null;
         let trackingEventsSent = {}; // Deduplikacja eventów
 
         // Helper to get effective price (custom_price or getEffectivePrice())
@@ -864,6 +880,82 @@
             // Render timeline
             const milestones = offer.milestones || [];
             renderTimeline(milestones);
+
+            // Load and render payment schedule if exists
+            loadPaymentSchedule();
+        }
+
+        async function loadPaymentSchedule() {
+            if (!lead?.id) return;
+
+            try {
+                // Fetch payment schedule for this lead
+                const { data: schedule, error } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('*, payment_installments(*)')
+                    .eq('lead_id', lead.id)
+                    .single();
+
+                if (error || !schedule) {
+                    console.log('[offer] No payment schedule for this lead');
+                    return;
+                }
+
+                paymentSchedule = schedule;
+                renderPaymentSchedule();
+
+            } catch (err) {
+                console.error('[offer] Error loading payment schedule:', err);
+            }
+        }
+
+        function renderPaymentSchedule() {
+            if (!paymentSchedule || !paymentSchedule.payment_installments?.length) return;
+
+            // Hide default installment info, show schedule section
+            document.getElementById('installments-default-info')?.classList.add('hidden');
+            document.getElementById('payment-schedule-section')?.classList.remove('hidden');
+
+            const container = document.getElementById('payment-schedule-list');
+            const installments = paymentSchedule.payment_installments
+                .sort((a, b) => a.installment_number - b.installment_number);
+
+            container.innerHTML = installments.map(inst => {
+                const statusColors = {
+                    'pending': 'text-zinc-400 bg-zinc-800',
+                    'paid': 'text-emerald-400 bg-emerald-500/20',
+                    'overdue': 'text-red-400 bg-red-500/20',
+                    'cancelled': 'text-zinc-600 bg-zinc-900'
+                };
+                const statusLabels = {
+                    'pending': 'Do zapłaty',
+                    'paid': 'Opłacona',
+                    'overdue': 'Zaległa',
+                    'cancelled': 'Anulowana'
+                };
+                const statusClass = statusColors[inst.status] || statusColors.pending;
+                const statusLabel = statusLabels[inst.status] || inst.status;
+
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-lg bg-zinc-900/50 border border-white/5">
+                        <div class="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            ${inst.installment_number}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-white font-medium">${formatPrice(inst.amount)} PLN</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="text-zinc-500 text-xs">
+                                Termin: ${formatDate(inst.due_date)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Show total
+            document.getElementById('schedule-total').textContent = formatPrice(paymentSchedule.total_amount) + ' PLN';
         }
 
         function renderTimeline(milestones) {
