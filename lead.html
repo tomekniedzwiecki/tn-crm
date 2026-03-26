@@ -3659,13 +3659,25 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (firstDateInput) firstDateInput.value = tomorrow.toISOString().split('T')[0];
 
             // Update preview and price badge on any change
-            ['installments-count', 'installments-interval', 'first-installment-date', 'first-installment-amount', 'field-value'].forEach(id => {
+            ['installments-count', 'first-installment-date', 'first-installment-amount', 'field-value'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.addEventListener('change', () => { updateInstallmentsPreview(); updatePriceBadge(); });
                     el.addEventListener('input', () => { updateInstallmentsPreview(); updatePriceBadge(); });
                 }
             });
+
+            // Special handler for interval - must clear preview to recalculate all dates
+            const intervalSelect = document.getElementById('installments-interval');
+            if (intervalSelect) {
+                intervalSelect.addEventListener('change', () => {
+                    // Clear preview to force date recalculation
+                    const preview = document.getElementById('installments-preview');
+                    if (preview) preview.innerHTML = '';
+                    updateInstallmentsPreview();
+                    updatePriceBadge();
+                });
+            }
 
             // Update preview and price badge when offer changes
             document.getElementById('field-offer')?.addEventListener('change', () => {
