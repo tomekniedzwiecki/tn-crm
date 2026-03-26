@@ -482,7 +482,22 @@
         }
 
         function updateLoginPreview() {
-            const displayName = lead.company || lead.name || lead.email;
+            // Only show name/company, never show full email as it defeats verification purpose
+            const hasRealName = lead.name && lead.name !== lead.email;
+            const hasCompany = lead.company && lead.company.trim();
+
+            let displayName;
+            if (hasCompany) {
+                displayName = lead.company;
+            } else if (hasRealName) {
+                displayName = lead.name;
+            } else {
+                // Mask email: show only first letter + domain hint
+                const emailParts = lead.email.split('@');
+                const domain = emailParts[1] || '';
+                displayName = `${emailParts[0].charAt(0)}***@${domain.split('.')[0]}...`;
+            }
+
             document.getElementById('login-client-name').textContent = displayName;
             document.getElementById('login-installments-info').textContent = `${installments.length} rat`;
             document.getElementById('login-total-amount').textContent = formatCurrency(schedule.total_amount);
