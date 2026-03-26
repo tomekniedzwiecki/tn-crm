@@ -444,6 +444,23 @@
             border-color: rgba(16, 185, 129, 0.5);
             background: rgba(16, 185, 129, 0.1);
         }
+
+        /* Payment mode buttons */
+        .payment-mode-btn {
+            border-color: rgba(255,255,255,0.1);
+            background: rgba(39, 39, 42, 0.5);
+            color: rgba(161, 161, 170, 1);
+        }
+        .payment-mode-btn:hover {
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(39, 39, 42, 0.8);
+            color: white;
+        }
+        .payment-mode-btn.active {
+            border-color: rgba(251, 191, 36, 0.5);
+            background: rgba(251, 191, 36, 0.15);
+            color: rgb(251, 191, 36);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -677,29 +694,33 @@
                                 <div class="border-t border-white/5 pt-4">
                                     <!-- ===== FORM: Create offer ===== -->
                                     <div id="client-offer-empty">
-                                        <!-- Row: Type + Validity + Payment mode -->
-                                        <div class="grid grid-cols-3 gap-3 mb-4">
+                                        <!-- Row: Type + Validity -->
+                                        <div class="grid grid-cols-2 gap-3 mb-3">
                                             <div>
                                                 <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Typ oferty</label>
                                                 <select id="offer-type-select" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer">
+                                                    <option value="full" selected>Pełen pakiet (z umową)</option>
                                                     <option value="starter">Startowy (bez umowy)</option>
-                                                    <option value="full">Pełen pakiet (z umową)</option>
                                                 </select>
                                             </div>
                                             <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Ważność</label>
+                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Ważność oferty</label>
                                                 <input type="date" id="client-offer-valid-until" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
                                             </div>
-                                            <div>
-                                                <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Płatność</label>
-                                                <label class="flex items-center justify-between h-[34px] px-3 rounded-lg border border-white/10 bg-zinc-800/50 cursor-pointer hover:bg-zinc-800 transition-colors">
-                                                    <span class="text-xs text-zinc-400" id="payment-mode-label">Jednorazowa</span>
-                                                    <input type="checkbox" id="enable-payment-schedule" class="sr-only peer">
-                                                    <div class="w-8 h-4 bg-zinc-700 rounded-full peer-checked:bg-amber-500/50 transition-colors relative border border-white/5 peer-checked:border-amber-500/50 shrink-0">
-                                                        <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-zinc-500 rounded-full peer-checked:translate-x-4 peer-checked:bg-amber-400 transition-all"></div>
-                                                    </div>
-                                                </label>
+                                        </div>
+
+                                        <!-- Payment mode: Two buttons -->
+                                        <div class="mb-4">
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Sposób płatności</label>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <button type="button" id="payment-mode-single" class="payment-mode-btn active py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('single')">
+                                                    <i class="ph ph-credit-card mr-1.5"></i>Jednorazowa
+                                                </button>
+                                                <button type="button" id="payment-mode-installments" class="payment-mode-btn py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('installments')">
+                                                    <i class="ph ph-calendar-check mr-1.5"></i>Ratalna
+                                                </button>
                                             </div>
+                                            <input type="checkbox" id="enable-payment-schedule" class="hidden">
                                         </div>
 
                                         <!-- Payment Schedule Config (compact) -->
@@ -3564,32 +3585,33 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         // ============ PAYMENT SCHEDULE FUNCTIONS ============
 
-        function initPaymentScheduleUI() {
+        function setPaymentMode(mode) {
+            const singleBtn = document.getElementById('payment-mode-single');
+            const installmentsBtn = document.getElementById('payment-mode-installments');
             const enableToggle = document.getElementById('enable-payment-schedule');
             const configSection = document.getElementById('payment-schedule-config');
-            const firstDateInput = document.getElementById('first-installment-date');
-            const paymentModeLabel = document.getElementById('payment-mode-label');
 
-            if (!enableToggle) return;
+            if (mode === 'installments') {
+                singleBtn?.classList.remove('active');
+                installmentsBtn?.classList.add('active');
+                if (enableToggle) enableToggle.checked = true;
+                configSection?.classList.remove('hidden');
+                updateInstallmentsPreview();
+            } else {
+                installmentsBtn?.classList.remove('active');
+                singleBtn?.classList.add('active');
+                if (enableToggle) enableToggle.checked = false;
+                configSection?.classList.add('hidden');
+            }
+        }
+
+        function initPaymentScheduleUI() {
+            const firstDateInput = document.getElementById('first-installment-date');
 
             // Set default first date (tomorrow)
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             if (firstDateInput) firstDateInput.value = tomorrow.toISOString().split('T')[0];
-
-            // Toggle config visibility and update label
-            enableToggle.addEventListener('change', () => {
-                if (configSection) {
-                    if (enableToggle.checked) {
-                        configSection.classList.remove('hidden');
-                        if (paymentModeLabel) paymentModeLabel.textContent = 'Ratalna';
-                        updateInstallmentsPreview();
-                    } else {
-                        configSection.classList.add('hidden');
-                        if (paymentModeLabel) paymentModeLabel.textContent = 'Jednorazowa';
-                    }
-                }
-            });
 
             // Update preview and price badge on any change
             ['installments-count', 'installments-interval', 'first-installment-date', 'first-installment-amount', 'field-value'].forEach(id => {
