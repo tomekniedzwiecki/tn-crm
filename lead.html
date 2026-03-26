@@ -709,21 +709,24 @@
                                             </div>
                                         </div>
 
-                                        <!-- Payment mode: Two buttons -->
+                                        <!-- Payment mode: Three buttons -->
                                         <div class="mb-4">
                                             <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Sposób płatności</label>
-                                            <div class="grid grid-cols-2 gap-2">
+                                            <div class="grid grid-cols-3 gap-2">
                                                 <button type="button" id="payment-mode-single" class="payment-mode-btn active py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('single')">
                                                     <i class="ph ph-credit-card mr-1.5"></i>Jednorazowa
                                                 </button>
                                                 <button type="button" id="payment-mode-installments" class="payment-mode-btn py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('installments')">
                                                     <i class="ph ph-calendar-check mr-1.5"></i>Ratalna
                                                 </button>
+                                                <button type="button" id="payment-mode-custom" class="payment-mode-btn py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('custom')">
+                                                    <i class="ph ph-link mr-1.5"></i>Indywidualnie
+                                                </button>
                                             </div>
                                             <input type="checkbox" id="enable-payment-schedule" class="hidden">
                                         </div>
 
-                                        <!-- Payment Schedule Config -->
+                                        <!-- Payment Schedule Config (Ratalna) -->
                                         <div id="payment-schedule-config" class="hidden mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
                                             <!-- Quick settings row -->
                                             <div class="grid grid-cols-4 gap-2 mb-3">
@@ -769,10 +772,66 @@
                                             </div>
                                         </div>
 
-                                        <!-- Generate Button -->
+                                        <!-- Custom Payment Config (Indywidualnie) -->
+                                        <div id="custom-payment-config" class="hidden mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+                                            <p class="text-zinc-500 text-[10px] mb-3">Jednorazowy link do płatności. Projekt TN Workflow <strong>nie zostanie</strong> utworzony.</p>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Kwota (PLN) <span class="text-red-400">*</span></label>
+                                                    <div class="relative">
+                                                        <input type="number" id="custom-payment-amount-inline" min="1" step="0.01" placeholder="np. 1500" class="input-field w-full rounded px-2 py-1.5 text-xs text-white pr-6">
+                                                        <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-600 text-[9px]">zł</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Opis <span class="text-red-400">*</span></label>
+                                                    <input type="text" id="custom-payment-description-inline" placeholder="np. Konsultacja AI" class="input-field w-full rounded px-2 py-1.5 text-xs text-white">
+                                                </div>
+                                            </div>
+                                            <!-- Upgrade option (only visible if lead has workflow) -->
+                                            <div id="upgrade-workflow-section-inline" class="hidden mt-3 pt-3 border-t border-white/5">
+                                                <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">
+                                                    <i class="ph ph-arrow-fat-up text-amber-400 mr-1"></i>Upgrade do oferty (opcja)
+                                                </label>
+                                                <select id="custom-payment-upgrade-offer-inline" class="input-field w-full rounded px-2 py-1.5 text-xs text-white">
+                                                    <option value="">-- Bez upgrade'u --</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Generated custom payment result -->
+                                        <div id="custom-payment-result-inline" class="hidden mb-4 p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <input type="text" id="custom-payment-url-inline" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700 rounded px-2 py-1.5 text-[10px] text-zinc-300 font-mono truncate">
+                                                <button onclick="copyCustomPaymentUrlInline()" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors" title="Kopiuj">
+                                                    <i class="ph ph-copy text-zinc-400 text-xs"></i>
+                                                </button>
+                                                <button onclick="openCustomPaymentUrlInline()" class="p-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 rounded transition-colors" title="Otwórz">
+                                                    <i class="ph ph-arrow-square-out text-emerald-400 text-xs"></i>
+                                                </button>
+                                            </div>
+                                            <div class="flex items-center justify-between text-[10px]">
+                                                <span class="text-zinc-400">
+                                                    <i class="ph ph-money text-emerald-400 mr-1"></i><span id="custom-payment-amount-display-inline">0</span> zł
+                                                    <span class="text-zinc-600 mx-1">•</span>
+                                                    <span id="custom-payment-description-display-inline" class="text-zinc-500 truncate">-</span>
+                                                </span>
+                                                <button onclick="resetCustomPaymentInline()" class="text-zinc-500 hover:text-white transition-colors">
+                                                    <i class="ph ph-arrow-counter-clockwise mr-1"></i>Nowy
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Generate Button (for single/installments) -->
                                         <button id="generate-client-offer-btn" class="w-full bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                                             <i class="ph ph-link-simple"></i>
                                             Generuj link do oferty
+                                        </button>
+
+                                        <!-- Generate Button (for custom payment) -->
+                                        <button id="generate-custom-payment-btn-inline" class="hidden w-full bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                                            <i class="ph ph-link"></i>
+                                            Generuj link do płatności
                                         </button>
                                     </div>
 
@@ -974,69 +1033,6 @@
                             </div>
                         </div>
 
-                        <!-- Custom Payment Link (jednorazowa płatność bez workflow) -->
-                        <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 sm:p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                    <i class="ph ph-credit-card text-emerald-400"></i>
-                                    Link do płatności
-                                    <span class="text-[9px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">bez workflow</span>
-                                </h3>
-                            </div>
-
-                            <!-- Generate payment link form -->
-                            <div id="custom-payment-form">
-                                <p class="text-zinc-500 text-xs mb-4">Wygeneruj jednorazowy link do płatności. Projekt TN Workflow <strong>nie zostanie</strong> utworzony.</p>
-
-                                <div class="space-y-3 mb-4">
-                                    <div>
-                                        <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">Kwota (PLN) <span class="text-red-400">*</span></label>
-                                        <input type="number" id="custom-payment-amount" min="1" step="0.01" placeholder="np. 1500" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
-                                    </div>
-                                    <div>
-                                        <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis płatności <span class="text-red-400">*</span></label>
-                                        <input type="text" id="custom-payment-description" placeholder="np. Konsultacja AI, Audyt" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
-                                    </div>
-                                    <!-- Upgrade workflow option -->
-                                    <div id="upgrade-workflow-section" class="hidden border-t border-white/5 pt-3 mt-3">
-                                        <label class="block text-zinc-600 text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                                            <i class="ph ph-arrow-fat-up text-amber-400 mr-1"></i>Upgrade do oferty (opcjonalnie)
-                                        </label>
-                                        <select id="custom-payment-upgrade-offer" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white">
-                                            <option value="">-- Bez upgrade'u --</option>
-                                        </select>
-                                        <p class="text-zinc-600 text-[10px] mt-1">Po opłaceniu, projekt klienta zostanie zaktualizowany do wybranej oferty</p>
-                                    </div>
-                                </div>
-
-                                <button id="generate-custom-payment-btn" class="w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-emerald-500/30">
-                                    <i class="ph ph-link"></i>
-                                    Generuj link do płatności
-                                </button>
-                            </div>
-
-                            <!-- Generated link display -->
-                            <div id="custom-payment-result" class="hidden">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <input type="text" id="custom-payment-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono truncate">
-                                    <button onclick="copyCustomPaymentUrl()" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-white/10" title="Kopiuj link">
-                                        <i class="ph ph-copy text-zinc-400"></i>
-                                    </button>
-                                    <button onclick="openCustomPaymentUrl()" class="p-2 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg transition-colors border border-emerald-500/30" title="Otwórz checkout">
-                                        <i class="ph ph-arrow-square-out text-emerald-400"></i>
-                                    </button>
-                                </div>
-                                <div class="flex items-center gap-3 text-xs text-zinc-400 mb-3">
-                                    <span><i class="ph ph-money text-emerald-400 mr-1"></i><span id="custom-payment-amount-display">0 PLN</span></span>
-                                    <span class="text-zinc-700">•</span>
-                                    <span class="truncate" id="custom-payment-description-display">-</span>
-                                </div>
-                                <button onclick="resetCustomPaymentForm()" class="w-full text-zinc-500 hover:text-white text-xs transition-colors flex items-center justify-center gap-1">
-                                    <i class="ph ph-arrow-counter-clockwise"></i>
-                                    Generuj nowy link
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 </div><!-- /tab-info -->
@@ -3592,20 +3588,45 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
         function setPaymentMode(mode) {
             const singleBtn = document.getElementById('payment-mode-single');
             const installmentsBtn = document.getElementById('payment-mode-installments');
+            const customBtn = document.getElementById('payment-mode-custom');
             const enableToggle = document.getElementById('enable-payment-schedule');
-            const configSection = document.getElementById('payment-schedule-config');
+            const installmentsConfig = document.getElementById('payment-schedule-config');
+            const customConfig = document.getElementById('custom-payment-config');
+            const customResult = document.getElementById('custom-payment-result-inline');
+            const offerBtn = document.getElementById('generate-client-offer-btn');
+            const customPaymentBtn = document.getElementById('generate-custom-payment-btn-inline');
+
+            // Reset all buttons
+            singleBtn?.classList.remove('active');
+            installmentsBtn?.classList.remove('active');
+            customBtn?.classList.remove('active');
+
+            // Hide all configs
+            installmentsConfig?.classList.add('hidden');
+            customConfig?.classList.add('hidden');
+            customResult?.classList.add('hidden');
 
             if (mode === 'installments') {
-                singleBtn?.classList.remove('active');
                 installmentsBtn?.classList.add('active');
                 if (enableToggle) enableToggle.checked = true;
-                configSection?.classList.remove('hidden');
+                installmentsConfig?.classList.remove('hidden');
+                offerBtn?.classList.remove('hidden');
+                customPaymentBtn?.classList.add('hidden');
                 updateInstallmentsPreview();
+            } else if (mode === 'custom') {
+                customBtn?.classList.add('active');
+                if (enableToggle) enableToggle.checked = false;
+                customConfig?.classList.remove('hidden');
+                offerBtn?.classList.add('hidden');
+                customPaymentBtn?.classList.remove('hidden');
+                // Populate upgrade offers dropdown if lead has workflow
+                populateUpgradeOffersInline();
             } else {
-                installmentsBtn?.classList.remove('active');
+                // single
                 singleBtn?.classList.add('active');
                 if (enableToggle) enableToggle.checked = false;
-                configSection?.classList.add('hidden');
+                offerBtn?.classList.remove('hidden');
+                customPaymentBtn?.classList.add('hidden');
             }
         }
 
@@ -4221,6 +4242,134 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         // Event listener for generate button
         document.getElementById('generate-custom-payment-btn')?.addEventListener('click', generateCustomPaymentLink);
+
+        // ============ INLINE CUSTOM PAYMENT FUNCTIONS ============
+
+        function populateUpgradeOffersInline() {
+            const select = document.getElementById('custom-payment-upgrade-offer-inline');
+            const section = document.getElementById('upgrade-workflow-section-inline');
+            if (!select) return;
+
+            // Clear existing options
+            select.innerHTML = '<option value="">-- Bez upgrade\'u --</option>';
+
+            // Show upgrade section only if lead has a workflow
+            if (leadWorkflowId && offers.length > 0) {
+                section?.classList.remove('hidden');
+                offers.forEach(offer => {
+                    const opt = document.createElement('option');
+                    opt.value = offer.id;
+                    opt.textContent = `${offer.name} (${offer.price?.toLocaleString('pl-PL')} zł)`;
+                    select.appendChild(opt);
+                });
+            } else {
+                section?.classList.add('hidden');
+            }
+        }
+
+        function generateCustomPaymentLinkInline() {
+            const amountInput = document.getElementById('custom-payment-amount-inline');
+            const descriptionInput = document.getElementById('custom-payment-description-inline');
+
+            const amount = parseFloat(amountInput.value);
+            const description = descriptionInput.value.trim();
+
+            // Validate
+            if (!amount || amount <= 0) {
+                amountInput.classList.add('shake');
+                amountInput.style.borderColor = '#ef4444';
+                setTimeout(() => {
+                    amountInput.classList.remove('shake');
+                    amountInput.style.borderColor = '';
+                }, 500);
+                return;
+            }
+
+            if (!description) {
+                descriptionInput.classList.add('shake');
+                descriptionInput.style.borderColor = '#ef4444';
+                setTimeout(() => {
+                    descriptionInput.classList.remove('shake');
+                    descriptionInput.style.borderColor = '';
+                }, 500);
+                return;
+            }
+
+            // Generate URL
+            const baseUrl = location.origin;
+            const isLocal = location.hostname === 'localhost';
+            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
+
+            const params = new URLSearchParams({
+                amount: amount.toFixed(2),
+                description: description,
+                lead_id: lead?.id || ''
+            });
+
+            // Check if upgrade option selected
+            const upgradeOfferSelect = document.getElementById('custom-payment-upgrade-offer-inline');
+            const upgradeOfferId = upgradeOfferSelect?.value;
+            if (upgradeOfferId && leadWorkflowId) {
+                params.set('upgrade_workflow_id', leadWorkflowId);
+                params.set('upgrade_to_offer_id', upgradeOfferId);
+            }
+
+            const paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
+
+            // Update UI - show result, hide config
+            document.getElementById('custom-payment-url-inline').value = paymentUrl;
+            document.getElementById('custom-payment-amount-display-inline').textContent = amount.toLocaleString('pl-PL');
+            document.getElementById('custom-payment-description-display-inline').textContent = description;
+
+            document.getElementById('custom-payment-config').classList.add('hidden');
+            document.getElementById('custom-payment-result-inline').classList.remove('hidden');
+
+            // Log activity
+            if (lead?.email) {
+                logAuditActivity('create', 'custom_payment_link', null, lead.email, null, {
+                    amount: amount,
+                    description: description,
+                    url: paymentUrl
+                });
+            }
+
+            console.log('[custom-payment-inline] Generated link:', paymentUrl);
+        }
+
+        function copyCustomPaymentUrlInline() {
+            const urlInput = document.getElementById('custom-payment-url-inline');
+            urlInput.select();
+            document.execCommand('copy');
+
+            // Show feedback
+            const btn = urlInput.nextElementSibling;
+            const icon = btn.querySelector('i');
+            icon.classList.remove('ph-copy');
+            icon.classList.add('ph-check');
+            icon.classList.add('text-emerald-400');
+
+            setTimeout(() => {
+                icon.classList.remove('ph-check', 'text-emerald-400');
+                icon.classList.add('ph-copy');
+            }, 2000);
+        }
+
+        function openCustomPaymentUrlInline() {
+            const url = document.getElementById('custom-payment-url-inline').value;
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function resetCustomPaymentInline() {
+            document.getElementById('custom-payment-amount-inline').value = '';
+            document.getElementById('custom-payment-description-inline').value = '';
+            document.getElementById('custom-payment-config').classList.remove('hidden');
+            document.getElementById('custom-payment-result-inline').classList.add('hidden');
+        }
+
+        // Event listener for inline custom payment button
+        document.getElementById('generate-custom-payment-btn-inline')?.addEventListener('click', generateCustomPaymentLinkInline);
 
         // View History Functions
         function toggleViewHistory() {
