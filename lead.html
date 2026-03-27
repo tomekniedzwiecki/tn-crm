@@ -709,67 +709,19 @@
                                             </div>
                                         </div>
 
-                                        <!-- Payment mode: Three buttons -->
+                                        <!-- Payment mode: Two buttons (schedule is separate) -->
                                         <div class="mb-4">
                                             <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Sposób płatności</label>
-                                            <div class="grid grid-cols-3 gap-2">
+                                            <div class="grid grid-cols-2 gap-2">
                                                 <button type="button" id="payment-mode-single" class="payment-mode-btn active py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('single')">
-                                                    <i class="ph ph-credit-card mr-1.5"></i>Jednorazowa
-                                                </button>
-                                                <button type="button" id="payment-mode-installments" class="payment-mode-btn py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('installments')">
-                                                    <i class="ph ph-calendar-check mr-1.5"></i>Ratalna
+                                                    <i class="ph ph-credit-card mr-1.5"></i>Pełna kwota
                                                 </button>
                                                 <button type="button" id="payment-mode-custom" class="payment-mode-btn py-2 px-3 rounded-lg text-sm font-medium transition-all border" onclick="setPaymentMode('custom')">
                                                     <i class="ph ph-link mr-1.5"></i>Indywidualnie
                                                 </button>
                                             </div>
+                                            <p class="text-zinc-600 text-[10px] mt-1.5"><i class="ph ph-info mr-1"></i>Harmonogram rat możesz dodać osobno w panelu bocznym</p>
                                             <input type="checkbox" id="enable-payment-schedule" class="hidden">
-                                        </div>
-
-                                        <!-- Payment Schedule Config (Ratalna) -->
-                                        <div id="payment-schedule-config" class="hidden mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
-                                            <!-- Quick settings row -->
-                                            <div class="grid grid-cols-4 gap-2 mb-3">
-                                                <div>
-                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Rat</label>
-                                                    <select id="installments-count" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer">
-                                                        <option value="2">2</option>
-                                                        <option value="3">3</option>
-                                                        <option value="4" selected>4</option>
-                                                        <option value="5">5</option>
-                                                        <option value="6">6</option>
-                                                        <option value="10">10</option>
-                                                        <option value="12">12</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Domyślnie co</label>
-                                                    <select id="installments-interval" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer">
-                                                        <option value="14">14 dni</option>
-                                                        <option value="30" selected>30 dni</option>
-                                                        <option value="60">60 dni</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Start</label>
-                                                    <input type="date" id="first-installment-date" class="input-field w-full rounded px-2 py-1.5 text-xs text-white cursor-pointer" onclick="this.showPicker()">
-                                                </div>
-                                                <div>
-                                                    <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">1. rata</label>
-                                                    <div class="relative">
-                                                        <input type="number" id="first-installment-amount" class="input-field w-full rounded px-2 py-1.5 text-xs text-white pr-6" placeholder="=" min="0" step="100">
-                                                        <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-600 text-[9px]">zł</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- Editable installments list -->
-                                            <div class="bg-zinc-900/50 rounded p-2">
-                                                <div class="flex items-center justify-between mb-2">
-                                                    <span class="text-[9px] text-zinc-500 uppercase tracking-wider">Harmonogram rat</span>
-                                                    <span class="text-xs text-amber-400 font-medium">Suma: <span id="schedule-total-display">0</span> zł</span>
-                                                </div>
-                                                <div id="installments-preview" class="space-y-1.5"></div>
-                                            </div>
                                         </div>
 
                                         <!-- Custom Payment Config (Indywidualnie) -->
@@ -1009,41 +961,60 @@
                             </button>
                         </div>
 
-                        <!-- Payment Schedule Overview -->
-                        <div id="sidebar-schedule-section" class="hidden bg-zinc-900/40 rounded-lg border border-amber-500/20 p-4">
+                        <!-- Payment Schedule Section -->
+                        <div id="sidebar-schedule-section" class="bg-zinc-900/40 rounded-lg border border-white/5 p-4">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="text-sm font-medium text-white flex items-center gap-2">
                                     <i class="ph ph-calendar-check text-amber-400"></i>
                                     Harmonogram rat
                                 </h3>
-                                <button onclick="copySidebarScheduleUrl()" class="text-zinc-500 hover:text-amber-400 transition-colors" title="Kopiuj link">
+                                <button id="sidebar-schedule-copy-btn" onclick="copySidebarScheduleUrl()" class="hidden text-zinc-500 hover:text-amber-400 transition-colors" title="Kopiuj link">
                                     <i class="ph ph-copy text-sm"></i>
                                 </button>
                             </div>
-                            <!-- Summary -->
-                            <div class="grid grid-cols-3 gap-2 mb-3 text-center">
-                                <div class="bg-zinc-800/50 rounded-lg p-2">
-                                    <div class="text-[10px] text-zinc-500 uppercase">Suma</div>
-                                    <div id="sidebar-schedule-total" class="text-sm font-bold text-white">-</div>
+
+                            <!-- Empty state - no schedule -->
+                            <div id="sidebar-schedule-empty" class="text-center py-4">
+                                <i class="ph ph-calendar-plus text-2xl text-zinc-700 mb-2"></i>
+                                <p class="text-zinc-500 text-xs mb-3">Brak harmonogramu rat</p>
+                                <button onclick="openCreateScheduleModal()" class="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-amber-500/30">
+                                    <i class="ph ph-plus"></i>
+                                    Dodaj harmonogram
+                                </button>
+                            </div>
+
+                            <!-- Has schedule - show details -->
+                            <div id="sidebar-schedule-details" class="hidden">
+                                <!-- Summary -->
+                                <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                                    <div class="bg-zinc-800/50 rounded-lg p-2">
+                                        <div class="text-[10px] text-zinc-500 uppercase">Suma</div>
+                                        <div id="sidebar-schedule-total" class="text-sm font-bold text-white">-</div>
+                                    </div>
+                                    <div class="bg-zinc-800/50 rounded-lg p-2">
+                                        <div class="text-[10px] text-zinc-500 uppercase">Wpłacono</div>
+                                        <div id="sidebar-schedule-paid" class="text-sm font-bold text-emerald-400">-</div>
+                                    </div>
+                                    <div class="bg-zinc-800/50 rounded-lg p-2">
+                                        <div class="text-[10px] text-zinc-500 uppercase">Pozostało</div>
+                                        <div id="sidebar-schedule-remaining" class="text-sm font-bold text-amber-400">-</div>
+                                    </div>
                                 </div>
-                                <div class="bg-zinc-800/50 rounded-lg p-2">
-                                    <div class="text-[10px] text-zinc-500 uppercase">Wpłacono</div>
-                                    <div id="sidebar-schedule-paid" class="text-sm font-bold text-emerald-400">-</div>
+                                <!-- Installments List -->
+                                <div id="sidebar-installments-list" class="space-y-1.5">
+                                    <!-- Rendered by JS -->
                                 </div>
-                                <div class="bg-zinc-800/50 rounded-lg p-2">
-                                    <div class="text-[10px] text-zinc-500 uppercase">Pozostało</div>
-                                    <div id="sidebar-schedule-remaining" class="text-sm font-bold text-amber-400">-</div>
+                                <!-- Actions -->
+                                <div class="flex gap-2 mt-3">
+                                    <button onclick="openSchedulePreview()" class="flex-1 text-zinc-500 hover:text-white text-xs flex items-center justify-center gap-1 transition-colors py-2 rounded-lg hover:bg-zinc-800/50">
+                                        <i class="ph ph-arrow-square-out"></i>
+                                        Pełny widok
+                                    </button>
+                                    <button onclick="deleteLeadSchedule()" class="text-zinc-600 hover:text-red-400 text-xs flex items-center justify-center gap-1 transition-colors py-2 px-3 rounded-lg hover:bg-red-500/10">
+                                        <i class="ph ph-trash"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <!-- Installments List -->
-                            <div id="sidebar-installments-list" class="space-y-1.5">
-                                <!-- Rendered by JS -->
-                            </div>
-                            <!-- Open full view -->
-                            <button onclick="openSchedulePreview()" class="w-full mt-3 text-zinc-500 hover:text-white text-xs flex items-center justify-center gap-1 transition-colors">
-                                <i class="ph ph-arrow-square-out"></i>
-                                Otwórz pełny widok
-                            </button>
                         </div>
 
                         <!-- Scheduled Meetings -->
@@ -1428,6 +1399,91 @@
                 </div>
                 <div id="view-history-content" class="p-4 max-h-[60vh] overflow-y-auto">
                     <!-- Content populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Schedule Modal -->
+    <div id="create-schedule-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeCreateScheduleModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-w-xl w-full transform transition-all duration-200">
+                <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                        <i class="ph ph-calendar-check text-amber-400"></i>
+                        Nowy harmonogram rat
+                    </h3>
+                    <button onclick="closeCreateScheduleModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <!-- Total Amount -->
+                    <div class="mb-4">
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Całkowita kwota (PLN) <span class="text-red-400">*</span></label>
+                        <div class="relative">
+                            <input type="number" id="modal-schedule-total" min="1" step="100" placeholder="np. 12000" class="input-field w-full rounded-lg px-3 py-2.5 text-white pr-8">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">zł</span>
+                        </div>
+                    </div>
+
+                    <!-- Quick settings row -->
+                    <div class="grid grid-cols-4 gap-3 mb-4">
+                        <div>
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase mb-1">Liczba rat</label>
+                            <select id="modal-installments-count" class="input-field w-full rounded-lg px-2 py-2.5 text-sm text-white cursor-pointer">
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4" selected>4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="10">10</option>
+                                <option value="12">12</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase mb-1">Co ile dni</label>
+                            <select id="modal-installments-interval" class="input-field w-full rounded-lg px-2 py-2.5 text-sm text-white cursor-pointer">
+                                <option value="14">14 dni</option>
+                                <option value="30" selected>30 dni</option>
+                                <option value="60">60 dni</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase mb-1">Start</label>
+                            <input type="date" id="modal-first-date" class="input-field w-full rounded-lg px-2 py-2.5 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                        </div>
+                        <div>
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase mb-1">1. rata</label>
+                            <div class="relative">
+                                <input type="number" id="modal-first-amount" class="input-field w-full rounded-lg px-2 py-2.5 text-sm text-white pr-6" placeholder="auto" min="0" step="100">
+                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 text-[10px]">zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Installments Preview -->
+                    <div class="bg-zinc-800/50 rounded-lg p-3 mb-4 max-h-[200px] overflow-y-auto">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Podgląd harmonogramu</span>
+                            <span class="text-xs text-amber-400 font-medium">Suma: <span id="modal-schedule-sum">0</span> zł</span>
+                        </div>
+                        <div id="modal-installments-preview" class="space-y-1.5">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3">
+                        <button onclick="closeCreateScheduleModal()" class="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-zinc-300 text-sm font-medium transition-colors">
+                            Anuluj
+                        </button>
+                        <button onclick="saveNewSchedule()" class="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 rounded-lg text-black text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-calendar-check"></i>
+                            Utwórz harmonogram
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3599,6 +3655,9 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 defaultDate.setDate(defaultDate.getDate() + 2);
                 document.getElementById('client-offer-valid-until').value = defaultDate.toISOString().split('T')[0];
             }
+
+            // Always load schedule state (may have schedule even without offer)
+            loadExistingSchedule();
         }
 
         function generateToken() {
@@ -3679,10 +3738,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         function setPaymentMode(mode) {
             const singleBtn = document.getElementById('payment-mode-single');
-            const installmentsBtn = document.getElementById('payment-mode-installments');
             const customBtn = document.getElementById('payment-mode-custom');
             const enableToggle = document.getElementById('enable-payment-schedule');
-            const installmentsConfig = document.getElementById('payment-schedule-config');
             const customConfig = document.getElementById('custom-payment-config');
             const customResult = document.getElementById('custom-payment-result-inline');
             const offerBtn = document.getElementById('generate-client-offer-btn');
@@ -3690,33 +3747,25 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
             // Reset all buttons
             singleBtn?.classList.remove('active');
-            installmentsBtn?.classList.remove('active');
             customBtn?.classList.remove('active');
 
             // Hide all configs
-            installmentsConfig?.classList.add('hidden');
             customConfig?.classList.add('hidden');
             customResult?.classList.add('hidden');
 
-            if (mode === 'installments') {
-                installmentsBtn?.classList.add('active');
-                if (enableToggle) enableToggle.checked = true;
-                installmentsConfig?.classList.remove('hidden');
-                offerBtn?.classList.remove('hidden');
-                customPaymentBtn?.classList.add('hidden');
-                updateInstallmentsPreview();
-            } else if (mode === 'custom') {
+            // Always keep schedule toggle off when creating offer (schedule is separate now)
+            if (enableToggle) enableToggle.checked = false;
+
+            if (mode === 'custom') {
                 customBtn?.classList.add('active');
-                if (enableToggle) enableToggle.checked = false;
                 customConfig?.classList.remove('hidden');
                 offerBtn?.classList.add('hidden');
                 customPaymentBtn?.classList.remove('hidden');
                 // Populate upgrade offers dropdown if lead has workflow
                 populateUpgradeOffersInline();
             } else {
-                // single
+                // single (full amount)
                 singleBtn?.classList.add('active');
-                if (enableToggle) enableToggle.checked = false;
                 offerBtn?.classList.remove('hidden');
                 customPaymentBtn?.classList.add('hidden');
             }
@@ -4009,21 +4058,43 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     schedules = workflowSchedules;
                 }
 
-                // Use the most recent schedule
+                // Use the most recent schedule or show empty state
                 if (schedules && schedules.length > 0) {
                     const scheduleData = schedules[0];
                     showPaymentScheduleLink(scheduleData.id);
                     loadSidebarSchedule(scheduleData);
+                } else {
+                    // No schedule - show empty state
+                    loadSidebarSchedule(null);
                 }
             } catch (err) {
                 console.error('Error loading schedule:', err);
+                loadSidebarSchedule(null);
             }
         }
 
+        // Current schedule data for sidebar
+        let currentSchedule = null;
+
         // Load schedule overview in sidebar
         async function loadSidebarSchedule(schedule) {
+            const emptyState = document.getElementById('sidebar-schedule-empty');
+            const detailsState = document.getElementById('sidebar-schedule-details');
+            const copyBtn = document.getElementById('sidebar-schedule-copy-btn');
             const section = document.getElementById('sidebar-schedule-section');
+
             if (!section) return;
+
+            // If no schedule, show empty state
+            if (!schedule) {
+                currentSchedule = null;
+                emptyState?.classList.remove('hidden');
+                detailsState?.classList.add('hidden');
+                copyBtn?.classList.add('hidden');
+                section.classList.remove('border-amber-500/20');
+                section.classList.add('border-white/5');
+                return;
+            }
 
             try {
                 const { data: installments } = await supabaseClient
@@ -4032,10 +4103,20 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     .eq('schedule_id', schedule.id)
                     .order('installment_number', { ascending: true });
 
-                if (!installments || installments.length === 0) return;
+                if (!installments || installments.length === 0) {
+                    loadSidebarSchedule(null);
+                    return;
+                }
 
-                // Show section
-                section.classList.remove('hidden');
+                // Store current schedule
+                currentSchedule = { ...schedule, installments };
+
+                // Show details, hide empty state
+                emptyState?.classList.add('hidden');
+                detailsState?.classList.remove('hidden');
+                copyBtn?.classList.remove('hidden');
+                section.classList.add('border-amber-500/20');
+                section.classList.remove('border-white/5');
 
                 // Calculate summary
                 const total = parseFloat(schedule.total_amount) || 0;
@@ -4107,6 +4188,244 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             } catch (err) {
                 console.error('Error toggling installment:', err);
                 showToast('Błąd aktualizacji raty', 'error');
+            }
+        }
+
+        // ============ CREATE SCHEDULE MODAL ============
+
+        function openCreateScheduleModal() {
+            const modal = document.getElementById('create-schedule-modal');
+            if (!modal) return;
+
+            // Set default values
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('modal-first-date').value = tomorrow.toISOString().split('T')[0];
+
+            // Try to get amount from offer or deal value
+            let defaultAmount = lead?.deal_value || 0;
+            if (clientOffer) {
+                const selectedOffer = offers.find(o => o.id === clientOffer.offer_id);
+                if (clientOffer.custom_price) {
+                    defaultAmount = clientOffer.custom_price;
+                } else if (selectedOffer?.price) {
+                    defaultAmount = selectedOffer.price;
+                }
+            }
+            document.getElementById('modal-schedule-total').value = defaultAmount || '';
+            document.getElementById('modal-first-amount').value = '';
+
+            // Reset count and interval
+            document.getElementById('modal-installments-count').value = '4';
+            document.getElementById('modal-installments-interval').value = '30';
+
+            // Setup listeners for modal preview
+            setupModalPreviewListeners();
+            updateModalPreview();
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeCreateScheduleModal() {
+            document.getElementById('create-schedule-modal')?.classList.add('hidden');
+        }
+
+        function setupModalPreviewListeners() {
+            ['modal-schedule-total', 'modal-installments-count', 'modal-first-date', 'modal-first-amount', 'modal-installments-interval'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('change', updateModalPreview);
+                    el.removeEventListener('input', updateModalPreview);
+                    el.addEventListener('change', updateModalPreview);
+                    el.addEventListener('input', updateModalPreview);
+                }
+            });
+        }
+
+        function updateModalPreview() {
+            const totalAmount = parseFloat(document.getElementById('modal-schedule-total')?.value) || 0;
+            const count = parseInt(document.getElementById('modal-installments-count')?.value) || 4;
+            const interval = parseInt(document.getElementById('modal-installments-interval')?.value) || 30;
+            const firstDateStr = document.getElementById('modal-first-date')?.value;
+            const firstAmountInput = document.getElementById('modal-first-amount')?.value;
+            const firstAmount = firstAmountInput ? parseFloat(firstAmountInput) : null;
+
+            if (!totalAmount || !firstDateStr) {
+                document.getElementById('modal-installments-preview').innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">Wprowadź kwotę i datę startu</p>';
+                document.getElementById('modal-schedule-sum').textContent = '0';
+                return;
+            }
+
+            const installments = [];
+            const baseAmount = Math.floor(totalAmount / count);
+            let remaining = totalAmount;
+            const firstDate = new Date(firstDateStr);
+
+            for (let i = 0; i < count; i++) {
+                const date = new Date(firstDate);
+                date.setDate(date.getDate() + (i * interval));
+
+                let amount;
+                if (i === 0 && firstAmount !== null) {
+                    amount = firstAmount;
+                } else if (i === count - 1) {
+                    amount = remaining;
+                } else {
+                    amount = i === 0 && firstAmount === null ? baseAmount : baseAmount;
+                }
+
+                remaining -= amount;
+                installments.push({ number: i + 1, date, amount });
+            }
+
+            // Recalculate to ensure sum matches
+            const actualSum = installments.reduce((s, i) => s + i.amount, 0);
+            if (actualSum !== totalAmount && installments.length > 0) {
+                installments[installments.length - 1].amount += (totalAmount - actualSum);
+            }
+
+            const preview = document.getElementById('modal-installments-preview');
+            preview.innerHTML = installments.map((inst, idx) => `
+                <div class="flex items-center justify-between p-2 bg-zinc-900/50 rounded-lg text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-5 h-5 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-[10px] font-bold">${inst.number}</span>
+                        <span class="text-zinc-400">${inst.date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <span class="text-white font-medium">${inst.amount.toLocaleString('pl-PL')} zł</span>
+                </div>
+            `).join('');
+
+            document.getElementById('modal-schedule-sum').textContent = totalAmount.toLocaleString('pl-PL');
+        }
+
+        async function saveNewSchedule() {
+            if (!lead?.id) {
+                showToast('Brak leada', 'error');
+                return;
+            }
+
+            const totalAmount = parseFloat(document.getElementById('modal-schedule-total')?.value);
+            const count = parseInt(document.getElementById('modal-installments-count')?.value) || 4;
+            const interval = parseInt(document.getElementById('modal-installments-interval')?.value) || 30;
+            const firstDateStr = document.getElementById('modal-first-date')?.value;
+            const firstAmountInput = document.getElementById('modal-first-amount')?.value;
+            const firstAmount = firstAmountInput ? parseFloat(firstAmountInput) : null;
+
+            if (!totalAmount || totalAmount <= 0) {
+                showToast('Podaj kwotę całkowitą', 'error');
+                return;
+            }
+            if (!firstDateStr) {
+                showToast('Podaj datę pierwszej raty', 'error');
+                return;
+            }
+
+            try {
+                // Create schedule
+                const { data: schedule, error: scheduleError } = await supabaseClient
+                    .from('payment_schedules')
+                    .insert({
+                        lead_id: lead.id,
+                        workflow_id: leadWorkflowId || null,
+                        total_amount: totalAmount,
+                        installments_count: count,
+                        created_by: currentMember?.id
+                    })
+                    .select()
+                    .single();
+
+                if (scheduleError) throw scheduleError;
+
+                // Calculate installments
+                const installments = [];
+                const baseAmount = Math.floor(totalAmount / count);
+                let remaining = totalAmount;
+                const firstDate = new Date(firstDateStr);
+
+                for (let i = 0; i < count; i++) {
+                    const date = new Date(firstDate);
+                    date.setDate(date.getDate() + (i * interval));
+
+                    let amount;
+                    if (i === 0 && firstAmount !== null) {
+                        amount = firstAmount;
+                    } else if (i === count - 1) {
+                        amount = remaining;
+                    } else {
+                        amount = baseAmount;
+                    }
+
+                    remaining -= amount;
+                    installments.push({
+                        schedule_id: schedule.id,
+                        installment_number: i + 1,
+                        amount: amount,
+                        due_date: date.toISOString().split('T')[0],
+                        status: 'pending'
+                    });
+                }
+
+                // Fix last installment to ensure exact sum
+                const actualSum = installments.reduce((s, i) => s + i.amount, 0);
+                if (actualSum !== totalAmount && installments.length > 0) {
+                    installments[installments.length - 1].amount += (totalAmount - actualSum);
+                }
+
+                // Insert installments
+                const { error: instError } = await supabaseClient
+                    .from('payment_installments')
+                    .insert(installments);
+
+                if (instError) throw instError;
+
+                // Close modal and refresh
+                closeCreateScheduleModal();
+                showPaymentScheduleLink(schedule.id);
+                loadSidebarSchedule(schedule);
+                showToast('Harmonogram utworzony', 'success');
+
+            } catch (err) {
+                console.error('Error creating schedule:', err);
+                showToast('Błąd tworzenia harmonogramu: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteLeadSchedule() {
+            if (!currentSchedule) return;
+
+            const paidCount = currentSchedule.installments?.filter(i => i.status === 'paid').length || 0;
+            const confirmMsg = paidCount > 0
+                ? `Uwaga: ${paidCount} rat jest już opłaconych. Czy na pewno usunąć harmonogram?`
+                : 'Czy na pewno usunąć harmonogram płatności?';
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                // Delete installments first (FK constraint)
+                await supabaseClient
+                    .from('payment_installments')
+                    .delete()
+                    .eq('schedule_id', currentSchedule.id);
+
+                // Delete schedule
+                const { error } = await supabaseClient
+                    .from('payment_schedules')
+                    .delete()
+                    .eq('id', currentSchedule.id);
+
+                if (error) throw error;
+
+                // Hide payment schedule link section
+                const linkSection = document.getElementById('payment-schedule-link-section');
+                if (linkSection) linkSection.classList.add('hidden');
+
+                // Show empty state in sidebar
+                loadSidebarSchedule(null);
+                showToast('Harmonogram usunięty', 'success');
+
+            } catch (err) {
+                console.error('Error deleting schedule:', err);
+                showToast('Błąd usuwania harmonogramu', 'error');
             }
         }
 
@@ -4466,9 +4785,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             updateClientOfferSection();
 
             if (deleteSchedule) {
-                // Hide sidebar schedule section
-                const sidebarSection = document.getElementById('sidebar-schedule-section');
-                if (sidebarSection) sidebarSection.classList.add('hidden');
+                // Reset sidebar schedule to empty state
+                loadSidebarSchedule(null);
 
                 // Hide payment schedule link section
                 const scheduleSection = document.getElementById('payment-schedule-link-section');
