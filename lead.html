@@ -1452,6 +1452,14 @@
                     </button>
                 </div>
                 <div class="p-5">
+                    <!-- Offer Selection -->
+                    <div class="mb-4" id="modal-offer-section">
+                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Powiązana oferta</label>
+                        <select id="modal-schedule-offer" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
+                            <option value="">-- Bez powiązania z ofertą --</option>
+                        </select>
+                    </div>
+
                     <!-- Total Amount -->
                     <div class="mb-4">
                         <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Całkowita kwota (PLN) <span class="text-red-400">*</span></label>
@@ -1497,9 +1505,9 @@
                     </div>
 
                     <!-- Installments Preview -->
-                    <div class="bg-zinc-800/50 rounded-lg p-3 mb-4 max-h-[200px] overflow-y-auto">
+                    <div class="bg-zinc-800/50 rounded-lg p-3 mb-4 max-h-[280px] overflow-y-auto">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Podgląd harmonogramu</span>
+                            <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Podgląd harmonogramu <span class="text-amber-400/70">(kliknij datę aby edytować)</span></span>
                             <span class="text-xs text-amber-400 font-medium">Suma: <span id="modal-schedule-sum">0</span> zł</span>
                         </div>
                         <div id="modal-installments-preview" class="space-y-1.5">
@@ -1546,6 +1554,7 @@
         let isAdmin = false;
         let confirmModalCallback = null;
         let clientOffer = null;
+        let customInstallmentDates = {}; // Store custom dates keyed by installment number
 
         // Audit logging helper
         async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
@@ -4230,10 +4239,25 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const modal = document.getElementById('create-schedule-modal');
             if (!modal) return;
 
+            // Reset custom dates
+            customInstallmentDates = {};
+
             // Set default values
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             document.getElementById('modal-first-date').value = tomorrow.toISOString().split('T')[0];
+
+            // Populate offer dropdown
+            const offerSelect = document.getElementById('modal-schedule-offer');
+            if (offerSelect) {
+                offerSelect.innerHTML = '<option value="">-- Bez powiązania z ofertą --</option>';
+                if (clientOffer) {
+                    const selectedOffer = offers.find(o => o.id === clientOffer.offer_id);
+                    const offerName = selectedOffer?.name || 'Oferta';
+                    const offerPrice = clientOffer.custom_price || selectedOffer?.price || 0;
+                    offerSelect.innerHTML += `<option value="${clientOffer.id}" selected>${offerName} (${offerPrice.toLocaleString('pl-PL')} zł)</option>`;
+                }
+            }
 
             // Try to get amount from offer or deal value
             let defaultAmount = lead?.deal_value || 0;
@@ -4254,34 +4278,55 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
             // Setup listeners for modal preview
             setupModalPreviewListeners();
-            updateModalPreview();
+            updateModalPreview(true);
 
             modal.classList.remove('hidden');
         }
 
         function closeCreateScheduleModal() {
             document.getElementById('create-schedule-modal')?.classList.add('hidden');
+            customInstallmentDates = {}; // Reset custom dates
         }
 
         function setupModalPreviewListeners() {
-            ['modal-schedule-total', 'modal-installments-count', 'modal-first-date', 'modal-first-amount', 'modal-installments-interval'].forEach(id => {
+            // Fields that should reset custom dates when changed
+            const resetFields = ['modal-installments-count', 'modal-first-date', 'modal-installments-interval'];
+            // Fields that only recalculate amounts
+            const amountFields = ['modal-schedule-total', 'modal-first-amount'];
+
+            resetFields.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.removeEventListener('change', updateModalPreview);
-                    el.removeEventListener('input', updateModalPreview);
-                    el.addEventListener('change', updateModalPreview);
-                    el.addEventListener('input', updateModalPreview);
+                    const handler = () => updateModalPreview(true);
+                    el.removeEventListener('change', handler);
+                    el.addEventListener('change', handler);
+                }
+            });
+
+            amountFields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const handler = () => updateModalPreview(false);
+                    el.removeEventListener('change', handler);
+                    el.removeEventListener('input', handler);
+                    el.addEventListener('change', handler);
+                    el.addEventListener('input', handler);
                 }
             });
         }
 
-        function updateModalPreview() {
+        function updateModalPreview(resetCustomDates = false) {
             const totalAmount = parseFloat(document.getElementById('modal-schedule-total')?.value) || 0;
             const count = parseInt(document.getElementById('modal-installments-count')?.value) || 4;
             const interval = parseInt(document.getElementById('modal-installments-interval')?.value) || 30;
             const firstDateStr = document.getElementById('modal-first-date')?.value;
             const firstAmountInput = document.getElementById('modal-first-amount')?.value;
             const firstAmount = firstAmountInput ? parseFloat(firstAmountInput) : null;
+
+            // Reset custom dates when count/interval/firstDate changes
+            if (resetCustomDates) {
+                customInstallmentDates = {};
+            }
 
             if (!totalAmount || !firstDateStr) {
                 document.getElementById('modal-installments-preview').innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">Wprowadź kwotę i datę startu</p>';
@@ -4295,8 +4340,15 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const firstDate = new Date(firstDateStr);
 
             for (let i = 0; i < count; i++) {
-                const date = new Date(firstDate);
-                date.setDate(date.getDate() + (i * interval));
+                // Use custom date if set, otherwise calculate
+                let date;
+                const instNumber = i + 1;
+                if (customInstallmentDates[instNumber]) {
+                    date = new Date(customInstallmentDates[instNumber]);
+                } else {
+                    date = new Date(firstDate);
+                    date.setDate(date.getDate() + (i * interval));
+                }
 
                 let amount;
                 if (i === 0 && firstAmount !== null) {
@@ -4304,11 +4356,11 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 } else if (i === count - 1) {
                     amount = remaining;
                 } else {
-                    amount = i === 0 && firstAmount === null ? baseAmount : baseAmount;
+                    amount = baseAmount;
                 }
 
                 remaining -= amount;
-                installments.push({ number: i + 1, date, amount });
+                installments.push({ number: instNumber, date, amount });
             }
 
             // Recalculate to ensure sum matches
@@ -4318,17 +4370,32 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
 
             const preview = document.getElementById('modal-installments-preview');
-            preview.innerHTML = installments.map((inst, idx) => `
+            preview.innerHTML = installments.map((inst) => {
+                const dateStr = inst.date.toISOString().split('T')[0];
+                const isCustom = customInstallmentDates[inst.number];
+                return `
                 <div class="flex items-center justify-between p-2 bg-zinc-900/50 rounded-lg text-xs">
                     <div class="flex items-center gap-2">
                         <span class="w-5 h-5 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-[10px] font-bold">${inst.number}</span>
-                        <span class="text-zinc-400">${inst.date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        <input type="date"
+                            value="${dateStr}"
+                            onchange="updateInstallmentDate(${inst.number}, this.value)"
+                            class="bg-transparent border border-zinc-700 hover:border-amber-500/50 focus:border-amber-500 rounded px-2 py-1 text-zinc-300 cursor-pointer transition-colors ${isCustom ? 'border-amber-500/30 text-amber-300' : ''}"
+                            onclick="this.showPicker()">
                     </div>
                     <span class="text-white font-medium">${inst.amount.toLocaleString('pl-PL')} zł</span>
                 </div>
-            `).join('');
+            `}).join('');
 
             document.getElementById('modal-schedule-sum').textContent = totalAmount.toLocaleString('pl-PL');
+        }
+
+        function updateInstallmentDate(number, dateValue) {
+            if (dateValue) {
+                customInstallmentDates[number] = dateValue;
+            } else {
+                delete customInstallmentDates[number];
+            }
         }
 
         async function saveNewSchedule() {
@@ -4343,6 +4410,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const firstDateStr = document.getElementById('modal-first-date')?.value;
             const firstAmountInput = document.getElementById('modal-first-amount')?.value;
             const firstAmount = firstAmountInput ? parseFloat(firstAmountInput) : null;
+            const selectedOfferId = document.getElementById('modal-schedule-offer')?.value || null;
 
             if (!totalAmount || totalAmount <= 0) {
                 showToast('Podaj kwotę całkowitą', 'error');
@@ -4354,30 +4422,45 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
 
             try {
-                // Create schedule
+                // Create schedule with offer link
+                const scheduleData = {
+                    lead_id: lead.id,
+                    workflow_id: leadWorkflowId || null,
+                    total_amount: totalAmount,
+                    installments_count: count,
+                    created_by: currentMember?.id
+                };
+
+                // Add offer link if selected
+                if (selectedOfferId) {
+                    scheduleData.client_offer_id = selectedOfferId;
+                }
+
                 const { data: schedule, error: scheduleError } = await supabaseClient
                     .from('payment_schedules')
-                    .insert({
-                        lead_id: lead.id,
-                        workflow_id: leadWorkflowId || null,
-                        total_amount: totalAmount,
-                        installments_count: count,
-                        created_by: currentMember?.id
-                    })
+                    .insert(scheduleData)
                     .select()
                     .single();
 
                 if (scheduleError) throw scheduleError;
 
-                // Calculate installments
+                // Calculate installments using custom dates if set
                 const installments = [];
                 const baseAmount = Math.floor(totalAmount / count);
                 let remaining = totalAmount;
                 const firstDate = new Date(firstDateStr);
 
                 for (let i = 0; i < count; i++) {
-                    const date = new Date(firstDate);
-                    date.setDate(date.getDate() + (i * interval));
+                    const instNumber = i + 1;
+
+                    // Use custom date if set, otherwise calculate
+                    let date;
+                    if (customInstallmentDates[instNumber]) {
+                        date = new Date(customInstallmentDates[instNumber]);
+                    } else {
+                        date = new Date(firstDate);
+                        date.setDate(date.getDate() + (i * interval));
+                    }
 
                     let amount;
                     if (i === 0 && firstAmount !== null) {
@@ -4391,7 +4474,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     remaining -= amount;
                     installments.push({
                         schedule_id: schedule.id,
-                        installment_number: i + 1,
+                        installment_number: instNumber,
                         amount: amount,
                         due_date: date.toISOString().split('T')[0],
                         status: 'pending'
