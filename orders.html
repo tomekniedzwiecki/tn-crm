@@ -1289,12 +1289,19 @@
             statusEl.classList.remove('hidden');
 
             try {
-                // Use official Polish Ministry of Finance API (Biala Lista VAT)
-                const today = new Date().toISOString().split('T')[0];
-                const response = await fetch(`https://wl-api.mf.gov.pl/api/search/nip/${nip}?date=${today}`);
+                // Use proxy to avoid CORS issues with MF API
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/nip-lookup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ nip })
+                });
 
                 if (!response.ok) {
-                    throw new Error('Blad API');
+                    const err = await response.json();
+                    throw new Error(err.error || 'Blad API');
                 }
 
                 const data = await response.json();
