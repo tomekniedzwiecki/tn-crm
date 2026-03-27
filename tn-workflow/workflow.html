@@ -1195,6 +1195,10 @@
                         <div class="mb-10">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-medium text-zinc-400 uppercase tracking-wider">Mockupy</h4>
+                                <button onclick="generateAllMockups()" id="generate-all-mockups-btn" class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 transition-colors">
+                                    <i class="ph ph-magic-wand"></i>
+                                    <span>Generuj wszystkie (10)</span>
+                                </button>
                             </div>
                             <!-- Mockup generation queue status -->
                             <div id="mockup-queue-status" class="hidden mb-3 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center gap-2">
@@ -5270,7 +5274,7 @@
         }
 
         function copyScheduleLink() {
-            const url = `${window.location.origin}/payment-schedule.html?token=${workflow.unique_token}`;
+            const url = `${window.location.origin}/payment-schedule?schedule=${paymentSchedule.id}`;
             navigator.clipboard.writeText(url);
             showToast('Link skopiowany', 'success');
         }
@@ -5292,6 +5296,15 @@
             }
 
             try {
+                // First delete all installments (foreign key constraint)
+                const { error: instError } = await supabaseClient
+                    .from('payment_installments')
+                    .delete()
+                    .eq('schedule_id', paymentSchedule.id);
+
+                if (instError) throw instError;
+
+                // Then delete the schedule
                 const { error } = await supabaseClient
                     .from('payment_schedules')
                     .delete()
@@ -8851,8 +8864,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     : '-';
                 const sigTypes = { 'zaufany': 'Podpis zaufany (gov.pl)', 'kwalifikowany': 'Podpis kwalifikowany', 'fizyczny': 'Podpis fizyczny' };
                 document.getElementById('signed-type').textContent = sigTypes[workflow.contract_signature_type] || workflow.contract_signature_type || '-';
-                if (workflow.contract_signed_file_url) {
-                    document.getElementById('signed-file-link').href = workflow.contract_signed_file_url;
+                if (workflow.contract_seller_signed_url) {
+                    document.getElementById('signed-file-link').href = workflow.contract_seller_signed_url;
                 }
             }
         }
@@ -10975,10 +10988,13 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 list = (prompts.mockup || []).map((item, i) => ({ ...item, index: i }));
             }
 
+            const btn = document.getElementById('generate-all-mockups-btn');
             if (list.length === 0) {
                 container.innerHTML = '<p class="text-zinc-600 text-xs">Dodaj informacje o marce aby wygenerować prompty</p>';
+                btn?.classList.add('hidden');
                 return;
             }
+            btn?.classList.remove('hidden');
 
             // Check if logo exists
             const hasLogo = !!getLogoUrl();
@@ -11043,6 +11059,41 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.copyMockupPromptInline = copyMockupPromptInline;
         window.renderMockupPromptsInline = renderMockupPromptsInline;
         window.loadUsedMockupPrompts = loadUsedMockupPrompts;
+
+        async function generateAllMockups() {
+            const hasLogo = !!getLogoUrl();
+            if (!hasLogo) {
+                showToast('Dodaj logo przed generowaniem mockupów', 'error');
+                return;
+            }
+
+            const mockupPrompts = brandingItems
+                .filter(b => b.type === 'ai_prompt' && parseNotes(b.notes).category === 'mockup')
+                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+            if (!mockupPrompts.length) {
+                showToast('Brak promptów mockup - wygeneruj branding', 'error');
+                return;
+            }
+
+            let added = 0;
+            mockupPrompts.forEach((p, i) => {
+                if (!mockupGeneratingSet.has(p.title) && !mockupQueuedSet.has(p.title) && !usedMockupPrompts.has(p.title)) {
+                    mockupQueuedSet.add(p.title);
+                    mockupQueue.push({ index: i, label: p.title, prompt: p.value });
+                    updateMockupChipStatus(i, 'queued');
+                    added++;
+                }
+            });
+
+            if (added > 0) {
+                showToast(`Dodano ${added} mockupów do kolejki`, 'info');
+                processMockupQueue();
+            } else {
+                showToast('Wszystkie mockupy wygenerowane', 'info');
+            }
+        }
+        window.generateAllMockups = generateAllMockups;
 
         // Branding delivery
         let lastBrandingEmailSentAt = 0;

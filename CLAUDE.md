@@ -43,10 +43,11 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 2. Pobierz dane workflow i produktu (raporty PDF, infografiki)
 3. Przeanalizuj produkt (nazwa, opis, raporty)
 4. Zaproponuj 10 nazw marki z wolnymi domenami .pl
-5. Po wyborze uzytkownika wygeneruj: tagline, opis, 6 kolorow, 3 fonty, 16 promptow AI
+5. Po wyborze uzytkownika wygeneruj: tagline, opis, 6 kolorow, 3 fonty, 15 promptow AI
 6. **WSTAW BEZPOSREDNIO DO BAZY** przez Supabase REST API (curl) — NIE generuj SQL!
+7. **AUTOMATYCZNIE WYGENERUJ 5 LOGO** — wywołaj edge function `generate-image` dla każdego promptu logo
 
-Dane wstawiane: brand_info, colors, fonts, ai_prompts (6 logo + 10 mockupow).
+Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
 ### Generowanie landing page
 **Plik:** `CLAUDE_LANDING_PROCEDURE.md`

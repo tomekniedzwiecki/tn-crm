@@ -830,12 +830,73 @@ Claude:
    - Przygotowuje dane (brand info, kolory, fonty, prompty)
    - **WSTAWIA BEZPOSREDNIO DO BAZY** przez curl (DELETE + POST)
    - Weryfikuje czy dane sa w bazie
-8. Informuje użytkownika: "Gotowe! Odśwież stronę workflow i kliknij 'Generuj wszystkie (5)' w sekcji Logo, aby automatycznie wygenerować 5 wersji logo."
+8. **AUTOMATYCZNIE GENERUJE 5 LOGO** — patrz sekcja poniżej
+9. Informuje użytkownika: "Gotowe! Branding i 5 logo wygenerowane. Odśwież stronę workflow."
 
-> **UWAGA O AUTOMATYCZNYM GENEROWANIU LOGO:**
-> Po wstawieniu brandingu, użytkownik może kliknąć przycisk "Generuj wszystkie (5)" w sekcji Logo na stronie workflow.
-> System automatycznie wygeneruje 5 wersji logo używając promptów zapisanych w bazie.
-> Pierwsze wygenerowane logo zostanie automatycznie oznaczone jako "Główne" i będzie używane do mockupów.
+---
+
+## Automatyczne generowanie 5 logo (OBOWIĄZKOWE)
+
+> **WAŻNE**: Po wstawieniu brandingu do bazy, Claude MUSI automatycznie wygenerować 5 logo.
+> NIE czekaj na użytkownika — generuj od razu po wstawieniu danych.
+
+### Procedura generowania logo
+
+Dla każdego z 5 promptów logo zapisanych w bazie:
+
+1. **Wywołaj edge function `generate-image`** przez curl:
+```bash
+curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image" \
+  -H "Authorization: Bearer [SERVICE_KEY]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "[PEŁNY PROMPT LOGO]",
+    "count": 1,
+    "workflow_id": "[WORKFLOW_ID]",
+    "type": "logo"
+  }'
+```
+
+2. **Odbierz URL wygenerowanego logo** z odpowiedzi:
+```json
+{"images":[{"url":"https://...supabase.co/storage/v1/object/public/attachments/ai-generated/..."}]}
+```
+
+3. **Zapisz logo do bazy** jako `workflow_branding` z type='logo':
+```bash
+curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_id": "[WORKFLOW_ID]",
+    "type": "logo",
+    "title": "[NAZWA PROMPTU np. Logo minimalistyczne]",
+    "file_url": "[URL Z ODPOWIEDZI]",
+    "notes": "{\"variant\":\"light\",\"is_main\":[true dla pierwszego, false dla pozostałych]}",
+    "sort_order": [0-4]
+  }'
+```
+
+### Kolejność generowania
+
+1. **Logo minimalistyczne** — `is_main: true` (pierwsze = główne)
+2. **Logo premium** — `is_main: false`
+3. **Logo geometryczne** — `is_main: false`
+4. **Logo typograficzne** — `is_main: false`
+5. **Logo dynamiczne** — `is_main: false`
+
+### Obsługa błędów
+
+- Jeśli generowanie pojedynczego logo się nie uda — kontynuuj z kolejnym
+- Na końcu poinformuj użytkownika ile logo zostało wygenerowanych
+- Przykład: "Wygenerowano 5/5 logo. Odśwież stronę workflow."
+
+### Ważne
+
+- Generuj logo SEKWENCYJNIE (jedno po drugim), nie równolegle
+- Każde generowanie może trwać 10-30 sekund
+- Pierwsze wygenerowane logo ZAWSZE ma `is_main: true`
 
 ---
 

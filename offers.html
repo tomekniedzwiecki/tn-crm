@@ -1718,13 +1718,18 @@
 
                 // Fetch all installments for these schedules
                 const scheduleIds = schedules.map(s => s.id);
-                const { data: allInstallments, error: instError } = await supabaseClient
-                    .from('payment_installments')
-                    .select('*')
-                    .in('schedule_id', scheduleIds)
-                    .order('due_date', { ascending: true });
+                let allInstallments = [];
 
-                if (instError) throw instError;
+                if (scheduleIds.length > 0) {
+                    const { data: instData, error: instError } = await supabaseClient
+                        .from('payment_installments')
+                        .select('*')
+                        .in('schedule_id', scheduleIds)
+                        .order('due_date', { ascending: true });
+
+                    if (instError) throw instError;
+                    allInstallments = instData || [];
+                }
 
                 // Group installments by schedule
                 const installmentsBySchedule = {};
