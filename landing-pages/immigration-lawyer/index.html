@@ -340,53 +340,168 @@
     .faq-item.open .faq-answer { max-height: 500px; }
     .faq-answer p { padding-bottom: 24px; color: var(--text-secondary); line-height: 1.8; }
 
-    /* FORM SECTION */
+    /* FORM SECTION - REDESIGNED */
     .form-section {
-      background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-soft) 100%);
+      background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-white) 100%);
       position: relative;
+      overflow: hidden;
     }
     .form-section::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0;
-      height: 300px;
+      height: 320px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      clip-path: polygon(0 0, 100% 0, 100% 60%, 0 100%);
     }
     .form-section .container { position: relative; z-index: 1; }
-    .form-section .section-header { color: white; margin-bottom: 40px; }
+    .form-section .section-header { color: white; margin-bottom: 32px; }
     .form-section .section-header .section-label { color: rgba(255,255,255,0.7); }
     .form-section .section-header .section-label::before { background: rgba(255,255,255,0.5); }
     .form-section .section-header .section-title { color: white; }
     .form-section .section-header .section-subtitle { color: rgba(255,255,255,0.85); }
-    .form-wrapper {
-      max-width: 640px; margin: 0 auto;
-      background: white; border-radius: var(--radius-xl);
-      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15); overflow: hidden;
-    }
-    .form-header { background: var(--gradient-accent); color: white; padding: 32px; text-align: center; }
-    .form-header h2 { color: white; font-size: 24px; margin-bottom: 8px; }
-    .form-header p { opacity: 0.9; font-size: 15px; }
-    .form-body { padding: 32px; }
 
-    /* Progress Steps */
-    .form-progress { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; }
-    .progress-step {
-      width: 40px; height: 4px; background: var(--bg-muted); border-radius: 2px;
-      transition: background 0.3s ease;
+    .form-wrapper {
+      max-width: 520px; margin: 0 auto;
+      background: white; border-radius: var(--radius-xl);
+      box-shadow: 0 25px 80px rgba(15, 23, 42, 0.2);
+      overflow: hidden;
     }
-    .progress-step.active { background: var(--primary); }
-    .progress-step.completed { background: var(--secondary); }
+    .form-body { padding: 32px 28px; }
+    @media (min-width: 480px) { .form-body { padding: 40px 36px; } }
+
+    /* Progress Bar - Visual Steps */
+    .form-progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 32px;
+      padding: 0 10px;
+    }
+    .progress-dot {
+      width: 10px; height: 10px;
+      background: var(--bg-muted);
+      border-radius: 50%;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .progress-dot.active { background: var(--primary); transform: scale(1.3); }
+    .progress-dot.completed { background: var(--secondary); }
+    .progress-line {
+      flex: 1; max-width: 40px; height: 3px;
+      background: var(--bg-muted); border-radius: 2px;
+      transition: background 0.4s ease;
+    }
+    .progress-line.completed { background: var(--secondary); }
 
     /* Form Steps */
-    .form-step { display: none; }
+    .form-step {
+      display: none;
+      animation: fadeSlideIn 0.4s ease;
+    }
     .form-step.active { display: block; }
-    .form-step-title { font-size: 20px; margin-bottom: 8px; text-align: center; }
-    .form-step-subtitle { color: var(--text-secondary); text-align: center; margin-bottom: 28px; font-size: 15px; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-    /* Form Elements */
+    .form-step-title {
+      font-size: 22px; margin-bottom: 8px; text-align: center;
+      font-family: var(--font-display);
+    }
+    .form-step-subtitle {
+      color: var(--text-secondary); text-align: center;
+      margin-bottom: 28px; font-size: 15px; line-height: 1.6;
+    }
+    .form-step-emoji {
+      font-size: 48px; text-align: center; margin-bottom: 16px;
+      animation: bounceIn 0.5s ease;
+    }
+    @keyframes bounceIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      60% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Choice Cards - Main Selection */
+    .choice-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .choice-grid.two-col { grid-template-columns: repeat(2, 1fr); }
+    .choice-grid.three-col { grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 480px) {
+      .choice-grid.three-col { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .choice-card {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 20px 16px;
+      background: var(--bg-white);
+      border: 2px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      min-height: 100px;
+      position: relative;
+    }
+    .choice-card:hover {
+      border-color: var(--primary-light);
+      background: var(--primary-soft);
+      transform: translateY(-2px);
+    }
+    .choice-card.selected {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
+    }
+    .choice-card.selected::after {
+      content: '✓';
+      position: absolute; top: 8px; right: 10px;
+      width: 22px; height: 22px;
+      background: var(--secondary);
+      color: white; font-size: 12px; font-weight: bold;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .choice-card input {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); border: 0;
+    }
+    .choice-card-emoji { font-size: 28px; margin-bottom: 8px; }
+    .choice-card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+    .choice-card-desc { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+
+    /* Horizontal Choice (for Yes/No style) */
+    .choice-horizontal {
+      display: flex; flex-direction: row;
+      align-items: center; gap: 14px;
+      text-align: left; padding: 18px 20px;
+      min-height: auto;
+    }
+    .choice-horizontal .choice-card-emoji { margin-bottom: 0; font-size: 32px; }
+    .choice-horizontal .choice-card-text { flex: 1; }
+    .choice-horizontal .choice-card-title { font-size: 15px; }
+
+    /* Hot Lead Badge */
+    .hot-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+      color: white; font-size: 10px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+
+    /* Form Inputs */
     .form-group { margin-bottom: 20px; }
-    .form-label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: var(--text-primary); }
+    .form-label {
+      display: block; font-weight: 600; font-size: 14px;
+      margin-bottom: 8px; color: var(--text-primary);
+    }
     .form-input, .form-select, .form-textarea {
       width: 100%; padding: 14px 16px;
       border: 2px solid var(--border-light); border-radius: var(--radius-md);
@@ -398,59 +513,100 @@
       outline: none; border-color: var(--primary);
       box-shadow: 0 0 0 4px var(--primary-soft);
     }
-    .form-textarea { min-height: 100px; resize: vertical; }
+    .form-input.error, .form-select.error { border-color: #ef4444; }
+    .form-textarea { min-height: 90px; resize: vertical; }
+    .form-hint { font-size: 13px; color: var(--text-tertiary); margin-top: 6px; }
+
     .form-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 480px) {
-      .form-row { grid-template-columns: 1fr 1fr; }
-    }
+    @media (min-width: 480px) { .form-row { grid-template-columns: 1fr 1fr; } }
 
-    /* Radio & Checkbox */
-    .form-options { display: flex; flex-direction: column; gap: 12px; }
-    .form-option {
+    /* WhatsApp Input */
+    .input-with-icon { position: relative; }
+    .input-with-icon .form-input { padding-left: 44px; }
+    .input-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 22px; height: 22px; color: var(--text-tertiary);
+    }
+    .whatsapp-toggle {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 10px; cursor: pointer;
+    }
+    .whatsapp-toggle input { width: 18px; height: 18px; accent-color: #25D366; cursor: pointer; }
+    .whatsapp-toggle span { font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+    .whatsapp-toggle svg { width: 18px; height: 18px; color: #25D366; }
+
+    /* Checkbox Consent */
+    .form-checkbox {
       display: flex; align-items: flex-start; gap: 12px;
-      padding: 16px; border: 2px solid var(--border-light); border-radius: var(--radius-md);
-      cursor: pointer; transition: all 0.3s ease;
+      cursor: pointer; padding: 16px;
+      background: var(--bg-cream); border-radius: var(--radius-md);
     }
-    .form-option:hover { border-color: var(--primary-light); background: var(--primary-soft); }
-    .form-option.selected { border-color: var(--primary); background: var(--primary-soft); }
-    .form-option input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
-    .form-option-radio {
-      width: 22px; height: 22px; border: 2px solid var(--border-medium);
-      border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: all 0.3s ease;
+    .form-checkbox input {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); border: 0;
     }
-    .form-option.selected .form-option-radio { border-color: var(--primary); background: var(--primary); }
-    .form-option.selected .form-option-radio::after {
-      content: ''; width: 8px; height: 8px; background: white; border-radius: 50%;
-    }
-    .form-option-content h4 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
-    .form-option-content p { font-size: 13px; color: var(--text-secondary); }
-
-    /* Checkbox */
-    .form-checkbox { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
-    .form-checkbox input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
     .checkbox-box {
-      width: 22px; height: 22px; border: 2px solid var(--border-medium);
-      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px;
+      border: 2px solid var(--border-medium);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: all 0.3s ease;
+      background: white;
     }
+    .form-checkbox:hover .checkbox-box { border-color: var(--primary); }
     .form-checkbox input:checked + .checkbox-box { background: var(--primary); border-color: var(--primary); }
     .form-checkbox input:checked + .checkbox-box svg { display: block; }
     .checkbox-box svg { display: none; width: 14px; height: 14px; color: white; }
     .checkbox-label { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
-    .checkbox-label a { color: var(--primary); }
+    .checkbox-label a { color: var(--primary); text-decoration: underline; }
 
     /* Form Navigation */
-    .form-nav { display: flex; justify-content: space-between; gap: 16px; margin-top: 32px; }
-    .form-nav .btn { flex: 1; }
-    .btn-back { background: var(--bg-soft); color: var(--text-secondary); }
-    .btn-back:hover { background: var(--bg-muted); }
+    .form-nav { display: flex; gap: 12px; margin-top: 28px; }
+    .form-nav .btn { flex: 1; padding: 16px 24px; }
+    .btn-back {
+      background: transparent; color: var(--text-secondary);
+      border: 2px solid var(--border-light); flex: 0 0 auto;
+      padding: 16px 20px;
+    }
+    .btn-back:hover { background: var(--bg-soft); border-color: var(--border-medium); }
+    .btn-next { background: var(--gradient-primary); color: white; }
+    .btn-next:hover { transform: translateY(-2px); box-shadow: var(--shadow-primary); }
+    .btn-submit { background: var(--gradient-accent); color: white; }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255, 107, 53, 0.35); }
 
-    /* WhatsApp Option */
-    .whatsapp-check { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-    .whatsapp-check input { width: 18px; height: 18px; accent-color: #25D366; }
-    .whatsapp-check label { font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
-    .whatsapp-check svg { width: 16px; height: 16px; color: #25D366; }
+    /* Result Screens */
+    .result-screen { text-align: center; padding: 20px 0; }
+    .result-icon { font-size: 72px; margin-bottom: 20px; }
+    .result-title { font-size: 24px; margin-bottom: 12px; }
+    .result-text { color: var(--text-secondary); margin-bottom: 24px; line-height: 1.7; }
+    .result-cta { margin-top: 20px; }
+
+    /* Success Animation */
+    .success-checkmark {
+      width: 80px; height: 80px; margin: 0 auto 20px;
+      background: var(--gradient-success); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .success-checkmark svg { width: 40px; height: 40px; color: white; }
+    @keyframes scaleIn {
+      0% { transform: scale(0); }
+      60% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Lead Score Display (for testing) */
+    .lead-score-badge {
+      display: none; /* Set to flex for debugging */
+      align-items: center; justify-content: center; gap: 8px;
+      padding: 8px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      margin: 16px auto 0;
+    }
+    .lead-score-badge.hot { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+    .lead-score-badge.warm { background: rgba(249, 115, 22, 0.1); color: #ea580c; }
+    .lead-score-badge.cold { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 
     /* FOOTER */
     .footer { background: var(--text-primary); color: white; padding: 60px 0 30px; }
@@ -1049,263 +1205,292 @@
     </div>
   </section>
 
-  <!-- FORM SECTION -->
+  <!-- FORM SECTION - REDESIGNED -->
   <section class="form-section" id="form">
     <div class="container">
       <div class="section-header">
-        <p class="section-label">Get Started</p>
-        <h2 class="section-title">Request Your Free Assessment</h2>
-        <p class="section-subtitle">Fill out this short form and we'll contact you within 24 hours.</p>
+        <p class="section-label">Free Assessment</p>
+        <h2 class="section-title">Check If We Can Help You</h2>
+        <p class="section-subtitle">Answer 5 quick questions to see if your case qualifies.</p>
       </div>
       <div class="form-wrapper">
-        <div class="form-header">
-          <h2>Let's Talk About Your Case</h2>
-          <p>Takes only 2 minutes — no commitment required</p>
-        </div>
         <div class="form-body">
-          <div class="form-progress">
-            <div class="progress-step active" data-step="1"></div>
-            <div class="progress-step" data-step="2"></div>
-            <div class="progress-step" data-step="3"></div>
-            <div class="progress-step" data-step="4"></div>
+          <!-- Progress Bar -->
+          <div class="form-progress-bar" id="progressBar">
+            <div class="progress-dot active" data-step="1"></div>
+            <div class="progress-line" data-after="1"></div>
+            <div class="progress-dot" data-step="2"></div>
+            <div class="progress-line" data-after="2"></div>
+            <div class="progress-dot" data-step="3"></div>
+            <div class="progress-line" data-after="3"></div>
+            <div class="progress-dot" data-step="4"></div>
+            <div class="progress-line" data-after="4"></div>
+            <div class="progress-dot" data-step="5"></div>
           </div>
 
-          <form id="qualificationForm">
-            <!-- STEP 1: Contact Info -->
+          <form id="qualificationForm" novalidate>
+
+            <!-- STEP 1: What do you need? (Permit Type) -->
             <div class="form-step active" data-step="1">
-              <h3 class="form-step-title">Your Contact Information</h3>
-              <p class="form-step-subtitle">How can we reach you?</p>
+              <div class="form-step-emoji">📋</div>
+              <h3 class="form-step-title">What do you need help with?</h3>
+              <p class="form-step-subtitle">Select the type of permit or service you're looking for.</p>
+
+              <div class="choice-grid two-col">
+                <label class="choice-card" data-value="temporary_work">
+                  <input type="radio" name="permit_type" value="temporary_work" required>
+                  <span class="choice-card-emoji">💼</span>
+                  <span class="choice-card-title">Residence + Work</span>
+                  <span class="choice-card-desc">Pobyt czasowy i praca</span>
+                </label>
+                <label class="choice-card" data-value="temporary_residence">
+                  <input type="radio" name="permit_type" value="temporary_residence">
+                  <span class="choice-card-emoji">🏠</span>
+                  <span class="choice-card-title">Temporary Residence</span>
+                  <span class="choice-card-desc">Pobyt czasowy</span>
+                </label>
+                <label class="choice-card" data-value="permanent">
+                  <input type="radio" name="permit_type" value="permanent">
+                  <span class="choice-card-emoji">🏡</span>
+                  <span class="choice-card-title">Permanent Residence</span>
+                  <span class="choice-card-desc">Pobyt stały</span>
+                </label>
+                <label class="choice-card" data-value="long_term_eu">
+                  <input type="radio" name="permit_type" value="long_term_eu">
+                  <span class="choice-card-emoji">🇪🇺</span>
+                  <span class="choice-card-title">Long-term EU</span>
+                  <span class="choice-card-desc">Rezydent UE</span>
+                </label>
+                <label class="choice-card" data-value="citizenship">
+                  <input type="radio" name="permit_type" value="citizenship">
+                  <span class="choice-card-emoji">🇵🇱</span>
+                  <span class="choice-card-title">Citizenship</span>
+                  <span class="choice-card-desc">Obywatelstwo polskie</span>
+                </label>
+                <label class="choice-card" data-value="other">
+                  <input type="radio" name="permit_type" value="other">
+                  <span class="choice-card-emoji">❓</span>
+                  <span class="choice-card-title">Not Sure</span>
+                  <span class="choice-card-desc">Help me decide</span>
+                </label>
+              </div>
+
+              <div class="form-nav">
+                <button type="button" class="btn btn-next" id="btnStep1">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 2: Where do you live? (Region Check) -->
+            <div class="form-step" data-step="2">
+              <div class="form-step-emoji">📍</div>
+              <h3 class="form-step-title">Where do you live?</h3>
+              <p class="form-step-subtitle">We handle cases for Lower Silesia region only.</p>
+
+              <div class="choice-grid two-col">
+                <label class="choice-card" data-value="Wrocław">
+                  <input type="radio" name="city" value="Wrocław" required>
+                  <span class="choice-card-emoji">🏙️</span>
+                  <span class="choice-card-title">Wrocław</span>
+                </label>
+                <label class="choice-card" data-value="Legnica">
+                  <input type="radio" name="city" value="Legnica">
+                  <span class="choice-card-emoji">🏘️</span>
+                  <span class="choice-card-title">Legnica</span>
+                </label>
+                <label class="choice-card" data-value="Wałbrzych">
+                  <input type="radio" name="city" value="Wałbrzych">
+                  <span class="choice-card-emoji">🏔️</span>
+                  <span class="choice-card-title">Wałbrzych</span>
+                </label>
+                <label class="choice-card" data-value="Jelenia Góra">
+                  <input type="radio" name="city" value="Jelenia Góra">
+                  <span class="choice-card-emoji">⛰️</span>
+                  <span class="choice-card-title">Jelenia Góra</span>
+                </label>
+                <label class="choice-card" data-value="other_dolnoslaskie">
+                  <input type="radio" name="city" value="other_dolnoslaskie">
+                  <span class="choice-card-emoji">🗺️</span>
+                  <span class="choice-card-title">Other in Lower Silesia</span>
+                  <span class="choice-card-desc">Lubin, Głogów, Świdnica...</span>
+                </label>
+                <label class="choice-card" data-value="outside">
+                  <input type="radio" name="city" value="outside">
+                  <span class="choice-card-emoji">🚫</span>
+                  <span class="choice-card-title">Outside Region</span>
+                  <span class="choice-card-desc">I don't live here</span>
+                </label>
+              </div>
+
+              <div class="form-nav">
+                <button type="button" class="btn btn-back" data-back="1">Back</button>
+                <button type="button" class="btn btn-next" id="btnStep2">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 3: New or In Progress? -->
+            <div class="form-step" data-step="3">
+              <div class="form-step-emoji">🔄</div>
+              <h3 class="form-step-title">What's your current situation?</h3>
+              <p class="form-step-subtitle">This helps us understand how to best assist you.</p>
+
+              <div class="choice-grid">
+                <label class="choice-card choice-horizontal" data-value="new">
+                  <input type="radio" name="case_status" value="new" required>
+                  <span class="choice-card-emoji">🆕</span>
+                  <div class="choice-card-text">
+                    <span class="choice-card-title">I want to START a new application</span>
+                    <span class="choice-card-desc">I haven't submitted anything yet</span>
+                  </div>
+                </label>
+                <label class="choice-card choice-horizontal" data-value="in_progress">
+                  <input type="radio" name="case_status" value="in_progress">
+                  <span class="choice-card-emoji">⏳</span>
+                  <div class="choice-card-text">
+                    <span class="choice-card-title">I ALREADY SUBMITTED and need help</span>
+                    <span class="choice-card-desc">My application is stuck or I have problems</span>
+                    <span class="hot-badge">High Priority</span>
+                  </div>
+                </label>
+              </div>
+
+              <div class="form-nav">
+                <button type="button" class="btn btn-back" data-back="2">Back</button>
+                <button type="button" class="btn btn-next" id="btnStep3">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 4a: New Application - Timeline -->
+            <div class="form-step" data-step="4a">
+              <div class="form-step-emoji">📅</div>
+              <h3 class="form-step-title">When do you want to start?</h3>
+              <p class="form-step-subtitle">This helps us prioritize your consultation.</p>
+
+              <div class="choice-grid two-col">
+                <label class="choice-card" data-value="asap">
+                  <input type="radio" name="timeline" value="asap" required>
+                  <span class="choice-card-emoji">🚀</span>
+                  <span class="choice-card-title">ASAP</span>
+                  <span class="choice-card-desc">I need to start now</span>
+                </label>
+                <label class="choice-card" data-value="1month">
+                  <input type="radio" name="timeline" value="1month">
+                  <span class="choice-card-emoji">📆</span>
+                  <span class="choice-card-title">Within 1 month</span>
+                  <span class="choice-card-desc">Soon but not urgent</span>
+                </label>
+                <label class="choice-card" data-value="3months">
+                  <input type="radio" name="timeline" value="3months">
+                  <span class="choice-card-emoji">🗓️</span>
+                  <span class="choice-card-title">Within 3 months</span>
+                  <span class="choice-card-desc">Planning ahead</span>
+                </label>
+                <label class="choice-card" data-value="exploring">
+                  <input type="radio" name="timeline" value="exploring">
+                  <span class="choice-card-emoji">🔍</span>
+                  <span class="choice-card-title">Just exploring</span>
+                  <span class="choice-card-desc">Getting information</span>
+                </label>
+              </div>
+
+              <div class="form-nav">
+                <button type="button" class="btn btn-back" data-back="3">Back</button>
+                <button type="button" class="btn btn-next" id="btnStep4a">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 4b: In Progress - Details -->
+            <div class="form-step" data-step="4b">
+              <div class="form-step-emoji">⏱️</div>
+              <h3 class="form-step-title">Tell us about your case</h3>
+              <p class="form-step-subtitle">This helps us understand the urgency.</p>
 
               <div class="form-group">
-                <label class="form-label">Your Name *</label>
+                <label class="form-label">How long have you been waiting?</label>
+                <div class="choice-grid two-col">
+                  <label class="choice-card" data-value="less_3">
+                    <input type="radio" name="waiting_time" value="less_3" required>
+                    <span class="choice-card-title">Less than 3 months</span>
+                  </label>
+                  <label class="choice-card" data-value="3_6">
+                    <input type="radio" name="waiting_time" value="3_6">
+                    <span class="choice-card-title">3-6 months</span>
+                  </label>
+                  <label class="choice-card" data-value="6_12">
+                    <input type="radio" name="waiting_time" value="6_12">
+                    <span class="choice-card-title">6-12 months</span>
+                    <span class="hot-badge">Urgent</span>
+                  </label>
+                  <label class="choice-card" data-value="more_12">
+                    <input type="radio" name="waiting_time" value="more_12">
+                    <span class="choice-card-title">12+ months</span>
+                    <span class="hot-badge">Critical</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 24px;">
+                <label class="form-label">Did you get fingerprint appointment?</label>
+                <div class="choice-grid two-col">
+                  <label class="choice-card" data-value="done">
+                    <input type="radio" name="fingerprints" value="done" required>
+                    <span class="choice-card-emoji">✅</span>
+                    <span class="choice-card-title">Done</span>
+                  </label>
+                  <label class="choice-card" data-value="scheduled">
+                    <input type="radio" name="fingerprints" value="scheduled">
+                    <span class="choice-card-emoji">📅</span>
+                    <span class="choice-card-title">Scheduled</span>
+                  </label>
+                  <label class="choice-card" data-value="waiting">
+                    <input type="radio" name="fingerprints" value="waiting">
+                    <span class="choice-card-emoji">⏳</span>
+                    <span class="choice-card-title">Still waiting</span>
+                    <span class="hot-badge">Urgent</span>
+                  </label>
+                  <label class="choice-card" data-value="unknown">
+                    <input type="radio" name="fingerprints" value="unknown">
+                    <span class="choice-card-emoji">❓</span>
+                    <span class="choice-card-title">Don't know</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-nav">
+                <button type="button" class="btn btn-back" data-back="3">Back</button>
+                <button type="button" class="btn btn-next" id="btnStep4b">Continue</button>
+              </div>
+            </div>
+
+            <!-- STEP 5: Contact Info (LAST) -->
+            <div class="form-step" data-step="5">
+              <div class="form-step-emoji">📱</div>
+              <h3 class="form-step-title">Great! How can we reach you?</h3>
+              <p class="form-step-subtitle">We'll contact you within 24 hours with a free assessment.</p>
+
+              <div class="form-group">
+                <label class="form-label">Your Name</label>
                 <input type="text" class="form-input" name="name" required placeholder="Enter your full name">
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Email *</label>
-                  <input type="email" class="form-input" name="email" required placeholder="your@email.com">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Phone Number *</label>
+              <div class="form-group">
+                <label class="form-label">Phone Number (WhatsApp preferred)</label>
+                <div class="input-with-icon">
+                  <svg class="input-icon" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                   <input type="tel" class="form-input" name="phone" required placeholder="+48 XXX XXX XXX">
-                  <div class="whatsapp-check">
-                    <input type="checkbox" id="whatsapp" name="whatsapp" checked>
-                    <label for="whatsapp">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      Contact me via WhatsApp
-                    </label>
-                  </div>
                 </div>
+                <label class="whatsapp-toggle">
+                  <input type="checkbox" name="whatsapp" checked>
+                  <span>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Contact me via WhatsApp
+                  </span>
+                </label>
               </div>
 
               <div class="form-group">
-                <label class="form-label">Your City in Lower Silesia *</label>
-                <select class="form-select" name="city" required>
-                  <option value="">Select your city...</option>
-                  <option value="Wrocław">Wrocław</option>
-                  <option value="Legnica">Legnica</option>
-                  <option value="Wałbrzych">Wałbrzych</option>
-                  <option value="Jelenia Góra">Jelenia Góra</option>
-                  <option value="Lubin">Lubin</option>
-                  <option value="Głogów">Głogów</option>
-                  <option value="Świdnica">Świdnica</option>
-                  <option value="Oleśnica">Oleśnica</option>
-                  <option value="Bolesławiec">Bolesławiec</option>
-                  <option value="Kłodzko">Kłodzko</option>
-                  <option value="other_dolnoslaskie">Other city in Lower Silesia</option>
-                  <option value="outside">I live outside Lower Silesia</option>
-                </select>
-              </div>
-
-              <div class="form-nav">
-                <button type="button" class="btn btn-primary" onclick="nextStep(1)">Continue →</button>
-              </div>
-            </div>
-
-            <!-- STEP 2: Situation -->
-            <div class="form-step" data-step="2">
-              <h3 class="form-step-title">Your Situation</h3>
-              <p class="form-step-subtitle">What do you need help with?</p>
-
-              <div class="form-group">
-                <label class="form-label">Type of Permit *</label>
-                <select class="form-select" name="permit_type" required>
-                  <option value="">Select permit type...</option>
-                  <option value="temporary_residence">Temporary Residence Permit (Pobyt czasowy)</option>
-                  <option value="temporary_work">Temporary Residence + Work Permit</option>
-                  <option value="permanent">Permanent Residence (Pobyt stały)</option>
-                  <option value="long_term_eu">Long-term EU Resident</option>
-                  <option value="citizenship">Polish Citizenship (Obywatelstwo)</option>
-                  <option value="other">Other / I'm not sure</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Current Status *</label>
-                <div class="form-options">
-                  <label class="form-option" data-value="new">
-                    <input type="radio" name="case_status" value="new" required>
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>I want to START a new application</h4>
-                      <p>I haven't submitted my application yet</p>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="in_progress">
-                    <input type="radio" name="case_status" value="in_progress" required>
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>I ALREADY SUBMITTED and need help</h4>
-                      <p>My application is in progress but I have problems</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-nav">
-                <button type="button" class="btn btn-back" onclick="prevStep(2)">← Back</button>
-                <button type="button" class="btn btn-primary" onclick="nextStep(2)">Continue →</button>
-              </div>
-            </div>
-
-            <!-- STEP 3a: New Application -->
-            <div class="form-step" data-step="3a">
-              <h3 class="form-step-title">Starting a New Application</h3>
-              <p class="form-step-subtitle">When do you want to begin?</p>
-
-              <div class="form-group">
-                <label class="form-label">When do you want to start? *</label>
-                <div class="form-options">
-                  <label class="form-option" data-value="asap">
-                    <input type="radio" name="timeline" value="asap" required>
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>As soon as possible</h4>
-                      <p>I need to start right away</p>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="1month">
-                    <input type="radio" name="timeline" value="1month">
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>Within 1 month</h4>
-                      <p>I have some time to prepare</p>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="3months">
-                    <input type="radio" name="timeline" value="3months">
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>Within 3 months</h4>
-                      <p>Planning ahead</p>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="exploring">
-                    <input type="radio" name="timeline" value="exploring">
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>Just exploring options</h4>
-                      <p>Not ready to start yet</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-nav">
-                <button type="button" class="btn btn-back" onclick="prevStep('3a')">← Back</button>
-                <button type="button" class="btn btn-primary" onclick="nextStep('3a')">Continue →</button>
-              </div>
-            </div>
-
-            <!-- STEP 3b: Case in Progress -->
-            <div class="form-step" data-step="3b">
-              <h3 class="form-step-title">Your Case Details</h3>
-              <p class="form-step-subtitle">Help us understand your situation better.</p>
-
-              <div class="form-group">
-                <label class="form-label">How long have you been waiting? *</label>
-                <select class="form-select" name="waiting_time" required>
-                  <option value="">Select...</option>
-                  <option value="less_3">Less than 3 months</option>
-                  <option value="3_6">3-6 months</option>
-                  <option value="6_12">6-12 months</option>
-                  <option value="more_12">More than 12 months</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Have you received fingerprint appointment? *</label>
-                <div class="form-options">
-                  <label class="form-option" data-value="done">
-                    <input type="radio" name="fingerprints" value="done" required>
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>Yes, already done</h4>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="scheduled">
-                    <input type="radio" name="fingerprints" value="scheduled">
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>Yes, scheduled</h4>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="waiting">
-                    <input type="radio" name="fingerprints" value="waiting">
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>No, still waiting</h4>
-                    </div>
-                  </label>
-                  <label class="form-option" data-value="unknown">
-                    <input type="radio" name="fingerprints" value="unknown">
-                    <span class="form-option-radio"></span>
-                    <div class="form-option-content">
-                      <h4>I don't know</h4>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Any problems with your case?</label>
-                <select class="form-select" name="problems">
-                  <option value="">Select if applicable...</option>
-                  <option value="missing_docs">Missing documents request</option>
-                  <option value="no_response">No response from office</option>
-                  <option value="rejected">Application rejected</option>
-                  <option value="fees">Missing fees</option>
-                  <option value="other">Other problems</option>
-                </select>
-              </div>
-
-              <div class="form-nav">
-                <button type="button" class="btn btn-back" onclick="prevStep('3b')">← Back</button>
-                <button type="button" class="btn btn-primary" onclick="nextStep('3b')">Continue →</button>
-              </div>
-            </div>
-
-            <!-- STEP 4: Final -->
-            <div class="form-step" data-step="4">
-              <h3 class="form-step-title">Almost Done!</h3>
-              <p class="form-step-subtitle">Any additional details you'd like to share?</p>
-
-              <div class="form-group">
-                <label class="form-label">Describe your situation (optional)</label>
-                <textarea class="form-textarea" name="description" placeholder="Tell us more about your case, any specific concerns or questions you have..."></textarea>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">How did you hear about us?</label>
-                <select class="form-select" name="source">
-                  <option value="">Select...</option>
-                  <option value="google">Google Search</option>
-                  <option value="facebook">Facebook</option>
-                  <option value="friend">Friend / Colleague</option>
-                  <option value="community">Community Group</option>
-                  <option value="other">Other</option>
-                </select>
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-input" name="email" required placeholder="your@email.com">
+                <p class="form-hint">We'll send you confirmation and case updates here.</p>
               </div>
 
               <div class="form-group">
@@ -1314,35 +1499,44 @@
                   <span class="checkbox-box">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   </span>
-                  <span class="checkbox-label">I agree to the <a href="#" target="_blank">Privacy Policy</a> and consent to being contacted about my inquiry. *</span>
+                  <span class="checkbox-label">I agree to the <a href="#" target="_blank">Privacy Policy</a> and consent to being contacted about my case.</span>
                 </label>
               </div>
 
               <div class="form-nav">
-                <button type="button" class="btn btn-back" onclick="prevStep(4)">← Back</button>
-                <button type="submit" class="btn btn-primary">Submit Request →</button>
+                <button type="button" class="btn btn-back" data-back="4">Back</button>
+                <button type="submit" class="btn btn-submit">Get Free Assessment</button>
               </div>
             </div>
 
-            <!-- SUCCESS MESSAGE -->
-            <div class="form-step" data-step="success" style="text-align: center; padding: 40px 0;">
-              <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
-              <h3 class="form-step-title">Thank You!</h3>
-              <p class="form-step-subtitle">We've received your request. Our team will contact you within 24 hours.</p>
-              <p style="margin-top: 20px; color: var(--text-secondary);">Prefer to chat now?</p>
-              <a href="https://wa.me/48123456789?text=Hi%2C%20I%20need%20help%20with%20my%20residence%20permit%20in%20Poland." target="_blank" class="btn btn-primary" style="margin-top: 16px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                Message us on WhatsApp
-              </a>
+            <!-- SUCCESS SCREEN -->
+            <div class="form-step" data-step="success">
+              <div class="result-screen">
+                <div class="success-checkmark">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <h3 class="result-title">Thank You!</h3>
+                <p class="result-text">We've received your request.<br>Our team will contact you within <strong>24 hours</strong>.</p>
+                <div class="result-cta">
+                  <p style="color: var(--text-tertiary); margin-bottom: 12px; font-size: 14px;">Want faster response?</p>
+                  <a href="https://wa.me/48123456789?text=Hi%2C%20I%20just%20filled%20out%20the%20form%20on%20your%20website.%20I%20need%20help%20with%20my%20residence%20permit." target="_blank" class="btn btn-next" style="background: #25D366;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Message us on WhatsApp
+                  </a>
+                </div>
+              </div>
             </div>
 
-            <!-- OUTSIDE REGION MESSAGE -->
-            <div class="form-step" data-step="outside" style="text-align: center; padding: 40px 0;">
-              <div style="font-size: 64px; margin-bottom: 20px;">📍</div>
-              <h3 class="form-step-title">Sorry, We Can't Help</h3>
-              <p class="form-step-subtitle">We only handle cases in Lower Silesia (województwo dolnośląskie). Your case would need to be processed at a different Voivodeship Office.</p>
-              <p style="margin-top: 20px; color: var(--text-secondary);">We recommend searching for an immigration lawyer in your region.</p>
+            <!-- OUTSIDE REGION SCREEN -->
+            <div class="form-step" data-step="outside">
+              <div class="result-screen">
+                <div class="result-icon">📍</div>
+                <h3 class="result-title">Sorry, We Can't Help</h3>
+                <p class="result-text">We only handle cases in <strong>Lower Silesia</strong> (Dolnośląskie).<br>Your case would need to be processed at a different Voivodeship Office.</p>
+                <p style="color: var(--text-tertiary); font-size: 14px;">We recommend searching for an immigration lawyer in your region.</p>
+              </div>
             </div>
+
           </form>
         </div>
       </div>
@@ -1414,189 +1608,225 @@
 
   <script>
     // ========================================
-    // FORM LOGIC
+    // FORM LOGIC - REDESIGNED
     // ========================================
 
+    const formData = {};
     let currentStep = 1;
-    let formData = {};
 
-    // Form option selection
-    document.querySelectorAll('.form-option').forEach(option => {
-      option.addEventListener('click', function() {
-        const parent = this.closest('.form-options');
-        parent.querySelectorAll('.form-option').forEach(o => o.classList.remove('selected'));
+    // ---- Choice Card Selection ----
+    document.querySelectorAll('.choice-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const grid = this.closest('.choice-grid');
+        if (grid) {
+          grid.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected'));
+        }
         this.classList.add('selected');
-        this.querySelector('input').checked = true;
+        const input = this.querySelector('input');
+        if (input) input.checked = true;
       });
     });
 
-    // Update progress bar
-    function updateProgress(step) {
-      document.querySelectorAll('.progress-step').forEach(el => {
-        const stepNum = parseInt(el.dataset.step);
-        el.classList.remove('active', 'completed');
-        if (stepNum < step) el.classList.add('completed');
-        if (stepNum === step) el.classList.add('active');
+    // ---- Progress Bar Update ----
+    function updateProgress(stepNum) {
+      document.querySelectorAll('.progress-dot').forEach(dot => {
+        const dotStep = parseInt(dot.dataset.step);
+        dot.classList.remove('active', 'completed');
+        if (dotStep < stepNum) dot.classList.add('completed');
+        if (dotStep === stepNum) dot.classList.add('active');
+      });
+      document.querySelectorAll('.progress-line').forEach(line => {
+        const afterStep = parseInt(line.dataset.after);
+        line.classList.toggle('completed', afterStep < stepNum);
       });
     }
 
-    // Show specific step
+    // ---- Show Step ----
     function showStep(step) {
       document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
-      document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
+      const target = document.querySelector(`.form-step[data-step="${step}"]`);
+      if (target) target.classList.add('active');
 
-      // Update progress (map 3a/3b to 3, 4 stays 4)
-      let progressStep = step;
-      if (step === '3a' || step === '3b') progressStep = 3;
-      if (step === 4 || step === '4') progressStep = 4;
-      if (step === 'success' || step === 'outside') progressStep = 4;
-      updateProgress(parseInt(progressStep) || 4);
+      // Map step to progress number
+      let progressNum = 1;
+      if (step === 1) progressNum = 1;
+      else if (step === 2) progressNum = 2;
+      else if (step === 3) progressNum = 3;
+      else if (step === '4a' || step === '4b') progressNum = 4;
+      else if (step === 5) progressNum = 5;
+      else if (step === 'success' || step === 'outside') progressNum = 5;
+
+      updateProgress(progressNum);
+
+      // Scroll form into view smoothly
+      document.querySelector('.form-wrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Validate current step
+    // ---- Collect Data from Step ----
+    function collectStepData(step) {
+      const stepEl = document.querySelector(`.form-step[data-step="${step}"]`);
+      if (!stepEl) return;
+      stepEl.querySelectorAll('input, select, textarea').forEach(input => {
+        if (input.type === 'radio') {
+          if (input.checked) formData[input.name] = input.value;
+        } else if (input.type === 'checkbox') {
+          formData[input.name] = input.checked;
+        } else if (input.value) {
+          formData[input.name] = input.value;
+        }
+      });
+    }
+
+    // ---- Validate Step ----
     function validateStep(step) {
       const stepEl = document.querySelector(`.form-step[data-step="${step}"]`);
-      const requiredFields = stepEl.querySelectorAll('[required]');
-      let valid = true;
+      if (!stepEl) return true;
 
-      requiredFields.forEach(field => {
+      let valid = true;
+      const radioGroups = {};
+
+      stepEl.querySelectorAll('[required]').forEach(field => {
         if (field.type === 'radio') {
-          const name = field.name;
-          const checked = stepEl.querySelector(`input[name="${name}"]:checked`);
-          if (!checked) valid = false;
-        } else if (!field.value) {
+          radioGroups[field.name] = true;
+        } else if (field.type === 'checkbox') {
+          if (!field.checked) {
+            valid = false;
+            field.closest('.form-checkbox')?.classList.add('error');
+          }
+        } else if (!field.value.trim()) {
           valid = false;
-          field.style.borderColor = '#ef4444';
+          field.classList.add('error');
         } else {
-          field.style.borderColor = '';
+          field.classList.remove('error');
+        }
+      });
+
+      // Check radio groups
+      Object.keys(radioGroups).forEach(name => {
+        const checked = stepEl.querySelector(`input[name="${name}"]:checked`);
+        if (!checked) {
+          valid = false;
+          // Highlight cards
+          stepEl.querySelectorAll(`input[name="${name}"]`).forEach(inp => {
+            inp.closest('.choice-card')?.style.setProperty('border-color', '#ef4444');
+          });
+        } else {
+          stepEl.querySelectorAll(`input[name="${name}"]`).forEach(inp => {
+            inp.closest('.choice-card')?.style.removeProperty('border-color');
+          });
         }
       });
 
       return valid;
     }
 
-    // Collect form data from step
-    function collectStepData(step) {
-      const stepEl = document.querySelector(`.form-step[data-step="${step}"]`);
-      const inputs = stepEl.querySelectorAll('input, select, textarea');
+    // ---- Navigation Buttons ----
+    // Step 1 → 2
+    document.getElementById('btnStep1')?.addEventListener('click', () => {
+      if (!validateStep(1)) return;
+      collectStepData(1);
+      showStep(2);
+      currentStep = 2;
+    });
 
-      inputs.forEach(input => {
-        if (input.type === 'radio') {
-          if (input.checked) formData[input.name] = input.value;
-        } else if (input.type === 'checkbox') {
-          formData[input.name] = input.checked;
-        } else {
-          formData[input.name] = input.value;
-        }
-      });
-    }
-
-    // Next step
-    function nextStep(from) {
-      if (!validateStep(from)) {
-        alert('Please fill in all required fields.');
+    // Step 2 → 3 (or outside)
+    document.getElementById('btnStep2')?.addEventListener('click', () => {
+      if (!validateStep(2)) return;
+      collectStepData(2);
+      if (formData.city === 'outside') {
+        showStep('outside');
         return;
       }
+      showStep(3);
+      currentStep = 3;
+    });
 
-      collectStepData(from);
-
-      // Step 1 → Check if outside region
-      if (from === 1) {
-        if (formData.city === 'outside') {
-          showStep('outside');
-          return;
-        }
-        showStep(2);
-        currentStep = 2;
+    // Step 3 → 4a or 4b
+    document.getElementById('btnStep3')?.addEventListener('click', () => {
+      if (!validateStep(3)) return;
+      collectStepData(3);
+      if (formData.case_status === 'new') {
+        showStep('4a');
+        currentStep = '4a';
+      } else {
+        showStep('4b');
+        currentStep = '4b';
       }
-      // Step 2 → Go to 3a or 3b based on case status
-      else if (from === 2) {
-        if (formData.case_status === 'new') {
-          showStep('3a');
-          currentStep = '3a';
+    });
+
+    // Step 4a → 5
+    document.getElementById('btnStep4a')?.addEventListener('click', () => {
+      if (!validateStep('4a')) return;
+      collectStepData('4a');
+      showStep(5);
+      currentStep = 5;
+    });
+
+    // Step 4b → 5
+    document.getElementById('btnStep4b')?.addEventListener('click', () => {
+      if (!validateStep('4b')) return;
+      collectStepData('4b');
+      showStep(5);
+      currentStep = 5;
+    });
+
+    // Back buttons
+    document.querySelectorAll('.btn-back[data-back]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const target = this.dataset.back;
+        if (target === '4') {
+          // Go back to correct step 4 variant
+          showStep(formData.case_status === 'new' ? '4a' : '4b');
         } else {
-          showStep('3b');
-          currentStep = '3b';
+          showStep(parseInt(target) || target);
         }
-      }
-      // Step 3a or 3b → Go to 4
-      else if (from === '3a' || from === '3b') {
-        showStep(4);
-        currentStep = 4;
-      }
-    }
+      });
+    });
 
-    // Previous step
-    function prevStep(from) {
-      if (from === 2) {
-        showStep(1);
-        currentStep = 1;
-      } else if (from === '3a' || from === '3b') {
-        showStep(2);
-        currentStep = 2;
-      } else if (from === 4) {
-        if (formData.case_status === 'new') {
-          showStep('3a');
-          currentStep = '3a';
-        } else {
-          showStep('3b');
-          currentStep = '3b';
-        }
-      }
-    }
-
-    // Calculate lead score
+    // ---- Lead Scoring ----
     function calculateLeadScore() {
       let score = 0;
       let priority = 'cold';
 
-      // Case in progress scoring
       if (formData.case_status === 'in_progress') {
-        // Waiting time
-        if (formData.waiting_time === 'more_12') score += 30;
-        else if (formData.waiting_time === '6_12') score += 20;
+        // Waiting time scoring
+        if (formData.waiting_time === 'more_12') score += 35;
+        else if (formData.waiting_time === '6_12') score += 25;
         else if (formData.waiting_time === '3_6') score += 10;
 
-        // Fingerprints
-        if (formData.fingerprints === 'waiting') score += 25;
+        // Fingerprints scoring
+        if (formData.fingerprints === 'waiting') score += 30;
         else if (formData.fingerprints === 'unknown') score += 15;
 
-        // Problems
-        if (formData.problems === 'rejected') score += 20;
-        else if (formData.problems === 'missing_docs') score += 15;
-        else if (formData.problems === 'no_response') score += 15;
-      }
-      // New application scoring
-      else {
-        if (formData.timeline === 'asap') score += 25;
-        else if (formData.timeline === '1month') score += 15;
-        else if (formData.timeline === '3months') score += 5;
+        // In-progress cases base bonus
+        score += 10;
+      } else {
+        // New application scoring
+        if (formData.timeline === 'asap') score += 30;
+        else if (formData.timeline === '1month') score += 20;
+        else if (formData.timeline === '3months') score += 10;
         // exploring = 0
       }
 
       // Determine priority
-      if (score >= 40) priority = 'hot';
-      else if (score >= 20) priority = 'warm';
+      if (score >= 50) priority = 'hot';
+      else if (score >= 25) priority = 'warm';
 
       return { score, priority };
     }
 
-    // Form submission
-    document.getElementById('qualificationForm').addEventListener('submit', async function(e) {
+    // ---- Form Submission ----
+    document.getElementById('qualificationForm')?.addEventListener('submit', async function(e) {
       e.preventDefault();
 
-      if (!validateStep(4)) {
-        alert('Please fill in all required fields and accept the Privacy Policy.');
-        return;
-      }
+      if (!validateStep(5)) return;
 
-      // Show loading state
       const submitBtn = this.querySelector('button[type="submit"]');
       const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = 'Submitting...';
+      submitBtn.innerHTML = '<span style="opacity:0.7">Sending...</span>';
       submitBtn.disabled = true;
 
-      collectStepData(4);
+      collectStepData(5);
 
       // Calculate lead score
       const { score, priority } = calculateLeadScore();
@@ -1604,6 +1834,8 @@
       formData.lead_priority = priority;
       formData.submitted_at = new Date().toISOString();
       formData.id = 'lead_' + Date.now();
+      formData.landing_page = window.location.href;
+      formData.user_agent = navigator.userAgent;
 
       // Add tracking data if available
       if (typeof LeadTracking !== 'undefined') {
@@ -1611,23 +1843,19 @@
         formData.source_info = LeadTracking.getSource();
       }
 
-      // Add page info
-      formData.landing_page = window.location.href;
-      formData.user_agent = navigator.userAgent;
-
-      // Lead data ready for submission (logged in dev only)
-      if (window.location.hostname === 'localhost') console.log('Lead data:', formData);
+      // Dev logging
+      if (window.location.hostname === 'localhost') {
+        console.log('Lead submitted:', formData);
+      }
 
       // MOCKUP: Save to localStorage (replace with Supabase later)
       try {
         const leads = JSON.parse(localStorage.getItem('immigration_leads') || '[]');
         leads.push(formData);
         localStorage.setItem('immigration_leads', JSON.stringify(leads));
-        // Lead saved (dev log)
-        if (window.location.hostname === 'localhost') console.log('Lead saved. Total:', leads.length);
 
         // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 600));
 
         showStep('success');
       } catch (error) {
