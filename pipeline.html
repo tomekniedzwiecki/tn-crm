@@ -1093,81 +1093,95 @@
 
         function renderLeadCard(lead, colors) {
             const gradient = getAvatarGradient(lead.email);
-            const initial = lead.email.charAt(0).toUpperCase();
             const displayName = lead.name || lead.email.split('@')[0];
+            const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
             const offer = lead.offer_id ? offersMap[lead.offer_id] : null;
             const assignedMember = lead.assigned_to ? teamMembersMap[lead.assigned_to] : null;
             const memberInitials = assignedMember ? getMemberInitials(lead.assigned_to) : '';
             const memberColor = assignedMember ? getMemberColor(lead.assigned_to) : '';
             const daysInStatus = getDaysInStatus(lead);
+            const leadValue = getLeadValue(lead);
 
-            // Follow-up indicator - subtle WhatsApp icon
-            const followupBadge = lead.needs_followup ? `
-                <div class="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 bg-zinc-800 border border-zinc-700 rounded-full shadow-sm" title="Follow-up${lead.hours_since_contact ? ` (${lead.hours_since_contact}h)` : ''}">
-                    <i class="ph-fill ph-whatsapp-logo text-[10px] text-orange-400"></i>
-                </div>
-            ` : '';
+            // Urgency indicator
+            const isUrgent = daysInStatus >= 7;
+            const isWarning = daysInStatus >= 5;
+            const terminalStages = ['won', 'lost', 'abandoned'];
+            const isTerminal = terminalStages.includes(lead.status);
+            const showUrgency = !isTerminal && (isUrgent || isWarning);
 
             return `
-                <div class="lead-card group bg-zinc-900/60 border border-white/5 rounded-lg p-4 hover:border-white/10 relative"
+                <div class="lead-card group bg-zinc-900/60 border border-white/5 rounded-lg p-3 hover:border-white/10 relative ${isUrgent && !isTerminal ? 'border-red-500/30' : ''}"
                      draggable="true"
                      data-id="${lead.id}"
                      ondragstart="handleDragStart(event)"
                      ondragend="handleDragEnd(event)"
                      onclick="openLead('${lead.id}')"
                      onauxclick="openLeadNewTab(event, '${lead.id}')">
-                    ${followupBadge}
-                    <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                            ${initial}
+
+                    <!-- Header: Avatar + Name + Actions -->
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
+                            ${initials}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="font-medium text-white text-base truncate">${displayName}</div>
-                            ${lead.company ? `<div class="text-zinc-500 text-sm truncate">${lead.company}</div>` : ''}
+                            <div class="font-medium text-white text-sm truncate leading-tight">${displayName}</div>
+                            ${offer ? `<div class="text-[11px] text-amber-400/70 truncate leading-tight">${offer.name}</div>` :
+                              (lead.company ? `<div class="text-[11px] text-zinc-500 truncate leading-tight">${lead.company}</div>` : '')}
                         </div>
-                        <div class="absolute top-2 right-2 flex items-center gap-1">
+                        <div class="flex items-center gap-1 flex-shrink-0">
                             ${assignedMember ? `
-                                <div class="w-6 h-6 rounded-full ${memberColor} flex items-center justify-center text-white text-[10px] font-bold" title="${assignedMember.name}">
+                                <div class="w-5 h-5 rounded-full ${memberColor} flex items-center justify-center text-white text-[9px] font-bold" title="${assignedMember.name}">
                                     ${memberInitials}
                                 </div>
                             ` : ''}
-                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="event.stopPropagation(); window.open(getLeadPath('${lead.id}'), '_blank')" class="p-1 text-blue-400 hover:bg-blue-500/20 rounded transition-colors" title="Otwórz w nowej karcie">
-                                    <i class="ph ph-arrow-square-out text-xs"></i>
-                                </button>
-                                <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1 text-purple-400 hover:bg-purple-500/20 rounded transition-colors" title="Wyślij email">
-                                    <i class="ph ph-envelope-simple text-xs"></i>
-                                </button>
-                                ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded transition-colors" title="Zadzwoń">
-                                    <i class="ph ph-phone text-xs"></i>
-                                </button>` : ''}
-                                ${(lead.status === 'new' || !lead.status) ? `<button onclick="event.stopPropagation(); abandonLead('${lead.id}')" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-500/20 rounded transition-colors" title="Porzuć">
-                                    <i class="ph ph-prohibit text-xs"></i>
-                                </button>` : ''}
-                            </div>
+                            <button onclick="event.stopPropagation(); window.open(getLeadPath('${lead.id}'), '_blank')" class="p-1 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-colors" title="Otwórz w nowej karcie">
+                                <i class="ph ph-arrow-square-out text-xs"></i>
+                            </button>
                         </div>
                     </div>
-                    ${offer ? `
-                        <div class="flex items-center gap-2 mt-2">
-                            <i class="ph ph-package text-amber-400 text-sm"></i>
-                            <span class="text-sm text-amber-400/80 truncate">${offer.name}</span>
+
+                    <!-- Footer: Value + Days + Actions on hover -->
+                    <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-white/5">
+                        <div class="flex items-center gap-3">
+                            ${leadValue > 0 ? `
+                                <span class="text-xs font-mono text-zinc-400">${formatCurrency(leadValue)}</span>
+                            ` : ''}
+                            ${lead.expected_close ? `
+                                <span class="text-[10px] text-cyan-400/70 flex items-center gap-1">
+                                    <i class="ph ph-calendar text-[10px]"></i>
+                                    ${formatExpectedClose(lead.expected_close)}
+                                </span>
+                            ` : ''}
                         </div>
-                    ` : ''}
-                    ${getLeadValue(lead) > 0 ? `
-                        <div class="flex items-center gap-2 mt-2">
-                            <div class="w-2 h-2 rounded-full bg-zinc-600"></div>
-                            <span class="text-sm font-mono text-zinc-400">${formatCurrency(getLeadValue(lead))}</span>
+                        <div class="flex items-center gap-1.5">
+                            <!-- Hover actions -->
+                            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${lead.phone ? `<button onclick="event.stopPropagation(); callPhone('${lead.phone.replace(/'/g, "\\'")}')" class="p-1 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded transition-colors" title="Zadzwoń">
+                                    <i class="ph ph-phone text-[11px]"></i>
+                                </button>` : ''}
+                                <button onclick="event.stopPropagation(); sendEmail('${lead.email}')" class="p-1 text-zinc-500 hover:text-purple-400 hover:bg-purple-500/10 rounded transition-colors" title="Email">
+                                    <i class="ph ph-envelope-simple text-[11px]"></i>
+                                </button>
+                                ${lead.needs_followup ? `
+                                    <div class="p-1 text-orange-400" title="Follow-up${lead.hours_since_contact ? ` (${lead.hours_since_contact}h)` : ''}">
+                                        <i class="ph-fill ph-whatsapp-logo text-[11px]"></i>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <!-- Days badge -->
+                            ${!isTerminal ? `
+                                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                    isUrgent ? 'bg-red-500/20 text-red-400 animate-pulse' :
+                                    isWarning ? 'bg-amber-500/15 text-amber-400' :
+                                    'text-zinc-500'
+                                }" title="Dni w tym statusie">
+                                    ${isUrgent ? '<i class="ph ph-warning-circle text-[10px]"></i>' : ''}
+                                    <span>${daysInStatus}d</span>
+                                </div>
+                            ` : `
+                                <span class="text-[10px] font-mono text-zinc-600">${daysInStatus}d</span>
+                            `}
                         </div>
-                    ` : ''}
-                    ${lead.expected_close ? `
-                        <div class="flex items-center gap-2 mt-2">
-                            <i class="ph ph-calendar text-cyan-400 text-sm"></i>
-                            <span class="text-xs text-cyan-400/80">${formatExpectedClose(lead.expected_close)}</span>
-                        </div>
-                    ` : ''}
-                    <div class="flex items-center justify-between mt-3 gap-2">
-                        <a href="/lead?id=${lead.id}" onclick="event.stopPropagation()" class="text-xs text-zinc-600 hover:text-blue-400 font-mono truncate block transition-colors">${lead.email}</a>
-                        ${getDaysInStatusBadge(daysInStatus, lead.status)}
                     </div>
                 </div>
             `;
