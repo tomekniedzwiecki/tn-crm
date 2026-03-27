@@ -662,33 +662,43 @@
                                 <span id="offer-price-badge" class="text-sm font-semibold text-amber-400">0 zł</span>
                             </div>
 
-                            <div class="p-4">
-                                <!-- Row 1: Offer + Price + Assigned -->
-                                <div class="grid grid-cols-6 gap-3 mb-4">
-                                    <div class="col-span-2">
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Oferta</label>
-                                        <select id="field-offer" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer">
-                                            <option value="">— Wybierz —</option>
+                            <div class="p-4 sm:p-5">
+                                <!-- Row 1: Main fields - Offer + Price -->
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Oferta</label>
+                                        <select id="field-offer" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
+                                            <option value="">— Wybierz ofertę —</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Cena</label>
+                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Cena</label>
                                         <div class="relative">
-                                            <input type="number" id="field-value" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white pr-8" placeholder="auto" min="0" step="1">
-                                            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 text-[10px]">zł</span>
+                                            <input type="number" id="field-value" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white pr-10" placeholder="auto" min="0" step="1">
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">zł</span>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Zamknięcie</label>
-                                        <input type="date" id="field-expected-close" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer" onclick="this.showPicker()">
-                                    </div>
-                                    <div class="col-span-2">
-                                        <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Przypisany</label>
-                                        <select id="field-assigned-to" class="input-field w-full rounded-lg px-2 py-2 text-sm text-white cursor-pointer">
-                                            <option value="">Nie przypisano</option>
-                                        </select>
-                                    </div>
                                 </div>
+
+                                <!-- Row 2: Secondary fields - Date + Assigned (collapsible on mobile) -->
+                                <details class="mb-4 group sm:[&:not([open])]:mb-0" open>
+                                    <summary class="sm:hidden flex items-center gap-2 text-[10px] text-zinc-500 uppercase tracking-wider cursor-pointer mb-2 hover:text-zinc-400">
+                                        <i class="ph ph-caret-right text-xs group-open:rotate-90 transition-transform"></i>
+                                        Więcej opcji
+                                    </summary>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Zamknięcie</label>
+                                            <input type="date" id="field-expected-close" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer" onclick="this.showPicker()">
+                                        </div>
+                                        <div>
+                                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Przypisany</label>
+                                            <select id="field-assigned-to" class="input-field w-full rounded-lg px-3 py-2.5 text-sm text-white cursor-pointer">
+                                                <option value="">Nie przypisano</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </details>
 
                                 <!-- Offer Link Generator Section -->
                                 <div class="border-t border-white/5 pt-4">
@@ -789,44 +799,67 @@
 
                                     <!-- ===== RESULT: Offer exists ===== -->
                                     <div id="client-offer-exists" class="hidden">
-                                        <!-- Link row -->
-                                        <div class="flex items-center gap-1.5 mb-3">
-                                            <input type="text" id="client-offer-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700/50 rounded-lg px-2.5 py-2 text-[11px] text-zinc-300 font-mono truncate">
-                                            <button onclick="copyOfferUrl()" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors" title="Kopiuj">
-                                                <i class="ph ph-copy text-zinc-400 text-sm"></i>
-                                            </button>
-                                            <button onclick="openOfferPreview()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Otwórz">
-                                                <i class="ph ph-arrow-square-out text-amber-400 text-sm"></i>
-                                            </button>
+                                        <!-- Link section - prominent -->
+                                        <div class="bg-zinc-800/30 rounded-xl p-3 sm:p-4 mb-4 border border-white/5">
+                                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2">
+                                                <i class="ph ph-link text-amber-400"></i>
+                                                <span class="font-mono uppercase tracking-wider">Link do oferty</span>
+                                            </div>
+                                            <div class="flex flex-col sm:flex-row gap-2">
+                                                <input type="text" id="client-offer-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700/50 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-zinc-300 font-mono truncate">
+                                                <div class="flex gap-2">
+                                                    <button onclick="copyOfferUrl()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-white">
+                                                        <i class="ph ph-copy"></i>
+                                                        <span class="sm:hidden">Kopiuj</span>
+                                                    </button>
+                                                    <button onclick="openOfferPreview()" class="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-amber-400">
+                                                        <i class="ph ph-arrow-square-out"></i>
+                                                        <span class="sm:hidden">Otwórz</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <!-- Stats row -->
-                                        <div class="flex items-center justify-between text-[11px] text-zinc-500 mb-3 px-1">
-                                            <div class="flex items-center gap-3">
-                                                <span><i class="ph ph-calendar text-amber-400/70 mr-1"></i>do <span id="client-offer-valid-display" class="text-zinc-300">-</span></span>
-                                                <button onclick="openViewHistoryModal()" class="hover:text-white transition-colors">
-                                                    <i class="ph ph-eye text-cyan-400/70 mr-1"></i><span id="client-offer-views" class="text-zinc-300">0</span> wyśw.
+                                        <!-- Stats row - compact -->
+                                        <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 mb-3">
+                                            <div class="flex items-center gap-4">
+                                                <span class="flex items-center gap-1.5">
+                                                    <i class="ph ph-calendar text-amber-400/70"></i>
+                                                    <span>do</span>
+                                                    <span id="client-offer-valid-display" class="text-zinc-300 font-medium">-</span>
+                                                </span>
+                                                <button onclick="openViewHistoryModal()" class="flex items-center gap-1.5 hover:text-white transition-colors">
+                                                    <i class="ph ph-eye text-cyan-400/70"></i>
+                                                    <span id="client-offer-views" class="text-zinc-300 font-medium">0</span>
+                                                    <span>wyświetleń</span>
                                                 </button>
                                             </div>
-                                            <button onclick="deleteClientOffer()" class="text-red-400/50 hover:text-red-400 transition-colors" title="Usuń">
+                                            <button onclick="deleteClientOffer()" class="flex items-center gap-1 text-red-400/60 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10" title="Usuń ofertę">
                                                 <i class="ph ph-trash"></i>
+                                                <span class="hidden sm:inline">Usuń</span>
                                             </button>
                                         </div>
 
                                         <!-- Payment Schedule Link (if exists) -->
-                                        <div id="payment-schedule-link-section" class="hidden mt-4 pt-4 border-t border-white/5">
-                                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2">
-                                                <i class="ph ph-calendar-check text-amber-400"></i>
-                                                <span class="font-mono uppercase">Harmonogram płatności</span>
-                                            </div>
-                                            <div class="flex items-center gap-1.5 mb-3">
-                                                <input type="text" id="payment-schedule-url" readonly class="flex-1 bg-zinc-900/80 border border-amber-500/30 rounded-lg px-2.5 py-2 text-[11px] text-zinc-300 font-mono truncate">
-                                                <button onclick="copyScheduleUrl()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Kopiuj">
-                                                    <i class="ph ph-copy text-amber-400 text-sm"></i>
-                                                </button>
-                                                <button onclick="openSchedulePreview()" class="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors" title="Otwórz">
-                                                    <i class="ph ph-arrow-square-out text-amber-400 text-sm"></i>
-                                                </button>
+                                        <div id="payment-schedule-link-section" class="hidden pt-4 border-t border-white/5">
+                                            <div class="bg-amber-500/5 rounded-xl p-3 sm:p-4 border border-amber-500/20">
+                                                <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2">
+                                                    <i class="ph ph-calendar-check text-amber-400"></i>
+                                                    <span class="font-mono uppercase tracking-wider">Harmonogram płatności</span>
+                                                </div>
+                                                <div class="flex flex-col sm:flex-row gap-2">
+                                                    <input type="text" id="payment-schedule-url" readonly class="flex-1 bg-zinc-900/80 border border-amber-500/30 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-zinc-300 font-mono truncate">
+                                                    <div class="flex gap-2">
+                                                        <button onclick="copyScheduleUrl()" class="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-amber-400">
+                                                            <i class="ph ph-copy"></i>
+                                                            <span class="sm:hidden">Kopiuj</span>
+                                                        </button>
+                                                        <button onclick="openSchedulePreview()" class="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-black font-medium">
+                                                            <i class="ph ph-arrow-square-out"></i>
+                                                            <span class="sm:hidden">Otwórz</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
