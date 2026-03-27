@@ -624,7 +624,11 @@
                             <div id="schedule-actions" class="flex items-center gap-2">
                                 <button id="create-schedule-btn" onclick="openCreateScheduleModal()" class="h-8 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5 border border-amber-500/30">
                                     <i class="ph ph-plus text-[14px]"></i>
-                                    Utwórz harmonogram
+                                    Utwórz
+                                </button>
+                                <button id="link-schedule-btn" onclick="openLinkScheduleModal()" class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#888] hover:text-white text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-link text-[14px]"></i>
+                                    Powiąż istniejący
                                 </button>
                                 <button id="copy-schedule-link-btn" onclick="copyScheduleLink()" class="hidden h-8 px-3 bg-white/5 hover:bg-white/10 text-[#888] hover:text-white text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5">
                                     <i class="ph ph-link text-[14px]"></i>
@@ -5025,6 +5029,7 @@
             const content = document.getElementById('schedule-content');
             const empty = document.getElementById('schedule-empty');
             const createBtn = document.getElementById('create-schedule-btn');
+            const linkBtn = document.getElementById('link-schedule-btn');
             const copyBtn = document.getElementById('copy-schedule-link-btn');
             const statusText = document.getElementById('schedule-status-text');
 
@@ -5032,6 +5037,7 @@
                 content.classList.add('hidden');
                 empty.classList.remove('hidden');
                 createBtn.classList.remove('hidden');
+                linkBtn.classList.remove('hidden');
                 copyBtn.classList.add('hidden');
                 statusText.textContent = 'Brak harmonogramu';
                 return;
@@ -5041,6 +5047,7 @@
             content.classList.remove('hidden');
             empty.classList.add('hidden');
             createBtn.classList.add('hidden');
+            linkBtn.classList.add('hidden');
             copyBtn.classList.remove('hidden');
 
             // Calculate stats
@@ -5320,6 +5327,137 @@
             } catch (err) {
                 console.error('Delete schedule error:', err);
                 showToast('Błąd usuwania harmonogramu', 'error');
+            }
+        }
+
+        // Link Schedule Modal
+        function openLinkScheduleModal() {
+            document.getElementById('link-schedule-email').value = '';
+            document.getElementById('link-schedule-results').innerHTML = `
+                <div class="text-center py-8 text-[#444] text-[12px]">
+                    <i class="ph ph-magnifying-glass text-[24px] mb-2 block"></i>
+                    Wpisz email i kliknij Szukaj
+                </div>
+            `;
+            document.getElementById('link-schedule-modal').classList.remove('hidden');
+        }
+
+        function closeLinkScheduleModal() {
+            document.getElementById('link-schedule-modal').classList.add('hidden');
+        }
+
+        async function searchSchedulesByEmail() {
+            const email = document.getElementById('link-schedule-email').value.trim();
+            const resultsDiv = document.getElementById('link-schedule-results');
+
+            if (!email) {
+                showToast('Wpisz email', 'error');
+                return;
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="text-center py-8 text-[#555] text-[12px]">
+                    <i class="ph ph-spinner animate-spin text-[24px] mb-2 block"></i>
+                    Szukam...
+                </div>
+            `;
+
+            try {
+                // Search schedules linked to leads with this email
+                const { data: schedules, error } = await supabaseClient
+                    .from('payment_schedules')
+                    .select(`
+                        *,
+                        lead:leads!payment_schedules_lead_id_fkey(id, name, email),
+                        installments:payment_installments(id, amount, status, due_date, installment_number)
+                    `)
+                    .or(`workflow_id.is.null,lead_id.not.is.null`)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // Filter by email (from lead or check all)
+                const filtered = schedules.filter(s => {
+                    if (s.lead && s.lead.email && s.lead.email.toLowerCase().includes(email.toLowerCase())) {
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (filtered.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="text-center py-8 text-[#444] text-[12px]">
+                            <i class="ph ph-x-circle text-[24px] mb-2 block"></i>
+                            Brak harmonogramów dla tego emaila
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Render results
+                resultsDiv.innerHTML = `
+                    <div class="text-[#555] text-[10px] font-medium uppercase tracking-wider mb-3">Znalezione harmonogramy (${filtered.length})</div>
+                    <div class="space-y-2">
+                        ${filtered.map(s => {
+                            const paidCount = s.installments.filter(i => i.status === 'paid').length;
+                            const totalCount = s.installments.length;
+                            const paidAmount = s.installments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+                            const leadName = s.lead?.name || s.lead?.email || 'Nieznany';
+                            const createdDate = new Date(s.created_at).toLocaleDateString('pl-PL');
+
+                            return `
+                                <div class="p-3 bg-[#111] border border-[#1a1a1a] rounded-lg hover:border-blue-500/30 transition-colors">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div>
+                                            <div class="text-white text-[13px] font-medium">${leadName}</div>
+                                            <div class="text-[#555] text-[11px]">${s.lead?.email || ''}</div>
+                                        </div>
+                                        <button onclick="linkScheduleToWorkflow('${s.id}')" class="h-7 px-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-[11px] font-medium rounded-lg transition-colors">
+                                            Powiąż
+                                        </button>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-[11px]">
+                                        <span class="text-amber-400 font-mono">${formatPrice(s.total_amount)}</span>
+                                        <span class="text-[#555]">${paidCount}/${totalCount} rat opłaconych</span>
+                                        <span class="text-emerald-400 font-mono">${formatPrice(paidAmount)} wpłacone</span>
+                                        <span class="text-[#444]">${createdDate}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+
+            } catch (err) {
+                console.error('Search schedules error:', err);
+                resultsDiv.innerHTML = `
+                    <div class="text-center py-8 text-red-400 text-[12px]">
+                        <i class="ph ph-warning text-[24px] mb-2 block"></i>
+                        Błąd wyszukiwania
+                    </div>
+                `;
+            }
+        }
+
+        async function linkScheduleToWorkflow(scheduleId) {
+            try {
+                const { error } = await supabaseClient
+                    .from('payment_schedules')
+                    .update({
+                        workflow_id: workflow.id,
+                        lead_id: null  // Odłącz od leada
+                    })
+                    .eq('id', scheduleId);
+
+                if (error) throw error;
+
+                closeLinkScheduleModal();
+                showToast('Harmonogram powiązany z workflow', 'success');
+                await loadPaymentSchedule();
+
+            } catch (err) {
+                console.error('Link schedule error:', err);
+                showToast('Błąd powiązania harmonogramu', 'error');
             }
         }
 
@@ -12836,6 +12974,48 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 </button>
                 <button onclick="savePaymentSchedule()" class="flex-1 h-10 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 text-[13px] font-medium rounded-lg transition-colors">
                     Utwórz harmonogram
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link Payment Schedule Modal -->
+    <div id="link-schedule-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+        <div class="bg-[#0d0d0d] border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
+                    <i class="ph ph-link text-blue-400 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-white font-semibold text-[15px]">Powiąż harmonogram płatności</h3>
+                    <p class="text-[#555] text-[11px]">Wyszukaj istniejący harmonogram po emailu</p>
+                </div>
+            </div>
+
+            <!-- Email Search -->
+            <div class="mb-4">
+                <label class="block text-[#555] text-[11px] font-medium uppercase tracking-wider mb-2">Email klienta</label>
+                <div class="flex gap-2">
+                    <input type="email" id="link-schedule-email" class="flex-1 bg-[#111] border border-[#262626] rounded-lg px-3 py-2.5 text-white text-[13px]" placeholder="email@example.com">
+                    <button onclick="searchSchedulesByEmail()" class="h-10 px-4 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                        <i class="ph ph-magnifying-glass text-[14px]"></i>
+                        Szukaj
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div id="link-schedule-results" class="mb-5">
+                <div class="text-center py-8 text-[#444] text-[12px]">
+                    <i class="ph ph-magnifying-glass text-[24px] mb-2 block"></i>
+                    Wpisz email i kliknij Szukaj
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3">
+                <button onclick="closeLinkScheduleModal()" class="flex-1 h-10 bg-transparent border border-[#262626] text-[#888] hover:text-white text-[13px] rounded-lg transition-colors">
+                    Anuluj
                 </button>
             </div>
         </div>
