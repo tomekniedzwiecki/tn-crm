@@ -121,23 +121,6 @@
                     <p class="text-zinc-500 text-sm">Podaj swój adres e-mail, aby zobaczyć harmonogram</p>
                 </div>
 
-                <!-- Client Preview Card -->
-                <div id="login-client-preview" class="bg-zinc-900/50 rounded-xl p-4 mb-6 border border-white/5">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <i class="ph ph-user text-amber-400"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div id="login-client-name" class="text-white font-medium truncate">-</div>
-                            <div class="flex items-center gap-2 text-xs text-zinc-500">
-                                <span id="login-installments-info">- rat</span>
-                                <span class="text-zinc-700">|</span>
-                                <span id="login-total-amount">- zł</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Email Input -->
                 <div class="space-y-4">
                     <div>
@@ -462,9 +445,6 @@
                     throw new Error('Client data not found');
                 }
 
-                // Update login screen preview
-                updateLoginPreview();
-
                 // Show login screen
                 showScreen('login-screen');
 
@@ -480,28 +460,6 @@
                 console.error('Init error:', error);
                 showScreen('not-found-screen');
             }
-        }
-
-        function updateLoginPreview() {
-            // Only show name/company, never show full email as it defeats verification purpose
-            const hasRealName = lead.name && lead.name !== lead.email;
-            const hasCompany = lead.company && lead.company.trim();
-
-            let displayName;
-            if (hasCompany) {
-                displayName = lead.company;
-            } else if (hasRealName) {
-                displayName = lead.name;
-            } else {
-                // Mask email: show only first letter + domain hint
-                const emailParts = lead.email.split('@');
-                const domain = emailParts[1] || '';
-                displayName = `${emailParts[0].charAt(0)}***@${domain.split('.')[0]}...`;
-            }
-
-            document.getElementById('login-client-name').textContent = displayName;
-            document.getElementById('login-installments-info').textContent = `${installments.length} rat`;
-            document.getElementById('login-total-amount').textContent = formatCurrency(schedule.total_amount);
         }
 
         // ============ EMAIL VERIFICATION ============
