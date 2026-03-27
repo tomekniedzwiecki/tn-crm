@@ -424,17 +424,18 @@
                     workflow = workflowData;
                     lead = workflowData.lead;
 
-                    const { data: scheduleData, error: scheduleError } = await supabaseClient
+                    const { data: schedulesData, error: scheduleError } = await supabaseClient
                         .from('payment_schedules')
                         .select('*')
                         .eq('workflow_id', workflow.id)
-                        .single();
+                        .order('created_at', { ascending: false });
 
-                    if (scheduleError || !scheduleData) {
+                    if (scheduleError || !schedulesData || schedulesData.length === 0) {
                         throw new Error('Payment schedule not found');
                     }
 
-                    schedule = scheduleData;
+                    // Use the most recent schedule
+                    schedule = schedulesData[0];
                 }
 
                 // Fetch installments
