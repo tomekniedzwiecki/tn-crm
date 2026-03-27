@@ -1555,6 +1555,7 @@
         let confirmModalCallback = null;
         let clientOffer = null;
         let customInstallmentDates = {}; // Store custom dates keyed by installment number
+        let customInstallmentAmounts = {}; // Store custom amounts keyed by installment number
 
         // Audit logging helper
         async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
@@ -4239,8 +4240,9 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const modal = document.getElementById('create-schedule-modal');
             if (!modal) return;
 
-            // Reset custom dates
+            // Reset custom values
             customInstallmentDates = {};
+            customInstallmentAmounts = {};
 
             // Set default values
             const tomorrow = new Date();
@@ -4285,7 +4287,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         function closeCreateScheduleModal() {
             document.getElementById('create-schedule-modal')?.classList.add('hidden');
-            customInstallmentDates = {}; // Reset custom dates
+            customInstallmentDates = {};
+            customInstallmentAmounts = {};
         }
 
         function setupModalPreviewListeners() {
@@ -4315,7 +4318,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             });
         }
 
-        function updateModalPreview(resetCustomDates = false) {
+        function updateModalPreview(resetCustomValues = false) {
             const totalAmount = parseFloat(document.getElementById('modal-schedule-total')?.value) || 0;
             const count = parseInt(document.getElementById('modal-installments-count')?.value) || 4;
             const interval = parseInt(document.getElementById('modal-installments-interval')?.value) || 30;
@@ -4323,9 +4326,10 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const firstAmountInput = document.getElementById('modal-first-amount')?.value;
             const firstAmount = firstAmountInput ? parseFloat(firstAmountInput) : null;
 
-            // Reset custom dates when count/interval/firstDate changes
-            if (resetCustomDates) {
+            // Reset custom values when count/interval/firstDate changes
+            if (resetCustomValues) {
                 customInstallmentDates = {};
+                customInstallmentAmounts = {};
             }
 
             if (!totalAmount || !firstDateStr) {
@@ -4340,9 +4344,10 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const firstDate = new Date(firstDateStr);
 
             for (let i = 0; i < count; i++) {
+                const instNumber = i + 1;
+
                 // Use custom date if set, otherwise calculate
                 let date;
-                const instNumber = i + 1;
                 if (customInstallmentDates[instNumber]) {
                     date = new Date(customInstallmentDates[instNumber]);
                 } else {
@@ -4350,8 +4355,11 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     date.setDate(date.getDate() + (i * interval));
                 }
 
+                // Use custom amount if set, otherwise calculate
                 let amount;
-                if (i === 0 && firstAmount !== null) {
+                if (customInstallmentAmounts[instNumber] !== undefined) {
+                    amount = customInstallmentAmounts[instNumber];
+                } else if (i === 0 && firstAmount !== null) {
                     amount = firstAmount;
                 } else if (i === count - 1) {
                     amount = remaining;
@@ -4363,31 +4371,46 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 installments.push({ number: instNumber, date, amount });
             }
 
-            // Recalculate to ensure sum matches
+            // Calculate actual sum from all amounts (custom or calculated)
             const actualSum = installments.reduce((s, i) => s + i.amount, 0);
-            if (actualSum !== totalAmount && installments.length > 0) {
-                installments[installments.length - 1].amount += (totalAmount - actualSum);
-            }
 
             const preview = document.getElementById('modal-installments-preview');
             preview.innerHTML = installments.map((inst) => {
                 const dateStr = inst.date.toISOString().split('T')[0];
-                const isCustom = customInstallmentDates[inst.number];
+                const isCustomDate = customInstallmentDates[inst.number];
+                const isCustomAmount = customInstallmentAmounts[inst.number] !== undefined;
                 return `
-                <div class="flex items-center justify-between p-2 bg-zinc-900/50 rounded-lg text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="w-5 h-5 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-[10px] font-bold">${inst.number}</span>
+                <div class="flex items-center justify-between p-2 bg-zinc-900/50 rounded-lg text-xs gap-2">
+                    <div class="flex items-center gap-2 flex-1">
+                        <span class="w-5 h-5 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">${inst.number}</span>
                         <input type="date"
                             value="${dateStr}"
                             onchange="updateInstallmentDate(${inst.number}, this.value)"
-                            class="bg-transparent border border-zinc-700 hover:border-amber-500/50 focus:border-amber-500 rounded px-2 py-1 text-zinc-300 cursor-pointer transition-colors ${isCustom ? 'border-amber-500/30 text-amber-300' : ''}"
+                            class="bg-transparent border border-zinc-700 hover:border-amber-500/50 focus:border-amber-500 rounded px-2 py-1 text-zinc-300 cursor-pointer transition-colors ${isCustomDate ? 'border-amber-500/30 text-amber-300' : ''}"
                             onclick="this.showPicker()">
                     </div>
-                    <span class="text-white font-medium">${inst.amount.toLocaleString('pl-PL')} zł</span>
+                    <div class="flex items-center gap-1">
+                        <input type="number"
+                            value="${inst.amount}"
+                            min="0"
+                            step="100"
+                            onchange="updateInstallmentAmount(${inst.number}, this.value)"
+                            class="w-20 bg-transparent border border-zinc-700 hover:border-amber-500/50 focus:border-amber-500 rounded px-2 py-1 text-right text-white font-medium transition-colors ${isCustomAmount ? 'border-amber-500/30 text-amber-300' : ''}">
+                        <span class="text-zinc-500 text-[10px]">zł</span>
+                    </div>
                 </div>
             `}).join('');
 
-            document.getElementById('modal-schedule-sum').textContent = totalAmount.toLocaleString('pl-PL');
+            // Show actual sum and warn if different from total
+            const sumEl = document.getElementById('modal-schedule-sum');
+            sumEl.textContent = actualSum.toLocaleString('pl-PL');
+            if (actualSum !== totalAmount) {
+                sumEl.classList.add('text-red-400');
+                sumEl.classList.remove('text-amber-400');
+            } else {
+                sumEl.classList.remove('text-red-400');
+                sumEl.classList.add('text-amber-400');
+            }
         }
 
         function updateInstallmentDate(number, dateValue) {
@@ -4396,6 +4419,17 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             } else {
                 delete customInstallmentDates[number];
             }
+        }
+
+        function updateInstallmentAmount(number, amountValue) {
+            const amount = parseFloat(amountValue);
+            if (!isNaN(amount) && amount >= 0) {
+                customInstallmentAmounts[number] = amount;
+            } else {
+                delete customInstallmentAmounts[number];
+            }
+            // Recalculate sum without resetting custom values
+            updateModalPreview(false);
         }
 
         async function saveNewSchedule() {
@@ -4444,7 +4478,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
                 if (scheduleError) throw scheduleError;
 
-                // Calculate installments using custom dates if set
+                // Calculate installments using custom dates and amounts if set
                 const installments = [];
                 const baseAmount = Math.floor(totalAmount / count);
                 let remaining = totalAmount;
@@ -4462,8 +4496,11 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                         date.setDate(date.getDate() + (i * interval));
                     }
 
+                    // Use custom amount if set, otherwise calculate
                     let amount;
-                    if (i === 0 && firstAmount !== null) {
+                    if (customInstallmentAmounts[instNumber] !== undefined) {
+                        amount = customInstallmentAmounts[instNumber];
+                    } else if (i === 0 && firstAmount !== null) {
                         amount = firstAmount;
                     } else if (i === count - 1) {
                         amount = remaining;
@@ -4481,10 +4518,15 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     });
                 }
 
-                // Fix last installment to ensure exact sum
+                // Calculate actual sum (may differ from totalAmount with custom amounts)
                 const actualSum = installments.reduce((s, i) => s + i.amount, 0);
-                if (actualSum !== totalAmount && installments.length > 0) {
-                    installments[installments.length - 1].amount += (totalAmount - actualSum);
+
+                // Update schedule total_amount if custom amounts changed the sum
+                if (actualSum !== totalAmount) {
+                    await supabaseClient
+                        .from('payment_schedules')
+                        .update({ total_amount: actualSum })
+                        .eq('id', schedule.id);
                 }
 
                 // Insert installments
