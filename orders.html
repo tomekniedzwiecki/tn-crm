@@ -836,6 +836,7 @@
                                 </button>
                                 ` : ''}
                                 ${order.status === 'paid' && !order.invoice_number ? `
+                                ${order.customer_nip ? `<span class="px-1.5 py-0.5 text-[10px] bg-amber-500/20 text-amber-400 rounded font-medium" title="NIP: ${order.customer_nip}">NIP</span>` : ''}
                                 <button onclick="generateInvoice('${order.id}')" class="p-1.5 text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded transition-colors" title="Wystaw fakture VAT">
                                     <i class="ph ph-file-text text-sm"></i>
                                 </button>
@@ -1370,6 +1371,63 @@
             showToast('Wystawiam fakture...');
 
             try {
+                // Auto-fetch company data from GUS if NIP provided but missing company details
+                if (order.customer_nip && (!order.customer_company || !order.customer_address)) {
+                    const nip = order.customer_nip.replace(/\D/g, '');
+                    if (nip.length === 10) {
+                        showToast('Pobieram dane firmy z GUS...');
+                        try {
+                            const gusResponse = await fetch(`${SUPABASE_URL}/functions/v1/nip-lookup`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                                },
+                                body: JSON.stringify({ nip })
+                            });
+
+                            if (gusResponse.ok) {
+                                const gusData = await gusResponse.json();
+                                if (gusData?.result?.subject) {
+                                    const subject = gusData.result.subject;
+
+                                    // Update order with GUS data
+                                    if (!order.customer_company && subject.name) {
+                                        order.customer_company = subject.name;
+                                    }
+
+                                    const address = subject.workingAddress || subject.residenceAddress || '';
+                                    if (!order.customer_address && address) {
+                                        // Parse address: "ul. Ulica 123, 00-000 Miasto"
+                                        const postalMatch = address.match(/(\d{2}-\d{3})\s+(.+?)(?:,|$)/);
+                                        const streetMatch = address.match(/^(.+?),?\s*\d{2}-\d{3}/);
+
+                                        order.customer_address = {
+                                            street: streetMatch ? streetMatch[1].trim() : address,
+                                            postal_code: postalMatch ? postalMatch[1] : '',
+                                            city: postalMatch ? postalMatch[2].trim() : '',
+                                            country: 'Polska'
+                                        };
+                                    }
+
+                                    // Save to database
+                                    await supabaseClient
+                                        .from('orders')
+                                        .update({
+                                            customer_company: order.customer_company,
+                                            customer_address: order.customer_address
+                                        })
+                                        .eq('id', orderId);
+
+                                    showToast('Dane firmy pobrane z GUS');
+                                }
+                            }
+                        } catch (gusErr) {
+                            console.warn('GUS lookup failed, continuing with existing data:', gusErr);
+                        }
+                    }
+                }
+
                 const response = await fetch(`${SUPABASE_URL}/functions/v1/fakturownia-invoice`, {
                     method: 'POST',
                     headers: {
