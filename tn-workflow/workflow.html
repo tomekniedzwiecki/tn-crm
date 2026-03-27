@@ -5268,6 +5268,13 @@
 
                 if (installmentsError) throw installmentsError;
 
+                // Update workflow.amount to match schedule total
+                await supabaseClient
+                    .from('workflows')
+                    .update({ amount: totalAmount })
+                    .eq('id', workflow.id);
+                workflow.amount = totalAmount;
+
                 showToast('Harmonogram utworzony', 'success');
                 closeCreateScheduleModal();
                 await loadPaymentSchedule();
@@ -5474,6 +5481,16 @@
 
         async function linkScheduleToWorkflow(scheduleId) {
             try {
+                // First get the schedule to know the total amount
+                const { data: scheduleData, error: fetchError } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('total_amount')
+                    .eq('id', scheduleId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                // Link schedule to workflow
                 const { error } = await supabaseClient
                     .from('payment_schedules')
                     .update({
@@ -5483,6 +5500,14 @@
                     .eq('id', scheduleId);
 
                 if (error) throw error;
+
+                // Update workflow.amount to match schedule total
+                const totalAmount = parseFloat(scheduleData.total_amount) || 0;
+                await supabaseClient
+                    .from('workflows')
+                    .update({ amount: totalAmount })
+                    .eq('id', workflow.id);
+                workflow.amount = totalAmount;
 
                 closeLinkScheduleModal();
                 showToast('Harmonogram powiązany z workflow', 'success');
