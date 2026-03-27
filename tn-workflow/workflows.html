@@ -870,9 +870,9 @@
                             const hasLegalData = w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0;
                             return w.takedrop_stage?.landing_page_connected && hasLegalData && !w.takedrop_stage?.legal_documents_ready;
                         }
-                        // "payment_gateway" (Bramka) = dokumenty gotowe ALE bramka NIE gotowa
+                        // "payment_gateway" (Bramka) = strona + dokumenty gotowe ALE bramka NIE gotowa
                         if (stage === 'payment_gateway') {
-                            return w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready;
+                            return w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready;
                         }
                         // "test" = bramka gotowa ALE test NIE zaakceptowany
                         if (stage === 'test') {
@@ -1032,8 +1032,8 @@
                     }
                     continue;
                 }
-                // "payment_gateway" = dokumenty gotowe ALE bramka NIE gotowa
-                if (w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready) {
+                // "payment_gateway" = strona + dokumenty gotowe ALE bramka NIE gotowa
+                if (w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready) {
                     counts.payment_gateway++;
                     continue;
                 }
