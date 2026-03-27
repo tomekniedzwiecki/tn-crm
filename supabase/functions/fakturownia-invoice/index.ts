@@ -57,6 +57,32 @@ Deno.serve(async (req) => {
     const netto = brutto / 1.23
     const vat = brutto - netto
 
+    // Enhance description with offer name if it's just "Rata X/Y"
+    let itemDescription = order.description || 'Usluga'
+    if (/^Rata \d+\/\d+$/.test(itemDescription) && order.lead_id) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+        const workflowResp = await fetch(
+          `${supabaseUrl}/rest/v1/workflows?lead_id=eq.${order.lead_id}&select=offer_name`,
+          {
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`
+            }
+          }
+        )
+        const workflows = await workflowResp.json()
+        if (workflows?.[0]?.offer_name) {
+          itemDescription = `${itemDescription} - ${workflows[0].offer_name}`
+          console.log('[fakturownia-invoice] Enhanced description:', itemDescription)
+        }
+      } catch (e) {
+        console.warn('[fakturownia-invoice] Could not fetch offer name:', e)
+      }
+    }
+
     // Build buyer info
     let buyerName = order.customer_company || order.customer_name || order.customer_email
 
@@ -100,7 +126,7 @@ Deno.serve(async (req) => {
           seller_tax_no: seller?.nip || '',
         }),
         positions: [{
-          name: order.description || 'Usluga',
+          name: itemDescription,
           tax: 23,
           total_price_gross: brutto,
           quantity: 1
