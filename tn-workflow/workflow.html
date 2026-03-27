@@ -5174,14 +5174,18 @@
                 const date = new Date(firstDate);
                 date.setDate(date.getDate() + (i * interval));
                 const amount = (i === count - 1) ? lastAmount : installmentAmount;
+                const dateStr = date.toISOString().split('T')[0];
 
                 html += `
-                    <div class="flex items-center justify-between py-1.5 ${i > 0 ? 'border-t border-[#1a1a1a]' : ''}">
+                    <div class="flex items-center justify-between py-1.5 gap-2 ${i > 0 ? 'border-t border-[#1a1a1a]' : ''}">
                         <div class="flex items-center gap-2">
-                            <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
-                            <span class="text-[12px] text-[#888]">${date.toLocaleDateString('pl-PL')}</span>
+                            <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">${i + 1}</span>
+                            <input type="date" class="schedule-inst-date bg-[#0a0a0a] border border-[#262626] rounded px-2 py-1 text-[11px] text-[#888] w-[120px]" data-index="${i}" value="${dateStr}">
                         </div>
-                        <span class="text-[12px] font-medium text-white font-mono">${amount.toLocaleString('pl-PL')} zł</span>
+                        <div class="flex items-center gap-1">
+                            <input type="number" class="schedule-inst-amount bg-[#0a0a0a] border border-[#262626] rounded px-2 py-1 text-[11px] text-white font-mono w-[80px] text-right" data-index="${i}" value="${amount}" onchange="recalcScheduleTotal()">
+                            <span class="text-[11px] text-[#555]">zł</span>
+                        </div>
                     </div>
                 `;
             }
@@ -5189,21 +5193,45 @@
             html += `
                 <div class="flex items-center justify-between pt-2 mt-2 border-t border-amber-500/30">
                     <span class="text-[11px] text-amber-400 font-medium">Razem</span>
-                    <span class="text-[13px] font-bold text-amber-400 font-mono">${total.toLocaleString('pl-PL')} zł</span>
+                    <span id="schedule-preview-total" class="text-[13px] font-bold text-amber-400 font-mono">${total.toLocaleString('pl-PL')} zł</span>
                 </div>
             `;
 
             previewEl.innerHTML = html;
         }
 
+        function recalcScheduleTotal() {
+            const amounts = document.querySelectorAll('.schedule-inst-amount');
+            let sum = 0;
+            amounts.forEach(input => {
+                sum += parseFloat(input.value) || 0;
+            });
+            const totalEl = document.getElementById('schedule-preview-total');
+            if (totalEl) {
+                totalEl.textContent = sum.toLocaleString('pl-PL') + ' zł';
+            }
+        }
+
         async function savePaymentSchedule() {
-            const total = parseFloat(document.getElementById('schedule-total-amount').value) || 0;
-            const count = parseInt(document.getElementById('schedule-installments-count').value) || 4;
-            const interval = parseInt(document.getElementById('schedule-interval').value) || 30;
             const firstDateStr = document.getElementById('schedule-first-date').value;
 
-            if (!total || !firstDateStr) {
-                showToast('Wprowadź kwotę i datę', 'error');
+            // Read edited values from preview inputs
+            const dateInputs = document.querySelectorAll('.schedule-inst-date');
+            const amountInputs = document.querySelectorAll('.schedule-inst-amount');
+
+            if (dateInputs.length === 0 || amountInputs.length === 0) {
+                showToast('Wprowadź kwotę i datę aby wygenerować podgląd', 'error');
+                return;
+            }
+
+            // Calculate total from edited amounts
+            let totalAmount = 0;
+            amountInputs.forEach(input => {
+                totalAmount += parseFloat(input.value) || 0;
+            });
+
+            if (totalAmount <= 0) {
+                showToast('Kwota musi być większa od 0', 'error');
                 return;
             }
 
@@ -5213,8 +5241,8 @@
                     .from('payment_schedules')
                     .insert({
                         workflow_id: workflow.id,
-                        total_amount: total,
-                        installments_count: count,
+                        total_amount: totalAmount,
+                        installments_count: dateInputs.length,
                         created_by: currentMember?.id
                     })
                     .select()
@@ -5222,21 +5250,14 @@
 
                 if (scheduleError) throw scheduleError;
 
-                // Create installments
-                const installmentAmount = Math.round(total / count);
-                const lastAmount = total - (installmentAmount * (count - 1));
-                const firstDate = new Date(firstDateStr);
-
+                // Create installments from edited values
                 const installmentsData = [];
-                for (let i = 0; i < count; i++) {
-                    const date = new Date(firstDate);
-                    date.setDate(date.getDate() + (i * interval));
-
+                for (let i = 0; i < dateInputs.length; i++) {
                     installmentsData.push({
                         schedule_id: schedule.id,
                         installment_number: i + 1,
-                        amount: (i === count - 1) ? lastAmount : installmentAmount,
-                        due_date: date.toISOString().split('T')[0],
+                        amount: parseFloat(amountInputs[i].value) || 0,
+                        due_date: dateInputs[i].value,
                         status: 'pending'
                     });
                 }
@@ -12953,6 +12974,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         <option value="2">2 raty</option>
                         <option value="3">3 raty</option>
                         <option value="4" selected>4 raty</option>
+                        <option value="5">5 rat</option>
                         <option value="6">6 rat</option>
                         <option value="12">12 rat</option>
                     </select>
