@@ -8466,6 +8466,24 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 loadTestTab();
                 updateNavChecks(); // Update nav to show/hide stage 4
                 showToast(isCompleted ? 'Test zaakceptowany' : 'Test oznaczony jako niezakończony');
+
+                // Trigger ads_activated automation when tests are completed (stage 4 starts)
+                if (isCompleted) {
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'ads_activated',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                email: workflow.customer_email,
+                                clientName: clientName,
+                                projectUrl: `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#reklamy`
+                            }
+                        }
+                    });
+                    console.log('Automation trigger fired: ads_activated');
+                }
             } catch (err) {
                 console.error('Error toggling test:', err);
                 showToast('Błąd aktualizacji', 'error');
