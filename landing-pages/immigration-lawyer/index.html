@@ -164,19 +164,26 @@
 
     /* PROBLEM */
     .problem { background: var(--bg-cream); }
+    .problem-layout { display: grid; grid-template-columns: 1fr; gap: 48px; align-items: center; }
+    .problem-image { border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg); }
+    .problem-image img { width: 100%; height: auto; display: block; transition: transform 0.5s ease; }
+    .problem-image:hover img { transform: scale(1.02); }
     .problem-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
     .problem-item {
       display: flex; align-items: flex-start; gap: 16px;
       background: white; padding: 24px; border-radius: var(--radius-md);
       border-left: 4px solid var(--accent);
+      transition: all 0.3s ease;
     }
+    .problem-item:hover { transform: translateX(4px); box-shadow: var(--shadow-md); }
     .problem-icon { width: 48px; height: 48px; background: rgba(255,107,53,0.1); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .problem-icon svg { width: 24px; height: 24px; color: var(--accent); }
     .problem-item h3 { font-size: 17px; margin-bottom: 6px; }
     .problem-item p { font-size: 15px; color: var(--text-secondary); }
 
     @media (min-width: 768px) {
-      .problem-grid { grid-template-columns: repeat(2, 1fr); }
+      .problem-layout { grid-template-columns: 1fr 1fr; }
+      .problem-grid { grid-template-columns: 1fr; }
     }
 
     /* STATS */
@@ -190,6 +197,10 @@
     }
 
     /* SOLUTION */
+    .solution { position: relative; overflow: hidden; }
+    .solution-layout { display: grid; grid-template-columns: 1fr; gap: 48px; align-items: center; }
+    .solution-image { border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg); }
+    .solution-image img { width: 100%; height: auto; display: block; }
     .solution-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
     .solution-card {
       background: var(--bg-cream); padding: 32px;
@@ -203,7 +214,10 @@
     .solution-card p { color: var(--text-secondary); }
 
     @media (min-width: 768px) {
-      .solution-grid { grid-template-columns: repeat(3, 1fr); }
+      .solution-layout { grid-template-columns: 1fr 1fr; }
+    }
+    @media (min-width: 1024px) {
+      .solution-grid { grid-template-columns: 1fr; }
     }
 
     /* SERVICES */
@@ -228,6 +242,27 @@
       .services-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
+    /* WHY CHOOSE US */
+    .why-us { background: var(--bg-white); }
+    .why-us-layout { display: grid; grid-template-columns: 1fr; gap: 48px; align-items: center; }
+    .why-us-content .section-title { text-align: left; }
+    .why-us-content .section-subtitle { text-align: left; margin: 0 0 24px; }
+    .why-us-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+    .why-us-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; }
+    .why-us-list li svg { color: var(--secondary); flex-shrink: 0; margin-top: 2px; }
+    .why-us-images { position: relative; }
+    .why-us-img-main { width: 100%; height: auto; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
+    .why-us-img-overlay {
+      position: absolute; bottom: -20px; right: -20px;
+      width: 55%; height: auto; border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg); border: 4px solid white;
+      display: none;
+    }
+    @media (min-width: 768px) {
+      .why-us-layout { grid-template-columns: 1fr 1fr; }
+      .why-us-img-overlay { display: block; }
+    }
+
     /* HOW IT WORKS */
     .steps { counter-reset: step; }
     .steps-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
@@ -249,7 +284,20 @@
     }
 
     /* TESTIMONIALS */
-    .testimonials { background: var(--primary); color: white; }
+    .testimonials {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .testimonials::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url("https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/immigration-lawyer-landing/1774610375319_0.jpg") center/cover;
+      opacity: 0.1;
+    }
+    .testimonials .container { position: relative; z-index: 1; }
     .testimonials .section-label { color: rgba(255,255,255,0.7); }
     .testimonials .section-label::before { background: rgba(255,255,255,0.5); }
     .testimonials .section-title { color: white; }
@@ -259,11 +307,13 @@
       background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
       padding: 32px; border-radius: var(--radius-lg);
       border: 1px solid rgba(255,255,255,0.15);
+      transition: all 0.3s ease;
     }
+    .testimonial:hover { transform: translateY(-4px); background: rgba(255,255,255,0.15); }
     .testimonial-stars { color: #FFC107; font-size: 18px; margin-bottom: 16px; }
     .testimonial p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; font-style: italic; }
     .testimonial-author { display: flex; align-items: center; gap: 12px; }
-    .testimonial-avatar { width: 44px; height: 44px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+    .testimonial-avatar { width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; }
     .testimonial-name { font-weight: 600; }
     .testimonial-origin { font-size: 13px; opacity: 0.7; }
 
@@ -291,13 +341,30 @@
     .faq-answer p { padding-bottom: 24px; color: var(--text-secondary); line-height: 1.8; }
 
     /* FORM SECTION */
-    .form-section { background: var(--bg-cream); }
+    .form-section {
+      background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-soft) 100%);
+      position: relative;
+    }
+    .form-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 300px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      clip-path: polygon(0 0, 100% 0, 100% 60%, 0 100%);
+    }
+    .form-section .container { position: relative; z-index: 1; }
+    .form-section .section-header { color: white; margin-bottom: 40px; }
+    .form-section .section-header .section-label { color: rgba(255,255,255,0.7); }
+    .form-section .section-header .section-label::before { background: rgba(255,255,255,0.5); }
+    .form-section .section-header .section-title { color: white; }
+    .form-section .section-header .section-subtitle { color: rgba(255,255,255,0.85); }
     .form-wrapper {
       max-width: 640px; margin: 0 auto;
       background: white; border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-lg); overflow: hidden;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15); overflow: hidden;
     }
-    .form-header { background: var(--gradient-primary); color: white; padding: 32px; text-align: center; }
+    .form-header { background: var(--gradient-accent); color: white; padding: 32px; text-align: center; }
     .form-header h2 { color: white; font-size: 24px; margin-bottom: 8px; }
     .form-header p { opacity: 0.9; font-size: 15px; }
     .form-body { padding: 32px; }
@@ -437,17 +504,29 @@
       .sticky-cta { display: none; }
     }
 
-    /* HERO IMAGE PLACEHOLDER */
+    /* HERO IMAGE */
     .hero-visual {
-      background: var(--gradient-primary);
+      position: relative;
       border-radius: var(--radius-xl);
-      aspect-ratio: 4/3;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      color: white; text-align: center; padding: 32px;
+      overflow: hidden;
     }
-    .hero-visual-icon { font-size: 64px; margin-bottom: 16px; }
-    .hero-visual p { font-size: 14px; opacity: 0.8; }
+    .hero-visual img {
+      display: block;
+      transition: transform 0.5s ease;
+    }
+    .hero-visual:hover img {
+      transform: scale(1.02);
+    }
+    .hero-visual::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40%;
+      background: linear-gradient(to top, rgba(30, 58, 95, 0.3), transparent);
+      pointer-events: none;
+    }
 
     /* FLOATING WHATSAPP */
     .whatsapp-float {
@@ -550,8 +629,11 @@
           </div>
         </div>
         <div class="hero-visual">
-          <div class="hero-visual-icon">🏛️</div>
-          <p>Professional immigration law services<br>in Lower Silesia, Poland</p>
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/immigration-lawyer-landing/1774610242150_0.jpg"
+               alt="Immigration lawyer consulting with diverse clients in modern Wrocław office"
+               width="600" height="450"
+               fetchpriority="high"
+               style="width: 100%; height: auto; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg);">
         </div>
       </div>
     </div>
@@ -613,7 +695,14 @@
         <h2 class="section-title">Dealing with Polish Immigration is Hard</h2>
         <p class="section-subtitle">Many foreigners struggle with the same problems. You're not alone.</p>
       </div>
-      <div class="problem-grid">
+      <div class="problem-layout">
+        <div class="problem-image fade-in">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/immigration-lawyer-landing/1774610277456_0.jpg"
+               alt="Person frustrated waiting for immigration documents"
+               width="600" height="400"
+               loading="lazy">
+        </div>
+        <div class="problem-grid">
         <div class="problem-item fade-in">
           <div class="problem-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -650,6 +739,7 @@
             <p>One wrong document or missed deadline can delay your case by months or even lead to deportation.</p>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </section>
@@ -662,27 +752,35 @@
         <h2 class="section-title">We Handle Everything For You</h2>
         <p class="section-subtitle">From preparing documents to representing you at the Immigration Office — we take care of your case.</p>
       </div>
-      <div class="solution-grid">
-        <div class="solution-card fade-in">
-          <div class="solution-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      <div class="solution-layout">
+        <div class="solution-grid">
+          <div class="solution-card fade-in">
+            <div class="solution-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <h3>New Applications</h3>
+            <p>We prepare all documents, fill out forms correctly, and submit your application — avoiding common mistakes that cause delays.</p>
           </div>
-          <h3>New Applications</h3>
-          <p>We prepare all documents, fill out forms correctly, and submit your application — avoiding common mistakes that cause delays.</p>
+          <div class="solution-card fade-in">
+            <div class="solution-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <h3>Cases in Progress</h3>
+            <p>Already submitted? We can take over your case, fix any problems, respond to office requests, and speed up the process.</p>
+          </div>
+          <div class="solution-card fade-in">
+            <div class="solution-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <h3>Clear Communication</h3>
+            <p>We explain everything in English. No confusing legal terms. You'll always know what's happening with your case.</p>
+          </div>
         </div>
-        <div class="solution-card fade-in">
-          <div class="solution-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-          </div>
-          <h3>Cases in Progress</h3>
-          <p>Already submitted? We can take over your case, fix any problems, respond to office requests, and speed up the process.</p>
-        </div>
-        <div class="solution-card fade-in">
-          <div class="solution-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          </div>
-          <h3>Clear Communication</h3>
-          <p>We explain everything in English. No confusing legal terms. You'll always know what's happening with your case.</p>
+        <div class="solution-image fade-in">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/immigration-lawyer-landing/1774610296977_0.jpg"
+               alt="Happy clients celebrating their approved residence permits"
+               width="600" height="400"
+               loading="lazy">
         </div>
       </div>
     </div>
@@ -738,6 +836,49 @@
             <h3>Case Review & Takeover</h3>
             <p>We can take over your existing case</p>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY CHOOSE US / OFFICE -->
+  <section class="why-us">
+    <div class="container">
+      <div class="why-us-layout">
+        <div class="why-us-content fade-in">
+          <p class="section-label">Why Choose Us</p>
+          <h2 class="section-title">Professional Legal Support in Wrocław</h2>
+          <p class="section-subtitle">We're not just lawyers — we understand what it's like to navigate a foreign legal system.</p>
+          <ul class="why-us-list">
+            <li>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span><strong>10+ years</strong> of immigration law experience</span>
+            </li>
+            <li>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span><strong>English-speaking</strong> team for clear communication</span>
+            </li>
+            <li>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span><strong>Direct contact</strong> with the lawyer handling your case</span>
+            </li>
+            <li>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span><strong>Transparent pricing</strong> — no hidden fees</span>
+            </li>
+          </ul>
+        </div>
+        <div class="why-us-images fade-in">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/immigration-lawyer-landing/1774610317583_0.jpg"
+               alt="Modern law office in Wrocław"
+               class="why-us-img-main"
+               width="500" height="350"
+               loading="lazy">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/immigration-lawyer-landing/1774610346185_0.jpg"
+               alt="Immigration lawyer consultation"
+               class="why-us-img-overlay"
+               width="280" height="200"
+               loading="lazy">
         </div>
       </div>
     </div>
@@ -911,10 +1052,15 @@
   <!-- FORM SECTION -->
   <section class="form-section" id="form">
     <div class="container">
+      <div class="section-header">
+        <p class="section-label">Get Started</p>
+        <h2 class="section-title">Request Your Free Assessment</h2>
+        <p class="section-subtitle">Fill out this short form and we'll contact you within 24 hours.</p>
+      </div>
       <div class="form-wrapper">
         <div class="form-header">
-          <h2>Get Your Free Case Assessment</h2>
-          <p>Tell us about your situation — we'll tell you if we can help.</p>
+          <h2>Let's Talk About Your Case</h2>
+          <p>Takes only 2 minutes — no commitment required</p>
         </div>
         <div class="form-body">
           <div class="form-progress">
