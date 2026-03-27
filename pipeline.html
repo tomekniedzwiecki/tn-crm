@@ -1114,7 +1114,8 @@
                      data-id="${lead.id}"
                      ondragstart="handleDragStart(event)"
                      ondragend="handleDragEnd(event)"
-                     onclick="openLead('${lead.id}')">
+                     onclick="openLead('${lead.id}')"
+                     onauxclick="openLeadNewTab(event, '${lead.id}')">
                     ${followupBadge}
                     <div class="flex items-start gap-3 mb-3">
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
@@ -1173,6 +1174,14 @@
             window.location.href = getLeadPath(id);
         }
 
+        function openLeadNewTab(event, id) {
+            // Middle mouse button (auxclick)
+            if (event.button === 1) {
+                event.preventDefault();
+                window.open(getLeadPath(id), '_blank');
+            }
+        }
+
         function sendEmail(email) {
             window.location.href = `mailto:${email}`;
         }
@@ -1183,6 +1192,7 @@
 
         window.sendEmail = sendEmail;
         window.callPhone = callPhone;
+        window.openLeadNewTab = openLeadNewTab;
 
         async function abandonLead(leadId) {
             if (!confirm('Czy na pewno chcesz porzucić tego leada?')) return;
