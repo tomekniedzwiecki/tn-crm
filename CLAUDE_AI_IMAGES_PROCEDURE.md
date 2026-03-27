@@ -217,136 +217,138 @@ Zamiast tego:
 
 ### 4.1 Wymagane klasy CSS dla obrazów
 
-**ZAWSZE sprawdź czy te klasy istnieją w CSS. Jeśli nie - DODAJ JE:**
+**⚠️ KRYTYCZNE: Landing page ma style tylko dla `.img-placeholder` - MUSISZ dodać style dla `img`!**
+
+Gdy zamieniasz placeholder na prawdziwy obraz, HTML zmienia się z:
+```html
+<div class="hero-product"><div class="img-placeholder">...</div></div>
+```
+na:
+```html
+<div class="hero-product"><img src="..." alt="..."></div>
+```
+
+**Ale style `.hero-product .img-placeholder` NIE DZIAŁAJĄ dla `img`!** Musisz dodać osobne style dla `img`.
+
+**ZAWSZE dodaj ten blok CSS po sekcji `.img-placeholder` (przed HEADER):**
 
 ```css
-/* Hero product image */
+/* ═══════════════════════════════════════════════════════════
+   IMAGE STYLES (replacing placeholders)
+═══════════════════════════════════════════════════════════ */
+
 .hero-product img {
   width: 100%;
-  aspect-ratio: 1/1;
+  aspect-ratio: 3/4;
   object-fit: cover;
   border-radius: var(--radius-xl);
-  box-shadow: 0 25px 50px -12px rgba(0,212,232,0.25);
+  box-shadow: var(--shadow-xl);
 }
 
-/* Problem section image */
 .problem-visual img {
   width: 100%;
-  max-width: 600px;
   aspect-ratio: 4/3;
   object-fit: cover;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-xl);
 }
 
-/* Bento/Solution section image */
-.bento-card.bento-image {
-  grid-column: span 2;
-  padding: 0;
-  overflow: hidden;
-}
-
-.bento-card.bento-image img {
+.bento-image img {
   width: 100%;
-  aspect-ratio: 21/9;
+  aspect-ratio: 16/9;
   object-fit: cover;
-  display: block;
-}
-
-/* Step images (How it works) */
-.step-image {
-  margin-bottom: 20px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  border-radius: var(--radius-md);
 }
 
 .step-image img {
   width: 100%;
-  aspect-ratio: 16/10;
+  aspect-ratio: 4/3;
   object-fit: cover;
   display: block;
 }
 
-/* Offer section with image */
-.offer-box {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  max-width: 900px;
-}
-
-.offer-image {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  background: var(--bg-soft);
-}
-
-.offer-image img {
+.offer-product img {
   width: 100%;
-  max-width: 360px;
   aspect-ratio: 1/1;
   object-fit: cover;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .bento-card.bento-image {
-    grid-column: span 1;
-  }
-
-  .offer-box {
-    grid-template-columns: 1fr;
-  }
-
-  .offer-content {
-    text-align: center;
-  }
 }
 ```
 
-### 4.2 HTML - używaj TYLKO klas, bez inline styles
+**Dlaczego to ważne:**
+- `aspect-ratio` - utrzymuje proporcje obrazu
+- `object-fit: cover` - obraz wypełnia kontener bez rozciągania
+- `width: 100%` - obraz skaluje się z kontenerem
+- `display: block` - usuwa dolny margines pod obrazem
 
-**Hero:**
+### 4.2 HTML - zamień placeholder na img
+
+**Przed (placeholder):**
 ```html
 <div class="hero-product">
-  <img src="[URL]" alt="[Nazwa produktu]">
-</div>
-```
-
-**Problem:**
-```html
-<div class="problem-visual">
-  <img src="[URL]" alt="[Opis problemu]">
-</div>
-```
-
-**Bento/Solution:**
-```html
-<div class="bento-card bento-image fade-in">
-  <img src="[URL]" alt="[Produkt w akcji]">
-</div>
-```
-
-**Steps (How it works):**
-```html
-<div class="step fade-in">
-  <div class="step-image">
-    <img src="[URL]" alt="Krok X - [Opis]">
+  <div class="img-placeholder">
+    <div class="ph-icon">...</div>
+    <span class="ph-label">Hero Image</span>
   </div>
-  <div class="step-number">X</div>
-  <h3 class="step-title">...</h3>
 </div>
 ```
 
-**Offer:**
+**Po (z obrazem):**
+```html
+<div class="hero-product">
+  <img src="[URL]" alt="[Nazwa produktu] - opis kontekstu">
+</div>
+```
+
+**Wzorce dla każdej sekcji:**
+
+| Sekcja | Kontener | Aspect Ratio |
+|--------|----------|--------------|
+| Hero | `.hero-product` | 3/4 |
+| Problem | `.problem-visual` | 4/3 |
+| Bento/Solution | `.bento-image` (wewnątrz `.bento-card`) | 16/9 |
+| Steps | `.step-image` (wewnątrz `.step-card`) | 4/3 |
+| Offer | `.offer-product` | 1/1 |
+
+**Przykłady zamian:**
+
+```html
+<!-- Problem -->
+<div class="problem-visual fade-in">
+  <img src="[URL]" alt="Tradycyjne sprzątanie - frustracja">
+</div>
+
+<!-- Bento card z obrazem -->
+<div class="bento-card fade-in">
+  <div class="bento-image">
+    <img src="[URL]" alt="Produkt w akcji">
+  </div>
+  <div class="bento-icon">...</div>
+  <h3 class="bento-title">...</h3>
+</div>
+
+<!-- Step -->
+<div class="step-card fade-in">
+  <div class="step-image">
+    <img src="[URL]" alt="Krok 1 - Napełnij zbiornik">
+  </div>
+  <div class="step-content">...</div>
+</div>
+
+<!-- Offer -->
+<div class="offer-product">
+  <img src="[URL]" alt="Kompletny zestaw z akcesoriami">
+</div>
+```
+
+**WAŻNE:**
+- Zachowaj istniejącą strukturę HTML (kontenery, klasy)
+- Zamień tylko wnętrze - `div.img-placeholder` → `img`
+- Alt text musi być opisowy (dla SEO i accessibility)
+
+**Offer (pełna struktura):**
 ```html
 <div class="offer-box fade-in">
-  <div class="offer-image">
+  <div class="offer-product">
     <img src="[URL]" alt="[Nazwa zestawu]">
   </div>
   <div class="offer-content">
