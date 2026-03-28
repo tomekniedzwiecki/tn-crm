@@ -1072,11 +1072,15 @@
                                     <span class="text-zinc-400">Typ podpisu:</span>
                                     <span id="signed-type" class="text-white">-</span>
                                 </div>
-                                <div class="mt-4">
+                                <div class="mt-4 flex items-center justify-between">
                                     <a id="signed-file-link" href="#" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-2">
                                         <i class="ph ph-file-pdf"></i>
                                         Pobierz podpisana umowe
                                     </a>
+                                    <button onclick="deleteContract()" class="text-red-400 hover:text-red-300 text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors">
+                                        <i class="ph ph-trash"></i>
+                                        Usun umowe
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -9413,6 +9417,40 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             updateContractUI();
         }
         window.sendContractToClient = sendContractToClient;
+
+        async function deleteContract() {
+            if (!confirm('Czy na pewno chcesz usunac umowe? Ta operacja jest nieodwracalna.')) {
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('workflows')
+                .update({
+                    contract_status: null,
+                    contract_signed_at: null,
+                    contract_seller_signed_url: null,
+                    contract_signature_type: null
+                })
+                .eq('id', workflowId);
+
+            if (error) {
+                showToast('Blad podczas usuwania umowy: ' + error.message, 'error');
+                return;
+            }
+
+            // Update local state
+            workflow.contract_status = null;
+            workflow.contract_signed_at = null;
+            workflow.contract_seller_signed_url = null;
+            workflow.contract_signature_type = null;
+
+            // Log activity
+            logActivity('contract_deleted', 'Usunieto podpisana umowe');
+
+            showToast('Umowa zostala usunieta', 'success');
+            updateContractUI();
+        }
+        window.deleteContract = deleteContract;
 
         // =============================================
         // MATERIALS MANAGEMENT
