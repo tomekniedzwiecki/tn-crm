@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="../components/shared-sidebar.js"></script>
+    <script src="shared-sales.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -470,102 +471,9 @@
         }
 
         // Cache for all sales data - loaded once per month, shared across employees
-        let salesDataCache = null;
-        let salesDataCacheMonth = null;
-
-        async function loadSalesData(monthStart, monthEnd) {
-            const cacheKey = monthStart.toISOString();
-            if (salesDataCache && salesDataCacheMonth === cacheKey) {
-                return salesDataCache;
-            }
-
-            // Fetch all paid orders (same as commissions.html)
-            const { data: orders } = await supabaseClient
-                .from('orders')
-                .select('id, amount, lead_id, paid_at, customer_email, commission_salesperson_id')
-                .eq('status', 'paid')
-                .gte('paid_at', monthStart.toISOString())
-                .lte('paid_at', monthEnd.toISOString());
-
-            if (!orders || orders.length === 0) {
-                salesDataCache = {};
-                salesDataCacheMonth = cacheKey;
-                return salesDataCache;
-            }
-
-            // Get leads for orders with lead_id
-            const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
-            let leadsMap = {};
-
-            if (leadIds.length > 0) {
-                const { data: leads } = await supabaseClient
-                    .from('leads')
-                    .select('id, assigned_to')
-                    .in('id', leadIds);
-                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l]));
-            }
-
-            // Group by salesperson - EXACTLY like commissions.html
-            const byPerson = {};
-
-            for (const order of orders) {
-                let assignedTo = null;
-                let leadData = null;
-
-                // Get lead data if exists
-                if (order.lead_id && leadsMap[order.lead_id]) {
-                    leadData = leadsMap[order.lead_id];
-                }
-
-                // Priority: commission_salesperson_id > leads.assigned_to
-                if (order.commission_salesperson_id) {
-                    assignedTo = order.commission_salesperson_id;
-                } else if (leadData) {
-                    assignedTo = leadData.assigned_to;
-                }
-
-                // Fallback: find lead by email (same as commissions.html)
-                if (!assignedTo && order.customer_email) {
-                    const { data: lead } = await supabaseClient
-                        .from('leads')
-                        .select('id, assigned_to')
-                        .eq('email', order.customer_email)
-                        .maybeSingle();
-                    if (lead) {
-                        assignedTo = order.commission_salesperson_id || lead.assigned_to;
-                    }
-                }
-
-                if (!assignedTo) continue; // Skip unassigned orders
-
-                if (!byPerson[assignedTo]) {
-                    byPerson[assignedTo] = { orders: [], total: 0 };
-                }
-
-                const nettoAmount = toNetto(parseFloat(order.amount));
-                order._netto = nettoAmount;
-                byPerson[assignedTo].orders.push(order);
-                byPerson[assignedTo].total += nettoAmount;
-            }
-
-            salesDataCache = byPerson;
-            salesDataCacheMonth = cacheKey;
-            return salesDataCache;
-        }
-
+        // Use SalesService from shared-sales.js (centralized sales calculation)
         async function getEmployeeSales(teamMemberId, monthStart, monthEnd) {
-            const salesData = await loadSalesData(monthStart, monthEnd);
-
-            const personData = salesData[teamMemberId];
-            if (!personData) {
-                return { totalSales: 0, orderCount: 0, orders: [] };
-            }
-
-            return {
-                totalSales: personData.total,
-                orderCount: personData.orders.length,
-                orders: personData.orders
-            };
+            return await SalesService.getPersonSales(supabaseClient, teamMemberId, monthStart, monthEnd);
         }
 
         async function loadEmployeeData() {

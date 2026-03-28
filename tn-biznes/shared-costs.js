@@ -45,71 +45,16 @@ const CostsService = {
     },
 
     // ============================================
-    // EMPLOYEE SALES
+    // EMPLOYEE SALES - uses SalesService from shared-sales.js
     // ============================================
     async getEmployeeSales(supabaseClient, teamMemberId, startDate, endDate) {
-        // Get paid orders in date range (include commission_salesperson_id)
-        const { data: orders } = await supabaseClient
-            .from('orders')
-            .select('id, amount, lead_id, paid_at, customer_email, commission_salesperson_id')
-            .eq('status', 'paid')
-            .gte('paid_at', startDate)
-            .lt('paid_at', endDate);
-
-        if (!orders || orders.length === 0) {
-            return { totalSales: 0, orderCount: 0 };
+        // Use centralized SalesService (loaded from shared-sales.js)
+        if (typeof SalesService !== 'undefined') {
+            return await SalesService.getPersonSales(supabaseClient, teamMemberId, new Date(startDate), new Date(endDate));
         }
-
-        // Get leads to find assigned_to (only for orders without commission_salesperson_id)
-        const ordersNeedingLead = orders.filter(o => !o.commission_salesperson_id);
-        const leadIds = [...new Set(ordersNeedingLead.filter(o => o.lead_id).map(o => o.lead_id))];
-        let leadsMap = {};
-
-        if (leadIds.length > 0) {
-            const { data: leads } = await supabaseClient
-                .from('leads')
-                .select('id, assigned_to')
-                .in('id', leadIds);
-            if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l.assigned_to]));
-        }
-
-        // For orders without lead_id and without commission_salesperson_id, try to find lead by email
-        const ordersWithoutLead = ordersNeedingLead.filter(o => !o.lead_id && o.customer_email);
-        if (ordersWithoutLead.length > 0) {
-            const emails = [...new Set(ordersWithoutLead.map(o => o.customer_email))];
-            const { data: leadsByEmail } = await supabaseClient
-                .from('leads')
-                .select('id, email, assigned_to')
-                .in('email', emails);
-
-            if (leadsByEmail) {
-                const emailToLead = Object.fromEntries(leadsByEmail.map(l => [l.email, l]));
-                for (const order of ordersWithoutLead) {
-                    const lead = emailToLead[order.customer_email];
-                    if (lead) {
-                        leadsMap[order.id] = lead.assigned_to;
-                    }
-                }
-            }
-        }
-
-        // Sum orders for this team member (convert to NETTO)
-        // Priority: commission_salesperson_id > leads.assigned_to
-        let totalSales = 0;
-        let orderCount = 0;
-
-        for (const order of orders) {
-            // Najpierw sprawdz reczne przypisanie, potem lead
-            const assignedTo = order.commission_salesperson_id
-                || (order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id]);
-
-            if (assignedTo === teamMemberId) {
-                totalSales += this.toNetto(parseFloat(order.amount));
-                orderCount++;
-            }
-        }
-
-        return { totalSales, orderCount };
+        // Fallback if SalesService not loaded
+        console.warn('SalesService not loaded, returning 0 sales');
+        return { totalSales: 0, orderCount: 0 };
     },
 
     // ============================================
