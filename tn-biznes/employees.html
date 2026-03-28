@@ -469,8 +469,17 @@
             }
         }
 
-        async function getEmployeeSales(teamMemberId, monthStart, monthEnd) {
-            // Get paid orders in date range (include commission_salesperson_id)
+        // Cache for all sales data - loaded once per month, shared across employees
+        let salesDataCache = null;
+        let salesDataCacheMonth = null;
+
+        async function loadSalesData(monthStart, monthEnd) {
+            const cacheKey = monthStart.toISOString();
+            if (salesDataCache && salesDataCacheMonth === cacheKey) {
+                return salesDataCache;
+            }
+
+            // Fetch all paid orders (same as commissions.html)
             const { data: orders } = await supabaseClient
                 .from('orders')
                 .select('id, amount, lead_id, paid_at, customer_email, commission_salesperson_id')
@@ -479,10 +488,12 @@
                 .lte('paid_at', monthEnd.toISOString());
 
             if (!orders || orders.length === 0) {
-                return { totalSales: 0, orderCount: 0, orders: [] };
+                salesDataCache = {};
+                salesDataCacheMonth = cacheKey;
+                return salesDataCache;
             }
 
-            // Get leads to find assigned_to
+            // Get leads for orders with lead_id
             const leadIds = [...new Set(orders.filter(o => o.lead_id).map(o => o.lead_id))];
             let leadsMap = {};
 
@@ -491,56 +502,70 @@
                     .from('leads')
                     .select('id, assigned_to')
                     .in('id', leadIds);
-                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l.assigned_to]));
+                if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l]));
             }
 
-            // For orders without lead_id, try to find lead by email
-            const ordersWithoutLead = orders.filter(o => !o.lead_id && o.customer_email);
-            if (ordersWithoutLead.length > 0) {
-                const emails = [...new Set(ordersWithoutLead.map(o => o.customer_email))];
-                const { data: leadsByEmail } = await supabaseClient
-                    .from('leads')
-                    .select('id, email, assigned_to')
-                    .in('email', emails);
-
-                if (leadsByEmail) {
-                    const emailToLead = Object.fromEntries(leadsByEmail.map(l => [l.email, l]));
-                    for (const order of ordersWithoutLead) {
-                        const lead = emailToLead[order.customer_email];
-                        if (lead) {
-                            leadsMap[order.id] = lead.assigned_to; // Use order.id as key for email-matched leads
-                        }
-                    }
-                }
-            }
-
-            // Sum orders for this team member
-            // Priority: commission_salesperson_id > leads.assigned_to (same as commissions.html)
-            let totalSales = 0;
-            let orderCount = 0;
-            const matchedOrders = [];
+            // Group by salesperson - EXACTLY like commissions.html
+            const byPerson = {};
 
             for (const order of orders) {
                 let assignedTo = null;
+                let leadData = null;
+
+                // Get lead data if exists
+                if (order.lead_id && leadsMap[order.lead_id]) {
+                    leadData = leadsMap[order.lead_id];
+                }
 
                 // Priority: commission_salesperson_id > leads.assigned_to
                 if (order.commission_salesperson_id) {
                     assignedTo = order.commission_salesperson_id;
-                } else if (order.lead_id) {
-                    assignedTo = leadsMap[order.lead_id];
-                } else {
-                    assignedTo = leadsMap[order.id]; // Email-matched leads
+                } else if (leadData) {
+                    assignedTo = leadData.assigned_to;
                 }
 
-                if (assignedTo === teamMemberId) {
-                    const nettoAmount = toNetto(parseFloat(order.amount));
-                    totalSales += nettoAmount;
-                    orderCount++;
-                    matchedOrders.push({ ...order, netto: nettoAmount });
+                // Fallback: find lead by email (same as commissions.html)
+                if (!assignedTo && order.customer_email) {
+                    const { data: lead } = await supabaseClient
+                        .from('leads')
+                        .select('id, assigned_to')
+                        .eq('email', order.customer_email)
+                        .maybeSingle();
+                    if (lead) {
+                        assignedTo = order.commission_salesperson_id || lead.assigned_to;
+                    }
                 }
+
+                if (!assignedTo) continue; // Skip unassigned orders
+
+                if (!byPerson[assignedTo]) {
+                    byPerson[assignedTo] = { orders: [], total: 0 };
+                }
+
+                const nettoAmount = toNetto(parseFloat(order.amount));
+                order._netto = nettoAmount;
+                byPerson[assignedTo].orders.push(order);
+                byPerson[assignedTo].total += nettoAmount;
             }
 
-            return { totalSales, orderCount, orders: matchedOrders };
+            salesDataCache = byPerson;
+            salesDataCacheMonth = cacheKey;
+            return salesDataCache;
+        }
+
+        async function getEmployeeSales(teamMemberId, monthStart, monthEnd) {
+            const salesData = await loadSalesData(monthStart, monthEnd);
+
+            const personData = salesData[teamMemberId];
+            if (!personData) {
+                return { totalSales: 0, orderCount: 0, orders: [] };
+            }
+
+            return {
+                totalSales: personData.total,
+                orderCount: personData.orders.length,
+                orders: personData.orders
+            };
         }
 
         async function loadEmployeeData() {
