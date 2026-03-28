@@ -525,17 +525,17 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="px-5 py-4 group cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="openChangeOfferModal()">
+                                <div class="px-5 py-4 group cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors" onclick="openChangeOfferModal()">
                                     <div class="flex items-center justify-between">
                                         <div class="text-[#666] text-[10px] font-medium uppercase tracking-wider mb-1">Oferta</div>
-                                        <i class="ph ph-pencil-simple text-[10px] text-[#444] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                                        <i class="ph ph-pencil-simple text-[10px] text-[#444] md:opacity-0 md:group-hover:opacity-100 transition-opacity"></i>
                                     </div>
                                     <div id="offer-name" class="text-white text-[13px] truncate">-</div>
                                 </div>
-                                <div class="px-5 py-4 group cursor-pointer hover:bg-white/[0.02] transition-colors" onclick="openEditAmountModal()">
+                                <div class="px-5 py-4 group cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors" onclick="openEditAmountModal()">
                                     <div class="flex items-center justify-between">
                                         <div class="text-[#666] text-[10px] font-medium uppercase tracking-wider mb-1">Kwota</div>
-                                        <i class="ph ph-pencil-simple text-[10px] text-[#444] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                                        <i class="ph ph-pencil-simple text-[10px] text-[#444] md:opacity-0 md:group-hover:opacity-100 transition-opacity"></i>
                                     </div>
                                     <div id="amount" class="text-emerald-400 text-[13px] font-semibold font-mono">-</div>
                                 </div>
@@ -1944,39 +1944,22 @@
 
                     <!-- TAB: Bramka płatności (Etap 3) -->
                     <div id="tab-payment-gateway" class="workflow-panel hidden">
-                        <!-- Client credentials status -->
+                        <!-- Client configured status -->
                         <div id="pg-client-status" class="hidden mb-6">
                             <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                            <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
-                                        </div>
-                                        <div>
-                                            <div class="text-[13px] text-emerald-400 font-medium">Klient podał dane logowania</div>
-                                            <div id="pg-client-gateway-type" class="text-[12px] text-[#888]">-</div>
-                                        </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                        <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
                                     </div>
-                                    <button onclick="togglePaymentCredentialsView()" class="text-[12px] text-emerald-400 hover:text-emerald-300">
-                                        <i class="ph ph-eye mr-1"></i>Pokaż dane
-                                    </button>
-                                </div>
-                                <div id="pg-credentials-details" class="hidden mt-4 pt-4 border-t border-emerald-500/20">
-                                    <div class="grid grid-cols-2 gap-4 text-[13px]">
-                                        <div>
-                                            <div class="text-[#666] text-[11px] mb-1">Email</div>
-                                            <div id="pg-cred-email" class="text-white font-mono">-</div>
-                                        </div>
-                                        <div>
-                                            <div class="text-[#666] text-[11px] mb-1">Hasło</div>
-                                            <div id="pg-cred-password" class="text-white font-mono">-</div>
-                                        </div>
+                                    <div>
+                                        <div class="text-[13px] text-emerald-400 font-medium">Klient skonfigurował bramkę płatności</div>
+                                        <div id="pg-client-gateway-type" class="text-[12px] text-[#888]">-</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- No credentials yet -->
+                        <!-- Waiting for client -->
                         <div id="pg-waiting-status" class="mb-6">
                             <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
                                 <div class="flex items-center gap-3">
@@ -1984,8 +1967,8 @@
                                         <i class="ph ph-clock text-amber-400 text-xl"></i>
                                     </div>
                                     <div>
-                                        <div class="text-[13px] text-amber-400 font-medium">Oczekiwanie na dane od klienta</div>
-                                        <div id="pg-expected-gateway" class="text-[12px] text-[#888]">Klient musi założyć konto i podać dane logowania</div>
+                                        <div class="text-[13px] text-amber-400 font-medium">Oczekiwanie na konfigurację bramki</div>
+                                        <div id="pg-expected-gateway" class="text-[12px] text-[#888]">Klient musi założyć konto i skonfigurować bramkę w TakeDrop</div>
                                     </div>
                                 </div>
                             </div>
@@ -8465,23 +8448,21 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
             }
 
-            // Check if client provided credentials
-            const hasCredentials = takeDropData?.payment_gateway_credentials?.email;
+            // Check if client configured the gateway
+            const isClientConfigured = takeDropData?.payment_gateway_ready;
 
-            if (hasCredentials) {
-                // Show client credentials
+            if (isClientConfigured) {
+                // Show configured status
                 if (clientStatus) clientStatus.classList.remove('hidden');
                 if (waitingStatus) waitingStatus.classList.add('hidden');
 
                 document.getElementById('pg-client-gateway-type').textContent = gatewayName;
-                document.getElementById('pg-cred-email').textContent = takeDropData.payment_gateway_credentials.email || '-';
-                document.getElementById('pg-cred-password').textContent = takeDropData.payment_gateway_credentials.password || '-';
             } else {
                 // Waiting for client
                 if (clientStatus) clientStatus.classList.add('hidden');
                 if (waitingStatus) waitingStatus.classList.remove('hidden');
 
-                document.getElementById('pg-expected-gateway').textContent = `Klient musi założyć konto ${gatewayName} i podać dane logowania`;
+                document.getElementById('pg-expected-gateway').textContent = `Klient musi założyć konto ${gatewayName} i skonfigurować bramkę w TakeDrop`;
             }
 
             // Check configured status
@@ -8504,13 +8485,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             } else {
                 if (configuredSuccess) configuredSuccess.classList.add('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
-            }
-        }
-
-        function togglePaymentCredentialsView() {
-            const details = document.getElementById('pg-credentials-details');
-            if (details) {
-                details.classList.toggle('hidden');
             }
         }
 
@@ -8562,7 +8536,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         window.loadPaymentGateway = loadPaymentGateway;
-        window.togglePaymentCredentialsView = togglePaymentCredentialsView;
         window.togglePaymentGatewayConfigured = togglePaymentGatewayConfigured;
 
         // =============================================
