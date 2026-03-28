@@ -44,6 +44,21 @@ const SalesService = {
             if (leads) leadsMap = Object.fromEntries(leads.map(l => [l.id, l]));
         }
 
+        // Batch lookup: get all leads by email for orders without lead_id
+        const ordersNeedingEmailLookup = orders.filter(o =>
+            !o.commission_salesperson_id && !o.lead_id && o.customer_email
+        );
+        const emailsToLookup = [...new Set(ordersNeedingEmailLookup.map(o => o.customer_email))];
+        let leadsByEmail = {};
+
+        if (emailsToLookup.length > 0) {
+            const { data: leads } = await supabaseClient
+                .from('leads')
+                .select('id, assigned_to, email, name, company')
+                .in('email', emailsToLookup);
+            if (leads) leadsByEmail = Object.fromEntries(leads.map(l => [l.email, l]));
+        }
+
         // Group by salesperson
         const byPerson = {};
 
@@ -63,17 +78,11 @@ const SalesService = {
                 assignedTo = leadData.assigned_to;
             }
 
-            // Fallback: find lead by email
-            if (!assignedTo && order.customer_email) {
-                const { data: lead } = await supabaseClient
-                    .from('leads')
-                    .select('id, assigned_to, name, company')
-                    .eq('email', order.customer_email)
-                    .maybeSingle();
-                if (lead) {
-                    assignedTo = order.commission_salesperson_id || lead.assigned_to;
-                    leadData = lead;
-                }
+            // Fallback: use pre-fetched lead by email
+            if (!assignedTo && order.customer_email && leadsByEmail[order.customer_email]) {
+                const lead = leadsByEmail[order.customer_email];
+                assignedTo = lead.assigned_to;
+                leadData = lead;
             }
 
             const key = assignedTo || 'unassigned';
