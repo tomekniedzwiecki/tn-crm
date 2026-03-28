@@ -470,10 +470,10 @@
         }
 
         async function getEmployeeSales(teamMemberId, monthStart, monthEnd) {
-            // Get paid orders in date range
+            // Get paid orders in date range (include commission_salesperson_id)
             const { data: orders } = await supabaseClient
                 .from('orders')
-                .select('id, amount, lead_id, paid_at, customer_email')
+                .select('id, amount, lead_id, paid_at, customer_email, commission_salesperson_id')
                 .eq('status', 'paid')
                 .gte('paid_at', monthStart.toISOString())
                 .lte('paid_at', monthEnd.toISOString());
@@ -515,12 +515,23 @@
             }
 
             // Sum orders for this team member
+            // Priority: commission_salesperson_id > leads.assigned_to (same as commissions.html)
             let totalSales = 0;
             let orderCount = 0;
             const matchedOrders = [];
 
             for (const order of orders) {
-                const assignedTo = order.lead_id ? leadsMap[order.lead_id] : leadsMap[order.id];
+                let assignedTo = null;
+
+                // Priority: commission_salesperson_id > leads.assigned_to
+                if (order.commission_salesperson_id) {
+                    assignedTo = order.commission_salesperson_id;
+                } else if (order.lead_id) {
+                    assignedTo = leadsMap[order.lead_id];
+                } else {
+                    assignedTo = leadsMap[order.id]; // Email-matched leads
+                }
+
                 if (assignedTo === teamMemberId) {
                     const nettoAmount = toNetto(parseFloat(order.amount));
                     totalSales += nettoAmount;
