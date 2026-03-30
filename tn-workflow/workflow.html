@@ -9145,15 +9145,23 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.saveContractData = saveContractData;
 
         async function generateContract() {
-            if (!contractTemplateUrl || !workflow) return;
+            if (!workflow) return;
 
             try {
-                // Fetch the contract template HTML
-                const response = await fetch(contractTemplateUrl);
-                if (!response.ok) {
-                    throw new Error('Nie mozna pobrac szablonu umowy');
+                let html;
+
+                // Use custom HTML if saved, otherwise fetch template
+                if (workflow.contract_custom_html) {
+                    html = workflow.contract_custom_html;
+                } else if (contractTemplateUrl) {
+                    const response = await fetch(contractTemplateUrl);
+                    if (!response.ok) {
+                        throw new Error('Nie mozna pobrac szablonu umowy');
+                    }
+                    html = await response.text();
+                } else {
+                    throw new Error('Brak szablonu umowy');
                 }
-                let html = await response.text();
 
                 const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
                 const startDate = workflow.started_at
@@ -9279,16 +9287,32 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
         window.toggleContractCodeView = toggleContractCodeView;
 
-        function saveContractHtml() {
+        async function saveContractHtml() {
             const editor = document.getElementById('contract-html-editor');
             contractHtml = editor.value;
 
-            document.getElementById('contract-save-status').textContent = 'Zapisano (tylko w sesji)';
-            setTimeout(() => {
-                document.getElementById('contract-save-status').textContent = '';
-            }, 3000);
+            document.getElementById('contract-save-status').textContent = 'Zapisywanie...';
 
-            showToast('Zmiany zapisane', 'success');
+            try {
+                const { error } = await supabase
+                    .from('workflows')
+                    .update({ contract_custom_html: contractHtml })
+                    .eq('id', workflow.id);
+
+                if (error) throw error;
+
+                workflow.contract_custom_html = contractHtml;
+                document.getElementById('contract-save-status').textContent = 'Zapisano do bazy';
+                setTimeout(() => {
+                    document.getElementById('contract-save-status').textContent = '';
+                }, 3000);
+
+                showToast('Umowa zapisana do bazy', 'success');
+            } catch (err) {
+                console.error('Error saving contract HTML:', err);
+                document.getElementById('contract-save-status').textContent = 'Blad zapisu!';
+                showToast('Blad zapisu umowy', 'error');
+            }
         }
         window.saveContractHtml = saveContractHtml;
 
