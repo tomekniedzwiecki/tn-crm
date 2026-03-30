@@ -502,167 +502,421 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       HERO SECTION
+       HERO SECTION — RADICALLY REDESIGNED
+       Central composition with animated suction effect
     ═══════════════════════════════════════════════════════════ */
 
     .hero {
       position: relative;
-      padding: 140px 0 80px;
-      background: var(--gradient-hero);
+      min-height: 100vh;
+      padding: 120px 0 60px;
+      background: linear-gradient(180deg, #FEF7ED 0%, #FFF5F0 40%, #F0FDFA 100%);
       overflow: hidden;
+      display: flex;
+      align-items: center;
     }
 
-    /* Mesh gradient background for hero - adds depth */
+    /* Animated gradient orbs in background */
     .hero::before {
       content: '';
       position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 10% 80%, rgba(251, 146, 60, 0.12) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 80% at 90% 20%, rgba(45, 212, 191, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(251, 191, 36, 0.05) 0%, transparent 60%);
+      width: 800px;
+      height: 800px;
+      top: -200px;
+      right: -200px;
+      background: radial-gradient(circle, rgba(45, 212, 191, 0.2) 0%, transparent 70%);
+      animation: orbFloat 20s ease-in-out infinite;
       pointer-events: none;
-      animation: meshMove 15s ease-in-out infinite;
-    }
-
-    @keyframes meshMove {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
     }
 
     .hero::after {
       content: '';
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 200px;
-      background: linear-gradient(to top, var(--bg-white) 0%, transparent 100%);
+      width: 600px;
+      height: 600px;
+      bottom: -150px;
+      left: -150px;
+      background: radial-gradient(circle, rgba(251, 146, 60, 0.15) 0%, transparent 70%);
+      animation: orbFloat 25s ease-in-out infinite reverse;
       pointer-events: none;
     }
 
-    /* Hero Background Animation - Floating fur particles */
-    .hero-bg-animation {
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.95); }
+    }
+
+    /* Floating decorative elements */
+    .hero-decorations {
       position: absolute;
-      top: 50%;
-      right: 15%;
-      transform: translateY(-50%);
-      width: 500px;
-      height: 500px;
+      inset: 0;
       pointer-events: none;
-      z-index: 0;
-    }
-
-    .fur-particle {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(var(--secondary-rgb), 0.3);
-      animation: fur-float 8s ease-in-out infinite;
-    }
-
-    .fur-particle:nth-child(1) { width: 8px; height: 8px; left: 20%; top: 30%; animation-delay: 0s; }
-    .fur-particle:nth-child(2) { width: 6px; height: 6px; left: 40%; top: 20%; animation-delay: 1s; }
-    .fur-particle:nth-child(3) { width: 10px; height: 10px; left: 60%; top: 40%; animation-delay: 2s; }
-    .fur-particle:nth-child(4) { width: 5px; height: 5px; left: 30%; top: 60%; animation-delay: 3s; }
-    .fur-particle:nth-child(5) { width: 7px; height: 7px; left: 70%; top: 50%; animation-delay: 4s; }
-    .fur-particle:nth-child(6) { width: 4px; height: 4px; left: 50%; top: 70%; animation-delay: 5s; }
-    .fur-particle:nth-child(7) { width: 9px; height: 9px; left: 80%; top: 30%; animation-delay: 6s; }
-
-    @keyframes fur-float {
-      0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
-      50% { transform: translateY(-30px) rotate(180deg); opacity: 0.6; }
-    }
-
-    /* Suction swirl animation */
-    .suction-swirl {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 300px;
-      height: 300px;
-      border: 2px dashed rgba(var(--primary-rgb), 0.1);
-      border-radius: 50%;
-      animation: swirl-rotate 15s linear infinite;
-    }
-
-    .suction-swirl:nth-child(2) { width: 200px; height: 200px; animation-duration: 12s; }
-    .suction-swirl:nth-child(3) { width: 100px; height: 100px; animation-duration: 8s; }
-
-    @keyframes swirl-rotate {
-      from { transform: translate(-50%, -50%) rotate(0deg); }
-      to { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-
-    .hero-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 60px;
-      align-items: center;
-      position: relative;
       z-index: 1;
     }
 
+    .floating-paw {
+      position: absolute;
+      font-size: 40px;
+      opacity: 0.15;
+      animation: floatPaw 6s ease-in-out infinite;
+    }
+
+    .floating-paw:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; font-size: 50px; }
+    .floating-paw:nth-child(2) { top: 25%; right: 12%; animation-delay: 1s; font-size: 35px; }
+    .floating-paw:nth-child(3) { bottom: 30%; left: 5%; animation-delay: 2s; font-size: 45px; }
+    .floating-paw:nth-child(4) { top: 60%; right: 8%; animation-delay: 3s; font-size: 30px; }
+    .floating-paw:nth-child(5) { bottom: 15%; right: 15%; animation-delay: 4s; font-size: 55px; }
+    .floating-paw:nth-child(6) { top: 40%; left: 3%; animation-delay: 5s; font-size: 25px; }
+
+    @keyframes floatPaw {
+      0%, 100% { transform: translateY(0) rotate(-10deg); }
+      50% { transform: translateY(-20px) rotate(10deg); }
+    }
+
+    /* Floating hearts */
+    .floating-heart {
+      position: absolute;
+      font-size: 24px;
+      opacity: 0.2;
+      animation: floatHeart 8s ease-in-out infinite;
+    }
+
+    .floating-heart:nth-child(7) { top: 20%; left: 20%; animation-delay: 0.5s; color: #F472B6; }
+    .floating-heart:nth-child(8) { top: 35%; right: 25%; animation-delay: 2s; color: #FB7185; font-size: 20px; }
+    .floating-heart:nth-child(9) { bottom: 25%; left: 18%; animation-delay: 3.5s; color: #F472B6; font-size: 28px; }
+
+    @keyframes floatHeart {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-15px) scale(1.1); }
+    }
+
+    .hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
     .hero-content {
-      max-width: 100%;
+      max-width: 700px;
+      margin-bottom: 40px;
     }
 
     .hero-badge {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 20px;
-      background: var(--gradient-glass);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(45, 212, 191, 0.2);
+      padding: 12px 24px;
+      background: white;
+      border: 2px solid var(--primary);
       border-radius: 100px;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       color: var(--primary-dark);
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-md);
+      margin-bottom: 28px;
+      box-shadow: 0 8px 30px rgba(45, 212, 191, 0.25);
+      animation: badgeBounce 3s ease-in-out infinite;
+    }
+
+    @keyframes badgeBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
     }
 
     .hero-badge-dot {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       background: var(--secondary);
       border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
+      animation: pulse 1.5s ease-in-out infinite;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.8; transform: scale(1.3); }
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4); }
+      50% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 0 8px rgba(251, 146, 60, 0); }
     }
 
     .hero-title {
-      font-size: clamp(32px, 4.5vw, 52px);
+      font-size: clamp(36px, 6vw, 64px);
       font-weight: 700;
-      line-height: 1.15;
-      margin-bottom: 20px;
-      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -1px;
     }
 
     .hero-title .highlight {
-      background: var(--gradient-primary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      position: relative;
+      display: inline-block;
+      color: var(--primary-dark);
+    }
+
+    /* Wavy underline under highlight */
+    .hero-title .highlight::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 12px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20'%3E%3Cpath d='M0 10 Q25 0 50 10 T100 10' fill='none' stroke='%232DD4BF' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x;
+      background-size: 50px 12px;
     }
 
     .hero-description {
-      font-size: 17px;
+      font-size: 19px;
       color: var(--text-secondary);
       line-height: 1.7;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
+      max-width: 550px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .hero-cta {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 32px;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+
+    .hero-cta .btn-primary {
+      padding: 18px 40px;
+      font-size: 17px;
+      border-radius: 100px;
+    }
+
+    .hero-cta .btn-secondary {
+      padding: 18px 32px;
+      font-size: 17px;
+      border-radius: 100px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       HERO PRODUCT SHOWCASE — 3D FLOATING EFFECT
+    ═══════════════════════════════════════════════════════════ */
+
+    .hero-showcase {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      perspective: 1000px;
+    }
+
+    .hero-product-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    /* Animated fur particles being sucked toward product */
+    .suction-particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .fur-particle {
+      position: absolute;
+      border-radius: 50%;
+      animation: suckIn 4s ease-in infinite;
+    }
+
+    .fur-particle.orange { background: rgba(251, 146, 60, 0.6); }
+    .fur-particle.brown { background: rgba(180, 130, 90, 0.6); }
+    .fur-particle.white { background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(200,200,200,0.3); }
+    .fur-particle.gray { background: rgba(120, 120, 120, 0.5); }
+
+    /* Multiple particles with different starting positions */
+    .fur-particle:nth-child(1) { width: 12px; height: 12px; left: 5%; top: 30%; animation-delay: 0s; }
+    .fur-particle:nth-child(2) { width: 8px; height: 8px; left: 10%; top: 60%; animation-delay: 0.5s; }
+    .fur-particle:nth-child(3) { width: 15px; height: 15px; left: 3%; top: 45%; animation-delay: 1s; }
+    .fur-particle:nth-child(4) { width: 10px; height: 10px; right: 5%; top: 25%; animation-delay: 0.3s; }
+    .fur-particle:nth-child(5) { width: 14px; height: 14px; right: 8%; top: 55%; animation-delay: 0.8s; }
+    .fur-particle:nth-child(6) { width: 9px; height: 9px; right: 3%; top: 70%; animation-delay: 1.3s; }
+    .fur-particle:nth-child(7) { width: 11px; height: 11px; left: 15%; top: 20%; animation-delay: 1.8s; }
+    .fur-particle:nth-child(8) { width: 7px; height: 7px; right: 15%; top: 40%; animation-delay: 2.2s; }
+    .fur-particle:nth-child(9) { width: 13px; height: 13px; left: 8%; top: 75%; animation-delay: 2.7s; }
+    .fur-particle:nth-child(10) { width: 10px; height: 10px; right: 12%; top: 15%; animation-delay: 3.2s; }
+    .fur-particle:nth-child(11) { width: 16px; height: 16px; left: 2%; top: 50%; animation-delay: 3.5s; }
+    .fur-particle:nth-child(12) { width: 8px; height: 8px; right: 2%; top: 65%; animation-delay: 3.8s; }
+
+    @keyframes suckIn {
+      0% {
+        opacity: 0;
+        transform: scale(1) translateX(0);
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.3) translateX(calc(50vw - 100%));
+      }
+    }
+
+    /* Glow ring around product */
+    .hero-product-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(45, 212, 191, 0.15) 0%, transparent 70%);
+      animation: glowPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+      50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    }
+
+    /* Rotating ring */
+    .hero-product-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
+      border: 3px dashed rgba(45, 212, 191, 0.3);
+      border-radius: 50%;
+      animation: ringRotate 20s linear infinite;
+    }
+
+    .hero-product-ring::before {
+      content: '🐾';
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+    }
+
+    @keyframes ringRotate {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* The product itself - 3D hover effect */
+    .hero-product {
+      position: relative;
+      z-index: 5;
+      width: 320px;
+      transform-style: preserve-3d;
+      animation: productFloat 4s ease-in-out infinite;
+    }
+
+    @keyframes productFloat {
+      0%, 100% { transform: translateY(0) rotateX(0deg) rotateY(0deg); }
+      25% { transform: translateY(-10px) rotateX(2deg) rotateY(-2deg); }
+      50% { transform: translateY(-15px) rotateX(0deg) rotateY(0deg); }
+      75% { transform: translateY(-10px) rotateX(-2deg) rotateY(2deg); }
+    }
+
+    .hero-product:hover {
+      animation-play-state: paused;
+      transform: translateY(-20px) scale(1.05);
+    }
+
+    .hero-product .img-placeholder {
+      aspect-ratio: 1;
+      border-radius: 32px;
+      background: white;
+      box-shadow:
+        0 30px 60px rgba(45, 212, 191, 0.2),
+        0 15px 30px rgba(251, 146, 60, 0.15),
+        0 0 0 1px rgba(45, 212, 191, 0.1);
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .hero-product:hover .img-placeholder {
+      box-shadow:
+        0 40px 80px rgba(45, 212, 191, 0.3),
+        0 20px 40px rgba(251, 146, 60, 0.2),
+        0 0 0 2px rgba(45, 212, 191, 0.2);
+    }
+
+    /* Feature badges around product */
+    .hero-feature-badges {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+
+    .feature-badge {
+      position: absolute;
+      background: white;
+      padding: 10px 16px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: badgeFloat 5s ease-in-out infinite;
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+
+    .feature-badge .badge-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .feature-badge:nth-child(1) {
+      top: 10%;
+      left: -10%;
+      animation-delay: 0s;
+    }
+    .feature-badge:nth-child(1) .badge-icon { background: rgba(45, 212, 191, 0.15); }
+
+    .feature-badge:nth-child(2) {
+      top: 25%;
+      right: -15%;
+      animation-delay: 1s;
+    }
+    .feature-badge:nth-child(2) .badge-icon { background: rgba(251, 146, 60, 0.15); }
+
+    .feature-badge:nth-child(3) {
+      bottom: 25%;
+      left: -12%;
+      animation-delay: 2s;
+    }
+    .feature-badge:nth-child(3) .badge-icon { background: rgba(251, 191, 36, 0.15); }
+
+    .feature-badge:nth-child(4) {
+      bottom: 10%;
+      right: -8%;
+      animation-delay: 3s;
+    }
+    .feature-badge:nth-child(4) .badge-icon { background: rgba(45, 212, 191, 0.2); }
+
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
     }
 
     .hero-features {
@@ -696,85 +950,40 @@
       color: var(--primary);
     }
 
-    .hero-visual {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
+    /* Old hero-visual, hero-specs removed - using new hero-showcase */
 
-    .hero-product {
-      width: 100%;
-      max-width: 420px;
-      transform: translateX(20px) rotate(2deg);  /* Grid-breaking: slight offset */
-      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
+    /* ═══════════════════════════════════════════════════════════
+       WAVY SECTION DIVIDERS
+    ═══════════════════════════════════════════════════════════ */
 
-    .hero-product:hover {
-      transform: translateX(20px) rotate(0deg) scale(1.02);
-    }
-
-    .hero-product .img-placeholder {
-      width: 100%;
-      aspect-ratio: 4/5;
-      border-radius: var(--radius-xl);
+    .wavy-divider {
+      position: relative;
+      height: 80px;
+      overflow: hidden;
       background: var(--bg-white);
-      box-shadow: var(--shadow-xl);
     }
 
-    .hero-specs {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+    .wavy-divider svg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
       width: 100%;
-      max-width: 400px;
+      height: 100%;
     }
 
-    .hero-spec {
-      background: var(--gradient-glass);
-      backdrop-filter: blur(10px);
-      padding: 14px 10px;
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(45, 212, 191, 0.1);
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-
-    .hero-spec:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-      border-color: rgba(45, 212, 191, 0.2);
-    }
-
-    .hero-spec-value {
-      font-family: var(--font-heading);
-      font-size: 14px;
-      font-weight: 700;
-      background: var(--gradient-primary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1.2;
-      margin-bottom: 3px;
-    }
-
-    .hero-spec-label {
-      font-size: 10px;
-      color: var(--text-tertiary);
-      line-height: 1.2;
-      font-weight: 500;
+    .wavy-divider.flip {
+      transform: scaleY(-1);
     }
 
     /* ═══════════════════════════════════════════════════════════
-       TRUST BAR
+       TRUST BAR — Playful floating cards
     ═══════════════════════════════════════════════════════════ */
 
     .trust-bar {
-      padding: 40px 0;
-      background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.04) 0%, rgba(var(--secondary-rgb), 0.04) 100%);
-      border-top: 1px solid rgba(var(--primary-rgb), 0.1);
-      border-bottom: 1px solid var(--border-light);
+      padding: 50px 0;
+      background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-white) 100%);
+      position: relative;
+      overflow: visible;
     }
 
     .trust-items {
@@ -2011,41 +2220,46 @@
         --section-padding: 80px;
       }
 
-      .hero-inner,
-      .problem-inner {
-        grid-template-columns: 1fr;
-        gap: 40px;
+      .hero {
+        min-height: auto;
+        padding: 120px 0 60px;
       }
 
-      .hero-content {
-        text-align: center;
-        order: 2;
-      }
-
-      .hero-cta {
-        justify-content: center;
-      }
-
-      .hero-features {
-        justify-content: center;
-      }
-
-      .hero-visual {
-        order: 1;
+      .hero-showcase {
+        max-width: 600px;
       }
 
       .hero-product {
-        max-width: 340px;
+        width: 260px;
       }
 
-      .hero-specs {
-        max-width: 340px;
+      .hero-product-glow {
+        width: 280px;
+        height: 280px;
       }
 
-      .hero-bg-animation {
-        width: 350px;
-        height: 350px;
-        opacity: 0.5;
+      .hero-product-ring {
+        width: 320px;
+        height: 320px;
+      }
+
+      .feature-badge {
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+
+      .feature-badge:nth-child(1) { left: 0; }
+      .feature-badge:nth-child(2) { right: 0; }
+      .feature-badge:nth-child(3) { left: 0; }
+      .feature-badge:nth-child(4) { right: 0; }
+
+      .floating-paw {
+        font-size: 30px;
+      }
+
+      .problem-inner {
+        grid-template-columns: 1fr;
+        gap: 40px;
       }
 
       .problem-content {
@@ -2102,19 +2316,47 @@
       }
 
       .hero {
-        padding: 100px 0 40px;
+        padding: 100px 0 50px;
+        min-height: auto;
+      }
+
+      .hero-title {
+        font-size: clamp(28px, 8vw, 42px);
+      }
+
+      .hero-showcase {
+        max-width: 100%;
       }
 
       .hero-product {
-        max-width: 280px;
+        width: 220px;
       }
 
-      .hero-specs {
-        max-width: 280px;
-        gap: 8px;
+      .hero-product-glow,
+      .hero-product-ring {
+        display: none;
       }
 
-      .hero-bg-animation {
+      .feature-badge {
+        position: static;
+        animation: none;
+      }
+
+      .hero-feature-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+        position: static;
+      }
+
+      .suction-particles {
+        display: none;
+      }
+
+      .floating-paw,
+      .floating-heart {
         display: none;
       }
 
@@ -2152,15 +2394,20 @@
 
       .hero-cta .btn {
         width: 100%;
+        padding: 16px 24px;
       }
 
       .hero-product {
-        max-width: 240px;
+        width: 180px;
       }
 
-      .hero-specs {
-        max-width: 240px;
-        grid-template-columns: repeat(2, 1fr);
+      .hero-description {
+        font-size: 16px;
+      }
+
+      .feature-badge {
+        font-size: 11px;
+        padding: 6px 10px;
       }
     }
 
@@ -2241,92 +2488,108 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
-       HERO SECTION
+       HERO SECTION — RADICALLY REDESIGNED
   ═══════════════════════════════════════════════════════════ -->
   <section class="hero">
-    <!-- Background animation - floating fur particles being sucked -->
-    <div class="hero-bg-animation">
-      <div class="suction-swirl"></div>
-      <div class="suction-swirl"></div>
-      <div class="suction-swirl"></div>
-      <div class="fur-particle"></div>
-      <div class="fur-particle"></div>
-      <div class="fur-particle"></div>
-      <div class="fur-particle"></div>
-      <div class="fur-particle"></div>
-      <div class="fur-particle"></div>
-      <div class="fur-particle"></div>
+    <!-- Floating decorative elements -->
+    <div class="hero-decorations">
+      <span class="floating-paw">🐾</span>
+      <span class="floating-paw">🐾</span>
+      <span class="floating-paw">🐾</span>
+      <span class="floating-paw">🐾</span>
+      <span class="floating-paw">🐾</span>
+      <span class="floating-paw">🐾</span>
+      <span class="floating-heart">💕</span>
+      <span class="floating-heart">💕</span>
+      <span class="floating-heart">💕</span>
     </div>
+
     <div class="container">
       <div class="hero-inner">
+        <!-- Text content - centered -->
         <div class="hero-content">
           <div class="hero-badge reveal delay-1">
             <span class="hero-badge-dot"></span>
             Salon groomerski w Twoim domu
           </div>
           <h1 class="hero-title reveal delay-2">
-            Twój pupil jak po groomerze — <span class="highlight">w 15 minut, w domu</span>
+            Twój pupil jak po groomerze — <span class="highlight">w 15 minut</span>
           </h1>
           <p class="hero-description reveal delay-3">
-            Jedno urządzenie czesze, strzyże i od razu zbiera sierść do zbiornika. Zero bałaganu po sesji, zero stresu dla pupila. Koniec z drogimi wizytami u groomera.
+            Jedno urządzenie czesze, strzyże i od razu zbiera sierść do zbiornika. Zero bałaganu, zero stresu — tylko zadowolony pupil.
           </p>
           <div class="hero-cta reveal delay-4">
-            <a href="#offer" class="btn btn-primary">Zamów z rabatem</a>
+            <a href="#offer" class="btn btn-primary">🐕 Zamów z rabatem -30%</a>
             <a href="#solution" class="btn btn-secondary">Jak to działa?</a>
           </div>
-          <div class="hero-features reveal delay-5">
-            <div class="hero-feature">
-              <span class="hero-feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </span>
-              2 lata gwarancji
-            </div>
-            <div class="hero-feature">
-              <span class="hero-feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </span>
-              Darmowa dostawa
-            </div>
-            <div class="hero-feature">
-              <span class="hero-feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </span>
-              30 dni na zwrot
-            </div>
-          </div>
         </div>
-        <div class="hero-visual">
-          <div class="hero-product reveal-bounce delay-3">
-            <div class="img-placeholder">
-              <div class="ph-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+
+        <!-- Product showcase with 3D effect -->
+        <div class="hero-showcase reveal-scale delay-3">
+          <div class="hero-product-container">
+            <!-- Animated fur particles being sucked in -->
+            <div class="suction-particles">
+              <div class="fur-particle orange"></div>
+              <div class="fur-particle brown"></div>
+              <div class="fur-particle white"></div>
+              <div class="fur-particle gray"></div>
+              <div class="fur-particle orange"></div>
+              <div class="fur-particle brown"></div>
+              <div class="fur-particle white"></div>
+              <div class="fur-particle gray"></div>
+              <div class="fur-particle orange"></div>
+              <div class="fur-particle brown"></div>
+              <div class="fur-particle white"></div>
+              <div class="fur-particle gray"></div>
+            </div>
+
+            <!-- Glow and ring effects -->
+            <div class="hero-product-glow"></div>
+            <div class="hero-product-ring"></div>
+
+            <!-- The product -->
+            <div class="hero-product">
+              <div class="img-placeholder">
+                <div class="ph-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                </div>
+                <span class="ph-label">Zdjęcie produktu</span>
+                <span class="ph-size">800 x 800 px</span>
               </div>
-              <span class="ph-label">Zdjęcie produktu</span>
-              <span class="ph-size">800 x 1000 px</span>
             </div>
-          </div>
-          <div class="hero-specs">
-            <div class="hero-spec reveal delay-5">
-              <div class="hero-spec-value">11 kPa</div>
-              <div class="hero-spec-label">Moc ssania</div>
-            </div>
-            <div class="hero-spec reveal delay-6">
-              <div class="hero-spec-value">2.5L</div>
-              <div class="hero-spec-label">Zbiornik</div>
-            </div>
-            <div class="hero-spec reveal delay-7">
-              <div class="hero-spec-value">HEPA 12</div>
-              <div class="hero-spec-label">Filtr</div>
-            </div>
-            <div class="hero-spec reveal delay-8">
-              <div class="hero-spec-value">99%</div>
-              <div class="hero-spec-label">Skuteczność</div>
+
+            <!-- Feature badges floating around product -->
+            <div class="hero-feature-badges">
+              <div class="feature-badge">
+                <span class="badge-icon">💨</span>
+                <span>11 kPa mocy</span>
+              </div>
+              <div class="feature-badge">
+                <span class="badge-icon">🧹</span>
+                <span>99% sierści</span>
+              </div>
+              <div class="feature-badge">
+                <span class="badge-icon">🛡️</span>
+                <span>2 lata gwarancji</span>
+              </div>
+              <div class="feature-badge">
+                <span class="badge-icon">📦</span>
+                <span>Darmowa dostawa</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Wavy divider -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="#FEF7ED" d="M0,64 C360,120 720,0 1080,64 C1260,96 1380,80 1440,64 L1440,120 L0,120 Z"/>
+      <path fill="rgba(45, 212, 191, 0.1)" d="M0,80 C320,120 640,40 960,80 C1200,108 1360,72 1440,80 L1440,120 L0,120 Z"/>
+    </svg>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════
        TRUST BAR
