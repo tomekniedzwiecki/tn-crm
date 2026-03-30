@@ -2405,3 +2405,21 @@ https://tn-crm.vercel.app/[slug]
 ```
 
 Przykład: `https://tn-crm.vercel.app/nomabar`
+
+---
+
+## ETAP 2: Weryfikacja (OBOWIĄZKOWY)
+
+**Po zapisaniu pierwszej wersji landing page MUSISZ wykonać procedurę weryfikacji.**
+
+Przeczytaj i wykonaj: **`CLAUDE_LANDING_REVIEW.md`**
+
+Procedura weryfikacji sprawdza:
+1. **Kompletność sekcji** — czy są wszystkie 15 sekcji z checklisty
+2. **Miejsca na zdjęcia** — minimum 15-20 placeholderów
+3. **Jakość copy** — czy treści trafiają w grupę docelową
+4. **Technikalia** — fonty, meta tagi, PageSpeed
+
+**NIE KOŃCZ PRACY NAD LANDINGIEM BEZ PRZEJŚCIA PRZEZ ETAP 2.**
+
+Deploy wykonuj dopiero po pozytywnej weryfikacji.

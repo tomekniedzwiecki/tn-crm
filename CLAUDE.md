@@ -58,18 +58,27 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 
 Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
-### Generowanie landing page
-**Plik:** `CLAUDE_LANDING_PROCEDURE.md`
+### Generowanie landing page (2 etapy)
+**Pliki:** `CLAUDE_LANDING_PROCEDURE.md` + `CLAUDE_LANDING_REVIEW.md`
 
 Kiedy uzytkownik mowi "zrob landing dla workflow X":
-1. Przeczytaj `CLAUDE_LANDING_PROCEDURE.md`
+
+**ETAP 1 — Generowanie** (`CLAUDE_LANDING_PROCEDURE.md`):
+1. Przeczytaj procedurę
 2. Pobierz branding, produkty, raporty z Supabase
 3. Wybierz motyw (ciemny/jasny) na podstawie kategorii
 4. Napisz copy dla kazdej sekcji (PAS framework)
 5. Wygeneruj kompletny `index.html` z inline CSS/JS
 6. Zapisz do `landing-pages/[nazwa-marki]/index.html`
 
-Wzorce: `landing-pages/vibestrike/` (ciemny), `landing-pages/dentaflow/` (jasny).
+**ETAP 2 — Weryfikacja** (`CLAUDE_LANDING_REVIEW.md`) — OBOWIĄZKOWY:
+1. Sprawdź kompletność sekcji (15 wymaganych)
+2. Sprawdź placeholdery zdjęć (min. 15-20)
+3. Zweryfikuj treści pod kątem grupy docelowej
+4. Sprawdź technikalia (fonty, meta, PageSpeed)
+5. Dopiero po pozytywnej weryfikacji: commit & deploy
+
+Wzorce: `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (jasny, pet care).
 
 ## Supabase Edge Functions
 
