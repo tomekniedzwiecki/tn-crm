@@ -132,6 +132,7 @@ Dla **każdej sekcji** zadaj sobie pytania:
 - [ ] Wszystkie `<img>` mają `width` i `height` (CLS)
 - [ ] `preconnect` do fonts.googleapis.com i fonts.gstatic.com
 - [ ] Meta title < 60 znaków, meta description < 160 znaków
+- [ ] **Header jest ZAWSZE widoczny** (position: fixed, bez hide-on-scroll JS)
 
 ---
 
