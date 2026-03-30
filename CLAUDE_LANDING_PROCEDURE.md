@@ -1,5 +1,19 @@
 # Procedura: Generowanie Landing Page dla Workflow
 
+> **⚠️ STOP! TO JEST ETAP 1 Z 3 — NIE COMMITUJ PO WYGENEROWANIU HTML!**
+>
+> Pełna procedura landing page składa się z 3 OBOWIĄZKOWYCH etapów:
+>
+> | Etap | Plik | Co robisz |
+> |------|------|-----------|
+> | **1. Generowanie** | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Generujesz HTML |
+> | **2. Weryfikacja** | `CLAUDE_LANDING_REVIEW.md` | Sprawdzasz kompletność, Hero, placeholdery |
+> | **3. Design** | `CLAUDE_LANDING_DESIGN.md` | Dopracowujesz estetykę, animacje, typografię |
+>
+> **Dopiero po przejściu wszystkich 3 etapów robisz commit & deploy!**
+
+---
+
 > **WAŻNE**: Zawsze pisz z polskimi znakami diakrytycznymi (ą, ę, ć, ś, ź, ż, ó, ł, ń) — dotyczy to całego copy na landing page (nagłówki, opisy, FAQ, CTA).
 
 ## Kiedy wywołać
