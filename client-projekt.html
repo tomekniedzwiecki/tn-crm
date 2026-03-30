@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026032504';
+        const APP_VERSION = '2026033001';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4234,15 +4234,23 @@
 
         async function prepareContractHtml() {
             if (clientContractHtml) return true;
-            const templateUrl = CONTRACT_TEMPLATES[workflow.offer_id];
-            if (!templateUrl) {
-                console.error('Brak szablonu umowy dla offer_id:', workflow.offer_id);
-                return false;
-            }
+
             try {
-                const response = await fetch(templateUrl);
-                if (!response.ok) throw new Error('Nie mozna pobrac szablonu');
-                let html = await response.text();
+                let html;
+
+                // Use custom HTML if saved in database, otherwise fetch template
+                if (workflow.contract_custom_html) {
+                    html = workflow.contract_custom_html;
+                } else {
+                    const templateUrl = CONTRACT_TEMPLATES[workflow.offer_id];
+                    if (!templateUrl) {
+                        console.error('Brak szablonu umowy dla offer_id:', workflow.offer_id);
+                        return false;
+                    }
+                    const response = await fetch(templateUrl);
+                    if (!response.ok) throw new Error('Nie mozna pobrac szablonu');
+                    html = await response.text();
+                }
 
                 const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
                 const startDate = workflow.started_at ? new Date(workflow.started_at).toLocaleDateString('pl-PL') : today;
