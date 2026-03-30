@@ -1367,15 +1367,17 @@
             installmentWorkflowId = params.get('workflow_id');
 
             // Handle installment payment mode
-            if (installmentId && installmentWorkflowId) {
+            // Note: workflow_id may be null for first installment (before workflow is created)
+            if (installmentId) {
                 try {
-                    // Fetch installment data with schedule and workflow
+                    // Fetch installment data with schedule, lead and workflow
                     const { data: instData, error: instError } = await supabaseClient
                         .from('payment_installments')
                         .select(`
                             *,
                             schedule:payment_schedules(
                                 *,
+                                lead:leads(id, email, phone, name, company, nip),
                                 workflow:workflows(
                                     id,
                                     offer_name,
@@ -1391,8 +1393,8 @@
                         return;
                     }
 
-                    // Verify workflow matches
-                    if (instData.schedule?.workflow?.id !== installmentWorkflowId) {
+                    // Verify workflow matches (only if workflow_id was provided)
+                    if (installmentWorkflowId && instData.schedule?.workflow?.id !== installmentWorkflowId) {
                         showErrorState('Nieprawidłowy link do płatności.');
                         return;
                     }
@@ -1406,14 +1408,16 @@
                     installmentData = instData;
                     isCustomPayment = true; // Reuse custom payment flag to skip workflow creation
 
+                    // Use workflow data if exists, otherwise use schedule's lead data
                     const workflow = instData.schedule.workflow;
-                    const lead = workflow.lead;
+                    const lead = workflow?.lead || instData.schedule.lead;
+                    const offerName = workflow?.offer_name || 'Harmonogram płatności';
 
                     // Create virtual offer for installment
                     currentOffer = {
                         id: null,
-                        name: `Rata ${instData.installment_number}/${instData.schedule.installments_count} - ${workflow.offer_name}`,
-                        description: `Harmonogram płatności - ${workflow.offer_name}`,
+                        name: `Rata ${instData.installment_number}/${instData.schedule.installments_count} - ${offerName}`,
+                        description: `Harmonogram płatności - ${offerName}`,
                         price: parseFloat(instData.amount)
                     };
 
@@ -1433,7 +1437,7 @@
 
                     showCheckout();
 
-                    console.log('[checkout] Installment payment mode:', instData.installment_number, 'of', instData.schedule.installments_count);
+                    console.log('[checkout] Installment payment mode:', instData.installment_number, 'of', instData.schedule.installments_count, workflow ? '(with workflow)' : '(no workflow yet)');
                     return;
                 } catch (e) {
                     console.error('[checkout] Installment load error:', e);
@@ -1765,12 +1769,16 @@
                         orderData.notes += ' | Upgrade workflow';
                     }
 
-                    // Installment payment - link to existing workflow and installment
-                    if (installmentId && installmentWorkflowId && installmentData) {
+                    // Installment payment - link to installment and workflow (if exists)
+                    if (installmentId && installmentData) {
                         orderData.installment_id = installmentId;
-                        orderData.workflow_id = installmentWorkflowId;
-                        orderData.skip_workflow = true; // Don't create new workflow
-                        orderData.lead_id = installmentData.schedule?.workflow?.lead?.id || null;
+                        // workflow_id may be null for first installment payment
+                        if (installmentWorkflowId) {
+                            orderData.workflow_id = installmentWorkflowId;
+                        }
+                        orderData.skip_workflow = true; // Don't create new workflow - trigger will handle it
+                        // Get lead_id from workflow if exists, otherwise from schedule's lead
+                        orderData.lead_id = installmentData.schedule?.workflow?.lead?.id || installmentData.schedule?.lead?.id || null;
                         orderData.notes += ` | Rata ${installmentData.installment_number}/${installmentData.schedule.installments_count}`;
                     }
 
