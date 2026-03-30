@@ -1,0 +1,2431 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KurzoBot — Kurz znika, czas zostaje</title>
+  <meta name="description" content="Inteligentny robot sprzątający z nawigacją LiDAR i funkcją mopowania. Czyste podłogi bez wysiłku. Sprawdź KurzoBot.">
+
+  <!-- Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap&subset=latin-ext" rel="stylesheet">
+
+  <!-- Phosphor Icons -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/fill/style.css">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #00B4D8;
+      --primary-rgb: 0, 180, 216;
+      --secondary: #FF8C42;
+      --secondary-rgb: 255, 140, 66;
+      --accent: #7ED321;
+      --accent-rgb: 126, 211, 33;
+      --neutral-dark: #1A1A2E;
+      --neutral-mid: #4A5568;
+      --neutral-light: #F7FAFC;
+
+      --primary-soft: rgba(0, 180, 216, 0.08);
+      --primary-glow: rgba(0, 180, 216, 0.25);
+      --secondary-soft: rgba(255, 140, 66, 0.08);
+
+      --bg-white: #FFFFFF;
+      --bg-alt: #F8FAFC;
+      --text-dark: #111827;
+      --text-secondary: #6B7280;
+      --border-light: #E5E7EB;
+
+      --font-heading: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-accent: 'Space Mono', monospace;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+      --shadow-xl: 0 20px 40px rgba(0,0,0,0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--text-dark);
+      background: var(--bg-white);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Utility */
+    .section-label {
+      font-family: var(--font-accent);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      color: var(--neutral-dark);
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 600px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 32px;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 16px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover {
+      background: #0096b7;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px var(--primary-glow);
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--neutral-dark);
+      border: 2px solid var(--border-light);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Animations */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Staggered animations */
+    .fade-in:nth-child(1) { transition-delay: 0ms; }
+    .fade-in:nth-child(2) { transition-delay: 100ms; }
+    .fade-in:nth-child(3) { transition-delay: 200ms; }
+    .fade-in:nth-child(4) { transition-delay: 300ms; }
+
+    /* Image placeholder */
+    .img-placeholder {
+      background: linear-gradient(135deg, var(--primary-soft) 0%, var(--secondary-soft) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: center;
+      border: 2px dashed var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    /* ========== HEADER ========== */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(0, 180, 216, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    .header.scrolled {
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo img {
+      height: 40px;
+      width: auto;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+    }
+
+    .nav-cta {
+      padding: 12px 24px;
+      font-size: 14px;
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .hamburger span {
+      width: 24px;
+      height: 2px;
+      background: var(--neutral-dark);
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      .nav { display: none; }
+      .hamburger { display: flex; }
+    }
+
+    /* Mobile Menu */
+    .mobile-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-white);
+      z-index: 99;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .mobile-menu.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .mobile-menu .nav-link {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .mobile-menu-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      font-size: 32px;
+      cursor: pointer;
+      color: var(--neutral-dark);
+    }
+
+    /* ========== HERO ========== */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      background: linear-gradient(135deg, rgba(0, 180, 216, 0.03) 0%, #FFF 50%, rgba(255, 140, 66, 0.03) 100%);
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 180, 216, 0.15) 0%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      animation: glow-pulse 4s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .hero-glow-2 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 140, 66, 0.1) 0%, transparent 70%);
+      bottom: -100px;
+      left: -100px;
+      animation: glow-pulse 5s ease-in-out infinite alternate-reverse;
+      pointer-events: none;
+    }
+
+    @keyframes glow-pulse {
+      0% { transform: scale(1); opacity: 0.5; }
+      100% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    /* Hero Background Animation - Circular cleaning paths */
+    .hero-bg-animation {
+      position: absolute;
+      top: 50%;
+      right: 10%;
+      transform: translateY(-50%);
+      width: 500px;
+      height: 500px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .cleaning-path {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px solid rgba(0, 180, 216, 0.1);
+      animation: path-pulse 4s ease-out infinite;
+    }
+
+    .cleaning-path-1 { width: 200px; height: 200px; }
+    .cleaning-path-2 { width: 300px; height: 300px; animation-delay: 1s; }
+    .cleaning-path-3 { width: 400px; height: 400px; animation-delay: 2s; }
+
+    @keyframes path-pulse {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.4; }
+      100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+    }
+
+    .dust-particles span {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(0, 180, 216, 0.3);
+      border-radius: 50%;
+      animation: dust-float 6s ease-in-out infinite;
+    }
+
+    .dust-particles span:nth-child(1) { top: 20%; left: 30%; animation-delay: 0s; }
+    .dust-particles span:nth-child(2) { top: 40%; left: 60%; animation-delay: 1s; }
+    .dust-particles span:nth-child(3) { top: 60%; left: 40%; animation-delay: 2s; }
+    .dust-particles span:nth-child(4) { top: 30%; left: 70%; animation-delay: 3s; }
+    .dust-particles span:nth-child(5) { top: 70%; left: 50%; animation-delay: 4s; }
+
+    @keyframes dust-float {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+      50% { transform: translateY(-15px) scale(0.5); opacity: 0; }
+    }
+
+    @media (max-width: 768px) {
+      .hero-bg-animation {
+        width: 300px;
+        height: 300px;
+        opacity: 0.5;
+        right: -50px;
+      }
+    }
+
+    /* Floating decorations in hero */
+    .hero-decorations {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .hero-decorations span {
+      position: absolute;
+      font-size: 32px;
+      opacity: 0.15;
+      animation: float-decoration 8s ease-in-out infinite;
+    }
+
+    .hero-decorations span:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; font-size: 28px; }
+    .hero-decorations span:nth-child(2) { top: 25%; right: 12%; animation-delay: 1s; font-size: 36px; }
+    .hero-decorations span:nth-child(3) { top: 60%; left: 5%; animation-delay: 2s; font-size: 24px; }
+    .hero-decorations span:nth-child(4) { top: 75%; right: 8%; animation-delay: 3s; font-size: 30px; }
+    .hero-decorations span:nth-child(5) { top: 40%; left: 15%; animation-delay: 4s; font-size: 26px; }
+    .hero-decorations span:nth-child(6) { top: 85%; left: 20%; animation-delay: 5s; font-size: 22px; }
+
+    @keyframes float-decoration {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(10deg); }
+    }
+
+    @media (max-width: 768px) {
+      .hero-decorations span { opacity: 0.1; font-size: 20px !important; }
+    }
+
+    /* Wavy divider */
+    .wavy-divider {
+      position: relative;
+      height: 60px;
+      overflow: hidden;
+      margin-top: -1px;
+    }
+
+    .wavy-divider svg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+    }
+
+    .wavy-divider .wave-1 { fill: rgba(0, 180, 216, 0.08); }
+    .wavy-divider .wave-2 { fill: var(--bg-white); }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    @media (max-width: 968px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: clamp(40px, 6vw, 64px);
+      font-weight: 800;
+      color: var(--neutral-dark);
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .hero-title span {
+      color: var(--primary);
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      max-width: 500px;
+    }
+
+    @media (max-width: 968px) {
+      .hero-subtitle { margin: 0 auto 32px; }
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 968px) {
+      .hero-ctas { justify-content: center; }
+    }
+
+    .hero-image {
+      position: relative;
+    }
+
+    .hero-image .img-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+    }
+
+    /* ========== TRUST BAR ========== */
+    .trust-bar {
+      background: linear-gradient(90deg, rgba(0, 180, 216, 0.04) 0%, rgba(255, 140, 66, 0.04) 100%);
+      border-top: 1px solid rgba(0, 180, 216, 0.1);
+      border-bottom: 1px solid rgba(0, 180, 216, 0.1);
+      padding: 24px 0;
+    }
+
+    .trust-items {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: nowrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--bg-white);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .trust-item:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 180, 216, 0.15);
+    }
+
+    .trust-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary-soft);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .trust-text {
+      white-space: nowrap;
+    }
+
+    .trust-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+    }
+
+    .trust-text span {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .trust-items {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .trust-item {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 140px;
+      }
+    }
+
+    /* ========== PRODUCT GALLERY ========== */
+    .gallery {
+      padding: 100px 0;
+      background: var(--bg-white);
+    }
+
+    .gallery-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 968px) {
+      .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .gallery-item {
+      aspect-ratio: 1;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+
+    .gallery-item:hover {
+      transform: scale(1.03);
+    }
+
+    .gallery-item .img-placeholder {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    /* ========== PROBLEM ========== */
+    .problem {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%);
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .problem-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .problem-content .section-title {
+      margin-bottom: 24px;
+    }
+
+    .problem-text {
+      font-size: 18px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.8;
+    }
+
+    .problem-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .stat-item {
+      background: var(--bg-white);
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-number {
+      font-family: var(--font-heading);
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .problem-image .img-placeholder {
+      width: 100%;
+      aspect-ratio: 4/3;
+    }
+
+    /* ========== SOLUTION / BENTO ========== */
+    .solution {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, rgba(0, 180, 216, 0.03) 100%);
+    }
+
+    .solution-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .solution-header .section-subtitle {
+      margin: 0 auto;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .bento-card {
+      position: relative;
+      background: var(--bg-white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .bento-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 12px 24px rgba(0, 180, 216, 0.15);
+      transform: translateY(-4px);
+    }
+
+    .bento-card:nth-child(2):hover {
+      border-color: var(--secondary);
+      box-shadow: 0 12px 24px rgba(255, 140, 66, 0.15);
+    }
+
+    .bento-card:nth-child(3):hover {
+      border-color: var(--accent);
+      box-shadow: 0 12px 24px rgba(126, 211, 33, 0.15);
+    }
+
+    .bento-card .spotlight {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 180, 216, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .bento-card:hover .spotlight {
+      opacity: 1;
+    }
+
+    .bento-inner {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 24px;
+      align-items: center;
+    }
+
+    @media (max-width: 480px) {
+      .bento-inner {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .bento-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-soft);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .bento-card:nth-child(2) .bento-icon {
+      background: var(--secondary-soft);
+      color: var(--secondary);
+    }
+
+    .bento-card:nth-child(3) .bento-icon {
+      background: rgba(126, 211, 33, 0.1);
+      color: var(--accent);
+    }
+
+    .bento-card:nth-child(4) .bento-icon {
+      background: rgba(26, 26, 46, 0.08);
+      color: var(--neutral-dark);
+    }
+
+    .bento-title {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 8px;
+    }
+
+    .bento-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .bento-img {
+      width: 120px;
+      height: 120px;
+    }
+
+    .bento-img .img-placeholder {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-md);
+    }
+
+    /* ========== HOW IT WORKS ========== */
+    .how-it-works {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFFCF5 0%, #FFF8E7 100%);
+    }
+
+    .how-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step-img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      margin-bottom: 24px;
+    }
+
+    .step-img .img-placeholder {
+      width: 100%;
+      height: 100%;
+    }
+
+    .step-number {
+      width: 48px;
+      height: 48px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0 auto 16px;
+    }
+
+    .step:nth-child(2) .step-number {
+      background: var(--secondary);
+    }
+
+    .step:nth-child(3) .step-number {
+      background: var(--accent);
+    }
+
+    .step-title {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ========== COMPARISON ========== */
+    .comparison {
+      padding: 100px 0;
+      background: linear-gradient(180deg, rgba(0, 180, 216, 0.03) 0%, #FFF 100%);
+    }
+
+    .comparison-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comparison-card {
+      padding: 40px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-white);
+      border: 1px solid var(--border-light);
+    }
+
+    .comparison-card.highlight {
+      border: 2px solid var(--primary);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+
+    .comparison-card.highlight::before {
+      content: 'Polecamy';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: white;
+      padding: 4px 16px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .comparison-card h3 {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 16px;
+    }
+
+    .comparison-card p {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+
+    .comparison-card ul {
+      list-style: none;
+    }
+
+    .comparison-card ul li {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .comparison-card ul li:last-child {
+      border-bottom: none;
+    }
+
+    .comparison-card.highlight ul li {
+      color: var(--neutral-dark);
+    }
+
+    /* ========== PERSONAS ========== */
+    .personas {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, rgba(255, 140, 66, 0.03) 100%);
+    }
+
+    .personas-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .personas-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .personas-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .persona-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .persona-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+
+    .persona-img {
+      width: 100%;
+      aspect-ratio: 4/3;
+    }
+
+    .persona-img .img-placeholder {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    .persona-content {
+      padding: 24px;
+    }
+
+    .persona-title {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 8px;
+    }
+
+    .persona-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ========== TESTIMONIALS ========== */
+    .testimonials {
+      padding: 100px 0;
+      background: linear-gradient(180deg, rgba(0, 180, 216, 0.03) 0%, #FFF 100%);
+    }
+
+    .testimonials-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 968px) {
+      .testimonials-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .testimonial-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      transition: all 0.3s ease;
+    }
+
+    .testimonial-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+
+    .testimonial-stars {
+      color: var(--secondary);
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    .testimonial-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .testimonial-avatar {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-soft);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .testimonial-info strong {
+      display: block;
+      font-size: 15px;
+      color: var(--neutral-dark);
+    }
+
+    .testimonial-info span {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ========== FAQ ========== */
+    .faq {
+      padding: 100px 0;
+      background: linear-gradient(180deg, #FFF 0%, rgba(255, 140, 66, 0.03) 100%);
+    }
+
+    .faq-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .faq-list {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-body);
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+      transition: color 0.3s ease;
+    }
+
+    .faq-question:hover {
+      color: var(--primary);
+    }
+
+    .faq-question i {
+      color: var(--primary);
+      font-size: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .faq-item.active .faq-question i {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-item.active .faq-answer {
+      max-height: 300px;
+    }
+
+    .faq-answer p {
+      padding-bottom: 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    /* ========== PACKAGE ========== */
+    .package {
+      padding: 100px 0;
+      background: linear-gradient(180deg, rgba(0, 180, 216, 0.03) 0%, #FFF 100%);
+    }
+
+    .package-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .package-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .package-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .package-img .img-placeholder {
+      width: 100%;
+      aspect-ratio: 4/3;
+    }
+
+    .package-content h3 {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 24px;
+    }
+
+    .package-list {
+      list-style: none;
+    }
+
+    .package-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 16px;
+      color: var(--neutral-dark);
+    }
+
+    .package-list li:last-child {
+      border-bottom: none;
+    }
+
+    .package-list li i {
+      color: var(--accent);
+      font-size: 20px;
+    }
+
+    /* ========== OFFER ========== */
+    .offer {
+      padding: 100px 0;
+      background: linear-gradient(135deg, rgba(0, 180, 216, 0.05) 0%, #FFF 50%, rgba(255, 140, 66, 0.05) 100%);
+    }
+
+    .offer-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .offer-box {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      padding: 48px;
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .offer-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent), var(--primary));
+      background-size: 300% 100%;
+      animation: border-beam 3s linear infinite;
+    }
+
+    @keyframes border-beam {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 100% 0%; }
+    }
+
+    .offer-badge {
+      display: inline-block;
+      background: var(--secondary);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .offer-product {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .offer-img {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 24px;
+    }
+
+    .offer-img .img-placeholder {
+      width: 100%;
+      height: 100%;
+    }
+
+    .offer-name {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      margin-bottom: 8px;
+    }
+
+    .offer-tagline {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    .offer-features {
+      margin-bottom: 32px;
+    }
+
+    .offer-feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .offer-feature:last-child {
+      border-bottom: none;
+    }
+
+    .offer-feature i {
+      color: var(--accent);
+      font-size: 20px;
+    }
+
+    .offer-feature span {
+      font-size: 15px;
+      color: var(--neutral-dark);
+    }
+
+    .offer-price {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .price-old {
+      font-size: 18px;
+      color: var(--text-secondary);
+      text-decoration: line-through;
+      margin-right: 12px;
+    }
+
+    .price-new {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .price-new span {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .offer-cta {
+      width: 100%;
+      padding: 20px;
+      font-size: 18px;
+    }
+
+    .offer-guarantee {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .offer-guarantee i {
+      color: var(--accent);
+    }
+
+    /* ========== CTA BANNER ========== */
+    .cta-banner {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary) 0%, #0096b7 100%);
+      text-align: center;
+    }
+
+    .cta-title {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 800;
+      color: white;
+      margin-bottom: 16px;
+    }
+
+    .cta-subtitle {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 32px;
+    }
+
+    .cta-banner .btn-primary {
+      background: white;
+      color: var(--primary);
+    }
+
+    .cta-banner .btn-primary:hover {
+      background: var(--neutral-light);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    /* ========== FOOTER ========== */
+    .footer {
+      background: var(--neutral-light);
+      padding: 60px 0 30px;
+      border-top: 2px solid transparent;
+      border-image: linear-gradient(90deg, var(--primary), var(--secondary)) 1;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 60px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+    }
+
+    .footer-brand img {
+      height: 40px;
+      margin-bottom: 16px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 300px;
+    }
+
+    .footer-col h4 {
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col ul li {
+      margin-bottom: 12px;
+    }
+
+    .footer-col ul li a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer-col ul li a:hover {
+      color: var(--primary);
+    }
+
+    .footer-bottom {
+      padding-top: 30px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-bottom p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .footer-legal {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-legal a {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .footer-legal a:hover {
+      color: var(--primary);
+    }
+
+    /* ========== STICKY CTA (Mobile) ========== */
+    .sticky-cta {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-white);
+      padding: 16px 24px;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+      z-index: 90;
+    }
+
+    .sticky-cta .btn {
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .sticky-cta {
+        display: block;
+      }
+
+      body {
+        padding-bottom: 80px;
+      }
+    }
+
+    /* ========== COOKIE BANNER ========== */
+    .cookie-banner {
+      position: fixed;
+      bottom: 100px;
+      left: 24px;
+      right: 24px;
+      max-width: 400px;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-xl);
+      z-index: 95;
+      display: none;
+    }
+
+    .cookie-banner.show {
+      display: block;
+    }
+
+    .cookie-banner p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .cookie-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .cookie-buttons .btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .cookie-banner {
+        bottom: 100px;
+        left: 16px;
+        right: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="#" class="logo">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/kurzobot/logo.png" alt="KurzoBot" width="120" height="40">
+        </a>
+
+        <nav class="nav">
+          <a href="#funkcje" class="nav-link">Funkcje</a>
+          <a href="#jak-dziala" class="nav-link">Jak działa</a>
+          <a href="#opinie" class="nav-link">Opinie</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+          <a href="#kup" class="btn btn-primary nav-cta">Zamów teraz</a>
+        </nav>
+
+        <div class="hamburger" onclick="toggleMobileMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-close" onclick="toggleMobileMenu()">
+      <i class="ph ph-x"></i>
+    </div>
+    <a href="#funkcje" class="nav-link" onclick="toggleMobileMenu()">Funkcje</a>
+    <a href="#jak-dziala" class="nav-link" onclick="toggleMobileMenu()">Jak działa</a>
+    <a href="#opinie" class="nav-link" onclick="toggleMobileMenu()">Opinie</a>
+    <a href="#faq" class="nav-link" onclick="toggleMobileMenu()">FAQ</a>
+    <a href="#kup" class="btn btn-primary" onclick="toggleMobileMenu()">Zamów teraz</a>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-glow-2"></div>
+
+    <!-- Floating decorations -->
+    <div class="hero-decorations">
+      <span>🧹</span>
+      <span>✨</span>
+      <span>🤖</span>
+      <span>💨</span>
+      <span>🏠</span>
+      <span>🧼</span>
+    </div>
+
+    <!-- Background animation - circular cleaning paths -->
+    <div class="hero-bg-animation">
+      <div class="cleaning-path cleaning-path-1"></div>
+      <div class="cleaning-path cleaning-path-2"></div>
+      <div class="cleaning-path cleaning-path-3"></div>
+      <div class="dust-particles">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="container hero-content">
+      <div class="hero-grid">
+        <div class="hero-text">
+          <div class="hero-badge">
+            <i class="ph ph-star"></i>
+            Nawigacja LiDAR + Mopowanie
+          </div>
+
+          <h1 class="hero-title">Czyste podłogi <span>bez Twojego udziału</span></h1>
+
+          <p class="hero-subtitle">KurzoBot sprząta i mopuje całe mieszkanie, a Ty zyskujesz czas dla siebie. Inteligentna nawigacja LiDAR i cicha praca.</p>
+
+          <div class="hero-ctas">
+            <a href="#kup" class="btn btn-primary">
+              <i class="ph ph-shopping-cart"></i>
+              Zamów z gwarancją zwrotu
+            </a>
+            <a href="#jak-dziala" class="btn btn-secondary">
+              Zobacz jak działa
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-image">
+          <div class="img-placeholder" style="aspect-ratio: 1;">
+            <!-- PLACEHOLDER 1: Zdjęcie produktu KurzoBot - robot sprzątający w akcji, nowoczesne wnętrze, czyste podłogi -->
+            [Hero: Robot KurzoBot w nowoczesnym salonie]
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Bar -->
+  <section class="trust-bar">
+    <div class="container">
+      <div class="trust-items">
+        <div class="trust-item">
+          <div class="trust-icon"><i class="ph ph-shield-check"></i></div>
+          <div class="trust-text">
+            <strong>2 lata gwarancji</strong>
+            <span>Pełna ochrona</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon"><i class="ph ph-truck"></i></div>
+          <div class="trust-text">
+            <strong>Darmowa dostawa</strong>
+            <span>W 24-48h</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon"><i class="ph ph-arrow-counter-clockwise"></i></div>
+          <div class="trust-text">
+            <strong>30 dni na zwrot</strong>
+            <span>Bez pytań</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon"><i class="ph ph-star"></i></div>
+          <div class="trust-text">
+            <strong>4.8/5 opinii</strong>
+            <span>Zadowoleni klienci</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wavy Divider -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
+      <path class="wave-1" d="M0,30 C200,60 400,0 600,30 C800,60 1000,0 1200,30 L1200,60 L0,60 Z"></path>
+      <path class="wave-2" d="M0,40 C200,70 400,10 600,40 C800,70 1000,10 1200,40 L1200,60 L0,60 Z"></path>
+    </svg>
+  </div>
+
+  <!-- Product Gallery -->
+  <section class="gallery">
+    <div class="container">
+      <div class="gallery-header fade-in">
+        <span class="section-label">Galeria</span>
+        <h2 class="section-title">Zobacz KurzoBota z każdej strony</h2>
+      </div>
+
+      <div class="gallery-grid">
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder">
+            <!-- PLACEHOLDER 2: Robot od góry - widok na szczotki i ssawkę -->
+            [Galeria 1: Widok z góry]
+          </div>
+        </div>
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder">
+            <!-- PLACEHOLDER 3: Robot z boku - widok na profil i czujniki -->
+            [Galeria 2: Widok z boku]
+          </div>
+        </div>
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder">
+            <!-- PLACEHOLDER 4: Robot na stacji dokującej -->
+            [Galeria 3: Na stacji dokującej]
+          </div>
+        </div>
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder">
+            <!-- PLACEHOLDER 5: Robot w akcji - mopowanie podłogi -->
+            [Galeria 4: Mopowanie w akcji]
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="problem">
+    <div class="container">
+      <div class="problem-grid">
+        <div class="problem-content fade-in">
+          <span class="section-label">Problem</span>
+          <h2 class="section-title">Ile godzin tygodniowo tracisz na odkurzanie?</h2>
+
+          <p class="problem-text">Wracasz zmęczony z pracy, a na podłodze znowu kurz i okruchy. Weekendy zamiast na odpoczynku, spędzasz z odkurzaczem w ręku. Ciągle te same czynności, w kółko.</p>
+
+          <div class="problem-stats">
+            <div class="stat-item">
+              <div class="stat-number">4h</div>
+              <div class="stat-label">Tyle średnio Polak spędza tygodniowo na sprzątaniu</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">72%</div>
+              <div class="stat-label">Osób chciałoby zautomatyzować domowe obowiązki</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="problem-image fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <!-- PLACEHOLDER 6: Zmęczona osoba z tradycyjnym odkurzaczem, frustracja -->
+            [Problem: Zmęczona osoba przy odkurzaniu]
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution / Bento -->
+  <section class="solution" id="funkcje">
+    <div class="container">
+      <div class="solution-header fade-in">
+        <span class="section-label">Rozwiązanie</span>
+        <h2 class="section-title">Poznaj KurzoBota — Kurz znika, czas zostaje</h2>
+        <p class="section-subtitle">Inteligentny robot, który sprząta i mopuje za Ciebie. Precyzyjnie, cicho i dokładnie.</p>
+      </div>
+
+      <div class="bento-grid">
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-inner">
+            <div class="bento-text">
+              <div class="bento-icon"><i class="ph ph-compass"></i></div>
+              <h3 class="bento-title">Nawigacja LiDAR</h3>
+              <p class="bento-desc">Precyzyjne mapowanie mieszkania w czasie rzeczywistym. Robot wie gdzie jest i nigdy nie gubi się.</p>
+            </div>
+            <div class="bento-img">
+              <div class="img-placeholder">
+                <!-- PLACEHOLDER 7: Wizualizacja mapowania LiDAR -->
+                [LiDAR]
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-inner">
+            <div class="bento-text">
+              <div class="bento-icon"><i class="ph ph-drop"></i></div>
+              <h3 class="bento-title">Odkurza i mopuje</h3>
+              <p class="bento-desc">Dwie funkcje w jednym urządzeniu. Kompletna czystość w jednym przejeździe.</p>
+            </div>
+            <div class="bento-img">
+              <div class="img-placeholder">
+                <!-- PLACEHOLDER 8: Zbliżenie na mop i szczotki -->
+                [Mopowanie]
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-inner">
+            <div class="bento-text">
+              <div class="bento-icon"><i class="ph ph-speaker-simple-slash"></i></div>
+              <h3 class="bento-title">Cicha praca</h3>
+              <p class="bento-desc">Pracuje tak cicho, że nie przeszkadza w pracy ani nie budzi dziecka.</p>
+            </div>
+            <div class="bento-img">
+              <div class="img-placeholder">
+                <!-- PLACEHOLDER 9: Robot pracujący w tle, osoba przy laptopie -->
+                [Cicha praca]
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bento-card fade-in">
+          <div class="spotlight"></div>
+          <div class="bento-inner">
+            <div class="bento-text">
+              <div class="bento-icon"><i class="ph ph-calendar-check"></i></div>
+              <h3 class="bento-title">Zaplanowane sprzątanie</h3>
+              <p class="bento-desc">Ustaw harmonogram i zapomnij. Sprząta gdy jesteś w pracy.</p>
+            </div>
+            <div class="bento-img">
+              <div class="img-placeholder">
+                <!-- PLACEHOLDER 10: Aplikacja na telefonie z harmonogramem -->
+                [Aplikacja]
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="jak-dziala">
+    <div class="container">
+      <div class="how-header fade-in">
+        <span class="section-label">Jak to działa</span>
+        <h2 class="section-title">3 kroki do czystego mieszkania</h2>
+      </div>
+
+      <div class="steps">
+        <div class="step fade-in">
+          <div class="step-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 11: Rozpakowywanie robota, ustawianie stacji -->
+              [Krok 1: Rozpakowanie]
+            </div>
+          </div>
+          <div class="step-number">1</div>
+          <h3 class="step-title">Rozpakuj i postaw</h3>
+          <p class="step-desc">Wyjmij KurzoBota z pudełka, podłącz stację dokującą i pozwól mu zmapować mieszkanie.</p>
+        </div>
+
+        <div class="step fade-in">
+          <div class="step-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 12: Osoba konfigurująca aplikację na telefonie -->
+              [Krok 2: Konfiguracja aplikacji]
+            </div>
+          </div>
+          <div class="step-number">2</div>
+          <h3 class="step-title">Ustaw harmonogram</h3>
+          <p class="step-desc">W aplikacji wybierz dni i godziny sprzątania. KurzoBot dostosuje się do Twojego trybu życia.</p>
+        </div>
+
+        <div class="step fade-in">
+          <div class="step-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 13: Osoba relaksująca się w czystym domu, robot w tle -->
+              [Krok 3: Relaks w czystym domu]
+            </div>
+          </div>
+          <div class="step-number">3</div>
+          <h3 class="step-title">Ciesz się wolnym czasem</h3>
+          <p class="step-desc">Wracaj do czystego domu bez żadnego wysiłku. Kurz znika, czas zostaje.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="comparison">
+    <div class="container">
+      <div class="comparison-header fade-in">
+        <span class="section-label">Porównanie</span>
+        <h2 class="section-title">Dlaczego KurzoBot, a nie tradycyjny odkurzacz?</h2>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="comparison-card fade-in">
+          <h3>Tradycyjne odkurzanie</h3>
+          <p>Wymaga Twojego czasu i energii przy każdym sprzątaniu.</p>
+          <ul>
+            <li>Musisz być w domu i fizycznie odkurzać</li>
+            <li>Zajmuje minimum 30-60 minut za każdym razem</li>
+            <li>Ciężki sprzęt do przechowywania i przenoszenia</li>
+            <li>Hałaśliwa praca przeszkadza domownikom</li>
+            <li>Mopowanie wymaga osobnego sprzętu</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card highlight fade-in">
+          <h3>KurzoBot</h3>
+          <p>Automatyzacja, która pracuje za Ciebie — codziennie i niezawodnie.</p>
+          <ul>
+            <li>Sprząta gdy Ciebie nie ma w domu</li>
+            <li>Pełne sprzątanie mieszkania w 1 cyklu</li>
+            <li>Kompaktowa stacja dokująca, zero bałaganu</li>
+            <li>Cicha praca — nie przeszkadza w niczym</li>
+            <li>Odkurza i mopuje w jednym przejeździe</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Personas -->
+  <section class="personas" id="dla-kogo">
+    <div class="container">
+      <div class="personas-header fade-in">
+        <span class="section-label">Dla kogo</span>
+        <h2 class="section-title">KurzoBot jest idealny dla...</h2>
+      </div>
+
+      <div class="personas-grid">
+        <div class="persona-card fade-in">
+          <div class="persona-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 14: Zapracowany profesjonalista w home office -->
+              [Persona: Zapracowany profesjonalista]
+            </div>
+          </div>
+          <div class="persona-content">
+            <h3 class="persona-title">Zapracowanych profesjonalistów</h3>
+            <p class="persona-desc">Pracujesz dużo, a po powrocie do domu nie masz siły na sprzątanie. KurzoBot zadba o czystość, gdy Ty skupiasz się na karierze.</p>
+          </div>
+        </div>
+
+        <div class="persona-card fade-in">
+          <div class="persona-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 15: Rodzina z dziećmi i zwierzętami -->
+              [Persona: Rodzina z dziećmi]
+            </div>
+          </div>
+          <div class="persona-content">
+            <h3 class="persona-title">Rodzin z dziećmi</h3>
+            <p class="persona-desc">Okruchy, piasek, sierść — codzienność z dziećmi i zwierzakami. KurzoBot jeździ 2x dziennie i utrzymuje porządek bez Twojego wysiłku.</p>
+          </div>
+        </div>
+
+        <div class="persona-card fade-in">
+          <div class="persona-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 16: Senior w przytulnym mieszkaniu -->
+              [Persona: Seniorzy]
+            </div>
+          </div>
+          <div class="persona-content">
+            <h3 class="persona-title">Seniorów</h3>
+            <p class="persona-desc">Dźwiganie ciężkiego odkurzacza to przeszłość. Prosta obsługa — jeden przycisk i robot robi resztę.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials" id="opinie">
+    <div class="container">
+      <div class="testimonials-header fade-in">
+        <span class="section-label">Opinie</span>
+        <h2 class="section-title">Co mówią nasi klienci</h2>
+      </div>
+
+      <div class="testimonials-grid">
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+          </div>
+          <p class="testimonial-text">"Byłam sceptyczna, ale po miesiącu nie wyobrażam sobie domu bez KurzoBota. Wracam z pracy do czystego mieszkania — to uczucie nie do opisania."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">MK</div>
+            <div class="testimonial-info">
+              <strong>Marta K.</strong>
+              <span>Warszawa, 65m²</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+          </div>
+          <p class="testimonial-text">"Mamy dwójkę dzieci i psa. Okruchy i sierść wszędzie. KurzoBot jeździ 2 razy dziennie i jakoś dajemy radę. Kupiliśmy drugi dla teściów."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">PR</div>
+            <div class="testimonial-info">
+              <strong>Piotr R.</strong>
+              <span>Kraków, rodzina 2+2</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star"></i>
+            <i class="ph-fill ph-star-half"></i>
+          </div>
+          <p class="testimonial-text">"Pracuję zdalnie i cisza była dla mnie kluczowa. KurzoBot jest tak cichy, że nie słyszę go podczas spotkań online. Polecam każdemu freelancerowi."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">AS</div>
+            <div class="testimonial-info">
+              <strong>Anna S.</strong>
+              <span>Wrocław, praca zdalna</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="faq-header fade-in">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Najczęściej zadawane pytania</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Czy KurzoBot radzi sobie z dywanami?
+            <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Tak! KurzoBot automatycznie rozpoznaje dywany i zwiększa moc ssania. Radzi sobie zarówno z krótkim włosiem, jak i dywanami o średniej grubości. Na dywanach automatycznie wyłącza funkcję mopowania.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Jak duże mieszkanie może posprzątać na jednym ładowaniu?
+            <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>KurzoBot na jednym ładowaniu posprząta mieszkanie do 120m². Jeśli bateria się wyczerpie, robot automatycznie wróci do stacji, naładuje się i dokończy sprzątanie dokładnie od miejsca, gdzie skończył.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Czy jest głośny? Mogę go uruchomić w nocy?
+            <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>KurzoBot pracuje na poziomie około 55 dB — to mniej niż zwykła rozmowa. Ma też tryb cichy (45 dB), idealny na noc lub gdy masz spotkanie online. Nie obudzi nikogo w sąsiednim pokoju.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Co jeśli robot utknie lub wjedzie gdzieś, gdzie nie powinien?
+            <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Nawigacja LiDAR tworzy dokładną mapę mieszkania. W aplikacji możesz zaznaczyć strefy zakazane — robot ich nie przekroczy. Jeśli mimo to utknie, dostaniesz powiadomienie na telefon.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Czy mogę sterować KurzoBotem, gdy jestem poza domem?
+            <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Oczywiście! Aplikacja mobilna pozwala uruchomić sprzątanie, sprawdzić status i zobaczyć mapę z każdego miejsca na świecie. Wystarczy, że robot jest połączony z WiFi.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Co jeśli mi się nie spodoba?
+            <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Masz 30 dni na testy. Jeśli KurzoBot nie spełni Twoich oczekiwań — zwracasz, my oddajemy pieniądze. Bez pytań, bez tłumaczenia się. Zero ryzyka.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Package -->
+  <section class="package">
+    <div class="container">
+      <div class="package-header fade-in">
+        <span class="section-label">Zestaw</span>
+        <h2 class="section-title">Co otrzymasz w zestawie</h2>
+      </div>
+
+      <div class="package-grid">
+        <div class="package-img fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <!-- PLACEHOLDER 17: Unboxing - wszystkie elementy zestawu rozłożone -->
+            [Zestaw: Unboxing - wszystkie elementy]
+          </div>
+        </div>
+
+        <div class="package-content fade-in">
+          <h3>Kompletny zestaw KurzoBot Pro</h3>
+          <ul class="package-list">
+            <li><i class="ph ph-check-circle"></i> Robot KurzoBot Pro</li>
+            <li><i class="ph ph-check-circle"></i> Stacja dokująca z ładowarką</li>
+            <li><i class="ph ph-check-circle"></i> Nakładka mopująca (2 szt.)</li>
+            <li><i class="ph ph-check-circle"></i> Zapasowe szczotki boczne (2 szt.)</li>
+            <li><i class="ph ph-check-circle"></i> Filtr HEPA (zapasowy)</li>
+            <li><i class="ph ph-check-circle"></i> Instrukcja w języku polskim</li>
+            <li><i class="ph ph-check-circle"></i> 2 lata gwarancji</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Offer -->
+  <section class="offer" id="kup">
+    <div class="container">
+      <div class="offer-header fade-in">
+        <span class="section-label">Oferta</span>
+        <h2 class="section-title">Zamów swojego KurzoBota</h2>
+      </div>
+
+      <div class="offer-box fade-in">
+        <div class="offer-badge">Bestseller 2026</div>
+
+        <div class="offer-product">
+          <div class="offer-img">
+            <div class="img-placeholder">
+              <!-- PLACEHOLDER 18: Packshot produktu KurzoBot Pro -->
+              [Oferta: Packshot KurzoBot Pro]
+            </div>
+          </div>
+          <h3 class="offer-name">KurzoBot Pro</h3>
+          <p class="offer-tagline">Robot sprzątający z nawigacją LiDAR i mopowaniem</p>
+        </div>
+
+        <div class="offer-features">
+          <div class="offer-feature">
+            <i class="ph ph-check-circle"></i>
+            <span>Robot KurzoBot Pro</span>
+          </div>
+          <div class="offer-feature">
+            <i class="ph ph-check-circle"></i>
+            <span>Stacja dokująca z ładowarką</span>
+          </div>
+          <div class="offer-feature">
+            <i class="ph ph-check-circle"></i>
+            <span>Nakładka mopująca (2 szt.)</span>
+          </div>
+          <div class="offer-feature">
+            <i class="ph ph-check-circle"></i>
+            <span>Zapasowe szczotki boczne</span>
+          </div>
+          <div class="offer-feature">
+            <i class="ph ph-check-circle"></i>
+            <span>2 lata gwarancji</span>
+          </div>
+          <div class="offer-feature">
+            <i class="ph ph-check-circle"></i>
+            <span>Darmowa dostawa</span>
+          </div>
+        </div>
+
+        <div class="offer-price">
+          <span class="price-old">1 299 zł</span>
+          <span class="price-new">999 <span>zł</span></span>
+        </div>
+
+        <a href="#" class="btn btn-primary offer-cta">
+          <i class="ph ph-shopping-cart"></i>
+          Zamów z 30-dniową gwarancją zwrotu
+        </a>
+
+        <div class="offer-guarantee">
+          <i class="ph ph-shield-check"></i>
+          30 dni na zwrot • Bezpieczna płatność • Gwarancja satysfakcji
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Banner -->
+  <section class="cta-banner">
+    <div class="container">
+      <h2 class="cta-title">Kurz znika, czas zostaje</h2>
+      <p class="cta-subtitle">Dołącz do tysięcy osób, które odzyskały wolny czas dzięki KurzoBotowi</p>
+      <a href="#kup" class="btn btn-primary">
+        <i class="ph ph-shopping-cart"></i>
+        Zamów swojego KurzoBota
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/kurzobot/logo.png" alt="KurzoBot" width="120" height="40">
+          <p>KurzoBot to polska marka inteligentnych robotów sprzątających. Kurz znika, czas zostaje.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Informacje</h4>
+          <ul>
+            <li><a href="#funkcje">Funkcje</a></li>
+            <li><a href="#jak-dziala">Jak działa</a></li>
+            <li><a href="#opinie">Opinie</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Kontakt</h4>
+          <ul>
+            <li><a href="mailto:kontakt@kurzobot.pl">kontakt@kurzobot.pl</a></li>
+            <li><a href="tel:+48123456789">+48 123 456 789</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 KurzoBot. Wszystkie prawa zastrzeżone.</p>
+        <div class="footer-legal">
+          <a href="#">Regulamin</a>
+          <a href="#">Polityka prywatności</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Sticky CTA (Mobile) -->
+  <div class="sticky-cta">
+    <a href="#kup" class="btn btn-primary">
+      <i class="ph ph-shopping-cart"></i>
+      Zamów za 999 zł
+    </a>
+  </div>
+
+  <!-- Cookie Banner -->
+  <div class="cookie-banner" id="cookieBanner">
+    <p>Używamy plików cookies, aby zapewnić najlepsze doświadczenia na naszej stronie. Kontynuując, zgadzasz się na ich użycie.</p>
+    <div class="cookie-buttons">
+      <button class="btn btn-secondary" onclick="closeCookieBanner()">Ustawienia</button>
+      <button class="btn btn-primary" onclick="acceptCookies()">Akceptuję</button>
+    </div>
+  </div>
+
+  <script>
+    // Mobile menu
+    function toggleMobileMenu() {
+      document.getElementById('mobileMenu').classList.toggle('active');
+    }
+
+    // Header scroll effect
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+
+    // Fade in on scroll
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-question').forEach(button => {
+      button.addEventListener('click', () => {
+        const item = button.parentElement;
+        const isActive = item.classList.contains('active');
+
+        // Close all
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+
+        // Open clicked if wasn't active
+        if (!isActive) {
+          item.classList.add('active');
+        }
+      });
+    });
+
+    // Spotlight effect on bento cards
+    document.querySelectorAll('.bento-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const spotlight = card.querySelector('.spotlight');
+        const rect = card.getBoundingClientRect();
+        spotlight.style.left = (e.clientX - rect.left - 150) + 'px';
+        spotlight.style.top = (e.clientY - rect.top - 150) + 'px';
+      });
+    });
+
+    // Cookie banner
+    function showCookieBanner() {
+      if (!localStorage.getItem('cookiesAccepted')) {
+        setTimeout(() => {
+          document.getElementById('cookieBanner').classList.add('show');
+        }, 2000);
+      }
+    }
+
+    function acceptCookies() {
+      localStorage.setItem('cookiesAccepted', 'true');
+      document.getElementById('cookieBanner').classList.remove('show');
+    }
+
+    function closeCookieBanner() {
+      document.getElementById('cookieBanner').classList.remove('show');
+    }
+
+    showCookieBanner();
+  </script>
+</body>
+</html>
