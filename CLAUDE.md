@@ -35,6 +35,15 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
 
 ## Procedury Claude
 
+### Tworzenie umów dla klientów
+**Plik:** `CLAUDE_UMOWY_PROCEDURE.md`
+
+Kiedy uzytkownik mowi "zrob umowe dla X" lub "dopracuj umowe":
+1. **NIGDY nie modyfikuj wzoru** `umowy/umowa-budowa-sklepu.html`
+2. Skopiuj wzór do `umowy/klienci/imie-nazwisko.html`
+3. Wprowadź zmiany w kopii (dane klienta, negocjowane warunki)
+4. Folder `umowy/klienci/` jest w `.gitignore` - umowy klientów NIE trafiają na serwer
+
 ### Generowanie brandingu
 **Plik:** `CLAUDE_BRANDING_PROCEDURE.md`
 
