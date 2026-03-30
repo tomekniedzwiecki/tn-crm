@@ -43,11 +43,11 @@
       --neutral-mid: #6B7280;
       --neutral-light: #FEF7ED;
 
-      /* Backgrounds */
-      --bg-white: #FFFFFF;
+      /* Backgrounds - warm, not flat */
+      --bg-white: #FEFCF9;  /* warm cream, not pure white */
       --bg-cream: #FEF7ED;
-      --bg-soft: #F9FAFB;
-      --bg-muted: #F3F4F6;
+      --bg-soft: #FBF8F5;   /* warmer */
+      --bg-muted: #F5F2EF;  /* warmer */
 
       /* Text */
       --text-primary: #1F2937;
@@ -55,15 +55,15 @@
       --text-tertiary: #9CA3AF;
       --text-on-primary: #FFFFFF;
 
-      /* Borders & Shadows */
-      --border-light: rgba(31, 41, 55, 0.06);
-      --border-medium: rgba(31, 41, 55, 0.1);
-      --shadow-sm: 0 1px 3px rgba(31, 41, 55, 0.04);
-      --shadow-md: 0 4px 16px rgba(31, 41, 55, 0.08);
-      --shadow-lg: 0 16px 48px rgba(31, 41, 55, 0.1);
-      --shadow-xl: 0 24px 64px rgba(31, 41, 55, 0.12);
-      --shadow-primary: 0 8px 32px rgba(45, 212, 191, 0.25);
-      --shadow-glow: 0 0 40px rgba(45, 212, 191, 0.15);
+      /* Borders & Shadows - colored, not black */
+      --border-light: rgba(45, 212, 191, 0.08);
+      --border-medium: rgba(45, 212, 191, 0.15);
+      --shadow-sm: 0 1px 3px rgba(45, 212, 191, 0.06), 0 1px 2px rgba(251, 146, 60, 0.04);
+      --shadow-md: 0 4px 16px rgba(45, 212, 191, 0.12), 0 2px 8px rgba(251, 146, 60, 0.06);
+      --shadow-lg: 0 16px 48px rgba(45, 212, 191, 0.15), 0 8px 24px rgba(251, 146, 60, 0.08);
+      --shadow-xl: 0 24px 64px rgba(45, 212, 191, 0.18), 0 12px 32px rgba(251, 146, 60, 0.1);
+      --shadow-primary: 0 8px 32px rgba(45, 212, 191, 0.35);
+      --shadow-glow: 0 0 60px rgba(45, 212, 191, 0.2), 0 0 30px rgba(251, 146, 60, 0.1);
 
       /* Gradients */
       --gradient-hero: linear-gradient(135deg, #FEF7ED 0%, #FFFFFF 50%, #F0FDFA 100%);
@@ -98,6 +98,102 @@
       overflow-x: hidden;
     }
 
+    /* ═══════════════════════════════════════════════════════════
+       NOISE TEXTURE OVERLAY - adds depth to backgrounds
+    ═══════════════════════════════════════════════════════════ */
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.015;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ORCHESTRATED REVEAL - staggered page load animations
+    ═══════════════════════════════════════════════════════════ */
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes bounceIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+      }
+      60% {
+        transform: scale(1.05) translateY(-5px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .reveal {
+      opacity: 0;
+      animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .reveal-scale {
+      opacity: 0;
+      animation: fadeInScale 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .reveal-bounce {
+      opacity: 0;
+      animation: bounceIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Reveal delays - for staggered animations in sections */
+    .reveal-delay-1 { animation-delay: 0.15s; }
+    .reveal-delay-2 { animation-delay: 0.3s; }
+    .reveal-delay-3 { animation-delay: 0.45s; }
+    .reveal-delay-4 { animation-delay: 0.6s; }
+
+    /* Scroll-triggered reveal for sections below the fold */
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .scroll-reveal.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .container {
       max-width: var(--container-width);
       margin: 0 auto;
@@ -118,17 +214,27 @@
     .section-label {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       font-family: var(--font-accent);
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
       color: var(--primary-dark);
       margin-bottom: 16px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.08) 0%, rgba(251, 146, 60, 0.06) 100%);
+      border-radius: 30px;
     }
 
     .section-label::before {
       content: '🐾';
-      font-size: 16px;
+      font-size: 18px;
+      animation: pawBounce 2s ease-in-out infinite;
+    }
+
+    @keyframes pawBounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-3px) rotate(-5deg); }
+      75% { transform: translateY(-3px) rotate(5deg); }
     }
 
     .section-title {
@@ -187,8 +293,12 @@
     }
 
     .btn-primary:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 16px 48px rgba(45, 212, 191, 0.35);
+      transform: translateY(-4px) scale(1.03) rotate(-1deg);
+      box-shadow: 0 20px 50px rgba(45, 212, 191, 0.4), 0 8px 20px rgba(251, 146, 60, 0.2);
+    }
+
+    .btn-primary:active {
+      transform: translateY(-2px) scale(1.01);
     }
 
     .btn-secondary {
@@ -402,15 +512,22 @@
       overflow: hidden;
     }
 
+    /* Mesh gradient background for hero - adds depth */
     .hero::before {
       content: '';
       position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 80%;
-      height: 150%;
-      background: radial-gradient(ellipse, rgba(45, 212, 191, 0.08) 0%, transparent 60%);
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 80%, rgba(251, 146, 60, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 90% 20%, rgba(45, 212, 191, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(251, 191, 36, 0.05) 0%, transparent 60%);
       pointer-events: none;
+      animation: meshMove 15s ease-in-out infinite;
+    }
+
+    @keyframes meshMove {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     .hero::after {
@@ -588,7 +705,13 @@
 
     .hero-product {
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
+      transform: translateX(20px) rotate(2deg);  /* Grid-breaking: slight offset */
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .hero-product:hover {
+      transform: translateX(20px) rotate(0deg) scale(1.02);
     }
 
     .hero-product .img-placeholder {
@@ -675,9 +798,19 @@
     }
 
     .trust-item:hover {
-      transform: translateY(-2px);
+      transform: translateY(-4px) scale(1.02);
       box-shadow: var(--shadow-md);
       border-color: var(--primary);
+    }
+
+    .trust-item:hover .trust-icon {
+      animation: wiggle 0.5s ease;
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-5deg); }
+      75% { transform: rotate(5deg); }
     }
 
     .trust-icon {
@@ -689,6 +822,7 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      transition: transform 0.3s ease;
     }
 
     .trust-icon svg {
@@ -720,6 +854,31 @@
     .problem {
       padding: var(--section-padding) 0;
       background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative paw print pattern */
+    .problem::before {
+      content: '🐾';
+      position: absolute;
+      top: 10%;
+      right: 5%;
+      font-size: 120px;
+      opacity: 0.03;
+      transform: rotate(-15deg);
+      pointer-events: none;
+    }
+
+    .problem::after {
+      content: '🐾';
+      position: absolute;
+      bottom: 15%;
+      left: 8%;
+      font-size: 80px;
+      opacity: 0.025;
+      transform: rotate(20deg);
+      pointer-events: none;
     }
 
     .problem-inner {
@@ -757,13 +916,25 @@
       border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--border-light);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .problem-stat:hover {
+      transform: translateY(-6px) rotate(-1deg);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--secondary);
+    }
+
+    .problem-stat:nth-child(2):hover {
+      transform: translateY(-6px) rotate(1deg);
     }
 
     .problem-stat-value {
       font-family: var(--font-heading);
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 700;
       color: var(--secondary);
+      transition: transform 0.3s ease;
       margin-bottom: 4px;
     }
 
@@ -812,29 +983,50 @@
     }
 
     .bento-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
+      transform: translateY(-8px) rotate(-0.5deg);
+      box-shadow: var(--shadow-lg), 12px 12px 0 rgba(45, 212, 191, 0.15);
       border-color: var(--primary);
     }
 
-    .bento-card:nth-child(2):hover { border-color: var(--secondary); }
-    .bento-card:nth-child(3):hover { border-color: var(--accent); }
-    .bento-card:nth-child(4):hover { border-color: var(--primary-dark); }
+    .bento-card:nth-child(2):hover {
+      border-color: var(--secondary);
+      transform: translateY(-8px) rotate(0.5deg);
+      box-shadow: var(--shadow-lg), -12px 12px 0 rgba(251, 146, 60, 0.15);
+    }
+    .bento-card:nth-child(3):hover {
+      border-color: var(--accent);
+      transform: translateY(-8px) rotate(-0.3deg);
+      box-shadow: var(--shadow-lg), 8px 12px 0 rgba(251, 191, 36, 0.15);
+    }
+    .bento-card:nth-child(4):hover {
+      border-color: var(--primary-dark);
+      transform: translateY(-8px) rotate(0.3deg);
+      box-shadow: var(--shadow-lg), -8px 12px 0 rgba(45, 212, 191, 0.2);
+    }
 
     .bento-icon {
-      width: 56px;
-      height: 56px;
+      width: 60px;
+      height: 60px;
       background: var(--primary-soft);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 20px;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .bento-card:hover .bento-icon {
+      transform: scale(1.1) rotate(-5deg);
     }
 
     .bento-card:nth-child(2) .bento-icon { background: var(--secondary-soft); }
     .bento-card:nth-child(3) .bento-icon { background: var(--accent-soft); }
     .bento-card:nth-child(4) .bento-icon { background: rgba(45, 212, 191, 0.15); }
+
+    .bento-card:nth-child(2):hover .bento-icon { transform: scale(1.1) rotate(5deg); }
+    .bento-card:nth-child(3):hover .bento-icon { transform: scale(1.1) rotate(-3deg); }
+    .bento-card:nth-child(4):hover .bento-icon { transform: scale(1.1) rotate(3deg); }
 
     .bento-icon svg {
       width: 28px;
@@ -2068,21 +2260,21 @@
     <div class="container">
       <div class="hero-inner">
         <div class="hero-content">
-          <div class="hero-badge">
+          <div class="hero-badge reveal delay-1">
             <span class="hero-badge-dot"></span>
             Salon groomerski w Twoim domu
           </div>
-          <h1 class="hero-title">
+          <h1 class="hero-title reveal delay-2">
             Twój pupil jak po groomerze — <span class="highlight">w 15 minut, w domu</span>
           </h1>
-          <p class="hero-description">
+          <p class="hero-description reveal delay-3">
             Jedno urządzenie czesze, strzyże i od razu zbiera sierść do zbiornika. Zero bałaganu po sesji, zero stresu dla pupila. Koniec z drogimi wizytami u groomera.
           </p>
-          <div class="hero-cta">
+          <div class="hero-cta reveal delay-4">
             <a href="#offer" class="btn btn-primary">Zamów z rabatem</a>
             <a href="#solution" class="btn btn-secondary">Jak to działa?</a>
           </div>
-          <div class="hero-features">
+          <div class="hero-features reveal delay-5">
             <div class="hero-feature">
               <span class="hero-feature-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2104,7 +2296,7 @@
           </div>
         </div>
         <div class="hero-visual">
-          <div class="hero-product">
+          <div class="hero-product reveal-bounce delay-3">
             <div class="img-placeholder">
               <div class="ph-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
@@ -2114,19 +2306,19 @@
             </div>
           </div>
           <div class="hero-specs">
-            <div class="hero-spec">
+            <div class="hero-spec reveal delay-5">
               <div class="hero-spec-value">11 kPa</div>
               <div class="hero-spec-label">Moc ssania</div>
             </div>
-            <div class="hero-spec">
+            <div class="hero-spec reveal delay-6">
               <div class="hero-spec-value">2.5L</div>
               <div class="hero-spec-label">Zbiornik</div>
             </div>
-            <div class="hero-spec">
+            <div class="hero-spec reveal delay-7">
               <div class="hero-spec-value">HEPA 12</div>
               <div class="hero-spec-label">Filtr</div>
             </div>
-            <div class="hero-spec">
+            <div class="hero-spec reveal delay-8">
               <div class="hero-spec-value">99%</div>
               <div class="hero-spec-label">Skuteczność</div>
             </div>
@@ -2913,6 +3105,21 @@
     }, { threshold: 0.1 });
 
     fadeElements.forEach(el => observer.observe(el));
+
+    // Scroll reveal for sections below the fold
+    const scrollRevealElements = document.querySelectorAll('.scroll-reveal');
+    const scrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          // Add staggered delay based on element's position in the group
+          entry.target.style.animationDelay = `${index * 0.1}s`;
+          entry.target.classList.add('revealed');
+          scrollObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    scrollRevealElements.forEach(el => scrollObserver.observe(el));
 
     // Cookie banner
     const cookieBanner = document.getElementById('cookieBanner');

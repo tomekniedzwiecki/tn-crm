@@ -58,8 +58,8 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 
 Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
-### Generowanie landing page (2 etapy)
-**Pliki:** `CLAUDE_LANDING_PROCEDURE.md` + `CLAUDE_LANDING_REVIEW.md`
+### Generowanie landing page (3 etapy)
+**Pliki:** `CLAUDE_LANDING_PROCEDURE.md` + `CLAUDE_LANDING_REVIEW.md` + `CLAUDE_LANDING_DESIGN.md`
 
 Kiedy uzytkownik mowi "zrob landing dla workflow X":
 
@@ -71,14 +71,23 @@ Kiedy uzytkownik mowi "zrob landing dla workflow X":
 5. Wygeneruj kompletny `index.html` z inline CSS/JS
 6. Zapisz do `landing-pages/[nazwa-marki]/index.html`
 
-**ETAP 2 — Weryfikacja** (`CLAUDE_LANDING_REVIEW.md`) — OBOWIĄZKOWY:
+**ETAP 2 — Weryfikacja treści** (`CLAUDE_LANDING_REVIEW.md`) — OBOWIĄZKOWY:
 1. Sprawdź kompletność sekcji (15 wymaganych)
 2. Sprawdź placeholdery zdjęć (min. 15-20)
-3. Zweryfikuj treści pod kątem grupy docelowej
-4. Sprawdź technikalia (fonty, meta, PageSpeed)
-5. Dopiero po pozytywnej weryfikacji: commit & deploy
+3. **HERO DEEP DIVE** — najważniejsza sekcja! (test 5 sekund)
+4. Zweryfikuj treści pod kątem grupy docelowej
+5. Sprawdź technikalia (fonty, meta, PageSpeed)
 
-Wzorce: `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (jasny, pet care).
+**ETAP 3 — Dopracowanie designu** (`CLAUDE_LANDING_DESIGN.md`) — OBOWIĄZKOWY:
+1. Wybierz kierunek estetyczny (Luxury, Playful, Brutalist, Organic, Editorial, Retro-Futuristic)
+2. Dopracuj typografię (charakterystyczne fonty, nie generyczne)
+3. Dodaj głębię kolorom (nie czysty #000/#FFF)
+4. Przełam przewidywalność układu (asymetria, overlap, grid-breaking)
+5. Dodaj animacje i micro-interactions (staggered reveal, zaskakujące hovery)
+6. Dodaj tekstury i głębię tłom
+7. Dopiero po pozytywnej weryfikacji: commit & deploy
+
+Wzorce: `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (jasny, pet care, Playful/Toy-like).
 
 ## Supabase Edge Functions
 
