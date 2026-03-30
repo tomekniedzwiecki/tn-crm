@@ -157,24 +157,201 @@ Przejrzyj całą stronę i zanotuj:
 - Co można wzmocnić?
 - Gdzie brakuje charakteru?
 
-### Krok 2: Hero jako priorytet
-Hero to 80% pierwszego wrażenia. Upewnij się że:
-- Wizualnie zatrzymuje scrollowanie
-- Ma unikalny element (animacja, układ, efekt)
-- Natychmiast komunikuje ton marki
+### Krok 2: Hero jako priorytet — CENTRALNA KOMPOZYCJA
 
-### Krok 3: Signature elements
+Hero to 80% pierwszego wrażenia. **NIE RÓB** standardowego 2-kolumnowego layoutu (tekst + obraz).
+
+**Zamiast tego użyj CENTRALNEJ KOMPOZYCJI:**
+
+```
+┌─────────────────────────────────────────────┐
+│        🐾  floating decorations  💕         │
+│                                             │
+│            [badge - centered]               │
+│         [headline - centered]               │
+│        [subheadline - centered]             │
+│           [CTA buttons]                     │
+│                                             │
+│    ┌─────────────────────────┐              │
+│    │   floating    PRODUCT   floating      │
+│    │   badges ───► [image] ◄─── badges    │
+│    │               + glow                   │
+│    │               + ring                   │
+│    └─────────────────────────┘              │
+│                                             │
+│         animated particles                  │
+└─────────────────────────────────────────────┘
+```
+
+**Wymagane elementy Hero:**
+
+1. **Floating decorations** w tle (emoji/ikony związane z produktem)
+   - 5-8 elementów z `animation: float Xs ease-in-out infinite`
+   - Różne rozmiary, pozycje, animation-delay
+
+2. **Animated gradient orbs** (pseudo-elements ::before/::after)
+   - Duże koła z radial-gradient
+   - Subtelna animacja ruchu
+
+3. **Produkt w centrum** z efektami:
+   - **Glow ring** - pulsująca poświata
+   - **Rotating ring** - obracający się dashed border z ikoną
+   - **3D float animation** - produkt "unosi się"
+   - **Hover**: zatrzymanie animacji + scale
+
+4. **Feature badges** wokół produktu
+   - 4 badge'e w rogach
+   - Każdy z ikoną (emoji) + krótki tekst
+   - Floating animation
+
+5. **Animated particles** (opcjonalne, wg produktu)
+   - Np. cząsteczki sierści dla pet care
+   - Animacja "ssania" w stronę produktu
+
+6. **Wavy divider** pod Hero
+   - SVG wave zamiast prostej linii
+   - 2 warstwy z różnymi kolorami
+
+**CSS do skopiowania:**
+```css
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hero-product {
+  animation: productFloat 4s ease-in-out infinite;
+}
+
+@keyframes productFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+```
+
+### Krok 3: Dopracowanie KAŻDEJ sekcji (nie tylko Hero!)
+
+**Trust Bar:**
+- Zmień z prostego paska na floating cards
+- Dodaj ikony z animacją (wiggle on hover)
+- Różne tło niż sąsiednie sekcje
+
+**Problem Section:**
+- Dodaj dekoracyjne elementy w tle (emoji, shapes)
+- Statystyki z wyróżniającymi się liczbami (duży font, gradient)
+- Hover na kartach stat z rotacją
+
+**Solution/Benefits (Bento Grid):**
+- Różne rozmiary kart (nie wszystkie identyczne!)
+- Jedna karta może być 2x szeroka lub wysoka
+- Ikony z bounce/rotate na hover
+- Kolorowe offset shadows na hover
+
+**How It Works:**
+- Zamiast prostych kart — **timeline z linią łączącą**
+- Lub **numbered steps z dużymi cyframi**
+- Animowane strzałki/linie między krokami
+
+**Testimonials:**
+- Duże cudzysłowy jako dekoracja
+- Zdjęcia/avatary z kolorowym border
+- Karty z różnym tłem (co druga inna)
+
+**Pricing/Offer:**
+- **WYRÓŻNIJ SIĘ** — to najważniejsza sekcja po Hero
+- Duży, wycentrowany box z gradientowym border
+- Przekreślona stara cena z animacją
+- Pulsujący CTA button
+- Badge "Bestseller" / "Najczęściej wybierany"
+- Lista korzyści z checkmarkami
+
+**FAQ:**
+- Accordion z płynną animacją
+- Ikona +/- z rotacją
+- Wyróżnione tło dla otwartego pytania
+
+**Footer:**
+- Wavy divider na górze
+- Dekoracyjne elementy (logo duże, emoji)
+- Social icons z hover effects
+
+### Krok 4: Wavy dividers między sekcjami
+
+**NIE UŻYWAJ** prostych linii ani border-top/bottom.
+
+**UŻYWAJ** SVG wave dividers:
+```html
+<div class="wavy-divider">
+  <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+    <path fill="#FEF7ED" d="M0,64 C360,120 720,0 1080,64 C1260,96 1380,80 1440,64 L1440,120 L0,120 Z"/>
+  </svg>
+</div>
+```
+
+Dodaj między: Hero→Trust, Problem→Solution, Testimonials→Offer
+
+### Krok 5: MOBILE — OBOWIĄZKOWE DOPRACOWANIE
+
+**Hero na mobile:**
+- Ukryj floating decorations (`display: none`)
+- Ukryj particles animations
+- Feature badges w linii pod produktem (nie floating)
+- Mniejszy produkt, mniejsze fonty
+- Ring/glow ukryte lub zmniejszone
+
+**Karty na mobile:**
+- `grid-template-columns: 1fr` (jedna kolumna)
+- Mniejsze paddingi
+- Hover effects zamień na tap-friendly
+
+**Testuj na 375px szerokości!**
+
+```css
+@media (max-width: 768px) {
+  .floating-paw,
+  .floating-heart,
+  .suction-particles,
+  .hero-product-ring,
+  .hero-product-glow {
+    display: none;
+  }
+
+  .feature-badge {
+    position: static;
+    animation: none;
+  }
+
+  .hero-feature-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+}
+```
+
+### Krok 6: Signature elements
 Stwórz 2-3 elementy powtarzające się na stronie:
-- Charakterystyczny styl kart
-- Unikalny sposób prezentacji liczb
-- Spójny styl hover effects
+- Charakterystyczny styl kart (ten sam border-radius, shadow, hover)
+- Unikalny sposób prezentacji liczb (gradient text, duży font)
+- Spójny styl hover effects (ta sama rotacja, shadow offset)
+- Spójna kolorystyka akcentów
 
-### Krok 4: Polish pass
-Przejdź sekcja po sekcji i dopracuj detale:
-- Spacing
-- Shadows
-- Border radius
-- Transitions
+### Krok 7: Final polish pass
+Przejdź sekcja po sekcji i dopracuj:
+- Spacing (różny padding między sekcjami!)
+- Shadows (kolorowe, nie czarne)
+- Border radius (spójny w całej stronie)
+- Transitions (cubic-bezier, nie linear)
 
 ---
 

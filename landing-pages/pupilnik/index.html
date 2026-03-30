@@ -1383,6 +1383,20 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 32px;
+      position: relative;
+    }
+
+    /* Connector line between steps */
+    .how-steps::before {
+      content: '';
+      position: absolute;
+      top: 65px;
+      left: calc(16.67% + 30px);
+      right: calc(16.67% + 30px);
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, #22C55E 100%);
+      border-radius: 2px;
+      z-index: 0;
     }
 
     .how-step {
@@ -1392,29 +1406,50 @@
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow-md);
       position: relative;
+      z-index: 1;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
+    .how-step:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .how-step:nth-child(1):hover { box-shadow: var(--shadow-xl), 0 15px 30px rgba(45, 212, 191, 0.2); }
+    .how-step:nth-child(2):hover { box-shadow: var(--shadow-xl), 0 15px 30px rgba(251, 146, 60, 0.2); }
+    .how-step:nth-child(3):hover { box-shadow: var(--shadow-xl), 0 15px 30px rgba(34, 197, 94, 0.2); }
+
     .how-step-number {
-      width: 48px;
-      height: 48px;
+      width: 60px;
+      height: 60px;
       background: var(--gradient-primary);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: var(--font-heading);
-      font-size: 20px;
+      font-size: 24px;
       font-weight: 700;
       color: var(--text-on-primary);
       margin: 0 auto 20px;
+      box-shadow: 0 8px 20px rgba(45, 212, 191, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 2;
+    }
+
+    .how-step:hover .how-step-number {
+      transform: scale(1.1) rotate(-5deg);
     }
 
     .how-step:nth-child(2) .how-step-number {
       background: var(--gradient-warm);
+      box-shadow: 0 8px 20px rgba(251, 146, 60, 0.3);
     }
 
     .how-step:nth-child(3) .how-step-number {
       background: linear-gradient(135deg, #22C55E 0%, #10B981 100%);
+      box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
     }
 
     .how-step-title {
@@ -1687,6 +1722,42 @@
       border-radius: var(--radius-xl);
       border: 1px solid var(--border-light);
       box-shadow: var(--shadow-sm);
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Decorative quote mark */
+    .testimonial-card::before {
+      content: '"';
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      font-family: Georgia, serif;
+      font-size: 80px;
+      line-height: 1;
+      color: var(--primary);
+      opacity: 0.1;
+      pointer-events: none;
+    }
+
+    .testimonial-card:hover {
+      transform: translateY(-6px) rotate(-0.5deg);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+
+    /* Alternating card backgrounds */
+    .testimonial-card:nth-child(2) {
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.03) 0%, var(--bg-white) 100%);
+    }
+
+    .testimonial-card:nth-child(2)::before {
+      color: var(--secondary);
+    }
+
+    .testimonial-card:nth-child(2):hover {
+      border-color: var(--secondary);
+      transform: translateY(-6px) rotate(0.5deg);
     }
 
     .testimonial-stars {
@@ -1704,9 +1775,11 @@
     .testimonial-text {
       font-size: 15px;
       color: var(--text-secondary);
-      line-height: 1.7;
+      line-height: 1.8;
       margin-bottom: 20px;
       font-style: italic;
+      position: relative;
+      z-index: 1;
     }
 
     .testimonial-author {
@@ -1716,8 +1789,8 @@
     }
 
     .testimonial-avatar {
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
       background: var(--primary-soft);
       border-radius: 50%;
       display: flex;
@@ -1725,7 +1798,21 @@
       justify-content: center;
       font-family: var(--font-heading);
       font-weight: 700;
+      font-size: 18px;
       color: var(--primary);
+      border: 3px solid var(--primary);
+      transition: all 0.3s ease;
+    }
+
+    .testimonial-card:hover .testimonial-avatar {
+      transform: scale(1.1);
+      box-shadow: 0 4px 15px rgba(45, 212, 191, 0.3);
+    }
+
+    .testimonial-card:nth-child(2) .testimonial-avatar {
+      background: var(--secondary-soft);
+      color: var(--secondary);
+      border-color: var(--secondary);
     }
 
     .testimonial-author-info strong {
@@ -1768,6 +1855,18 @@
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-light);
       overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .faq-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .faq-item.open {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.03) 0%, var(--bg-white) 100%);
     }
 
     .faq-question {
@@ -1784,18 +1883,28 @@
       font-weight: 600;
       color: var(--text-primary);
       text-align: left;
+      transition: color 0.3s ease;
+    }
+
+    .faq-item.open .faq-question {
+      color: var(--primary-dark);
     }
 
     .faq-question svg {
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       color: var(--primary);
-      transition: transform 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
       flex-shrink: 0;
+      background: var(--primary-soft);
+      padding: 4px;
+      border-radius: 50%;
     }
 
     .faq-item.open .faq-question svg {
       transform: rotate(180deg);
+      background: var(--primary);
+      color: white;
     }
 
     .faq-answer {
@@ -1832,16 +1941,35 @@
       box-shadow: var(--shadow-xl);
       overflow: hidden;
       position: relative;
+      /* Gradient border effect */
+      border: 3px solid transparent;
+      background-clip: padding-box;
     }
 
+    /* Gradient border using pseudo-element */
     .offer-box::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
+      inset: -3px;
       background: var(--gradient-primary);
+      border-radius: calc(var(--radius-xl) + 3px);
+      z-index: -1;
+    }
+
+    /* Animated glow effect */
+    .offer-box::after {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      background: radial-gradient(circle at 50% 0%, rgba(45, 212, 191, 0.15) 0%, transparent 50%);
+      animation: offerGlow 3s ease-in-out infinite;
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    @keyframes offerGlow {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.02); }
     }
 
     .offer-box-content {
@@ -1897,19 +2025,44 @@
     }
 
     .offer-price-old {
-      font-size: 18px;
+      font-size: 20px;
       color: var(--text-tertiary);
       text-decoration: line-through;
+      position: relative;
+    }
+
+    /* Animated strike-through */
+    .offer-price-old::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 100%;
+      height: 2px;
+      background: var(--secondary);
+      animation: strikeThrough 1s ease-out 0.5s forwards;
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+
+    @keyframes strikeThrough {
+      to { transform: scaleX(1); }
     }
 
     .offer-price-new {
       font-family: var(--font-heading);
-      font-size: 40px;
+      font-size: 48px;
       font-weight: 700;
       background: var(--gradient-primary);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      animation: priceReveal 0.8s ease-out 0.3s both;
+    }
+
+    @keyframes priceReveal {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     .offer-saving {
@@ -1943,9 +2096,24 @@
 
     .offer-cta {
       width: 100%;
-      padding: 18px 32px;
-      font-size: 16px;
+      padding: 20px 32px;
+      font-size: 17px;
       margin-top: 8px;
+      border-radius: 100px;
+      animation: ctaPulse 2s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes ctaPulse {
+      0%, 100% { box-shadow: 0 8px 32px rgba(45, 212, 191, 0.35); }
+      50% { box-shadow: 0 8px 48px rgba(45, 212, 191, 0.5), 0 0 20px rgba(45, 212, 191, 0.3); }
+    }
+
+    .offer-cta:hover {
+      animation: none;
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 40px rgba(45, 212, 191, 0.45);
     }
 
     .offer-guarantee {
@@ -2360,6 +2528,16 @@
         display: none;
       }
 
+      /* Hide connector line on mobile */
+      .how-steps::before {
+        display: none;
+      }
+
+      /* Smaller wavy dividers on mobile */
+      .wavy-divider {
+        height: 50px;
+      }
+
       .trust-items {
         flex-wrap: wrap;
         gap: 16px;
@@ -2727,6 +2905,13 @@
     </div>
   </section>
 
+  <!-- Wavy divider - Problem to Solution -->
+  <div class="wavy-divider" style="background: linear-gradient(180deg, #FFF5F0 0%, var(--bg-white) 100%);">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+      <path fill="var(--bg-white)" d="M0,40 C240,80 480,0 720,40 C960,80 1200,20 1440,40 L1440,80 L0,80 Z"/>
+    </svg>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════════════
        SOLUTION / BENTO SECTION
   ═══════════════════════════════════════════════════════════ -->
@@ -2899,6 +3084,13 @@
       </div>
     </div>
   </section>
+
+  <!-- Wavy divider before Testimonials -->
+  <div class="wavy-divider" style="background: linear-gradient(180deg, #FFF8E7 0%, var(--bg-white) 100%);">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+      <path fill="var(--bg-white)" d="M0,60 C180,20 360,80 540,40 C720,0 900,60 1080,40 C1260,20 1380,50 1440,40 L1440,80 L0,80 Z"/>
+    </svg>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════
        TESTIMONIALS
@@ -3163,6 +3355,14 @@
       </div>
     </div>
   </section>
+
+  <!-- Wavy divider before Offer - special gradient -->
+  <div class="wavy-divider" style="background: linear-gradient(180deg, rgba(45, 212, 191, 0.03) 0%, rgba(251, 146, 60, 0.02) 100%);">
+    <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
+      <path fill="rgba(45, 212, 191, 0.05)" d="M0,50 C360,100 720,0 1080,50 C1260,75 1380,60 1440,50 L1440,100 L0,100 Z"/>
+      <path fill="var(--bg-white)" d="M0,70 C240,100 480,40 720,70 C960,100 1200,50 1440,70 L1440,100 L0,100 Z"/>
+    </svg>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════
        OFFER
