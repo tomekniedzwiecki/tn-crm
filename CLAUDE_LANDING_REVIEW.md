@@ -34,7 +34,62 @@ Jeśli brakuje sekcji lub obrazów — **dodaj je przed kontynuowaniem**.
 
 ---
 
-## 2. Weryfikacja treści (Copy Review)
+## 2. HERO DEEP DIVE (najważniejsza sekcja!)
+
+Hero decyduje o tym, czy użytkownik zostanie na stronie. Poświęć mu **osobną, pogłębioną analizę**.
+
+### A. Zdefiniuj grupę docelową PRZED pisaniem
+
+Odpowiedz na pytania:
+1. **Kim jest odbiorca?** (wiek, płeć, sytuacja życiowa)
+2. **Co go boli?** (główny problem, frustracja, ból codzienny)
+3. **Czego pragnie?** (marzenie, stan docelowy, ulga)
+4. **Jakim językiem mówi?** (prosty/techniczny, formalny/luźny)
+
+### B. Checklist Hero — KAŻDY punkt musi być spełniony
+
+| Element | Pytanie kontrolne | Spełnione? |
+|---------|-------------------|------------|
+| **Badge** | Czy buduje kontekst/ciekawość? (nie "Nowość" — to nic nie mówi) | [ ] |
+| **Headline** | Czy trafia w BÓL lub PRAGNIENIE? (nie w funkcję produktu!) | [ ] |
+| **Headline** | Czy jest < 10 słów? | [ ] |
+| **Headline** | Czy odbiorca pomyśli "to o mnie!"? | [ ] |
+| **Subheadline** | Czy wyjaśnia JAK produkt rozwiązuje problem? | [ ] |
+| **Subheadline** | Czy jest BEZ żargonu technicznego? (nie "11 kPa", "HEPA 12") | [ ] |
+| **Subheadline** | Czy jest < 25 słów? | [ ] |
+| **CTA główne** | Czy mówi co dostanę? (nie "Kup teraz" — raczej "Zamów z rabatem -30%") | [ ] |
+| **CTA drugorzędne** | Czy odpowiada na "chcę wiedzieć więcej"? | [ ] |
+
+### C. Formuły na skuteczny headline
+
+Użyj jednej z tych formuł:
+
+1. **Ból → Rozwiązanie:** "Koniec z [BÓL] — [ROZWIĄZANIE]"
+2. **Pragnienie:** "[OSIĄGNIJ MARZENIE] bez [PRZESZKODA]"
+3. **Transformacja:** "Z [STAN A] do [STAN B] w [CZAS]"
+4. **Pytanie retoryczne:** "Masz dość [BÓL]?"
+5. **Konkret:** "[LICZBA] [EFEKT] w [CZAS]"
+
+### D. Anty-wzorce (NIE RÓB TEGO)
+
+- ❌ Headline o produkcie: "Pupilnik — profesjonalny system pielęgnacji"
+- ❌ Headline z funkcjami: "Moc ssania 11 kPa i filtr HEPA 12"
+- ❌ Subheadline zaczynający się od nazwy: "Pupilnik to..."
+- ❌ Żargon techniczny w pierwszych 3 sekundach
+- ❌ Ogólniki: "Najlepsze rozwiązanie", "Innowacyjny produkt"
+
+### E. Test 5 sekund
+
+Przeczytaj TYLKO badge + headline + subheadline. Czy w 5 sekund wiesz:
+1. Dla kogo to jest?
+2. Jaki problem rozwiązuje?
+3. Dlaczego powinienem zostać?
+
+Jeśli NIE — przepisz Hero.
+
+---
+
+## 3. Weryfikacja treści (Copy Review)
 
 Dla **każdej sekcji** zadaj sobie pytania:
 
@@ -47,7 +102,7 @@ Dla **każdej sekcji** zadaj sobie pytania:
 
 | Sekcja | Pytania kontrolne |
 |--------|-------------------|
-| **Hero** | Czy headline trafia w główny ból? Czy jest konkretny (liczby, efekty)? Czy CTA jest jasne? |
+| **Hero** | **PATRZ SEKCJA 2 POWYŻEJ** — Hero wymaga osobnej, pogłębionej analizy! |
 | **Problem** | Czy opis problemu rezonuje z odbiorcą? Czy używam jego słów? Czy statystyki są wiarygodne? |
 | **Solution** | Czy korzyści są napisane językiem efektów (nie funkcji)? Czy każda korzyść odpowiada na konkretny ból? |
 | **How It Works** | Czy kroki są proste i zrozumiałe? Czy pokazuję jak łatwo zacząć? |
@@ -68,7 +123,7 @@ Dla **każdej sekcji** zadaj sobie pytania:
 
 ---
 
-## 3. Weryfikacja techniczna
+## 4. Weryfikacja techniczna
 
 - [ ] Logo ma pełny URL Supabase (nie względny)
 - [ ] Fonty mają `&subset=latin-ext` (polskie znaki)
@@ -79,7 +134,7 @@ Dla **każdej sekcji** zadaj sobie pytania:
 
 ---
 
-## 4. Akcje po weryfikacji
+## 5. Akcje po weryfikacji
 
 Po przejściu checklisty:
 
@@ -92,7 +147,7 @@ Po przejściu checklisty:
 
 ---
 
-## 5. Raport dla użytkownika
+## 6. Raport dla użytkownika
 
 Po zakończeniu weryfikacji przedstaw krótki raport:
 
