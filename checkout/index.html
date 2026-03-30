@@ -1411,13 +1411,15 @@
                     // Use workflow data if exists, otherwise use schedule's lead data
                     const workflow = instData.schedule.workflow;
                     const lead = workflow?.lead || instData.schedule.lead;
-                    const offerName = workflow?.offer_name || 'Harmonogram płatności';
+                    // Zawsze używaj "Budowa sklepu pełen pakiet" dla płatności rat
+                    const offerName = 'Budowa sklepu pełen pakiet';
+                    const rataLabel = `Rata ${instData.installment_number}/${instData.schedule.installments_count}`;
 
                     // Create virtual offer for installment
                     currentOffer = {
                         id: null,
-                        name: `Rata ${instData.installment_number}/${instData.schedule.installments_count} - ${offerName}`,
-                        description: `Harmonogram płatności - ${offerName}`,
+                        name: `${offerName} - ${rataLabel}`,
+                        description: `${offerName} - ${rataLabel}`,
                         price: parseFloat(instData.amount)
                     };
 
