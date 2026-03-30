@@ -77,6 +77,7 @@ Użyj jednej z tych formuł:
 - ❌ Subheadline zaczynający się od nazwy: "Pupilnik to..."
 - ❌ Żargon techniczny w pierwszych 3 sekundach
 - ❌ Ogólniki: "Najlepsze rozwiązanie", "Innowacyjny produkt"
+- ❌ **ZAKŁADANIE SYTUACJI ODBIORCY:** "Twoje dziecko raczkuje...", "Twój pies...", "Masz apartament..." — NIE WIESZ czy odbiorca ma dziecko/psa/apartament! Używaj uniwersalnych sformułowań lub pytań ("Masz dość...?", "Czy zdarza Ci się...?")
 
 ### E. Test 5 sekund
 
@@ -134,16 +135,14 @@ Dla **każdej sekcji** zadaj sobie pytania:
 
 ---
 
-## 5. Akcje po weryfikacji
+## 5. Akcje po weryfikacji treści
 
 Po przejściu checklisty:
 
-1. **Jeśli są braki** — popraw je i przejdź ponownie przez sekcje z problemami
-2. **Jeśli wszystko OK** — commituj i deployuj:
-   ```bash
-   cd /c/repos_tn/tn-crm && git add landing-pages/[nazwa]/ && git commit -m "Add [nazwa] landing page" && git push
-   ```
-3. **Podaj użytkownikowi link:** `https://tn-crm.vercel.app/landing-pages/[nazwa]/`
+1. **Jeśli są braki w treściach** — popraw je i przejdź ponownie przez sekcje z problemami
+2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 3: DESIGN** (patrz sekcja 7 poniżej)
+
+**NIE COMMITUJ JESZCZE** — najpierw dopracuj design w ETAP 3!
 
 ---
 
@@ -164,3 +163,21 @@ Po zakończeniu weryfikacji przedstaw krótki raport:
 
 ### Link: https://tn-crm.vercel.app/landing-pages/[nazwa]/
 ```
+
+---
+
+## 7. ETAP 3: Dopracowanie designu
+
+**OBOWIĄZKOWY** — po weryfikacji treści przejdź do:
+
+**Plik:** `CLAUDE_LANDING_DESIGN.md`
+
+Ten etap przekształca "poprawny szablon" w **wyróżniającą się stronę marki**.
+
+Po zakończeniu ETAP 3 wróć tutaj i wykonaj deploy:
+
+```bash
+cd /c/repos_tn/tn-crm && git add landing-pages/[nazwa]/ && git commit -m "Add [nazwa] landing page" && git push
+```
+
+**Podaj użytkownikowi link:** `https://tn-crm.vercel.app/landing-pages/[nazwa]/`
