@@ -244,45 +244,20 @@
                             <thead>
                                 <tr class="text-left text-zinc-500 border-b border-white/5">
                                     <th class="px-4 py-3 font-medium">Zrodlo</th>
+                                    <th class="px-4 py-3 font-medium text-right">Leady</th>
+                                    <th class="px-4 py-3 font-medium text-right">Trans.</th>
+                                    <th class="px-4 py-3 font-medium text-right">Conv%</th>
                                     <th class="px-4 py-3 font-medium text-right">Przychod</th>
-                                    <th class="px-4 py-3 font-medium text-right">Koszt reklam</th>
+                                    <th class="px-4 py-3 font-medium text-right">Koszt</th>
+                                    <th class="px-4 py-3 font-medium text-right">CPL</th>
+                                    <th class="px-4 py-3 font-medium text-right">CAC</th>
                                     <th class="px-4 py-3 font-medium text-right">ROAS</th>
-                                    <th class="px-4 py-3 font-medium text-right">Transakcje</th>
-                                    <th class="px-4 py-3 font-medium text-right">Avg. wartosc</th>
                                 </tr>
                             </thead>
                             <tbody id="sources-table">
-                                <tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
+                                <tr><td colspan="9" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
                             </tbody>
                             <tfoot id="sources-total" class="border-t border-white/10 bg-white/[0.02]">
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Lead Funnel Table -->
-                <div class="chart-container rounded-xl overflow-hidden mb-6">
-                    <div class="p-4 border-b border-white/5">
-                        <h3 class="text-sm font-medium text-white">Funnel leadow wg zrodla</h3>
-                        <p class="text-xs text-zinc-500 mt-1">Metryki konwersji i kosztow pozyskania</p>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="text-left text-zinc-500 border-b border-white/5">
-                                    <th class="px-4 py-3 font-medium">Zrodlo</th>
-                                    <th class="px-4 py-3 font-medium text-right">Leady</th>
-                                    <th class="px-4 py-3 font-medium text-right">Konwersje</th>
-                                    <th class="px-4 py-3 font-medium text-right">Conv. %</th>
-                                    <th class="px-4 py-3 font-medium text-right">CPL</th>
-                                    <th class="px-4 py-3 font-medium text-right">CAC</th>
-                                    <th class="px-4 py-3 font-medium text-right">Avg. LTV</th>
-                                </tr>
-                            </thead>
-                            <tbody id="funnel-table">
-                                <tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
-                            </tbody>
-                            <tfoot id="funnel-total" class="border-t border-white/10 bg-white/[0.02]">
                             </tfoot>
                         </table>
                     </div>
@@ -330,8 +305,7 @@
             orders: [],
             adExpenses: [],
             leads: [],
-            bySource: {},
-            funnelBySource: {}
+            bySource: {}
         };
 
         // Source configuration
@@ -627,32 +601,9 @@
                 }
                 console.log('Lead tracking loaded for', Object.keys(allLeadsTrackingMap).length, 'leads');
 
-                // Load ALL orders for lead emails (for funnel conversion tracking)
-                // We need orders regardless of date to track if leads converted
-                let ordersForFunnel = [];
-                if (allLeads.length > 0) {
-                    const leadEmails = [...new Set(allLeads.map(l => l.email.toLowerCase()))];
-
-                    // Batch queries for emails (max 1000 per query)
-                    for (let i = 0; i < leadEmails.length; i += pageSize) {
-                        const batchEmails = leadEmails.slice(i, i + pageSize);
-                        const { data: ordersBatch } = await supabaseClient
-                            .from('orders')
-                            .select('id, customer_email, amount, paid_at, lead_id')
-                            .not('paid_at', 'is', null)
-                            .in('customer_email', batchEmails);
-
-                        if (ordersBatch) {
-                            ordersForFunnel = ordersForFunnel.concat(ordersBatch);
-                        }
-                    }
-                }
-                console.log('Orders for funnel (all time for lead emails):', ordersForFunnel.length);
-
                 analyticsData.orders = orders;
                 analyticsData.adExpenses = adExpenses;
                 analyticsData.leads = allLeads;
-                analyticsData.ordersForFunnel = ordersForFunnel;
 
                 // Process data
                 processData();
@@ -724,7 +675,8 @@
                 analyticsData.bySource[key] = {
                     revenue: 0,
                     orders: [],
-                    count: 0
+                    count: 0,
+                    leads: 0
                 };
             });
 
@@ -743,6 +695,12 @@
             });
             console.log(`Orders without lead_id: ${noLeadId}, with lead_id but no tracking: ${noTracking}`);
 
+            // Count leads by source
+            analyticsData.leads.forEach(lead => {
+                const source = determineLeadSource(lead);
+                analyticsData.bySource[source].leads++;
+            });
+
             // Process ad expenses by source
             const adCostsBySource = { google: 0, meta: 0, tiktok: 0 };
             analyticsData.adExpenses.forEach(exp => {
@@ -759,9 +717,6 @@
             });
 
             analyticsData.adCostsBySource = adCostsBySource;
-
-            // Process lead funnel
-            processLeadFunnel();
         }
 
         function determineLeadSource(lead) {
@@ -797,45 +752,6 @@
             if (tracking.utm_medium === 'email') return 'email';
 
             return 'organic';
-        }
-
-        function processLeadFunnel() {
-            // Initialize funnel data
-            analyticsData.funnelBySource = {};
-            Object.keys(SOURCES).forEach(key => {
-                analyticsData.funnelBySource[key] = {
-                    leads: 0,
-                    conversions: 0,
-                    revenue: 0,
-                    leadEmails: new Set(),
-                    convertedEmails: new Set() // Track unique conversions
-                };
-            });
-
-            // Count leads by source and collect emails per source
-            analyticsData.leads.forEach(lead => {
-                const source = determineLeadSource(lead);
-                analyticsData.funnelBySource[source].leads++;
-                analyticsData.funnelBySource[source].leadEmails.add(lead.email.toLowerCase());
-            });
-
-            // Count conversions using ALL orders for lead emails (not just period orders)
-            // This correctly tracks: "leads from this period that eventually converted"
-            const ordersForFunnel = analyticsData.ordersForFunnel || [];
-            ordersForFunnel.forEach(order => {
-                const email = order.customer_email?.toLowerCase();
-                if (!email) return;
-
-                // Find which source this customer came from
-                Object.entries(analyticsData.funnelBySource).forEach(([sourceKey, data]) => {
-                    if (data.leadEmails.has(email) && !data.convertedEmails.has(email)) {
-                        // Count unique conversions (one per email per source)
-                        data.convertedEmails.add(email);
-                        data.conversions++;
-                        data.revenue += toNetto(parseFloat(order.amount) || 0);
-                    }
-                });
-            });
         }
 
         // ============================================
@@ -1179,7 +1095,6 @@
         // ============================================
         function updateTables() {
             updateSourcesTable();
-            updateFunnelTable();
             updateTransactionsTable();
         }
 
@@ -1191,9 +1106,10 @@
             let totalRevenue = 0;
             let totalCost = 0;
             let totalCount = 0;
+            let totalLeads = 0;
 
             Object.entries(analyticsData.bySource)
-                .filter(([_, data]) => data.count > 0)
+                .filter(([_, data]) => data.count > 0 || data.leads > 0)
                 .sort((a, b) => b[1].revenue - a[1].revenue)
                 .forEach(([key, data]) => {
                     const source = SOURCES[key];
@@ -1209,81 +1125,14 @@
                     }
 
                     const roas = cost > 0 ? (data.revenue / cost).toFixed(1) + 'x' : '-';
-                    const avgValue = data.count > 0 ? data.revenue / data.count : 0;
+                    const cpl = cost > 0 && data.leads > 0 ? cost / data.leads : 0;
+                    const cac = cost > 0 && data.count > 0 ? cost / data.count : 0;
+                    const convRate = data.leads > 0 ? (data.count / data.leads * 100) : 0;
 
                     totalRevenue += data.revenue;
                     totalCost += cost;
                     totalCount += data.count;
-
-                    html += `
-                        <tr class="source-row border-b border-white/5">
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full" style="background: ${source.color}"></span>
-                                    <span class="text-white">${source.name}</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(data.revenue)}</td>
-                            <td class="px-4 py-3 text-right font-mono text-zinc-400">${cost > 0 ? formatMoney(cost) : '-'}</td>
-                            <td class="px-4 py-3 text-right font-mono ${cost > 0 ? 'text-emerald-400' : 'text-zinc-600'}">${roas}</td>
-                            <td class="px-4 py-3 text-right text-zinc-400">${data.count}</td>
-                            <td class="px-4 py-3 text-right font-mono text-zinc-400">${formatMoney(avgValue)}</td>
-                        </tr>
-                    `;
-                });
-
-            tbody.innerHTML = html || '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
-
-            // Total row
-            const totalRoas = totalCost > 0 ? (totalRevenue / totalCost).toFixed(1) + 'x' : '-';
-            const totalAvg = totalCount > 0 ? totalRevenue / totalCount : 0;
-            tfoot.innerHTML = `
-                <tr class="text-white font-medium">
-                    <td class="px-4 py-3">Razem</td>
-                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalRevenue)}</td>
-                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalCost)}</td>
-                    <td class="px-4 py-3 text-right font-mono text-emerald-400">${totalRoas}</td>
-                    <td class="px-4 py-3 text-right">${totalCount}</td>
-                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalAvg)}</td>
-                </tr>
-            `;
-        }
-
-        function updateFunnelTable() {
-            const tbody = document.getElementById('funnel-table');
-            const tfoot = document.getElementById('funnel-total');
-
-            let html = '';
-            let totalLeads = 0;
-            let totalConversions = 0;
-            let totalRevenue = 0;
-            let totalCost = 0;
-
-            Object.entries(analyticsData.funnelBySource)
-                .filter(([_, data]) => data.leads > 0)
-                .sort((a, b) => b[1].leads - a[1].leads)
-                .forEach(([key, data]) => {
-                    const source = SOURCES[key];
-                    let cost = 0;
-
-                    // Map costs
-                    if (key === 'google' || key === 'youtube') {
-                        cost = analyticsData.adCostsBySource?.google || 0;
-                    } else if (key === 'meta') {
-                        cost = analyticsData.adCostsBySource?.meta || 0;
-                    } else if (key === 'tiktok') {
-                        cost = analyticsData.adCostsBySource?.tiktok || 0;
-                    }
-
-                    const convRate = data.leads > 0 ? (data.conversions / data.leads * 100) : 0;
-                    const cpl = cost > 0 && data.leads > 0 ? cost / data.leads : 0;
-                    const cac = cost > 0 && data.conversions > 0 ? cost / data.conversions : 0;
-                    const avgLtv = data.conversions > 0 ? data.revenue / data.conversions : 0;
-
                     totalLeads += data.leads;
-                    totalConversions += data.conversions;
-                    totalRevenue += data.revenue;
-                    if (cost > 0) totalCost += cost;
 
                     const convColor = convRate >= 5 ? 'text-emerald-400' : convRate >= 2 ? 'text-amber-400' : 'text-zinc-400';
 
@@ -1296,32 +1145,36 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-right text-zinc-400">${data.leads}</td>
-                            <td class="px-4 py-3 text-right text-white">${data.conversions}</td>
+                            <td class="px-4 py-3 text-right text-white">${data.count}</td>
                             <td class="px-4 py-3 text-right font-mono ${convColor}">${convRate.toFixed(1)}%</td>
+                            <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(data.revenue)}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-400">${cost > 0 ? formatMoney(cost) : '-'}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-400">${cpl > 0 ? formatMoney(cpl) : '-'}</td>
-                            <td class="px-4 py-3 text-right font-mono ${cac > 0 ? 'text-amber-400' : 'text-zinc-600'}">${cac > 0 ? formatMoney(cac) : '-'}</td>
-                            <td class="px-4 py-3 text-right font-mono text-teal-400">${avgLtv > 0 ? formatMoney(avgLtv) : '-'}</td>
+                            <td class="px-4 py-3 text-right font-mono text-amber-400">${cac > 0 ? formatMoney(cac) : '-'}</td>
+                            <td class="px-4 py-3 text-right font-mono ${cost > 0 ? 'text-emerald-400' : 'text-zinc-600'}">${roas}</td>
                         </tr>
                     `;
                 });
 
-            tbody.innerHTML = html || '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
+            tbody.innerHTML = html || '<tr><td colspan="9" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
 
             // Total row
-            const totalConvRate = totalLeads > 0 ? (totalConversions / totalLeads * 100) : 0;
+            const totalRoas = totalCost > 0 ? (totalRevenue / totalCost).toFixed(1) + 'x' : '-';
             const totalCpl = totalCost > 0 && totalLeads > 0 ? totalCost / totalLeads : 0;
-            const totalCac = totalCost > 0 && totalConversions > 0 ? totalCost / totalConversions : 0;
-            const totalAvgLtv = totalConversions > 0 ? totalRevenue / totalConversions : 0;
+            const totalCac = totalCost > 0 && totalCount > 0 ? totalCost / totalCount : 0;
+            const totalConvRate = totalLeads > 0 ? (totalCount / totalLeads * 100) : 0;
 
             tfoot.innerHTML = `
                 <tr class="text-white font-medium">
                     <td class="px-4 py-3">Razem</td>
                     <td class="px-4 py-3 text-right">${totalLeads}</td>
-                    <td class="px-4 py-3 text-right">${totalConversions}</td>
+                    <td class="px-4 py-3 text-right">${totalCount}</td>
                     <td class="px-4 py-3 text-right font-mono">${totalConvRate.toFixed(1)}%</td>
+                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalRevenue)}</td>
+                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalCost)}</td>
                     <td class="px-4 py-3 text-right font-mono">${totalCpl > 0 ? formatMoney(totalCpl) : '-'}</td>
                     <td class="px-4 py-3 text-right font-mono text-amber-400">${totalCac > 0 ? formatMoney(totalCac) : '-'}</td>
-                    <td class="px-4 py-3 text-right font-mono text-teal-400">${totalAvgLtv > 0 ? formatMoney(totalAvgLtv) : '-'}</td>
+                    <td class="px-4 py-3 text-right font-mono text-emerald-400">${totalRoas}</td>
                 </tr>
             `;
         }
