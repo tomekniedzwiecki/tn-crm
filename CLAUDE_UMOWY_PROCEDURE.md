@@ -29,13 +29,13 @@ Na podstawie ustaleń z klientem zmodyfikuj kopię w `umowy/klienci/`:
 - Dane klienta (imię, nazwisko, email, NIP, adres)
 - Negocjowane warunki (kary umowne, terminy wykupu, udział procentowy itp.)
 
-### Krok 3: Poinformuj o lokalizacji
-Umowa jest dostępna TYLKO lokalnie:
+### Krok 3: Podaj klikalny link do pliku
+**ZAWSZE** na końcu podaj link w formacie markdown, który otwiera plik w IDE:
 ```
-c:\repos_tn\tn-crm\umowy\klienci\imie-nazwisko.html
+[imie-nazwisko.html](tn-crm/umowy/klienci/imie-nazwisko.html)
 ```
 
-NIE jest dostępna online (folder w .gitignore).
+Umowa jest dostępna TYLKO lokalnie - NIE jest dostępna online (folder w .gitignore).
 
 ## Przykład użycia
 
@@ -44,7 +44,7 @@ Użytkownik: "Zrób umowę dla Jana Kowalskiego, obniż kary o 30%"
 1. Kopiuję `umowa-budowa-sklepu.html` → `umowy/klienci/jan-kowalski.html`
 2. Wprowadzam dane klienta
 3. Obniżam kary o 30%
-4. Informuję o lokalizacji pliku
+4. Podaję klikalny link: [jan-kowalski.html](tn-crm/umowy/klienci/jan-kowalski.html)
 
 ## Typowe modyfikacje
 
