@@ -627,9 +627,32 @@
                 }
                 console.log('Lead tracking loaded for', Object.keys(allLeadsTrackingMap).length, 'leads');
 
+                // Load ALL orders for lead emails (for funnel conversion tracking)
+                // We need orders regardless of date to track if leads converted
+                let ordersForFunnel = [];
+                if (allLeads.length > 0) {
+                    const leadEmails = [...new Set(allLeads.map(l => l.email.toLowerCase()))];
+
+                    // Batch queries for emails (max 1000 per query)
+                    for (let i = 0; i < leadEmails.length; i += pageSize) {
+                        const batchEmails = leadEmails.slice(i, i + pageSize);
+                        const { data: ordersBatch } = await supabaseClient
+                            .from('orders')
+                            .select('id, customer_email, amount, paid_at, lead_id')
+                            .not('paid_at', 'is', null)
+                            .in('customer_email', batchEmails);
+
+                        if (ordersBatch) {
+                            ordersForFunnel = ordersForFunnel.concat(ordersBatch);
+                        }
+                    }
+                }
+                console.log('Orders for funnel (all time for lead emails):', ordersForFunnel.length);
+
                 analyticsData.orders = orders;
                 analyticsData.adExpenses = adExpenses;
                 analyticsData.leads = allLeads;
+                analyticsData.ordersForFunnel = ordersForFunnel;
 
                 // Process data
                 processData();
@@ -784,25 +807,30 @@
                     leads: 0,
                     conversions: 0,
                     revenue: 0,
-                    leadEmails: new Set()
+                    leadEmails: new Set(),
+                    convertedEmails: new Set() // Track unique conversions
                 };
             });
 
-            // Count leads by source
+            // Count leads by source and collect emails per source
             analyticsData.leads.forEach(lead => {
                 const source = determineLeadSource(lead);
                 analyticsData.funnelBySource[source].leads++;
                 analyticsData.funnelBySource[source].leadEmails.add(lead.email.toLowerCase());
             });
 
-            // Count conversions (orders from leads in period)
-            analyticsData.orders.forEach(order => {
+            // Count conversions using ALL orders for lead emails (not just period orders)
+            // This correctly tracks: "leads from this period that eventually converted"
+            const ordersForFunnel = analyticsData.ordersForFunnel || [];
+            ordersForFunnel.forEach(order => {
                 const email = order.customer_email?.toLowerCase();
                 if (!email) return;
 
                 // Find which source this customer came from
                 Object.entries(analyticsData.funnelBySource).forEach(([sourceKey, data]) => {
-                    if (data.leadEmails.has(email)) {
+                    if (data.leadEmails.has(email) && !data.convertedEmails.has(email)) {
+                        // Count unique conversions (one per email per source)
+                        data.convertedEmails.add(email);
                         data.conversions++;
                         data.revenue += toNetto(parseFloat(order.amount) || 0);
                     }
