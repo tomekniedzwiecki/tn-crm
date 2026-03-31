@@ -248,6 +248,7 @@
                                     <th class="px-4 py-3 font-medium text-right">Trans.</th>
                                     <th class="px-4 py-3 font-medium text-right">Conv%</th>
                                     <th class="px-4 py-3 font-medium text-right">Przychod</th>
+                                    <th class="px-4 py-3 font-medium text-right">Avg LTV</th>
                                     <th class="px-4 py-3 font-medium text-right">Koszt</th>
                                     <th class="px-4 py-3 font-medium text-right">CPL</th>
                                     <th class="px-4 py-3 font-medium text-right">CAC</th>
@@ -255,7 +256,7 @@
                                 </tr>
                             </thead>
                             <tbody id="sources-table">
-                                <tr><td colspan="9" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
+                                <tr><td colspan="10" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
                             </tbody>
                             <tfoot id="sources-total" class="border-t border-white/10 bg-white/[0.02]">
                             </tfoot>
@@ -1126,6 +1127,7 @@
                     const cpl = cost > 0 && data.leads > 0 ? cost / data.leads : 0;
                     const cac = cost > 0 && data.count > 0 ? cost / data.count : 0;
                     const convRate = data.leads > 0 ? (data.count / data.leads * 100) : 0;
+                    const avgLtv = data.count > 0 ? data.revenue / data.count : 0;
 
                     totalRevenue += data.revenue;
                     totalCost += cost;
@@ -1146,6 +1148,7 @@
                             <td class="px-4 py-3 text-right text-white">${data.count}</td>
                             <td class="px-4 py-3 text-right font-mono ${convColor}">${convRate.toFixed(1)}%</td>
                             <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(data.revenue)}</td>
+                            <td class="px-4 py-3 text-right font-mono text-teal-400">${avgLtv > 0 ? formatMoney(avgLtv) : '-'}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-400">${cost > 0 ? formatMoney(cost) : '-'}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-400">${cpl > 0 ? formatMoney(cpl) : '-'}</td>
                             <td class="px-4 py-3 text-right font-mono text-amber-400">${cac > 0 ? formatMoney(cac) : '-'}</td>
@@ -1154,13 +1157,14 @@
                     `;
                 });
 
-            tbody.innerHTML = html || '<tr><td colspan="9" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
+            tbody.innerHTML = html || '<tr><td colspan="10" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
 
             // Total row
             const totalRoas = totalCost > 0 ? (totalRevenue / totalCost).toFixed(1) + 'x' : '-';
             const totalCpl = totalCost > 0 && totalLeads > 0 ? totalCost / totalLeads : 0;
             const totalCac = totalCost > 0 && totalCount > 0 ? totalCost / totalCount : 0;
             const totalConvRate = totalLeads > 0 ? (totalCount / totalLeads * 100) : 0;
+            const totalAvgLtv = totalCount > 0 ? totalRevenue / totalCount : 0;
 
             tfoot.innerHTML = `
                 <tr class="text-white font-medium">
@@ -1169,6 +1173,7 @@
                     <td class="px-4 py-3 text-right">${totalCount}</td>
                     <td class="px-4 py-3 text-right font-mono">${totalConvRate.toFixed(1)}%</td>
                     <td class="px-4 py-3 text-right font-mono">${formatMoney(totalRevenue)}</td>
+                    <td class="px-4 py-3 text-right font-mono text-teal-400">${totalAvgLtv > 0 ? formatMoney(totalAvgLtv) : '-'}</td>
                     <td class="px-4 py-3 text-right font-mono">${formatMoney(totalCost)}</td>
                     <td class="px-4 py-3 text-right font-mono">${totalCpl > 0 ? formatMoney(totalCpl) : '-'}</td>
                     <td class="px-4 py-3 text-right font-mono text-amber-400">${totalCac > 0 ? formatMoney(totalCac) : '-'}</td>
