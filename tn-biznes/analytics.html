@@ -63,10 +63,10 @@
             box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
         }
 
-        .preset-btn {
+        .preset-btn, .grouping-btn {
             transition: all 0.2s;
         }
-        .preset-btn.active {
+        .preset-btn.active, .grouping-btn.active {
             background: rgba(20, 184, 166, 0.15);
             color: #14b8a6;
             border-color: rgba(20, 184, 166, 0.3);
@@ -187,6 +187,21 @@
                     </div>
                 </div>
 
+                <!-- Ad Costs Chart - Full Width -->
+                <div class="chart-container rounded-xl p-4 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-white">Koszty reklam wg zrodla</h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="setChartGrouping('daily')" data-grouping="daily" class="grouping-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Dziennie</button>
+                            <button onclick="setChartGrouping('weekly')" data-grouping="weekly" class="grouping-btn active px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Tygodniowo</button>
+                            <button onclick="setChartGrouping('monthly')" data-grouping="monthly" class="grouping-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Miesiecznie</button>
+                        </div>
+                    </div>
+                    <div class="h-72">
+                        <canvas id="chart-adcosts"></canvas>
+                    </div>
+                </div>
+
                 <!-- Charts Row 1 -->
                 <div class="grid lg:grid-cols-3 gap-4 mb-6">
                     <!-- Revenue vs Ad Costs Over Time -->
@@ -211,21 +226,11 @@
                     </div>
                 </div>
 
-                <!-- Charts Row 2 -->
-                <div class="grid lg:grid-cols-2 gap-4 mb-6">
-                    <!-- ROAS by Source -->
-                    <div class="chart-container rounded-xl p-4">
-                        <h3 class="text-sm font-medium text-white mb-4">ROAS wg zrodla</h3>
-                        <div class="h-48">
-                            <canvas id="chart-roas"></canvas>
-                        </div>
-                    </div>
-                    <!-- Ad Costs by Source Over Time -->
-                    <div class="chart-container rounded-xl p-4">
-                        <h3 class="text-sm font-medium text-white mb-4">Koszty reklam wg zrodla</h3>
-                        <div class="h-48">
-                            <canvas id="chart-adcosts"></canvas>
-                        </div>
+                <!-- ROAS Chart -->
+                <div class="chart-container rounded-xl p-4 mb-6">
+                    <h3 class="text-sm font-medium text-white mb-4">ROAS wg zrodla</h3>
+                    <div class="h-48">
+                        <canvas id="chart-roas"></canvas>
                     </div>
                 </div>
 
@@ -292,6 +297,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let charts = {};
+        let chartGrouping = 'weekly'; // daily, weekly, monthly
         let analyticsData = {
             orders: [],
             adExpenses: [],
@@ -400,6 +406,14 @@
             });
 
             loadData();
+        }
+
+        function setChartGrouping(grouping) {
+            chartGrouping = grouping;
+            document.querySelectorAll('.grouping-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.grouping === grouping);
+            });
+            updateAdcostsChart();
         }
 
         function formatDate(date) {
@@ -816,8 +830,25 @@
             return `${date.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
         }
 
-        function formatDateLabel(dateStr, isWeek) {
-            if (isWeek) return dateStr;
+        function getMonthKey(dateStr) {
+            const date = new Date(dateStr);
+            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        }
+
+        function getDateKey(dateStr, grouping) {
+            if (grouping === 'daily') return dateStr;
+            if (grouping === 'weekly') return getWeekKey(dateStr);
+            if (grouping === 'monthly') return getMonthKey(dateStr);
+            return dateStr;
+        }
+
+        function formatDateLabel(dateStr, grouping) {
+            if (grouping === 'weekly') return dateStr;
+            if (grouping === 'monthly') {
+                const [year, month] = dateStr.split('-');
+                const monthNames = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paz', 'Lis', 'Gru'];
+                return `${monthNames[parseInt(month) - 1]} ${year.slice(2)}`;
+            }
             const date = new Date(dateStr);
             return `${date.getDate()}.${date.getMonth() + 1}`;
         }
@@ -876,12 +907,7 @@
         }
 
         function updateAdcostsChart() {
-            // Group ad expenses by week and source
-            const dateFrom = new Date(document.getElementById('date-from').value);
-            const dateTo = new Date(document.getElementById('date-to').value);
-            const daysDiff = Math.ceil((dateTo - dateFrom) / (1000 * 60 * 60 * 24));
-            const groupByWeek = daysDiff > 30;
-
+            // Group ad expenses by chartGrouping (daily/weekly/monthly)
             const costsBySourceAndDate = {
                 google: {},
                 meta: {},
@@ -889,7 +915,7 @@
             };
 
             analyticsData.adExpenses.forEach(exp => {
-                const key = groupByWeek ? getWeekKey(exp.date) : exp.date;
+                const key = getDateKey(exp.date, chartGrouping);
                 const source = exp.source;
                 if (costsBySourceAndDate[source]) {
                     costsBySourceAndDate[source][key] = (costsBySourceAndDate[source][key] || 0) + (parseFloat(exp.amount) || 0);
@@ -903,7 +929,7 @@
                 ...Object.keys(costsBySourceAndDate.tiktok)
             ])].sort();
 
-            charts.adcosts.data.labels = allDates.map(d => formatDateLabel(d, groupByWeek));
+            charts.adcosts.data.labels = allDates.map(d => formatDateLabel(d, chartGrouping));
             charts.adcosts.data.datasets = [
                 {
                     label: 'Google',
