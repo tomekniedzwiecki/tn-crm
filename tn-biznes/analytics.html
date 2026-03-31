@@ -288,9 +288,9 @@
         // CONFIGURATION
         // ============================================
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyOTA2ODgsImV4cCI6MjA1Mjg2NjY4OH0.ykHJJcA7WuesXoYKXCrxzSvk0Br_cf9Trj6fmj5X9fM';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let supabase;
         let charts = {};
         let analyticsData = {
             orders: [],
@@ -309,27 +309,55 @@
         };
 
         // ============================================
+        // AUTH CHECK
+        // ============================================
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
         // INITIALIZATION
         // ============================================
-        document.addEventListener('DOMContentLoaded', async () => {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
 
-            // Check auth
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+            // Check if user has access to TN Biznes
+            if (!Sidebar.canAccessApp('biznes', session.user.email)) {
+                window.location.href = '/dashboard';
                 return;
             }
 
-            // Render sidebar
             Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
 
-            // Set default dates (last 30 days)
-            setPreset('30d');
+            // Load user profile
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
 
             // Initialize charts
             initCharts();
-        });
+
+            // Set default dates (last 30 days)
+            setPreset('30d');
+        }
+
+        init();
 
         // ============================================
         // DATE PRESETS
@@ -389,7 +417,7 @@
 
             try {
                 // Load orders with leads and tracking
-                const { data: orders, error: ordersError } = await supabase
+                const { data: orders, error: ordersError } = await supabaseClient
                     .from('orders')
                     .select(`
                         id,
@@ -423,7 +451,7 @@
                 if (ordersError) throw ordersError;
 
                 // Load ad expenses
-                const { data: adExpenses, error: adError } = await supabase
+                const { data: adExpenses, error: adError } = await supabaseClient
                     .from('ad_expenses')
                     .select('*')
                     .gte('date', dateFrom)
