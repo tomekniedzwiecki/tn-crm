@@ -432,10 +432,12 @@
                     throw ordersError;
                 }
                 console.log('Orders loaded:', orders?.length || 0);
+                console.log('Orders with lead_id:', orders?.filter(o => o.lead_id).length || 0);
+                console.log('Orders WITHOUT lead_id:', orders?.filter(o => !o.lead_id).map(o => ({ email: o.customer_email, amount: o.amount })));
 
                 // Get unique lead_ids
                 const leadIds = [...new Set(orders?.filter(o => o.lead_id).map(o => o.lead_id) || [])];
-                console.log('Lead IDs:', leadIds.length);
+                console.log('Unique Lead IDs:', leadIds);
 
                 // Load tracking data separately if we have lead_ids
                 let trackingMap = {};
