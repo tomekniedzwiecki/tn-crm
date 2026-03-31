@@ -432,14 +432,32 @@
                     throw ordersError;
                 }
                 console.log('Orders loaded:', orders?.length || 0);
-                console.log('Orders with lead_id:', orders?.filter(o => o.lead_id).length || 0);
-                console.log('Orders WITHOUT lead_id:', orders?.filter(o => !o.lead_id).map(o => ({ email: o.customer_email, amount: o.amount })));
 
-                // Get unique lead_ids
+                // Get lead_ids from orders that have them
                 const leadIds = [...new Set(orders?.filter(o => o.lead_id).map(o => o.lead_id) || [])];
-                console.log('Unique Lead IDs:', leadIds);
 
-                // Load tracking data separately if we have lead_ids
+                // Get emails from orders WITHOUT lead_id - we'll lookup leads by email
+                const emailsWithoutLeadId = [...new Set(orders?.filter(o => !o.lead_id && o.customer_email).map(o => o.customer_email.toLowerCase()) || [])];
+                console.log('Orders with lead_id:', leadIds.length, 'Orders to lookup by email:', emailsWithoutLeadId.length);
+
+                // Lookup leads by email for orders without lead_id
+                let emailToLeadMap = {};
+                if (emailsWithoutLeadId.length > 0) {
+                    const { data: leadsByEmail } = await supabaseClient
+                        .from('leads')
+                        .select('id, email')
+                        .in('email', emailsWithoutLeadId);
+
+                    if (leadsByEmail) {
+                        leadsByEmail.forEach(l => {
+                            emailToLeadMap[l.email.toLowerCase()] = l.id;
+                            if (!leadIds.includes(l.id)) leadIds.push(l.id);
+                        });
+                        console.log('Found leads by email:', leadsByEmail.length);
+                    }
+                }
+
+                // Load tracking data for ALL lead_ids
                 let trackingMap = {};
                 if (leadIds.length > 0) {
                     const { data: tracking, error: trackingError } = await supabaseClient
@@ -459,8 +477,15 @@
 
                 // Attach tracking to orders
                 orders?.forEach(order => {
-                    if (order.lead_id && trackingMap[order.lead_id]) {
-                        order.leads = { lead_tracking: [trackingMap[order.lead_id]] };
+                    let leadId = order.lead_id;
+
+                    // If no lead_id, try to find by email
+                    if (!leadId && order.customer_email) {
+                        leadId = emailToLeadMap[order.customer_email.toLowerCase()];
+                    }
+
+                    if (leadId && trackingMap[leadId]) {
+                        order.leads = { lead_tracking: [trackingMap[leadId]] };
                     }
                 });
 
