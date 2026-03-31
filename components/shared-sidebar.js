@@ -71,6 +71,7 @@ const NAV_ITEMS_STACK = [
 
 const NAV_ITEMS_BIZNES = [
     { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
+    { id: 'analytics', icon: 'ph-chart-bar', label: 'Analytics' },
     { id: 'costs', icon: 'ph-wallet', label: 'Koszty' },
     { id: 'revenues', icon: 'ph-money', label: 'Przychody' },
     { id: 'employees', icon: 'ph-users', label: 'Pracownicy' },

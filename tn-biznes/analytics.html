@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Analytics</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(20, 184, 166, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+
+        .preset-btn {
+            transition: all 0.2s;
+        }
+        .preset-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+            border-color: rgba(20, 184, 166, 0.3);
+        }
+
+        .chart-container {
+            background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .source-row { transition: all 0.15s ease; }
+        .source-row:hover { background: rgba(255,255,255,0.03); }
+
+        /* Source colors */
+        .source-google { color: #FBBC04; }
+        .source-youtube { color: #FF0000; }
+        .source-meta { color: #1877F2; }
+        .source-tiktok { color: #FF0050; }
+        .source-organic { color: #10B981; }
+        .source-email { color: #9333EA; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">analytics</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="exportData()" class="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors text-xs">
+                    <i class="ph ph-export"></i>
+                    <span class="hidden md:inline">Eksport</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto animate-enter">
+
+                <!-- Date Filter -->
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/5">
+                    <!-- Date inputs -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-zinc-500">Od:</label>
+                            <input type="date" id="date-from" class="input-field rounded-lg px-3 py-2 text-white text-sm" onchange="loadData()">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-zinc-500">Do:</label>
+                            <input type="date" id="date-to" class="input-field rounded-lg px-3 py-2 text-white text-sm" onchange="loadData()">
+                        </div>
+                    </div>
+                    <!-- Presets -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="setPreset('7d')" data-preset="7d" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">7 dni</button>
+                        <button onclick="setPreset('30d')" data-preset="30d" class="preset-btn active px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">30 dni</button>
+                        <button onclick="setPreset('month')" data-preset="month" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Ten miesiac</button>
+                        <button onclick="setPreset('last-month')" data-preset="last-month" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Poprzedni</button>
+                        <button onclick="setPreset('year')" data-preset="year" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-white/10">Ten rok</button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-8">
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-money text-lg text-teal-400"></i>
+                            <span class="text-xs text-zinc-500">Przychod</span>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="kpi-revenue">0 zl</div>
+                        <div class="text-xs text-zinc-600 mt-1" id="kpi-revenue-orders">0 transakcji</div>
+                    </div>
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-megaphone text-lg text-red-400"></i>
+                            <span class="text-xs text-zinc-500">Koszty reklam</span>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="kpi-adcost">0 zl</div>
+                        <div class="text-xs text-zinc-600 mt-1" id="kpi-adcost-breakdown">-</div>
+                    </div>
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-chart-line-up text-lg text-emerald-400"></i>
+                            <span class="text-xs text-zinc-500">ROAS</span>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="kpi-roas">0.0x</div>
+                        <div class="text-xs text-zinc-600 mt-1">zwrot z reklam</div>
+                    </div>
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-user-plus text-lg text-violet-400"></i>
+                            <span class="text-xs text-zinc-500">CAC</span>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="kpi-cac">0 zl</div>
+                        <div class="text-xs text-zinc-600 mt-1">koszt pozyskania</div>
+                    </div>
+                    <div class="stat-card rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-percent text-lg text-amber-400"></i>
+                            <span class="text-xs text-zinc-500">Marza</span>
+                        </div>
+                        <div class="text-2xl font-semibold text-white font-mono" id="kpi-margin">0%</div>
+                        <div class="text-xs text-zinc-600 mt-1">po kosztach reklam</div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 1 -->
+                <div class="grid lg:grid-cols-3 gap-4 mb-6">
+                    <!-- Revenue vs Ad Costs Over Time -->
+                    <div class="lg:col-span-2 chart-container rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-medium text-white">Przychody vs Koszty reklam</h3>
+                            <div class="flex items-center gap-4 text-xs">
+                                <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-teal-400 rounded"></span> Przychod</span>
+                                <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-red-400 rounded"></span> Koszt</span>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="chart-timeline"></canvas>
+                        </div>
+                    </div>
+                    <!-- Revenue by Source Donut -->
+                    <div class="chart-container rounded-xl p-4">
+                        <h3 class="text-sm font-medium text-white mb-4">Przychody wg zrodla</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="chart-sources"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2 -->
+                <div class="grid lg:grid-cols-2 gap-4 mb-6">
+                    <!-- ROAS by Source -->
+                    <div class="chart-container rounded-xl p-4">
+                        <h3 class="text-sm font-medium text-white mb-4">ROAS wg zrodla</h3>
+                        <div class="h-48">
+                            <canvas id="chart-roas"></canvas>
+                        </div>
+                    </div>
+                    <!-- Ad Costs by Source Over Time -->
+                    <div class="chart-container rounded-xl p-4">
+                        <h3 class="text-sm font-medium text-white mb-4">Koszty reklam wg zrodla</h3>
+                        <div class="h-48">
+                            <canvas id="chart-adcosts"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sources Table -->
+                <div class="chart-container rounded-xl overflow-hidden mb-6">
+                    <div class="p-4 border-b border-white/5">
+                        <h3 class="text-sm font-medium text-white">Szczegoly wg zrodla</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-zinc-500 border-b border-white/5">
+                                    <th class="px-4 py-3 font-medium">Zrodlo</th>
+                                    <th class="px-4 py-3 font-medium text-right">Przychod</th>
+                                    <th class="px-4 py-3 font-medium text-right">Koszt reklam</th>
+                                    <th class="px-4 py-3 font-medium text-right">ROAS</th>
+                                    <th class="px-4 py-3 font-medium text-right">Transakcje</th>
+                                    <th class="px-4 py-3 font-medium text-right">Avg. wartosc</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sources-table">
+                                <tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
+                            </tbody>
+                            <tfoot id="sources-total" class="border-t border-white/10 bg-white/[0.02]">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="chart-container rounded-xl overflow-hidden">
+                    <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                        <h3 class="text-sm font-medium text-white">Ostatnie transakcje</h3>
+                        <span id="transactions-count" class="text-xs text-zinc-500">0 transakcji</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full text-sm">
+                            <thead class="sticky top-0 bg-zinc-950">
+                                <tr class="text-left text-zinc-500 border-b border-white/5">
+                                    <th class="px-4 py-3 font-medium">Data</th>
+                                    <th class="px-4 py-3 font-medium">Klient</th>
+                                    <th class="px-4 py-3 font-medium">Zrodlo</th>
+                                    <th class="px-4 py-3 font-medium">UTM Campaign</th>
+                                    <th class="px-4 py-3 font-medium text-right">Wartosc</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table">
+                                <tr><td colspan="5" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyOTA2ODgsImV4cCI6MjA1Mjg2NjY4OH0.ykHJJcA7WuesXoYKXCrxzSvk0Br_cf9Trj6fmj5X9fM';
+
+        let supabase;
+        let charts = {};
+        let analyticsData = {
+            orders: [],
+            adExpenses: [],
+            bySource: {}
+        };
+
+        // Source configuration
+        const SOURCES = {
+            google: { name: 'Google Ads', color: '#FBBC04', icon: 'ph-google-logo' },
+            youtube: { name: 'YouTube', color: '#FF0000', icon: 'ph-youtube-logo' },
+            meta: { name: 'Meta Ads', color: '#1877F2', icon: 'ph-meta-logo' },
+            tiktok: { name: 'TikTok', color: '#FF0050', icon: 'ph-tiktok-logo' },
+            email: { name: 'Email', color: '#9333EA', icon: 'ph-envelope' },
+            organic: { name: 'Organic', color: '#10B981', icon: 'ph-globe' }
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // Check auth
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            // Render sidebar
+            Sidebar.render({ appId: 'biznes' });
+
+            // Set default dates (last 30 days)
+            setPreset('30d');
+
+            // Initialize charts
+            initCharts();
+        });
+
+        // ============================================
+        // DATE PRESETS
+        // ============================================
+        function setPreset(preset) {
+            const today = new Date();
+            let from, to;
+
+            switch (preset) {
+                case '7d':
+                    from = new Date(today);
+                    from.setDate(from.getDate() - 7);
+                    to = today;
+                    break;
+                case '30d':
+                    from = new Date(today);
+                    from.setDate(from.getDate() - 30);
+                    to = today;
+                    break;
+                case 'month':
+                    from = new Date(today.getFullYear(), today.getMonth(), 1);
+                    to = today;
+                    break;
+                case 'last-month':
+                    from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    to = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+                case 'year':
+                    from = new Date(today.getFullYear(), 0, 1);
+                    to = today;
+                    break;
+            }
+
+            document.getElementById('date-from').value = formatDate(from);
+            document.getElementById('date-to').value = formatDate(to);
+
+            // Update active preset button
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.preset === preset);
+            });
+
+            loadData();
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadData() {
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+
+            if (!dateFrom || !dateTo) return;
+
+            try {
+                // Load orders with leads and tracking
+                const { data: orders, error: ordersError } = await supabase
+                    .from('orders')
+                    .select(`
+                        id,
+                        paid_at,
+                        total,
+                        customer_name,
+                        customer_email,
+                        lead_id,
+                        leads (
+                            id,
+                            lead_source,
+                            lead_tracking (
+                                gclid,
+                                gbraid,
+                                wbraid,
+                                gad_source,
+                                fbclid,
+                                ttclid,
+                                utm_source,
+                                utm_medium,
+                                utm_campaign,
+                                network
+                            )
+                        )
+                    `)
+                    .not('paid_at', 'is', null)
+                    .gte('paid_at', dateFrom)
+                    .lte('paid_at', dateTo + 'T23:59:59')
+                    .order('paid_at', { ascending: false });
+
+                if (ordersError) throw ordersError;
+
+                // Load ad expenses
+                const { data: adExpenses, error: adError } = await supabase
+                    .from('ad_expenses')
+                    .select('*')
+                    .gte('date', dateFrom)
+                    .lte('date', dateTo)
+                    .order('date', { ascending: true });
+
+                if (adError) throw adError;
+
+                analyticsData.orders = orders || [];
+                analyticsData.adExpenses = adExpenses || [];
+
+                // Process data
+                processData();
+                updateKPIs();
+                updateCharts();
+                updateTables();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // ============================================
+        // DATA PROCESSING
+        // ============================================
+        function determineSource(order) {
+            const tracking = order.leads?.lead_tracking?.[0];
+
+            if (!tracking) {
+                return 'organic';
+            }
+
+            // Google Ads
+            if (tracking.gclid || tracking.gbraid || tracking.wbraid || tracking.gad_source) {
+                // Check for YouTube
+                if (tracking.network === 'v') return 'youtube';
+                if (tracking.utm_medium === 'youtube' || tracking.utm_medium === 'video') return 'youtube';
+                return 'google';
+            }
+
+            // Meta
+            if (tracking.fbclid) return 'meta';
+
+            // TikTok
+            if (tracking.ttclid) return 'tiktok';
+
+            // UTM source fallback
+            if (tracking.utm_source) {
+                const src = tracking.utm_source.toLowerCase();
+                if (src.includes('youtube')) return 'youtube';
+                if (src.includes('google')) return 'google';
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta') || src.includes('instagram')) return 'meta';
+                if (src.includes('tiktok')) return 'tiktok';
+                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
+            }
+
+            // Email medium
+            if (tracking.utm_medium === 'email') return 'email';
+
+            return 'organic';
+        }
+
+        function processData() {
+            // Reset by source
+            analyticsData.bySource = {};
+
+            // Initialize all sources
+            Object.keys(SOURCES).forEach(key => {
+                analyticsData.bySource[key] = {
+                    revenue: 0,
+                    orders: [],
+                    count: 0
+                };
+            });
+
+            // Process orders
+            analyticsData.orders.forEach(order => {
+                const source = determineSource(order);
+                const total = parseFloat(order.total) || 0;
+
+                analyticsData.bySource[source].revenue += total;
+                analyticsData.bySource[source].orders.push(order);
+                analyticsData.bySource[source].count++;
+            });
+
+            // Process ad expenses by source
+            const adCostsBySource = { google: 0, meta: 0, tiktok: 0 };
+            analyticsData.adExpenses.forEach(exp => {
+                // Map ad_expenses source to our sources
+                let source = exp.source;
+                // Google includes YouTube costs
+                if (source === 'google') {
+                    adCostsBySource.google += parseFloat(exp.amount) || 0;
+                } else if (source === 'meta') {
+                    adCostsBySource.meta += parseFloat(exp.amount) || 0;
+                } else if (source === 'tiktok') {
+                    adCostsBySource.tiktok += parseFloat(exp.amount) || 0;
+                }
+            });
+
+            analyticsData.adCostsBySource = adCostsBySource;
+        }
+
+        // ============================================
+        // KPI UPDATES
+        // ============================================
+        function updateKPIs() {
+            const totalRevenue = analyticsData.orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            const totalAdCost = analyticsData.adExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+            const orderCount = analyticsData.orders.length;
+            const roas = totalAdCost > 0 ? totalRevenue / totalAdCost : 0;
+            const cac = orderCount > 0 ? totalAdCost / orderCount : 0;
+            const margin = totalRevenue > 0 ? ((totalRevenue - totalAdCost) / totalRevenue) * 100 : 0;
+
+            document.getElementById('kpi-revenue').textContent = formatMoney(totalRevenue);
+            document.getElementById('kpi-revenue-orders').textContent = `${orderCount} transakcji`;
+
+            document.getElementById('kpi-adcost').textContent = formatMoney(totalAdCost);
+            const adBreakdown = [];
+            if (analyticsData.adCostsBySource?.google > 0) adBreakdown.push(`G: ${formatMoney(analyticsData.adCostsBySource.google, true)}`);
+            if (analyticsData.adCostsBySource?.meta > 0) adBreakdown.push(`M: ${formatMoney(analyticsData.adCostsBySource.meta, true)}`);
+            if (analyticsData.adCostsBySource?.tiktok > 0) adBreakdown.push(`T: ${formatMoney(analyticsData.adCostsBySource.tiktok, true)}`);
+            document.getElementById('kpi-adcost-breakdown').textContent = adBreakdown.join(' | ') || '-';
+
+            document.getElementById('kpi-roas').textContent = roas.toFixed(1) + 'x';
+            document.getElementById('kpi-cac').textContent = formatMoney(cac);
+            document.getElementById('kpi-margin').textContent = margin.toFixed(0) + '%';
+        }
+
+        function formatMoney(amount, short = false) {
+            if (short && amount >= 1000) {
+                return (amount / 1000).toFixed(1) + 'k';
+            }
+            return new Intl.NumberFormat('pl-PL', {
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount) + ' zl';
+        }
+
+        // ============================================
+        // CHARTS
+        // ============================================
+        function initCharts() {
+            // Common chart options
+            Chart.defaults.color = '#71717a';
+            Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+            // Timeline chart
+            const ctxTimeline = document.getElementById('chart-timeline').getContext('2d');
+            charts.timeline = new Chart(ctxTimeline, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Przychod',
+                            data: [],
+                            borderColor: '#14b8a6',
+                            backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Koszt reklam',
+                            data: [],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: v => formatMoney(v, true)
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Sources donut
+            const ctxSources = document.getElementById('chart-sources').getContext('2d');
+            charts.sources = new Chart(ctxSources, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+
+            // ROAS bar chart
+            const ctxRoas = document.getElementById('chart-roas').getContext('2d');
+            charts.roas = new Chart(ctxRoas, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'ROAS',
+                        data: [],
+                        backgroundColor: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { callback: v => v + 'x' }
+                        }
+                    }
+                }
+            });
+
+            // Ad costs stacked bar
+            const ctxAdcosts = document.getElementById('chart-adcosts').getContext('2d');
+            charts.adcosts = new Chart(ctxAdcosts, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: { callback: v => formatMoney(v, true) }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            updateTimelineChart();
+            updateSourcesChart();
+            updateRoasChart();
+            updateAdcostsChart();
+        }
+
+        function updateTimelineChart() {
+            const dateFrom = new Date(document.getElementById('date-from').value);
+            const dateTo = new Date(document.getElementById('date-to').value);
+            const daysDiff = Math.ceil((dateTo - dateFrom) / (1000 * 60 * 60 * 24));
+
+            // Determine grouping (daily for <= 60 days, weekly for > 60)
+            const groupByWeek = daysDiff > 60;
+
+            // Group orders by date
+            const revenueByDate = {};
+            analyticsData.orders.forEach(order => {
+                const date = order.paid_at.split('T')[0];
+                const key = groupByWeek ? getWeekKey(date) : date;
+                revenueByDate[key] = (revenueByDate[key] || 0) + (parseFloat(order.total) || 0);
+            });
+
+            // Group ad expenses by date
+            const costByDate = {};
+            analyticsData.adExpenses.forEach(exp => {
+                const key = groupByWeek ? getWeekKey(exp.date) : exp.date;
+                costByDate[key] = (costByDate[key] || 0) + (parseFloat(exp.amount) || 0);
+            });
+
+            // Get all dates
+            const allDates = [...new Set([...Object.keys(revenueByDate), ...Object.keys(costByDate)])].sort();
+
+            charts.timeline.data.labels = allDates.map(d => formatDateLabel(d, groupByWeek));
+            charts.timeline.data.datasets[0].data = allDates.map(d => revenueByDate[d] || 0);
+            charts.timeline.data.datasets[1].data = allDates.map(d => costByDate[d] || 0);
+            charts.timeline.update();
+        }
+
+        function getWeekKey(dateStr) {
+            const date = new Date(dateStr);
+            const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+            const weekNum = Math.ceil(((date - firstDayOfYear) / 86400000 + firstDayOfYear.getDay() + 1) / 7);
+            return `${date.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
+        }
+
+        function formatDateLabel(dateStr, isWeek) {
+            if (isWeek) return dateStr;
+            const date = new Date(dateStr);
+            return `${date.getDate()}.${date.getMonth() + 1}`;
+        }
+
+        function updateSourcesChart() {
+            const labels = [];
+            const data = [];
+            const colors = [];
+
+            Object.entries(analyticsData.bySource).forEach(([key, source]) => {
+                if (source.revenue > 0) {
+                    labels.push(SOURCES[key].name);
+                    data.push(source.revenue);
+                    colors.push(SOURCES[key].color);
+                }
+            });
+
+            charts.sources.data.labels = labels;
+            charts.sources.data.datasets[0].data = data;
+            charts.sources.data.datasets[0].backgroundColor = colors;
+            charts.sources.update();
+        }
+
+        function updateRoasChart() {
+            const labels = [];
+            const data = [];
+            const colors = [];
+
+            // Calculate ROAS for sources that have ad costs
+            const sourcesWithCosts = ['google', 'youtube', 'meta', 'tiktok'];
+
+            sourcesWithCosts.forEach(key => {
+                const revenue = analyticsData.bySource[key]?.revenue || 0;
+                let cost = 0;
+
+                // Map our source keys to ad_expenses sources
+                if (key === 'google' || key === 'youtube') {
+                    cost = analyticsData.adCostsBySource?.google || 0;
+                } else if (key === 'meta') {
+                    cost = analyticsData.adCostsBySource?.meta || 0;
+                } else if (key === 'tiktok') {
+                    cost = analyticsData.adCostsBySource?.tiktok || 0;
+                }
+
+                if (cost > 0 || revenue > 0) {
+                    labels.push(SOURCES[key].name);
+                    data.push(cost > 0 ? revenue / cost : 0);
+                    colors.push(SOURCES[key].color);
+                }
+            });
+
+            charts.roas.data.labels = labels;
+            charts.roas.data.datasets[0].data = data;
+            charts.roas.data.datasets[0].backgroundColor = colors;
+            charts.roas.update();
+        }
+
+        function updateAdcostsChart() {
+            // Group ad expenses by week and source
+            const dateFrom = new Date(document.getElementById('date-from').value);
+            const dateTo = new Date(document.getElementById('date-to').value);
+            const daysDiff = Math.ceil((dateTo - dateFrom) / (1000 * 60 * 60 * 24));
+            const groupByWeek = daysDiff > 30;
+
+            const costsBySourceAndDate = {
+                google: {},
+                meta: {},
+                tiktok: {}
+            };
+
+            analyticsData.adExpenses.forEach(exp => {
+                const key = groupByWeek ? getWeekKey(exp.date) : exp.date;
+                const source = exp.source;
+                if (costsBySourceAndDate[source]) {
+                    costsBySourceAndDate[source][key] = (costsBySourceAndDate[source][key] || 0) + (parseFloat(exp.amount) || 0);
+                }
+            });
+
+            // Get all dates
+            const allDates = [...new Set([
+                ...Object.keys(costsBySourceAndDate.google),
+                ...Object.keys(costsBySourceAndDate.meta),
+                ...Object.keys(costsBySourceAndDate.tiktok)
+            ])].sort();
+
+            charts.adcosts.data.labels = allDates.map(d => formatDateLabel(d, groupByWeek));
+            charts.adcosts.data.datasets = [
+                {
+                    label: 'Google',
+                    data: allDates.map(d => costsBySourceAndDate.google[d] || 0),
+                    backgroundColor: SOURCES.google.color
+                },
+                {
+                    label: 'Meta',
+                    data: allDates.map(d => costsBySourceAndDate.meta[d] || 0),
+                    backgroundColor: SOURCES.meta.color
+                },
+                {
+                    label: 'TikTok',
+                    data: allDates.map(d => costsBySourceAndDate.tiktok[d] || 0),
+                    backgroundColor: SOURCES.tiktok.color
+                }
+            ];
+            charts.adcosts.update();
+        }
+
+        // ============================================
+        // TABLES
+        // ============================================
+        function updateTables() {
+            updateSourcesTable();
+            updateTransactionsTable();
+        }
+
+        function updateSourcesTable() {
+            const tbody = document.getElementById('sources-table');
+            const tfoot = document.getElementById('sources-total');
+
+            let html = '';
+            let totalRevenue = 0;
+            let totalCost = 0;
+            let totalCount = 0;
+
+            Object.entries(analyticsData.bySource)
+                .filter(([_, data]) => data.count > 0)
+                .sort((a, b) => b[1].revenue - a[1].revenue)
+                .forEach(([key, data]) => {
+                    const source = SOURCES[key];
+                    let cost = 0;
+
+                    // Map costs
+                    if (key === 'google' || key === 'youtube') {
+                        cost = analyticsData.adCostsBySource?.google || 0;
+                    } else if (key === 'meta') {
+                        cost = analyticsData.adCostsBySource?.meta || 0;
+                    } else if (key === 'tiktok') {
+                        cost = analyticsData.adCostsBySource?.tiktok || 0;
+                    }
+
+                    const roas = cost > 0 ? (data.revenue / cost).toFixed(1) + 'x' : '-';
+                    const avgValue = data.count > 0 ? data.revenue / data.count : 0;
+
+                    totalRevenue += data.revenue;
+                    totalCost += cost;
+                    totalCount += data.count;
+
+                    html += `
+                        <tr class="source-row border-b border-white/5">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" style="background: ${source.color}"></span>
+                                    <span class="text-white">${source.name}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(data.revenue)}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-400">${cost > 0 ? formatMoney(cost) : '-'}</td>
+                            <td class="px-4 py-3 text-right font-mono ${cost > 0 ? 'text-emerald-400' : 'text-zinc-600'}">${roas}</td>
+                            <td class="px-4 py-3 text-right text-zinc-400">${data.count}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-400">${formatMoney(avgValue)}</td>
+                        </tr>
+                    `;
+                });
+
+            tbody.innerHTML = html || '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
+
+            // Total row
+            const totalRoas = totalCost > 0 ? (totalRevenue / totalCost).toFixed(1) + 'x' : '-';
+            const totalAvg = totalCount > 0 ? totalRevenue / totalCount : 0;
+            tfoot.innerHTML = `
+                <tr class="text-white font-medium">
+                    <td class="px-4 py-3">Razem</td>
+                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalRevenue)}</td>
+                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalCost)}</td>
+                    <td class="px-4 py-3 text-right font-mono text-emerald-400">${totalRoas}</td>
+                    <td class="px-4 py-3 text-right">${totalCount}</td>
+                    <td class="px-4 py-3 text-right font-mono">${formatMoney(totalAvg)}</td>
+                </tr>
+            `;
+        }
+
+        function updateTransactionsTable() {
+            const tbody = document.getElementById('transactions-table');
+            document.getElementById('transactions-count').textContent = `${analyticsData.orders.length} transakcji`;
+
+            if (analyticsData.orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-zinc-600">Brak transakcji</td></tr>';
+                return;
+            }
+
+            let html = '';
+            analyticsData.orders.slice(0, 50).forEach(order => {
+                const sourceKey = determineSource(order);
+                const source = SOURCES[sourceKey];
+                const tracking = order.leads?.lead_tracking?.[0];
+                const utmCampaign = tracking?.utm_campaign || '-';
+                const date = new Date(order.paid_at);
+
+                html += `
+                    <tr class="source-row border-b border-white/5">
+                        <td class="px-4 py-3 text-zinc-400">${date.toLocaleDateString('pl-PL')}</td>
+                        <td class="px-4 py-3 text-white">${order.customer_name || order.customer_email || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs" style="background: ${source.color}20; color: ${source.color}">
+                                ${source.name}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-zinc-500 text-xs font-mono">${utmCampaign}</td>
+                        <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(parseFloat(order.total) || 0)}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // ============================================
+        // EXPORT
+        // ============================================
+        function exportData() {
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+
+            // Prepare CSV
+            let csv = 'Data,Klient,Email,Zrodlo,UTM Campaign,Wartosc\n';
+
+            analyticsData.orders.forEach(order => {
+                const sourceKey = determineSource(order);
+                const source = SOURCES[sourceKey].name;
+                const tracking = order.leads?.lead_tracking?.[0];
+                const utmCampaign = tracking?.utm_campaign || '';
+                const date = new Date(order.paid_at).toLocaleDateString('pl-PL');
+
+                csv += `"${date}","${order.customer_name || ''}","${order.customer_email || ''}","${source}","${utmCampaign}",${order.total}\n`;
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `analytics_${dateFrom}_${dateTo}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
