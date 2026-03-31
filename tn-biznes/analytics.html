@@ -436,7 +436,7 @@
                 // Note: gte/lte automatically exclude null values
                 const { data: orders, error: ordersError } = await supabaseClient
                     .from('orders')
-                    .select('id, paid_at, amount, customer_name, customer_email, lead_id')
+                    .select('id, paid_at, amount, customer_name, customer_email, lead_id, manual_source')
                     .gte('paid_at', dateFrom + 'T00:00:00')
                     .lte('paid_at', dateTo + 'T23:59:59')
                     .order('paid_at', { ascending: false });
@@ -534,6 +534,11 @@
         // DATA PROCESSING
         // ============================================
         function determineSource(order) {
+            // Manual override takes priority
+            if (order.manual_source) {
+                return order.manual_source;
+            }
+
             const tracking = order.leads?.lead_tracking?.[0];
 
             if (!tracking) {
@@ -1047,15 +1052,27 @@
                 const tracking = order.leads?.lead_tracking?.[0];
                 const utmCampaign = tracking?.utm_campaign || '-';
                 const date = new Date(order.paid_at);
+                const isManual = !!order.manual_source;
+
+                // Build source options
+                const sourceOptions = Object.entries(SOURCES).map(([key, s]) =>
+                    `<option value="${key}" ${key === sourceKey ? 'selected' : ''}>${s.name}</option>`
+                ).join('');
 
                 html += `
                     <tr class="source-row border-b border-white/5">
                         <td class="px-4 py-3 text-zinc-400">${date.toLocaleDateString('pl-PL')}</td>
                         <td class="px-4 py-3 text-white">${order.customer_name || order.customer_email || '-'}</td>
                         <td class="px-4 py-3">
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs" style="background: ${source.color}20; color: ${source.color}">
-                                ${source.name}
-                            </span>
+                            <div class="relative inline-block">
+                                <select onchange="updateOrderSource('${order.id}', this.value)"
+                                    class="appearance-none cursor-pointer px-2 py-0.5 pr-6 rounded-full text-xs border-0 focus:ring-1 focus:ring-white/20 ${isManual ? 'ring-1 ring-white/20' : ''}"
+                                    style="background: ${source.color}20; color: ${source.color}"
+                                    title="${isManual ? 'Reczne nadpisanie' : 'Kliknij aby zmienic'}">
+                                    ${sourceOptions}
+                                </select>
+                                <i class="ph ph-caret-down absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none" style="color: ${source.color}"></i>
+                            </div>
                         </td>
                         <td class="px-4 py-3 text-zinc-500 text-xs font-mono">${utmCampaign}</td>
                         <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(toNetto(parseFloat(order.amount) || 0))}</td>
@@ -1064,6 +1081,34 @@
             });
 
             tbody.innerHTML = html;
+        }
+
+        async function updateOrderSource(orderId, newSource) {
+            try {
+                const { error } = await supabaseClient
+                    .from('orders')
+                    .update({ manual_source: newSource })
+                    .eq('id', orderId);
+
+                if (error) throw error;
+
+                // Update local data
+                const order = analyticsData.orders.find(o => o.id === orderId);
+                if (order) {
+                    order.manual_source = newSource;
+                }
+
+                // Reprocess and update
+                processData();
+                updateKPIs();
+                updateCharts();
+                updateSourcesTable();
+                // Don't call updateTransactionsTable to avoid losing focus
+
+            } catch (err) {
+                console.error('Failed to update source:', err);
+                alert('Blad zapisu: ' + err.message);
+            }
         }
 
         // ============================================
