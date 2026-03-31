@@ -419,18 +419,11 @@
 
             try {
                 // Load orders with leads (simpler query first)
+                // Note: gte/lte automatically exclude null values
                 const { data: orders, error: ordersError } = await supabaseClient
                     .from('orders')
-                    .select(`
-                        id,
-                        paid_at,
-                        total,
-                        customer_name,
-                        customer_email,
-                        lead_id
-                    `)
-                    .not('paid_at', 'is', null)
-                    .gte('paid_at', dateFrom)
+                    .select('id, paid_at, amount, customer_name, customer_email, lead_id')
+                    .gte('paid_at', dateFrom + 'T00:00:00')
                     .lte('paid_at', dateTo + 'T23:59:59')
                     .order('paid_at', { ascending: false });
 
@@ -552,7 +545,7 @@
             // Process orders
             analyticsData.orders.forEach(order => {
                 const source = determineSource(order);
-                const total = parseFloat(order.total) || 0;
+                const total = parseFloat(order.amount) || 0;
 
                 analyticsData.bySource[source].revenue += total;
                 analyticsData.bySource[source].orders.push(order);
@@ -760,7 +753,7 @@
             analyticsData.orders.forEach(order => {
                 const date = order.paid_at.split('T')[0];
                 const key = groupByWeek ? getWeekKey(date) : date;
-                revenueByDate[key] = (revenueByDate[key] || 0) + (parseFloat(order.total) || 0);
+                revenueByDate[key] = (revenueByDate[key] || 0) + (parseFloat(order.amount) || 0);
             });
 
             // Group ad expenses by date
@@ -995,7 +988,7 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-zinc-500 text-xs font-mono">${utmCampaign}</td>
-                        <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(parseFloat(order.total) || 0)}</td>
+                        <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(parseFloat(order.amount) || 0)}</td>
                     </tr>
                 `;
             });
@@ -1020,7 +1013,7 @@
                 const utmCampaign = tracking?.utm_campaign || '';
                 const date = new Date(order.paid_at).toLocaleDateString('pl-PL');
 
-                csv += `"${date}","${order.customer_name || ''}","${order.customer_email || ''}","${source}","${utmCampaign}",${order.total}\n`;
+                csv += `"${date}","${order.customer_name || ''}","${order.customer_email || ''}","${source}","${utmCampaign}",${order.amount}\n`;
             });
 
             // Download
