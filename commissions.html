@@ -584,15 +584,6 @@
                                             <tr class="order-row border-b border-white/5 last:border-0">
                                                 <td class="px-5 py-3 w-16">
                                                     <div class="flex items-center gap-1">
-                                                        ${leadId ? `
-                                                            <a href="/lead?id=${leadId}" class="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors" title="Zobacz lead">
-                                                                <i class="ph ph-arrow-square-out text-xs"></i>
-                                                            </a>
-                                                        ` : (o.customer_email ? `
-                                                            <a href="/leads?search=${encodeURIComponent(o.customer_email)}" class="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-600 hover:text-white transition-colors" title="Szukaj leada: ${o.customer_email}">
-                                                                <i class="ph ph-magnifying-glass text-xs"></i>
-                                                            </a>
-                                                        ` : '<div class="w-6"></div>')}
                                                         ${isAdmin ? `
                                                             <button onclick="showSalespersonPicker('${o.id}', this)"
                                                                 class="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-white transition-all ${o.commission_salesperson_id ? 'text-amber-500/70' : ''}">
@@ -603,7 +594,11 @@
                                                 </td>
                                                 <td class="py-3">
                                                     <div class="text-white text-sm">${clientName}</div>
-                                                    <div class="text-zinc-600 text-xs truncate max-w-[250px]">${o.description || o.order_number || ''}</div>
+                                                    ${o.customer_email ? `
+                                                        <a href="${leadId ? '/lead?id=' + leadId : '/leads?search=' + encodeURIComponent(o.customer_email)}"
+                                                           class="text-zinc-500 text-xs hover:text-emerald-400 transition-colors block">${o.customer_email}</a>
+                                                    ` : ''}
+                                                    ${o.description || o.order_number ? `<div class="text-zinc-600 text-xs truncate max-w-[250px]">${o.description || o.order_number}</div>` : ''}
                                                 </td>
                                                 <td class="px-5 py-3 text-right">
                                                     <div class="text-white font-mono text-sm">${fmt(o._amountNetto)}</div>
