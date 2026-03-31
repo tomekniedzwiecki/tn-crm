@@ -543,7 +543,11 @@
             });
 
             // Process orders
+            let noLeadId = 0, noTracking = 0;
             analyticsData.orders.forEach(order => {
+                if (!order.lead_id) noLeadId++;
+                else if (!order.leads?.lead_tracking?.[0]) noTracking++;
+
                 const source = determineSource(order);
                 const total = parseFloat(order.amount) || 0;
 
@@ -551,6 +555,7 @@
                 analyticsData.bySource[source].orders.push(order);
                 analyticsData.bySource[source].count++;
             });
+            console.log(`Orders without lead_id: ${noLeadId}, with lead_id but no tracking: ${noTracking}`);
 
             // Process ad expenses by source
             const adCostsBySource = { google: 0, meta: 0, tiktok: 0 };
