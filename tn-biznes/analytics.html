@@ -148,7 +148,7 @@
                     <div class="stat-card rounded-xl p-4">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="ph ph-money text-lg text-teal-400"></i>
-                            <span class="text-xs text-zinc-500">Przychod</span>
+                            <span class="text-xs text-zinc-500">Przychod netto</span>
                         </div>
                         <div class="text-2xl font-semibold text-white font-mono" id="kpi-revenue">0 zl</div>
                         <div class="text-xs text-zinc-600 mt-1" id="kpi-revenue-orders">0 transakcji</div>
@@ -556,6 +556,11 @@
             return 'organic';
         }
 
+        // Convert brutto to netto (VAT 23%)
+        function toNetto(brutto) {
+            return brutto / 1.23;
+        }
+
         function processData() {
             // Reset by source
             analyticsData.bySource = {};
@@ -576,7 +581,7 @@
                 else if (!order.leads?.lead_tracking?.[0]) noTracking++;
 
                 const source = determineSource(order);
-                const total = parseFloat(order.amount) || 0;
+                const total = toNetto(parseFloat(order.amount) || 0);
 
                 analyticsData.bySource[source].revenue += total;
                 analyticsData.bySource[source].orders.push(order);
@@ -785,7 +790,7 @@
             analyticsData.orders.forEach(order => {
                 const date = order.paid_at.split('T')[0];
                 const key = groupByWeek ? getWeekKey(date) : date;
-                revenueByDate[key] = (revenueByDate[key] || 0) + (parseFloat(order.amount) || 0);
+                revenueByDate[key] = (revenueByDate[key] || 0) + toNetto(parseFloat(order.amount) || 0);
             });
 
             // Group ad expenses by date
@@ -1020,7 +1025,7 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-zinc-500 text-xs font-mono">${utmCampaign}</td>
-                        <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(parseFloat(order.amount) || 0)}</td>
+                        <td class="px-4 py-3 text-right font-mono text-white">${formatMoney(toNetto(parseFloat(order.amount) || 0))}</td>
                     </tr>
                 `;
             });
@@ -1045,7 +1050,7 @@
                 const utmCampaign = tracking?.utm_campaign || '';
                 const date = new Date(order.paid_at).toLocaleDateString('pl-PL');
 
-                csv += `"${date}","${order.customer_name || ''}","${order.customer_email || ''}","${source}","${utmCampaign}",${order.amount}\n`;
+                csv += `"${date}","${order.customer_name || ''}","${order.customer_email || ''}","${source}","${utmCampaign}",${toNetto(parseFloat(order.amount) || 0).toFixed(2)}\n`;
             });
 
             // Download
