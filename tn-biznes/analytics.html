@@ -415,8 +415,10 @@
 
             if (!dateFrom || !dateTo) return;
 
+            console.log('Loading data for:', dateFrom, 'to', dateTo);
+
             try {
-                // Load orders with leads and tracking
+                // Load orders with leads (simpler query first)
                 const { data: orders, error: ordersError } = await supabaseClient
                     .from('orders')
                     .select(`
@@ -425,30 +427,47 @@
                         total,
                         customer_name,
                         customer_email,
-                        lead_id,
-                        leads (
-                            id,
-                            lead_source,
-                            lead_tracking (
-                                gclid,
-                                gbraid,
-                                wbraid,
-                                gad_source,
-                                fbclid,
-                                ttclid,
-                                utm_source,
-                                utm_medium,
-                                utm_campaign,
-                                network
-                            )
-                        )
+                        lead_id
                     `)
                     .not('paid_at', 'is', null)
                     .gte('paid_at', dateFrom)
                     .lte('paid_at', dateTo + 'T23:59:59')
                     .order('paid_at', { ascending: false });
 
-                if (ordersError) throw ordersError;
+                if (ordersError) {
+                    console.error('Orders error:', ordersError);
+                    throw ordersError;
+                }
+                console.log('Orders loaded:', orders?.length || 0);
+
+                // Get unique lead_ids
+                const leadIds = [...new Set(orders?.filter(o => o.lead_id).map(o => o.lead_id) || [])];
+                console.log('Lead IDs:', leadIds.length);
+
+                // Load tracking data separately if we have lead_ids
+                let trackingMap = {};
+                if (leadIds.length > 0) {
+                    const { data: tracking, error: trackingError } = await supabaseClient
+                        .from('lead_tracking')
+                        .select('lead_id, gclid, gbraid, wbraid, gad_source, fbclid, ttclid, utm_source, utm_medium, utm_campaign, network')
+                        .in('lead_id', leadIds);
+
+                    if (trackingError) {
+                        console.warn('Tracking error (non-fatal):', trackingError);
+                    } else if (tracking) {
+                        tracking.forEach(t => {
+                            trackingMap[t.lead_id] = t;
+                        });
+                        console.log('Tracking loaded:', tracking.length);
+                    }
+                }
+
+                // Attach tracking to orders
+                orders?.forEach(order => {
+                    if (order.lead_id && trackingMap[order.lead_id]) {
+                        order.leads = { lead_tracking: [trackingMap[order.lead_id]] };
+                    }
+                });
 
                 // Load ad expenses
                 const { data: adExpenses, error: adError } = await supabaseClient
@@ -458,7 +477,10 @@
                     .lte('date', dateTo)
                     .order('date', { ascending: true });
 
-                if (adError) throw adError;
+                if (adError) {
+                    console.warn('Ad expenses error (non-fatal):', adError);
+                }
+                console.log('Ad expenses loaded:', adExpenses?.length || 0);
 
                 analyticsData.orders = orders || [];
                 analyticsData.adExpenses = adExpenses || [];
