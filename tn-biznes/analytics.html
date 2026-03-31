@@ -260,6 +260,34 @@
                     </div>
                 </div>
 
+                <!-- Lead Funnel Table -->
+                <div class="chart-container rounded-xl overflow-hidden mb-6">
+                    <div class="p-4 border-b border-white/5">
+                        <h3 class="text-sm font-medium text-white">Funnel leadow wg zrodla</h3>
+                        <p class="text-xs text-zinc-500 mt-1">Metryki konwersji i kosztow pozyskania</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-zinc-500 border-b border-white/5">
+                                    <th class="px-4 py-3 font-medium">Zrodlo</th>
+                                    <th class="px-4 py-3 font-medium text-right">Leady</th>
+                                    <th class="px-4 py-3 font-medium text-right">Konwersje</th>
+                                    <th class="px-4 py-3 font-medium text-right">Conv. %</th>
+                                    <th class="px-4 py-3 font-medium text-right">CPL</th>
+                                    <th class="px-4 py-3 font-medium text-right">CAC</th>
+                                    <th class="px-4 py-3 font-medium text-right">Avg. LTV</th>
+                                </tr>
+                            </thead>
+                            <tbody id="funnel-table">
+                                <tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600">Ladowanie...</td></tr>
+                            </tbody>
+                            <tfoot id="funnel-total" class="border-t border-white/10 bg-white/[0.02]">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Transactions Table -->
                 <div class="chart-container rounded-xl overflow-hidden">
                     <div class="p-4 border-b border-white/5 flex items-center justify-between">
@@ -301,7 +329,9 @@
         let analyticsData = {
             orders: [],
             adExpenses: [],
-            bySource: {}
+            leads: [],
+            bySource: {},
+            funnelBySource: {}
         };
 
         // Source configuration
@@ -516,8 +546,42 @@
                 }
                 console.log('Ad expenses loaded:', adExpenses?.length || 0);
 
+                // Load ALL leads from period for funnel analysis
+                const { data: allLeads, error: leadsError } = await supabaseClient
+                    .from('leads')
+                    .select('id, email, created_at')
+                    .gte('created_at', dateFrom + 'T00:00:00')
+                    .lte('created_at', dateTo + 'T23:59:59');
+
+                if (leadsError) {
+                    console.warn('Leads error (non-fatal):', leadsError);
+                }
+                console.log('All leads loaded:', allLeads?.length || 0);
+
+                // Load tracking for ALL leads in period
+                let allLeadsTrackingMap = {};
+                if (allLeads && allLeads.length > 0) {
+                    const allLeadIds = allLeads.map(l => l.id);
+                    const { data: allTracking } = await supabaseClient
+                        .from('lead_tracking')
+                        .select('lead_id, gclid, gbraid, wbraid, gad_source, fbclid, ttclid, utm_source, utm_medium, network')
+                        .in('lead_id', allLeadIds);
+
+                    if (allTracking) {
+                        allTracking.forEach(t => {
+                            allLeadsTrackingMap[t.lead_id] = t;
+                        });
+                    }
+
+                    // Attach tracking to leads
+                    allLeads.forEach(lead => {
+                        lead.tracking = allLeadsTrackingMap[lead.id] || null;
+                    });
+                }
+
                 analyticsData.orders = orders || [];
                 analyticsData.adExpenses = adExpenses || [];
+                analyticsData.leads = allLeads || [];
 
                 // Process data
                 processData();
@@ -624,6 +688,78 @@
             });
 
             analyticsData.adCostsBySource = adCostsBySource;
+
+            // Process lead funnel
+            processLeadFunnel();
+        }
+
+        function determineLeadSource(lead) {
+            const tracking = lead.tracking;
+
+            if (!tracking) {
+                return 'organic';
+            }
+
+            // Google Ads
+            if (tracking.gclid || tracking.gbraid || tracking.wbraid || tracking.gad_source) {
+                if (tracking.network === 'v') return 'youtube';
+                if (tracking.utm_medium === 'youtube' || tracking.utm_medium === 'video') return 'youtube';
+                return 'google';
+            }
+
+            // Meta
+            if (tracking.fbclid) return 'meta';
+
+            // TikTok
+            if (tracking.ttclid) return 'tiktok';
+
+            // UTM source fallback
+            if (tracking.utm_source) {
+                const src = tracking.utm_source.toLowerCase();
+                if (src.includes('youtube')) return 'youtube';
+                if (src.includes('google')) return 'google';
+                if (src.includes('facebook') || src.includes('fb') || src.includes('meta') || src.includes('instagram')) return 'meta';
+                if (src.includes('tiktok')) return 'tiktok';
+                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
+            }
+
+            if (tracking.utm_medium === 'email') return 'email';
+
+            return 'organic';
+        }
+
+        function processLeadFunnel() {
+            // Initialize funnel data
+            analyticsData.funnelBySource = {};
+            Object.keys(SOURCES).forEach(key => {
+                analyticsData.funnelBySource[key] = {
+                    leads: 0,
+                    conversions: 0,
+                    revenue: 0,
+                    leadEmails: new Set()
+                };
+            });
+
+            // Count leads by source
+            analyticsData.leads.forEach(lead => {
+                const source = determineLeadSource(lead);
+                analyticsData.funnelBySource[source].leads++;
+                analyticsData.funnelBySource[source].leadEmails.add(lead.email.toLowerCase());
+            });
+
+            // Count conversions (orders from leads in period)
+            analyticsData.orders.forEach(order => {
+                const email = order.customer_email?.toLowerCase();
+                if (!email) return;
+
+                // Find which source this customer came from
+                Object.entries(analyticsData.funnelBySource).forEach(([sourceKey, data]) => {
+                    if (data.leadEmails.has(email)) {
+                        data.conversions++;
+                        data.revenue += toNetto(parseFloat(order.amount) || 0);
+                    }
+                });
+            });
         }
 
         // ============================================
@@ -967,6 +1103,7 @@
         // ============================================
         function updateTables() {
             updateSourcesTable();
+            updateFunnelTable();
             updateTransactionsTable();
         }
 
@@ -1032,6 +1169,83 @@
                     <td class="px-4 py-3 text-right font-mono text-emerald-400">${totalRoas}</td>
                     <td class="px-4 py-3 text-right">${totalCount}</td>
                     <td class="px-4 py-3 text-right font-mono">${formatMoney(totalAvg)}</td>
+                </tr>
+            `;
+        }
+
+        function updateFunnelTable() {
+            const tbody = document.getElementById('funnel-table');
+            const tfoot = document.getElementById('funnel-total');
+
+            let html = '';
+            let totalLeads = 0;
+            let totalConversions = 0;
+            let totalRevenue = 0;
+            let totalCost = 0;
+
+            Object.entries(analyticsData.funnelBySource)
+                .filter(([_, data]) => data.leads > 0)
+                .sort((a, b) => b[1].leads - a[1].leads)
+                .forEach(([key, data]) => {
+                    const source = SOURCES[key];
+                    let cost = 0;
+
+                    // Map costs
+                    if (key === 'google' || key === 'youtube') {
+                        cost = analyticsData.adCostsBySource?.google || 0;
+                    } else if (key === 'meta') {
+                        cost = analyticsData.adCostsBySource?.meta || 0;
+                    } else if (key === 'tiktok') {
+                        cost = analyticsData.adCostsBySource?.tiktok || 0;
+                    }
+
+                    const convRate = data.leads > 0 ? (data.conversions / data.leads * 100) : 0;
+                    const cpl = cost > 0 && data.leads > 0 ? cost / data.leads : 0;
+                    const cac = cost > 0 && data.conversions > 0 ? cost / data.conversions : 0;
+                    const avgLtv = data.conversions > 0 ? data.revenue / data.conversions : 0;
+
+                    totalLeads += data.leads;
+                    totalConversions += data.conversions;
+                    totalRevenue += data.revenue;
+                    if (cost > 0) totalCost += cost;
+
+                    const convColor = convRate >= 5 ? 'text-emerald-400' : convRate >= 2 ? 'text-amber-400' : 'text-zinc-400';
+
+                    html += `
+                        <tr class="source-row border-b border-white/5">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" style="background: ${source.color}"></span>
+                                    <span class="text-white">${source.name}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-right text-zinc-400">${data.leads}</td>
+                            <td class="px-4 py-3 text-right text-white">${data.conversions}</td>
+                            <td class="px-4 py-3 text-right font-mono ${convColor}">${convRate.toFixed(1)}%</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-400">${cpl > 0 ? formatMoney(cpl) : '-'}</td>
+                            <td class="px-4 py-3 text-right font-mono ${cac > 0 ? 'text-amber-400' : 'text-zinc-600'}">${cac > 0 ? formatMoney(cac) : '-'}</td>
+                            <td class="px-4 py-3 text-right font-mono text-teal-400">${avgLtv > 0 ? formatMoney(avgLtv) : '-'}</td>
+                        </tr>
+                    `;
+                });
+
+            tbody.innerHTML = html || '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600">Brak danych</td></tr>';
+
+            // Total row
+            const totalConvRate = totalLeads > 0 ? (totalConversions / totalLeads * 100) : 0;
+            const totalCpl = totalCost > 0 && totalLeads > 0 ? totalCost / totalLeads : 0;
+            const totalCac = totalCost > 0 && totalConversions > 0 ? totalCost / totalConversions : 0;
+            const totalAvgLtv = totalConversions > 0 ? totalRevenue / totalConversions : 0;
+
+            tfoot.innerHTML = `
+                <tr class="text-white font-medium">
+                    <td class="px-4 py-3">Razem</td>
+                    <td class="px-4 py-3 text-right">${totalLeads}</td>
+                    <td class="px-4 py-3 text-right">${totalConversions}</td>
+                    <td class="px-4 py-3 text-right font-mono">${totalConvRate.toFixed(1)}%</td>
+                    <td class="px-4 py-3 text-right font-mono">${totalCpl > 0 ? formatMoney(totalCpl) : '-'}</td>
+                    <td class="px-4 py-3 text-right font-mono text-amber-400">${totalCac > 0 ? formatMoney(totalCac) : '-'}</td>
+                    <td class="px-4 py-3 text-right font-mono text-teal-400">${totalAvgLtv > 0 ? formatMoney(totalAvgLtv) : '-'}</td>
                 </tr>
             `;
         }
