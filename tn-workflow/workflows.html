@@ -433,6 +433,7 @@
         let selectedStages = new Set();
         let stagesInitialized = false;
         let workflowLogos = {};
+        let brandNames = {}; // Brand names for search
         let selectedStatusStages = new Set(); // For filtering by missing status stages
         let ownerFilter = 'all'; // 'all', 'mine', 'client'
         let deadlineSettings = {}; // deadline per step from settings
@@ -569,7 +570,7 @@
                 workflows = data || [];
             }
 
-            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos(), loadCurrentMilestoneTasks(), loadStageData()]);
+            await Promise.all([loadUnreadComments(), loadReportCounts(), loadWorkflowLogos(), loadBrandNames(), loadCurrentMilestoneTasks(), loadStageData()]);
             populateOfferFilter();
             renderStageFilter();
             applyFilters();
@@ -647,6 +648,25 @@
                     const meta = item.notes ? JSON.parse(item.notes) : {};
                     if (meta.variant === 'main') {
                         workflowLogos[item.workflow_id] = item.file_url;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        async function loadBrandNames() {
+            const { data, error } = await supabaseClient
+                .from('workflow_branding')
+                .select('workflow_id, value')
+                .eq('type', 'brand_info');
+
+            if (error || !data) return;
+
+            brandNames = {};
+            for (const item of data) {
+                try {
+                    const info = item.value ? JSON.parse(item.value) : {};
+                    if (info.name) {
+                        brandNames[item.workflow_id] = info.name;
                     }
                 } catch (e) {}
             }
@@ -792,6 +812,7 @@
             const email = (workflow.customer_email || '').toLowerCase();
             const offer = (workflow.offer_name || '').toLowerCase();
             const id = (workflow.workflow_id || '').toLowerCase();
+            const brandName = (brandNames[workflow.workflow_id] || '').toLowerCase();
 
             // Single term search - check all fields
             if (terms.length === 1) {
@@ -805,7 +826,8 @@
                        company.includes(term) ||
                        email.includes(term) ||
                        offer.includes(term) ||
-                       id.includes(term);
+                       id.includes(term) ||
+                       brandName.includes(term);
             }
 
             // Multi-word search - all terms must match somewhere (great for "Jan Kowalski")
@@ -816,6 +838,7 @@
                        email.includes(t) ||
                        offer.includes(t) ||
                        id.includes(t) ||
+                       brandName.includes(t) ||
                        (/^\d{3,}$/.test(normalizedT) && customerPhone.includes(normalizedT));
             });
         }
