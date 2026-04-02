@@ -7431,6 +7431,10 @@
                 if (isConnected) {
                     try {
                         const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                        const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                        // landing_url is the full URL from input (e.g. https://dobromir.pl), fallback to projectUrl
+                        const landingPageUrl = takeDropData?.landing_url || projectUrl;
+                        const domain = takeDropData?.domain || '';
                         await supabaseClient.functions.invoke('automation-trigger', {
                             body: {
                                 trigger_type: 'landing_page_connected',
@@ -7439,8 +7443,9 @@
                                 context: {
                                     email: workflow.customer_email,
                                     clientName: clientName,
-                                    landingDomain: takeDropData?.domain || '',
-                                    projectUrl: `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
+                                    landingDomain: domain,
+                                    landingPageUrl: landingPageUrl,
+                                    projectUrl: projectUrl
                                 }
                             }
                         });

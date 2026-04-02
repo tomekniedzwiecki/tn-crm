@@ -353,7 +353,8 @@ Deno.serve(async (req) => {
         // Sales page
         salesPageUrl: data.salesPageUrl || '',
         // TakeDrop
-        landingDomain: data.landingDomain || ''
+        landingDomain: data.landingDomain || '',
+        landingPageUrl: data.landingPageUrl || ''
       }
 
       // Replace variables in subject and body
