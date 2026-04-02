@@ -1371,6 +1371,7 @@
             if (installmentId) {
                 try {
                     // Fetch installment data with schedule, lead and workflow
+                    // Note: workflows table doesn't have lead_id FK, so we get lead from schedule
                     const { data: instData, error: instError } = await supabaseClient
                         .from('payment_installments')
                         .select(`
@@ -1378,11 +1379,7 @@
                             schedule:payment_schedules(
                                 *,
                                 lead:leads(id, email, phone, name, company, nip),
-                                workflow:workflows(
-                                    id,
-                                    offer_name,
-                                    lead:leads(id, email, phone, name, company, nip)
-                                )
+                                workflow:workflows(id, offer_name)
                             )
                         `)
                         .eq('id', installmentId)
@@ -1408,9 +1405,9 @@
                     installmentData = instData;
                     isCustomPayment = true; // Reuse custom payment flag to skip workflow creation
 
-                    // Use workflow data if exists, otherwise use schedule's lead data
+                    // Use schedule's lead data (workflow doesn't have lead FK)
                     const workflow = instData.schedule.workflow;
-                    const lead = workflow?.lead || instData.schedule.lead;
+                    const lead = instData.schedule.lead;
                     // Zawsze używaj "Budowa sklepu pełen pakiet" dla płatności rat
                     const offerName = 'Budowa sklepu pełen pakiet';
                     const rataLabel = `Rata ${instData.installment_number}/${instData.schedule.installments_count}`;
