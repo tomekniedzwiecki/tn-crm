@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZENOKO - Twój przycisk reset | Masażer oczu z technologią grafenową</title>
+    <title>ZENOKO - Ulga dla zmęczonych oczu w 15 minut</title>
     <meta name="description" content="ZENOKO to inteligentny masażer oczu z ciepłem grafenowym i presoterapią. Głęboka regeneracja zmęczonych oczu w 15 minut. Dla profesjonalistów spędzających godziny przed ekranem.">
 
     <!-- Preconnect -->
@@ -43,11 +43,13 @@
             --section-padding: 100px 0;
             --container-width: 1200px;
 
-            /* Shadows */
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+            /* Shadows - Colored for depth */
+            --shadow-sm: 0 2px 8px rgba(0, 137, 123, 0.06);
+            --shadow-md: 0 4px 16px rgba(0, 137, 123, 0.1);
+            --shadow-lg: 0 8px 32px rgba(0, 137, 123, 0.15);
             --shadow-primary: 0 8px 24px rgba(0, 137, 123, 0.25);
+            --shadow-secondary: 0 8px 24px rgba(149, 117, 205, 0.2);
+            --shadow-accent: 0 8px 24px rgba(245, 166, 35, 0.2);
 
             /* Border Radius */
             --radius-sm: 8px;
@@ -71,7 +73,7 @@
             font-size: 16px;
             line-height: 1.7;
             color: var(--neutral-dark);
-            background: #FFFFFF;
+            background: #FEFDFB;
             overflow-x: hidden;
         }
 
@@ -111,17 +113,44 @@
         .text-center { text-align: center; }
         .mx-auto { margin-left: auto; margin-right: auto; }
 
-        /* Fade-in Animation */
+        /* Fade-in Animation with stagger */
         .fade-in {
             opacity: 0;
             transform: translateY(40px);
-            transition: opacity 0.8s ease, transform 0.8s ease;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .fade-in.visible {
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* Staggered animations for grid children */
+        .bento-grid .fade-in:nth-child(1) { transition-delay: 0ms; }
+        .bento-grid .fade-in:nth-child(2) { transition-delay: 100ms; }
+        .bento-grid .fade-in:nth-child(3) { transition-delay: 200ms; }
+        .bento-grid .fade-in:nth-child(4) { transition-delay: 300ms; }
+
+        .steps-grid .fade-in:nth-child(1) { transition-delay: 0ms; }
+        .steps-grid .fade-in:nth-child(2) { transition-delay: 150ms; }
+        .steps-grid .fade-in:nth-child(3) { transition-delay: 300ms; }
+
+        .problem-grid .fade-in:nth-child(1) { transition-delay: 0ms; }
+        .problem-grid .fade-in:nth-child(2) { transition-delay: 100ms; }
+        .problem-grid .fade-in:nth-child(3) { transition-delay: 200ms; }
+
+        .testimonials-grid .fade-in:nth-child(1) { transition-delay: 0ms; }
+        .testimonials-grid .fade-in:nth-child(2) { transition-delay: 100ms; }
+        .testimonials-grid .fade-in:nth-child(3) { transition-delay: 200ms; }
+
+        .personas-grid .fade-in:nth-child(1) { transition-delay: 0ms; }
+        .personas-grid .fade-in:nth-child(2) { transition-delay: 150ms; }
+        .personas-grid .fade-in:nth-child(3) { transition-delay: 300ms; }
+
+        .gallery-grid .fade-in:nth-child(1) { transition-delay: 0ms; }
+        .gallery-grid .fade-in:nth-child(2) { transition-delay: 100ms; }
+        .gallery-grid .fade-in:nth-child(3) { transition-delay: 200ms; }
+        .gallery-grid .fade-in:nth-child(4) { transition-delay: 300ms; }
 
         /* Image Placeholders */
         .img-placeholder {
@@ -230,7 +259,7 @@
             font-weight: 600;
             text-decoration: none;
             border-radius: var(--radius-md);
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             border: none;
         }
@@ -543,7 +572,16 @@
 
         .trust-item:hover {
             border-color: var(--primary);
-            box-shadow: 0 4px 16px rgba(0, 137, 123, 0.15);
+            box-shadow: 0 8px 20px rgba(0, 137, 123, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .trust-item:hover .trust-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .trust-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .trust-icon {
@@ -579,6 +617,386 @@
             color: var(--neutral-mid);
         }
 
+        /* ==================== GALLERY ==================== */
+        .gallery {
+            padding: 80px 0;
+            background: linear-gradient(180deg, #FFFFFF 0%, rgba(0, 137, 123, 0.03) 100%);
+        }
+
+        .gallery-header {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto 48px;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 20px 40px rgba(0, 137, 123, 0.2);
+        }
+
+        .gallery-item .img-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: var(--radius-lg);
+        }
+
+        .gallery-item-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: #FFFFFF;
+            font-family: var(--font-heading);
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .gallery-item:hover .gallery-item-overlay {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ==================== TECHNOLOGY ==================== */
+        .technology {
+            padding: var(--section-padding);
+            background: linear-gradient(135deg, rgba(0, 137, 123, 0.06) 0%, rgba(149, 117, 205, 0.06) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .technology::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(245, 166, 35, 0.1) 0%, transparent 70%);
+            top: -100px;
+            right: -100px;
+            pointer-events: none;
+        }
+
+        .technology-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px;
+        }
+
+        .technology-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .technology-visual {
+            position: relative;
+        }
+
+        .technology-image {
+            aspect-ratio: 1;
+            border-radius: var(--radius-xl);
+        }
+
+        .technology-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(245, 166, 35, 0.3) 0%, transparent 70%);
+            animation: tech-glow 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes tech-glow {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .technology-info h3 {
+            font-family: var(--font-heading);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--neutral-dark);
+            margin-bottom: 20px;
+        }
+
+        .technology-info p {
+            font-size: 16px;
+            color: var(--neutral-mid);
+            line-height: 1.8;
+            margin-bottom: 32px;
+        }
+
+        .tech-features {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tech-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 20px;
+            background: #FFFFFF;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tech-feature:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 24px rgba(0, 137, 123, 0.15);
+        }
+
+        .tech-feature-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(0, 137, 123, 0.15));
+            border-radius: var(--radius-sm);
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .tech-feature-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .tech-feature-text h4 {
+            font-family: var(--font-heading);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--neutral-dark);
+            margin-bottom: 4px;
+        }
+
+        .tech-feature-text p {
+            font-size: 14px;
+            color: var(--neutral-mid);
+            margin-bottom: 0;
+        }
+
+        /* ==================== PERSONAS ==================== */
+        .personas {
+            padding: var(--section-padding);
+            background: linear-gradient(180deg, #FFFFFF 0%, rgba(149, 117, 205, 0.05) 100%);
+        }
+
+        .personas-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px;
+        }
+
+        .personas-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .persona-card {
+            position: relative;
+            background: #FFFFFF;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .persona-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12);
+        }
+
+        .persona-card:nth-child(1):hover {
+            box-shadow: 0 24px 48px rgba(0, 137, 123, 0.2);
+        }
+
+        .persona-card:nth-child(2):hover {
+            box-shadow: 0 24px 48px rgba(149, 117, 205, 0.2);
+        }
+
+        .persona-card:nth-child(3):hover {
+            box-shadow: 0 24px 48px rgba(245, 166, 35, 0.2);
+        }
+
+        .persona-image {
+            aspect-ratio: 4/3;
+        }
+
+        .persona-content {
+            padding: 28px;
+        }
+
+        .persona-tag {
+            display: inline-block;
+            padding: 6px 12px;
+            font-family: var(--font-accent);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 50px;
+            margin-bottom: 12px;
+        }
+
+        .persona-card:nth-child(1) .persona-tag {
+            background: rgba(0, 137, 123, 0.1);
+            color: var(--primary);
+        }
+
+        .persona-card:nth-child(2) .persona-tag {
+            background: rgba(149, 117, 205, 0.1);
+            color: var(--secondary);
+        }
+
+        .persona-card:nth-child(3) .persona-tag {
+            background: rgba(245, 166, 35, 0.1);
+            color: #C77800;
+        }
+
+        .persona-card h3 {
+            font-family: var(--font-heading);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--neutral-dark);
+            margin-bottom: 12px;
+        }
+
+        .persona-card p {
+            font-size: 15px;
+            color: var(--neutral-mid);
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .persona-benefits {
+            list-style: none;
+        }
+
+        .persona-benefits li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--neutral-dark);
+            padding: 8px 0;
+        }
+
+        .persona-benefits li svg {
+            width: 18px;
+            height: 18px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        /* ==================== PACKAGE ==================== */
+        .package {
+            padding: var(--section-padding);
+            background: linear-gradient(135deg, #FFFCF5 0%, #FFF8E7 100%);
+        }
+
+        .package-header {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto 60px;
+        }
+
+        .package-content {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 60px;
+            align-items: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .package-image {
+            aspect-ratio: 4/3;
+            border-radius: var(--radius-xl);
+        }
+
+        .package-items {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .package-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 24px;
+            background: #FFFFFF;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .package-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 24px rgba(0, 137, 123, 0.15);
+        }
+
+        .package-item-icon {
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-soft);
+            border-radius: var(--radius-md);
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .package-item-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .package-item h4 {
+            font-family: var(--font-heading);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--neutral-dark);
+            margin-bottom: 4px;
+        }
+
+        .package-item p {
+            font-size: 14px;
+            color: var(--neutral-mid);
+        }
+
         /* ==================== PROBLEM ==================== */
         .problem {
             padding: var(--section-padding);
@@ -607,8 +1025,17 @@
         }
 
         .problem-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
+            transform: translateY(-6px) rotate(-0.5deg);
+            box-shadow: 0 16px 32px rgba(224, 123, 57, 0.12);
+        }
+
+        .problem-card:hover .problem-icon {
+            transform: scale(1.1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .problem-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .problem-icon {
@@ -696,8 +1123,17 @@
 
         .bento-card:hover {
             border-color: var(--primary);
-            box-shadow: 0 16px 40px rgba(0, 137, 123, 0.15);
-            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0, 137, 123, 0.18);
+            transform: translateY(-6px) rotate(-0.5deg);
+        }
+
+        .bento-card:hover .bento-icon {
+            transform: scale(1.1) rotate(5deg);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bento-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .bento-card:nth-child(2):hover {
@@ -803,8 +1239,17 @@
         }
 
         .step-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-lg);
+            transform: translateY(-10px) rotate(1deg);
+            box-shadow: 0 20px 40px rgba(0, 137, 123, 0.15);
+        }
+
+        .step-card:hover .step-number {
+            transform: scale(1.1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .step-number {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .step-number {
@@ -988,8 +1433,19 @@
         }
 
         .testimonial-card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(0, 137, 123, 0.12);
+            transform: translateY(-6px);
+            border-color: rgba(0, 137, 123, 0.2);
+        }
+
+        .testimonial-card:nth-child(2):hover {
+            box-shadow: 0 16px 32px rgba(149, 117, 205, 0.12);
+            border-color: rgba(149, 117, 205, 0.2);
+        }
+
+        .testimonial-card:nth-child(3):hover {
+            box-shadow: 0 16px 32px rgba(245, 166, 35, 0.12);
+            border-color: rgba(245, 166, 35, 0.2);
         }
 
         .testimonial-stars {
@@ -1061,11 +1517,17 @@
             border-radius: var(--radius-md);
             margin-bottom: 12px;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .faq-item:hover {
             border-color: var(--primary);
+            box-shadow: 0 4px 16px rgba(0, 137, 123, 0.1);
+        }
+
+        .faq-item.active {
+            border-color: var(--primary);
+            background: linear-gradient(180deg, #FFFFFF, rgba(0, 137, 123, 0.02));
         }
 
         .faq-question {
@@ -1227,6 +1689,24 @@
             width: 100%;
             padding: 18px 32px;
             font-size: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .offer-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
         }
 
         .offer-guarantee {
@@ -1495,6 +1975,24 @@
                 opacity: 0.5;
             }
 
+            .gallery-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .technology-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .personas-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .package-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
             .bento-grid {
                 grid-template-columns: 1fr;
             }
@@ -1669,10 +2167,10 @@
 
                     <h1 class="hero-title">Koniec z bólem oczu. <span>W 15 minut.</span></h1>
 
-                    <p class="hero-subtitle">ZENOKO to Twój przycisk reset po całym dniu przed ekranem. Ciepło grafenowe i presoterapia regenerują zmęczone oczy, redukują napięcie skroni i pomagają zasnąć. Bez tabletek, bez skutków ubocznych.</p>
+                    <p class="hero-subtitle">Twój przycisk reset po całym dniu przed ekranem. Ciepło grafenowe i presoterapia regenerują zmęczone oczy, redukują napięcie skroni i pomagają zasnąć. Bez tabletek, bez skutków ubocznych.</p>
 
                     <div class="hero-cta">
-                        <a href="#zamow" class="btn btn-primary">Zamów teraz</a>
+                        <a href="#zamow" class="btn btn-primary">Zamów z rabatem -34%</a>
                         <a href="#jak-dziala" class="btn btn-secondary">Zobacz jak działa</a>
                     </div>
 
@@ -1761,6 +2259,70 @@
         </div>
     </section>
 
+    <!-- Gallery -->
+    <section class="gallery">
+        <div class="container">
+            <div class="gallery-header fade-in">
+                <span class="section-label">Galeria</span>
+                <h2 class="section-title">Zobacz ZENOKO z każdej strony</h2>
+            </div>
+
+            <div class="gallery-grid">
+                <div class="gallery-item fade-in">
+                    <div class="img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Przód masażera</span>
+                        <span class="ph-size">400x400px</span>
+                    </div>
+                    <div class="gallery-item-overlay">Widok z przodu</div>
+                </div>
+
+                <div class="gallery-item fade-in">
+                    <div class="img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Wnętrze masażera</span>
+                        <span class="ph-size">400x400px</span>
+                    </div>
+                    <div class="gallery-item-overlay">Wnętrze z poduszkami</div>
+                </div>
+
+                <div class="gallery-item fade-in">
+                    <div class="img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Masażer złożony</span>
+                        <span class="ph-size">400x400px</span>
+                    </div>
+                    <div class="gallery-item-overlay">Kompaktowa konstrukcja</div>
+                </div>
+
+                <div class="gallery-item fade-in">
+                    <div class="img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Masażer na głowie</span>
+                        <span class="ph-size">400x400px</span>
+                    </div>
+                    <div class="gallery-item-overlay">W użyciu</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Problem Section -->
     <section class="problem">
         <div class="container">
@@ -1806,6 +2368,75 @@
             <div class="problem-stat fade-in">
                 <div class="problem-stat-number">80%</div>
                 <p class="problem-stat-text">pracowników biurowych w Polsce cierpi na chroniczne zmęczenie oczu. Czy Ty też jesteś w tej grupie?</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Section -->
+    <section class="technology">
+        <div class="container">
+            <div class="technology-header fade-in">
+                <span class="section-label">Technologia</span>
+                <h2 class="section-title">Jak działa ciepło grafenowe FIR?</h2>
+                <p class="section-subtitle">Daleka podczerwień (FIR) to ta sama energia, którą słońce dostarcza Twojemu ciału. Bezpiecznie i głęboko penetruje tkanki.</p>
+            </div>
+
+            <div class="technology-content">
+                <div class="technology-visual fade-in">
+                    <div class="technology-glow"></div>
+                    <div class="technology-image img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Wizualizacja technologii FIR</span>
+                        <span class="ph-size">600x600px</span>
+                    </div>
+                </div>
+
+                <div class="technology-info fade-in">
+                    <h3>Grafen — materiał przyszłości</h3>
+                    <p>Grafen przewodzi ciepło 5x lepiej niż miedź. Dzięki temu ZENOKO nagrzewa się błyskawicznie i utrzymuje stałą temperaturę 38-42°C — idealną dla regeneracji oczu.</p>
+
+                    <div class="tech-features">
+                        <div class="tech-feature">
+                            <div class="tech-feature-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <div class="tech-feature-text">
+                                <h4>Szybkie nagrzewanie</h4>
+                                <p>Gotowy do użycia w 10 sekund</p>
+                            </div>
+                        </div>
+
+                        <div class="tech-feature">
+                            <div class="tech-feature-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </div>
+                            <div class="tech-feature-text">
+                                <h4>Poprawa krążenia</h4>
+                                <p>FIR rozszerza naczynia krwionośne</p>
+                            </div>
+                        </div>
+
+                        <div class="tech-feature">
+                            <div class="tech-feature-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            </div>
+                            <div class="tech-feature-text">
+                                <h4>Udrożnienie gruczołów Meiboma</h4>
+                                <p>Naturalna produkcja łez</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -1991,6 +2622,130 @@
         </div>
     </section>
 
+    <!-- Personas -->
+    <section class="personas">
+        <div class="container">
+            <div class="personas-header fade-in">
+                <span class="section-label">Dla kogo</span>
+                <h2 class="section-title">Znajdź siebie</h2>
+                <p class="section-subtitle">ZENOKO pomaga każdemu, kto spędza godziny przed ekranem. Sprawdź, jak może pomóc Tobie.</p>
+            </div>
+
+            <div class="personas-grid">
+                <div class="persona-card fade-in">
+                    <div class="persona-image img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Programista przy komputerze</span>
+                        <span class="ph-size">400x300px</span>
+                    </div>
+                    <div class="persona-content">
+                        <span class="persona-tag">Programiści & IT</span>
+                        <h3>10+ godzin przed kodem</h3>
+                        <p>Debugowanie, code review, spotkania na Zoom — Twoje oczy nie mają chwili wytchnienia. ZENOKO to Twój reset między sesjami.</p>
+                        <ul class="persona-benefits">
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Redukcja zmęczenia oczu
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Lepsza koncentracja
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Przerwa bez poczucia winy
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="persona-card fade-in">
+                    <div class="persona-image img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Pracownik biurowy</span>
+                        <span class="ph-size">400x300px</span>
+                    </div>
+                    <div class="persona-content">
+                        <span class="persona-tag">Pracownicy biurowi</span>
+                        <h3>Excel, maile, raporty</h3>
+                        <p>Klimatyzowane biuro, jarzeniówki, małe litery w arkuszach — klasyczny przepis na zespół suchego oka i bóle głowy.</p>
+                        <ul class="persona-benefits">
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Ulga w suchych oczach
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Mniej bólów głowy
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Relaks w przerwie obiadowej
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="persona-card fade-in">
+                    <div class="persona-image img-placeholder">
+                        <div class="ph-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="ph-label">Osoba z migreną</span>
+                        <span class="ph-size">400x300px</span>
+                    </div>
+                    <div class="persona-content">
+                        <span class="persona-tag">Osoby z migrenami</span>
+                        <h3>Przewlekłe napięcie</h3>
+                        <p>Migreny i napięciowe bóle głowy potrafią zrujnować cały dzień. ZENOKO pomaga rozluźnić mięśnie i zmniejszyć częstotliwość ataków.</p>
+                        <ul class="persona-benefits">
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Rozluźnienie napięcia skroni
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Profilaktyka bez tabletek
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Lepszy sen
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Testimonials -->
     <section class="testimonials" id="opinie">
         <div class="container">
@@ -2154,6 +2909,80 @@
                     <div class="faq-answer">
                         <div class="faq-answer-content">
                             Dostawa jest darmowa! Wysyłamy w ciągu 24 godzin od złożenia zamówienia. Standardowa przesyłka dociera w 1-2 dni robocze (InPost lub kurier). Możesz też wybrać odbiór w Paczkomacie.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Package -->
+    <section class="package">
+        <div class="container">
+            <div class="package-header fade-in">
+                <span class="section-label">W zestawie</span>
+                <h2 class="section-title">Co otrzymujesz?</h2>
+                <p class="section-subtitle">Kompletny zestaw gotowy do użycia od razu po rozpakowaniu.</p>
+            </div>
+
+            <div class="package-content">
+                <div class="package-image img-placeholder fade-in">
+                    <div class="ph-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <span class="ph-label">Zdjęcie zestawu / unboxing</span>
+                    <span class="ph-size">600x450px</span>
+                </div>
+
+                <div class="package-items fade-in">
+                    <div class="package-item">
+                        <div class="package-item-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Masażer ZENOKO</h4>
+                            <p>Główne urządzenie z technologią FIR</p>
+                        </div>
+                    </div>
+
+                    <div class="package-item">
+                        <div class="package-item-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Eleganckie etui podróżne</h4>
+                            <p>Ochrona podczas transportu</p>
+                        </div>
+                    </div>
+
+                    <div class="package-item">
+                        <div class="package-item-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Kabel USB-C</h4>
+                            <p>Szybkie ładowanie w 2h</p>
+                        </div>
+                    </div>
+
+                    <div class="package-item">
+                        <div class="package-item-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Instrukcja obsługi PL</h4>
+                            <p>Wszystko jasno wyjaśnione</p>
                         </div>
                     </div>
                 </div>
