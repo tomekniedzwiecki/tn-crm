@@ -862,6 +862,66 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <!-- Custom Payment Link (always available) -->
+                                        <div class="pt-4 border-t border-white/5">
+                                            <details class="group">
+                                                <summary class="flex items-center justify-between cursor-pointer text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors py-2">
+                                                    <span class="flex items-center gap-2">
+                                                        <i class="ph ph-credit-card text-emerald-400"></i>
+                                                        <span class="font-mono uppercase tracking-wider">Płatność jednorazowa</span>
+                                                    </span>
+                                                    <i class="ph ph-caret-down group-open:rotate-180 transition-transform"></i>
+                                                </summary>
+                                                <div class="pt-3">
+                                                    <!-- Form -->
+                                                    <div id="custom-payment-exists-form">
+                                                        <p class="text-zinc-600 text-[10px] mb-3">Jednorazowy link do płatności. Projekt TN Workflow <strong>nie zostanie</strong> utworzony.</p>
+                                                        <div class="grid grid-cols-2 gap-3 mb-3">
+                                                            <div>
+                                                                <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Kwota (PLN) <span class="text-red-400">*</span></label>
+                                                                <div class="relative">
+                                                                    <input type="number" id="custom-payment-amount-exists" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white pr-10" placeholder="1000">
+                                                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">PLN</span>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Opis <span class="text-red-400">*</span></label>
+                                                                <input type="text" id="custom-payment-description-exists" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" placeholder="Konsultacja">
+                                                            </div>
+                                                        </div>
+                                                        <button onclick="generateCustomPaymentLinkExists()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                                                            <i class="ph ph-link"></i>
+                                                            Generuj link do płatności
+                                                        </button>
+                                                    </div>
+                                                    <!-- Result -->
+                                                    <div id="custom-payment-exists-result" class="hidden">
+                                                        <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20 mb-3">
+                                                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2">
+                                                                <i class="ph ph-check-circle text-emerald-400"></i>
+                                                                <span class="font-mono uppercase tracking-wider">Link do płatności</span>
+                                                            </div>
+                                                            <div class="flex flex-col sm:flex-row gap-2">
+                                                                <input type="text" id="custom-payment-url-exists" readonly class="flex-1 bg-zinc-900/80 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-zinc-300 font-mono truncate">
+                                                                <button onclick="copyCustomPaymentUrlExists()" class="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-emerald-400">
+                                                                    <i class="ph ph-copy"></i>
+                                                                    <span class="sm:hidden">Kopiuj</span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="flex items-center gap-4 mt-2 text-[10px] text-zinc-500">
+                                                                <span><strong id="custom-payment-amount-display-exists">0</strong> PLN</span>
+                                                                <span id="custom-payment-description-display-exists">-</span>
+                                                            </div>
+                                                        </div>
+                                                        <button onclick="resetCustomPaymentExists()" class="w-full text-zinc-500 hover:text-zinc-300 text-xs py-2 transition-colors flex items-center justify-center gap-1">
+                                                            <i class="ph ph-plus"></i>
+                                                            Generuj kolejny link
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </details>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -5189,6 +5249,86 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         // Event listener for inline custom payment button
         document.getElementById('generate-custom-payment-btn-inline')?.addEventListener('click', generateCustomPaymentLinkInline);
+
+        // ============ CUSTOM PAYMENT IN EXISTS STATE FUNCTIONS ============
+
+        function generateCustomPaymentLinkExists() {
+            const amountInput = document.getElementById('custom-payment-amount-exists');
+            const descriptionInput = document.getElementById('custom-payment-description-exists');
+
+            const amount = parseFloat(amountInput.value);
+            const description = descriptionInput.value.trim();
+
+            if (!amount || amount <= 0) {
+                showToast('Podaj kwotę', 'error');
+                amountInput.focus();
+                return;
+            }
+
+            if (!description) {
+                showToast('Podaj opis płatności', 'error');
+                descriptionInput.focus();
+                return;
+            }
+
+            // Generate TPay payment URL
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const baseUrl = isLocal ? window.location.origin : 'https://crm.tomekniedzwiecki.pl';
+            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
+
+            const params = new URLSearchParams({
+                amount: amount.toFixed(2),
+                description: description,
+                lead_id: lead?.id || ''
+            });
+
+            const paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
+
+            // Update UI - show result, hide form
+            document.getElementById('custom-payment-url-exists').value = paymentUrl;
+            document.getElementById('custom-payment-amount-display-exists').textContent = amount.toLocaleString('pl-PL');
+            document.getElementById('custom-payment-description-display-exists').textContent = description;
+
+            document.getElementById('custom-payment-exists-form').classList.add('hidden');
+            document.getElementById('custom-payment-exists-result').classList.remove('hidden');
+
+            // Log activity
+            if (lead?.email) {
+                logAuditActivity('create', 'custom_payment_link', null, lead.email, null, {
+                    amount: amount,
+                    description: description,
+                    url: paymentUrl
+                });
+            }
+
+            console.log('[custom-payment-exists] Generated link:', paymentUrl);
+        }
+
+        function copyCustomPaymentUrlExists() {
+            const urlInput = document.getElementById('custom-payment-url-exists');
+            urlInput.select();
+            document.execCommand('copy');
+
+            // Show feedback
+            const btn = urlInput.nextElementSibling;
+            const icon = btn.querySelector('i');
+            icon.classList.remove('ph-copy');
+            icon.classList.add('ph-check');
+            icon.classList.add('text-emerald-400');
+            showToast('Skopiowano link', 'success');
+
+            setTimeout(() => {
+                icon.classList.remove('ph-check', 'text-emerald-400');
+                icon.classList.add('ph-copy');
+            }, 2000);
+        }
+
+        function resetCustomPaymentExists() {
+            document.getElementById('custom-payment-amount-exists').value = '';
+            document.getElementById('custom-payment-description-exists').value = '';
+            document.getElementById('custom-payment-exists-form').classList.remove('hidden');
+            document.getElementById('custom-payment-exists-result').classList.add('hidden');
+        }
 
         // View History Modal Functions
         function openViewHistoryModal() {
