@@ -856,11 +856,28 @@
             // Auto-assign status for leads with survey but no status
             await autoAssignStatusForSurveyLeads(leads);
 
-            // Load client offers to get tokens
-            const { data: clientOffers } = await supabaseClient.from('client_offers').select('lead_id, unique_token');
-            if (clientOffers) {
+            // Load client offers to get tokens (with pagination)
+            const allClientOffers = [];
+            let offersPage = 0;
+            let hasMoreOffers = true;
+
+            while (hasMoreOffers) {
+                const { data: clientOffers } = await supabaseClient
+                    .from('client_offers')
+                    .select('lead_id, unique_token')
+                    .range(offersPage * pageSize, (offersPage + 1) * pageSize - 1);
+
+                if (clientOffers && clientOffers.length > 0) {
+                    allClientOffers.push(...clientOffers);
+                    offersPage++;
+                }
+
+                hasMoreOffers = clientOffers && clientOffers.length === pageSize;
+            }
+
+            if (allClientOffers.length > 0) {
                 const tokenMap = {};
-                clientOffers.forEach(co => {
+                allClientOffers.forEach(co => {
                     tokenMap[co.lead_id] = co.unique_token;
                 });
                 leads.forEach(lead => {
@@ -868,11 +885,28 @@
                 });
             }
 
-            // Load tracking data for marketing source attribution
-            const { data: trackingData } = await supabaseClient.from('lead_tracking').select('lead_id, gclid, gbraid, wbraid, fbclid, ttclid, utm_source, utm_medium, utm_campaign, network, campaignid, adgroupid, creative, placement');
-            if (trackingData) {
+            // Load tracking data for marketing source attribution (with pagination like leads)
+            const allTracking = [];
+            let trackingPage = 0;
+            let hasMoreTracking = true;
+
+            while (hasMoreTracking) {
+                const { data: trackingData } = await supabaseClient
+                    .from('lead_tracking')
+                    .select('lead_id, gclid, gbraid, wbraid, fbclid, ttclid, utm_source, utm_medium, utm_campaign, network, campaignid, adgroupid, creative, placement')
+                    .range(trackingPage * pageSize, (trackingPage + 1) * pageSize - 1);
+
+                if (trackingData && trackingData.length > 0) {
+                    allTracking.push(...trackingData);
+                    trackingPage++;
+                }
+
+                hasMoreTracking = trackingData && trackingData.length === pageSize;
+            }
+
+            if (allTracking.length > 0) {
                 const trackingMap = {};
-                trackingData.forEach(t => {
+                allTracking.forEach(t => {
                     trackingMap[t.lead_id] = t;
                 });
                 leads.forEach(lead => {
