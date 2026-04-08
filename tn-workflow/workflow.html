@@ -2153,14 +2153,21 @@
                             <!-- Status: Client confirmed partner access -->
                             <div id="ad-account-partner-granted-status" class="hidden mb-6">
                                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                            <i class="ph ph-user-check text-amber-400 text-xl"></i>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                <i class="ph ph-user-check text-amber-400 text-xl"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-[13px] text-amber-400 font-medium">Klient potwierdził dostęp partnera</div>
+                                                <div id="ad-account-partner-granted-date" class="text-[12px] text-[#888]">-</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div class="text-[13px] text-amber-400 font-medium">Klient potwierdził dostęp partnera</div>
-                                            <div id="ad-account-partner-granted-date" class="text-[12px] text-[#888]">-</div>
-                                        </div>
+                                        <button onclick="resetAdAccountData()" id="reset-ad-account-btn"
+                                                class="flex items-center gap-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 px-3 py-2 rounded-lg text-[12px] font-medium transition-colors">
+                                            <i class="ph ph-arrow-counter-clockwise"></i>
+                                            Resetuj
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -8872,8 +8879,54 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
+        async function resetAdAccountData() {
+            if (!confirm('Czy na pewno chcesz zresetować dane konta reklamowego? Klient będzie musiał ponownie przejść przez proces konfiguracji.')) {
+                return;
+            }
+
+            const btn = document.getElementById('reset-ad-account-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Resetuję...';
+            }
+
+            try {
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            partner_access_granted: false,
+                            partner_access_granted_at: null,
+                            ad_account_ready: false,
+                            ad_account_configured_at: null
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+
+                    adsData.partner_access_granted = false;
+                    adsData.partner_access_granted_at = null;
+                    adsData.ad_account_ready = false;
+                    adsData.ad_account_configured_at = null;
+                }
+
+                showToast('Dane konta reklamowego zresetowane');
+                loadAdAccountTab();
+                updateNavChecks();
+            } catch (err) {
+                console.error('Error resetting ad account:', err);
+                showToast('Błąd resetowania', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-arrow-counter-clockwise"></i> Resetuj';
+                }
+            }
+        }
+
         window.loadAdAccountTab = loadAdAccountTab;
         window.toggleAdAccountReady = toggleAdAccountReady;
+        window.resetAdAccountData = resetAdAccountData;
 
         // Budżet tab
         async function loadBudzetTab() {
