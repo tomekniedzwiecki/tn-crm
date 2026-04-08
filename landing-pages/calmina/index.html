@@ -15,7 +15,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Lato:wght@400;500;600;700&family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Lato:wght@400;500;600;700&family=Comfortaa:wght@400;700&display=swap&subset=latin-ext" rel="stylesheet">
 
   <style>
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -61,11 +61,11 @@
       --radius-xl: 24px;
       --radius-full: 9999px;
 
-      /* Shadows */
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-      --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+      /* Shadows - kolorowe, nie czarne */
+      --shadow-sm: 0 1px 2px rgba(var(--primary-rgb), 0.08);
+      --shadow-md: 0 4px 12px rgba(var(--primary-rgb), 0.12);
+      --shadow-lg: 0 10px 24px rgba(var(--primary-rgb), 0.15);
+      --shadow-xl: 0 20px 40px rgba(var(--primary-rgb), 0.18);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -86,7 +86,7 @@
       font-size: 16px;
       line-height: 1.6;
       color: var(--text-dark);
-      background: var(--bg-white);
+      background: #fefdfb;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -360,6 +360,64 @@
     @keyframes glow-pulse {
       0% { transform: scale(1); opacity: 0.6; }
       100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* Floating Decorations */
+    .floating-deco {
+      position: absolute;
+      font-size: 24px;
+      opacity: 0.15;
+      pointer-events: none;
+      animation: float-deco 6s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    .floating-deco:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; }
+    .floating-deco:nth-child(2) { top: 25%; right: 12%; animation-delay: 1s; font-size: 20px; }
+    .floating-deco:nth-child(3) { top: 60%; left: 5%; animation-delay: 2s; font-size: 18px; }
+    .floating-deco:nth-child(4) { top: 70%; right: 8%; animation-delay: 0.5s; }
+    .floating-deco:nth-child(5) { top: 40%; left: 15%; animation-delay: 1.5s; font-size: 16px; }
+    .floating-deco:nth-child(6) { bottom: 20%; right: 15%; animation-delay: 2.5s; font-size: 22px; }
+
+    @keyframes float-deco {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(10deg); }
+    }
+
+    /* Wavy Divider */
+    .wavy-divider {
+      position: relative;
+      height: 80px;
+      margin-top: -1px;
+      overflow: hidden;
+    }
+
+    .wavy-divider svg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .wavy-divider-top {
+      margin-top: 0;
+      margin-bottom: -1px;
+    }
+
+    .wavy-divider-top svg {
+      top: 0;
+      bottom: auto;
+      transform: rotate(180deg);
+    }
+
+    @media (max-width: 768px) {
+      .floating-deco {
+        display: none;
+      }
+      .wavy-divider {
+        height: 50px;
+      }
     }
 
     /* Hero Background Animation - Vibration Waves */
@@ -646,7 +704,7 @@
        PROBLEM SECTION
        ═══════════════════════════════════════════════════════════════════════════ */
     .problem {
-      padding: var(--section-padding);
+      padding: 120px 0 100px;
       background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%);
     }
 
@@ -723,7 +781,7 @@
        SOLUTION / BENTO
        ═══════════════════════════════════════════════════════════════════════════ */
     .solution {
-      padding: var(--section-padding);
+      padding: 100px 0 120px;
       background: linear-gradient(180deg, #FFF 0%, rgba(184,169,201,0.05) 100%);
     }
 
@@ -746,23 +804,35 @@
       border: 1px solid var(--border-light);
       border-radius: var(--radius-xl);
       overflow: hidden;
-      transition: all 0.4s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    /* Staggered animation delays */
+    .bento-card:nth-child(1) { transition-delay: 0ms; }
+    .bento-card:nth-child(2) { transition-delay: 100ms; }
+    .bento-card:nth-child(3) { transition-delay: 200ms; }
+    .bento-card:nth-child(4) { transition-delay: 300ms; }
 
     .bento-card:hover {
       border-color: var(--primary);
-      box-shadow: 0 12px 24px rgba(201, 146, 154, 0.15);
-      transform: translateY(-4px);
+      box-shadow: 0 16px 32px rgba(201, 146, 154, 0.2);
+      transform: translateY(-8px) rotate(-0.5deg);
     }
 
     .bento-card:nth-child(2):hover {
       border-color: var(--secondary);
-      box-shadow: 0 12px 24px rgba(184, 169, 201, 0.15);
+      box-shadow: 0 16px 32px rgba(184, 169, 201, 0.2);
+      transform: translateY(-8px) rotate(0.5deg);
     }
 
     .bento-card:nth-child(3):hover {
       border-color: var(--accent);
-      box-shadow: 0 12px 24px rgba(212, 165, 116, 0.15);
+      box-shadow: 0 16px 32px rgba(212, 165, 116, 0.2);
+      transform: translateY(-8px) rotate(-0.5deg);
+    }
+
+    .bento-card:nth-child(4):hover {
+      transform: translateY(-8px) rotate(0.5deg);
     }
 
     .spotlight {
@@ -1207,7 +1277,7 @@
        OFFER
        ═══════════════════════════════════════════════════════════════════════════ */
     .offer {
-      padding: var(--section-padding);
+      padding: 120px 0 140px;
       background: linear-gradient(135deg, rgba(201,146,154,0.05) 0%, #FFF 50%, rgba(184,169,201,0.05) 100%);
     }
 
@@ -1345,6 +1415,16 @@
       width: 100%;
       font-size: 18px;
       padding: 20px 40px;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(201, 146, 154, 0.4); }
+      50% { box-shadow: 0 0 20px 10px rgba(201, 146, 154, 0.2); }
+    }
+
+    .offer-cta:hover {
+      animation: none;
     }
 
     .offer-guarantee {
@@ -1393,6 +1473,200 @@
     .cta-banner .btn-primary:hover {
       background: var(--neutral-light);
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PRODUCT GALLERY
+       ═══════════════════════════════════════════════════════════════════════════ */
+    .product-gallery {
+      padding: var(--section-padding);
+      background: var(--bg-white);
+    }
+
+    .gallery-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 24px;
+    }
+
+    .gallery-item {
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .gallery-main {
+      grid-column: 1 / 2;
+      grid-row: 1 / 3;
+    }
+
+    .gallery-main .img-placeholder {
+      height: 100%;
+      aspect-ratio: auto;
+    }
+
+    @media (max-width: 768px) {
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .gallery-main {
+        grid-column: auto;
+        grid-row: auto;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       TECHNOLOGY
+       ═══════════════════════════════════════════════════════════════════════════ */
+    .technology {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, #FFF 0%, rgba(201,146,154,0.05) 100%);
+    }
+
+    .technology-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .technology-content {
+      max-width: 520px;
+    }
+
+    .technology-text {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.8;
+    }
+
+    .tech-features {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .tech-feature {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .tech-feature-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-soft);
+      border-radius: var(--radius-md);
+      flex-shrink: 0;
+    }
+
+    .tech-feature-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--primary);
+    }
+
+    .tech-feature-content strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--neutral-dark);
+      margin-bottom: 4px;
+    }
+
+    .tech-feature-content span {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      .technology-inner {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .technology-visual {
+        order: -1;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PERSONAS
+       ═══════════════════════════════════════════════════════════════════════════ */
+    .personas {
+      padding: var(--section-padding);
+      background: linear-gradient(180deg, #FFFBF8 0%, #FFF5F0 100%);
+    }
+
+    .personas-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .personas-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .persona-card {
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .persona-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .persona-image .img-placeholder {
+      border-radius: 0;
+    }
+
+    .persona-content {
+      padding: 24px;
+    }
+
+    .persona-title {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 12px;
+    }
+
+    .persona-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 768px) {
+      .personas-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -1567,6 +1841,14 @@
     <div class="hero-glow hero-glow-1"></div>
     <div class="hero-glow hero-glow-2"></div>
 
+    <!-- Floating Decorations -->
+    <span class="floating-deco">💕</span>
+    <span class="floating-deco">🌸</span>
+    <span class="floating-deco">✨</span>
+    <span class="floating-deco">💜</span>
+    <span class="floating-deco">🌿</span>
+    <span class="floating-deco">💫</span>
+
     <!-- Background Animation -->
     <div class="hero-bg-animation">
       <div class="vibration-wave vibration-wave-1"></div>
@@ -1626,6 +1908,13 @@
     </div>
   </section>
 
+  <!-- Wavy Divider -->
+  <div class="wavy-divider" style="background: linear-gradient(135deg, rgba(201,146,154,0.04) 0%, #FFF 50%, rgba(184,169,201,0.04) 100%);">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="rgba(201,146,154,0.04)" d="M0,64 C360,120 720,0 1080,64 C1260,96 1380,80 1440,64 L1440,120 L0,120 Z"/>
+    </svg>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════════════════════════════
        TRUST BAR
        ═══════════════════════════════════════════════════════════════════════════ -->
@@ -1677,6 +1966,66 @@
           <div class="trust-text">
             <strong>Certyfikowany</strong>
             <span>CE, bezpieczny</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       PRODUCT GALLERY
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="product-gallery" id="gallery">
+    <div class="container">
+      <div class="gallery-header fade-in">
+        <span class="section-label">Galeria</span>
+        <h2 class="section-title">Zobacz Calmina z każdej strony</h2>
+        <p class="section-subtitle">Eleganckie wzornictwo spotyka się z zaawansowaną technologią</p>
+      </div>
+
+      <div class="gallery-grid">
+        <div class="gallery-item gallery-main fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <span class="ph-label">Calmina - widok główny</span>
+            <span class="ph-size">800×600px</span>
+          </div>
+        </div>
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 1/1;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <span class="ph-label">Detal - panel sterowania</span>
+            <span class="ph-size">400×400px</span>
+          </div>
+        </div>
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 1/1;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <span class="ph-label">W użyciu - na brzuchu</span>
+            <span class="ph-size">400×400px</span>
+          </div>
+        </div>
+        <div class="gallery-item fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 1/1;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <span class="ph-label">Etui podróżne</span>
+            <span class="ph-size">400×400px</span>
           </div>
         </div>
       </div>
@@ -1831,6 +2180,72 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
+       TECHNOLOGY
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="technology">
+    <div class="container">
+      <div class="technology-inner">
+        <div class="technology-visual fade-in">
+          <div class="img-placeholder" style="aspect-ratio: 4/3;">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <span class="ph-label">Przekrój technologii NTC</span>
+            <span class="ph-size">800×600px</span>
+          </div>
+        </div>
+
+        <div class="technology-content fade-in">
+          <span class="section-label">Technologia</span>
+          <h2 class="section-title">Jak działa terapia NTC?</h2>
+          <p class="technology-text">Calmina wykorzystuje zaawansowaną technologię NTC (Negative Temperature Coefficient) — precyzyjne ogrzewanie ceramiczne połączone z terapeutycznymi wibracjami.</p>
+
+          <div class="tech-features">
+            <div class="tech-feature">
+              <div class="tech-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+              </div>
+              <div class="tech-feature-content">
+                <strong>Ceramiczne ogrzewanie NTC</strong>
+                <span>Równomierne ciepło 45-65°C penetruje głęboko w tkanki, rozluźniając napięte mięśnie macicy.</span>
+              </div>
+            </div>
+
+            <div class="tech-feature">
+              <div class="tech-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12h2M20 12h2M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                  <circle cx="12" cy="12" r="4"/>
+                </svg>
+              </div>
+              <div class="tech-feature-content">
+                <strong>Wibracje masujące</strong>
+                <span>Delikatne impulsy o częstotliwości 30-60Hz blokują sygnały bólowe (teoria bramkowania bólu).</span>
+              </div>
+            </div>
+
+            <div class="tech-feature">
+              <div class="tech-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <div class="tech-feature-content">
+                <strong>Bezpieczeństwo</strong>
+                <span>Automatyczne wyłączanie przy przegrzaniu, certyfikat CE, bezpieczne materiały.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
        HOW IT WORKS
        ═══════════════════════════════════════════════════════════════════════════ -->
   <section class="how-it-works" id="how-it-works">
@@ -1897,6 +2312,75 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
+       PERSONAS / FOR WHO
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="personas">
+    <div class="container">
+      <div class="personas-header fade-in">
+        <span class="section-label">Dla kogo</span>
+        <h2 class="section-title">Calmina jest dla Ciebie, jeśli...</h2>
+        <p class="section-subtitle">Niezależnie od stylu życia, zasługujesz na dni bez bólu</p>
+      </div>
+
+      <div class="personas-grid">
+        <div class="persona-card fade-in">
+          <div class="persona-image">
+            <div class="img-placeholder" style="aspect-ratio: 3/4;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Aktywna kobieta</span>
+              <span class="ph-size">400x533px</span>
+            </div>
+          </div>
+          <div class="persona-content">
+            <h3 class="persona-title">Aktywna zawodowo</h3>
+            <p class="persona-desc">Masz spotkania, prezentacje, deadliny. Nie możesz pozwolić sobie na "wolne" co miesiąc. Calmina działa dyskretnie — noś do pracy bez ograniczeń.</p>
+          </div>
+        </div>
+
+        <div class="persona-card fade-in">
+          <div class="persona-image">
+            <div class="img-placeholder" style="aspect-ratio: 3/4;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Studentka</span>
+              <span class="ph-size">400x533px</span>
+            </div>
+          </div>
+          <div class="persona-content">
+            <h3 class="persona-title">Studentka na uczelni</h3>
+            <p class="persona-desc">Wykłady, egzaminy, życie towarzyskie. Nie chcesz być tą, która odpada z planów. Z Calmina możesz żyć normalnie — nawet w te dni.</p>
+          </div>
+        </div>
+
+        <div class="persona-card fade-in">
+          <div class="persona-image">
+            <div class="img-placeholder" style="aspect-ratio: 3/4;">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+              <span class="ph-label">Mama</span>
+              <span class="ph-size">400x533px</span>
+            </div>
+          </div>
+          <div class="persona-content">
+            <h3 class="persona-title">Mama na pełen etat</h3>
+            <p class="persona-desc">Dzieci nie czekają na Twój okres. Potrzebujesz rozwiązania, które działa od razu i pozwala funkcjonować. Bez tabletek obciążających organizm.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--═══════════════════════════════════════════════════════════════════════════
        COMPARISON
        ═══════════════════════════════════════════════════════════════════════════ -->
   <section class="comparison">
@@ -2097,6 +2581,13 @@
       </div>
     </div>
   </section>
+
+  <!-- Wavy Divider przed Offer -->
+  <div class="wavy-divider wavy-divider-top" style="background: linear-gradient(135deg, rgba(201,146,154,0.05) 0%, #FFF 50%, rgba(184,169,201,0.05) 100%);">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="rgba(184,169,201,0.05)" d="M0,64 C480,0 960,120 1440,64 L1440,120 L0,120 Z"/>
+    </svg>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
        OFFER
