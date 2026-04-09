@@ -2135,7 +2135,7 @@
 
                         <!-- Stage 4 active content -->
                         <div id="ad-account-content" class="hidden">
-                            <!-- Status: Ready -->
+                            <!-- Status: Ready (admin confirmed) -->
                             <div id="ad-account-ready-status" class="hidden mb-6">
                                 <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
                                     <div class="flex items-center gap-3">
@@ -2150,17 +2150,17 @@
                                 </div>
                             </div>
 
-                            <!-- Status: Client confirmed partner access -->
-                            <div id="ad-account-partner-granted-status" class="hidden mb-6">
-                                <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                            <!-- Status: Both granted (waiting for admin confirmation) -->
+                            <div id="ad-account-both-granted-status" class="hidden mb-6">
+                                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                                <i class="ph ph-user-check text-amber-400 text-xl"></i>
+                                            <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                                <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
                                             </div>
                                             <div>
-                                                <div class="text-[13px] text-amber-400 font-medium">Klient potwierdził dostęp partnera</div>
-                                                <div id="ad-account-partner-granted-date" class="text-[12px] text-[#888]">-</div>
+                                                <div class="text-[13px] text-emerald-400 font-medium">Klient udostępnił konto i fanpage</div>
+                                                <div id="ad-account-both-granted-date" class="text-[12px] text-[#888]">-</div>
                                             </div>
                                         </div>
                                         <button onclick="resetAdAccountData()" id="reset-ad-account-btn"
@@ -2172,7 +2172,24 @@
                                 </div>
                             </div>
 
-                            <!-- Status: Waiting for client -->
+                            <!-- Status: Partial (only one granted) -->
+                            <div id="ad-account-partial-status" class="hidden mb-6">
+                                <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                <i class="ph ph-hourglass text-amber-400 text-xl"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-[13px] text-amber-400 font-medium">W trakcie — <span id="ad-account-partial-text">1 z 2</span></div>
+                                                <div id="ad-account-partial-details" class="text-[12px] text-[#888]">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status: Waiting for client (none granted) -->
                             <div id="ad-account-waiting-status" class="mb-6">
                                 <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
                                     <div class="flex items-center gap-3">
@@ -2181,9 +2198,27 @@
                                         </div>
                                         <div>
                                             <div class="text-[13px] text-zinc-300 font-medium">Czekam na klienta</div>
-                                            <div class="text-[12px] text-[#666]">Klient ma instrukcję w portalu — musi dodać Cię jako partnera</div>
+                                            <div class="text-[12px] text-[#666]">Klient ma instrukcję w portalu — musi udostępnić konto reklamowe i fanpage</div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Sub-steps checklist -->
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div id="admin-step-ad-account" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i id="admin-step-ad-icon" class="ph ph-circle text-zinc-600"></i>
+                                        <span class="text-[13px] text-white font-medium">Konto reklamowe</span>
+                                    </div>
+                                    <p id="admin-step-ad-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
+                                </div>
+                                <div id="admin-step-fanpage" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i id="admin-step-fp-icon" class="ph ph-circle text-zinc-600"></i>
+                                        <span class="text-[13px] text-white font-medium">Fanpage</span>
+                                    </div>
+                                    <p id="admin-step-fp-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
                                 </div>
                             </div>
 
@@ -2192,7 +2227,7 @@
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <div class="text-[13px] text-white">Konto reklamowe gotowe</div>
-                                        <div class="text-[12px] text-[#666] mt-1">Zaznacz gdy konto reklamowe jest skonfigurowane</div>
+                                        <div class="text-[12px] text-[#666] mt-1">Zaznacz gdy konto reklamowe i fanpage są skonfigurowane</div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="ad-account-ready-toggle" onchange="toggleAdAccountReady()" class="sr-only peer">
@@ -4223,7 +4258,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -4305,7 +4340,8 @@
                 if (navStage4) {
                     navStage4.classList.toggle('hidden', !takedropNavStatus?.test_accepted);
                 }
-                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || !!adsNavStatus?.partner_access_granted);
+                // Nav check requires BOTH ad account AND fanpage granted (or admin marked as ready)
+                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
@@ -8761,7 +8797,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const notActiveEl = document.getElementById('ad-account-not-active');
             const contentEl = document.getElementById('ad-account-content');
             const readyStatusEl = document.getElementById('ad-account-ready-status');
-            const partnerGrantedStatusEl = document.getElementById('ad-account-partner-granted-status');
+            const bothGrantedStatusEl = document.getElementById('ad-account-both-granted-status');
+            const partialStatusEl = document.getElementById('ad-account-partial-status');
             const waitingStatusEl = document.getElementById('ad-account-waiting-status');
             const readyToggle = document.getElementById('ad-account-ready-toggle');
             const navCheck = document.getElementById('nav-check-ad-account');
@@ -8791,8 +8828,18 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             // Hide all status sections first
             if (readyStatusEl) readyStatusEl.classList.add('hidden');
-            if (partnerGrantedStatusEl) partnerGrantedStatusEl.classList.add('hidden');
+            if (bothGrantedStatusEl) bothGrantedStatusEl.classList.add('hidden');
+            if (partialStatusEl) partialStatusEl.classList.add('hidden');
             if (waitingStatusEl) waitingStatusEl.classList.add('hidden');
+
+            // Check sub-steps status
+            const adAccountDone = adsData?.partner_access_granted;
+            const fanpageDone = adsData?.fanpage_access_granted;
+            const bothDone = adAccountDone && fanpageDone;
+            const oneDone = adAccountDone || fanpageDone;
+
+            // Update sub-step indicators
+            updateAdminSubSteps(adAccountDone, fanpageDone);
 
             // Check ad account status
             if (adsData?.ad_account_ready) {
@@ -8810,19 +8857,40 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         });
                     }
                 }
-            } else if (adsData?.partner_access_granted) {
-                // Client confirmed partner access, waiting for admin to verify
-                if (partnerGrantedStatusEl) partnerGrantedStatusEl.classList.remove('hidden');
+            } else if (bothDone) {
+                // Both granted, waiting for admin confirmation
+                if (bothGrantedStatusEl) bothGrantedStatusEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (readyToggle) readyToggle.checked = false;
+
+                // Show the later date
+                const adDate = adsData.partner_access_granted_at ? new Date(adsData.partner_access_granted_at) : null;
+                const fpDate = adsData.fanpage_access_granted_at ? new Date(adsData.fanpage_access_granted_at) : null;
+                const laterDate = adDate && fpDate ? (adDate > fpDate ? adDate : fpDate) : (adDate || fpDate);
+
+                if (laterDate) {
+                    const dateEl = document.getElementById('ad-account-both-granted-date');
+                    if (dateEl) {
+                        dateEl.textContent = laterDate.toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+            } else if (oneDone) {
+                // Only one granted
+                if (partialStatusEl) partialStatusEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
                 if (readyToggle) readyToggle.checked = false;
 
-                const grantedDate = adsData.partner_access_granted_at;
-                if (grantedDate) {
-                    const dateEl = document.getElementById('ad-account-partner-granted-date');
-                    if (dateEl) {
-                        dateEl.textContent = new Date(grantedDate).toLocaleDateString('pl-PL', {
-                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        });
+                const partialText = document.getElementById('ad-account-partial-text');
+                const partialDetails = document.getElementById('ad-account-partial-details');
+
+                if (partialText) partialText.textContent = '1 z 2';
+                if (partialDetails) {
+                    if (adAccountDone) {
+                        partialDetails.textContent = 'Konto reklamowe OK — brakuje fanpage';
+                    } else {
+                        partialDetails.textContent = 'Fanpage OK — brakuje konta reklamowego';
                     }
                 }
             } else {
@@ -8830,6 +8898,60 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (waitingStatusEl) waitingStatusEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
                 if (readyToggle) readyToggle.checked = false;
+            }
+        }
+
+        function updateAdminSubSteps(adAccountDone, fanpageDone) {
+            // Ad account step
+            const adIcon = document.getElementById('admin-step-ad-icon');
+            const adDate = document.getElementById('admin-step-ad-date');
+
+            if (adAccountDone) {
+                if (adIcon) {
+                    adIcon.className = 'ph-fill ph-check-circle text-emerald-400';
+                }
+                if (adDate && adsData?.partner_access_granted_at) {
+                    adDate.textContent = new Date(adsData.partner_access_granted_at).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    });
+                    adDate.classList.add('text-emerald-400');
+                    adDate.classList.remove('text-zinc-500');
+                }
+            } else {
+                if (adIcon) {
+                    adIcon.className = 'ph ph-circle text-zinc-600';
+                }
+                if (adDate) {
+                    adDate.textContent = 'Oczekuje';
+                    adDate.classList.remove('text-emerald-400');
+                    adDate.classList.add('text-zinc-500');
+                }
+            }
+
+            // Fanpage step
+            const fpIcon = document.getElementById('admin-step-fp-icon');
+            const fpDate = document.getElementById('admin-step-fp-date');
+
+            if (fanpageDone) {
+                if (fpIcon) {
+                    fpIcon.className = 'ph-fill ph-check-circle text-emerald-400';
+                }
+                if (fpDate && adsData?.fanpage_access_granted_at) {
+                    fpDate.textContent = new Date(adsData.fanpage_access_granted_at).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    });
+                    fpDate.classList.add('text-emerald-400');
+                    fpDate.classList.remove('text-zinc-500');
+                }
+            } else {
+                if (fpIcon) {
+                    fpIcon.className = 'ph ph-circle text-zinc-600';
+                }
+                if (fpDate) {
+                    fpDate.textContent = 'Oczekuje';
+                    fpDate.classList.remove('text-emerald-400');
+                    fpDate.classList.add('text-zinc-500');
+                }
             }
         }
 
@@ -8897,6 +9019,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         .update({
                             partner_access_granted: false,
                             partner_access_granted_at: null,
+                            fanpage_access_granted: false,
+                            fanpage_access_granted_at: null,
                             ad_account_ready: false,
                             ad_account_configured_at: null
                         })
@@ -8906,6 +9030,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
                     adsData.partner_access_granted = false;
                     adsData.partner_access_granted_at = null;
+                    adsData.fanpage_access_granted = false;
+                    adsData.fanpage_access_granted_at = null;
                     adsData.ad_account_ready = false;
                     adsData.ad_account_configured_at = null;
                 }
