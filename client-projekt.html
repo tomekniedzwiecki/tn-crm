@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026040908';
+        const APP_VERSION = '2026040909';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5701,21 +5701,74 @@
         }
 
         function renderEtap4KampaniaBox() {
+            const box = document.getElementById('dash-etap4-box-kampania');
             const content = document.getElementById('dash-etap4-kampania-content');
             if (!content) return;
 
-            content.innerHTML = `
-                <div class="h-full p-5 flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-[#666] text-xs uppercase tracking-wide">Kampania</span>
-                        <span class="flex items-center gap-1 text-zinc-500 text-xs">Wkrótce</span>
+            const isLaunched = adsData?.campaign_launched;
+            const budgetFunded = adsData?.budget_funded;
+
+            // Remove opacity when budget is funded
+            if (box) {
+                box.classList.toggle('opacity-50', !budgetFunded);
+                box.classList.toggle('cursor-pointer', budgetFunded);
+                if (budgetFunded) {
+                    box.onclick = () => switchToDashTab('kampania');
+                }
+            }
+
+            if (isLaunched) {
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Kampania</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Aktywna
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph-fill ph-rocket-launch text-5xl text-emerald-500 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Kampania działa!</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Reklamy są wyświetlane</p>
+                        </div>
                     </div>
-                    <div class="flex-1 flex flex-col items-center justify-center">
-                        <i class="ph ph-rocket-launch text-4xl text-zinc-600 mb-3"></i>
-                        <h3 class="text-zinc-500 text-base font-medium">Uruchomienie kampanii</h3>
+                `;
+            } else if (budgetFunded) {
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Kampania</span>
+                            <span class="flex items-center gap-1.5 text-cyan-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
+                                W przygotowaniu
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-rocket-launch text-5xl text-cyan-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Przygotowuję kampanię</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Wkrótce uruchomię reklamy</p>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Kampania</span>
+                            <span class="flex items-center gap-1 text-zinc-500 text-xs">
+                                <i class="ph ph-lock-simple"></i>
+                                Zablokowane
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-rocket-launch text-4xl text-zinc-600 mb-3"></i>
+                            <h3 class="text-zinc-500 text-base font-medium">Uruchomienie kampanii</h3>
+                            <p class="text-zinc-600 text-xs text-center mt-2">Najpierw doładuj budżet</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function renderEtap4RaportBox() {
@@ -6995,6 +7048,9 @@
                     break;
                 case 'budzet':
                     loadBudzet();
+                    break;
+                case 'kampania':
+                    loadKampania();
                     break;
             }
         }
@@ -8663,7 +8719,7 @@
                     try {
                         const { data: ads } = await supabaseClient
                             .from('workflow_ads')
-                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, phone_verified, phone_verified_at, budget_funded, budget_funded_at')
+                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, phone_verified, phone_verified_at, budget_funded, budget_funded_at, campaign_launched, campaign_launched_at')
                             .eq('workflow_id', workflow.id)
                             .maybeSingle();
                         adsData = ads;
@@ -9985,6 +10041,50 @@
             }
         }
         window.confirmBudgetFunded = confirmBudgetFunded;
+
+        // Kampania tab (client side)
+        async function loadKampania() {
+            // Make sure we have ads data
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
+            const waitingEl = document.getElementById('kampania-waiting-client');
+            const launchedEl = document.getElementById('kampania-launched-client');
+            const navCheck = document.getElementById('nav-check-kampania');
+            const navCheckMobile = document.getElementById('nav-check-kampania-mobile');
+
+            // Hide all states first
+            if (waitingEl) waitingEl.classList.add('hidden');
+            if (launchedEl) launchedEl.classList.add('hidden');
+
+            if (adsData?.campaign_launched) {
+                // Campaign launched
+                if (launchedEl) launchedEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckMobile) navCheckMobile.classList.remove('hidden');
+
+                const launchDate = adsData.campaign_launched_at;
+                if (launchDate) {
+                    const dateEl = document.getElementById('kampania-launched-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Uruchomiono ' + new Date(launchDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                        });
+                    }
+                }
+            } else {
+                // Waiting for campaign
+                if (waitingEl) waitingEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+                if (navCheckMobile) navCheckMobile.classList.add('hidden');
+            }
+        }
 
         // Mobile menu toggle
         function toggleMobileMenu() {

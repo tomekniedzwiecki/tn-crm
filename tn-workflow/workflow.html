@@ -2313,33 +2313,21 @@
 
                     <!-- TAB: Kampania (Etap 4) -->
                     <div id="tab-kampania" class="workflow-panel hidden">
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-                                <i class="ph ph-rocket-launch text-cyan-400"></i>
-                                Uruchomienie kampanii
-                            </h3>
-                            <p class="text-zinc-500 text-sm">Status kampanii reklamowych na Meta Ads</p>
-                        </div>
-
-                        <!-- Generate Ad Copy -->
-                        <div class="bg-gradient-to-br from-[#0d0d0d] to-[#0a0a0a] border border-cyan-500/20 rounded-xl p-5 mb-6">
-                            <div class="flex items-start gap-4 mb-4">
-                                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ph-magic-wand text-cyan-400 text-xl"></i>
-                                </div>
-                                <div>
-                                    <h4 class="text-[14px] font-medium text-white mb-1">Generuj copy reklamowe</h4>
-                                    <p class="text-[12px] text-[#666]">Skopiuj prompt z danymi marki i wklej do Claude aby wygenerować 5 wersji copy</p>
-                                </div>
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i class="ph ph-rocket-launch text-cyan-400"></i>
+                                    Uruchomienie kampanii
+                                </h3>
+                                <p class="text-zinc-500 text-sm mt-1">Status kampanii reklamowych na Meta Ads</p>
                             </div>
-                            <button onclick="generateAdCopyPrompt()" class="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-white py-3 rounded-xl text-[13px] font-semibold transition-colors">
-                                <i class="ph ph-copy"></i>
-                                Kopiuj prompt do generowania copy
+                            <button onclick="generateAdCopyPrompt()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt do generowania copy reklamowego">
+                                <i class="ph ph-robot"></i> Copy Ads
                             </button>
                         </div>
 
-                        <!-- Status info -->
-                        <div id="kampania-admin-status" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                        <!-- Pending state -->
+                        <div id="kampania-pending" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
                             <div class="flex items-center gap-4 mb-4">
                                 <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
                                     <i class="ph ph-clock text-xl text-cyan-400"></i>
@@ -2353,6 +2341,19 @@
                                 <i class="ph ph-rocket-launch mr-2"></i>
                                 Oznacz jako uruchomioną
                             </button>
+                        </div>
+
+                        <!-- Launched state -->
+                        <div id="kampania-launched" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-rocket-launch text-xl text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-[14px] font-medium text-emerald-400">Kampania uruchomiona!</h4>
+                                    <p id="kampania-launched-date" class="text-[12px] text-[#888]">-</p>
+                                </div>
+                            </div>
                         </div>
                     </div><!-- /tab-kampania -->
 
@@ -6113,6 +6114,9 @@
                 case 'budzet':
                     loadBudzetTab();
                     break;
+                case 'kampania':
+                    loadKampaniaTab();
+                    break;
                 case 'historia':
                     loadFullHistory(true);
                     break;
@@ -9248,6 +9252,161 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
         window.loadBudzetTab = loadBudzetTab;
+
+        // Kampania tab
+        async function loadKampaniaTab() {
+            // Make sure we have ads data
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
+            const pendingEl = document.getElementById('kampania-pending');
+            const launchedEl = document.getElementById('kampania-launched');
+            const navCheck = document.getElementById('nav-check-kampania');
+
+            // Hide all first
+            if (pendingEl) pendingEl.classList.add('hidden');
+            if (launchedEl) launchedEl.classList.add('hidden');
+
+            if (adsData?.campaign_launched) {
+                // Campaign launched
+                if (launchedEl) launchedEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+
+                const launchDate = adsData.campaign_launched_at;
+                if (launchDate) {
+                    const dateEl = document.getElementById('kampania-launched-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Uruchomiono ' + new Date(launchDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+            } else {
+                // Pending
+                if (pendingEl) pendingEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+            }
+        }
+
+        async function markCampaignLaunched() {
+            const btn = document.getElementById('btn-launch-campaign');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2"></i> Uruchamiam...';
+            }
+
+            try {
+                const now = new Date().toISOString();
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            campaign_launched: true,
+                            campaign_launched_at: now
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.campaign_launched = true;
+                    adsData.campaign_launched_at = now;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: now,
+                            campaign_launched: true,
+                            campaign_launched_at: now
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                // Send email notification to client
+                const clientEmail = workflow?.email;
+                const clientName = workflow?.first_name || 'Kliencie';
+                const brandName = workflow?.brand_name || workflow?.name || 'Twój sklep';
+
+                if (clientEmail) {
+                    try {
+                        await supabaseClient.functions.invoke('send-email', {
+                            body: {
+                                to: clientEmail,
+                                subject: `🚀 Kampania ${brandName} została uruchomiona!`,
+                                html: `
+                                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                                        <h2 style="color: #10b981;">Świetna wiadomość, ${clientName}!</h2>
+                                        <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                                            Twoja kampania reklamowa dla <strong>${brandName}</strong> została właśnie uruchomiona na Meta Ads!
+                                        </p>
+                                        <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                                            Reklamy zaczną się wyświetlać w ciągu najbliższych godzin. Będę monitorował wyniki i dam Ci znać, jak tylko pojawią się pierwsze dane.
+                                        </p>
+                                        <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                            <p style="margin: 0; color: #666; font-size: 14px;">
+                                                <strong>Co dalej?</strong><br>
+                                                Pierwsze wyniki zobaczysz zazwyczaj po 24-48 godzinach. Prześlę Ci raport z pierwszymi danymi, gdy będą dostępne.
+                                            </p>
+                                        </div>
+                                        <p style="font-size: 14px; color: #888;">
+                                            Pozdrawiam,<br>
+                                            Tomek Nieźwiecki
+                                        </p>
+                                    </div>
+                                `
+                            }
+                        });
+                    } catch (emailErr) {
+                        console.error('Email send error:', emailErr);
+                        // Don't fail the whole operation if email fails
+                    }
+                }
+
+                // Trigger automation
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'campaign_launched',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflow_id: workflow.id,
+                                client_name: clientName,
+                                brand_name: brandName,
+                                launched_at: now
+                            }
+                        }
+                    });
+                } catch (triggerErr) {
+                    console.error('Automation trigger error:', triggerErr);
+                }
+
+                showToast('Kampania oznaczona jako uruchomiona!', 'success');
+                loadKampaniaTab();
+                updateNavChecks();
+            } catch (err) {
+                console.error('Error marking campaign as launched:', err);
+                showToast('Błąd oznaczania kampanii', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-rocket-launch mr-2"></i> Oznacz jako uruchomioną';
+                }
+            }
+        }
+
+        window.loadKampaniaTab = loadKampaniaTab;
+        window.markCampaignLaunched = markCampaignLaunched;
 
         // =============================================
         // CONTRACT MANAGEMENT
