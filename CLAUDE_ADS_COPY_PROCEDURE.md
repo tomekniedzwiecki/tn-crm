@@ -261,33 +261,56 @@ Różnica? Zobacz sam."
 
 ## FORMAT ODPOWIEDZI
 
+**WAŻNE:** NIE podawaj cen w copy reklamowym! Ceny zmieniają się, a reklamy zostają.
+
 ```markdown
 ## Copy reklamowe dla [NAZWA MARKI]
 
-**Produkt:** [nazwa, cena]
+**Produkt:** [nazwa]
 **Grupa docelowa:** [kto, jakie problemy]
 **USP:** [co wyróżnia]
 **Landing page:** [URL]
 
 ---
 
-### Wersja 1: Pain Point
+### Tekst podstawowy (5 wersji)
 
-**Primary Text:** (X znaków)
-[tekst]
-
-**Headline:** (X znaków)
-[tekst]
-
-**Description:** (X znaków)
-[tekst]
-
-**CTA:** [Sprawdź szczegóły / Zobacz opinie / etc.]
+1. [Pain Point] tekst...
+2. [Transformation] tekst...
+3. [Social Proof] tekst...
+4. [Curiosity] tekst...
+5. [Health/Time/Money angle] tekst...
 
 ---
 
-[Wersje 2-5 analogicznie]
+### Nagłówek (5 wersji)
+
+1. tekst...
+2. tekst...
+3. tekst...
+4. tekst...
+5. tekst...
+
+---
+
+### Opis (5 wersji)
+
+1. tekst...
+2. tekst...
+3. tekst...
+4. tekst...
+5. tekst...
+
+---
+
+### CTA (do wyboru)
+
+- Sprawdź szczegóły
+- Zobacz opinie
+- Zamów z darmową dostawą
 ```
+
+Ten format ułatwia kopiowanie do Meta Ads Manager.
 
 ---
 
@@ -348,6 +371,7 @@ Napisz: "Możesz puścić dzieci na podłogę 5 minut po sprzątaniu."
 
 | Błąd | ❌ Przykład | ✅ Poprawka |
 |------|------------|-------------|
+| **Ceny w copy** | "Tylko 249 zł!" | Nie podawaj cen — zmieniają się, reklamy zostają |
 | Za długi tekst | 200+ znaków przed "See more" | Max 125 znaków widocznych |
 | Brak WOW factor w hooku | "Nasza myjka jest świetna" | "15 sek do pary. Konkurencja: 3 min." |
 | Cechy zamiast korzyści | "Moc 3800W" | "Nagrzewa się w 15 sekund" |
@@ -402,87 +426,54 @@ Allegro, Ceneo, Amazon — co KLIENCI mówią swoimi słowami? Użyj ich języka
 
 **Input:**
 - Marka: Parova
-- Produkt: Myjka parowa 3800W, cena 249-349 zł
+- Produkt: Myjka parowa 3800W
 - Grupa: Rodziny z dziećmi 30-45 lat, alergicy
-- USP: Przemysłowa moc w cenie taniej konkurencji, 15 sek nagrzewania, bez chemii
+- USP: Przemysłowa moc, 15 sek nagrzewania, bez chemii, 12x szybciej niż konkurencja
 
 **WOW FACTOR zidentyfikowany:**
 > "15 sekund do pary vs 3 minuty u konkurencji — 12x szybciej"
 
 ---
 
-### Wersja 1: WOW Factor (liczba w hook)
+### Tekst podstawowy (5 wersji)
 
-**Primary Text:** (98 znaków)
-15 sekund. Tyle czeka Parova na parę. Konkurencja? 3 minuty. Moc 3800W, cena 249 zł.
+1. Przypalony garnek. 30 sekund pary. Wychodzi bez szorowania. Nie wierzysz? Ja też nie wierzyłam.
 
-**Headline:** (19 zn.)
-15 sekund do pary
+2. Myślałam że to kolejny chiński bubel. Minął rok. Właśnie zamówiłam drugą dla mamy.
 
-**Description:** (24 zn.)
-Przemysłowa moc. 249 zł.
+3. Mąż się śmiał że kolejny gadżet do szafy. Teraz sam czyści felgi w garażu.
 
-**CTA:** Sprawdź szczegóły
+4. Fuga w łazience. Pięć lat szorowania szczoteczką. Jedna para i jest biała jak nowa.
 
----
-
-### Wersja 2: Emocjonalny obraz (dla rodziców)
-
-**Primary Text:** (117 znaków)
-Twoje dziecko raczkuje po podłodze. Ile tam Domestosa? Parova — para 105°C, 99,9% bakterii, zero chemii. Czysto i bezpiecznie.
-
-**Headline:** (28 zn.)
-Zero chemii. 99,9% bakterii.
-
-**Description:** (22 zn.)
-Bezpieczne dla dzieci.
-
-**CTA:** Zobacz opinie
+5. Goście za godzinę. Plama na kanapie. Normalnie panika. Teraz? Pięć minut i po sprawie.
 
 ---
 
-### Wersja 3: Social Proof (cytat)
+### Nagłówek (5 wersji)
 
-**Primary Text:** (104 znaki)
-"Kupiłam bo tania. Rok później kupuję mamie." Parova 3800W — 847 opinii, średnia 4.8. Sprawdź sama.
-
-**Headline:** (24 zn.)
-4.8/5 z 847 opinii
-
-**Description:** (24 zn.)
-30 dni na zwrot. Bez ryzyka.
-
-**CTA:** Zobacz opinie
+1. 15 sekund do pary
+2. Zero chemii. 99,9% bakterii.
+3. Wracają po drugą sztukę
+4. 12x szybciej niż konkurencja
+5. Koniec z porannym katarem
 
 ---
 
-### Wersja 4: Porównanie ceny
+### Opis (5 wersji)
 
-**Primary Text:** (108 znaków)
-Profesjonalna myjka parowa: 1200+ zł. Parova 3800W: 249 zł. Ta sama moc, 1/5 ceny. Matematyka jest prosta.
-
-**Headline:** (25 zn.)
-1/5 ceny, ta sama moc
-
-**Description:** (28 zn.)
-3800W za cenę zabawki.
-
-**CTA:** Sprawdź szczegóły
+1. Przemysłowa moc w domu.
+2. Bezpieczne dla dzieci.
+3. 30 dni na zwrot. Bez ryzyka.
+4. 3800W mocy. 15 sek do pary.
+5. 99,9% alergenów eliminuje.
 
 ---
 
-### Wersja 5: Urgency (konkretne liczby)
+### CTA (do wyboru)
 
-**Primary Text:** (119 znaków)
-Ostatnie 34 sztuki w cenie 249 zł. Od poniedziałku: 349 zł. Parova 3800W — 15 sek nagrzewania, bez chemii, 5 lat gwarancji.
-
-**Headline:** (27 zn.)
--100 zł jeszcze do niedzieli
-
-**Description:** (18 zn.)
-Zostało 34 sztuki.
-
-**CTA:** Zamów teraz
+- Sprawdź szczegóły
+- Zobacz opinie
+- Zamów z darmową dostawą
 
 ---
 
