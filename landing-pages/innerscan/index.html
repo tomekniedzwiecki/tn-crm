@@ -15,7 +15,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin-ext" rel="stylesheet">
 
   <style>
     :root {
@@ -35,16 +35,16 @@
       --primary-glow: rgba(0, 212, 255, 0.25);
       --secondary-soft: rgba(10, 22, 40, 0.05);
 
-      /* Light theme */
-      --bg-white: #FFFFFF;
+      /* Light theme — with warmth */
+      --bg-white: #FEFEFE;
       --bg-alt: #F8FAFC;
-      --text-dark: #111827;
-      --text-secondary: #6B7280;
-      --border-light: #E5E7EB;
+      --text-dark: #0D1117;
+      --text-secondary: #5C6470;
+      --border-light: #E2E6EB;
 
       /* Typography */
       --font-heading: 'Space Grotesk', sans-serif;
-      --font-body: 'Inter', sans-serif;
+      --font-body: 'IBM Plex Sans', sans-serif;
       --font-accent: 'JetBrains Mono', monospace;
 
       /* Spacing & Radius */
@@ -53,11 +53,11 @@
       --radius-lg: 16px;
       --radius-xl: 24px;
 
-      /* Shadows */
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
-      --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
-      --shadow-xl: 0 20px 40px rgba(0,0,0,0.12);
+      /* Shadows — with color */
+      --shadow-sm: 0 1px 2px rgba(10, 22, 40, 0.06);
+      --shadow-md: 0 4px 12px rgba(10, 22, 40, 0.08);
+      --shadow-lg: 0 10px 30px rgba(0, 212, 255, 0.12);
+      --shadow-xl: 0 20px 50px rgba(0, 212, 255, 0.18);
     }
 
     * {
@@ -131,8 +131,8 @@
     }
 
     .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 30px rgba(0, 212, 255, 0.45), 0 0 0 4px rgba(0, 212, 255, 0.15);
     }
 
     .btn-primary.btn-shimmer::after {
@@ -450,6 +450,74 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Floating Tech Decorations */
+    .floating-decoration {
+      position: absolute;
+      font-size: 32px;
+      opacity: 0.15;
+      animation: float 6s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .floating-decoration:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; }
+    .floating-decoration:nth-child(2) { top: 25%; right: 12%; animation-delay: 1s; font-size: 28px; }
+    .floating-decoration:nth-child(3) { top: 60%; left: 5%; animation-delay: 2s; font-size: 24px; }
+    .floating-decoration:nth-child(4) { bottom: 20%; right: 8%; animation-delay: 3s; }
+    .floating-decoration:nth-child(5) { top: 40%; left: 15%; animation-delay: 4s; font-size: 20px; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-15px) rotate(5deg); }
+    }
+
+    /* Hero Product Glow Ring */
+    .hero-image-wrapper {
+      position: relative;
+    }
+
+    .hero-image-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 110%;
+      height: 110%;
+      transform: translate(-50%, -50%);
+      border: 2px dashed rgba(0, 212, 255, 0.3);
+      border-radius: var(--radius-xl);
+      animation: ring-rotate 20s linear infinite;
+      pointer-events: none;
+    }
+
+    .hero-image-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 90%;
+      height: 90%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+      border-radius: var(--radius-xl);
+      animation: glow-pulse 3s ease-in-out infinite;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    @keyframes ring-rotate {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .floating-decoration {
+        display: none;
+      }
+      .hero-image-ring,
+      .hero-image-glow {
+        display: none;
+      }
+    }
+
     .hero-content {
       position: relative;
       z-index: 1;
@@ -578,6 +646,25 @@
       .hero-bg-animation {
         display: none;
       }
+    }
+
+    /* ==================== WAVY DIVIDERS ==================== */
+    .wavy-divider {
+      position: relative;
+      margin-top: -1px;
+      height: 60px;
+      overflow: hidden;
+    }
+
+    .wavy-divider svg {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .wavy-divider.flip svg {
+      transform: scaleY(-1);
     }
 
     /* ==================== TRUST BAR ==================== */
@@ -766,9 +853,15 @@
 
     .bento-card:hover {
       border-color: var(--primary);
-      box-shadow: 0 12px 24px rgba(0, 212, 255, 0.15);
-      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 212, 255, 0.2), 8px 8px 0 rgba(0, 212, 255, 0.1);
+      transform: translateY(-6px) rotate(-0.5deg);
     }
+
+    /* Staggered animation */
+    .bento-card:nth-child(1) { animation-delay: 0ms; }
+    .bento-card:nth-child(2) { animation-delay: 100ms; }
+    .bento-card:nth-child(3) { animation-delay: 200ms; }
+    .bento-card:nth-child(4) { animation-delay: 300ms; }
 
     .bento-card:nth-child(2):hover {
       border-color: var(--secondary);
@@ -939,6 +1032,119 @@
       }
     }
 
+    /* ==================== PERSONAS ==================== */
+    .personas {
+      padding: 100px 0;
+      background: linear-gradient(180deg, var(--bg-white) 0%, rgba(0, 212, 255, 0.03) 100%);
+    }
+
+    .personas-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .personas-header .section-subtitle {
+      margin: 0 auto;
+    }
+
+    .personas-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .persona-card {
+      padding: 32px;
+      background: var(--bg-white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      text-align: center;
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .persona-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transform: scaleX(0);
+      transition: transform 0.4s ease;
+    }
+
+    .persona-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 212, 255, 0.15);
+      border-color: var(--primary);
+    }
+
+    .persona-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .persona-icon {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      background: var(--primary-soft);
+      border-radius: 50%;
+      font-size: 36px;
+    }
+
+    .persona-card:nth-child(2) .persona-icon {
+      background: rgba(10, 22, 40, 0.08);
+    }
+
+    .persona-card:nth-child(3) .persona-icon {
+      background: rgba(255, 107, 53, 0.1);
+    }
+
+    .persona-title {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    .persona-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .persona-usecases {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .persona-usecase {
+      padding: 6px 12px;
+      background: var(--secondary-soft);
+      border-radius: 50px;
+      font-family: var(--font-accent);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .personas-grid {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+    }
+
     /* ==================== COMPARISON ==================== */
     .comparison {
       padding: 100px 0;
@@ -1012,19 +1218,38 @@
     }
 
     .comparison-card ul li {
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border-light);
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: var(--radius-sm);
       font-size: 14px;
       color: var(--text-secondary);
       line-height: 1.6;
+      position: relative;
+      padding-left: 36px;
+    }
+
+    .comparison-card ul li::before {
+      content: '—';
+      position: absolute;
+      left: 12px;
+      color: var(--neutral-mid);
+      font-weight: 600;
     }
 
     .comparison-card ul li:last-child {
-      border-bottom: none;
+      margin-bottom: 0;
     }
 
     .comparison-card.highlight ul li {
       color: var(--text-dark);
+      background: rgba(0, 212, 255, 0.06);
+    }
+
+    .comparison-card.highlight ul li::before {
+      content: '+';
+      color: var(--primary);
+      font-size: 16px;
     }
 
     @media (max-width: 768px) {
@@ -1061,11 +1286,26 @@
       border: 1px solid var(--border-light);
       border-radius: var(--radius-xl);
       transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .testimonial-card::before {
+      content: '"';
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      font-family: Georgia, serif;
+      font-size: 72px;
+      line-height: 1;
+      color: var(--primary);
+      opacity: 0.15;
+      pointer-events: none;
     }
 
     .testimonial-card:hover {
       box-shadow: var(--shadow-lg);
       transform: translateY(-4px);
+      border-color: var(--primary);
     }
 
     .testimonial-stars {
@@ -1098,14 +1338,23 @@
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: var(--primary-soft);
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: var(--font-heading);
       font-size: 16px;
       font-weight: 700;
-      color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+    }
+
+    .testimonial-card:nth-child(2) .testimonial-avatar {
+      background: linear-gradient(135deg, var(--secondary), #1A2F4A);
+    }
+
+    .testimonial-card:nth-child(3) .testimonial-avatar {
+      background: linear-gradient(135deg, var(--accent), #E55A2B);
     }
 
     .testimonial-info strong {
@@ -1307,6 +1556,36 @@
       font-size: 24px;
     }
 
+    .offer-urgency {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: linear-gradient(90deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05));
+      border: 1px solid rgba(255, 107, 53, 0.2);
+      border-radius: 50px;
+      margin-bottom: 20px;
+      animation: urgency-pulse 2s ease-in-out infinite;
+    }
+
+    .offer-urgency svg {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
+    }
+
+    .offer-urgency span {
+      font-family: var(--font-accent);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    @keyframes urgency-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
     .offer-savings {
       display: inline-block;
       padding: 6px 12px;
@@ -1360,6 +1639,12 @@
       width: 100%;
       padding: 20px 40px;
       font-size: 18px;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4); }
+      50% { box-shadow: 0 0 0 12px rgba(0, 212, 255, 0); }
     }
 
     .offer-guarantee {
@@ -1390,14 +1675,33 @@
 
     /* ==================== CTA BANNER ==================== */
     .cta-banner {
-      padding: 80px 0;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      padding: 100px 0;
+      background: linear-gradient(135deg, var(--secondary) 0%, #0D2137 50%, var(--secondary) 100%);
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 30% 50%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 50%, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .cta-banner .container {
+      position: relative;
+      z-index: 1;
     }
 
     .cta-title {
       font-family: var(--font-heading);
-      font-size: clamp(28px, 5vw, 40px);
+      font-size: clamp(32px, 6vw, 48px);
       font-weight: 700;
       color: #FFFFFF;
       margin-bottom: 16px;
@@ -1405,17 +1709,23 @@
 
     .cta-subtitle {
       font-size: 18px;
-      color: rgba(255, 255, 255, 0.8);
-      margin-bottom: 32px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 40px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .cta-banner .btn-primary {
-      background: #FFFFFF;
-      color: var(--primary);
+      background: var(--primary);
+      color: var(--secondary);
+      padding: 18px 40px;
+      font-size: 18px;
     }
 
     .cta-banner .btn-primary:hover {
-      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+      box-shadow: 0 12px 35px rgba(0, 212, 255, 0.5), 0 0 0 4px rgba(0, 212, 255, 0.2);
+      transform: translateY(-3px) scale(1.02);
     }
 
     /* ==================== FOOTER ==================== */
@@ -1528,6 +1838,60 @@
       }
     }
 
+    /* ==================== STICKY CTA (MOBILE) ==================== */
+    .sticky-cta {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 20%, #fff 100%);
+      z-index: 90;
+      transform: translateY(100%);
+      transition: transform 0.4s ease;
+    }
+
+    .sticky-cta.visible {
+      transform: translateY(0);
+    }
+
+    .sticky-cta-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sticky-cta-price {
+      flex: 1;
+    }
+
+    .sticky-cta-price .old {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-decoration: line-through;
+    }
+
+    .sticky-cta-price .new {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .sticky-cta .btn-primary {
+      flex: 1;
+      padding: 14px 20px;
+      font-size: 14px;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @media (max-width: 768px) {
+      .sticky-cta {
+        display: block;
+      }
+    }
+
     /* ==================== COOKIE BANNER ==================== */
     .cookie-banner {
       position: fixed;
@@ -1631,6 +1995,13 @@
     <div class="hero-glow hero-glow-1"></div>
     <div class="hero-glow hero-glow-2"></div>
 
+    <!-- Floating Tech Decorations -->
+    <span class="floating-decoration">🔍</span>
+    <span class="floating-decoration">⚙️</span>
+    <span class="floating-decoration">🔧</span>
+    <span class="floating-decoration">📹</span>
+    <span class="floating-decoration">💡</span>
+
     <!-- Background Animation - Scanning Waves -->
     <div class="hero-bg-animation">
       <div class="scan-wave scan-wave-1"></div>
@@ -1665,7 +2036,7 @@
 
             <div class="hero-ctas fade-in">
               <a href="https://innerscan.pl/checkout?products=103035094" class="btn-primary btn-shimmer">
-                Zamów teraz
+                Zamów z rabatem -40%
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </a>
               <a href="#features" class="btn-secondary">
@@ -1686,14 +2057,26 @@
           </div>
 
           <div class="hero-visual fade-in">
-            <div class="hero-image">
-              <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026294283_0.jpg" alt="InnerScan - kamera endoskopowa w akcji" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-xl); box-shadow: 0 25px 50px -12px rgba(0,212,232,0.25);">
+            <div class="hero-image-wrapper">
+              <div class="hero-image-glow"></div>
+              <div class="hero-image-ring"></div>
+              <div class="hero-image">
+                <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026294283_0.jpg" alt="InnerScan - kamera endoskopowa w akcji" width="600" height="450" fetchpriority="high" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-xl); box-shadow: 0 25px 50px -12px rgba(0,212,232,0.25);">
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Wavy Divider -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+      <path fill="rgba(0, 212, 255, 0.04)" d="M0,30 C360,60 720,0 1080,30 C1260,45 1380,40 1440,30 L1440,60 L0,60 Z"/>
+      <path fill="rgba(10, 22, 40, 0.03)" d="M0,40 C400,70 800,10 1200,40 C1340,52 1400,48 1440,40 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
 
   <!-- Trust Bar -->
   <section class="trust-bar">
@@ -1766,11 +2149,18 @@
         </div>
 
         <div class="problem-visual fade-in">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774025969152_0.jpg" alt="Frustracja przy ślepej diagnostyce" style="width: 100%; max-width: 600px; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774025969152_0.jpg" alt="Frustracja przy ślepej diagnostyce" width="600" height="450" loading="lazy" style="width: 100%; max-width: 600px; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Wavy Divider -->
+  <div class="wavy-divider flip">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+      <path fill="#FFF5F0" d="M0,30 C360,60 720,0 1080,30 C1260,45 1380,40 1440,30 L1440,0 L0,0 Z"/>
+    </svg>
+  </div>
 
   <!-- Solution / Bento -->
   <section class="solution" id="features">
@@ -1787,7 +2177,7 @@
         <div class="bento-card fade-in">
           <div class="spotlight"></div>
           <div class="bento-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026006807_0.jpg" alt="Podwójny obiektyw Dual Lens" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026006807_0.jpg" alt="Podwójny obiektyw Dual Lens" width="480" height="270" loading="lazy" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
           </div>
           <div class="bento-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1807,7 +2197,7 @@
         <div class="bento-card fade-in">
           <div class="spotlight"></div>
           <div class="bento-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026026023_0.jpg" alt="Ekran IPS 4.3 cala" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026026023_0.jpg" alt="Ekran IPS 4.3 cala" width="480" height="270" loading="lazy" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
           </div>
           <div class="bento-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1825,7 +2215,7 @@
         <div class="bento-card fade-in">
           <div class="spotlight"></div>
           <div class="bento-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026045039_0.jpg" alt="Wodoodporność IP67" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026045039_0.jpg" alt="Wodoodporność IP67" width="480" height="270" loading="lazy" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
           </div>
           <div class="bento-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1841,7 +2231,7 @@
         <div class="bento-card fade-in">
           <div class="spotlight"></div>
           <div class="bento-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026063365_0.jpg" alt="Inspekcja ścian i kanałów" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026063365_0.jpg" alt="Inspekcja ścian i kanałów" width="480" height="270" loading="lazy" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);">
           </div>
           <div class="bento-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1872,7 +2262,7 @@
       <div class="how-steps">
         <div class="how-step fade-in">
           <div class="how-step-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026114775_0.jpg" alt="Krok 1 - Rozpakuj kamerę" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026114775_0.jpg" alt="Krok 1 - Rozpakuj kamerę" width="400" height="300" loading="lazy" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
           </div>
           <div class="how-step-number">1</div>
           <h3 class="how-step-title">Włącz kamerę</h3>
@@ -1883,7 +2273,7 @@
 
         <div class="how-step fade-in">
           <div class="how-step-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026132786_0.jpg" alt="Krok 2 - Wprowadź przewód" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026132786_0.jpg" alt="Krok 2 - Wprowadź przewód" width="400" height="300" loading="lazy" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
           </div>
           <div class="how-step-number">2</div>
           <h3 class="how-step-title">Wprowadź przewód</h3>
@@ -1894,13 +2284,67 @@
 
         <div class="how-step fade-in">
           <div class="how-step-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026152451_0.jpg" alt="Krok 3 - Zdiagnozuj problem" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026152451_0.jpg" alt="Krok 3 - Zdiagnozuj problem" width="400" height="300" loading="lazy" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
           </div>
           <div class="how-step-number">3</div>
           <h3 class="how-step-title">Zdiagnozuj i napraw</h3>
           <p class="how-step-text">
             Zobaczysz usterkę na własne oczy. Podejmij decyzję o naprawie — sam lub z fachowcem — bez kosztownych "na ślepo" rozbiórek.
           </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Personas -->
+  <section class="personas">
+    <div class="container">
+      <div class="personas-header fade-in">
+        <span class="section-label">Dla kogo</span>
+        <h2 class="section-title">Dla każdego, kto chce widzieć więcej</h2>
+        <p class="section-subtitle">
+          InnerScan sprawdza się wszędzie tam, gdzie trzeba zajrzeć w niedostępne miejsca.
+        </p>
+      </div>
+
+      <div class="personas-grid">
+        <div class="persona-card fade-in">
+          <div class="persona-icon">🔧</div>
+          <h3 class="persona-title">Mechanik amator</h3>
+          <p class="persona-text">
+            Diagnozujesz auto w garażu? Sprawdź cylindry, zawory i kanały chłodzenia bez demontażu głowicy. Oszczędź tysiące na warsztatowych wycenach "na ślepo".
+          </p>
+          <div class="persona-usecases">
+            <span class="persona-usecase">Silniki</span>
+            <span class="persona-usecase">Skrzynie biegów</span>
+            <span class="persona-usecase">Turbosprężarki</span>
+          </div>
+        </div>
+
+        <div class="persona-card fade-in">
+          <div class="persona-icon">🏠</div>
+          <h3 class="persona-title">Właściciel nieruchomości</h3>
+          <p class="persona-text">
+            Szukasz wycieku? Znajdź pęknięcie w rurze kanalizacyjnej bez kucia płytek. Sprawdź kominy, instalacje i ściany przed remontem — zanim wydasz pieniądze na "może".
+          </p>
+          <div class="persona-usecases">
+            <span class="persona-usecase">Rury</span>
+            <span class="persona-usecase">Kominy</span>
+            <span class="persona-usecase">Instalacje</span>
+          </div>
+        </div>
+
+        <div class="persona-card fade-in">
+          <div class="persona-icon">⚙️</div>
+          <h3 class="persona-title">Fachowiec / Serwisant</h3>
+          <p class="persona-text">
+            Hydraulik, serwisant HVAC, elektryk? Diagnozuj szybciej, dokumentuj dla klienta, oszczędzaj czas. Profesjonalne narzędzie, które zarabia na siebie w jeden dzień.
+          </p>
+          <div class="persona-usecases">
+            <span class="persona-usecase">Klimatyzacje</span>
+            <span class="persona-usecase">Wentylacje</span>
+            <span class="persona-usecase">Przekładnie</span>
+          </div>
         </div>
       </div>
     </div>
@@ -2127,11 +2571,16 @@
           <span class="offer-badge">Bestseller</span>
 
           <div class="offer-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026171171_0.jpg" alt="Zestaw InnerScan Dual Lens" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; box-shadow: var(--shadow-lg);">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1774026171171_0.jpg" alt="Zestaw InnerScan Dual Lens" width="560" height="315" loading="lazy" style="width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; box-shadow: var(--shadow-lg);">
           </div>
 
           <h3 class="offer-title">InnerScan Dual Lens 4.3" HD</h3>
           <p class="offer-subtitle">Kamera endoskopowa z podwójnym obiektywem i ekranem IPS</p>
+
+          <div class="offer-urgency">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Zostało tylko <strong>17 sztuk</strong> w magazynie</span>
+          </div>
 
           <div class="offer-price">
             <span class="offer-price-old">499 PLN</span>
@@ -2166,7 +2615,7 @@
           </div>
 
           <a href="https://innerscan.pl/checkout?products=103035094" class="btn-primary btn-shimmer offer-cta">
-            Zamów teraz
+            Zamów z rabatem -40%
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
 
@@ -2232,6 +2681,20 @@
       </div>
     </div>
   </footer>
+
+  <!-- Sticky CTA (Mobile) -->
+  <div class="sticky-cta" id="stickyCta">
+    <div class="sticky-cta-inner">
+      <div class="sticky-cta-price">
+        <span class="old">499 PLN</span>
+        <span class="new">299 PLN</span>
+      </div>
+      <a href="https://innerscan.pl/checkout?products=103035094" class="btn-primary">
+        Zamów -40%
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
 
   <!-- Cookie Banner -->
   <div class="cookie-banner" id="cookieBanner">
@@ -2314,6 +2777,24 @@
         localStorage.setItem('cookiesAccepted', 'true');
         cookieBanner.classList.remove('show');
       });
+
+      // Sticky CTA (Mobile)
+      const stickyCta = document.getElementById('stickyCta');
+      const heroSection = document.querySelector('.hero');
+
+      if (stickyCta && heroSection) {
+        const stickyObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              stickyCta.classList.remove('visible');
+            } else {
+              stickyCta.classList.add('visible');
+            }
+          });
+        }, { threshold: 0 });
+
+        stickyObserver.observe(heroSection);
+      }
 
       // Conversion Toolkit
       if (typeof ConversionToolkit !== 'undefined') {
