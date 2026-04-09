@@ -9333,47 +9333,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     adsData = data;
                 }
 
-                // Send email notification to client
-                const clientEmail = workflow?.email;
+                // Trigger automation for email notification
                 const clientName = workflow?.first_name || 'Kliencie';
                 const brandName = workflow?.brand_name || workflow?.name || 'Twój sklep';
 
-                if (clientEmail) {
-                    try {
-                        await supabaseClient.functions.invoke('send-email', {
-                            body: {
-                                to: clientEmail,
-                                subject: `🚀 Kampania ${brandName} została uruchomiona!`,
-                                html: `
-                                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                                        <h2 style="color: #10b981;">Świetna wiadomość, ${clientName}!</h2>
-                                        <p style="font-size: 16px; color: #333; line-height: 1.6;">
-                                            Twoja kampania reklamowa dla <strong>${brandName}</strong> została właśnie uruchomiona na Meta Ads!
-                                        </p>
-                                        <p style="font-size: 16px; color: #333; line-height: 1.6;">
-                                            Reklamy zaczną się wyświetlać w ciągu najbliższych godzin. Będę monitorował wyniki i dam Ci znać, jak tylko pojawią się pierwsze dane.
-                                        </p>
-                                        <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                                            <p style="margin: 0; color: #666; font-size: 14px;">
-                                                <strong>Co dalej?</strong><br>
-                                                Pierwsze wyniki zobaczysz zazwyczaj po 24-48 godzinach. Prześlę Ci raport z pierwszymi danymi, gdy będą dostępne.
-                                            </p>
-                                        </div>
-                                        <p style="font-size: 14px; color: #888;">
-                                            Pozdrawiam,<br>
-                                            Tomek Nieźwiecki
-                                        </p>
-                                    </div>
-                                `
-                            }
-                        });
-                    } catch (emailErr) {
-                        console.error('Email send error:', emailErr);
-                        // Don't fail the whole operation if email fails
-                    }
-                }
-
-                // Trigger automation
                 try {
                     await supabaseClient.functions.invoke('automation-trigger', {
                         body: {

@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     reklamy: {
         label: 'Etap 4 - Reklamy',
         description: 'Maile związane z kampaniami reklamowymi',
-        templates: ['ads_activated']
+        templates: ['ads_activated', 'campaign_launched']
     }
 };
 
@@ -156,6 +156,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy admin oznaczy testy jako zakończone',
         icon: 'ph-megaphone-simple',
         color: 'rose'
+    },
+    'campaign_launched': {
+        name: 'Kampania uruchomiona',
+        description: 'Wysyłany gdy admin uruchomi kampanię reklamową',
+        icon: 'ph-rocket-launch',
+        color: 'rose'
     }
 };
 
@@ -208,7 +214,8 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
-        { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' }
+        { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
+        { value: 'campaign_launched', label: 'Kampania uruchomiona' }
     ]
 };
 
@@ -240,5 +247,6 @@ const TRIGGER_DEFINITIONS = {
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
     test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
     // Etap 4 - Reklamy
-    ads_activated: { label: 'Konfiguracja konta reklamowego', icon: 'ph-megaphone-simple', color: 'rose' }
+    ads_activated: { label: 'Konfiguracja konta reklamowego', icon: 'ph-megaphone-simple', color: 'rose' },
+    campaign_launched: { label: 'Kampania uruchomiona', icon: 'ph-rocket-launch', color: 'rose' }
 };
