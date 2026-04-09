@@ -318,16 +318,19 @@
             <!-- Contact Section -->
             <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-8">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
-                    <div>
-                        <h3 class="text-base sm:text-lg font-semibold text-white mb-1">Masz pytania?</h3>
-                        <p class="text-zinc-400 text-sm">Skontaktuj się z nami, chętnie odpowiemy na wszystkie pytania.</p>
+                    <div class="flex items-center gap-4">
+                        <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat.png" alt="Tomek Niedźwiecki" class="w-14 h-14 rounded-full object-cover flex-shrink-0">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-semibold text-white mb-1">Masz pytania?</h3>
+                            <p class="text-zinc-400 text-sm">Skontaktuj się bezpośrednio ze mną.</p>
+                        </div>
                     </div>
                     <div class="flex gap-2 sm:gap-3">
                         <a href="mailto:kontakt@tn.digital" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
                             <i class="ph ph-envelope"></i>
                             Email
                         </a>
-                        <a href="https://wa.me/48533308623" target="_blank" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
+                        <a href="https://wa.me/48793113898" target="_blank" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors border border-white/10 text-sm">
                             <i class="ph ph-whatsapp-logo"></i>
                             WhatsApp
                         </a>
@@ -976,6 +979,7 @@
                 const deliverables = (milestone.deliverables || []).filter(d => d.trim());
                 const tasks = milestone.tasks || [];
                 const hasContent = deliverables.length > 0 || tasks.length > 0;
+                const totalItems = deliverables.length + tasks.length;
 
                 return `
                     <div class="relative mb-4 animate-enter" style="animation-delay: ${index * 0.1}s">
@@ -992,7 +996,18 @@
                                     <div class="flex items-start justify-between gap-3">
                                         <!-- Title -->
                                         <div class="flex-1 min-w-0">
-                                            <h3 class="text-base font-semibold text-white leading-tight">${escapeHtml(milestone.title) || 'Etap ' + (index + 1)}</h3>
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <h3 class="text-base font-semibold text-white leading-tight">${escapeHtml(milestone.title) || 'Etap ' + (index + 1)}</h3>
+                                                ${hasContent ? `
+                                                    <button onclick="toggleMilestone(${index})"
+                                                            id="milestone-badge-${index}"
+                                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 text-xs font-medium transition-all cursor-pointer group">
+                                                        <i class="ph ph-list-bullets"></i>
+                                                        <span class="milestone-badge-text-${index}">${totalItems} ${totalItems === 1 ? 'element' : 'elementów'}</span>
+                                                        <i class="ph ph-caret-down milestone-chevron-${index} transition-transform duration-200 group-hover:translate-y-0.5"></i>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
                                             ${milestone.description ? `<p class="text-zinc-500 text-sm mt-1">${escapeHtml(milestone.description)}</p>` : ''}
                                         </div>
 
@@ -1004,24 +1019,6 @@
                                         </div>
                                         ` : ''}
                                     </div>
-
-                                    <!-- Badges row -->
-                                    ${hasContent ? `
-                                        <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/5">
-                                            ${deliverables.length > 0 ? `
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                                                    <i class="ph ph-package"></i>
-                                                    <span>${deliverables.length} rezultatów</span>
-                                                </span>
-                                            ` : ''}
-                                            ${tasks.length > 0 ? `
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs">
-                                                    <i class="ph ph-list-checks"></i>
-                                                    <span>${tasks.length} zadań</span>
-                                                </span>
-                                            ` : ''}
-                                        </div>
-                                    ` : ''}
                                 </div>
 
                                 <!-- Expandable Content -->
@@ -1087,14 +1084,6 @@
                                             ` : ''}
                                         </div>
                                     </div>
-
-                                    <!-- Expand button -->
-                                    <button onclick="toggleMilestone(${index})"
-                                            id="milestone-btn-${index}"
-                                            class="w-full px-4 py-2.5 bg-zinc-800/50 hover:bg-zinc-800 border-t border-white/5 text-zinc-400 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2">
-                                        <span class="milestone-btn-text-${index}">Rozwiń szczegóły</span>
-                                        <i class="ph ph-caret-down milestone-chevron-${index} transition-transform duration-200"></i>
-                                    </button>
                                 ` : ''}
                             </div>
                         </div>
@@ -1107,18 +1096,27 @@
 
         function toggleMilestone(index) {
             const content = document.getElementById(`milestone-content-${index}`);
+            const badge = document.getElementById(`milestone-badge-${index}`);
             const chevron = document.querySelector(`.milestone-chevron-${index}`);
-            const btnText = document.querySelector(`.milestone-btn-text-${index}`);
+            const badgeText = document.querySelector(`.milestone-badge-text-${index}`);
             const isExpanded = content.classList.contains('expanded');
 
             if (isExpanded) {
                 content.classList.remove('expanded');
+                badge.classList.remove('bg-amber-500/25');
+                badge.classList.add('bg-amber-500/15');
                 chevron.style.transform = 'rotate(0deg)';
-                btnText.textContent = 'Rozwiń szczegóły';
+                badgeText.textContent = badgeText.dataset.originalText;
             } else {
+                // Store original text on first expand
+                if (!badgeText.dataset.originalText) {
+                    badgeText.dataset.originalText = badgeText.textContent;
+                }
                 content.classList.add('expanded');
+                badge.classList.remove('bg-amber-500/15');
+                badge.classList.add('bg-amber-500/25');
                 chevron.style.transform = 'rotate(180deg)';
-                btnText.textContent = 'Zwiń szczegóły';
+                badgeText.textContent = 'Zwiń';
             }
         }
 
