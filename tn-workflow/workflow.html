@@ -9707,6 +9707,23 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             renderBranding();
             updateSuggestedDomain();
+            updateBreadcrumbWithBrand();
+        }
+
+        function updateBreadcrumbWithBrand() {
+            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+            const customerDisplay = workflow.customer_name || workflow.customer_company || workflow.customer_email.split('@')[0];
+            const breadcrumbEl = document.getElementById('breadcrumb-name');
+
+            if (brandInfo) {
+                const info = parseNotes(brandInfo.value);
+                if (info.name) {
+                    breadcrumbEl.innerHTML = `${customerDisplay} <span class="text-zinc-500 font-normal">— ${info.name}</span>`;
+                    return;
+                }
+            }
+
+            breadcrumbEl.textContent = customerDisplay;
         }
 
         function updateSuggestedDomain() {
