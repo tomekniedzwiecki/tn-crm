@@ -2212,7 +2212,7 @@
                             </div>
 
                             <!-- Sub-steps checklist -->
-                            <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="grid grid-cols-3 gap-4 mb-6">
                                 <div id="admin-step-ad-account" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i id="admin-step-ad-icon" class="ph ph-circle text-zinc-600"></i>
@@ -2226,6 +2226,13 @@
                                         <span class="text-[13px] text-white font-medium">Fanpage</span>
                                     </div>
                                     <p id="admin-step-fp-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
+                                </div>
+                                <div id="admin-step-instagram" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i id="admin-step-ig-icon" class="ph ph-circle text-zinc-600"></i>
+                                        <span class="text-[13px] text-white font-medium">Instagram</span>
+                                    </div>
+                                    <p id="admin-step-ig-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
                                 </div>
                             </div>
 
@@ -4323,7 +4330,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -4405,8 +4412,8 @@
                 if (navStage4) {
                     navStage4.classList.toggle('hidden', !takedropNavStatus?.test_accepted);
                 }
-                // Nav check requires BOTH ad account AND fanpage granted (or admin marked as ready)
-                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted));
+                // Nav check requires ALL 3 granted: ad account + fanpage + instagram (or admin marked as ready)
+                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
@@ -8909,11 +8916,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             // Check sub-steps status
             const adAccountDone = adsData?.partner_access_granted;
             const fanpageDone = adsData?.fanpage_access_granted;
-            const bothDone = adAccountDone && fanpageDone;
-            const oneDone = adAccountDone || fanpageDone;
+            const instagramDone = adsData?.instagram_access_granted;
+            const allDone = adAccountDone && fanpageDone && instagramDone;
+            const doneCount = [adAccountDone, fanpageDone, instagramDone].filter(Boolean).length;
 
             // Update sub-step indicators
-            updateAdminSubSteps(adAccountDone, fanpageDone);
+            updateAdminSubSteps(adAccountDone, fanpageDone, instagramDone);
 
             // Check ad account status
             if (adsData?.ad_account_ready) {
@@ -8931,16 +8939,18 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         });
                     }
                 }
-            } else if (bothDone) {
-                // Both granted, waiting for admin confirmation
+            } else if (allDone) {
+                // All 3 granted, waiting for admin confirmation
                 if (bothGrantedStatusEl) bothGrantedStatusEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (readyToggle) readyToggle.checked = false;
 
-                // Show the later date
+                // Show the latest date
                 const adDate = adsData.partner_access_granted_at ? new Date(adsData.partner_access_granted_at) : null;
                 const fpDate = adsData.fanpage_access_granted_at ? new Date(adsData.fanpage_access_granted_at) : null;
-                const laterDate = adDate && fpDate ? (adDate > fpDate ? adDate : fpDate) : (adDate || fpDate);
+                const igDate = adsData.instagram_access_granted_at ? new Date(adsData.instagram_access_granted_at) : null;
+                const dates = [adDate, fpDate, igDate].filter(Boolean);
+                const laterDate = dates.length > 0 ? new Date(Math.max(...dates)) : null;
 
                 if (laterDate) {
                     const dateEl = document.getElementById('ad-account-both-granted-date');
@@ -8950,8 +8960,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         });
                     }
                 }
-            } else if (oneDone) {
-                // Only one granted
+            } else if (doneCount > 0) {
+                // Partial progress
                 if (partialStatusEl) partialStatusEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
                 if (readyToggle) readyToggle.checked = false;
@@ -8959,13 +8969,13 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 const partialText = document.getElementById('ad-account-partial-text');
                 const partialDetails = document.getElementById('ad-account-partial-details');
 
-                if (partialText) partialText.textContent = '1 z 2';
+                if (partialText) partialText.textContent = `${doneCount} z 3`;
                 if (partialDetails) {
-                    if (adAccountDone) {
-                        partialDetails.textContent = 'Konto reklamowe OK — brakuje fanpage';
-                    } else {
-                        partialDetails.textContent = 'Fanpage OK — brakuje konta reklamowego';
-                    }
+                    const missing = [];
+                    if (!adAccountDone) missing.push('konto reklamowe');
+                    if (!fanpageDone) missing.push('fanpage');
+                    if (!instagramDone) missing.push('Instagram');
+                    partialDetails.textContent = `Brakuje: ${missing.join(', ')}`;
                 }
             } else {
                 // Waiting for client to confirm
@@ -8975,7 +8985,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
-        function updateAdminSubSteps(adAccountDone, fanpageDone) {
+        function updateAdminSubSteps(adAccountDone, fanpageDone, instagramDone) {
             // Ad account step
             const adIcon = document.getElementById('admin-step-ad-icon');
             const adDate = document.getElementById('admin-step-ad-date');
@@ -9025,6 +9035,32 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     fpDate.textContent = 'Oczekuje';
                     fpDate.classList.remove('text-emerald-400');
                     fpDate.classList.add('text-zinc-500');
+                }
+            }
+
+            // Instagram step
+            const igIcon = document.getElementById('admin-step-ig-icon');
+            const igDate = document.getElementById('admin-step-ig-date');
+
+            if (instagramDone) {
+                if (igIcon) {
+                    igIcon.className = 'ph-fill ph-check-circle text-emerald-400';
+                }
+                if (igDate && adsData?.instagram_access_granted_at) {
+                    igDate.textContent = new Date(adsData.instagram_access_granted_at).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    });
+                    igDate.classList.add('text-emerald-400');
+                    igDate.classList.remove('text-zinc-500');
+                }
+            } else {
+                if (igIcon) {
+                    igIcon.className = 'ph ph-circle text-zinc-600';
+                }
+                if (igDate) {
+                    igDate.textContent = 'Oczekuje';
+                    igDate.classList.remove('text-emerald-400');
+                    igDate.classList.add('text-zinc-500');
                 }
             }
         }
@@ -9095,6 +9131,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                             partner_access_granted_at: null,
                             fanpage_access_granted: false,
                             fanpage_access_granted_at: null,
+                            instagram_access_granted: false,
+                            instagram_access_granted_at: null,
                             ad_account_ready: false,
                             ad_account_configured_at: null
                         })
@@ -9106,6 +9144,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     adsData.partner_access_granted_at = null;
                     adsData.fanpage_access_granted = false;
                     adsData.fanpage_access_granted_at = null;
+                    adsData.instagram_access_granted = false;
+                    adsData.instagram_access_granted_at = null;
                     adsData.ad_account_ready = false;
                     adsData.ad_account_configured_at = null;
                 }

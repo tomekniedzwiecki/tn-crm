@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026040904';
+        const APP_VERSION = '2026040905';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3709,9 +3709,9 @@
 
                             <!-- Two task cards -->
                             <div class="p-5">
-                                <div class="text-[11px] text-zinc-500 uppercase tracking-wider font-medium mb-3">Zaznacz "Pełna kontrola" przy obu:</div>
+                                <div class="text-[11px] text-zinc-500 uppercase tracking-wider font-medium mb-3">Zaznacz "Pełna kontrola" przy wszystkich trzech:</div>
 
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
 
                                     <!-- Card 1: Konto reklamowe -->
                                     <div id="step3a-card" class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 transition-all hover:border-zinc-700">
@@ -3793,6 +3793,46 @@
                                         </div>
                                     </div>
 
+                                    <!-- Card 3: Instagram -->
+                                    <div id="step3c-card" class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 transition-all hover:border-zinc-700">
+                                        <div class="flex items-start gap-3 mb-2">
+                                            <div id="step3c-checkbox" class="w-5 h-5 rounded border-2 border-zinc-600 flex items-center justify-center transition-all duration-300 flex-shrink-0 mt-0.5">
+                                                <i class="ph-fill ph-check text-white text-xs hidden"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <h4 class="text-[13px] font-medium text-white">Instagram</h4>
+                                                    <span id="step3c-status" class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">OCZEKUJE</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Instructions -->
+                                        <div id="step3c-content" class="text-[11px] text-zinc-400 mb-3">
+                                            <ol class="space-y-1">
+                                                <li><span class="text-rose-400">1.</span> <strong class="text-zinc-300">⚙️ Ustawienia firmy</strong> → <strong class="text-zinc-300">Konta → Instagram</strong></li>
+                                                <li><span class="text-rose-400">2.</span> Kliknij na swój profil Instagram</li>
+                                                <li><span class="text-rose-400">3.</span> Kliknij <strong class="text-zinc-300">"Przypisz partnerów"</strong></li>
+                                                <li><span class="text-rose-400">4.</span> Znajdź partnera i zaznacz <strong class="text-zinc-300">"Pełna kontrola"</strong></li>
+                                            </ol>
+                                        </div>
+
+                                        <button onclick="confirmInstagramAccess()" id="confirm-instagram-btn"
+                                                class="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-black py-2 rounded-lg text-[12px] font-semibold transition-all">
+                                            <i class="ph ph-check"></i>
+                                            Zrobione
+                                        </button>
+
+                                        <!-- Done state -->
+                                        <div id="step3c-done" class="hidden">
+                                            <div class="flex items-center gap-2 text-emerald-400 text-[12px]">
+                                                <i class="ph-fill ph-check-circle"></i>
+                                                <span>Gotowe</span>
+                                                <span id="step3c-date" class="text-zinc-500 ml-auto"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
 
                                 <!-- Progress bar -->
@@ -3800,7 +3840,7 @@
                                     <div class="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                                         <div id="step3-progress-bar" class="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
                                     </div>
-                                    <span id="step3-progress-text" class="text-[12px] text-zinc-500 font-medium">0 / 2</span>
+                                    <span id="step3-progress-text" class="text-[12px] text-zinc-500 font-medium">0 / 3</span>
                                 </div>
                             </div>
 
@@ -5404,8 +5444,8 @@
         // ============================================
         function renderEtap4Dashboard() {
             // Etap 4 ma 5 elementów: Konto, Budżet, Kampania, Raport, Skalowanie
-            // Konto wymaga ZARÓWNO ad account JAK I fanpage
-            const kontoDone = adsData?.partner_access_granted && adsData?.fanpage_access_granted;
+            // Konto wymaga ad account, fanpage I instagram
+            const kontoDone = adsData?.partner_access_granted && adsData?.fanpage_access_granted && adsData?.instagram_access_granted;
             const budzetDone = adsData?.budget_funded;
             const kampaniaDone = adsData?.campaign_launched;
             const raportDone = adsData?.report_sent;
@@ -5433,12 +5473,14 @@
 
             const adAccountDone = adsData?.partner_access_granted;
             const fanpageDone = adsData?.fanpage_access_granted;
-            const bothDone = adAccountDone && fanpageDone;
-            const partialDone = adAccountDone || fanpageDone;
+            const instagramDone = adsData?.instagram_access_granted;
+            const allDone = adAccountDone && fanpageDone && instagramDone;
+            const doneCount = [adAccountDone, fanpageDone, instagramDone].filter(Boolean).length;
+            const partialDone = doneCount > 0;
 
-            if (!bothDone) {
+            if (!allDone) {
                 box.classList.add('bento-action');
-                const progressText = partialDone ? '1 z 2' : '0 z 2';
+                const progressText = `${doneCount} z 3`;
                 const statusText = partialDone ? 'W trakcie' : 'Wymaga akcji';
                 const statusColor = partialDone ? 'text-amber-500' : 'text-rose-500';
                 const pulseClass = partialDone ? '' : 'animate-pulse';
@@ -5455,7 +5497,7 @@
                         <div class="flex-1 flex flex-col items-center justify-center">
                             <i class="ph ph-megaphone-simple text-5xl text-rose-400 mb-4"></i>
                             <h3 class="text-white text-lg font-medium">Dodaj partnera</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Konto + Fanpage (${progressText})</p>
+                            <p class="text-[#666] text-sm text-center mt-2">Konto + Fanpage + Instagram (${progressText})</p>
                         </div>
                     </div>
                 `;
@@ -5486,8 +5528,8 @@
             if (!box || !content) return;
 
             if (!adsData?.budget_funded) {
-                // Budget is locked until BOTH ad account AND fanpage are granted
-                const isLocked = !(adsData?.partner_access_granted && adsData?.fanpage_access_granted);
+                // Budget is locked until ad account, fanpage AND instagram are granted
+                const isLocked = !(adsData?.partner_access_granted && adsData?.fanpage_access_granted && adsData?.instagram_access_granted);
                 box.classList.toggle('bento-action', !isLocked);
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
@@ -6164,22 +6206,22 @@
             document.getElementById('ads-stage-desktop')?.classList.toggle('hidden', !hasTestAccepted);
             document.getElementById('ads-stage-mobile')?.classList.toggle('hidden', !hasTestAccepted);
 
-            // Show/hide Budżet nav item (only after BOTH partner_access_granted AND fanpage_access_granted)
-            const hasBothAccess = adsData?.partner_access_granted && adsData?.fanpage_access_granted;
+            // Show/hide Budżet nav item (only after ad account, fanpage AND instagram granted)
+            const hasAllAccess = adsData?.partner_access_granted && adsData?.fanpage_access_granted && adsData?.instagram_access_granted;
             // Dashboard screen IDs
-            document.getElementById('dash-nav-budzet')?.classList.toggle('hidden', !hasBothAccess);
-            document.getElementById('dash-nav-budzet-mobile')?.classList.toggle('hidden', !hasBothAccess);
+            document.getElementById('dash-nav-budzet')?.classList.toggle('hidden', !hasAllAccess);
+            document.getElementById('dash-nav-budzet-mobile')?.classList.toggle('hidden', !hasAllAccess);
             // Project screen IDs (legacy)
-            document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasBothAccess);
-            document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasBothAccess);
+            document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasAllAccess);
+            document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasAllAccess);
 
-            // Update Konto reklamowe checkmark (green when BOTH granted)
+            // Update Konto reklamowe checkmark (green when ALL 3 granted: ad account + fanpage + instagram)
             // Dashboard screen IDs
-            document.getElementById('dash-nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasBothAccess);
-            document.getElementById('dash-nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasBothAccess);
+            document.getElementById('dash-nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasAllAccess);
+            document.getElementById('dash-nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasAllAccess);
             // Project screen IDs (legacy)
-            document.getElementById('nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasBothAccess);
-            document.getElementById('nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasBothAccess);
+            document.getElementById('nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasAllAccess);
+            document.getElementById('nav-check-konto-reklamowe-mobile')?.classList.toggle('hidden', !hasAllAccess);
 
             // Update Budżet checkmark (green when budget_funded)
             const hasBudgetFunded = adsData?.budget_funded;
@@ -8496,7 +8538,7 @@
                     try {
                         const { data: ads } = await supabaseClient
                             .from('workflow_ads')
-                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, budget_funded, budget_funded_at')
+                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, budget_funded, budget_funded_at')
                             .eq('workflow_id', workflow.id)
                             .maybeSingle();
                         adsData = ads;
@@ -9139,7 +9181,8 @@
             // Check completion status
             const adAccountDone = adsData?.partner_access_granted;
             const fanpageDone = adsData?.fanpage_access_granted;
-            const bothDone = adAccountDone && fanpageDone;
+            const instagramDone = adsData?.instagram_access_granted;
+            const allDone = adAccountDone && fanpageDone && instagramDone;
 
             // Stage 4 is active
             if (adsData?.ad_account_ready) {
@@ -9161,13 +9204,13 @@
                         });
                     }
                 }
-            } else if (bothDone) {
-                // Both ad account and fanpage done - show completed state
+            } else if (allDone) {
+                // All three done (ad account, fanpage, instagram) - show completed state
                 if (partnerGrantedEl) partnerGrantedEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (navCheckMobile) navCheckMobile.classList.remove('hidden');
 
-                // Show Budżet nav item (unlocked after both completed)
+                // Show Budżet nav item (unlocked after all completed)
                 document.getElementById('nav-budzet-desktop')?.classList.remove('hidden');
                 document.getElementById('nav-budzet-mobile')?.classList.remove('hidden');
                 document.getElementById('dash-nav-budzet')?.classList.remove('hidden');
@@ -9176,7 +9219,8 @@
                 // Fill in dates
                 const adDate = adsData.partner_access_granted_at;
                 const fpDate = adsData.fanpage_access_granted_at;
-                const laterDate = new Date(Math.max(new Date(adDate || 0), new Date(fpDate || 0)));
+                const igDate = adsData.instagram_access_granted_at;
+                const laterDate = new Date(Math.max(new Date(adDate || 0), new Date(fpDate || 0), new Date(igDate || 0)));
 
                 const dateEl = document.getElementById('partner-granted-date');
                 if (dateEl) {
@@ -9188,11 +9232,15 @@
                 // Fill individual dates
                 const adDateEl = document.getElementById('step3-ad-account-date');
                 const fpDateEl = document.getElementById('step3-fanpage-date');
+                const igDateEl = document.getElementById('step3-instagram-date');
                 if (adDateEl && adDate) {
                     adDateEl.textContent = new Date(adDate).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
                 }
                 if (fpDateEl && fpDate) {
                     fpDateEl.textContent = new Date(fpDate).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                }
+                if (igDateEl && igDate) {
+                    igDateEl.textContent = new Date(igDate).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
                 }
             } else {
                 // Show pending state with sub-steps
@@ -9201,11 +9249,11 @@
                 if (navCheckMobile) navCheckMobile.classList.add('hidden');
 
                 // Update sub-step UI
-                updateStep3SubSteps(adAccountDone, fanpageDone);
+                updateStep3SubSteps(adAccountDone, fanpageDone, instagramDone);
             }
         }
 
-        function updateStep3SubSteps(adAccountDone, fanpageDone) {
+        function updateStep3SubSteps(adAccountDone, fanpageDone, instagramDone) {
             // Step 3A: Ad Account
             const step3aCard = document.getElementById('step3a-card');
             const step3aCheckbox = document.getElementById('step3a-checkbox');
@@ -9290,15 +9338,57 @@
                 }
             }
 
+            // Step 3C: Instagram
+            const step3cCard = document.getElementById('step3c-card');
+            const step3cCheckbox = document.getElementById('step3c-checkbox');
+            const step3cContent = document.getElementById('step3c-content');
+            const step3cBtn = document.getElementById('confirm-instagram-btn');
+            const step3cDone = document.getElementById('step3c-done');
+            const step3cStatus = document.getElementById('step3c-status');
+            const step3cDate = document.getElementById('step3c-date');
+
+            if (instagramDone) {
+                step3cCheckbox?.classList.add('bg-emerald-500', 'border-emerald-500');
+                step3cCheckbox?.classList.remove('border-zinc-600');
+                step3cCheckbox?.querySelector('i')?.classList.remove('hidden');
+                step3cContent?.classList.add('hidden');
+                step3cBtn?.classList.add('hidden');
+                step3cDone?.classList.remove('hidden');
+                step3cCard?.classList.add('border-emerald-500/30');
+                step3cCard?.classList.remove('border-zinc-800');
+                if (step3cStatus) {
+                    step3cStatus.textContent = 'GOTOWE';
+                    step3cStatus.classList.remove('bg-zinc-800', 'text-zinc-400');
+                    step3cStatus.classList.add('bg-emerald-500/20', 'text-emerald-400');
+                }
+                if (step3cDate && adsData?.instagram_access_granted_at) {
+                    step3cDate.textContent = new Date(adsData.instagram_access_granted_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                }
+            } else {
+                step3cCheckbox?.classList.remove('bg-emerald-500', 'border-emerald-500');
+                step3cCheckbox?.classList.add('border-zinc-600');
+                step3cCheckbox?.querySelector('i')?.classList.add('hidden');
+                step3cContent?.classList.remove('hidden');
+                step3cBtn?.classList.remove('hidden');
+                step3cDone?.classList.add('hidden');
+                step3cCard?.classList.remove('border-emerald-500/30');
+                step3cCard?.classList.add('border-zinc-800');
+                if (step3cStatus) {
+                    step3cStatus.textContent = 'OCZEKUJE';
+                    step3cStatus.classList.add('bg-zinc-800', 'text-zinc-400');
+                    step3cStatus.classList.remove('bg-emerald-500/20', 'text-emerald-400');
+                }
+            }
+
             // Update progress bar
-            const completed = (adAccountDone ? 1 : 0) + (fanpageDone ? 1 : 0);
+            const completed = (adAccountDone ? 1 : 0) + (fanpageDone ? 1 : 0) + (instagramDone ? 1 : 0);
             const progressBar = document.getElementById('step3-progress-bar');
             const progressText = document.getElementById('step3-progress-text');
-            if (progressBar) progressBar.style.width = (completed / 2 * 100) + '%';
-            if (progressText) progressText.textContent = completed + ' / 2';
+            if (progressBar) progressBar.style.width = (completed / 3 * 100) + '%';
+            if (progressText) progressText.textContent = completed + ' / 3';
 
             // Change progress bar color when complete
-            if (completed === 2) {
+            if (completed === 3) {
                 progressBar?.classList.remove('from-rose-500', 'to-rose-400');
                 progressBar?.classList.add('from-emerald-500', 'to-emerald-400');
             } else {
@@ -9348,7 +9438,7 @@
 
                 showToast('Konto reklamowe zapisane!', 'success');
                 loadKontoReklamowe();
-                checkAndTriggerBothCompleted();
+                checkAndTriggerAllCompleted();
             } catch (err) {
                 console.error('Error confirming ad account access:', err);
                 showToast('Błąd zapisu', 'error');
@@ -9401,7 +9491,7 @@
 
                 showToast('Fanpage zapisany!', 'success');
                 loadKontoReklamowe();
-                checkAndTriggerBothCompleted();
+                checkAndTriggerAllCompleted();
             } catch (err) {
                 console.error('Error confirming fanpage access:', err);
                 showToast('Błąd zapisu', 'error');
@@ -9413,9 +9503,62 @@
         }
         window.confirmFanpageAccess = confirmFanpageAccess;
 
-        async function checkAndTriggerBothCompleted() {
-            // Only trigger automation when BOTH are completed
-            if (adsData?.partner_access_granted && adsData?.fanpage_access_granted) {
+        async function confirmInstagramAccess() {
+            const btn = document.getElementById('confirm-instagram-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Zapisuję...';
+            }
+
+            try {
+                const now = new Date().toISOString();
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            instagram_access_granted: true,
+                            instagram_access_granted_at: now
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.instagram_access_granted = true;
+                    adsData.instagram_access_granted_at = now;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: now,
+                            instagram_access_granted: true,
+                            instagram_access_granted_at: now
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                showToast('Instagram zapisany!', 'success');
+                loadKontoReklamowe();
+                checkAndTriggerAllCompleted();
+            } catch (err) {
+                console.error('Error confirming instagram access:', err);
+                showToast('Błąd zapisu', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-check"></i> Zrobione';
+                }
+            }
+        }
+        window.confirmInstagramAccess = confirmInstagramAccess;
+
+        async function checkAndTriggerAllCompleted() {
+            // Only trigger automation when ALL THREE are completed
+            if (adsData?.partner_access_granted && adsData?.fanpage_access_granted && adsData?.instagram_access_granted) {
                 try {
                     const clientName = workflow?.customer_name || workflow?.client_name || 'Klient';
                     const brandName = workflow?.brand_name || workflow?.name || 'Projekt';
@@ -9483,8 +9626,8 @@
             if (pendingEl) pendingEl.classList.add('hidden');
             if (fundedEl) fundedEl.classList.add('hidden');
 
-            // Check if BOTH partner access AND fanpage granted (prerequisite for budget step)
-            if (!(adsData?.partner_access_granted && adsData?.fanpage_access_granted)) {
+            // Check if ALL 3 access granted: ad account + fanpage + instagram (prerequisite for budget step)
+            if (!(adsData?.partner_access_granted && adsData?.fanpage_access_granted && adsData?.instagram_access_granted)) {
                 if (notActiveEl) notActiveEl.classList.remove('hidden');
                 return;
             }

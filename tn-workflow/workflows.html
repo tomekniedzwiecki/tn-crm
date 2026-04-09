@@ -731,7 +731,7 @@
             const [videoRes, takedropRes, adsRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, budget_funded, campaign_launched').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, budget_funded, campaign_launched').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -901,17 +901,17 @@
                         if (stage === 'test') {
                             return w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted;
                         }
-                        // "ad_account" = test zaakceptowany ALE partner access lub fanpage NIE granted
+                        // "ad_account" = test zaakceptowany ALE wszystkie 3 accessy NIE granted
                         if (stage === 'ad_account') {
-                            return w.takedrop_stage?.test_accepted && !(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted);
+                            return w.takedrop_stage?.test_accepted && !(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted);
                         }
-                        // "budget" = partner access I fanpage granted ALE budget NIE funded
+                        // "budget" = wszystkie 3 accessy granted ALE budget NIE funded
                         if (stage === 'budget') {
-                            return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted) && !w.ads_stage?.budget_funded;
+                            return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted) && !w.ads_stage?.budget_funded;
                         }
-                        // "campaign" = budget funded ALE kampania NIE uruchomiona (wymaga też oba accessy)
+                        // "campaign" = budget funded ALE kampania NIE uruchomiona (wymaga też wszystkie accessy)
                         if (stage === 'campaign') {
-                            return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted) && w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched;
+                            return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted) && w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -1065,13 +1065,13 @@
                     counts.test++;
                     continue;
                 }
-                // "ad_account" = test zaakceptowany ALE partner access lub fanpage NIE granted
-                if (w.takedrop_stage?.test_accepted && !(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted)) {
+                // "ad_account" = test zaakceptowany ALE wszystkie 3 accessy NIE granted
+                if (w.takedrop_stage?.test_accepted && !(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted)) {
                     counts.ad_account++;
                     continue;
                 }
-                // "budget" = partner access I fanpage granted ALE budget NIE funded
-                if ((w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted) && !w.ads_stage?.budget_funded) {
+                // "budget" = wszystkie 3 accessy granted ALE budget NIE funded
+                if ((w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted) && !w.ads_stage?.budget_funded) {
                     counts.budget++;
                     continue;
                 }
@@ -1236,7 +1236,7 @@
                 case 'test':
                     return !!w.takedrop_stage?.test_accepted;
                 case 'ad_account':
-                    return !!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted);
+                    return !!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted);
                 case 'budget':
                     return !!w.ads_stage?.budget_funded;
                 case 'campaign':
@@ -1301,8 +1301,8 @@
             if (!w.takedrop_stage?.test_accepted) return 'test';
 
             // Etap 4: Reklamy
-            // Konto reklamowe (partner access + fanpage)
-            if (!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted)) return 'ad_account';
+            // Konto reklamowe (partner access + fanpage + instagram)
+            if (!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted)) return 'ad_account';
 
             // Budżet reklamowy
             if (!w.ads_stage?.budget_funded) return 'budget';
@@ -1460,16 +1460,16 @@
 
             // Etap 4: Reklamy - pokazuj gdy test zaakceptowany
             if (w.takedrop_stage?.test_accepted) {
-                // Konto reklamowe + fanpage
-                const bothAccessGranted = w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted;
-                if (bothAccessGranted) {
+                // Konto reklamowe + fanpage + instagram
+                const allAccessGranted = w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted;
+                if (allAccessGranted) {
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Konto</span>`);
                 } else {
                     items.push(`<span class="flex items-center gap-1 text-cyan-400"><i class="ph ph-circle-notch text-[10px]"></i>Konto</span>`);
                 }
 
-                // Budżet - pokazuj gdy konto + fanpage gotowe
-                if (bothAccessGranted) {
+                // Budżet - pokazuj gdy wszystkie accessy gotowe
+                if (allAccessGranted) {
                     if (w.ads_stage?.budget_funded) {
                         items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Budżet</span>`);
                     } else {
