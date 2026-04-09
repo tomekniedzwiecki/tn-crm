@@ -2212,7 +2212,7 @@
                             </div>
 
                             <!-- Sub-steps checklist -->
-                            <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                                 <div id="admin-step-ad-account" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i id="admin-step-ad-icon" class="ph ph-circle text-zinc-600"></i>
@@ -2234,6 +2234,13 @@
                                     </div>
                                     <p id="admin-step-ig-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
                                 </div>
+                                <div id="admin-step-phone" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i id="admin-step-ph-icon" class="ph ph-circle text-zinc-600"></i>
+                                        <span class="text-[13px] text-white font-medium">Telefon</span>
+                                    </div>
+                                    <p id="admin-step-ph-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
+                                </div>
                             </div>
 
                             <!-- Manual toggle for ad account ready -->
@@ -2241,7 +2248,7 @@
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <div class="text-[13px] text-white">Konto reklamowe gotowe</div>
-                                        <div class="text-[12px] text-[#666] mt-1">Zaznacz gdy konto reklamowe i fanpage są skonfigurowane</div>
+                                        <div class="text-[12px] text-[#666] mt-1">Zaznacz gdy wszystkie 4 kroki są skonfigurowane</div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="ad-account-ready-toggle" onchange="toggleAdAccountReady()" class="sr-only peer">
@@ -4330,7 +4337,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -4412,8 +4419,8 @@
                 if (navStage4) {
                     navStage4.classList.toggle('hidden', !takedropNavStatus?.test_accepted);
                 }
-                // Nav check requires ALL 3 granted: ad account + fanpage + instagram (or admin marked as ready)
-                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted));
+                // Nav check requires ALL 4 granted: ad account + fanpage + instagram + phone (or admin marked as ready)
+                toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted && !!adsNavStatus?.phone_verified));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
@@ -8917,11 +8924,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const adAccountDone = adsData?.partner_access_granted;
             const fanpageDone = adsData?.fanpage_access_granted;
             const instagramDone = adsData?.instagram_access_granted;
-            const allDone = adAccountDone && fanpageDone && instagramDone;
-            const doneCount = [adAccountDone, fanpageDone, instagramDone].filter(Boolean).length;
+            const phoneDone = adsData?.phone_verified;
+            const allDone = adAccountDone && fanpageDone && instagramDone && phoneDone;
+            const doneCount = [adAccountDone, fanpageDone, instagramDone, phoneDone].filter(Boolean).length;
 
             // Update sub-step indicators
-            updateAdminSubSteps(adAccountDone, fanpageDone, instagramDone);
+            updateAdminSubSteps(adAccountDone, fanpageDone, instagramDone, phoneDone);
 
             // Check ad account status
             if (adsData?.ad_account_ready) {
@@ -8969,12 +8977,13 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 const partialText = document.getElementById('ad-account-partial-text');
                 const partialDetails = document.getElementById('ad-account-partial-details');
 
-                if (partialText) partialText.textContent = `${doneCount} z 3`;
+                if (partialText) partialText.textContent = `${doneCount} z 4`;
                 if (partialDetails) {
                     const missing = [];
                     if (!adAccountDone) missing.push('konto reklamowe');
                     if (!fanpageDone) missing.push('fanpage');
                     if (!instagramDone) missing.push('Instagram');
+                    if (!phoneDone) missing.push('telefon');
                     partialDetails.textContent = `Brakuje: ${missing.join(', ')}`;
                 }
             } else {
@@ -8985,7 +8994,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
-        function updateAdminSubSteps(adAccountDone, fanpageDone, instagramDone) {
+        function updateAdminSubSteps(adAccountDone, fanpageDone, instagramDone, phoneDone) {
             // Ad account step
             const adIcon = document.getElementById('admin-step-ad-icon');
             const adDate = document.getElementById('admin-step-ad-date');
@@ -9063,6 +9072,32 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     igDate.classList.add('text-zinc-500');
                 }
             }
+
+            // Phone step
+            const phIcon = document.getElementById('admin-step-ph-icon');
+            const phDate = document.getElementById('admin-step-ph-date');
+
+            if (phoneDone) {
+                if (phIcon) {
+                    phIcon.className = 'ph-fill ph-check-circle text-emerald-400';
+                }
+                if (phDate && adsData?.phone_verified_at) {
+                    phDate.textContent = new Date(adsData.phone_verified_at).toLocaleDateString('pl-PL', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    });
+                    phDate.classList.add('text-emerald-400');
+                    phDate.classList.remove('text-zinc-500');
+                }
+            } else {
+                if (phIcon) {
+                    phIcon.className = 'ph ph-circle text-zinc-600';
+                }
+                if (phDate) {
+                    phDate.textContent = 'Oczekuje';
+                    phDate.classList.remove('text-emerald-400');
+                    phDate.classList.add('text-zinc-500');
+                }
+            }
         }
 
         async function toggleAdAccountReady() {
@@ -9133,6 +9168,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                             fanpage_access_granted_at: null,
                             instagram_access_granted: false,
                             instagram_access_granted_at: null,
+                            phone_verified: false,
+                            phone_verified_at: null,
                             ad_account_ready: false,
                             ad_account_configured_at: null
                         })
@@ -9146,6 +9183,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     adsData.fanpage_access_granted_at = null;
                     adsData.instagram_access_granted = false;
                     adsData.instagram_access_granted_at = null;
+                    adsData.phone_verified = false;
+                    adsData.phone_verified_at = null;
                     adsData.ad_account_ready = false;
                     adsData.ad_account_configured_at = null;
                 }
