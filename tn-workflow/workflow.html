@@ -2307,6 +2307,23 @@
                             <p class="text-zinc-500 text-sm">Status kampanii reklamowych na Meta Ads</p>
                         </div>
 
+                        <!-- Generate Ad Copy -->
+                        <div class="bg-gradient-to-br from-[#0d0d0d] to-[#0a0a0a] border border-cyan-500/20 rounded-xl p-5 mb-6">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-magic-wand text-cyan-400 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-[14px] font-medium text-white mb-1">Generuj copy reklamowe</h4>
+                                    <p class="text-[12px] text-[#666]">Skopiuj prompt z danymi marki i wklej do Claude aby wygenerować 5 wersji copy</p>
+                                </div>
+                            </div>
+                            <button onclick="generateAdCopyPrompt()" class="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-white py-3 rounded-xl text-[13px] font-semibold transition-colors">
+                                <i class="ph ph-copy"></i>
+                                Kopiuj prompt do generowania copy
+                            </button>
+                        </div>
+
                         <!-- Status info -->
                         <div id="kampania-admin-status" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
                             <div class="flex items-center gap-4 mb-4">
@@ -4164,6 +4181,78 @@
                 showToast(`Skopiowano ${links.length} linków`, 'success');
             }).catch(() => {
                 showToast('Nie udało się skopiować', 'error');
+            });
+        }
+
+        function generateAdCopyPrompt() {
+            // Gather brand info
+            const brandInfo = brandingData?.find(b => b.type === 'brand_info');
+            const colors = brandingData?.filter(b => b.type === 'color') || [];
+            const fonts = brandingData?.filter(b => b.type === 'font') || [];
+
+            // Gather product info
+            const product = productsData?.[0];
+
+            // Landing page URL
+            const landingPageUrl = workflowData?.landing_page_url || '[BRAK - UZUPEŁNIJ]';
+
+            // Build prompt
+            let prompt = `Przeczytaj procedurę CLAUDE_ADS_COPY_PROCEDURE.md i wygeneruj 5 wersji copy reklamowego dla Meta Ads.
+
+## DANE MARKI
+
+**Nazwa marki:** ${brandInfo?.content?.name || '[BRAK]'}
+**Tagline:** ${brandInfo?.content?.tagline || '[BRAK]'}
+**Opis marki:** ${brandInfo?.content?.description || '[BRAK]'}
+**Ton komunikacji:** ${brandInfo?.content?.tone || 'Profesjonalny, przyjazny'}
+
+**Kolory:**
+${colors.map(c => `- ${c.content?.name || 'Kolor'}: ${c.content?.hex || c.content?.value || ''}`).join('\n') || '- Brak zdefiniowanych kolorów'}
+
+**Fonty:**
+${fonts.map(f => `- ${f.content?.name || 'Font'}: ${f.content?.usage || ''}`).join('\n') || '- Brak zdefiniowanych fontów'}
+
+## PRODUKT
+
+**Nazwa produktu:** ${product?.name || '[BRAK]'}
+**Kategoria:** ${product?.category || '[BRAK]'}
+**Opis produktu:** ${product?.description || '[BRAK]'}
+**Cena:** ${product?.price ? product.price + ' zł' : '[BRAK]'}
+
+## GRUPA DOCELOWA
+
+**Klient:** ${workflowData?.first_name || ''} ${workflowData?.last_name || ''}
+**Opis grupy docelowej:** ${brandInfo?.content?.target_audience || product?.target_audience || '[OPISZ GRUPĘ DOCELOWĄ: wiek, płeć, zainteresowania, problemy, pragnienia]'}
+
+## LANDING PAGE
+
+**URL:** ${landingPageUrl}
+
+## WYMAGANIA
+
+1. Wygeneruj 5 wersji copy z RÓŻNYMI KĄTAMI:
+   - Wersja 1: Pain Point (skupienie na problemie)
+   - Wersja 2: Transformation (przed/po)
+   - Wersja 3: Social Proof (dowody, liczby)
+   - Wersja 4: Urgency (pilność, ograniczona oferta)
+   - Wersja 5: Curiosity (intrygujący hook)
+
+2. Każda wersja musi zawierać:
+   - **Primary Text** (max 125 znaków zalecane)
+   - **Headline** (max 40 znaków)
+   - **Description** (max 30 znaków)
+   - **CTA Button** (Shop Now / Learn More / Get Offer / Order Now)
+
+3. Pisz po POLSKU
+4. Używaj języka grupy docelowej
+5. Emoji max 1-2 na tekst`;
+
+            navigator.clipboard.writeText(prompt).then(() => {
+                showToast('Prompt skopiowany! Wklej go do Claude.', 'success');
+            }).catch(() => {
+                // Fallback - show in modal or alert
+                console.log(prompt);
+                showToast('Nie udało się skopiować - sprawdź konsolę', 'error');
             });
         }
 
