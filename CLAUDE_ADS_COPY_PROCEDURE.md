@@ -4,15 +4,36 @@
 
 Gdy uzytkownik prosi o "zrob copy reklamowe", "przygotuj reklamy", "wygeneruj teksty na reklamy" dla danego workflow.
 
-## Wymagane dane wejsciowe
+## KROK 1: Pobierz dane z Supabase
 
-Przed generowaniem copy MUSISZ miec:
-1. **Brand info** — nazwa marki, tagline, opis, ton komunikacji
-2. **Kolory i fonty** — dla spojnosci wizualnej w opisach
-3. **Produkt** — co sprzedajemy, jakie problemy rozwiazuje
-4. **Grupa docelowa** — kim jest klient, jakie ma bole, pragnienia
-5. **Landing page URL** — dokad kierujemy ruch
-6. **USP** — unikalna propozycja wartosci, co nas wyroznia
+Gdy uzytkownik podaje workflow ID, pobierz dane przez curl:
+
+```bash
+# Workflow + landing page URL
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflows?id=eq.WORKFLOW_ID&select=id,first_name,last_name,landing_page_url" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY"
+
+# Branding (brand_info, kolory, fonty)
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.WORKFLOW_ID&select=type,content" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY"
+
+# Produkty
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_products?workflow_id=eq.WORKFLOW_ID&select=name,description,category,price,target_audience" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY"
+```
+
+## KROK 2: Wyodrębnij kluczowe dane
+
+Z pobranych danych wyodrebnij:
+1. **Brand info** — nazwa marki, tagline, opis, ton komunikacji (z `workflow_branding` gdzie `type=brand_info`)
+2. **Kolory** — z `workflow_branding` gdzie `type=color`
+3. **Fonty** — z `workflow_branding` gdzie `type=font`
+4. **Produkt** — nazwa, opis, kategoria, cena, grupa docelowa
+5. **Landing page URL** — z `workflows.landing_page_url`
+6. **USP** — unikalna propozycja wartosci (z opisu marki lub produktu)
 
 ## Pola Meta Ads do wygenerowania
 

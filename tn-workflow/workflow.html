@@ -4185,72 +4185,19 @@
         }
 
         function generateAdCopyPrompt() {
-            // Gather brand info
-            const brandInfo = brandingData?.find(b => b.type === 'brand_info');
-            const colors = brandingData?.filter(b => b.type === 'color') || [];
-            const fonts = brandingData?.filter(b => b.type === 'font') || [];
+            const workflowId = workflowData?.id;
+            const clientName = `${workflowData?.first_name || ''} ${workflowData?.last_name || ''}`.trim();
 
-            // Gather product info
-            const product = productsData?.[0];
+            if (!workflowId) {
+                showToast('Brak ID workflow', 'error');
+                return;
+            }
 
-            // Landing page URL
-            const landingPageUrl = workflowData?.landing_page_url || '[BRAK - UZUPEŁNIJ]';
-
-            // Build prompt
-            let prompt = `Przeczytaj procedurę CLAUDE_ADS_COPY_PROCEDURE.md i wygeneruj 5 wersji copy reklamowego dla Meta Ads.
-
-## DANE MARKI
-
-**Nazwa marki:** ${brandInfo?.content?.name || '[BRAK]'}
-**Tagline:** ${brandInfo?.content?.tagline || '[BRAK]'}
-**Opis marki:** ${brandInfo?.content?.description || '[BRAK]'}
-**Ton komunikacji:** ${brandInfo?.content?.tone || 'Profesjonalny, przyjazny'}
-
-**Kolory:**
-${colors.map(c => `- ${c.content?.name || 'Kolor'}: ${c.content?.hex || c.content?.value || ''}`).join('\n') || '- Brak zdefiniowanych kolorów'}
-
-**Fonty:**
-${fonts.map(f => `- ${f.content?.name || 'Font'}: ${f.content?.usage || ''}`).join('\n') || '- Brak zdefiniowanych fontów'}
-
-## PRODUKT
-
-**Nazwa produktu:** ${product?.name || '[BRAK]'}
-**Kategoria:** ${product?.category || '[BRAK]'}
-**Opis produktu:** ${product?.description || '[BRAK]'}
-**Cena:** ${product?.price ? product.price + ' zł' : '[BRAK]'}
-
-## GRUPA DOCELOWA
-
-**Klient:** ${workflowData?.first_name || ''} ${workflowData?.last_name || ''}
-**Opis grupy docelowej:** ${brandInfo?.content?.target_audience || product?.target_audience || '[OPISZ GRUPĘ DOCELOWĄ: wiek, płeć, zainteresowania, problemy, pragnienia]'}
-
-## LANDING PAGE
-
-**URL:** ${landingPageUrl}
-
-## WYMAGANIA
-
-1. Wygeneruj 5 wersji copy z RÓŻNYMI KĄTAMI:
-   - Wersja 1: Pain Point (skupienie na problemie)
-   - Wersja 2: Transformation (przed/po)
-   - Wersja 3: Social Proof (dowody, liczby)
-   - Wersja 4: Urgency (pilność, ograniczona oferta)
-   - Wersja 5: Curiosity (intrygujący hook)
-
-2. Każda wersja musi zawierać:
-   - **Primary Text** (max 125 znaków zalecane)
-   - **Headline** (max 40 znaków)
-   - **Description** (max 30 znaków)
-   - **CTA Button** (Shop Now / Learn More / Get Offer / Order Now)
-
-3. Pisz po POLSKU
-4. Używaj języka grupy docelowej
-5. Emoji max 1-2 na tekst`;
+            const prompt = `Zrób copy reklamowe dla workflow ${workflowId} (${clientName})`;
 
             navigator.clipboard.writeText(prompt).then(() => {
                 showToast('Prompt skopiowany! Wklej go do Claude.', 'success');
             }).catch(() => {
-                // Fallback - show in modal or alert
                 console.log(prompt);
                 showToast('Nie udało się skopiować - sprawdź konsolę', 'error');
             });

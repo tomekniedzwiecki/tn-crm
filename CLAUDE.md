@@ -89,6 +89,15 @@ Kiedy uzytkownik mowi "zrob landing dla workflow X":
 
 Wzorce: `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (jasny, pet care, Playful/Toy-like).
 
+### Generowanie copy reklamowego Meta Ads
+**Plik:** `CLAUDE_ADS_COPY_PROCEDURE.md`
+
+Kiedy uzytkownik mowi "zrob copy reklamowe dla workflow X":
+1. Przeczytaj `CLAUDE_ADS_COPY_PROCEDURE.md`
+2. Pobierz dane workflow z Supabase (branding, produkty, landing page URL)
+3. Wygeneruj 5 wersji copy z roznymi katami (Pain Point, Transformation, Social Proof, Urgency, Curiosity)
+4. Kazda wersja: Primary Text + Headline + Description + CTA
+
 ## Supabase Edge Functions
 
 ### ⚠️ KRYTYCZNE: NIE PSUJ INTEGRACJI TPAY ⚠️
