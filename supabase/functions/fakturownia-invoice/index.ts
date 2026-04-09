@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         buyerData.buyer_street = order.customer_address.street || ''
         buyerData.buyer_post_code = order.customer_address.postal_code || ''
         buyerData.buyer_city = order.customer_address.city || ''
-        buyerData.buyer_country = order.customer_address.country || 'Polska'
+        buyerData.buyer_country = order.customer_address.country || 'PL'
       } else {
         buyerData.buyer_street = order.customer_address
       }
