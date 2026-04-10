@@ -12,7 +12,6 @@ const APPS = [
     { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard' },
     { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white', defaultPage: 'workflows' },
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
-    { id: 'stack', name: 'TN Stack', icon: 'ph-stack', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
     { id: 'biznes', name: 'TN Biznes', icon: 'ph-chart-line-up', color: 'bg-teal-500 text-white', defaultPage: 'dashboard' }
 ];
 
@@ -20,7 +19,6 @@ const APP_BASES = {
     crm: '',
     workflow: '/tn-workflow',
     todo: '/tn-todo',
-    stack: '/tn-stack',
     biznes: '/tn-biznes'
 };
 
@@ -28,7 +26,6 @@ const APP_AVATAR_COLORS = {
     crm: 'from-emerald-600 to-emerald-700',
     workflow: 'from-emerald-600 to-emerald-700',
     todo: 'from-violet-600 to-violet-700',
-    stack: 'from-amber-600 to-amber-700',
     biznes: 'from-teal-600 to-teal-700'
 };
 
@@ -64,11 +61,6 @@ const NAV_ITEMS_TODO = [
     { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki' },
 ];
 
-const NAV_ITEMS_STACK = [
-    { id: 'dashboard', icon: 'ph-chart-pie', label: 'Dashboard' },
-    { id: 'categories', icon: 'ph-folders', label: 'Kategorie' },
-];
-
 const NAV_ITEMS_BIZNES = [
     { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
     { id: 'analytics', icon: 'ph-chart-bar', label: 'Analytics' },
@@ -83,7 +75,6 @@ function getNavItemsForApp(appId) {
     switch (appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
         case 'todo': return NAV_ITEMS_TODO;
-        case 'stack': return NAV_ITEMS_STACK;
         case 'biznes': return NAV_ITEMS_BIZNES;
         default: return NAV_ITEMS_CRM;
     }
@@ -449,7 +440,6 @@ function getCurrentPage() {
 function detectCurrentApp() {
     const path = location.pathname;
     if (path.includes('/tn-todo')) return 'todo';
-    if (path.includes('/tn-stack')) return 'stack';
     if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/tn-workflow')) return 'workflow';
     return 'crm';
