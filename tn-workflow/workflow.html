@@ -4095,6 +4095,11 @@
             content = content.replace(/\{\{workflow_id\}\}/g, workflow.id);
             content = content.replace(/\{\{product_name\}\}/g, workflow.offer_name || 'Produkt');
 
+            // Get brand name from branding items
+            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+            const brandName = brandInfo?.title || workflow.offer_name || 'Marka';
+            content = content.replace(/\{\{brand_name\}\}/g, brandName);
+
             try {
                 await navigator.clipboard.writeText(content);
                 showToast('Prompt skopiowany');
