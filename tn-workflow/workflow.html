@@ -9917,6 +9917,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 return;
             }
 
+            const wfId = getWorkflowId();
+            if (!wfId) {
+                showToast('Blad: brak ID workflow', 'error');
+                return;
+            }
+
             const { error } = await supabaseClient
                 .from('workflows')
                 .update({
@@ -9925,7 +9931,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     contract_seller_signed_url: null,
                     contract_signature_type: null
                 })
-                .eq('id', workflowId);
+                .eq('id', wfId);
 
             if (error) {
                 showToast('Blad podczas usuwania umowy: ' + error.message, 'error');
