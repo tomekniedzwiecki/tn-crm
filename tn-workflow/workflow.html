@@ -2243,6 +2243,23 @@
                                 </div>
                             </div>
 
+                            <!-- Meta Ad Account ID -->
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="ph ph-identification-card text-violet-400"></i>
+                                    <span class="text-[13px] text-white font-medium">Meta Ad Account ID</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="meta-ad-account-id"
+                                        class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white placeholder-zinc-500 focus:border-violet-500 focus:outline-none"
+                                        placeholder="np. act_123456789">
+                                    <button onclick="saveMetaAdAccountId()" class="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[12px] font-medium rounded-lg transition-colors">
+                                        Zapisz
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-zinc-500 mt-2">ID konta z Meta Ads Manager — potrzebne do integracji z Manus</p>
+                            </div>
+
                             <!-- Manual toggle for ad account ready -->
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5">
                                 <div class="flex items-center justify-between">
@@ -9091,6 +9108,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (notActiveEl) notActiveEl.classList.add('hidden');
             if (contentEl) contentEl.classList.remove('hidden');
 
+            // Load Meta Ad Account ID
+            const adAccountIdInput = document.getElementById('meta-ad-account-id');
+            if (adAccountIdInput && adsData?.meta_ad_account_id) {
+                adAccountIdInput.value = adsData.meta_ad_account_id;
+            }
+
             // Hide all status sections first
             if (readyStatusEl) readyStatusEl.classList.add('hidden');
             if (bothGrantedStatusEl) bothGrantedStatusEl.classList.add('hidden');
@@ -9320,6 +9343,47 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 console.error('Error toggling ad account:', err);
                 showToast('Błąd aktualizacji', 'error');
                 if (toggle) toggle.checked = !isReady;
+            }
+        }
+
+        async function saveMetaAdAccountId() {
+            const input = document.getElementById('meta-ad-account-id');
+            const adAccountId = input?.value?.trim() || '';
+
+            if (!adAccountId) {
+                showToast('Wprowadź Meta Ad Account ID', 'error');
+                return;
+            }
+
+            try {
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({ meta_ad_account_id: adAccountId })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.meta_ad_account_id = adAccountId;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: new Date().toISOString(),
+                            meta_ad_account_id: adAccountId
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                showToast('Meta Ad Account ID zapisany');
+            } catch (err) {
+                console.error('Error saving ad account ID:', err);
+                showToast('Błąd zapisu', 'error');
             }
         }
 

@@ -13,7 +13,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦷</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Comfortaa:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Comfortaa:wght@400;500;700&display=swap&subset=latin-ext" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -28,11 +28,20 @@
       /* Derived */
       --primary-soft: rgba(0,180,166,0.08);
       --primary-glow: rgba(0,180,166,0.25);
+      --primary-rgb: 0,180,166;
+      --secondary-rgb: 37,99,235;
       --secondary-soft: rgba(37,99,235,0.08);
       --accent-soft: rgba(52,211,153,0.10);
+      --accent-rgb: 52,211,153;
       --red-soft: #EF4444;
-      --warm-white: #FAFFFE;
+      --warm-white: #f8fffe;
+      --cream: #fefcfa;
       --gold: #D4A574;
+
+      /* Deep backgrounds (nie czyste #fff/#000) */
+      --bg-hero: #0a1214;
+      --bg-section-warm: #fefcfa;
+      --bg-section-cool: #f4fafa;
 
       /* OraVibe Brand Fonts */
       --font-heading: 'Quicksand', sans-serif;
@@ -69,6 +78,75 @@
       font-family: var(--font-accent); font-size: 12px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 3px;
       color: var(--primary); margin-bottom: 16px;
+    }
+
+    /* ═══ WAVY DIVIDERS ═══ */
+    .wavy-divider {
+      position: relative;
+      height: 80px;
+      overflow: hidden;
+      margin-top: -1px;
+    }
+    .wavy-divider svg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .wavy-divider-flip {
+      transform: scaleY(-1);
+      margin-top: 0;
+      margin-bottom: -1px;
+    }
+
+    /* ═══ FLOATING DECORATIONS ═══ */
+    .hero-floating {
+      position: absolute;
+      font-size: 32px;
+      opacity: 0.15;
+      z-index: 2;
+      animation: floatDecor 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .hero-floating:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; }
+    .hero-floating:nth-child(2) { top: 25%; right: 12%; animation-delay: 1s; font-size: 24px; }
+    .hero-floating:nth-child(3) { bottom: 30%; left: 15%; animation-delay: 2s; font-size: 28px; }
+    .hero-floating:nth-child(4) { bottom: 20%; right: 8%; animation-delay: 0.5s; }
+    .hero-floating:nth-child(5) { top: 40%; left: 5%; animation-delay: 1.5s; font-size: 20px; }
+    .hero-floating:nth-child(6) { top: 35%; right: 5%; animation-delay: 2.5s; font-size: 26px; }
+
+    @keyframes floatDecor {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(10deg); }
+    }
+
+    @media (max-width: 768px) {
+      .hero-floating { display: none; }
+    }
+
+    /* ═══ GRADIENT TEXT ═══ */
+    .gradient-text {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ═══ COLORED SHADOWS ═══ */
+    .shadow-primary {
+      box-shadow: 0 20px 40px rgba(var(--primary-rgb), 0.15);
+    }
+    .shadow-primary-hover:hover {
+      box-shadow: 0 24px 48px rgba(var(--primary-rgb), 0.25);
+    }
+
+    /* ═══ CARD HOVER EFFECTS ═══ */
+    .card-lift {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .card-lift:hover {
+      transform: translateY(-8px) rotate(-0.5deg);
     }
 
     /* ═══ PLACEHOLDER IMAGE SYSTEM ═══ */
@@ -207,31 +285,43 @@
     .how-header p { font-size: 16px; color: var(--neutral-mid); max-width: 500px; margin: 0 auto; }
     .how-steps {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
-      max-width: 900px; margin: 0 auto; position: relative;
+      max-width: 1000px; margin: 0 auto; position: relative;
     }
-    .how-steps::before {
-      content: ''; position: absolute; top: 40px; left: 16%; right: 16%; height: 2px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-      opacity: 0.2;
+    .how-step {
+      text-align: center; position: relative;
+      background: #fff;
+      border-radius: 20px;
+      padding: 24px;
+      border: 1px solid rgba(0,180,166,0.08);
     }
-    .how-step { text-align: center; position: relative; }
+    .how-step-img {
+      margin-bottom: 20px;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .how-step-img img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+    }
     .how-step-num {
-      width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px;
+      width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-heading); font-size: 28px; font-weight: 700;
-      background: linear-gradient(135deg, var(--primary-soft), rgba(37,99,235,0.06));
-      color: var(--primary); border: 2px solid rgba(0,180,166,0.15);
+      font-family: var(--font-heading); font-size: 22px; font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), #009E92);
+      color: #fff;
       position: relative; z-index: 1;
     }
+    .how-step:nth-child(2) .how-step-num { background: linear-gradient(135deg, var(--secondary), #1d4ed8); }
+    .how-step:nth-child(3) .how-step-num { background: linear-gradient(135deg, var(--accent), #10b981); }
     .how-step h3 {
-      font-family: var(--font-heading); font-size: 20px; font-weight: 700;
+      font-family: var(--font-heading); font-size: 18px; font-weight: 700;
       color: var(--neutral-dark); margin-bottom: 8px;
     }
     .how-step p { font-size: 14px; color: var(--neutral-mid); line-height: 1.7; }
     @media (max-width: 768px) {
       .how-it-works { padding: 80px 16px; }
-      .how-steps { grid-template-columns: 1fr; gap: 40px; }
-      .how-steps::before { display: none; }
+      .how-steps { grid-template-columns: 1fr; gap: 24px; }
     }
 
     /* Comparison table */
@@ -413,10 +503,126 @@
     }
     .trust-item svg { color: var(--primary); flex-shrink: 0; }
 
+    /* ═══ PRODUCT GALLERY ═══ */
+    .gallery {
+      padding: 100px 24px;
+      background: #fff;
+    }
+    .gallery-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .gallery-header h2 {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 12px;
+    }
+    .gallery-header p {
+      font-size: 16px;
+      color: var(--neutral-mid);
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .gallery-main img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border-radius: 20px;
+      border: 1px solid rgba(0,180,166,0.08);
+    }
+    .gallery-side {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .gallery-side img {
+      width: 100%;
+      aspect-ratio: 16/10;
+      object-fit: cover;
+      border-radius: 16px;
+      border: 1px solid rgba(0,180,166,0.08);
+    }
+    @media (max-width: 768px) {
+      .gallery { padding: 64px 16px; }
+      .gallery-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ═══ PERSONAS ═══ */
+    .personas {
+      padding: 120px 24px;
+      background: linear-gradient(180deg, #fff 0%, var(--neutral-light) 100%);
+    }
+    .personas-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+    .personas-header h2 {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 16px;
+    }
+    .personas-header p {
+      font-size: 16px;
+      color: var(--neutral-mid);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .personas-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .persona-card {
+      background: #fff;
+      border: 1px solid rgba(0,180,166,0.08);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .persona-card:hover {
+      transform: translateY(-8px) rotate(-0.5deg);
+      box-shadow: 0 20px 40px rgba(var(--primary-rgb), 0.12);
+    }
+    .persona-card img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+    }
+    .persona-content {
+      padding: 24px;
+    }
+    .persona-content h3 {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 8px;
+    }
+    .persona-content p {
+      font-size: 14px;
+      color: var(--neutral-mid);
+      line-height: 1.7;
+    }
+    @media (max-width: 768px) {
+      .personas { padding: 80px 16px; }
+      .personas-grid { grid-template-columns: 1fr; }
+    }
+
     /* ═══ PROBLEM (Dark Agitation) ═══ */
     .problem {
       padding: 160px 24px;
-      background: #fff;
+      background: var(--bg-section-warm);
       color: var(--neutral-dark);
       position: relative;
     }
@@ -455,22 +661,30 @@
       background: var(--neutral-light);
       border: none;
       border-radius: 16px; padding: 28px 20px; text-align: center;
-      transition: transform 0.3s;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
       border-left: 3px solid transparent;
     }
     .stat-card:nth-child(1),
     .stat-card:nth-child(2),
     .stat-card:nth-child(3) { border-left-color: var(--red-soft); }
     .stat-card:nth-child(4) { border-left-color: var(--primary); }
-    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card:hover {
+      transform: translateY(-6px) rotate(1deg);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+    }
     .stat-card .stat-num {
-      font-family: var(--font-heading); font-size: 32px; font-weight: 700;
+      font-family: var(--font-heading); font-size: 36px; font-weight: 700;
       margin-bottom: 6px;
     }
     .stat-card:nth-child(1) .stat-num,
     .stat-card:nth-child(2) .stat-num,
     .stat-card:nth-child(3) .stat-num { color: var(--neutral-dark); }
-    .stat-card:nth-child(4) .stat-num { color: var(--primary); }
+    .stat-card:nth-child(4) .stat-num {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
     .stat-card .stat-label {
       font-size: 11px; color: var(--neutral-mid);
       font-family: var(--font-accent); text-transform: uppercase; letter-spacing: 1px;
@@ -547,6 +761,18 @@
       border: 1px solid rgba(0,180,166,0.08);
       border-radius: 20px;
       overflow: hidden;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .bento-card:hover {
+      transform: translateY(-8px) rotate(-0.5deg);
+      box-shadow: 0 20px 40px rgba(var(--primary-rgb), 0.12);
+    }
+    .bento-hero {
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .bento-hero:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 48px rgba(var(--primary-rgb), 0.1);
     }
     .bento-card-img img {
       width: 100%;
@@ -594,7 +820,7 @@
     /* ═══ ROI CALCULATOR ═══ */
     .roi {
       padding: 120px 24px;
-      background: #fff;
+      background: var(--bg-section-cool);
     }
     .roi-inner {
       max-width: 720px; margin: 0 auto; text-align: center;
@@ -685,8 +911,9 @@
       transition: border-color 0.3s, box-shadow 0.3s;
     }
     .testimonial-card:hover {
-      border-color: rgba(0,180,166,0.15);
-      box-shadow: 0 4px 20px rgba(0,180,166,0.04);
+      border-color: rgba(0,180,166,0.2);
+      box-shadow: 0 16px 32px rgba(var(--primary-rgb), 0.1);
+      transform: translateY(-4px);
     }
     @media (max-width: 768px) {
       .testimonials { grid-template-columns: 1fr; }
@@ -715,7 +942,7 @@
     }
 
     /* ═══ FAQ ═══ */
-    .faq { padding: 120px 24px; background: #fff; }
+    .faq { padding: 120px 24px; background: var(--bg-section-warm); }
     .faq-header { text-align: center; margin-bottom: 64px; }
     .faq-header h2 {
       font-family: var(--font-heading);
@@ -799,9 +1026,13 @@
       font-size: 13px; color: var(--neutral-mid); margin-bottom: 8px;
     }
     .offer-box .price-save {
-      display: inline-block; font-family: var(--font-heading); font-size: 12px;
-      font-weight: 700; color: var(--primary); letter-spacing: 1px;
+      display: inline-block; font-family: var(--font-heading); font-size: 13px;
+      font-weight: 700; letter-spacing: 1px;
       margin-bottom: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .offer-includes {
       display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px;
@@ -816,16 +1047,25 @@
     .offer-includes li .check { color: var(--primary); font-weight: 700; font-size: 16px; }
     .btn-cta-main {
       display: block; width: 100%;
-      font-family: var(--font-heading); font-size: 14px; font-weight: 700;
-      padding: 20px 24px; border-radius: 100px;
+      font-family: var(--font-heading); font-size: 15px; font-weight: 700;
+      padding: 22px 24px; border-radius: 100px;
       text-transform: uppercase; letter-spacing: 1.5px;
       border: none; cursor: pointer; text-decoration: none; text-align: center;
       position: relative; overflow: hidden;
       transition: transform 0.2s, box-shadow 0.3s;
       background: linear-gradient(135deg, var(--primary), #009E92); color: #fff;
       box-shadow: 0 4px 24px var(--primary-glow);
+      animation: pulse-glow 2s ease-in-out infinite;
     }
-    .btn-cta-main:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,180,166,0.35); }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 4px 24px rgba(var(--primary-rgb), 0.25); }
+      50% { box-shadow: 0 8px 40px rgba(var(--primary-rgb), 0.4); }
+    }
+    .btn-cta-main:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(var(--primary-rgb), 0.4);
+      animation: none;
+    }
     .btn-cta-main::after {
       content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
@@ -854,7 +1094,7 @@
     .cta-banner {
       padding: 120px 24px;
       text-align: center;
-      background: linear-gradient(180deg, rgba(0,180,166,0.03), var(--neutral-light));
+      background: linear-gradient(180deg, var(--bg-section-cool), rgba(var(--primary-rgb),0.06));
       position: relative;
     }
     .cta-banner h2 {
@@ -1036,17 +1276,26 @@
   <!-- ═══ HERO ═══ -->
   <section class="hero" id="hero">
     <video class="hero-video-bg" autoplay loop muted playsinline preload="auto" id="heroVideo" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/video/oravibe_hero.mp4"></video>
+
+    <!-- Floating decorations -->
+    <span class="hero-floating">🦷</span>
+    <span class="hero-floating">💧</span>
+    <span class="hero-floating">✨</span>
+    <span class="hero-floating">🪥</span>
+    <span class="hero-floating">💎</span>
+    <span class="hero-floating">🌊</span>
+
     <div class="hero-content">
-      <p class="section-label fade-in">Smart Oral Care</p>
+      <p class="section-label fade-in">Oszczędź na dentyście</p>
       <h1 class="fade-in delay-1">
-        Twój Domowy Gabinet<br>
-        <span class="accent">Higieny Jamy Ustnej.</span>
+        Koniec z wizytami<br>
+        <span class="accent">za 350 zł.</span>
       </h1>
       <p class="hero-sub fade-in delay-2">
-        Profesjonalna moc 120 PSI i zbiornik 800 ml zamknięte w designie, który pokocha Twoja łazienka. 99,9% czystości, której nie zapewni żadna nić dentystyczna.
+        2 minuty dziennie = 6000 zł oszczędności w 5 lat. Jeden zakup, zero kamienia, zdrowe dziąsła. Irygator, który zastąpi Ci wizyty kontrolne.
       </p>
       <div class="hero-ctas fade-in delay-3">
-        <a href="https://oravibe.pl/checkout?products=103032606-321178488" class="btn-primary">Zacznij dbać profesjonalnie</a>
+        <a href="https://oravibe.pl/checkout?products=103032606-321178488" class="btn-primary">Zamów z rabatem -40% (299 zł)</a>
         <a href="#features" class="btn-ghost">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
           Jak to działa
@@ -1073,6 +1322,13 @@
     </div>
   </section>
 
+  <!-- Wavy divider -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="var(--neutral-light)" d="M0,64 C360,120 720,20 1080,64 C1260,86 1380,70 1440,64 L1440,120 L0,120 Z"/>
+    </svg>
+  </div>
+
   <!-- ═══ TRUST BAR ═══ -->
   <div class="trust-bar">
     <div class="trust-bar-inner">
@@ -1086,6 +1342,28 @@
       </div>
     </div>
   </div>
+
+  <!-- ═══ PRODUCT GALLERY ═══ -->
+  <section class="gallery" id="gallery">
+    <div class="gallery-header">
+      <p class="section-label fade-in">Produkt</p>
+      <h2 class="fade-in delay-1">Poznaj OraVibe V300 z bliska</h2>
+      <p class="fade-in delay-2">Zaprojektowany, by wyglądać dobrze w każdej łazience.</p>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-main fade-in">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994306879_0.jpg" alt="OraVibe V300 - widok główny" width="800" height="600">
+      </div>
+      <div class="gallery-side">
+        <div class="fade-in delay-1">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994336883_0.jpg" alt="OraVibe - dysze wymienne" width="400" height="250">
+        </div>
+        <div class="fade-in delay-2">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994499009_0.jpg" alt="OraVibe - zbiornik 800ml" width="400" height="250">
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- ═══ PROBLEM (Dark Agitation) ═══ -->
   <section class="problem" id="problem">
@@ -1136,16 +1414,25 @@
     </div>
     <div class="how-steps">
       <div class="how-step fade-in">
+        <div class="how-step-img">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994499009_0.jpg" alt="Napełnianie zbiornika wodą" width="400" height="300">
+        </div>
         <div class="how-step-num">1</div>
         <h3>Napełnij zbiornik</h3>
         <p>800 ml ciepłej wody — wystarczy na pełną irygację górnej i dolnej szczęki bez dolewania.</p>
       </div>
       <div class="how-step fade-in delay-1">
+        <div class="how-step-img">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994336883_0.jpg" alt="Wybór dyszy do irygatora" width="400" height="300">
+        </div>
         <div class="how-step-num">2</div>
         <h3>Wybierz dyszę i tryb</h3>
         <p>5 wymiennych końcówek i 10 poziomów ciśnienia. Dopasuj irygację do swoich potrzeb.</p>
       </div>
       <div class="how-step fade-in delay-2">
+        <div class="how-step-img">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994242762_0.jpg" alt="Irygacja zębów" width="400" height="300">
+        </div>
         <div class="how-step-num">3</div>
         <h3>2 minuty — gotowe</h3>
         <p>Skieruj strumień wzdłuż linii dziąseł. 120 sekund i czujesz różnicę od pierwszego użycia.</p>
@@ -1437,6 +1724,40 @@
     </div>
   </section>
 
+  <!-- ═══ PERSONAS ═══ -->
+  <section class="personas" id="personas">
+    <div class="personas-header">
+      <p class="section-label fade-in">Dla kogo</p>
+      <h2 class="fade-in delay-1">OraVibe jest dla Ciebie, jeśli...</h2>
+      <p class="fade-in delay-2">Niezależnie od sytuacji — zdrowe dziąsła to Twoja inwestycja w przyszłość.</p>
+    </div>
+    <div class="personas-grid">
+      <div class="persona-card fade-in">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994211082_0.jpg" alt="Osoba z aparatem ortodontycznym" width="400" height="300">
+        <div class="persona-content">
+          <h3>Nosisz aparat ortodontyczny</h3>
+          <p>Zamki i druty to pułapka na resztki. Irygator dociera tam, gdzie szczoteczka nie ma szans. Dedykowana dysza ortodontyczna w zestawie.</p>
+        </div>
+      </div>
+      <div class="persona-card fade-in delay-1">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994285274_0.jpg" alt="Osoba z implantami dentystycznymi" width="400" height="300">
+        <div class="persona-content">
+          <h3>Masz implanty lub mostki</h3>
+          <p>Inwestycja w implant to 5000+ zł. Ochrona? 2 minuty dziennie z OraVibe. Regulowane ciśnienie od 20 PSI — bezpieczne dla wrażliwych obszarów.</p>
+        </div>
+      </div>
+      <div class="persona-card fade-in delay-2">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/dentaflow/1773994306879_0.jpg" alt="Rodzina korzystająca z irygatora" width="400" height="300">
+        <div class="persona-content">
+          <h3>Dbasz o zdrowie całej rodziny</h3>
+          <p>5 dysz w zestawie = każdy ma swoją końcówkę. Dzieci uwielbiają "strumień wody", a Ty oszczędzasz na wizytach u dentysty całej rodziny.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
   <!-- ═══ GUARANTEE ═══ -->
   <section class="guarantee-section">
     <div class="guarantee-inner">
@@ -1458,7 +1779,12 @@
     </div>
   </section>
 
-  <div class="section-divider"></div>
+  <!-- Wavy divider przed Offer -->
+  <div class="wavy-divider wavy-divider-flip">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="var(--neutral-light)" d="M0,64 C360,20 720,100 1080,64 C1260,44 1380,56 1440,64 L1440,0 L0,0 Z"/>
+    </svg>
+  </div>
 
   <!-- ═══ OFFER ═══ -->
   <section class="offer" id="offer">
@@ -1515,6 +1841,13 @@
       <a href="https://oravibe.pl/checkout?products=103032606-321178488" class="btn-primary fade-in delay-2">Zamów OraVibe</a>
     </div>
   </section>
+
+  <!-- Wavy divider przed footer -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="var(--neutral-dark)" d="M0,64 C480,120 960,20 1440,64 L1440,120 L0,120 Z"/>
+    </svg>
+  </div>
 
   <!-- ═══ FOOTER ═══ -->
   <footer class="footer">
