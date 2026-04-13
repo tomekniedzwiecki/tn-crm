@@ -2920,6 +2920,18 @@
             const session = await checkAuth();
             if (session) {
                 await Promise.all([loadWorkflows(), loadRecentActivities(), loadDeadlineSettings()]);
+
+                // Check for ?search= URL parameter (for deeplinks/widgets)
+                const urlParams = new URLSearchParams(window.location.search);
+                const searchQuery = urlParams.get('search');
+                if (searchQuery) {
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput) {
+                        searchInput.value = searchQuery;
+                        applyFilters();
+                        renderWorkflows();
+                    }
+                }
             }
         }
 
