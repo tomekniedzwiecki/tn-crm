@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041310';
+        const APP_VERSION = '2026041311';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2066,6 +2066,11 @@
                             <span>Budżet</span>
                             <i id="nav-check-budzet" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="nav-raport-desktop" class="dash-nav-item hidden" data-tab="raport" onclick="switchTab('raport')">
+                            <i class="ph ph-chart-bar"></i>
+                            <span>Raport</span>
+                            <i id="nav-check-raport-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -2185,6 +2190,11 @@
                                 <i class="ph ph-wallet"></i>
                                 <span>Budżet</span>
                                 <i id="nav-check-budzet-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="nav-raport-mobile" class="dash-nav-item hidden" data-tab="raport" onclick="switchTab('raport');toggleMobileMenu()">
+                                <i class="ph ph-chart-bar"></i>
+                                <span>Raport</span>
+                                <i id="nav-check-raport-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -6612,11 +6622,11 @@
 
             // Show/hide Raport nav item (when report_sent is true)
             const hasReportSent = adsData?.report_sent;
-            document.getElementById('dash-nav-raport')?.classList.toggle('hidden', !hasReportSent);
-            document.getElementById('dash-nav-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
+            document.getElementById('nav-raport-desktop')?.classList.toggle('hidden', !hasReportSent);
+            document.getElementById('nav-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
             // Update Raport checkmark
-            document.getElementById('dash-nav-check-raport')?.classList.toggle('hidden', !hasReportSent);
-            document.getElementById('dash-nav-check-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
+            document.getElementById('nav-check-raport-desktop')?.classList.toggle('hidden', !hasReportSent);
+            document.getElementById('nav-check-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
 
             // Update landing tab status
             updateLandingTabStatus();
@@ -10323,8 +10333,8 @@
             const readyEl = document.getElementById('raport-ready-client');
             const statsEl = document.getElementById('raport-stats-client');
             const urlEl = document.getElementById('raport-url-client');
-            const navCheck = document.getElementById('dash-nav-check-raport');
-            const navCheckMobile = document.getElementById('dash-nav-check-raport-mobile');
+            const navCheck = document.getElementById('nav-check-raport-desktop');
+            const navCheckMobile = document.getElementById('nav-check-raport-mobile');
 
             // Hide all states first
             if (waitingEl) waitingEl.classList.add('hidden');
@@ -10333,8 +10343,8 @@
             if (urlEl) urlEl.classList.add('hidden');
 
             // Show/hide nav items based on report_sent
-            const navItem = document.getElementById('dash-nav-raport');
-            const navItemMobile = document.getElementById('dash-nav-raport-mobile');
+            const navItem = document.getElementById('nav-raport-desktop');
+            const navItemMobile = document.getElementById('nav-raport-mobile');
 
             if (adsData?.report_sent) {
                 // Report ready - show nav items
