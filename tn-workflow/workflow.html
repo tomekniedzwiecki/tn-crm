@@ -10082,7 +10082,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     throw new Error('Błąd wysyłania emaila: ' + emailError.message);
                 }
 
-                // Update database
+                // Update workflow_ads
                 if (adsData?.id) {
                     const { error } = await supabaseClient
                         .from('workflow_ads')
@@ -10110,6 +10110,28 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
                     if (error) throw error;
                     adsData = data;
+                }
+
+                // Save to report history (workflow_ad_reports)
+                const roas = reportData.spend > 0 ? reportData.revenue / reportData.spend : 0;
+                const { error: historyError } = await supabaseClient
+                    .from('workflow_ad_reports')
+                    .insert({
+                        workflow_id: workflow.id,
+                        report_data: reportData,
+                        period_from: periodFrom,
+                        period_to: periodTo,
+                        spend: reportData.spend || 0,
+                        revenue: reportData.revenue || 0,
+                        roas: roas,
+                        purchases: reportData.purchases || reportData.conversions || 0,
+                        sent_to_client: true,
+                        sent_at: now
+                    });
+
+                if (historyError) {
+                    console.error('Error saving report to history:', historyError);
+                    // Don't throw - report was sent, just log the error
                 }
 
                 // Trigger automation (for any additional flows)
