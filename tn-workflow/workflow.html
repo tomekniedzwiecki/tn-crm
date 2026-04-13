@@ -9617,6 +9617,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         function renderReportStats(data) {
+            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+
             // Main metrics
             const spend = data.spend ?? 0;
             const conversions = data.conversions ?? 0;
@@ -9624,20 +9626,20 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const revenue = data.revenue ?? 0;
             const roas = spend > 0 ? revenue / spend : 0;
 
-            document.getElementById('raport-stat-spend')?.innerText = spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
-            document.getElementById('raport-stat-conversions')?.innerText = conversions.toString();
-            document.getElementById('raport-stat-cpc')?.innerText = costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
-            document.getElementById('raport-stat-roas')?.innerText = roas.toFixed(2) + 'x';
+            setEl('raport-stat-spend', spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            setEl('raport-stat-conversions', conversions.toString());
+            setEl('raport-stat-cpc', costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            setEl('raport-stat-roas', roas.toFixed(2) + 'x');
 
             // Secondary metrics
             const impressions = data.impressions ?? 0;
             const clicks = data.clicks ?? 0;
             const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
 
-            document.getElementById('raport-stat-impressions')?.innerText = impressions.toLocaleString('pl-PL');
-            document.getElementById('raport-stat-clicks')?.innerText = clicks.toLocaleString('pl-PL');
-            document.getElementById('raport-stat-ctr')?.innerText = ctr.toFixed(2) + '%';
-            document.getElementById('raport-stat-revenue')?.innerText = revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            setEl('raport-stat-impressions', impressions.toLocaleString('pl-PL'));
+            setEl('raport-stat-clicks', clicks.toLocaleString('pl-PL'));
+            setEl('raport-stat-ctr', ctr.toFixed(2) + '%');
+            setEl('raport-stat-revenue', revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
 
             // Period
             const periodEl = document.getElementById('raport-stats-period');

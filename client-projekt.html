@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041301';
+        const APP_VERSION = '2026041302';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -10225,6 +10225,8 @@
         }
 
         function renderRaportStatsClient(data) {
+            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+
             const spend = data.spend ?? 0;
             const conversions = data.conversions ?? 0;
             const costPerConversion = conversions > 0 ? spend / conversions : 0;
@@ -10234,14 +10236,14 @@
             const clicks = data.clicks ?? 0;
             const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
 
-            document.getElementById('raport-client-spend')?.innerText = spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
-            document.getElementById('raport-client-conversions')?.innerText = conversions.toString();
-            document.getElementById('raport-client-cpc')?.innerText = costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
-            document.getElementById('raport-client-roas')?.innerText = roas.toFixed(2) + 'x';
-            document.getElementById('raport-client-impressions')?.innerText = impressions.toLocaleString('pl-PL');
-            document.getElementById('raport-client-clicks')?.innerText = clicks.toLocaleString('pl-PL');
-            document.getElementById('raport-client-ctr')?.innerText = ctr.toFixed(2) + '%';
-            document.getElementById('raport-client-revenue')?.innerText = revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            setEl('raport-client-spend', spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            setEl('raport-client-conversions', conversions.toString());
+            setEl('raport-client-cpc', costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            setEl('raport-client-roas', roas.toFixed(2) + 'x');
+            setEl('raport-client-impressions', impressions.toLocaleString('pl-PL'));
+            setEl('raport-client-clicks', clicks.toLocaleString('pl-PL'));
+            setEl('raport-client-ctr', ctr.toFixed(2) + '%');
+            setEl('raport-client-revenue', revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
 
             // Period
             const periodEl = document.getElementById('raport-period-client');
