@@ -112,7 +112,7 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.
     // Store task ID for tracking
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
-    await supabase
+    const { error: updateError, count } = await supabase
       .from('workflow_ads')
       .update({
         manus_task_id: manusData.task_id,
@@ -120,6 +120,10 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.
         manus_task_created_at: new Date().toISOString()
       })
       .eq('workflow_id', workflow_id)
+
+    if (updateError) {
+      console.error('Error updating workflow_ads:', updateError)
+    }
 
     return new Response(
       JSON.stringify({

@@ -82,8 +82,8 @@ serve(async (req) => {
     const messages = messagesData.messages || messagesData.data || []
     let result = ''
 
-    // Look for assistant messages that might contain JSON
-    for (const msg of messages.reverse()) {
+    // Look for assistant messages that might contain JSON (use spread to not mutate original)
+    for (const msg of [...messages].reverse()) {
       if (msg.role === 'assistant' && msg.content) {
         const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
         if (content.includes('{') && content.includes('}')) {
@@ -102,8 +102,8 @@ serve(async (req) => {
     // Try to parse JSON from result
     let reportData = null
     try {
-      // Look for JSON in the result
-      const jsonMatch = result.match(/\{[\s\S]*\}/)
+      // Look for JSON in the result (non-greedy to get first complete JSON object)
+      const jsonMatch = result.match(/\{[\s\S]*?\}/)
       if (jsonMatch) {
         reportData = JSON.parse(jsonMatch[0])
       }
@@ -179,30 +179,30 @@ serve(async (req) => {
             // Pobierz dane workflow i klienta
             const { data: workflow } = await supabase
               .from('workflows')
-              .select('id, name, client_email, client_name, client_token')
+              .select('id, offer_name, customer_email, customer_name, unique_token')
               .eq('id', workflow_id)
               .single()
 
-            if (workflow?.client_email) {
+            if (workflow?.customer_email) {
               // Wyślij email z raportem
               try {
-                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                const emailResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    to: workflow.client_email,
+                    to: workflow.customer_email,
                     template: 'ad_report',
                     data: {
-                      client_name: workflow.client_name || 'Kliencie',
-                      project_name: workflow.name,
+                      client_name: workflow.customer_name || 'Kliencie',
+                      project_name: workflow.offer_name,
                       period_from: periodFrom,
                       period_to: periodTo,
                       spend: reportData.spend || 0,
                       revenue: reportData.revenue || 0,
-                      roas: (reportData.roas || 0).toFixed(2),
+                      roas: Number(reportData.roas || 0).toFixed(2),
                       purchases: reportData.purchases || reportData.conversions || 0,
                       clicks: reportData.clicks || 0,
                       impressions: reportData.impressions || 0,
@@ -210,10 +210,16 @@ serve(async (req) => {
                       initiate_checkout: reportData.initiate_checkout || 0,
                       report_id: historyRecord.id,
                       workflow_id: workflow_id,
-                      client_token: workflow.client_token || ''
+                      client_token: workflow.unique_token || ''
                     }
                   })
                 })
+
+                // Sprawdź czy email się wysłał
+                if (!emailResponse.ok) {
+                  console.error('Email send failed:', await emailResponse.text())
+                  throw new Error('Email send failed')
+                }
 
                 // Oznacz raport jako wysłany
                 await supabase

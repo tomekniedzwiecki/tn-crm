@@ -32,14 +32,14 @@ serve(async (req) => {
       .select(`
         id,
         workflow_id,
-        ad_account_id,
+        meta_ad_account_id,
         auto_reports_enabled,
         auto_reports_interval_days,
         last_auto_report_at,
-        workflows!inner(id, name, client_email)
+        workflows!inner(id, offer_name, customer_email)
       `)
       .eq('auto_reports_enabled', true)
-      .not('ad_account_id', 'is', null)
+      .not('meta_ad_account_id', 'is', null)
 
     if (fetchError) {
       console.error('Error fetching workflows:', fetchError)
@@ -101,7 +101,7 @@ serve(async (req) => {
 
       // Wywołaj Manus
       const instruction = `
-Pobierz statystyki kampanii reklamowych z Meta Ads dla konta: ${ads.ad_account_id}
+Pobierz statystyki kampanii reklamowych z Meta Ads dla konta: ${ads.meta_ad_account_id}
 
 Okres: od ${dateFrom} do ${dateTo}
 
