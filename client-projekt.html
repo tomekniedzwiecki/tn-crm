@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041312';
+        const APP_VERSION = '2026041313';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5917,23 +5917,37 @@
             }
         }
 
-        function renderEtap4RaportBox() {
+        async function renderEtap4RaportBox() {
             const box = document.getElementById('dash-etap4-box-raport');
             const content = document.getElementById('dash-etap4-raport-content');
             if (!box || !content) return;
 
-            const reportReady = adsData?.report_sent;
-            const reportData = adsData?.report_data;
+            // Fetch latest report from workflow_ad_reports
+            let latestReport = null;
+            try {
+                const { data } = await supabaseClient
+                    .from('workflow_ad_reports')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .order('period_to', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                latestReport = data;
+            } catch (err) {
+                console.error('Error fetching latest report:', err);
+            }
 
-            if (reportReady && reportData) {
-                // Report ready - show metrics
+            if (latestReport) {
+                // Report ready - show metrics from latest report
                 box.classList.remove('opacity-50');
                 box.classList.add('cursor-pointer');
                 box.onclick = () => switchToDashTab('raport');
 
+                const reportData = latestReport.report_data || {};
                 const currency = reportData.currency || 'PLN';
-                const roas = reportData.roas || (reportData.spend > 0 ? (reportData.revenue / reportData.spend) : 0);
-                const purchases = reportData.purchases ?? reportData.conversions ?? 0;
+                const roas = latestReport.roas || 0;
+                const spend = latestReport.spend || 0;
+                const purchases = latestReport.purchases || 0;
 
                 const fmtCurrency = (n) => {
                     const num = Number(n) || 0;
@@ -5943,6 +5957,10 @@
                         return num.toLocaleString('pl-PL', { maximumFractionDigits: 0 }) + ' ' + currency;
                     }
                 };
+
+                // Format period
+                const periodFrom = new Date(latestReport.period_from).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                const periodTo = new Date(latestReport.period_to).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
@@ -5958,7 +5976,7 @@
                             <div class="text-[10px] text-[#555] uppercase mb-3">ROAS</div>
                             <div class="flex items-center gap-4 text-[11px]">
                                 <div class="text-center">
-                                    <div class="text-white font-medium">${fmtCurrency(reportData.spend)}</div>
+                                    <div class="text-white font-medium">${fmtCurrency(spend)}</div>
                                     <div class="text-[#555]">Wydatki</div>
                                 </div>
                                 <div class="text-center">
@@ -5966,11 +5984,12 @@
                                     <div class="text-[#555]">Zakupy</div>
                                 </div>
                             </div>
+                            <div class="text-[10px] text-[#444] mt-2">${periodFrom} - ${periodTo}</div>
                         </div>
                     </div>
                 `;
             } else {
-                // Not ready yet
+                // No reports yet
                 box.classList.add('opacity-50');
                 box.classList.remove('cursor-pointer');
                 box.onclick = null;
