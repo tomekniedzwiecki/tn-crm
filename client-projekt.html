@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041304';
+        const APP_VERSION = '2026041306';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4347,15 +4347,34 @@
                                 </div>
                             </div>
 
-                            <!-- Secondary metrics -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <!-- Secondary metrics - row 1 -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Zasięg</div>
+                                    <div id="raport-client-reach" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
                                 <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
                                     <div class="text-[10px] text-[#555] uppercase mb-1">Wyświetlenia</div>
                                     <div id="raport-client-impressions" class="text-[14px] font-medium text-[#888]">-</div>
                                 </div>
                                 <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Częstotliwość</div>
+                                    <div id="raport-client-frequency" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">CPM</div>
+                                    <div id="raport-client-cpm" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
+                            </div>
+                            <!-- Secondary metrics - row 2 -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
                                     <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
                                     <div id="raport-client-clicks" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Wejścia na stronę</div>
+                                    <div id="raport-client-lpv" class="text-[14px] font-medium text-[#888]">-</div>
                                 </div>
                                 <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
                                     <div class="text-[10px] text-[#555] uppercase mb-1">CTR</div>
@@ -10283,24 +10302,47 @@
 
         function renderRaportStatsClient(data) {
             const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+            const currency = data.currency || 'PLN';
+            const fmtCurrency = (n) => {
+                const num = Number(n) || 0;
+                try {
+                    return num.toLocaleString('pl-PL', { style: 'currency', currency: currency });
+                } catch (e) {
+                    return num.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
+                }
+            };
 
-            const spend = data.spend ?? 0;
-            const purchases = data.purchases ?? data.conversions ?? 0;
+            const spend = Number(data.spend) || 0;
+            const purchases = Number(data.purchases ?? data.conversions) || 0;
             const costPerConversion = purchases > 0 ? spend / purchases : 0;
-            const revenue = data.revenue ?? 0;
+            const revenue = Number(data.revenue) || 0;
             const roas = spend > 0 ? revenue / spend : 0;
-            const impressions = data.impressions ?? 0;
-            const clicks = data.clicks ?? 0;
+            const impressions = Number(data.impressions) || 0;
+            const clicks = Number(data.clicks) || 0;
             const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
 
-            setEl('raport-client-spend', spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            // New metrics
+            const reach = Number(data.reach) || 0;
+            const frequency = Number(data.frequency) || 0;
+            const cpm = Number(data.cpm) || (impressions > 0 ? (spend / impressions * 1000) : 0);
+            const landingPageViews = Number(data.landing_page_views) || 0;
+
+            setEl('raport-client-spend', fmtCurrency(spend));
             setEl('raport-client-conversions', purchases.toString());
-            setEl('raport-client-cpc', costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            setEl('raport-client-cpc', fmtCurrency(costPerConversion));
             setEl('raport-client-roas', roas.toFixed(2) + 'x');
+
+            // Row 1: reach, impressions, frequency, CPM
+            setEl('raport-client-reach', reach.toLocaleString('pl-PL'));
             setEl('raport-client-impressions', impressions.toLocaleString('pl-PL'));
+            setEl('raport-client-frequency', frequency.toFixed(2));
+            setEl('raport-client-cpm', fmtCurrency(cpm));
+
+            // Row 2: clicks, lpv, CTR, revenue
             setEl('raport-client-clicks', clicks.toLocaleString('pl-PL'));
+            setEl('raport-client-lpv', landingPageViews.toLocaleString('pl-PL'));
             setEl('raport-client-ctr', ctr.toFixed(2) + '%');
-            setEl('raport-client-revenue', revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+            setEl('raport-client-revenue', fmtCurrency(revenue));
 
             // Funnel metrics
             const addToCart = data.add_to_cart ?? 0;
@@ -10337,7 +10379,7 @@
                     <div class="flex items-center justify-between bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg px-3 py-2">
                         <span class="text-[13px] text-[#aaa]">${escapeHtml(c.name || 'Kampania')}</span>
                         <div class="flex items-center gap-3 text-[12px]">
-                            <span class="text-[#666]">${(c.spend || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}</span>
+                            <span class="text-[#666]">${fmtCurrency(c.spend || 0)}</span>
                             <span class="text-emerald-400">${c.purchases || c.conversions || 0} zakupów</span>
                         </div>
                     </div>
@@ -10396,6 +10438,14 @@
                     const roas = report.roas?.toFixed(2) || '0';
                     const roasClass = report.roas >= 2 ? 'text-emerald-400' : report.roas >= 1 ? 'text-amber-400' : 'text-rose-400';
                     const isLatest = index === 0;
+                    const reportCurrency = report.report_data?.currency || 'PLN';
+                    const spendFormatted = (() => {
+                        try {
+                            return (report.spend || 0).toLocaleString('pl-PL', {style:'currency',currency:reportCurrency});
+                        } catch (e) {
+                            return (report.spend || 0).toLocaleString('pl-PL', {minimumFractionDigits:2}) + ' ' + reportCurrency;
+                        }
+                    })();
 
                     return `
                         <div class="flex items-center justify-between bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-[#111] transition-colors ${isLatest ? 'border-violet-500/30' : ''}"
@@ -10403,7 +10453,7 @@
                             <div>
                                 <div class="text-[12px] text-[#888]">${periodFrom} - ${periodTo}</div>
                                 <div class="text-[10px] text-[#555] mt-0.5">
-                                    ${(report.spend || 0).toLocaleString('pl-PL', {style:'currency',currency:'PLN'})} • ${report.purchases || 0} zakupów
+                                    ${spendFormatted} • ${report.purchases || 0} zakupów
                                 </div>
                             </div>
                             <div class="text-right">

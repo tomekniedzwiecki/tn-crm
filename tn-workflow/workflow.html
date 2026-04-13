@@ -2398,11 +2398,14 @@
                                         <div id="raport-ad-account-info" class="text-[11px] text-zinc-500">Brak skonfigurowanego konta</div>
                                     </div>
                                 </div>
-                                <div id="manus-task-status" class="hidden">
+                                <div id="manus-task-status" class="hidden flex items-center gap-2">
                                     <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                         <i class="ph ph-spinner animate-spin text-xs"></i>
                                         <span id="manus-task-status-text">Pobieram...</span>
                                     </span>
+                                    <button onclick="checkManusStatusNow()" class="text-[10px] text-violet-400 hover:text-violet-300 underline">
+                                        Sprawdź teraz
+                                    </button>
                                 </div>
                             </div>
 
@@ -2573,14 +2576,32 @@
                                     <i class="ph ph-users"></i>
                                     Ruch na stronie
                                 </div>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                        <div class="text-[10px] text-zinc-600 uppercase mb-1">Zasięg</div>
+                                        <div id="raport-stat-reach" class="text-[15px] font-semibold text-zinc-300">-</div>
+                                    </div>
                                     <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
                                         <div class="text-[10px] text-zinc-600 uppercase mb-1">Wyświetlenia</div>
                                         <div id="raport-stat-impressions" class="text-[15px] font-semibold text-zinc-300">-</div>
                                     </div>
                                     <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                        <div class="text-[10px] text-zinc-600 uppercase mb-1">Częstotliwość</div>
+                                        <div id="raport-stat-frequency" class="text-[15px] font-semibold text-zinc-300">-</div>
+                                    </div>
+                                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                        <div class="text-[10px] text-zinc-600 uppercase mb-1">CPM</div>
+                                        <div id="raport-stat-cpm" class="text-[15px] font-semibold text-zinc-300">-</div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
                                         <div class="text-[10px] text-zinc-600 uppercase mb-1">Kliknięcia</div>
                                         <div id="raport-stat-clicks" class="text-[15px] font-semibold text-zinc-300">-</div>
+                                    </div>
+                                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                        <div class="text-[10px] text-zinc-600 uppercase mb-1">Wejścia na stronę</div>
+                                        <div id="raport-stat-lpv" class="text-[15px] font-semibold text-zinc-300">-</div>
                                     </div>
                                     <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
                                         <div class="text-[10px] text-zinc-600 uppercase mb-1">CTR</div>
@@ -9778,15 +9799,23 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
             }
 
-            // Show Manus task status
+            // Show Manus task status and auto-resume polling if pending
             const taskStatusEl = document.getElementById('manus-task-status');
             const taskStatusText = document.getElementById('manus-task-status-text');
             if (taskStatusEl && adsData?.manus_task_status) {
                 if (adsData.manus_task_status === 'pending' || adsData.manus_task_status === 'running') {
                     taskStatusEl.classList.remove('hidden');
                     taskStatusText.textContent = adsData.manus_task_status === 'pending' ? 'W kolejce...' : 'Pobieram dane...';
+
+                    // Auto-resume polling if we have a task_id
+                    if (adsData.manus_task_id && !window._manusPollingActive) {
+                        window._manusPollingActive = true;
+                        console.log('Resuming polling for task:', adsData.manus_task_id);
+                        pollManusTaskStatus(adsData.manus_task_id);
+                    }
                 } else {
                     taskStatusEl.classList.add('hidden');
+                    window._manusPollingActive = false;
                 }
             }
 
@@ -9861,7 +9890,17 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
         function renderReportStats(data) {
             const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
-            const fmt = (n) => n.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            const currency = data.currency || 'PLN';
+            const fmt = (n) => {
+                // Ensure n is a number
+                const num = Number(n) || 0;
+                try {
+                    return num.toLocaleString('pl-PL', { style: 'currency', currency: currency });
+                } catch (e) {
+                    // Fallback if currency code is invalid
+                    return num.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
+                }
+            };
 
             // Core metrics
             const spend = data.spend ?? 0;
@@ -9938,9 +9977,20 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             setEl('raport-funnel-checkout-rate', checkoutRate.toFixed(1) + '% kliknięć');
             setEl('raport-funnel-purchases-rate', purchaseRate.toFixed(1) + '% kliknięć');
 
-            // Traffic metrics
+            // Traffic metrics - row 1 (reach, impressions, frequency, CPM)
+            const reach = Number(data.reach) || 0;
+            const frequency = Number(data.frequency) || 0;
+            const cpm = Number(data.cpm) || (impressions > 0 ? (spend / impressions * 1000) : 0);
+            const landingPageViews = Number(data.landing_page_views) || 0;
+
+            setEl('raport-stat-reach', reach.toLocaleString('pl-PL'));
             setEl('raport-stat-impressions', impressions.toLocaleString('pl-PL'));
+            setEl('raport-stat-frequency', frequency.toFixed(2));
+            setEl('raport-stat-cpm', fmt(cpm));
+
+            // Traffic metrics - row 2 (clicks, lpv, CTR, CPC)
             setEl('raport-stat-clicks', clicks.toLocaleString('pl-PL'));
+            setEl('raport-stat-lpv', landingPageViews.toLocaleString('pl-PL'));
             setEl('raport-stat-ctr', ctr.toFixed(2) + '%');
             setEl('raport-stat-cpc', fmt(cpc));
 
@@ -10121,6 +10171,11 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     showToast('Zadanie wysłane do Manus. Dane pojawią się automatycznie.', 'success');
                     if (taskStatusText) taskStatusText.textContent = 'Pobieram dane...';
 
+                    // Update adsData with new task_id
+                    adsData.manus_task_id = result.task_id;
+                    adsData.manus_task_status = 'pending';
+                    window._manusPollingActive = true;
+
                     // Start polling for results
                     pollManusTaskStatus(result.task_id);
                 } else {
@@ -10139,44 +10194,176 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         async function pollManusTaskStatus(taskId) {
-            // Poll every 5 seconds for up to 2 minutes
+            // Poll every 10 seconds for up to 5 minutes
             let attempts = 0;
-            const maxAttempts = 24;
+            const maxAttempts = 30;
             const taskStatusEl = document.getElementById('manus-task-status');
+            const taskStatusText = document.getElementById('manus-task-status-text');
 
             const poll = async () => {
                 attempts++;
+                if (taskStatusText) taskStatusText.textContent = `Pobieram dane... (${attempts}/${maxAttempts})`;
 
-                // Reload ads data
-                const { data } = await supabaseClient
-                    .from('workflow_ads')
-                    .select('manus_task_status, report_data, manus_task_error')
-                    .eq('workflow_id', workflow.id)
-                    .maybeSingle();
+                try {
+                    // Call manus-get-result to fetch data from Manus API
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/manus-get-result`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            task_id: taskId,
+                            workflow_id: workflow.id
+                        })
+                    });
 
-                if (data?.manus_task_status === 'completed' && data?.report_data) {
-                    if (taskStatusEl) taskStatusEl.classList.add('hidden');
-                    showToast('Dane z Manus pobrane!', 'success');
-                    adsData = { ...adsData, ...data };
-                    loadRaportTab();
-                    return;
-                }
+                    const result = await response.json();
+                    console.log('Manus get-result:', result);
+                    console.log('Task status:', result.status, 'Has report_data:', !!result.report_data);
 
-                if (data?.manus_task_status === 'failed') {
-                    if (taskStatusEl) taskStatusEl.classList.add('hidden');
-                    showToast('Manus: ' + (data.manus_task_error || 'Błąd pobierania'), 'error');
-                    return;
-                }
+                    if (result.success && ['stopped', 'completed', 'done'].includes(result.status)) {
+                        // Task completed - reload data from DB (manus-get-result already saved it)
+                        if (taskStatusEl) taskStatusEl.classList.add('hidden');
+                        window._manusPollingActive = false;
 
-                if (attempts < maxAttempts) {
-                    setTimeout(poll, 5000);
-                } else {
-                    if (taskStatusEl) taskStatusEl.classList.add('hidden');
-                    showToast('Przekroczono czas oczekiwania. Sprawdź później.', 'info');
+                        console.log('Task completed! Reloading data from DB...');
+
+                        // Reload ads data from DB
+                        const { data, error } = await supabaseClient
+                            .from('workflow_ads')
+                            .select('*')
+                            .eq('workflow_id', workflow.id)
+                            .maybeSingle();
+
+                        console.log('Reloaded data:', data, 'Error:', error);
+
+                        if (data && data.report_data) {
+                            adsData = data;
+                            showToast('Dane z Manus pobrane!', 'success');
+                            loadRaportTab();
+                            loadReportHistory();
+                        } else {
+                            showToast('Dane zapisane ale brak report_data. Sprawdź logi.', 'warning');
+                            console.error('No report_data in reloaded data:', data);
+                        }
+                        return;
+                    }
+
+                    if (result.success && ['running', 'pending', 'queued'].includes(result.status)) {
+                        // Still processing
+                        if (taskStatusText) taskStatusText.textContent = `Manus pracuje... (${result.status})`;
+                        if (attempts < maxAttempts) {
+                            setTimeout(poll, 10000);
+                        } else {
+                            if (taskStatusEl) taskStatusEl.classList.add('hidden');
+                            showToast('Manus nadal pracuje. Odśwież stronę za chwilę.', 'info');
+                        }
+                        return;
+                    }
+
+                    if (!result.success) {
+                        if (taskStatusEl) taskStatusEl.classList.add('hidden');
+                        window._manusPollingActive = false;
+
+                        // If task expired, reload data and show message
+                        if (result.status === 'expired') {
+                            showToast('Zadanie Manus wygasło. Wygeneruj nowy raport.', 'warning');
+                            const { data: freshData } = await supabaseClient
+                                .from('workflow_ads')
+                                .select('*')
+                                .eq('workflow_id', workflow.id)
+                                .maybeSingle();
+                            if (freshData) {
+                                adsData = freshData;
+                                loadRaportTab();
+                            }
+                        } else {
+                            showToast('Błąd Manus: ' + (result.error || 'Nieznany błąd'), 'error');
+                        }
+                        return;
+                    }
+
+                    // Unknown status - keep polling
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, 10000);
+                    } else {
+                        if (taskStatusEl) taskStatusEl.classList.add('hidden');
+                        window._manusPollingActive = false;
+                        showToast('Przekroczono czas oczekiwania. Sprawdź później.', 'info');
+                    }
+
+                } catch (err) {
+                    console.error('Polling error:', err);
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, 10000);
+                    } else {
+                        if (taskStatusEl) taskStatusEl.classList.add('hidden');
+                        window._manusPollingActive = false;
+                        showToast('Błąd połączenia. Sprawdź później.', 'error');
+                    }
                 }
             };
 
-            poll();
+            // Start polling after 5 seconds (give Manus time to start)
+            setTimeout(poll, 5000);
+        }
+
+        async function checkManusStatusNow() {
+            if (!adsData?.manus_task_id) {
+                showToast('Brak aktywnego zadania Manus', 'error');
+                return;
+            }
+
+            const taskStatusText = document.getElementById('manus-task-status-text');
+            if (taskStatusText) taskStatusText.textContent = 'Sprawdzam...';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/manus-get-result`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        task_id: adsData.manus_task_id,
+                        workflow_id: workflow.id
+                    })
+                });
+
+                const result = await response.json();
+                console.log('Manual check result:', result);
+
+                if (result.success && ['stopped', 'completed', 'done'].includes(result.status) && result.report_data) {
+                    showToast('Dane pobrane!', 'success');
+                    const { data } = await supabaseClient
+                        .from('workflow_ads')
+                        .select('*')
+                        .eq('workflow_id', workflow.id)
+                        .maybeSingle();
+                    if (data) {
+                        adsData = data;
+                        loadRaportTab();
+                        loadReportHistory();
+                    }
+                } else if (result.success && ['running', 'pending', 'queued'].includes(result.status)) {
+                    showToast(`Manus nadal pracuje (${result.status})`, 'info');
+                    if (taskStatusText) taskStatusText.textContent = `Manus: ${result.status}`;
+                } else if (result.status === 'expired') {
+                    showToast('Zadanie Manus wygasło. Wygeneruj nowy raport.', 'warning');
+                    // Reload data to get updated status
+                    const { data: freshData } = await supabaseClient
+                        .from('workflow_ads')
+                        .select('*')
+                        .eq('workflow_id', workflow.id)
+                        .maybeSingle();
+                    if (freshData) {
+                        adsData = freshData;
+                        loadRaportTab();
+                    }
+                } else {
+                    showToast(result.error || 'Nieoczekiwany status', 'warning');
+                }
+            } catch (err) {
+                console.error('Check error:', err);
+                showToast('Błąd sprawdzania: ' + err.message, 'error');
+            }
         }
 
         window.loadRaportTab = loadRaportTab;
@@ -10185,6 +10372,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.fetchReportDataManus = fetchReportDataManus;
         window.saveMetaAdAccountId = saveMetaAdAccountId;
         window.setDateRangePreset = setDateRangePreset;
+        window.checkManusStatusNow = checkManusStatusNow;
 
         // =============================================
         // AUTO-REPORTS & HISTORY
@@ -10279,6 +10467,15 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         ? '<i class="ph ph-check-circle text-emerald-400" title="Wysłany do klienta"></i>'
                         : '<i class="ph ph-clock text-zinc-500" title="Niewysłany"></i>';
 
+                    const reportCurrency = report.report_data?.currency || 'PLN';
+                    const spendFormatted = (() => {
+                        try {
+                            return (report.spend || 0).toLocaleString('pl-PL', {style:'currency',currency:reportCurrency});
+                        } catch (e) {
+                            return (report.spend || 0).toLocaleString('pl-PL', {minimumFractionDigits:2}) + ' ' + reportCurrency;
+                        }
+                    })();
+
                     return `
                         <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3 cursor-pointer hover:bg-zinc-800/30 transition-colors"
                              onclick="loadReportFromHistory('${report.id}')">
@@ -10286,7 +10483,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                                 <div>
                                     <div class="text-[12px] text-zinc-300">${periodFrom} - ${periodTo}</div>
                                     <div class="text-[11px] text-zinc-600 mt-1">
-                                        Wydatki: ${(report.spend || 0).toLocaleString('pl-PL', {style:'currency',currency:'PLN'})}
+                                        Wydatki: ${spendFormatted}
                                         • Zakupy: ${report.purchases || 0}
                                     </div>
                                 </div>

@@ -45,8 +45,21 @@ serve(async (req) => {
     console.log('Manus task detail:', JSON.stringify(detailData, null, 2))
 
     if (!detailResponse.ok || !detailData.ok) {
+      // If task not found, clear the pending status in DB
+      if (detailData?.error?.code === 'not_found' && workflow_id) {
+        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
+        await supabase
+          .from('workflow_ads')
+          .update({
+            manus_task_status: 'expired',
+            manus_task_error: 'Task not found in Manus - may have expired'
+          })
+          .eq('workflow_id', workflow_id)
+        console.log('Cleared expired task for workflow:', workflow_id)
+      }
+
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to get task detail', details: detailData }),
+        JSON.stringify({ success: false, error: 'Failed to get task detail', details: detailData, status: 'expired' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -102,10 +115,36 @@ serve(async (req) => {
     // Try to parse JSON from result
     let reportData = null
     try {
-      // Look for JSON in the result (non-greedy to get first complete JSON object)
-      const jsonMatch = result.match(/\{[\s\S]*?\}/)
-      if (jsonMatch) {
-        reportData = JSON.parse(jsonMatch[0])
+      // Find balanced JSON object by counting braces
+      let depth = 0
+      let start = -1
+      let end = -1
+      for (let i = 0; i < result.length; i++) {
+        if (result[i] === '{') {
+          if (depth === 0) start = i
+          depth++
+        } else if (result[i] === '}') {
+          depth--
+          if (depth === 0 && start !== -1) {
+            end = i + 1
+            break
+          }
+        }
+      }
+
+      if (start !== -1 && end !== -1) {
+        const jsonStr = result.substring(start, end)
+        reportData = JSON.parse(jsonStr)
+
+        // Normalize numeric fields to ensure they're numbers, not strings
+        const numericFields = ['spend', 'revenue', 'roas', 'impressions', 'clicks', 'ctr', 'cpc',
+                               'add_to_cart', 'initiate_checkout', 'purchases', 'conversion_rate', 'cost_per_purchase',
+                               'cpm', 'reach', 'frequency', 'link_clicks', 'landing_page_views']
+        for (const field of numericFields) {
+          if (reportData[field] !== undefined) {
+            reportData[field] = Number(reportData[field]) || 0
+          }
+        }
       }
     } catch (parseErr) {
       console.error('Error parsing result:', parseErr)
@@ -208,6 +247,7 @@ serve(async (req) => {
                       impressions: reportData.impressions || 0,
                       add_to_cart: reportData.add_to_cart || 0,
                       initiate_checkout: reportData.initiate_checkout || 0,
+                      currency: reportData.currency || 'PLN',
                       report_id: historyRecord.id,
                       workflow_id: workflow_id,
                       client_token: workflow.unique_token || ''
@@ -230,7 +270,7 @@ serve(async (req) => {
                   })
                   .eq('id', historyRecord.id)
 
-                console.log('Report email sent to:', workflow.client_email)
+                console.log('Report email sent to:', workflow.customer_email)
               } catch (emailErr) {
                 console.error('Error sending report email:', emailErr)
               }

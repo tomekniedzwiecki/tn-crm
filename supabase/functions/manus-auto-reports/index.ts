@@ -53,7 +53,6 @@ serve(async (req) => {
 
     for (const ads of workflowsToReport || []) {
       const intervalDays = ads.auto_reports_interval_days || 7
-      const lastReport = ads.last_auto_report_at ? new Date(ads.last_auto_report_at) : null
 
       // Pobierz ostatni raport z historii żeby znać datę końcową
       const { data: lastReportRecord } = await supabase
@@ -105,20 +104,28 @@ Pobierz statystyki kampanii reklamowych z Meta Ads dla konta: ${ads.meta_ad_acco
 
 Okres: od ${dateFrom} do ${dateTo}
 
+WAŻNE: Użyj DOKŁADNIE tej samej waluty co w ustawieniach konta Meta Ads. NIE przeliczaj na PLN jeśli konto używa innej waluty!
+
 Zwróć dane w formacie JSON:
 {
   "period": { "from": "${dateFrom}", "to": "${dateTo}" },
-  "spend": [całkowite wydatki w PLN],
+  "currency": "[waluta konta Meta Ads - np. PLN, USD, EUR]",
+  "spend": [całkowite wydatki - liczba bez waluty],
   "impressions": [liczba wyświetleń],
-  "clicks": [liczba kliknięć],
+  "reach": [zasięg - unikalni użytkownicy],
+  "frequency": [średnia częstotliwość wyświetleń na osobę],
+  "cpm": [koszt za 1000 wyświetleń],
+  "clicks": [liczba kliknięć w link],
+  "link_clicks": [kliknięcia w link - jeśli dostępne osobno],
+  "landing_page_views": [wyświetlenia strony docelowej],
   "ctr": [CTR w procentach],
-  "cpc": [koszt za kliknięcie w PLN],
+  "cpc": [koszt za kliknięcie],
   "add_to_cart": [liczba zdarzeń AddToCart],
   "initiate_checkout": [liczba zdarzeń InitiateCheckout],
   "purchases": [liczba zakupów/konwersji Purchase],
   "conversion_rate": [współczynnik konwersji zakupów w %],
-  "cost_per_purchase": [koszt za zakup w PLN],
-  "revenue": [przychód z zakupów w PLN, jeśli dostępny],
+  "cost_per_purchase": [koszt za zakup],
+  "revenue": [przychód z zakupów, jeśli dostępny],
   "roas": [ROAS = revenue/spend],
   "funnel": {
     "clicks_to_cart_rate": [% kliknięć które dodały do koszyka],
@@ -126,7 +133,7 @@ Zwróć dane w formacie JSON:
     "checkout_to_purchase_rate": [% kas które zakończyły zakup]
   },
   "campaigns": [
-    { "name": "nazwa kampanii", "spend": X, "purchases": Y, "impressions": Z, "add_to_cart": A, "initiate_checkout": B }
+    { "name": "nazwa kampanii", "spend": X, "purchases": Y, "impressions": Z, "reach": R, "cpm": C, "add_to_cart": A, "initiate_checkout": B }
   ]
 }
 

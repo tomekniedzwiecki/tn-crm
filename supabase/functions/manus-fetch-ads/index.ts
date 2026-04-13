@@ -42,20 +42,28 @@ Pobierz statystyki kampanii reklamowych z Meta Ads dla konta: ${ad_account_id}
 
 Okres: od ${startDate} do ${endDate}
 
+WAŻNE: Użyj DOKŁADNIE tej samej waluty co w ustawieniach konta Meta Ads. NIE przeliczaj na PLN jeśli konto używa innej waluty!
+
 Zwróć dane w formacie JSON:
 {
   "period": { "from": "${startDate}", "to": "${endDate}" },
-  "spend": [całkowite wydatki w PLN],
+  "currency": "[waluta konta Meta Ads - np. PLN, USD, EUR]",
+  "spend": [całkowite wydatki - liczba bez waluty],
   "impressions": [liczba wyświetleń],
-  "clicks": [liczba kliknięć],
+  "reach": [zasięg - unikalni użytkownicy],
+  "frequency": [średnia częstotliwość wyświetleń na osobę],
+  "cpm": [koszt za 1000 wyświetleń],
+  "clicks": [liczba kliknięć w link],
+  "link_clicks": [kliknięcia w link - jeśli dostępne osobno],
+  "landing_page_views": [wyświetlenia strony docelowej],
   "ctr": [CTR w procentach],
-  "cpc": [koszt za kliknięcie w PLN],
+  "cpc": [koszt za kliknięcie],
   "add_to_cart": [liczba zdarzeń AddToCart],
   "initiate_checkout": [liczba zdarzeń InitiateCheckout],
   "purchases": [liczba zakupów/konwersji Purchase],
   "conversion_rate": [współczynnik konwersji zakupów w %],
-  "cost_per_purchase": [koszt za zakup w PLN],
-  "revenue": [przychód z zakupów w PLN, jeśli dostępny],
+  "cost_per_purchase": [koszt za zakup],
+  "revenue": [przychód z zakupów, jeśli dostępny],
   "roas": [ROAS = revenue/spend],
   "funnel": {
     "clicks_to_cart_rate": [% kliknięć które dodały do koszyka],
@@ -63,7 +71,7 @@ Zwróć dane w formacie JSON:
     "checkout_to_purchase_rate": [% kas które zakończyły zakup]
   },
   "campaigns": [
-    { "name": "nazwa kampanii", "spend": X, "purchases": Y, "impressions": Z, "add_to_cart": A, "initiate_checkout": B }
+    { "name": "nazwa kampanii", "spend": X, "purchases": Y, "impressions": Z, "reach": R, "cpm": C, "add_to_cart": A, "initiate_checkout": B }
   ]
 }
 
@@ -112,7 +120,7 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.
     // Store task ID for tracking
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { error: updateError, count } = await supabase
+    const { error: updateError } = await supabase
       .from('workflow_ads')
       .update({
         manus_task_id: manusData.task_id,
