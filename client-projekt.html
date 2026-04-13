@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041303';
+        const APP_VERSION = '2026041304';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4367,6 +4367,39 @@
                                 </div>
                             </div>
 
+                            <!-- Lejek konwersji -->
+                            <div class="mb-4">
+                                <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3 flex items-center gap-2">
+                                    <i class="ph ph-funnel"></i>
+                                    Lejek konwersji
+                                </div>
+                                <div class="flex items-center gap-2 overflow-x-auto pb-2">
+                                    <div class="flex-1 min-w-[80px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-3 text-center">
+                                        <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
+                                        <div id="raport-client-funnel-clicks" class="text-lg font-bold text-[#888]">-</div>
+                                        <div class="text-[10px] text-[#444]">100%</div>
+                                    </div>
+                                    <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
+                                    <div class="flex-1 min-w-[80px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-3 text-center">
+                                        <div class="text-[10px] text-[#555] uppercase mb-1">Do koszyka</div>
+                                        <div id="raport-client-funnel-atc" class="text-lg font-bold text-blue-400">-</div>
+                                        <div id="raport-client-funnel-atc-rate" class="text-[10px] text-[#555]">-</div>
+                                    </div>
+                                    <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
+                                    <div class="flex-1 min-w-[80px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-3 text-center">
+                                        <div class="text-[10px] text-[#555] uppercase mb-1">Do kasy</div>
+                                        <div id="raport-client-funnel-checkout" class="text-lg font-bold text-amber-400">-</div>
+                                        <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#555]">-</div>
+                                    </div>
+                                    <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
+                                    <div class="flex-1 min-w-[80px] bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
+                                        <div class="text-[10px] text-emerald-400/70 uppercase mb-1">Zakupy</div>
+                                        <div id="raport-client-funnel-purchases" class="text-lg font-bold text-emerald-400">-</div>
+                                        <div id="raport-client-funnel-purchases-rate" class="text-[10px] text-emerald-500/70">-</div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Campaigns breakdown -->
                             <div id="raport-campaigns-client" class="hidden">
                                 <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3">Kampanie</div>
@@ -4384,12 +4417,17 @@
                             </div>
                         </div>
 
-                        <!-- Report URL link -->
-                        <div id="raport-url-client" class="hidden mt-6">
-                            <a id="raport-url-link-client" href="#" target="_blank" class="inline-flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white px-5 py-3 rounded-xl font-medium transition-colors">
-                                <i class="ph ph-file-pdf"></i>
-                                Zobacz pełny raport
-                            </a>
+                        <!-- Report History -->
+                        <div id="raport-history-client" class="hidden mt-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="text-[11px] text-[#555] uppercase tracking-wide flex items-center gap-2">
+                                    <i class="ph ph-clock-counter-clockwise"></i>
+                                    Historia raportów
+                                </div>
+                            </div>
+                            <div id="raport-history-list-client" class="space-y-2">
+                                <!-- Rendered dynamically -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -10226,6 +10264,9 @@
                     renderRaportStatsClient(adsData.report_data);
                 }
 
+                // Load report history
+                loadClientReportHistory();
+
                 // Show report URL if available
                 if (adsData.report_url) {
                     if (urlEl) urlEl.classList.remove('hidden');
@@ -10244,8 +10285,8 @@
             const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
 
             const spend = data.spend ?? 0;
-            const conversions = data.conversions ?? 0;
-            const costPerConversion = conversions > 0 ? spend / conversions : 0;
+            const purchases = data.purchases ?? data.conversions ?? 0;
+            const costPerConversion = purchases > 0 ? spend / purchases : 0;
             const revenue = data.revenue ?? 0;
             const roas = spend > 0 ? revenue / spend : 0;
             const impressions = data.impressions ?? 0;
@@ -10253,13 +10294,31 @@
             const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
 
             setEl('raport-client-spend', spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
-            setEl('raport-client-conversions', conversions.toString());
+            setEl('raport-client-conversions', purchases.toString());
             setEl('raport-client-cpc', costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
             setEl('raport-client-roas', roas.toFixed(2) + 'x');
             setEl('raport-client-impressions', impressions.toLocaleString('pl-PL'));
             setEl('raport-client-clicks', clicks.toLocaleString('pl-PL'));
             setEl('raport-client-ctr', ctr.toFixed(2) + '%');
             setEl('raport-client-revenue', revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }));
+
+            // Funnel metrics
+            const addToCart = data.add_to_cart ?? 0;
+            const initiateCheckout = data.initiate_checkout ?? 0;
+
+            setEl('raport-client-funnel-clicks', clicks.toLocaleString('pl-PL'));
+            setEl('raport-client-funnel-atc', addToCart.toLocaleString('pl-PL'));
+            setEl('raport-client-funnel-checkout', initiateCheckout.toLocaleString('pl-PL'));
+            setEl('raport-client-funnel-purchases', purchases.toLocaleString('pl-PL'));
+
+            // Funnel rates
+            const atcRate = clicks > 0 ? (addToCart / clicks * 100) : 0;
+            const checkoutRate = clicks > 0 ? (initiateCheckout / clicks * 100) : 0;
+            const purchaseRate = clicks > 0 ? (purchases / clicks * 100) : 0;
+
+            setEl('raport-client-funnel-atc-rate', atcRate.toFixed(1) + '%');
+            setEl('raport-client-funnel-checkout-rate', checkoutRate.toFixed(1) + '%');
+            setEl('raport-client-funnel-purchases-rate', purchaseRate.toFixed(1) + '%');
 
             // Period
             const periodEl = document.getElementById('raport-period-client');
@@ -10279,7 +10338,7 @@
                         <span class="text-[13px] text-[#aaa]">${escapeHtml(c.name || 'Kampania')}</span>
                         <div class="flex items-center gap-3 text-[12px]">
                             <span class="text-[#666]">${(c.spend || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}</span>
-                            <span class="text-emerald-400">${c.conversions || 0} konw.</span>
+                            <span class="text-emerald-400">${c.purchases || c.conversions || 0} zakupów</span>
                         </div>
                     </div>
                 `).join('');
@@ -10299,6 +10358,74 @@
                 updatedEl.classList.add('hidden');
             }
         }
+
+        let clientReportHistory = [];
+
+        async function loadClientReportHistory() {
+            if (!workflow?.id) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_ad_reports')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .order('period_to', { ascending: false });
+
+                if (error) throw error;
+
+                clientReportHistory = data || [];
+                renderClientReportHistory();
+            } catch (err) {
+                console.error('Error loading client report history:', err);
+            }
+        }
+
+        function renderClientReportHistory() {
+            const historySection = document.getElementById('raport-history-client');
+            const historyList = document.getElementById('raport-history-list-client');
+
+            if (!historySection || !historyList) return;
+
+            if (clientReportHistory.length > 1) {
+                // Show history only if there's more than one report
+                historySection.classList.remove('hidden');
+
+                historyList.innerHTML = clientReportHistory.map((report, index) => {
+                    const periodFrom = new Date(report.period_from).toLocaleDateString('pl-PL');
+                    const periodTo = new Date(report.period_to).toLocaleDateString('pl-PL');
+                    const roas = report.roas?.toFixed(2) || '0';
+                    const roasClass = report.roas >= 2 ? 'text-emerald-400' : report.roas >= 1 ? 'text-amber-400' : 'text-rose-400';
+                    const isLatest = index === 0;
+
+                    return `
+                        <div class="flex items-center justify-between bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-[#111] transition-colors ${isLatest ? 'border-violet-500/30' : ''}"
+                             onclick="loadClientReportFromHistory('${report.id}')">
+                            <div>
+                                <div class="text-[12px] text-[#888]">${periodFrom} - ${periodTo}</div>
+                                <div class="text-[10px] text-[#555] mt-0.5">
+                                    ${(report.spend || 0).toLocaleString('pl-PL', {style:'currency',currency:'PLN'})} • ${report.purchases || 0} zakupów
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[14px] font-bold ${roasClass}">${roas}x</div>
+                                ${isLatest ? '<div class="text-[9px] text-violet-400">Najnowszy</div>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                historySection.classList.add('hidden');
+            }
+        }
+
+        function loadClientReportFromHistory(reportId) {
+            const report = clientReportHistory.find(r => r.id === reportId);
+            if (report && report.report_data) {
+                renderRaportStatsClient(report.report_data);
+            }
+        }
+
+        window.loadClientReportFromHistory = loadClientReportFromHistory;
 
         async function loadSkalowanie() {
             // Make sure we have ads data

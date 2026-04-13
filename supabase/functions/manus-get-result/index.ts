@@ -128,6 +128,7 @@ serve(async (req) => {
     if (workflow_id) {
       const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
+      // Zapisz bieżący raport w workflow_ads
       const { error: updateError } = await supabase
         .from('workflow_ads')
         .update({
@@ -138,7 +139,98 @@ serve(async (req) => {
         .eq('workflow_id', workflow_id)
 
       if (updateError) {
-        console.error('Error updating database:', updateError)
+        console.error('Error updating workflow_ads:', updateError)
+      }
+
+      // Zapisz do historii raportów
+      if (reportData && !reportData.parse_error) {
+        const periodFrom = reportData.period?.from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const periodTo = reportData.period?.to || new Date().toISOString().split('T')[0]
+
+        const { data: historyRecord, error: historyError } = await supabase
+          .from('workflow_ad_reports')
+          .insert({
+            workflow_id,
+            report_data: reportData,
+            period_from: periodFrom,
+            period_to: periodTo,
+            spend: reportData.spend || 0,
+            revenue: reportData.revenue || 0,
+            roas: reportData.roas || 0,
+            purchases: reportData.purchases || reportData.conversions || 0,
+            manus_task_id: task_id
+          })
+          .select()
+          .single()
+
+        if (historyError) {
+          console.error('Error saving to history:', historyError)
+        } else {
+          console.log('Saved report to history:', historyRecord.id)
+
+          // Sprawdź czy auto-raporty są włączone i wyślij email
+          const { data: adsData } = await supabase
+            .from('workflow_ads')
+            .select('auto_reports_enabled')
+            .eq('workflow_id', workflow_id)
+            .single()
+
+          if (adsData?.auto_reports_enabled) {
+            // Pobierz dane workflow i klienta
+            const { data: workflow } = await supabase
+              .from('workflows')
+              .select('id, name, client_email, client_name, client_token')
+              .eq('id', workflow_id)
+              .single()
+
+            if (workflow?.client_email) {
+              // Wyślij email z raportem
+              try {
+                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    to: workflow.client_email,
+                    template: 'ad_report',
+                    data: {
+                      client_name: workflow.client_name || 'Kliencie',
+                      project_name: workflow.name,
+                      period_from: periodFrom,
+                      period_to: periodTo,
+                      spend: reportData.spend || 0,
+                      revenue: reportData.revenue || 0,
+                      roas: (reportData.roas || 0).toFixed(2),
+                      purchases: reportData.purchases || reportData.conversions || 0,
+                      clicks: reportData.clicks || 0,
+                      impressions: reportData.impressions || 0,
+                      add_to_cart: reportData.add_to_cart || 0,
+                      initiate_checkout: reportData.initiate_checkout || 0,
+                      report_id: historyRecord.id,
+                      workflow_id: workflow_id,
+                      client_token: workflow.client_token || ''
+                    }
+                  })
+                })
+
+                // Oznacz raport jako wysłany
+                await supabase
+                  .from('workflow_ad_reports')
+                  .update({
+                    sent_to_client: true,
+                    sent_at: new Date().toISOString()
+                  })
+                  .eq('id', historyRecord.id)
+
+                console.log('Report email sent to:', workflow.client_email)
+              } catch (emailErr) {
+                console.error('Error sending report email:', emailErr)
+              }
+            }
+          }
+        }
       }
     }
 

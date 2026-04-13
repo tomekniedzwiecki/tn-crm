@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     reklamy: {
         label: 'Etap 4 - Reklamy',
         description: 'Maile związane z kampaniami reklamowymi',
-        templates: ['ads_activated', 'campaign_launched']
+        templates: ['ads_activated', 'campaign_launched', 'ad_report']
     }
 };
 
@@ -161,6 +161,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         name: 'Kampania uruchomiona',
         description: 'Wysyłany gdy admin uruchomi kampanię reklamową',
         icon: 'ph-rocket-launch',
+        color: 'rose'
+    },
+    'ad_report': {
+        name: 'Raport reklamowy',
+        description: 'Automatyczny raport z wynikami kampanii (co 7 dni)',
+        icon: 'ph-chart-line-up',
         color: 'rose'
     }
 };

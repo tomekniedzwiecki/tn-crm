@@ -50,17 +50,25 @@ Zwróć dane w formacie JSON:
   "clicks": [liczba kliknięć],
   "ctr": [CTR w procentach],
   "cpc": [koszt za kliknięcie w PLN],
-  "conversions": [liczba konwersji],
-  "conversion_rate": [współczynnik konwersji w %],
-  "cost_per_conversion": [koszt za konwersję w PLN],
-  "revenue": [przychód z konwersji w PLN, jeśli dostępny],
+  "add_to_cart": [liczba zdarzeń AddToCart],
+  "initiate_checkout": [liczba zdarzeń InitiateCheckout],
+  "purchases": [liczba zakupów/konwersji Purchase],
+  "conversion_rate": [współczynnik konwersji zakupów w %],
+  "cost_per_purchase": [koszt za zakup w PLN],
+  "revenue": [przychód z zakupów w PLN, jeśli dostępny],
   "roas": [ROAS = revenue/spend],
+  "funnel": {
+    "clicks_to_cart_rate": [% kliknięć które dodały do koszyka],
+    "cart_to_checkout_rate": [% koszyków które przeszły do kasy],
+    "checkout_to_purchase_rate": [% kas które zakończyły zakup]
+  },
   "campaigns": [
-    { "name": "nazwa kampanii", "spend": X, "conversions": Y, "impressions": Z }
+    { "name": "nazwa kampanii", "spend": X, "purchases": Y, "impressions": Z, "add_to_cart": A, "initiate_checkout": B }
   ]
 }
 
-Jeśli nie ma danych o przychodzie/konwersjach, ustaw na 0.
+Pobierz eventy konwersji: AddToCart, InitiateCheckout, Purchase.
+Jeśli nie ma danych, ustaw na 0.
 Zwróć TYLKO JSON, bez dodatkowego tekstu.
 `.trim()
 

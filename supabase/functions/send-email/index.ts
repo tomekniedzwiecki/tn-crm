@@ -47,6 +47,7 @@ const VALID_EMAIL_TYPES = [
   'ads_activated',
   'partner_step_completed',
   'ads_completed',
+  'ad_report',
   'direct'
 ]
 
@@ -75,7 +76,8 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   // Etap 4 - Reklamy
   ads_activated: 'Ruszamy z reklamami — etap 4 aktywowany!',
   partner_step_completed: 'Konto reklamowe gotowe!',
-  ads_completed: 'Budżet doładowany — zaczynamy kampanię!'
+  ads_completed: 'Budżet doładowany — zaczynamy kampanię!',
+  ad_report: 'Raport z kampanii reklamowej — {{period_from}} - {{period_to}}'
 }
 
 // Offer flow email types (use special reply-to)
