@@ -46,9 +46,9 @@ VALUES (
     </table>
 
     <div style="background: #fef3c7; border-radius: 12px; padding: 16px; margin: 24px 0;">
-        <div style="color: #92400e; font-size: 13px; font-weight: 600; margin-bottom: 8px;">📊 Lejek konwersji</div>
+        <div style="color: #92400e; font-size: 13px; font-weight: 600; margin-bottom: 8px;">Lejek konwersji</div>
         <div style="color: #78716c; font-size: 14px;">
-            Kliknięcia: {{clicks}} → Do koszyka: {{add_to_cart}} → Do kasy: {{initiate_checkout}} → Zakupy: {{purchases}}
+            Kliknięcia: {{clicks}} → Do kasy: {{initiate_checkout}} → Zakupy: {{purchases}}
         </div>
     </div>
 
@@ -57,7 +57,7 @@ VALUES (
     </p>
 
     <div style="text-align: center; margin: 32px 0;">
-        <a href="https://crm.tomekniedzwiecki.pl/client-projekt.html?token={{client_token}}" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Zobacz pełny raport</a>
+        <a href="https://crm.tomekniedzwiecki.pl/client-projekt.html?token={{client_token}}#raport" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Zobacz pełny raport</a>
     </div>
 
     <p style="color: #71717a; font-size: 13px; text-align: center; margin-top: 32px;">
