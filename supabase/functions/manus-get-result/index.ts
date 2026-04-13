@@ -114,9 +114,24 @@ serve(async (req) => {
     // Fallback to last message
     if (!result && messages.length > 0) {
       const lastMsg = messages[messages.length - 1]
-      result = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content)
+      if (lastMsg && lastMsg.content !== undefined) {
+        result = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content)
+      }
       console.log('Using fallback - last message content:', result?.substring(0, 200))
     }
+
+    // Also check task.output or task.result if messages don't have the data
+    if (!result && task.output) {
+      result = typeof task.output === 'string' ? task.output : JSON.stringify(task.output)
+      console.log('Using task.output:', result?.substring(0, 200))
+    }
+    if (!result && task.result) {
+      result = typeof task.result === 'string' ? task.result : JSON.stringify(task.result)
+      console.log('Using task.result:', result?.substring(0, 200))
+    }
+
+    // Ensure result is always a string
+    result = result || ''
 
     // Try to parse JSON from result
     let reportData = null
