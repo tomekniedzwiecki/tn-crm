@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041311';
+        const APP_VERSION = '2026041312';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4288,20 +4288,27 @@
 
             <!-- TAB: Raport (Etap 4) -->
             <div id="tab-raport" class="tab-panel hidden animate-enter">
-                <div class="max-w-3xl">
+                <div class="max-w-4xl">
+                    <!-- Header -->
                     <div class="flex items-start gap-4 mb-8">
                         <div class="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
                             <i class="ph ph-chart-line-up text-2xl text-violet-400"></i>
                         </div>
-                        <div>
-                            <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Raport z wyników</h2>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Raporty z kampanii</h2>
+                                <button id="raport-back-btn" onclick="showReportsList()" class="hidden text-[13px] text-[#888] hover:text-white flex items-center gap-1.5 transition-colors">
+                                    <i class="ph ph-arrow-left"></i>
+                                    Wszystkie raporty
+                                </button>
+                            </div>
                             <p class="text-[14px] text-[#888] leading-relaxed">
-                                Podsumowanie wyników Twoich kampanii reklamowych.
+                                Cykliczne podsumowania wyników Twoich kampanii reklamowych.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Waiting state -->
+                    <!-- Waiting state (no reports yet) -->
                     <div id="raport-waiting-client" class="hidden">
                         <div class="bg-violet-500/10 border border-violet-500/30 rounded-xl p-6">
                             <div class="flex items-center gap-4">
@@ -4310,151 +4317,135 @@
                                 </div>
                                 <div>
                                     <h3 class="text-[16px] font-medium text-violet-400">Zbieram dane</h3>
-                                    <p class="text-[13px] text-[#888] mt-1">Raport będzie gotowy po kilku dniach działania kampanii.</p>
+                                    <p class="text-[13px] text-[#888] mt-1">Pierwszy raport będzie gotowy po kilku dniach działania kampanii.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Ready state with stats -->
-                    <div id="raport-ready-client" class="hidden">
-                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
-                            <div class="flex items-center gap-4">
-                                <div class="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                    <i class="ph-fill ph-chart-line-up text-emerald-400 text-2xl"></i>
-                                </div>
+                    <!-- Reports list view -->
+                    <div id="raport-list-client" class="hidden">
+                        <div id="raport-list-container" class="grid gap-4">
+                            <!-- Rendered dynamically -->
+                        </div>
+
+                        <!-- Pagination -->
+                        <div id="raport-pagination" class="hidden mt-6 flex items-center justify-center gap-2">
+                            <button id="raport-prev-btn" onclick="changeReportsPage(-1)" class="px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed text-[13px] flex items-center gap-1 transition-colors">
+                                <i class="ph ph-caret-left"></i>
+                                Poprzednie
+                            </button>
+                            <span id="raport-page-info" class="text-[12px] text-[#666] px-3">1 / 1</span>
+                            <button id="raport-next-btn" onclick="changeReportsPage(1)" class="px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#888] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed text-[13px] flex items-center gap-1 transition-colors">
+                                Następne
+                                <i class="ph ph-caret-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Single report detail view -->
+                    <div id="raport-detail-client" class="hidden">
+                        <!-- Period header -->
+                        <div class="bg-gradient-to-r from-violet-500/10 to-transparent border border-violet-500/20 rounded-xl p-5 mb-6">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-[16px] font-medium text-emerald-400">Raport gotowy!</h3>
-                                    <p id="raport-ready-date" class="text-[13px] text-[#888] mt-1">Sprawdź wyniki kampanii</p>
+                                    <div class="text-[11px] text-violet-400/70 uppercase tracking-wider mb-1">Okres raportu</div>
+                                    <div id="raport-detail-period" class="text-lg font-semibold text-white">-</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[11px] text-[#666] uppercase tracking-wider mb-1">Wygenerowano</div>
+                                    <div id="raport-detail-created" class="text-[13px] text-[#888]">-</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Stats cards (if data available) -->
-                        <div id="raport-stats-client" class="hidden">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-[14px] font-medium text-white">Wyniki kampanii</h4>
-                                <span id="raport-period-client" class="text-[12px] text-[#666]">-</span>
+                        <!-- Main metrics - big cards -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-5 text-center">
+                                <div class="text-[11px] text-[#666] uppercase tracking-wide mb-3">Wydatki</div>
+                                <div id="raport-client-spend" class="text-2xl font-bold text-white">-</div>
                             </div>
+                            <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-5 text-center">
+                                <div class="text-[11px] text-[#666] uppercase tracking-wide mb-3">Przychód</div>
+                                <div id="raport-client-revenue" class="text-2xl font-bold text-emerald-400">-</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-violet-500/20 to-violet-500/5 border border-violet-500/30 rounded-xl p-5 text-center">
+                                <div class="text-[11px] text-violet-400/70 uppercase tracking-wide mb-3">ROAS</div>
+                                <div id="raport-client-roas" class="text-2xl font-bold text-violet-400">-</div>
+                            </div>
+                            <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-5 text-center">
+                                <div class="text-[11px] text-[#666] uppercase tracking-wide mb-3">Zakupy</div>
+                                <div id="raport-client-conversions" class="text-2xl font-bold text-emerald-400">-</div>
+                            </div>
+                        </div>
 
-                            <!-- Main metrics -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">Wydatki</div>
-                                    <div id="raport-client-spend" class="text-xl font-semibold text-white">-</div>
-                                </div>
-                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">Konwersje</div>
-                                    <div id="raport-client-conversions" class="text-xl font-semibold text-emerald-400">-</div>
-                                </div>
-                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">Koszt/konwersja</div>
-                                    <div id="raport-client-cpc" class="text-xl font-semibold text-white">-</div>
-                                </div>
-                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">ROAS</div>
-                                    <div id="raport-client-roas" class="text-xl font-semibold text-violet-400">-</div>
-                                </div>
+                        <!-- Secondary metrics -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Zasięg</div>
+                                <div id="raport-client-reach" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Wyświetlenia</div>
+                                <div id="raport-client-impressions" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Częstotliwość</div>
+                                <div id="raport-client-frequency" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">CPM</div>
+                                <div id="raport-client-cpm" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
+                                <div id="raport-client-clicks" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Wejścia na stronę</div>
+                                <div id="raport-client-lpv" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">CTR</div>
+                                <div id="raport-client-ctr" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                            <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Koszt/zakup</div>
+                                <div id="raport-client-cpc" class="text-[14px] font-medium text-[#888]">-</div>
+                            </div>
+                        </div>
 
-                            <!-- Secondary metrics - row 1 -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Zasięg</div>
-                                    <div id="raport-client-reach" class="text-[14px] font-medium text-[#888]">-</div>
-                                </div>
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Wyświetlenia</div>
-                                    <div id="raport-client-impressions" class="text-[14px] font-medium text-[#888]">-</div>
-                                </div>
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Częstotliwość</div>
-                                    <div id="raport-client-frequency" class="text-[14px] font-medium text-[#888]">-</div>
-                                </div>
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">CPM</div>
-                                    <div id="raport-client-cpm" class="text-[14px] font-medium text-[#888]">-</div>
-                                </div>
+                        <!-- Lejek konwersji (bez "Do koszyka") -->
+                        <div class="mb-6">
+                            <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3 flex items-center gap-2">
+                                <i class="ph ph-funnel"></i>
+                                Lejek konwersji
                             </div>
-                            <!-- Secondary metrics - row 2 -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                            <div class="flex items-center gap-2 overflow-x-auto pb-2">
+                                <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
                                     <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
-                                    <div id="raport-client-clicks" class="text-[14px] font-medium text-[#888]">-</div>
+                                    <div id="raport-client-funnel-clicks" class="text-xl font-bold text-[#888]">-</div>
+                                    <div class="text-[10px] text-[#444]">100%</div>
                                 </div>
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Wejścia na stronę</div>
-                                    <div id="raport-client-lpv" class="text-[14px] font-medium text-[#888]">-</div>
+                                <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
+                                <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Do kasy</div>
+                                    <div id="raport-client-funnel-checkout" class="text-xl font-bold text-amber-400">-</div>
+                                    <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#555]">-</div>
                                 </div>
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">CTR</div>
-                                    <div id="raport-client-ctr" class="text-[14px] font-medium text-[#888]">-</div>
+                                <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
+                                <div class="flex-1 min-w-[100px] bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
+                                    <div class="text-[10px] text-emerald-400/70 uppercase mb-1">Zakupy</div>
+                                    <div id="raport-client-funnel-purchases" class="text-xl font-bold text-emerald-400">-</div>
+                                    <div id="raport-client-funnel-purchases-rate" class="text-[10px] text-emerald-500/70">-</div>
                                 </div>
-                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Przychód</div>
-                                    <div id="raport-client-revenue" class="text-[14px] font-medium text-emerald-400">-</div>
-                                </div>
-                            </div>
-
-                            <!-- Lejek konwersji -->
-                            <div class="mb-4">
-                                <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3 flex items-center gap-2">
-                                    <i class="ph ph-funnel"></i>
-                                    Lejek konwersji
-                                </div>
-                                <div class="flex items-center gap-2 overflow-x-auto pb-2">
-                                    <div class="flex-1 min-w-[80px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-3 text-center">
-                                        <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
-                                        <div id="raport-client-funnel-clicks" class="text-lg font-bold text-[#888]">-</div>
-                                        <div class="text-[10px] text-[#444]">100%</div>
-                                    </div>
-                                    <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                    <div class="flex-1 min-w-[80px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-3 text-center">
-                                        <div class="text-[10px] text-[#555] uppercase mb-1">Do koszyka</div>
-                                        <div id="raport-client-funnel-atc" class="text-lg font-bold text-blue-400">-</div>
-                                        <div id="raport-client-funnel-atc-rate" class="text-[10px] text-[#555]">-</div>
-                                    </div>
-                                    <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                    <div class="flex-1 min-w-[80px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-3 text-center">
-                                        <div class="text-[10px] text-[#555] uppercase mb-1">Do kasy</div>
-                                        <div id="raport-client-funnel-checkout" class="text-lg font-bold text-amber-400">-</div>
-                                        <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#555]">-</div>
-                                    </div>
-                                    <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                    <div class="flex-1 min-w-[80px] bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
-                                        <div class="text-[10px] text-emerald-400/70 uppercase mb-1">Zakupy</div>
-                                        <div id="raport-client-funnel-purchases" class="text-lg font-bold text-emerald-400">-</div>
-                                        <div id="raport-client-funnel-purchases-rate" class="text-[10px] text-emerald-500/70">-</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Campaigns breakdown -->
-                            <div id="raport-campaigns-client" class="hidden">
-                                <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3">Kampanie</div>
-                                <div id="raport-campaigns-container-client" class="space-y-2">
-                                    <!-- Rendered dynamically -->
-                                </div>
-                            </div>
-
-                            <!-- Last updated info -->
-                            <div id="raport-updated-client" class="hidden mt-4 pt-4 border-t border-[#1a1a1a]">
-                                <p class="text-[11px] text-[#555] flex items-center gap-2">
-                                    <i class="ph ph-clock"></i>
-                                    Dane z: <span id="raport-updated-date-client">-</span>
-                                </p>
                             </div>
                         </div>
 
-                        <!-- Report History -->
-                        <div id="raport-history-client" class="hidden mt-6">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="text-[11px] text-[#555] uppercase tracking-wide flex items-center gap-2">
-                                    <i class="ph ph-clock-counter-clockwise"></i>
-                                    Historia raportów
-                                </div>
-                            </div>
-                            <div id="raport-history-list-client" class="space-y-2">
+                        <!-- Campaigns breakdown -->
+                        <div id="raport-campaigns-client" class="hidden">
+                            <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3">Kampanie</div>
+                            <div id="raport-campaigns-container-client" class="space-y-2">
                                 <!-- Rendered dynamically -->
                             </div>
                         </div>
@@ -10318,146 +10309,262 @@
             }
         }
 
-        async function loadRaportClient() {
-            // Make sure we have ads data
-            if (!adsData) {
-                const { data } = await supabaseClient
-                    .from('workflow_ads')
-                    .select('*')
-                    .eq('workflow_id', workflow.id)
-                    .maybeSingle();
-                adsData = data;
-            }
+        // ========== REPORTS SYSTEM ==========
+        let clientReports = [];
+        let reportsPage = 1;
+        const REPORTS_PER_PAGE = 6;
+        let currentReportId = null;
 
+        async function loadRaportClient() {
             const waitingEl = document.getElementById('raport-waiting-client');
-            const readyEl = document.getElementById('raport-ready-client');
-            const statsEl = document.getElementById('raport-stats-client');
-            const urlEl = document.getElementById('raport-url-client');
+            const listEl = document.getElementById('raport-list-client');
+            const detailEl = document.getElementById('raport-detail-client');
+            const navItem = document.getElementById('nav-raport-desktop');
+            const navItemMobile = document.getElementById('nav-raport-mobile');
             const navCheck = document.getElementById('nav-check-raport-desktop');
             const navCheckMobile = document.getElementById('nav-check-raport-mobile');
 
             // Hide all states first
-            if (waitingEl) waitingEl.classList.add('hidden');
-            if (readyEl) readyEl.classList.add('hidden');
-            if (statsEl) statsEl.classList.add('hidden');
-            if (urlEl) urlEl.classList.add('hidden');
+            waitingEl?.classList.add('hidden');
+            listEl?.classList.add('hidden');
+            detailEl?.classList.add('hidden');
 
-            // Show/hide nav items based on report_sent
-            const navItem = document.getElementById('nav-raport-desktop');
-            const navItemMobile = document.getElementById('nav-raport-mobile');
+            // Load reports from database
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_ad_reports')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .order('period_to', { ascending: false });
 
-            if (adsData?.report_sent) {
-                // Report ready - show nav items
-                if (navItem) navItem.classList.remove('hidden');
-                if (navItemMobile) navItemMobile.classList.remove('hidden');
-                if (readyEl) readyEl.classList.remove('hidden');
-                if (navCheck) navCheck.classList.remove('hidden');
-                if (navCheckMobile) navCheckMobile.classList.remove('hidden');
+                if (error) throw error;
+                clientReports = data || [];
+            } catch (err) {
+                console.error('Error loading reports:', err);
+                clientReports = [];
+            }
 
-                const sentDate = adsData.report_sent_at;
-                if (sentDate) {
-                    const dateEl = document.getElementById('raport-ready-date');
-                    if (dateEl) {
-                        dateEl.textContent = 'Wysłano ' + new Date(sentDate).toLocaleDateString('pl-PL', {
-                            day: 'numeric', month: 'short', year: 'numeric'
-                        });
-                    }
-                }
+            if (clientReports.length > 0) {
+                // Has reports - show nav and list
+                navItem?.classList.remove('hidden');
+                navItemMobile?.classList.remove('hidden');
+                navCheck?.classList.remove('hidden');
+                navCheckMobile?.classList.remove('hidden');
 
-                // Render stats if available
-                if (adsData.report_data && Object.keys(adsData.report_data).length > 0) {
-                    if (statsEl) statsEl.classList.remove('hidden');
-                    renderRaportStatsClient(adsData.report_data);
-                }
-
-                // Load report history
-                loadClientReportHistory();
-
-                // Show report URL if available
-                if (adsData.report_url) {
-                    if (urlEl) urlEl.classList.remove('hidden');
-                    const linkEl = document.getElementById('raport-url-link-client');
-                    if (linkEl) linkEl.href = adsData.report_url;
+                // Check if we should show a specific report (from URL hash or email link)
+                const hash = window.location.hash;
+                if (hash === '#raport' && clientReports.length > 0) {
+                    // Show the latest report directly
+                    showReportDetail(clientReports[0].id);
+                } else {
+                    showReportsList();
                 }
             } else {
-                // Waiting for report - hide nav items
-                if (navItem) navItem.classList.add('hidden');
-                if (navItemMobile) navItemMobile.classList.add('hidden');
-                if (waitingEl) waitingEl.classList.remove('hidden');
-                if (navCheck) navCheck.classList.add('hidden');
-                if (navCheckMobile) navCheckMobile.classList.add('hidden');
+                // No reports yet - show waiting state, hide nav
+                navItem?.classList.add('hidden');
+                navItemMobile?.classList.add('hidden');
+                navCheck?.classList.add('hidden');
+                navCheckMobile?.classList.add('hidden');
+                waitingEl?.classList.remove('hidden');
             }
         }
 
-        function renderRaportStatsClient(data) {
-            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+        function showReportsList() {
+            const listEl = document.getElementById('raport-list-client');
+            const detailEl = document.getElementById('raport-detail-client');
+            const backBtn = document.getElementById('raport-back-btn');
+
+            detailEl?.classList.add('hidden');
+            listEl?.classList.remove('hidden');
+            backBtn?.classList.add('hidden');
+
+            currentReportId = null;
+            renderReportsList();
+        }
+
+        function renderReportsList() {
+            const container = document.getElementById('raport-list-container');
+            const paginationEl = document.getElementById('raport-pagination');
+            if (!container) return;
+
+            const totalPages = Math.ceil(clientReports.length / REPORTS_PER_PAGE);
+            const startIdx = (reportsPage - 1) * REPORTS_PER_PAGE;
+            const pageReports = clientReports.slice(startIdx, startIdx + REPORTS_PER_PAGE);
+
+            container.innerHTML = pageReports.map((report, idx) => {
+                const globalIdx = startIdx + idx;
+                const periodFrom = new Date(report.period_from).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+                const periodTo = new Date(report.period_to).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+                const roas = (report.roas || 0).toFixed(2);
+                const roasClass = report.roas >= 2 ? 'text-emerald-400' : report.roas >= 1 ? 'text-amber-400' : 'text-rose-400';
+                const roasBg = report.roas >= 2 ? 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/30' : report.roas >= 1 ? 'from-amber-500/20 to-amber-500/5 border-amber-500/30' : 'from-rose-500/20 to-rose-500/5 border-rose-500/30';
+                const isNew = !report.viewed_at;
+                const isLatest = globalIdx === 0;
+                const currency = report.report_data?.currency || 'PLN';
+
+                const fmtMoney = (n) => {
+                    try {
+                        return (n || 0).toLocaleString('pl-PL', { style: 'currency', currency });
+                    } catch (e) {
+                        return (n || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 }) + ' ' + currency;
+                    }
+                };
+
+                return `
+                    <div class="bg-[#0d0d0d] border ${isLatest ? 'border-violet-500/30' : 'border-[#1a1a1a]'} rounded-xl p-5 cursor-pointer hover:bg-[#111] hover:border-[#333] transition-all group"
+                         onclick="showReportDetail('${report.id}')">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[15px] font-medium text-white">${periodFrom} - ${periodTo}</span>
+                                    ${isNew ? '<span class="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 text-[10px] font-medium uppercase tracking-wider">Nowy</span>' : ''}
+                                    ${isLatest ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-medium uppercase tracking-wider">Najnowszy</span>' : ''}
+                                </div>
+                                <div class="text-[12px] text-[#666]">
+                                    Wygenerowano ${new Date(report.created_at).toLocaleDateString('pl-PL')}
+                                </div>
+                            </div>
+                            <div class="bg-gradient-to-br ${roasBg} rounded-lg px-3 py-2 text-center">
+                                <div class="text-[10px] text-[#888] uppercase mb-0.5">ROAS</div>
+                                <div class="text-xl font-bold ${roasClass}">${roas}x</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Wydatki</div>
+                                <div class="text-[14px] font-medium text-white">${fmtMoney(report.spend)}</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Przychód</div>
+                                <div class="text-[14px] font-medium text-emerald-400">${fmtMoney(report.revenue)}</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-[#555] uppercase mb-1">Zakupy</div>
+                                <div class="text-[14px] font-medium text-white">${report.purchases || 0}</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-[#1a1a1a] flex items-center justify-between">
+                            <span class="text-[12px] text-[#666] group-hover:text-[#888] transition-colors">Zobacz szczegóły</span>
+                            <i class="ph ph-arrow-right text-[#444] group-hover:text-violet-400 transition-colors"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Pagination
+            if (totalPages > 1) {
+                paginationEl?.classList.remove('hidden');
+                document.getElementById('raport-page-info').textContent = `${reportsPage} / ${totalPages}`;
+                document.getElementById('raport-prev-btn').disabled = reportsPage <= 1;
+                document.getElementById('raport-next-btn').disabled = reportsPage >= totalPages;
+            } else {
+                paginationEl?.classList.add('hidden');
+            }
+        }
+
+        function changeReportsPage(delta) {
+            const totalPages = Math.ceil(clientReports.length / REPORTS_PER_PAGE);
+            reportsPage = Math.max(1, Math.min(totalPages, reportsPage + delta));
+            renderReportsList();
+        }
+
+        async function showReportDetail(reportId) {
+            const report = clientReports.find(r => r.id === reportId);
+            if (!report) return;
+
+            currentReportId = reportId;
+
+            const listEl = document.getElementById('raport-list-client');
+            const detailEl = document.getElementById('raport-detail-client');
+            const backBtn = document.getElementById('raport-back-btn');
+
+            listEl?.classList.add('hidden');
+            detailEl?.classList.remove('hidden');
+            if (clientReports.length > 1) {
+                backBtn?.classList.remove('hidden');
+            }
+
+            // Mark as viewed if not already
+            if (!report.viewed_at) {
+                try {
+                    await supabaseClient
+                        .from('workflow_ad_reports')
+                        .update({ viewed_at: new Date().toISOString() })
+                        .eq('id', reportId);
+                    report.viewed_at = new Date().toISOString();
+                } catch (err) {
+                    console.error('Error marking report as viewed:', err);
+                }
+            }
+
+            // Render report detail
+            renderReportDetail(report);
+        }
+
+        function renderReportDetail(report) {
+            const data = report.report_data || {};
             const currency = data.currency || 'PLN';
+
+            const setEl = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = val;
+            };
+
             const fmtCurrency = (n) => {
                 const num = Number(n) || 0;
                 try {
-                    return num.toLocaleString('pl-PL', { style: 'currency', currency: currency });
+                    return num.toLocaleString('pl-PL', { style: 'currency', currency });
                 } catch (e) {
                     return num.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
                 }
             };
 
+            // Period header
+            const periodFrom = new Date(report.period_from).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+            const periodTo = new Date(report.period_to).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+            setEl('raport-detail-period', `${periodFrom} - ${periodTo}`);
+            setEl('raport-detail-created', new Date(report.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }));
+
+            // Main metrics
             const spend = Number(data.spend) || 0;
-            const purchases = Number(data.purchases ?? data.conversions) || 0;
-            const costPerConversion = purchases > 0 ? spend / purchases : 0;
             const revenue = Number(data.revenue) || 0;
+            const purchases = Number(data.purchases ?? data.conversions) || 0;
             const roas = spend > 0 ? revenue / spend : 0;
+            const costPerPurchase = purchases > 0 ? spend / purchases : 0;
+
+            setEl('raport-client-spend', fmtCurrency(spend));
+            setEl('raport-client-revenue', fmtCurrency(revenue));
+            setEl('raport-client-roas', roas.toFixed(2) + 'x');
+            setEl('raport-client-conversions', purchases.toString());
+
+            // Secondary metrics
             const impressions = Number(data.impressions) || 0;
             const clicks = Number(data.clicks) || 0;
-            const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
-
-            // New metrics
             const reach = Number(data.reach) || 0;
             const frequency = Number(data.frequency) || 0;
             const cpm = Number(data.cpm) || (impressions > 0 ? (spend / impressions * 1000) : 0);
             const landingPageViews = Number(data.landing_page_views) || 0;
+            const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
 
-            setEl('raport-client-spend', fmtCurrency(spend));
-            setEl('raport-client-conversions', purchases.toString());
-            setEl('raport-client-cpc', fmtCurrency(costPerConversion));
-            setEl('raport-client-roas', roas.toFixed(2) + 'x');
-
-            // Row 1: reach, impressions, frequency, CPM
             setEl('raport-client-reach', reach.toLocaleString('pl-PL'));
             setEl('raport-client-impressions', impressions.toLocaleString('pl-PL'));
             setEl('raport-client-frequency', frequency.toFixed(2));
             setEl('raport-client-cpm', fmtCurrency(cpm));
-
-            // Row 2: clicks, lpv, CTR, revenue
             setEl('raport-client-clicks', clicks.toLocaleString('pl-PL'));
             setEl('raport-client-lpv', landingPageViews.toLocaleString('pl-PL'));
             setEl('raport-client-ctr', ctr.toFixed(2) + '%');
-            setEl('raport-client-revenue', fmtCurrency(revenue));
+            setEl('raport-client-cpc', fmtCurrency(costPerPurchase));
 
-            // Funnel metrics
-            const addToCart = data.add_to_cart ?? 0;
-            const initiateCheckout = data.initiate_checkout ?? 0;
-
-            setEl('raport-client-funnel-clicks', clicks.toLocaleString('pl-PL'));
-            setEl('raport-client-funnel-atc', addToCart.toLocaleString('pl-PL'));
-            setEl('raport-client-funnel-checkout', initiateCheckout.toLocaleString('pl-PL'));
-            setEl('raport-client-funnel-purchases', purchases.toLocaleString('pl-PL'));
-
-            // Funnel rates
-            const atcRate = clicks > 0 ? (addToCart / clicks * 100) : 0;
+            // Funnel (bez "Do koszyka")
+            const initiateCheckout = Number(data.initiate_checkout) || 0;
             const checkoutRate = clicks > 0 ? (initiateCheckout / clicks * 100) : 0;
             const purchaseRate = clicks > 0 ? (purchases / clicks * 100) : 0;
 
-            setEl('raport-client-funnel-atc-rate', atcRate.toFixed(1) + '%');
+            setEl('raport-client-funnel-clicks', clicks.toLocaleString('pl-PL'));
+            setEl('raport-client-funnel-checkout', initiateCheckout.toLocaleString('pl-PL'));
             setEl('raport-client-funnel-checkout-rate', checkoutRate.toFixed(1) + '%');
+            setEl('raport-client-funnel-purchases', purchases.toLocaleString('pl-PL'));
             setEl('raport-client-funnel-purchases-rate', purchaseRate.toFixed(1) + '%');
-
-            // Period
-            const periodEl = document.getElementById('raport-period-client');
-            if (periodEl && data.period) {
-                const from = data.period.from ? new Date(data.period.from).toLocaleDateString('pl-PL') : '?';
-                const to = data.period.to ? new Date(data.period.to).toLocaleDateString('pl-PL') : '?';
-                periodEl.textContent = `${from} - ${to}`;
-            }
 
             // Campaigns breakdown
             const campaignsContainer = document.getElementById('raport-campaigns-container-client');
@@ -10473,98 +10580,15 @@
                         </div>
                     </div>
                 `).join('');
-            } else if (campaignsList) {
-                campaignsList.classList.add('hidden');
-            }
-
-            // Last updated
-            const updatedEl = document.getElementById('raport-updated-client');
-            const updatedDateEl = document.getElementById('raport-updated-date-client');
-            if (updatedEl && data.fetched_at) {
-                updatedEl.classList.remove('hidden');
-                updatedDateEl.textContent = new Date(data.fetched_at).toLocaleDateString('pl-PL', {
-                    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                });
-            } else if (updatedEl) {
-                updatedEl.classList.add('hidden');
-            }
-        }
-
-        let clientReportHistory = [];
-
-        async function loadClientReportHistory() {
-            if (!workflow?.id) return;
-
-            try {
-                const { data, error } = await supabaseClient
-                    .from('workflow_ad_reports')
-                    .select('*')
-                    .eq('workflow_id', workflow.id)
-                    .order('period_to', { ascending: false });
-
-                if (error) throw error;
-
-                clientReportHistory = data || [];
-                renderClientReportHistory();
-            } catch (err) {
-                console.error('Error loading client report history:', err);
-            }
-        }
-
-        function renderClientReportHistory() {
-            const historySection = document.getElementById('raport-history-client');
-            const historyList = document.getElementById('raport-history-list-client');
-
-            if (!historySection || !historyList) return;
-
-            if (clientReportHistory.length > 1) {
-                // Show history only if there's more than one report
-                historySection.classList.remove('hidden');
-
-                historyList.innerHTML = clientReportHistory.map((report, index) => {
-                    const periodFrom = new Date(report.period_from).toLocaleDateString('pl-PL');
-                    const periodTo = new Date(report.period_to).toLocaleDateString('pl-PL');
-                    const roas = report.roas?.toFixed(2) || '0';
-                    const roasClass = report.roas >= 2 ? 'text-emerald-400' : report.roas >= 1 ? 'text-amber-400' : 'text-rose-400';
-                    const isLatest = index === 0;
-                    const reportCurrency = report.report_data?.currency || 'PLN';
-                    const spendFormatted = (() => {
-                        try {
-                            return (report.spend || 0).toLocaleString('pl-PL', {style:'currency',currency:reportCurrency});
-                        } catch (e) {
-                            return (report.spend || 0).toLocaleString('pl-PL', {minimumFractionDigits:2}) + ' ' + reportCurrency;
-                        }
-                    })();
-
-                    return `
-                        <div class="flex items-center justify-between bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-[#111] transition-colors ${isLatest ? 'border-violet-500/30' : ''}"
-                             onclick="loadClientReportFromHistory('${report.id}')">
-                            <div>
-                                <div class="text-[12px] text-[#888]">${periodFrom} - ${periodTo}</div>
-                                <div class="text-[10px] text-[#555] mt-0.5">
-                                    ${spendFormatted} • ${report.purchases || 0} zakupów
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-[14px] font-bold ${roasClass}">${roas}x</div>
-                                ${isLatest ? '<div class="text-[9px] text-violet-400">Najnowszy</div>' : ''}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
             } else {
-                historySection.classList.add('hidden');
+                campaignsList?.classList.add('hidden');
             }
         }
 
-        function loadClientReportFromHistory(reportId) {
-            const report = clientReportHistory.find(r => r.id === reportId);
-            if (report && report.report_data) {
-                renderRaportStatsClient(report.report_data);
-            }
-        }
-
-        window.loadClientReportFromHistory = loadClientReportFromHistory;
+        // Expose functions globally
+        window.showReportsList = showReportsList;
+        window.showReportDetail = showReportDetail;
+        window.changeReportsPage = changeReportsPage;
 
         async function loadSkalowanie() {
             // Make sure we have ads data
