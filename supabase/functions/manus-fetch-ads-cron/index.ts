@@ -97,21 +97,26 @@ Jeśli nie ma danych o przychodzie/konwersjach, ustaw na 0.
 Zwróć TYLKO JSON, bez dodatkowego tekstu.
 `.trim()
 
+        // Get Meta Ads connector UUID from env
+        const META_ADS_CONNECTOR_UUID = Deno.env.get('MANUS_META_ADS_CONNECTOR_UUID')
+
+        const requestBody: any = {
+          message: {
+            content: instruction
+          }
+        }
+
+        if (META_ADS_CONNECTOR_UUID) {
+          requestBody.message.connectors = [META_ADS_CONNECTOR_UUID]
+        }
+
         const manusResponse = await fetch('https://api.manus.ai/v2/task.create', {
           method: 'POST',
           headers: {
             'x-manus-api-key': MANUS_API_KEY,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            instruction,
-            connectors: ['meta_ads'],
-            metadata: {
-              workflow_id: workflow.workflow_id,
-              ad_account_id: workflow.meta_ad_account_id,
-              type: 'ads_report_cron'
-            }
-          })
+          body: JSON.stringify(requestBody)
         })
 
         const manusData = await manusResponse.json()
