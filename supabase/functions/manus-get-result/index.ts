@@ -66,6 +66,14 @@ serve(async (req) => {
 
     const task = detailData.task || detailData
 
+    // Log all task fields to find where the result is
+    console.log('Task keys:', Object.keys(task))
+    console.log('Task output:', task.output ? JSON.stringify(task.output).substring(0, 500) : 'none')
+    console.log('Task result:', task.result ? JSON.stringify(task.result).substring(0, 500) : 'none')
+    console.log('Task response:', task.response ? JSON.stringify(task.response).substring(0, 500) : 'none')
+    console.log('Task data:', task.data ? JSON.stringify(task.data).substring(0, 500) : 'none')
+    console.log('Task final_output:', task.final_output ? JSON.stringify(task.final_output).substring(0, 500) : 'none')
+
     // Check status - Manus uses 'stopped' when agent finishes working
     const isFinished = ['completed', 'done', 'stopped'].includes(task.status)
     if (!isFinished) {
@@ -98,16 +106,43 @@ serve(async (req) => {
     console.log('Total messages:', messages.length)
     console.log('Message roles:', messages.map((m: any) => m.role).join(', '))
 
-    // Look for assistant messages that might contain JSON (use spread to not mutate original)
+    // Log all messages to see the structure
+    for (let i = 0; i < Math.min(messages.length, 5); i++) {
+      const msg = messages[i]
+      console.log(`Message ${i}:`, JSON.stringify(msg).substring(0, 300))
+    }
+
+    // Look for assistant messages that might contain JSON
+    // Manus API uses type: "assistant_message" with content in msg.assistant_message
+    // IMPORTANT: Only check assistant_message type, not user_message (which contains the instruction)
     for (const msg of [...messages].reverse()) {
-      if (msg.role === 'assistant' && msg.content) {
-        const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-        console.log('Assistant message preview:', content.substring(0, 200))
-        if (content.includes('{') && content.includes('}')) {
-          result = content
-          console.log('Found JSON-like content in assistant message')
-          break
-        }
+      // Skip non-assistant messages
+      if (msg.type !== 'assistant_message') {
+        continue
+      }
+
+      // Get the assistant message content
+      const assistantContent = msg.assistant_message
+      if (!assistantContent) continue
+
+      // Handle both string and object formats
+      let content: string
+      if (typeof assistantContent === 'string') {
+        content = assistantContent
+      } else if (typeof assistantContent === 'object') {
+        // Check nested fields
+        content = assistantContent.content || assistantContent.text || assistantContent.message || JSON.stringify(assistantContent)
+      } else {
+        continue
+      }
+
+      console.log('Checking assistant_message, preview:', content.substring(0, 300))
+
+      // Look for JSON with ad metrics
+      if (content.includes('{') && (content.includes('"spend"') || content.includes('"impressions"') || content.includes('"clicks"'))) {
+        result = content
+        console.log('Found JSON-like content with ad metrics in assistant_message')
+        break
       }
     }
 
@@ -174,13 +209,44 @@ serve(async (req) => {
         }
         console.log('Parsed reportData keys:', Object.keys(reportData))
       } else {
-        // No JSON found - save raw result for debugging
+        // No JSON found - save raw result AND raw Manus data for debugging
         console.log('No JSON braces found in result')
         reportData = {
           raw_result: result || '(empty)',
           parse_error: true,
           error_reason: 'no_json_found',
-          status: task.status
+          status: task.status,
+          // Include raw Manus data for debugging
+          debug_task_keys: Object.keys(task),
+          debug_task_output: task.output ? String(task.output).substring(0, 1000) : null,
+          debug_task_result: task.result ? String(task.result).substring(0, 1000) : null,
+          debug_messages_count: messages.length,
+          debug_all_messages: messages.map((m: any, i: number) => {
+            // For assistant_message type, dump the full structure
+            const assistantMsg = m.assistant_message
+            let assistantContent = null
+            if (assistantMsg) {
+              if (typeof assistantMsg === 'string') {
+                assistantContent = assistantMsg.substring(0, 500)
+              } else if (typeof assistantMsg === 'object') {
+                // Check common nested fields
+                assistantContent = {
+                  keys: Object.keys(assistantMsg),
+                  content: assistantMsg.content ? String(assistantMsg.content).substring(0, 500) : null,
+                  text: assistantMsg.text ? String(assistantMsg.text).substring(0, 500) : null,
+                  message: assistantMsg.message ? String(assistantMsg.message).substring(0, 500) : null,
+                  full_preview: JSON.stringify(assistantMsg).substring(0, 800)
+                }
+              }
+            }
+            return {
+              index: i,
+              type: m.type,
+              assistant_message: assistantContent,
+              user_message: m.user_message ? (typeof m.user_message === 'object' ? JSON.stringify(m.user_message).substring(0, 300) : String(m.user_message).substring(0, 300)) : null
+            }
+          }),
+          debug_messages_data_keys: Object.keys(messagesData)
         }
       }
     } catch (parseErr) {
