@@ -2542,55 +2542,7 @@
                                     <i class="ph ph-chart-line-up text-2xl text-zinc-600"></i>
                                 </div>
                                 <h4 class="text-[14px] font-medium text-zinc-300 mb-2">Brak danych kampanii</h4>
-                                <p class="text-[12px] text-zinc-600 mb-1">Wybierz okres i kliknij "Pobierz dane" aby pobrać statystyki z Meta Ads</p>
-                                <p class="text-[11px] text-zinc-700">lub użyj ręcznego wprowadzania danych poniżej</p>
-                            </div>
-                        </div>
-
-                        <!-- Manual data entry (collapsible) -->
-                        <div class="mb-6">
-                            <button onclick="toggleManualReportEntry()" class="flex items-center gap-2 text-[12px] text-zinc-500 hover:text-white transition-colors mb-3">
-                                <i id="manual-entry-chevron" class="ph ph-caret-right text-xs transition-transform"></i>
-                                <span>Ręczne wprowadzenie danych</span>
-                            </button>
-                            <div id="manual-entry-panel" class="hidden pl-4 border-l border-zinc-800">
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Wydatki (PLN)</label>
-                                        <input type="number" id="manual-spend" step="0.01" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0.00">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Konwersje</label>
-                                        <input type="number" id="manual-conversions" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Przychód (PLN)</label>
-                                        <input type="number" id="manual-revenue" step="0.01" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0.00">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Wyświetlenia</label>
-                                        <input type="number" id="manual-impressions" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0">
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Kliknięcia</label>
-                                        <input type="number" id="manual-clicks" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Okres od</label>
-                                        <input type="date" id="manual-period-from" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Okres do</label>
-                                        <input type="date" id="manual-period-to" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none">
-                                    </div>
-                                    <div class="flex items-end">
-                                        <button onclick="saveManualReportData()" class="w-full bg-zinc-700 hover:bg-zinc-600 text-white py-2 rounded-lg text-[13px] font-medium transition-colors">
-                                            Zapisz dane
-                                        </button>
-                                    </div>
-                                </div>
+                                <p class="text-[12px] text-zinc-600">Wybierz okres i kliknij "Pobierz dane" aby pobrać statystyki z Meta Ads przez Manus</p>
                             </div>
                         </div>
 
@@ -9960,78 +9912,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
-        function toggleManualReportEntry() {
-            const panel = document.getElementById('manual-entry-panel');
-            const chevron = document.getElementById('manual-entry-chevron');
-            if (panel) {
-                panel.classList.toggle('hidden');
-                chevron?.classList.toggle('rotate-90');
-            }
-        }
-
-        async function saveManualReportData() {
-            const spend = parseFloat(document.getElementById('manual-spend')?.value) || 0;
-            const conversions = parseInt(document.getElementById('manual-conversions')?.value) || 0;
-            const revenue = parseFloat(document.getElementById('manual-revenue')?.value) || 0;
-            const impressions = parseInt(document.getElementById('manual-impressions')?.value) || 0;
-            const clicks = parseInt(document.getElementById('manual-clicks')?.value) || 0;
-            const periodFrom = document.getElementById('manual-period-from')?.value || null;
-            const periodTo = document.getElementById('manual-period-to')?.value || null;
-
-            const reportData = {
-                spend,
-                conversions,
-                revenue,
-                impressions,
-                clicks,
-                ctr: impressions > 0 ? (clicks / impressions * 100) : 0,
-                cost_per_conversion: conversions > 0 ? spend / conversions : 0,
-                roas: spend > 0 ? revenue / spend : 0,
-                period: { from: periodFrom, to: periodTo },
-                source: 'manual',
-                fetched_at: new Date().toISOString()
-            };
-
-            try {
-                const now = new Date().toISOString();
-
-                if (adsData?.id) {
-                    const { error } = await supabaseClient
-                        .from('workflow_ads')
-                        .update({
-                            report_data: reportData,
-                            report_generated_at: now
-                        })
-                        .eq('id', adsData.id);
-
-                    if (error) throw error;
-                    adsData.report_data = reportData;
-                    adsData.report_generated_at = now;
-                } else {
-                    const { data, error } = await supabaseClient
-                        .from('workflow_ads')
-                        .insert({
-                            workflow_id: workflow.id,
-                            is_active: true,
-                            activated_at: now,
-                            report_data: reportData,
-                            report_generated_at: now
-                        })
-                        .select()
-                        .single();
-
-                    if (error) throw error;
-                    adsData = data;
-                }
-
-                showToast('Dane raportu zapisane!', 'success');
-                loadRaportTab();
-            } catch (err) {
-                console.error('Error saving manual report data:', err);
-                showToast('Błąd zapisywania danych', 'error');
-            }
-        }
-
         async function saveReportUrl() {
             const url = document.getElementById('raport-url-input')?.value?.trim() || null;
 
@@ -10185,8 +10065,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.loadRaportTab = loadRaportTab;
         window.markReportSent = markReportSent;
         window.resetReportSent = resetReportSent;
-        window.toggleManualReportEntry = toggleManualReportEntry;
-        window.saveManualReportData = saveManualReportData;
         window.saveReportUrl = saveReportUrl;
         window.fetchReportDataManus = fetchReportDataManus;
         window.saveMetaAdAccountId = saveMetaAdAccountId;
