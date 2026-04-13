@@ -299,6 +299,16 @@
                                 <i class="ph ph-rocket-launch"></i> Kampania
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
+                            <button onclick="toggleStatusStage('ads_report')" data-stage="ads_report"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-chart-line-up"></i> Raport
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
+                            <button onclick="toggleStatusStage('skalowanie')" data-stage="skalowanie"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-trend-up"></i> Skalowanie
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
                         </div>
                     </div>
                     <!-- Owner Filter -->
@@ -913,6 +923,14 @@
                         if (stage === 'campaign') {
                             return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified) && w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched;
                         }
+                        // "ads_report" = kampania uruchomiona ALE raport NIE wysłany
+                        if (stage === 'ads_report') {
+                            return w.ads_stage?.campaign_launched && !w.ads_stage?.report_sent;
+                        }
+                        // "skalowanie" = raport wysłany ALE skalowanie NIE rozpoczęte
+                        if (stage === 'skalowanie') {
+                            return w.ads_stage?.report_sent && !w.ads_stage?.scaling_started;
+                        }
                         // Other stages = next step
                         return nextStep === stage;
                     });
@@ -1018,7 +1036,7 @@
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
                 takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
-                ad_account: 0, budget: 0, campaign: 0
+                ad_account: 0, budget: 0, campaign: 0, ads_report: 0, skalowanie: 0
             };
 
             // Only count active workflows
@@ -1080,12 +1098,22 @@
                     counts.campaign++;
                     continue;
                 }
+                // "ads_report" = kampania uruchomiona ALE raport NIE wysłany
+                if (w.ads_stage?.campaign_launched && !w.ads_stage?.report_sent) {
+                    counts.ads_report++;
+                    continue;
+                }
+                // "skalowanie" = raport wysłany ALE skalowanie NIE rozpoczęte
+                if (w.ads_stage?.report_sent && !w.ads_stage?.scaling_started) {
+                    counts.skalowanie++;
+                    continue;
+                }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
-                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account/budget/campaign - these are handled above with exact filter logic
+                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account/budget/campaign/ads_report/skalowanie - these are handled above with exact filter logic
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign', 'ads_report', 'skalowanie'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }
@@ -1310,6 +1338,12 @@
             // Kampania uruchomiona
             if (!w.ads_stage?.campaign_launched) return 'campaign';
 
+            // Raport wysłany
+            if (!w.ads_stage?.report_sent) return 'ads_report';
+
+            // Skalowanie rozpoczęte
+            if (!w.ads_stage?.scaling_started) return 'skalowanie';
+
             return null; // all done
         }
 
@@ -1483,6 +1517,24 @@
                         items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Kampania</span>`);
                     } else {
                         items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Kampania</span>`);
+                    }
+                }
+
+                // Raport - pokazuj gdy kampania uruchomiona
+                if (w.ads_stage?.campaign_launched) {
+                    if (w.ads_stage?.report_sent) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Raport</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-blue-400"><i class="ph ph-circle-notch text-[10px]"></i>Raport</span>`);
+                    }
+                }
+
+                // Skalowanie - pokazuj gdy raport wysłany
+                if (w.ads_stage?.report_sent) {
+                    if (w.ads_stage?.scaling_started) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Skalowanie</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Skalowanie</span>`);
                     }
                 }
             }

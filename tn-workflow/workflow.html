@@ -2359,29 +2359,185 @@
 
                     <!-- TAB: Raport (Etap 4) -->
                     <div id="tab-raport" class="workflow-panel hidden">
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-                                <i class="ph ph-chart-line-up text-violet-400"></i>
-                                Raport z wyników
-                            </h3>
-                            <p class="text-zinc-500 text-sm">Raport z pierwszych wyników kampanii</p>
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i class="ph ph-chart-line-up text-violet-400"></i>
+                                    Raport z wyników
+                                </h3>
+                                <p class="text-zinc-500 text-sm mt-1">Statystyki kampanii i raport dla klienta</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="fetchReportDataManus()" id="btn-fetch-manus" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Pobierz dane z Meta Ads przez Manus">
+                                    <i class="ph ph-robot"></i> Pobierz dane (Manus)
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Status info -->
-                        <div id="raport-admin-status" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div class="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                                    <i class="ph ph-clock text-xl text-violet-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="text-[14px] font-medium text-white">Raport w przygotowaniu</h4>
-                                    <p class="text-[12px] text-[#666]">Wyślij raport gdy masz wyniki z kampanii</p>
+                        <!-- Report sent status -->
+                        <div id="raport-sent-status" class="hidden mb-6">
+                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                        <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[13px] text-emerald-400 font-medium">Raport wysłany do klienta</div>
+                                        <div id="raport-sent-date" class="text-[12px] text-[#888]">-</div>
+                                    </div>
                                 </div>
                             </div>
-                            <button onclick="markReportSent()" id="btn-send-report" class="w-full bg-violet-500 hover:bg-violet-400 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors">
-                                <i class="ph ph-paper-plane-tilt mr-2"></i>
-                                Oznacz jako wysłany
+                        </div>
+
+                        <!-- Stats cards (hidden until data loaded) -->
+                        <div id="raport-stats-section" class="hidden mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-[13px] font-medium text-white flex items-center gap-2">
+                                    <i class="ph ph-chart-bar text-violet-400"></i>
+                                    Statystyki kampanii
+                                </h4>
+                                <div class="flex items-center gap-2 text-[11px] text-zinc-500">
+                                    <span id="raport-stats-period">-</span>
+                                    <span class="text-zinc-700">|</span>
+                                    <span id="raport-stats-fetched">-</span>
+                                </div>
+                            </div>
+
+                            <!-- Main metrics grid -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                    <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Wydatki</div>
+                                    <div id="raport-stat-spend" class="text-xl font-semibold text-white">-</div>
+                                </div>
+                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                    <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Konwersje</div>
+                                    <div id="raport-stat-conversions" class="text-xl font-semibold text-emerald-400">-</div>
+                                </div>
+                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                    <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Koszt/konwersja</div>
+                                    <div id="raport-stat-cpc" class="text-xl font-semibold text-white">-</div>
+                                </div>
+                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                    <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">ROAS</div>
+                                    <div id="raport-stat-roas" class="text-xl font-semibold text-violet-400">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Secondary metrics -->
+                            <div class="grid grid-cols-4 gap-3 mb-4">
+                                <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">Wyświetlenia</div>
+                                    <div id="raport-stat-impressions" class="text-[14px] font-medium text-zinc-300">-</div>
+                                </div>
+                                <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">Kliknięcia</div>
+                                    <div id="raport-stat-clicks" class="text-[14px] font-medium text-zinc-300">-</div>
+                                </div>
+                                <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">CTR</div>
+                                    <div id="raport-stat-ctr" class="text-[14px] font-medium text-zinc-300">-</div>
+                                </div>
+                                <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
+                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">Przychód</div>
+                                    <div id="raport-stat-revenue" class="text-[14px] font-medium text-emerald-400">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Campaigns breakdown -->
+                            <div id="raport-campaigns-list" class="hidden">
+                                <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-2">Kampanie</div>
+                                <div id="raport-campaigns-container" class="space-y-2">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No data state -->
+                        <div id="raport-no-data" class="mb-6">
+                            <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center">
+                                <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-zinc-800/50 flex items-center justify-center">
+                                    <i class="ph ph-chart-line text-xl text-zinc-500"></i>
+                                </div>
+                                <h4 class="text-[14px] font-medium text-zinc-300 mb-1">Brak danych kampanii</h4>
+                                <p class="text-[12px] text-zinc-600 mb-4">Użyj przycisku "Pobierz dane (Manus)" aby pobrać statystyki z Meta Ads</p>
+                            </div>
+                        </div>
+
+                        <!-- Manual data entry (collapsible) -->
+                        <div class="mb-6">
+                            <button onclick="toggleManualReportEntry()" class="flex items-center gap-2 text-[12px] text-zinc-500 hover:text-white transition-colors mb-3">
+                                <i id="manual-entry-chevron" class="ph ph-caret-right text-xs transition-transform"></i>
+                                <span>Ręczne wprowadzenie danych</span>
                             </button>
+                            <div id="manual-entry-panel" class="hidden pl-4 border-l border-zinc-800">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Wydatki (PLN)</label>
+                                        <input type="number" id="manual-spend" step="0.01" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0.00">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Konwersje</label>
+                                        <input type="number" id="manual-conversions" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Przychód (PLN)</label>
+                                        <input type="number" id="manual-revenue" step="0.01" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0.00">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Wyświetlenia</label>
+                                        <input type="number" id="manual-impressions" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Kliknięcia</label>
+                                        <input type="number" id="manual-clicks" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none" placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Okres od</label>
+                                        <input type="date" id="manual-period-from" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-600 uppercase mb-1">Okres do</label>
+                                        <input type="date" id="manual-period-to" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-zinc-500 focus:outline-none">
+                                    </div>
+                                    <div class="flex items-end">
+                                        <button onclick="saveManualReportData()" class="w-full bg-zinc-700 hover:bg-zinc-600 text-white py-2 rounded-lg text-[13px] font-medium transition-colors">
+                                            Zapisz dane
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Report URL -->
+                        <div class="mb-6 pt-4 border-t border-zinc-800">
+                            <label class="block text-[11px] text-zinc-500 uppercase tracking-wide mb-2">Link do raportu (opcjonalnie)</label>
+                            <div class="flex gap-2">
+                                <input type="url" id="raport-url-input" class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white font-mono focus:border-zinc-500 focus:outline-none" placeholder="https://...">
+                                <button onclick="saveReportUrl()" class="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-lg text-[13px] transition-colors">
+                                    Zapisz
+                                </button>
+                                <a id="raport-url-link" href="#" target="_blank" class="hidden bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-lg transition-colors">
+                                    <i class="ph ph-arrow-square-out"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="pt-4 border-t border-zinc-800">
+                            <div id="raport-pending-actions">
+                                <button onclick="markReportSent()" id="btn-send-report" class="w-full bg-violet-500 hover:bg-violet-400 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors flex items-center justify-center gap-2">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    Oznacz raport jako wysłany
+                                </button>
+                            </div>
+                            <div id="raport-sent-actions" class="hidden">
+                                <button onclick="resetReportSent()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl text-[14px] font-medium transition-colors flex items-center justify-center gap-2">
+                                    <i class="ph ph-arrow-counter-clockwise"></i>
+                                    Cofnij oznaczenie
+                                </button>
+                            </div>
                         </div>
                     </div><!-- /tab-raport -->
 
@@ -4343,7 +4499,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, campaign_launched, report_sent, scaling_started').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -4428,6 +4584,9 @@
                 // Nav check requires ALL 4 granted: ad account + fanpage + instagram + phone (or admin marked as ready)
                 toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted && !!adsNavStatus?.phone_verified));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
+                toggle('nav-check-kampania', !!adsNavStatus?.campaign_launched);
+                toggle('nav-check-raport', !!adsNavStatus?.report_sent);
+                toggle('nav-check-skalowanie', !!adsNavStatus?.scaling_started);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
@@ -6127,6 +6286,9 @@
                     break;
                 case 'kampania':
                     loadKampaniaTab();
+                    break;
+                case 'raport':
+                    loadRaportTab();
                     break;
                 case 'historia':
                     loadFullHistory(true);
@@ -9381,6 +9543,377 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
         window.loadKampaniaTab = loadKampaniaTab;
         window.markCampaignLaunched = markCampaignLaunched;
+
+        // =============================================
+        // RAPORT TAB (Etap 4)
+        // =============================================
+        async function loadRaportTab() {
+            // Make sure we have ads data
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
+            const sentStatusEl = document.getElementById('raport-sent-status');
+            const noDataEl = document.getElementById('raport-no-data');
+            const statsSection = document.getElementById('raport-stats-section');
+            const pendingActions = document.getElementById('raport-pending-actions');
+            const sentActions = document.getElementById('raport-sent-actions');
+            const navCheck = document.getElementById('nav-check-raport');
+
+            // Hide all first
+            if (sentStatusEl) sentStatusEl.classList.add('hidden');
+            if (noDataEl) noDataEl.classList.add('hidden');
+            if (statsSection) statsSection.classList.add('hidden');
+            if (pendingActions) pendingActions.classList.add('hidden');
+            if (sentActions) sentActions.classList.add('hidden');
+
+            // Check if report has data
+            const hasData = adsData?.report_data && Object.keys(adsData.report_data).length > 0;
+
+            if (hasData) {
+                // Show stats
+                if (statsSection) statsSection.classList.remove('hidden');
+                renderReportStats(adsData.report_data);
+            } else {
+                // Show no data state
+                if (noDataEl) noDataEl.classList.remove('hidden');
+            }
+
+            // Report URL
+            const urlInput = document.getElementById('raport-url-input');
+            const urlLink = document.getElementById('raport-url-link');
+            if (urlInput && adsData?.report_url) {
+                urlInput.value = adsData.report_url;
+                if (urlLink) {
+                    urlLink.href = adsData.report_url;
+                    urlLink.classList.remove('hidden');
+                }
+            }
+
+            // Check if report is sent
+            if (adsData?.report_sent) {
+                if (sentStatusEl) sentStatusEl.classList.remove('hidden');
+                if (sentActions) sentActions.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+
+                const sentDate = adsData.report_sent_at;
+                if (sentDate) {
+                    const dateEl = document.getElementById('raport-sent-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Wysłano ' + new Date(sentDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+            } else {
+                if (pendingActions) pendingActions.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+            }
+        }
+
+        function renderReportStats(data) {
+            // Main metrics
+            const spend = data.spend ?? 0;
+            const conversions = data.conversions ?? 0;
+            const costPerConversion = conversions > 0 ? spend / conversions : 0;
+            const revenue = data.revenue ?? 0;
+            const roas = spend > 0 ? revenue / spend : 0;
+
+            document.getElementById('raport-stat-spend')?.innerText = spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            document.getElementById('raport-stat-conversions')?.innerText = conversions.toString();
+            document.getElementById('raport-stat-cpc')?.innerText = costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            document.getElementById('raport-stat-roas')?.innerText = roas.toFixed(2) + 'x';
+
+            // Secondary metrics
+            const impressions = data.impressions ?? 0;
+            const clicks = data.clicks ?? 0;
+            const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
+
+            document.getElementById('raport-stat-impressions')?.innerText = impressions.toLocaleString('pl-PL');
+            document.getElementById('raport-stat-clicks')?.innerText = clicks.toLocaleString('pl-PL');
+            document.getElementById('raport-stat-ctr')?.innerText = ctr.toFixed(2) + '%';
+            document.getElementById('raport-stat-revenue')?.innerText = revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+
+            // Period
+            const periodEl = document.getElementById('raport-stats-period');
+            if (periodEl && data.period) {
+                const from = data.period.from ? new Date(data.period.from).toLocaleDateString('pl-PL') : '?';
+                const to = data.period.to ? new Date(data.period.to).toLocaleDateString('pl-PL') : '?';
+                periodEl.textContent = `${from} - ${to}`;
+            }
+
+            // Fetched date
+            const fetchedEl = document.getElementById('raport-stats-fetched');
+            if (fetchedEl && data.fetched_at) {
+                fetchedEl.textContent = 'Pobrano: ' + new Date(data.fetched_at).toLocaleDateString('pl-PL', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+            }
+
+            // Campaigns breakdown
+            const campaignsContainer = document.getElementById('raport-campaigns-container');
+            const campaignsList = document.getElementById('raport-campaigns-list');
+            if (campaignsContainer && data.campaigns && data.campaigns.length > 0) {
+                campaignsList?.classList.remove('hidden');
+                campaignsContainer.innerHTML = data.campaigns.map(c => `
+                    <div class="flex items-center justify-between bg-zinc-900/30 border border-zinc-800/50 rounded-lg px-3 py-2">
+                        <span class="text-[13px] text-zinc-300">${escapeHtml(c.name)}</span>
+                        <div class="flex items-center gap-4 text-[12px]">
+                            <span class="text-zinc-500">${(c.spend || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}</span>
+                            <span class="text-emerald-400">${c.conversions || 0} konw.</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                campaignsList?.classList.add('hidden');
+            }
+        }
+
+        async function markReportSent() {
+            const btn = document.getElementById('btn-send-report');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2"></i> Zapisuję...';
+            }
+
+            try {
+                const now = new Date().toISOString();
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            report_sent: true,
+                            report_sent_at: now
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.report_sent = true;
+                    adsData.report_sent_at = now;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: now,
+                            report_sent: true,
+                            report_sent_at: now
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                // Trigger automation
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'report_sent',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflow_id: workflow.id,
+                                client_name: workflow?.first_name || 'Kliencie',
+                                brand_name: workflow?.brand_name || workflow?.name || 'Twój sklep',
+                                report_url: adsData?.report_url || null,
+                                sent_at: now
+                            }
+                        }
+                    });
+                } catch (triggerErr) {
+                    console.error('Automation trigger error:', triggerErr);
+                }
+
+                showToast('Raport oznaczony jako wysłany!', 'success');
+                loadRaportTab();
+                updateNavChecks();
+            } catch (err) {
+                console.error('Error marking report as sent:', err);
+                showToast('Błąd oznaczania raportu', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-paper-plane-tilt mr-2"></i> Oznacz raport jako wysłany';
+                }
+            }
+        }
+
+        async function resetReportSent() {
+            if (!confirm('Cofnąć oznaczenie raportu jako wysłanego?')) return;
+
+            try {
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            report_sent: false,
+                            report_sent_at: null
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.report_sent = false;
+                    adsData.report_sent_at = null;
+                }
+
+                showToast('Oznaczenie cofnięte', 'success');
+                loadRaportTab();
+                updateNavChecks();
+            } catch (err) {
+                console.error('Error resetting report sent:', err);
+                showToast('Błąd cofania oznaczenia', 'error');
+            }
+        }
+
+        function toggleManualReportEntry() {
+            const panel = document.getElementById('manual-entry-panel');
+            const chevron = document.getElementById('manual-entry-chevron');
+            if (panel) {
+                panel.classList.toggle('hidden');
+                chevron?.classList.toggle('rotate-90');
+            }
+        }
+
+        async function saveManualReportData() {
+            const spend = parseFloat(document.getElementById('manual-spend')?.value) || 0;
+            const conversions = parseInt(document.getElementById('manual-conversions')?.value) || 0;
+            const revenue = parseFloat(document.getElementById('manual-revenue')?.value) || 0;
+            const impressions = parseInt(document.getElementById('manual-impressions')?.value) || 0;
+            const clicks = parseInt(document.getElementById('manual-clicks')?.value) || 0;
+            const periodFrom = document.getElementById('manual-period-from')?.value || null;
+            const periodTo = document.getElementById('manual-period-to')?.value || null;
+
+            const reportData = {
+                spend,
+                conversions,
+                revenue,
+                impressions,
+                clicks,
+                ctr: impressions > 0 ? (clicks / impressions * 100) : 0,
+                cost_per_conversion: conversions > 0 ? spend / conversions : 0,
+                roas: spend > 0 ? revenue / spend : 0,
+                period: { from: periodFrom, to: periodTo },
+                source: 'manual',
+                fetched_at: new Date().toISOString()
+            };
+
+            try {
+                const now = new Date().toISOString();
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({
+                            report_data: reportData,
+                            report_generated_at: now
+                        })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.report_data = reportData;
+                    adsData.report_generated_at = now;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: now,
+                            report_data: reportData,
+                            report_generated_at: now
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                showToast('Dane raportu zapisane!', 'success');
+                loadRaportTab();
+            } catch (err) {
+                console.error('Error saving manual report data:', err);
+                showToast('Błąd zapisywania danych', 'error');
+            }
+        }
+
+        async function saveReportUrl() {
+            const url = document.getElementById('raport-url-input')?.value?.trim() || null;
+
+            try {
+                const now = new Date().toISOString();
+
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update({ report_url: url })
+                        .eq('id', adsData.id);
+
+                    if (error) throw error;
+                    adsData.report_url = url;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: now,
+                            report_url: url
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                // Update link visibility
+                const urlLink = document.getElementById('raport-url-link');
+                if (urlLink) {
+                    if (url) {
+                        urlLink.href = url;
+                        urlLink.classList.remove('hidden');
+                    } else {
+                        urlLink.classList.add('hidden');
+                    }
+                }
+
+                showToast('URL raportu zapisany!', 'success');
+            } catch (err) {
+                console.error('Error saving report URL:', err);
+                showToast('Błąd zapisywania URL', 'error');
+            }
+        }
+
+        async function fetchReportDataManus() {
+            // TODO: Integracja z Manus AI
+            // Na razie pokazujemy informację
+            showToast('Integracja z Manus w przygotowaniu. Użyj ręcznego wprowadzania danych.', 'info');
+
+            // Otwórz panel ręcznego wprowadzania
+            const panel = document.getElementById('manual-entry-panel');
+            const chevron = document.getElementById('manual-entry-chevron');
+            if (panel && panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                chevron?.classList.add('rotate-90');
+            }
+        }
+
+        window.loadRaportTab = loadRaportTab;
+        window.markReportSent = markReportSent;
+        window.resetReportSent = resetReportSent;
+        window.toggleManualReportEntry = toggleManualReportEntry;
+        window.saveManualReportData = saveManualReportData;
+        window.saveReportUrl = saveReportUrl;
+        window.fetchReportDataManus = fetchReportDataManus;
 
         // =============================================
         // CONTRACT MANAGEMENT

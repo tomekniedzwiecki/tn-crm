@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041001';
+        const APP_VERSION = '2026041301';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1501,6 +1501,11 @@
                             <span>Budżet</span>
                             <i id="dash-nav-check-budzet" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="dash-nav-raport" class="dash-nav-item hidden" onclick="switchToDashTab('raport')">
+                            <i class="ph ph-chart-line-up"></i>
+                            <span>Raport</span>
+                            <i id="dash-nav-check-raport" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -1615,6 +1620,11 @@
                                 <i class="ph ph-wallet"></i>
                                 <span>Budżet</span>
                                 <i id="dash-nav-check-budzet-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-nav-raport-mobile" class="dash-nav-item hidden" onclick="switchToDashTab('raport');toggleDashMobileMenu()">
+                                <i class="ph ph-chart-line-up"></i>
+                                <span>Raport</span>
+                                <i id="dash-nav-check-raport-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -4296,9 +4306,9 @@
                         </div>
                     </div>
 
-                    <!-- Ready state -->
+                    <!-- Ready state with stats -->
                     <div id="raport-ready-client" class="hidden">
-                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center">
                                     <i class="ph-fill ph-chart-line-up text-emerald-400 text-2xl"></i>
@@ -4308,6 +4318,62 @@
                                     <p id="raport-ready-date" class="text-[13px] text-[#888] mt-1">Sprawdź wyniki kampanii</p>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Stats cards (if data available) -->
+                        <div id="raport-stats-client" class="hidden">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-[14px] font-medium text-white">Wyniki kampanii</h4>
+                                <span id="raport-period-client" class="text-[12px] text-[#666]">-</span>
+                            </div>
+
+                            <!-- Main metrics -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
+                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">Wydatki</div>
+                                    <div id="raport-client-spend" class="text-xl font-semibold text-white">-</div>
+                                </div>
+                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
+                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">Konwersje</div>
+                                    <div id="raport-client-conversions" class="text-xl font-semibold text-emerald-400">-</div>
+                                </div>
+                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
+                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">Koszt/konwersja</div>
+                                    <div id="raport-client-cpc" class="text-xl font-semibold text-white">-</div>
+                                </div>
+                                <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
+                                    <div class="text-[11px] text-[#666] uppercase tracking-wide mb-2">ROAS</div>
+                                    <div id="raport-client-roas" class="text-xl font-semibold text-violet-400">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Secondary metrics -->
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Wyświetlenia</div>
+                                    <div id="raport-client-impressions" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
+                                    <div id="raport-client-clicks" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">CTR</div>
+                                    <div id="raport-client-ctr" class="text-[14px] font-medium text-[#888]">-</div>
+                                </div>
+                                <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
+                                    <div class="text-[10px] text-[#555] uppercase mb-1">Przychód</div>
+                                    <div id="raport-client-revenue" class="text-[14px] font-medium text-emerald-400">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Report URL link -->
+                        <div id="raport-url-client" class="hidden mt-6">
+                            <a id="raport-url-link-client" href="#" target="_blank" class="inline-flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white px-5 py-3 rounded-xl font-medium transition-colors">
+                                <i class="ph ph-file-pdf"></i>
+                                Zobacz pełny raport
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -7057,6 +7123,12 @@
                     break;
                 case 'kampania':
                     loadKampania();
+                    break;
+                case 'raport':
+                    loadRaportClient();
+                    break;
+                case 'skalowanie':
+                    loadSkalowanie();
                     break;
             }
         }
@@ -10089,6 +10161,131 @@
                 if (waitingEl) waitingEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
                 if (navCheckMobile) navCheckMobile.classList.add('hidden');
+            }
+        }
+
+        async function loadRaportClient() {
+            // Make sure we have ads data
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
+            const waitingEl = document.getElementById('raport-waiting-client');
+            const readyEl = document.getElementById('raport-ready-client');
+            const statsEl = document.getElementById('raport-stats-client');
+            const urlEl = document.getElementById('raport-url-client');
+            const navCheck = document.getElementById('dash-nav-check-raport');
+            const navCheckMobile = document.getElementById('dash-nav-check-raport-mobile');
+
+            // Hide all states first
+            if (waitingEl) waitingEl.classList.add('hidden');
+            if (readyEl) readyEl.classList.add('hidden');
+            if (statsEl) statsEl.classList.add('hidden');
+            if (urlEl) urlEl.classList.add('hidden');
+
+            if (adsData?.report_sent) {
+                // Report ready
+                if (readyEl) readyEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.remove('hidden');
+                if (navCheckMobile) navCheckMobile.classList.remove('hidden');
+
+                const sentDate = adsData.report_sent_at;
+                if (sentDate) {
+                    const dateEl = document.getElementById('raport-ready-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Wysłano ' + new Date(sentDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                        });
+                    }
+                }
+
+                // Render stats if available
+                if (adsData.report_data && Object.keys(adsData.report_data).length > 0) {
+                    if (statsEl) statsEl.classList.remove('hidden');
+                    renderRaportStatsClient(adsData.report_data);
+                }
+
+                // Show report URL if available
+                if (adsData.report_url) {
+                    if (urlEl) urlEl.classList.remove('hidden');
+                    const linkEl = document.getElementById('raport-url-link-client');
+                    if (linkEl) linkEl.href = adsData.report_url;
+                }
+            } else {
+                // Waiting for report
+                if (waitingEl) waitingEl.classList.remove('hidden');
+                if (navCheck) navCheck.classList.add('hidden');
+                if (navCheckMobile) navCheckMobile.classList.add('hidden');
+            }
+        }
+
+        function renderRaportStatsClient(data) {
+            const spend = data.spend ?? 0;
+            const conversions = data.conversions ?? 0;
+            const costPerConversion = conversions > 0 ? spend / conversions : 0;
+            const revenue = data.revenue ?? 0;
+            const roas = spend > 0 ? revenue / spend : 0;
+            const impressions = data.impressions ?? 0;
+            const clicks = data.clicks ?? 0;
+            const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
+
+            document.getElementById('raport-client-spend')?.innerText = spend.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            document.getElementById('raport-client-conversions')?.innerText = conversions.toString();
+            document.getElementById('raport-client-cpc')?.innerText = costPerConversion.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+            document.getElementById('raport-client-roas')?.innerText = roas.toFixed(2) + 'x';
+            document.getElementById('raport-client-impressions')?.innerText = impressions.toLocaleString('pl-PL');
+            document.getElementById('raport-client-clicks')?.innerText = clicks.toLocaleString('pl-PL');
+            document.getElementById('raport-client-ctr')?.innerText = ctr.toFixed(2) + '%';
+            document.getElementById('raport-client-revenue')?.innerText = revenue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+
+            // Period
+            const periodEl = document.getElementById('raport-period-client');
+            if (periodEl && data.period) {
+                const from = data.period.from ? new Date(data.period.from).toLocaleDateString('pl-PL') : '?';
+                const to = data.period.to ? new Date(data.period.to).toLocaleDateString('pl-PL') : '?';
+                periodEl.textContent = `${from} - ${to}`;
+            }
+        }
+
+        async function loadSkalowanie() {
+            // Make sure we have ads data
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
+            const waitingEl = document.getElementById('skalowanie-waiting-client');
+            const activeEl = document.getElementById('skalowanie-active-client');
+
+            // Hide all states first
+            if (waitingEl) waitingEl.classList.add('hidden');
+            if (activeEl) activeEl.classList.add('hidden');
+
+            if (adsData?.scaling_started) {
+                // Scaling active
+                if (activeEl) activeEl.classList.remove('hidden');
+
+                const startDate = adsData.scaling_started_at;
+                if (startDate) {
+                    const dateEl = document.getElementById('skalowanie-active-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Od ' + new Date(startDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                        });
+                    }
+                }
+            } else {
+                // Waiting for scaling
+                if (waitingEl) waitingEl.classList.remove('hidden');
             }
         }
 
