@@ -95,12 +95,17 @@ serve(async (req) => {
     const messages = messagesData.messages || messagesData.data || []
     let result = ''
 
+    console.log('Total messages:', messages.length)
+    console.log('Message roles:', messages.map((m: any) => m.role).join(', '))
+
     // Look for assistant messages that might contain JSON (use spread to not mutate original)
     for (const msg of [...messages].reverse()) {
       if (msg.role === 'assistant' && msg.content) {
         const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+        console.log('Assistant message preview:', content.substring(0, 200))
         if (content.includes('{') && content.includes('}')) {
           result = content
+          console.log('Found JSON-like content in assistant message')
           break
         }
       }
@@ -110,10 +115,14 @@ serve(async (req) => {
     if (!result && messages.length > 0) {
       const lastMsg = messages[messages.length - 1]
       result = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content)
+      console.log('Using fallback - last message content:', result?.substring(0, 200))
     }
 
     // Try to parse JSON from result
     let reportData = null
+    console.log('Raw result length:', result?.length || 0)
+    console.log('Raw result preview:', result?.substring(0, 500))
+
     try {
       // Find balanced JSON object by counting braces
       let depth = 0
@@ -132,8 +141,11 @@ serve(async (req) => {
         }
       }
 
+      console.log('JSON bounds:', start, end)
+
       if (start !== -1 && end !== -1) {
         const jsonStr = result.substring(start, end)
+        console.log('Extracted JSON:', jsonStr.substring(0, 300))
         reportData = JSON.parse(jsonStr)
 
         // Normalize numeric fields to ensure they're numbers, not strings
@@ -145,13 +157,24 @@ serve(async (req) => {
             reportData[field] = Number(reportData[field]) || 0
           }
         }
+        console.log('Parsed reportData keys:', Object.keys(reportData))
+      } else {
+        // No JSON found - save raw result for debugging
+        console.log('No JSON braces found in result')
+        reportData = {
+          raw_result: result || '(empty)',
+          parse_error: true,
+          error_reason: 'no_json_found',
+          status: task.status
+        }
       }
     } catch (parseErr) {
       console.error('Error parsing result:', parseErr)
       // Store raw result if can't parse
       reportData = {
-        raw_result: result,
+        raw_result: result || '(empty)',
         parse_error: true,
+        error_reason: parseErr.message,
         status: task.status
       }
     }

@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041306';
+        const APP_VERSION = '2026041307';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5917,21 +5917,76 @@
         }
 
         function renderEtap4RaportBox() {
+            const box = document.getElementById('dash-etap4-box-raport');
             const content = document.getElementById('dash-etap4-raport-content');
-            if (!content) return;
+            if (!box || !content) return;
 
-            content.innerHTML = `
-                <div class="h-full p-5 flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-[#666] text-xs uppercase tracking-wide">Raport</span>
-                        <span class="flex items-center gap-1 text-zinc-500 text-xs">Wkrótce</span>
+            const reportReady = adsData?.report_sent;
+            const reportData = adsData?.report_data;
+
+            if (reportReady && reportData) {
+                // Report ready - show metrics
+                box.classList.remove('opacity-50');
+                box.classList.add('cursor-pointer');
+                box.onclick = () => switchToDashTab('raport');
+
+                const currency = reportData.currency || 'PLN';
+                const roas = reportData.roas || (reportData.spend > 0 ? (reportData.revenue / reportData.spend) : 0);
+                const purchases = reportData.purchases ?? reportData.conversions ?? 0;
+
+                const fmtCurrency = (n) => {
+                    const num = Number(n) || 0;
+                    try {
+                        return num.toLocaleString('pl-PL', { style: 'currency', currency: currency, maximumFractionDigits: 0 });
+                    } catch (e) {
+                        return num.toLocaleString('pl-PL', { maximumFractionDigits: 0 }) + ' ' + currency;
+                    }
+                };
+
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Raport</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Gotowy
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <div class="text-3xl font-bold text-violet-400 mb-1">${Number(roas).toFixed(2)}x</div>
+                            <div class="text-[10px] text-[#555] uppercase mb-3">ROAS</div>
+                            <div class="flex items-center gap-4 text-[11px]">
+                                <div class="text-center">
+                                    <div class="text-white font-medium">${fmtCurrency(reportData.spend)}</div>
+                                    <div class="text-[#555]">Wydatki</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-emerald-400 font-medium">${purchases}</div>
+                                    <div class="text-[#555]">Zakupy</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex-1 flex flex-col items-center justify-center">
-                        <i class="ph ph-chart-line-up text-4xl text-zinc-600 mb-3"></i>
-                        <h3 class="text-zinc-500 text-base font-medium">Raport wyników</h3>
+                `;
+            } else {
+                // Not ready yet
+                box.classList.add('opacity-50');
+                box.classList.remove('cursor-pointer');
+                box.onclick = null;
+
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Raport</span>
+                            <span class="flex items-center gap-1 text-zinc-500 text-xs">Wkrótce</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-chart-line-up text-4xl text-zinc-600 mb-3"></i>
+                            <h3 class="text-zinc-500 text-base font-medium">Raport wyników</h3>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         }
 
         function renderEtap4SkalowanieBox() {
@@ -10261,8 +10316,14 @@
             if (statsEl) statsEl.classList.add('hidden');
             if (urlEl) urlEl.classList.add('hidden');
 
+            // Show/hide nav items based on report_sent
+            const navItem = document.getElementById('dash-nav-raport');
+            const navItemMobile = document.getElementById('dash-nav-raport-mobile');
+
             if (adsData?.report_sent) {
-                // Report ready
+                // Report ready - show nav items
+                if (navItem) navItem.classList.remove('hidden');
+                if (navItemMobile) navItemMobile.classList.remove('hidden');
                 if (readyEl) readyEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.remove('hidden');
                 if (navCheckMobile) navCheckMobile.classList.remove('hidden');
@@ -10293,7 +10354,9 @@
                     if (linkEl) linkEl.href = adsData.report_url;
                 }
             } else {
-                // Waiting for report
+                // Waiting for report - hide nav items
+                if (navItem) navItem.classList.add('hidden');
+                if (navItemMobile) navItemMobile.classList.add('hidden');
                 if (waitingEl) waitingEl.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
                 if (navCheckMobile) navCheckMobile.classList.add('hidden');

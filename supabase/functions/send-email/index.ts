@@ -356,7 +356,22 @@ Deno.serve(async (req) => {
         salesPageUrl: data.salesPageUrl || '',
         // TakeDrop
         landingDomain: data.landingDomain || '',
-        landingPageUrl: data.landingPageUrl || ''
+        landingPageUrl: data.landingPageUrl || '',
+        // Ad report variables
+        client_name: data.client_name || data.clientName || 'Kliencie',
+        project_name: data.project_name || data.offerName || '',
+        period_from: data.period_from || '',
+        period_to: data.period_to || '',
+        spend: data.spend || 0,
+        revenue: data.revenue || 0,
+        roas: data.roas || '0.00',
+        purchases: data.purchases || 0,
+        clicks: data.clicks || 0,
+        impressions: data.impressions || 0,
+        add_to_cart: data.add_to_cart || 0,
+        initiate_checkout: data.initiate_checkout || 0,
+        currency: data.currency || 'PLN',
+        client_token: data.client_token || ''
       }
 
       // Replace variables in subject and body

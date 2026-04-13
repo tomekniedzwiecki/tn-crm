@@ -2693,9 +2693,9 @@
                         <div id="raport-pending-actions" class="pt-4 border-t border-zinc-800">
                             <button onclick="markReportSent()" id="btn-send-report" class="w-full bg-violet-600 hover:bg-violet-500 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors flex items-center justify-center gap-2">
                                 <i class="ph ph-paper-plane-tilt"></i>
-                                Oznacz raport jako wysłany
+                                Wyślij raport do klienta
                             </button>
-                            <p class="text-[11px] text-zinc-600 text-center mt-2">Klient zobaczy statystyki w swoim portalu</p>
+                            <p class="text-[11px] text-zinc-600 text-center mt-2">Email z wynikami + zakładka w portalu klienta</p>
                         </div>
                     </div><!-- /tab-raport -->
 
@@ -10031,12 +10031,58 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const btn = document.getElementById('btn-send-report');
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2"></i> Zapisuję...';
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2"></i> Wysyłam email...';
             }
 
             try {
                 const now = new Date().toISOString();
+                const reportData = adsData?.report_data;
 
+                // Check if we have report data
+                if (!reportData || Object.keys(reportData).length === 0) {
+                    throw new Error('Brak danych raportu do wysłania');
+                }
+
+                // Check if customer email exists
+                if (!workflow.customer_email) {
+                    throw new Error('Brak adresu email klienta');
+                }
+
+                // Calculate period from report data
+                const periodFrom = reportData.period?.from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                const periodTo = reportData.period?.to || new Date().toISOString().split('T')[0];
+
+                // Send email with report data
+                const { error: emailError } = await supabaseClient.functions.invoke('send-email', {
+                    body: {
+                        to: workflow.customer_email,
+                        template: 'ad_report',
+                        data: {
+                            client_name: workflow.customer_name || workflow.first_name || 'Kliencie',
+                            project_name: workflow.offer_name || workflow.brand_name || 'Twój sklep',
+                            period_from: periodFrom,
+                            period_to: periodTo,
+                            spend: reportData.spend || 0,
+                            revenue: reportData.revenue || 0,
+                            roas: Number(reportData.roas || (reportData.spend > 0 ? reportData.revenue / reportData.spend : 0)).toFixed(2),
+                            purchases: reportData.purchases || reportData.conversions || 0,
+                            clicks: reportData.clicks || 0,
+                            impressions: reportData.impressions || 0,
+                            add_to_cart: reportData.add_to_cart || 0,
+                            initiate_checkout: reportData.initiate_checkout || 0,
+                            currency: reportData.currency || 'PLN',
+                            workflow_id: workflow.id,
+                            client_token: workflow.unique_token || ''
+                        }
+                    }
+                });
+
+                if (emailError) {
+                    console.error('Email send error:', emailError);
+                    throw new Error('Błąd wysyłania emaila: ' + emailError.message);
+                }
+
+                // Update database
                 if (adsData?.id) {
                     const { error } = await supabaseClient
                         .from('workflow_ads')
@@ -10066,7 +10112,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     adsData = data;
                 }
 
-                // Trigger automation
+                // Trigger automation (for any additional flows)
                 try {
                     await supabaseClient.functions.invoke('automation-trigger', {
                         body: {
@@ -10086,15 +10132,15 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     console.error('Automation trigger error:', triggerErr);
                 }
 
-                showToast('Raport oznaczony jako wysłany!', 'success');
+                showToast('Raport wysłany do klienta!', 'success');
                 loadRaportTab();
                 updateNavChecks();
             } catch (err) {
-                console.error('Error marking report as sent:', err);
-                showToast('Błąd oznaczania raportu', 'error');
+                console.error('Error sending report:', err);
+                showToast(err.message || 'Błąd wysyłania raportu', 'error');
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="ph ph-paper-plane-tilt mr-2"></i> Oznacz raport jako wysłany';
+                    btn.innerHTML = '<i class="ph ph-paper-plane-tilt mr-2"></i> Wyślij raport do klienta';
                 }
             }
         }
