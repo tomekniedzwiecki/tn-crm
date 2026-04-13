@@ -2384,24 +2384,72 @@
                                 </h3>
                                 <p class="text-zinc-500 text-sm mt-1">Statystyki kampanii i raport dla klienta</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="fetchReportDataManus()" id="btn-fetch-manus" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Pobierz dane z Meta Ads przez Manus">
-                                    <i class="ph ph-robot"></i> Pobierz dane (Manus)
-                                </button>
+                        </div>
+
+                        <!-- Manus fetch section -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                        <i class="ph ph-robot text-violet-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[13px] text-white font-medium">Pobierz dane z Meta Ads</div>
+                                        <div id="raport-ad-account-info" class="text-[11px] text-zinc-500">Brak skonfigurowanego konta</div>
+                                    </div>
+                                </div>
+                                <div id="manus-task-status" class="hidden">
+                                    <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                        <i class="ph ph-spinner animate-spin text-xs"></i>
+                                        <span id="manus-task-status-text">Pobieram...</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Date range picker -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div>
+                                    <label class="block text-[10px] text-zinc-600 uppercase mb-1">Od</label>
+                                    <input type="date" id="manus-date-from" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-violet-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-zinc-600 uppercase mb-1">Do</label>
+                                    <input type="date" id="manus-date-to" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-violet-500 focus:outline-none">
+                                </div>
+                                <div class="md:col-span-2 flex items-end gap-2">
+                                    <button onclick="fetchReportDataManus()" id="btn-fetch-manus" class="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-2 rounded-lg text-[13px] font-medium transition-colors flex items-center justify-center gap-2">
+                                        <i class="ph ph-cloud-arrow-down"></i> Pobierz dane
+                                    </button>
+                                    <button onclick="setDateRangePreset('7d')" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-[11px] transition-colors">7 dni</button>
+                                    <button onclick="setDateRangePreset('30d')" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-[11px] transition-colors">30 dni</button>
+                                </div>
+                            </div>
+
+                            <!-- Last fetch info -->
+                            <div id="raport-last-fetch" class="hidden text-[11px] text-zinc-500 flex items-center gap-2">
+                                <i class="ph ph-clock"></i>
+                                <span>Ostatnie pobranie: <span id="raport-last-fetch-date">-</span></span>
+                                <span class="text-zinc-700">|</span>
+                                <span>Źródło: <span id="raport-source" class="text-violet-400">Manus</span></span>
                             </div>
                         </div>
 
                         <!-- Report sent status -->
                         <div id="raport-sent-status" class="hidden mb-6">
                             <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                        <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                            <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[13px] text-emerald-400 font-medium">Raport wysłany do klienta</div>
+                                            <div id="raport-sent-date" class="text-[12px] text-[#888]">-</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-[13px] text-emerald-400 font-medium">Raport wysłany do klienta</div>
-                                        <div id="raport-sent-date" class="text-[12px] text-[#888]">-</div>
-                                    </div>
+                                    <button onclick="resetReportSent()" class="text-[11px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1">
+                                        <i class="ph ph-arrow-counter-clockwise"></i> Cofnij
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2414,55 +2462,73 @@
                                     Statystyki kampanii
                                 </h4>
                                 <div class="flex items-center gap-2 text-[11px] text-zinc-500">
+                                    <i class="ph ph-calendar"></i>
                                     <span id="raport-stats-period">-</span>
-                                    <span class="text-zinc-700">|</span>
-                                    <span id="raport-stats-fetched">-</span>
                                 </div>
                             </div>
 
                             <!-- Main metrics grid -->
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                <div class="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-zinc-800 rounded-xl p-4 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-16 h-16 bg-rose-500/5 rounded-full -mr-8 -mt-8"></div>
                                     <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Wydatki</div>
-                                    <div id="raport-stat-spend" class="text-xl font-semibold text-white">-</div>
+                                    <div id="raport-stat-spend" class="text-xl font-bold text-white">-</div>
                                 </div>
-                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                <div class="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-emerald-500/20 rounded-xl p-4 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8"></div>
                                     <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Konwersje</div>
-                                    <div id="raport-stat-conversions" class="text-xl font-semibold text-emerald-400">-</div>
+                                    <div id="raport-stat-conversions" class="text-xl font-bold text-emerald-400">-</div>
                                 </div>
-                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                <div class="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-zinc-800 rounded-xl p-4 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-full -mr-8 -mt-8"></div>
                                     <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Koszt/konwersja</div>
-                                    <div id="raport-stat-cpc" class="text-xl font-semibold text-white">-</div>
+                                    <div id="raport-stat-cpc" class="text-xl font-bold text-white">-</div>
                                 </div>
-                                <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                <div class="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-violet-500/20 rounded-xl p-4 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-16 h-16 bg-violet-500/5 rounded-full -mr-8 -mt-8"></div>
                                     <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">ROAS</div>
-                                    <div id="raport-stat-roas" class="text-xl font-semibold text-violet-400">-</div>
+                                    <div id="raport-stat-roas" class="text-xl font-bold text-violet-400">-</div>
                                 </div>
                             </div>
 
                             <!-- Secondary metrics -->
-                            <div class="grid grid-cols-4 gap-3 mb-4">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                                 <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
-                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">Wyświetlenia</div>
+                                    <div class="flex items-center gap-1.5 mb-1">
+                                        <i class="ph ph-eye text-zinc-600 text-xs"></i>
+                                        <span class="text-[10px] text-zinc-600 uppercase">Wyświetlenia</span>
+                                    </div>
                                     <div id="raport-stat-impressions" class="text-[14px] font-medium text-zinc-300">-</div>
                                 </div>
                                 <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
-                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">Kliknięcia</div>
+                                    <div class="flex items-center gap-1.5 mb-1">
+                                        <i class="ph ph-cursor-click text-zinc-600 text-xs"></i>
+                                        <span class="text-[10px] text-zinc-600 uppercase">Kliknięcia</span>
+                                    </div>
                                     <div id="raport-stat-clicks" class="text-[14px] font-medium text-zinc-300">-</div>
                                 </div>
                                 <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
-                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">CTR</div>
+                                    <div class="flex items-center gap-1.5 mb-1">
+                                        <i class="ph ph-percent text-zinc-600 text-xs"></i>
+                                        <span class="text-[10px] text-zinc-600 uppercase">CTR</span>
+                                    </div>
                                     <div id="raport-stat-ctr" class="text-[14px] font-medium text-zinc-300">-</div>
                                 </div>
                                 <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-lg p-3">
-                                    <div class="text-[10px] text-zinc-600 uppercase mb-0.5">Przychód</div>
+                                    <div class="flex items-center gap-1.5 mb-1">
+                                        <i class="ph ph-currency-circle-dollar text-emerald-600 text-xs"></i>
+                                        <span class="text-[10px] text-zinc-600 uppercase">Przychód</span>
+                                    </div>
                                     <div id="raport-stat-revenue" class="text-[14px] font-medium text-emerald-400">-</div>
                                 </div>
                             </div>
 
                             <!-- Campaigns breakdown -->
                             <div id="raport-campaigns-list" class="hidden">
-                                <div class="text-[11px] text-zinc-500 uppercase tracking-wide mb-2">Kampanie</div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-[11px] text-zinc-500 uppercase tracking-wide">Kampanie</div>
+                                    <div class="text-[10px] text-zinc-600">Wydatki / Konwersje</div>
+                                </div>
                                 <div id="raport-campaigns-container" class="space-y-2">
                                     <!-- Rendered dynamically -->
                                 </div>
@@ -2471,12 +2537,13 @@
 
                         <!-- No data state -->
                         <div id="raport-no-data" class="mb-6">
-                            <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center">
-                                <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-zinc-800/50 flex items-center justify-center">
-                                    <i class="ph ph-chart-line text-xl text-zinc-500"></i>
+                            <div class="bg-zinc-900/50 border border-dashed border-zinc-700 rounded-xl p-8 text-center">
+                                <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-zinc-800/50 flex items-center justify-center">
+                                    <i class="ph ph-chart-line-up text-2xl text-zinc-600"></i>
                                 </div>
-                                <h4 class="text-[14px] font-medium text-zinc-300 mb-1">Brak danych kampanii</h4>
-                                <p class="text-[12px] text-zinc-600 mb-4">Użyj przycisku "Pobierz dane (Manus)" aby pobrać statystyki z Meta Ads</p>
+                                <h4 class="text-[14px] font-medium text-zinc-300 mb-2">Brak danych kampanii</h4>
+                                <p class="text-[12px] text-zinc-600 mb-1">Wybierz okres i kliknij "Pobierz dane" aby pobrać statystyki z Meta Ads</p>
+                                <p class="text-[11px] text-zinc-700">lub użyj ręcznego wprowadzania danych poniżej</p>
                             </div>
                         </div>
 
@@ -2542,19 +2609,12 @@
                         </div>
 
                         <!-- Actions -->
-                        <div class="pt-4 border-t border-zinc-800">
-                            <div id="raport-pending-actions">
-                                <button onclick="markReportSent()" id="btn-send-report" class="w-full bg-violet-500 hover:bg-violet-400 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors flex items-center justify-center gap-2">
-                                    <i class="ph ph-paper-plane-tilt"></i>
-                                    Oznacz raport jako wysłany
-                                </button>
-                            </div>
-                            <div id="raport-sent-actions" class="hidden">
-                                <button onclick="resetReportSent()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl text-[14px] font-medium transition-colors flex items-center justify-center gap-2">
-                                    <i class="ph ph-arrow-counter-clockwise"></i>
-                                    Cofnij oznaczenie
-                                </button>
-                            </div>
+                        <div id="raport-pending-actions" class="pt-4 border-t border-zinc-800">
+                            <button onclick="markReportSent()" id="btn-send-report" class="w-full bg-violet-600 hover:bg-violet-500 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors flex items-center justify-center gap-2">
+                                <i class="ph ph-paper-plane-tilt"></i>
+                                Oznacz raport jako wysłany
+                            </button>
+                            <p class="text-[11px] text-zinc-600 text-center mt-2">Klient zobaczy statystyki w swoim portalu</p>
                         </div>
                     </div><!-- /tab-raport -->
 
@@ -9626,15 +9686,60 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const noDataEl = document.getElementById('raport-no-data');
             const statsSection = document.getElementById('raport-stats-section');
             const pendingActions = document.getElementById('raport-pending-actions');
-            const sentActions = document.getElementById('raport-sent-actions');
             const navCheck = document.getElementById('nav-check-raport');
+
+            // Set default date range (last 30 days)
+            const dateFromInput = document.getElementById('manus-date-from');
+            const dateToInput = document.getElementById('manus-date-to');
+            if (dateFromInput && !dateFromInput.value) {
+                const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                dateFromInput.value = from.toISOString().split('T')[0];
+            }
+            if (dateToInput && !dateToInput.value) {
+                dateToInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            // Show Meta Ad Account ID
+            const adAccountInfo = document.getElementById('raport-ad-account-info');
+            if (adAccountInfo) {
+                if (adsData?.meta_ad_account_id) {
+                    adAccountInfo.innerHTML = `<span class="text-violet-400">${adsData.meta_ad_account_id}</span>`;
+                } else {
+                    adAccountInfo.innerHTML = '<span class="text-amber-400">Brak ID konta — uzupełnij w zakładce Konto reklamowe</span>';
+                }
+            }
+
+            // Show Manus task status
+            const taskStatusEl = document.getElementById('manus-task-status');
+            const taskStatusText = document.getElementById('manus-task-status-text');
+            if (taskStatusEl && adsData?.manus_task_status) {
+                if (adsData.manus_task_status === 'pending' || adsData.manus_task_status === 'running') {
+                    taskStatusEl.classList.remove('hidden');
+                    taskStatusText.textContent = adsData.manus_task_status === 'pending' ? 'W kolejce...' : 'Pobieram dane...';
+                } else {
+                    taskStatusEl.classList.add('hidden');
+                }
+            }
+
+            // Show last fetch info
+            const lastFetchEl = document.getElementById('raport-last-fetch');
+            const lastFetchDateEl = document.getElementById('raport-last-fetch-date');
+            const sourceEl = document.getElementById('raport-source');
+            if (lastFetchEl && adsData?.report_data?.fetched_at) {
+                lastFetchEl.classList.remove('hidden');
+                lastFetchDateEl.textContent = new Date(adsData.report_data.fetched_at).toLocaleDateString('pl-PL', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                sourceEl.textContent = adsData.report_data.source === 'manus' ? 'Manus' : 'Ręcznie';
+            } else if (lastFetchEl) {
+                lastFetchEl.classList.add('hidden');
+            }
 
             // Hide all first
             if (sentStatusEl) sentStatusEl.classList.add('hidden');
             if (noDataEl) noDataEl.classList.add('hidden');
             if (statsSection) statsSection.classList.add('hidden');
             if (pendingActions) pendingActions.classList.add('hidden');
-            if (sentActions) sentActions.classList.add('hidden');
 
             // Check if report has data
             const hasData = adsData?.report_data && Object.keys(adsData.report_data).length > 0;
@@ -9662,7 +9767,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             // Check if report is sent
             if (adsData?.report_sent) {
                 if (sentStatusEl) sentStatusEl.classList.remove('hidden');
-                if (sentActions) sentActions.classList.remove('hidden');
+                if (pendingActions) pendingActions.classList.add('hidden');
                 if (navCheck) navCheck.classList.remove('hidden');
 
                 const sentDate = adsData.report_sent_at;
@@ -9678,6 +9783,22 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (pendingActions) pendingActions.classList.remove('hidden');
                 if (navCheck) navCheck.classList.add('hidden');
             }
+        }
+
+        function setDateRangePreset(preset) {
+            const dateFromInput = document.getElementById('manus-date-from');
+            const dateToInput = document.getElementById('manus-date-to');
+            const today = new Date();
+
+            let days = 30;
+            if (preset === '7d') days = 7;
+            else if (preset === '30d') days = 30;
+            else if (preset === '90d') days = 90;
+
+            const from = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+
+            if (dateFromInput) dateFromInput.value = from.toISOString().split('T')[0];
+            if (dateToInput) dateToInput.value = today.toISOString().split('T')[0];
         }
 
         function renderReportStats(data) {
@@ -9966,10 +10087,21 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 return;
             }
 
+            // Get selected date range
+            const dateFrom = document.getElementById('manus-date-from')?.value;
+            const dateTo = document.getElementById('manus-date-to')?.value;
+
             const btn = document.getElementById('btn-fetch-manus');
+            const taskStatusEl = document.getElementById('manus-task-status');
+            const taskStatusText = document.getElementById('manus-task-status-text');
+
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Pobieram...';
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Wysyłam...';
+            }
+            if (taskStatusEl) {
+                taskStatusEl.classList.remove('hidden');
+                taskStatusText.textContent = 'Wysyłam do Manus...';
             }
 
             try {
@@ -9980,7 +10112,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     },
                     body: JSON.stringify({
                         workflow_id: workflow.id,
-                        ad_account_id: adsData.meta_ad_account_id
+                        ad_account_id: adsData.meta_ad_account_id,
+                        date_from: dateFrom,
+                        date_to: dateTo
                     })
                 });
 
@@ -9988,6 +10122,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
                 if (result.success) {
                     showToast('Zadanie wysłane do Manus. Dane pojawią się automatycznie.', 'success');
+                    if (taskStatusText) taskStatusText.textContent = 'Pobieram dane...';
 
                     // Start polling for results
                     pollManusTaskStatus(result.task_id);
@@ -9997,10 +10132,11 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             } catch (err) {
                 console.error('Error fetching from Manus:', err);
                 showToast('Błąd pobierania danych: ' + err.message, 'error');
+                if (taskStatusEl) taskStatusEl.classList.add('hidden');
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="ph ph-robot"></i> Pobierz dane (Manus)';
+                    btn.innerHTML = '<i class="ph ph-cloud-arrow-down"></i> Pobierz dane';
                 }
             }
         }
@@ -10009,6 +10145,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             // Poll every 5 seconds for up to 2 minutes
             let attempts = 0;
             const maxAttempts = 24;
+            const taskStatusEl = document.getElementById('manus-task-status');
 
             const poll = async () => {
                 attempts++;
@@ -10021,12 +10158,15 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     .maybeSingle();
 
                 if (data?.manus_task_status === 'completed' && data?.report_data) {
+                    if (taskStatusEl) taskStatusEl.classList.add('hidden');
                     showToast('Dane z Manus pobrane!', 'success');
+                    adsData = { ...adsData, ...data };
                     loadRaportTab();
                     return;
                 }
 
                 if (data?.manus_task_status === 'failed') {
+                    if (taskStatusEl) taskStatusEl.classList.add('hidden');
                     showToast('Manus: ' + (data.manus_task_error || 'Błąd pobierania'), 'error');
                     return;
                 }
@@ -10034,6 +10174,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (attempts < maxAttempts) {
                     setTimeout(poll, 5000);
                 } else {
+                    if (taskStatusEl) taskStatusEl.classList.add('hidden');
                     showToast('Przekroczono czas oczekiwania. Sprawdź później.', 'info');
                 }
             };
@@ -10049,6 +10190,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.saveReportUrl = saveReportUrl;
         window.fetchReportDataManus = fetchReportDataManus;
         window.saveMetaAdAccountId = saveMetaAdAccountId;
+        window.setDateRangePreset = setDateRangePreset;
 
         // =============================================
         // CONTRACT MANAGEMENT
