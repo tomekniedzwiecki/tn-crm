@@ -9960,17 +9960,85 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         async function fetchReportDataManus() {
-            // TODO: Integracja z Manus AI
-            // Na razie pokazujemy informację
-            showToast('Integracja z Manus w przygotowaniu. Użyj ręcznego wprowadzania danych.', 'info');
-
-            // Otwórz panel ręcznego wprowadzania
-            const panel = document.getElementById('manual-entry-panel');
-            const chevron = document.getElementById('manual-entry-chevron');
-            if (panel && panel.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-                chevron?.classList.add('rotate-90');
+            // Check if ad account ID is set
+            if (!adsData?.meta_ad_account_id) {
+                showToast('Najpierw uzupełnij Meta Ad Account ID w zakładce Konto reklamowe', 'error');
+                return;
             }
+
+            const btn = document.getElementById('btn-fetch-manus');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Pobieram...';
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/manus-fetch-ads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        workflow_id: workflow.id,
+                        ad_account_id: adsData.meta_ad_account_id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Zadanie wysłane do Manus. Dane pojawią się automatycznie.', 'success');
+
+                    // Start polling for results
+                    pollManusTaskStatus(result.task_id);
+                } else {
+                    throw new Error(result.error || 'Błąd Manus API');
+                }
+            } catch (err) {
+                console.error('Error fetching from Manus:', err);
+                showToast('Błąd pobierania danych: ' + err.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-robot"></i> Pobierz dane (Manus)';
+                }
+            }
+        }
+
+        async function pollManusTaskStatus(taskId) {
+            // Poll every 5 seconds for up to 2 minutes
+            let attempts = 0;
+            const maxAttempts = 24;
+
+            const poll = async () => {
+                attempts++;
+
+                // Reload ads data
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('manus_task_status, report_data, manus_task_error')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+
+                if (data?.manus_task_status === 'completed' && data?.report_data) {
+                    showToast('Dane z Manus pobrane!', 'success');
+                    loadRaportTab();
+                    return;
+                }
+
+                if (data?.manus_task_status === 'failed') {
+                    showToast('Manus: ' + (data.manus_task_error || 'Błąd pobierania'), 'error');
+                    return;
+                }
+
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 5000);
+                } else {
+                    showToast('Przekroczono czas oczekiwania. Sprawdź później.', 'info');
+                }
+            };
+
+            poll();
         }
 
         window.loadRaportTab = loadRaportTab;
@@ -9980,6 +10048,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.saveManualReportData = saveManualReportData;
         window.saveReportUrl = saveReportUrl;
         window.fetchReportDataManus = fetchReportDataManus;
+        window.saveMetaAdAccountId = saveMetaAdAccountId;
 
         // =============================================
         // CONTRACT MANAGEMENT
