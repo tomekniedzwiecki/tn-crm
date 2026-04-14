@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041416';
+        const APP_VERSION = '2026041417';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -735,6 +735,43 @@
             }
             #dash-bento-etap2 #dash-etap2-box-nagrania {
                 min-height: 300px;
+            }
+        }
+
+        /* Skeleton shimmer for loading states */
+        @keyframes skeletonShimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0.02) 0%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.02) 100%);
+            background-size: 200% 100%;
+            animation: skeletonShimmer 1.8s ease-in-out infinite;
+            border-radius: 6px;
+        }
+
+        /* Staggered fade-in for bento tiles on stage switch */
+        @keyframes bentoFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box {
+            animation: bentoFadeIn 0.45s ease-out both;
+        }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(1) { animation-delay: 0ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(2) { animation-delay: 60ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(3) { animation-delay: 120ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(4) { animation-delay: 180ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(5) { animation-delay: 240ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(6) { animation-delay: 300ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(7) { animation-delay: 360ms; }
+        #dashboard-screen .bento-grid:not(.hidden) > .bento-box:nth-child(n+8) { animation-delay: 420ms; }
+        @media (prefers-reduced-motion: reduce) {
+            #dashboard-screen .bento-grid:not(.hidden) > .bento-box {
+                animation: none;
             }
         }
 
@@ -1990,7 +2027,7 @@
 
             <!-- Footer (hidden on mobile, visible on desktop) -->
             <div class="mt-12 pt-6 border-t border-[#1a1a1a] items-center justify-between hidden lg:flex">
-                <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-[#555] hover:text-white text-[12px] transition-colors flex items-center gap-1.5">
+                <a href="mailto:ceo@tomekniedzwiecki.pl" class="text-[#777] hover:text-white text-[12px] transition-colors flex items-center gap-1.5">
                     <i class="ph ph-envelope"></i> Kontakt
                 </a>
                 <p class="text-[#333] text-[11px] font-mono">tomekniedzwiecki.pl</p>
@@ -2419,7 +2456,7 @@
                 <div id="documents-empty" class="empty-state">
                     <div class="card p-6 md:p-16 text-center max-w-lg mx-auto" style="border-style: dashed;">
                         <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
-                            <i class="ph ph-file-text text-3xl text-[#444]"></i>
+                            <i class="ph ph-file-text text-3xl text-[#666]"></i>
                         </div>
                         <h3 class="text-white font-medium text-lg mb-2">Brak dokumentów</h3>
                         <p class="text-tertiary text-sm leading-relaxed">Umowy, faktury i inne ważne dokumenty pojawią się tutaj, gdy zostaną dodane przez zespół.</p>
@@ -2460,7 +2497,7 @@
                 <div id="branding-hero-empty" class="mb-12">
                     <h2 class="page-title">Branding</h2>
                     <div class="card p-10 text-center" style="border-style: dashed;">
-                        <i class="ph ph-paint-brush text-2xl text-[#444] mb-2"></i>
+                        <i class="ph ph-paint-brush text-2xl text-[#666] mb-2"></i>
                         <p class="text-tertiary text-sm">Brand kit jest w przygotowaniu</p>
                     </div>
                 </div>
@@ -2473,7 +2510,7 @@
                     </div>
                     <div id="branding-gallery-empty" class="card p-10 text-center hidden" style="border-style: dashed;">
                         <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
-                            <i class="ph ph-images text-xl text-[#444]"></i>
+                            <i class="ph ph-images text-xl text-[#666]"></i>
                         </div>
                         <p class="text-tertiary text-sm">Grafiki pojawią się tutaj</p>
                     </div>
@@ -2517,7 +2554,7 @@
                     </div>
                     <div id="branding-guidelines-empty" class="card p-8 text-center hidden" style="border-style: dashed;">
                         <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center">
-                            <i class="ph ph-file-arrow-down text-xl text-[#444]"></i>
+                            <i class="ph ph-file-arrow-down text-xl text-[#666]"></i>
                         </div>
                         <p class="text-tertiary text-sm">Pliki do pobrania pojawią się tutaj</p>
                     </div>
@@ -2582,7 +2619,7 @@
                 <div id="sales-page-empty" class="empty-state">
                     <div class="card p-6 md:p-16 text-center max-w-lg mx-auto" style="border-style: dashed;">
                         <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
-                            <i class="ph ph-globe text-3xl text-[#444]"></i>
+                            <i class="ph ph-globe text-3xl text-[#666]"></i>
                         </div>
                         <h3 class="text-white font-medium text-lg mb-2">Strona w przygotowaniu</h3>
                         <p class="text-tertiary text-sm leading-relaxed">Twoja strona sprzedażowa jest w trakcie realizacji. Pojawi się tutaj, gdy będzie gotowa.</p>
@@ -2643,7 +2680,7 @@
                 <div id="products-empty" class="empty-state">
                     <div class="card p-6 md:p-16 text-center max-w-lg mx-auto" style="border-style: dashed;">
                         <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center">
-                            <i class="ph ph-package text-3xl text-[#444]"></i>
+                            <i class="ph ph-package text-3xl text-[#666]"></i>
                         </div>
                         <h3 class="text-white font-medium text-lg mb-2">Brak produktów</h3>
                         <p class="text-tertiary text-sm leading-relaxed">Propozycje produktowe pojawią się tutaj wkrótce.</p>
@@ -2666,10 +2703,10 @@
                 <div id="reports-empty" class="hidden">
                     <div class="text-center py-16 px-8">
                         <div class="w-14 h-14 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center mx-auto mb-4">
-                            <i class="ph ph-chart-line-up text-xl text-[#444]"></i>
+                            <i class="ph ph-chart-line-up text-xl text-[#666]"></i>
                         </div>
                         <h3 class="text-[15px] font-medium text-white mb-1">Raporty w przygotowaniu</h3>
-                        <p class="text-[13px] text-[#555]">Materiały analityczne pojawią się tutaj wkrótce</p>
+                        <p class="text-[13px] text-[#777]">Materiały analityczne pojawią się tutaj wkrótce</p>
                     </div>
                 </div>
 
@@ -2911,7 +2948,7 @@
                         <!-- Empty state -->
                         <div id="video-links-empty" class="hidden bg-[#0a0a0a] border border-dashed border-[#333] rounded-xl p-8 text-center">
                             <i class="ph ph-video-camera text-3xl text-[#333] mb-3"></i>
-                            <p class="text-[#555] text-[13px]">Brak nagrań. Kliknij "Dodaj link" aby przesłać pierwsze video.</p>
+                            <p class="text-[#777] text-[13px]">Brak nagrań. Kliknij "Dodaj link" aby przesłać pierwsze video.</p>
                         </div>
                     </div>
                 </div>
@@ -3147,7 +3184,7 @@
                     <div class="mb-8">
                         <div class="flex gap-3">
                             <div class="flex-1 relative">
-                                <i class="ph ph-link absolute left-4 top-1/2 -translate-y-1/2 text-[#444]"></i>
+                                <i class="ph ph-link absolute left-4 top-1/2 -translate-y-1/2 text-[#666]"></i>
                                 <input type="url" id="recording-url-input"
                                     class="w-full bg-[#0a0a0a] border border-[#252525] rounded-xl pl-11 pr-4 py-3.5 text-[14px] text-white placeholder-[#555] focus:border-[#444] focus:outline-none transition-colors"
                                     placeholder="Wklej link do nagrania (TikTok, YouTube, Instagram)"
@@ -3184,7 +3221,7 @@
                                 </div>
                             </div>
                             <p class="text-[15px] text-[#888] mb-2">Brak nagrań</p>
-                            <p class="text-[13px] text-[#555]">
+                            <p class="text-[13px] text-[#777]">
                                 Wrzuć nagrania na social media i wklej linki powyżej
                             </p>
                         </div>
@@ -3243,7 +3280,7 @@
                                     <div id="takedrop-success-state" class="hidden flex items-center gap-2">
                                         <i class="ph-fill ph-check-circle text-emerald-500"></i>
                                         <span class="text-[12px] text-emerald-500">Gotowe</span>
-                                        <span id="takedrop-confirmed-date" class="text-[11px] text-[#555]"></span>
+                                        <span id="takedrop-confirmed-date" class="text-[11px] text-[#777]"></span>
                                     </div>
                                 </div>
                                 <p class="text-[13px] text-[#666] mb-5">
@@ -3252,11 +3289,11 @@
                                 <div id="takedrop-login-form">
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                                         <div>
-                                            <label class="block text-[12px] text-[#555] mb-1.5">Email</label>
+                                            <label class="block text-[12px] text-[#777] mb-1.5">Email</label>
                                             <input type="email" id="takedrop-client-email" class="w-full bg-[#111] border border-[#252525] rounded-lg px-3.5 py-2.5 text-[13px] text-white placeholder-[#444] focus:border-[#444] focus:outline-none transition-colors" placeholder="twoj@email.pl">
                                         </div>
                                         <div>
-                                            <label class="block text-[12px] text-[#555] mb-1.5">Hasło</label>
+                                            <label class="block text-[12px] text-[#777] mb-1.5">Hasło</label>
                                             <input type="password" id="takedrop-client-password" class="w-full bg-[#111] border border-[#252525] rounded-lg px-3.5 py-2.5 text-[13px] text-white placeholder-[#444] focus:border-[#444] focus:outline-none transition-colors" placeholder="••••••••">
                                         </div>
                                     </div>
@@ -3278,9 +3315,9 @@
                                 <div class="flex items-center justify-between mb-1">
                                     <h3 class="text-[15px] font-medium text-white">Strona sprzedażowa</h3>
                                     <div id="takedrop-landing-status" class="flex items-center gap-2">
-                                        <i id="takedrop-landing-status-icon" class="ph ph-clock text-[#555]"></i>
-                                        <span id="takedrop-landing-status-text" class="text-[12px] text-[#555]">Oczekuje</span>
-                                        <span id="takedrop-landing-date" class="text-[11px] text-[#555]"></span>
+                                        <i id="takedrop-landing-status-icon" class="ph ph-clock text-[#777]"></i>
+                                        <span id="takedrop-landing-status-text" class="text-[12px] text-[#777]">Oczekuje</span>
+                                        <span id="takedrop-landing-date" class="text-[11px] text-[#777]"></span>
                                     </div>
                                 </div>
                                 <p id="takedrop-landing-desc" class="text-[13px] text-[#666]">
@@ -3305,7 +3342,7 @@
                     <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6">
                         <div class="flex items-start gap-4">
                             <div id="landing-status-icon-container" class="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
-                                <i id="landing-status-icon" class="ph ph-clock text-[#555] text-xl"></i>
+                                <i id="landing-status-icon" class="ph ph-clock text-[#777] text-xl"></i>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <h3 id="landing-status-title" class="text-[16px] font-medium text-white mb-2">Oczekuje na podłączenie</h3>
@@ -3319,9 +3356,9 @@
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="text-[13px] text-white font-medium group-hover:text-emerald-400 transition-colors truncate" id="landing-domain-text">-</div>
-                                            <div class="text-[11px] text-[#555]">Kliknij, aby otworzyć sklep</div>
+                                            <div class="text-[11px] text-[#777]">Kliknij, aby otworzyć sklep</div>
                                         </div>
-                                        <i class="ph ph-arrow-square-out text-[#555] group-hover:text-emerald-400 transition-colors"></i>
+                                        <i class="ph ph-arrow-square-out text-[#777] group-hover:text-emerald-400 transition-colors"></i>
                                     </a>
                                 </div>
                             </div>
@@ -3365,15 +3402,15 @@
                                 <div>
                                     <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">Sprzedawca *</label>
                                     <input type="text" id="client-legal-company" autocomplete="name" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="Imię i nazwisko lub nazwa firmy">
-                                    <p class="text-[11px] text-[#555] mt-1.5">Działalność nierejestrowana: imię i nazwisko. Firma: pełna nazwa z formą prawną (np. Sp. z o.o.)</p>
+                                    <p class="text-[11px] text-[#777] mt-1.5">Działalność nierejestrowana: imię i nazwisko. Firma: pełna nazwa z formą prawną (np. Sp. z o.o.)</p>
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">NIP <span class="text-[#555]">(jeśli dotyczy)</span></label>
+                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">NIP <span class="text-[#777]">(jeśli dotyczy)</span></label>
                                         <input type="text" id="client-legal-nip" autocomplete="off" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="1234567890">
                                     </div>
                                     <div>
-                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">REGON <span class="text-[#555]">(jeśli dotyczy)</span></label>
+                                        <label class="block text-[12px] text-[#666] uppercase tracking-wide mb-2">REGON <span class="text-[#777]">(jeśli dotyczy)</span></label>
                                         <input type="text" id="client-legal-regon" autocomplete="off" class="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 text-white text-[14px] focus:border-white/30 focus:outline-none transition-colors" placeholder="123456789">
                                     </div>
                                 </div>
@@ -3504,7 +3541,7 @@
                                             Otwórz instrukcję konfiguracji
                                             <i class="ph ph-arrow-up-right text-[14px]"></i>
                                         </a>
-                                        <p class="text-[12px] text-[#555] mb-4">
+                                        <p class="text-[12px] text-[#777] mb-4">
                                             Po wykonaniu wszystkich kroków z instrukcji, kliknij przycisk poniżej:
                                         </p>
                                         <button onclick="confirmPayUConfigured()" class="bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
@@ -3534,7 +3571,7 @@
                                             Otwórz instrukcję konfiguracji
                                             <i class="ph ph-arrow-up-right text-[14px]"></i>
                                         </a>
-                                        <p class="text-[12px] text-[#555] mb-4">
+                                        <p class="text-[12px] text-[#777] mb-4">
                                             Po wykonaniu wszystkich kroków z instrukcji, kliknij przycisk poniżej:
                                         </p>
                                         <button onclick="confirmStripeConfigured()" class="bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
@@ -4494,56 +4531,56 @@
                         <!-- Secondary metrics -->
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Zasięg</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Zasięg</div>
                                 <div id="raport-client-reach" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Wyświetlenia</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Wyświetlenia</div>
                                 <div id="raport-client-impressions" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Częstotliwość</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Częstotliwość</div>
                                 <div id="raport-client-frequency" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">CPM</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">CPM</div>
                                 <div id="raport-client-cpm" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Kliknięcia</div>
                                 <div id="raport-client-clicks" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Wejścia na stronę</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Wejścia na stronę</div>
                                 <div id="raport-client-lpv" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">CTR</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">CTR</div>
                                 <div id="raport-client-ctr" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Koszt/zakup</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Koszt/zakup</div>
                                 <div id="raport-client-cpc" class="text-[14px] font-medium text-[#888]">-</div>
                             </div>
                         </div>
 
                         <!-- Lejek konwersji (bez "Do koszyka") -->
                         <div class="mb-6">
-                            <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3 flex items-center gap-2">
+                            <div class="text-[11px] text-[#777] uppercase tracking-wide mb-3 flex items-center gap-2">
                                 <i class="ph ph-funnel"></i>
                                 Lejek konwersji
                             </div>
                             <div class="flex items-center gap-2 overflow-x-auto pb-2">
                                 <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Kliknięcia</div>
+                                    <div class="text-[10px] text-[#777] uppercase mb-1">Kliknięcia</div>
                                     <div id="raport-client-funnel-clicks" class="text-xl font-bold text-[#888]">-</div>
-                                    <div class="text-[10px] text-[#444]">100%</div>
+                                    <div class="text-[10px] text-[#666]">100%</div>
                                 </div>
                                 <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
                                 <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-[#555] uppercase mb-1">Do kasy</div>
+                                    <div class="text-[10px] text-[#777] uppercase mb-1">Do kasy</div>
                                     <div id="raport-client-funnel-checkout" class="text-xl font-bold text-amber-400">-</div>
-                                    <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#555]">-</div>
+                                    <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#777]">-</div>
                                 </div>
                                 <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
                                 <div class="flex-1 min-w-[100px] bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
@@ -4556,7 +4593,7 @@
 
                         <!-- Campaigns breakdown -->
                         <div id="raport-campaigns-client" class="hidden">
-                            <div class="text-[11px] text-[#555] uppercase tracking-wide mb-3">Kampanie</div>
+                            <div class="text-[11px] text-[#777] uppercase tracking-wide mb-3">Kampanie</div>
                             <div id="raport-campaigns-container-client" class="space-y-2">
                                 <!-- Rendered dynamically -->
                             </div>
@@ -5210,6 +5247,14 @@
             document.getElementById('dash-bento-etap4')?.classList.add('hidden');
             document.getElementById('dash-bento-placeholder')?.classList.add('hidden');
 
+            // Restart stagger animation: force reflow by re-adding class
+            const target = document.getElementById(`dash-bento-etap${stageNum}`);
+            if (target) {
+                target.classList.remove('bento-grid');
+                void target.offsetWidth;
+                target.classList.add('bento-grid');
+            }
+
             switch(stageNum) {
                 case 1:
                     document.getElementById('dash-bento-etap1')?.classList.remove('hidden');
@@ -5257,7 +5302,7 @@
                         <i class="ph ${item.icon}"></i>${item.label}<i class="ph ph-check ml-0.5"></i>
                     </span>`;
                 } else {
-                    return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#111] border border-[#222] text-[#555] text-[11px]">
+                    return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#111] border border-[#222] text-[#777] text-[11px]">
                         <i class="ph ${item.icon}"></i>${item.label}
                     </span>`;
                 }
@@ -5349,9 +5394,9 @@
                         </div>
                         <div class="flex-1 flex flex-col items-center justify-center">
                             <div class="flex gap-4 mb-4">
-                                <i class="ph ph-tiktok-logo text-4xl text-[#444]"></i>
-                                <i class="ph ph-youtube-logo text-4xl text-[#444]"></i>
-                                <i class="ph ph-instagram-logo text-4xl text-[#444]"></i>
+                                <i class="ph ph-tiktok-logo text-4xl text-[#666]"></i>
+                                <i class="ph ph-youtube-logo text-4xl text-[#666]"></i>
+                                <i class="ph ph-instagram-logo text-4xl text-[#666]"></i>
                             </div>
                             <h3 class="text-white text-lg font-medium">Dodaj profile</h3>
                             <p class="text-[#666] text-sm text-center mt-2">Podaj linki do social media</p>
@@ -5372,9 +5417,9 @@
                         </div>
                         <div class="flex-1 flex flex-col items-center justify-center">
                             <div class="flex gap-4 mb-4">
-                                <i class="ph ${profiles.tiktok ? 'ph-fill' : ''} ph-tiktok-logo text-4xl ${profiles.tiktok ? 'text-emerald-500' : 'text-[#444]'}"></i>
-                                <i class="ph ${profiles.youtube ? 'ph-fill' : ''} ph-youtube-logo text-4xl ${profiles.youtube ? 'text-emerald-500' : 'text-[#444]'}"></i>
-                                <i class="ph ${profiles.instagram ? 'ph-fill' : ''} ph-instagram-logo text-4xl ${profiles.instagram ? 'text-emerald-500' : 'text-[#444]'}"></i>
+                                <i class="ph ${profiles.tiktok ? 'ph-fill' : ''} ph-tiktok-logo text-4xl ${profiles.tiktok ? 'text-emerald-500' : 'text-[#666]'}"></i>
+                                <i class="ph ${profiles.youtube ? 'ph-fill' : ''} ph-youtube-logo text-4xl ${profiles.youtube ? 'text-emerald-500' : 'text-[#666]'}"></i>
+                                <i class="ph ${profiles.instagram ? 'ph-fill' : ''} ph-instagram-logo text-4xl ${profiles.instagram ? 'text-emerald-500' : 'text-[#666]'}"></i>
                             </div>
                             <h3 class="text-white text-lg font-medium">Uzupełnij profile</h3>
                             <p class="text-[#666] text-sm text-center mt-2">Dodaj pozostałe platformy</p>
@@ -6121,15 +6166,18 @@
                     </div>`;
             } else if (inProgress) {
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Materiały reklamowe</span>
-                            <span class="flex items-center gap-1.5 text-violet-400 text-xs"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span> W przygotowaniu</span>
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-violet-500/[0.05] via-transparent to-transparent pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-3">
+                            <span class="text-[#777] text-xs uppercase tracking-wide">Materiały</span>
+                            <span class="flex items-center gap-1.5 text-violet-400 text-xs"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span> Tworzymy</span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph ph-spinner animate-spin text-5xl text-violet-400 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">Tworzymy materiały</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Research + copy + 5 grafik</p>
+                        <div class="relative flex-1 grid grid-cols-2 gap-1.5 min-h-0">
+                            ${Array.from({length: 4}).map(() => `<div class="skeleton-shimmer aspect-square"></div>`).join('')}
+                        </div>
+                        <div class="relative mt-3 flex items-center gap-2 text-[11px] text-[#888]">
+                            <i class="ph ph-sparkle text-violet-400 text-sm animate-pulse"></i>
+                            <span>Research + copy + 5 grafik</span>
                         </div>
                     </div>`;
             } else if (budgetFunded) {
@@ -6420,18 +6468,18 @@
                         </div>
                         <div class="flex-1 flex flex-col items-center justify-center">
                             <div class="text-3xl font-bold text-violet-400 mb-1">${Number(roas).toFixed(2)}x</div>
-                            <div class="text-[10px] text-[#555] uppercase mb-3">ROAS</div>
+                            <div class="text-[10px] text-[#777] uppercase mb-3">ROAS</div>
                             <div class="flex items-center gap-4 text-[11px]">
                                 <div class="text-center">
                                     <div class="text-white font-medium">${fmtCurrency(spend)}</div>
-                                    <div class="text-[#555]">Wydatki</div>
+                                    <div class="text-[#777]">Wydatki</div>
                                 </div>
                                 <div class="text-center">
                                     <div class="text-emerald-400 font-medium">${purchases}</div>
-                                    <div class="text-[#555]">Zakupy</div>
+                                    <div class="text-[#777]">Zakupy</div>
                                 </div>
                             </div>
-                            <div class="text-[10px] text-[#444] mt-2">${periodFrom} - ${periodTo}</div>
+                            <div class="text-[10px] text-[#666] mt-2">${periodFrom} - ${periodTo}</div>
                         </div>
                     </div>
                 `;
@@ -6540,7 +6588,7 @@
                         <i class="ph ${item.icon}"></i>${item.label}<i class="ph ph-check ml-0.5"></i>
                     </span>`;
                 } else {
-                    return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#111] border border-[#222] text-[#555] text-[11px]">
+                    return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#111] border border-[#222] text-[#777] text-[11px]">
                         <i class="ph ${item.icon}"></i>${item.label}
                     </span>`;
                 }
@@ -6583,7 +6631,7 @@
                         <span class="text-[#666] text-[11px] uppercase tracking-wider font-medium">Produkt</span>
                         <div class="flex-1 flex flex-col items-center justify-center gap-2">
                             <i class="ph ph-hourglass text-2xl text-[#333]"></i>
-                            <span class="text-[#555] text-sm">W przygotowaniu</span>
+                            <span class="text-[#777] text-sm">W przygotowaniu</span>
                         </div>
                     </div>
                 `;
@@ -6625,7 +6673,7 @@
                                     <div class="w-12 h-12 rounded-xl bg-[#161616] border border-[#252525] overflow-hidden flex-shrink-0 hover:border-amber-500/50 transition-colors">
                                         ${p.image_url
                                             ? `<img src="${p.image_url}" class="w-full h-full object-cover" alt="">`
-                                            : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-lg text-[#444]"></i></div>`
+                                            : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-lg text-[#666]"></i></div>`
                                         }
                                     </div>
                                 `).join('')}
@@ -6687,7 +6735,7 @@
                         <span class="text-[#666] text-[11px] uppercase tracking-wider font-medium">Branding</span>
                         <div class="flex-1 flex flex-col items-center justify-center gap-2">
                             <i class="ph ph-hourglass text-2xl text-[#333]"></i>
-                            <span class="text-[#555] text-sm">W przygotowaniu</span>
+                            <span class="text-[#777] text-sm">W przygotowaniu</span>
                         </div>
                     </div>
                 `;
@@ -6716,7 +6764,7 @@
                                        <img src="${logoUrl}" class="max-w-full max-h-full object-contain" alt="">
                                    </div>`
                                 : `<div class="w-52 h-52 rounded-2xl bg-[#1a1a1a] flex items-center justify-center">
-                                       <i class="ph ph-palette text-6xl text-[#444]"></i>
+                                       <i class="ph ph-palette text-6xl text-[#666]"></i>
                                    </div>`
                             }
 
@@ -6762,7 +6810,7 @@
                         <span class="text-[#666] text-[11px] uppercase tracking-wider font-medium">Strona</span>
                         <div class="flex-1 flex flex-col items-center justify-center gap-2">
                             <i class="ph ph-hourglass text-2xl text-[#333]"></i>
-                            <span class="text-[#555] text-sm">W przygotowaniu</span>
+                            <span class="text-[#777] text-sm">W przygotowaniu</span>
                         </div>
                     </div>
                 `;
@@ -6792,7 +6840,7 @@
                                     <span class="w-2 h-2 rounded-full bg-[#333]"></span>
                                     <span class="w-2 h-2 rounded-full bg-[#333]"></span>
                                 </div>
-                                <span class="text-[10px] text-[#555] font-mono truncate">${shortUrl}</span>
+                                <span class="text-[10px] text-[#777] font-mono truncate">${shortUrl}</span>
                             </div>
                             <div class="p-4 flex items-center justify-center">
                                 <i class="ph ph-globe text-2xl text-[#333]"></i>
@@ -6831,7 +6879,7 @@
                         <span class="text-[#666] text-[11px] uppercase tracking-wider font-medium">Raporty</span>
                         <div class="flex-1 flex flex-col items-center justify-center gap-2">
                             <i class="ph ph-hourglass text-2xl text-[#333]"></i>
-                            <span class="text-[#555] text-sm">Brak raportów</span>
+                            <span class="text-[#777] text-sm">Brak raportów</span>
                         </div>
                     </div>
                 `;
@@ -7133,7 +7181,7 @@
             } else {
                 iconContainer.classList.add('bg-[#1a1a1a]');
                 iconContainer.classList.remove('bg-emerald-500/20');
-                icon.className = 'ph ph-clock text-[#555] text-xl';
+                icon.className = 'ph ph-clock text-[#777] text-xl';
                 title.textContent = 'Oczekuje na podłączenie';
                 desc.textContent = 'Twoja strona sprzedażowa zostanie podłączona do platformy sklepowej. Otrzymasz powiadomienie gdy będzie gotowa.';
                 domainInfo.classList.add('hidden');
@@ -7159,7 +7207,7 @@
             } else {
                 iconContainer.classList.add('bg-[#1a1a1a]');
                 iconContainer.classList.remove('bg-emerald-500/20');
-                icon.className = 'ph ph-clock text-[#555] text-xl';
+                icon.className = 'ph ph-clock text-[#777] text-xl';
                 title.textContent = 'W przygotowaniu';
                 desc.textContent = 'Dokumenty prawne Twojego sklepu są przygotowywane. Obejmują regulamin, politykę prywatności i politykę cookies.';
             }
@@ -8348,11 +8396,11 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="px-2 py-0.5 text-[10px] font-medium rounded border ${typeClass}">${escapeHtml(scenario.type || 'Video')}</span>
-                                ${scenario.duration ? `<span class="text-[10px] text-[#555]">${escapeHtml(scenario.duration)}</span>` : ''}
+                                ${scenario.duration ? `<span class="text-[10px] text-[#777]">${escapeHtml(scenario.duration)}</span>` : ''}
                             </div>
                             <h4 class="text-white text-[14px] font-medium truncate">${escapeHtml(scenario.title)}</h4>
                         </div>
-                        <i class="ph ph-caret-down text-[#555] text-lg transition-transform duration-200" id="scenario-arrow-${globalIndex}"></i>
+                        <i class="ph ph-caret-down text-[#777] text-lg transition-transform duration-200" id="scenario-arrow-${globalIndex}"></i>
                     </button>
 
                     <div id="scenario-content-${globalIndex}" class="hidden">
@@ -8420,7 +8468,7 @@
                             <div class="flex items-start gap-2 bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
                                 <i class="ph ph-text-aa text-purple-400 text-sm mt-0.5"></i>
                                 <div class="text-[#888] text-[12px]">
-                                    <span class="text-[#555] text-[10px] block mb-1">Tekst na ekranie:</span>
+                                    <span class="text-[#777] text-[10px] block mb-1">Tekst na ekranie:</span>
                                     <span class="text-[#aaa]">${escapeHtml(scenario.textOverlay)}</span>
                                 </div>
                             </div>
@@ -8455,7 +8503,7 @@
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-user text-pink-400"></i>
                             <h4 class="text-[13px] font-medium text-white">Z twarzą</h4>
-                            <span class="text-[11px] text-[#555]">(${withFace.length})</span>
+                            <span class="text-[11px] text-[#777]">(${withFace.length})</span>
                         </div>
                         <div class="space-y-3">
                             ${faceCards}
@@ -8470,7 +8518,7 @@
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-hand text-cyan-400"></i>
                             <h4 class="text-[13px] font-medium text-white">Bez twarzy</h4>
-                            <span class="text-[11px] text-[#555]">(${noFace.length})</span>
+                            <span class="text-[11px] text-[#777]">(${noFace.length})</span>
                         </div>
                         <div class="space-y-3">
                             ${noFaceCards}
@@ -8564,10 +8612,10 @@
                             class="w-full bg-transparent text-[#666] text-[12px] focus:outline-none placeholder-[#444]"
                             onchange="updateVideoLink(${index}, 'url', this.value)">
                     </div>
-                    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener" class="w-8 h-8 rounded-lg hover:bg-[#1a1a1a] flex items-center justify-center text-[#555] hover:text-white transition-colors">
+                    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener" class="w-8 h-8 rounded-lg hover:bg-[#1a1a1a] flex items-center justify-center text-[#777] hover:text-white transition-colors">
                         <i class="ph ph-arrow-square-out"></i>
                     </a>
-                    <button onclick="removeVideoLink(${index})" class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[#555] hover:text-red-400 transition-colors">
+                    <button onclick="removeVideoLink(${index})" class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[#777] hover:text-red-400 transition-colors">
                         <i class="ph ph-trash"></i>
                     </button>
                 </div>
@@ -8981,7 +9029,7 @@
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-user text-pink-400"></i>
                             <span class="text-[13px] text-white font-medium">Z twarzą</span>
-                            <span class="text-[11px] text-[#555]">(${withFace.length})</span>
+                            <span class="text-[11px] text-[#777]">(${withFace.length})</span>
                         </div>
                         <div class="space-y-2">
                             ${withFace.map((s, i) => renderIntroScenarioCard(s, `face-${i}`)).join('')}
@@ -8995,7 +9043,7 @@
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-hand text-cyan-400"></i>
                             <span class="text-[13px] text-white font-medium">Bez twarzy</span>
-                            <span class="text-[11px] text-[#555]">(${withoutFace.length})</span>
+                            <span class="text-[11px] text-[#777]">(${withoutFace.length})</span>
                         </div>
                         <div class="space-y-2">
                             ${withoutFace.map((s, i) => renderIntroScenarioCard(s, `noface-${i}`)).join('')}
@@ -9037,10 +9085,10 @@
                     <button onclick="toggleIntroScenario('${id}')" class="w-full p-4 flex items-center justify-between text-left hover:bg-[#111] transition-colors">
                         <div class="flex items-center gap-3">
                             <span class="text-[11px] px-2 py-0.5 rounded border ${typeClass}">${scenario.type || 'Video'}</span>
-                            ${scenario.duration ? `<span class="text-[11px] text-[#555]">${scenario.duration}</span>` : ''}
+                            ${scenario.duration ? `<span class="text-[11px] text-[#777]">${scenario.duration}</span>` : ''}
                             <span class="text-[13px] text-white font-medium">${escapeHtml(scenario.title)}</span>
                         </div>
-                        <i id="intro-scenario-arrow-${id}" class="ph ph-caret-down text-[#555] transition-transform"></i>
+                        <i id="intro-scenario-arrow-${id}" class="ph ph-caret-down text-[#777] transition-transform"></i>
                     </button>
                     <div id="intro-scenario-content-${id}" class="hidden px-4 pb-4 pt-0 border-t border-[#1a1a1a]">
                         ${scenario.hook ? `<div class="mt-3"><p class="text-[11px] text-emerald-400 uppercase tracking-wider mb-1">Start</p><p class="text-[13px] text-[#888]">${escapeHtml(scenario.hook)}</p></div>` : ''}
@@ -9184,13 +9232,13 @@
                         <input type="text" value="${escapeHtml(link.title || '')}" placeholder="Dodaj nazwę..."
                             class="w-full bg-transparent text-[13px] text-white placeholder-[#444] focus:outline-none focus:placeholder-[#555]"
                             onchange="updateRecordingLink(${link.originalIndex}, 'title', this.value)">
-                        <a href="${escapeHtml(link.url)}" target="_blank" class="text-[11px] text-[#555] hover:text-[#888] transition-colors truncate block">${shortUrl}</a>
+                        <a href="${escapeHtml(link.url)}" target="_blank" class="text-[11px] text-[#777] hover:text-[#888] transition-colors truncate block">${shortUrl}</a>
                     </div>
                     <div class="flex items-center gap-0.5">
-                        <a href="${escapeHtml(link.url)}" target="_blank" class="w-7 h-7 rounded-md hover:bg-[#1a1a1a] flex items-center justify-center text-[#444] hover:text-white transition-colors">
+                        <a href="${escapeHtml(link.url)}" target="_blank" class="w-7 h-7 rounded-md hover:bg-[#1a1a1a] flex items-center justify-center text-[#666] hover:text-white transition-colors">
                             <i class="ph ph-arrow-square-out text-sm"></i>
                         </a>
-                        <button onclick="removeRecordingLink(${link.originalIndex})" class="w-7 h-7 rounded-md hover:bg-red-500/10 flex items-center justify-center text-[#444] hover:text-red-400 transition-colors">
+                        <button onclick="removeRecordingLink(${link.originalIndex})" class="w-7 h-7 rounded-md hover:bg-red-500/10 flex items-center justify-center text-[#666] hover:text-red-400 transition-colors">
                             <i class="ph ph-trash text-sm"></i>
                         </button>
                     </div>
@@ -9206,7 +9254,7 @@
                             <i class="${data.icon} text-sm ${data.color}"></i>
                         </div>
                         <span class="text-[12px] font-medium text-[#888] uppercase tracking-wide">${data.name}</span>
-                        <span class="text-[11px] text-[#444] bg-[#1a1a1a] px-1.5 py-0.5 rounded">${data.links.length}</span>
+                        <span class="text-[11px] text-[#666] bg-[#1a1a1a] px-1.5 py-0.5 rounded">${data.links.length}</span>
                     </div>
                     <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden divide-y divide-[#1a1a1a]">
                         ${data.links.map(link => renderLink(link)).join('')}
@@ -9499,9 +9547,9 @@
                     landingIcon.innerHTML = '<span class="text-[13px] font-medium text-white">3</span>';
                     landingIcon.classList.add('bg-white/10');
                     landingIcon.classList.remove('bg-emerald-500/20');
-                    landingStatusIcon.className = 'ph ph-clock text-[#555]';
+                    landingStatusIcon.className = 'ph ph-clock text-[#777]';
                     landingStatusText.textContent = 'Oczekuje';
-                    landingStatusText.className = 'text-[12px] text-[#555]';
+                    landingStatusText.className = 'text-[12px] text-[#777]';
                     landingDesc.textContent = 'Twoja strona sprzedażowa zostanie przeniesiona do TakeDrop.';
                     if (landingDate) landingDate.textContent = '';
                 }
@@ -10929,21 +10977,21 @@
                         </div>
                         <div class="grid grid-cols-3 gap-3">
                             <div class="text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Wydatki</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Wydatki</div>
                                 <div class="text-[14px] font-medium text-white">${fmtMoney(report.spend)}</div>
                             </div>
                             <div class="text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Przychód</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Przychód</div>
                                 <div class="text-[14px] font-medium text-emerald-400">${fmtMoney(report.revenue)}</div>
                             </div>
                             <div class="text-center">
-                                <div class="text-[10px] text-[#555] uppercase mb-1">Zakupy</div>
+                                <div class="text-[10px] text-[#777] uppercase mb-1">Zakupy</div>
                                 <div class="text-[14px] font-medium text-white">${report.purchases || 0}</div>
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-[#1a1a1a] flex items-center justify-between">
                             <span class="text-[12px] text-[#666] group-hover:text-[#888] transition-colors">Zobacz szczegóły</span>
-                            <i class="ph ph-arrow-right text-[#444] group-hover:text-violet-400 transition-colors"></i>
+                            <i class="ph ph-arrow-right text-[#666] group-hover:text-violet-400 transition-colors"></i>
                         </div>
                     </div>
                 `;
@@ -11713,7 +11761,7 @@
             const imgContainer = document.getElementById('confirm-product-image');
             imgContainer.innerHTML = product.image_url
                 ? `<img src="${product.image_url}" alt="" class="w-full h-full object-cover">`
-                : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-[#444]"></i></div>`;
+                : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-[#666]"></i></div>`;
 
             document.getElementById('confirm-product-name').textContent = product.name;
             document.getElementById('product-confirm-modal').classList.remove('hidden');
