@@ -1,5 +1,17 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { jsonrepair } from 'https://esm.sh/jsonrepair@3.12.0'
+
+// Parse JSON with fallback to jsonrepair (Manus sometimes produces malformed JSON
+// with unescaped quotes in string values — e.g. testimonials with " inside)
+function tolerantJSONParse(raw: string): any | null {
+  if (!raw) return null
+  try { return JSON.parse(raw) } catch (_) {}
+  try { return JSON.parse(jsonrepair(raw)) } catch (e) {
+    console.error('[tolerantParse] jsonrepair failed:', (e as Error).message)
+  }
+  return null
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -150,13 +162,19 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
   console.log(`[full] ${workflowId}: ${images.length} images, ${jsonFiles.length} JSON files`)
 
   // === 1. Parsuj JSON z campaign data (research + copy) ===
+  // Tolerant: najpierw plik (JSON.parse → jsonrepair), potem fallback do text messages
   let campaignData: any = null
   if (jsonFiles.length > 0) {
     try {
       const jsonRes = await fetch(jsonFiles[0].url)
-      if (jsonRes.ok) campaignData = await jsonRes.json()
+      if (jsonRes.ok) {
+        const rawText = await jsonRes.text()
+        campaignData = tolerantJSONParse(rawText)
+        if (campaignData) console.log(`[full] campaign.json parsed (${rawText.length} chars)`)
+        else console.error(`[full] campaign.json malformed and unrepairable (${rawText.length} chars)`)
+      }
     } catch (e) {
-      console.error('[full] JSON fetch failed:', e.message)
+      console.error('[full] JSON fetch failed:', (e as Error).message)
     }
   }
   // Fallback: szukaj JSON w tekście wiadomości
@@ -166,10 +184,18 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
       const am = m.assistant_message
       const txt = typeof am === 'string' ? am : (am?.content || am?.text || '')
       if (txt.includes('"research"') || txt.includes('"copy"')) {
-        try {
-          const jsonMatch = txt.match(/\{[\s\S]*\}/)
-          if (jsonMatch) { campaignData = JSON.parse(jsonMatch[0]); break }
-        } catch {}
+        // Pobierz content pomiędzy ```json i ``` albo od { do }
+        let jsonText = ''
+        const fenced = txt.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+        if (fenced) jsonText = fenced[1]
+        else {
+          const m2 = txt.match(/\{[\s\S]*\}/)
+          if (m2) jsonText = m2[0]
+        }
+        if (jsonText) {
+          campaignData = tolerantJSONParse(jsonText)
+          if (campaignData) { console.log('[full] campaign data parsed from text message fallback'); break }
+        }
       }
     }
   }
