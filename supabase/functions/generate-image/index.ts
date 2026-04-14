@@ -84,13 +84,28 @@ async function generateWithGemini(
   // Build the prompt with STRONG reference instruction
   let finalPrompt = ''
   if (productRefAdded) {
-    finalPrompt = `CRITICAL PRODUCT REFERENCE: The image I provided shows the EXACT product that must appear in your generated image. You MUST render this exact product with the same:
-- Shape and proportions
-- Color and materials
-- Branding and labels (if visible)
-- All visible details
+    finalPrompt = `TASK: PHOTO COMPOSITE / PRODUCT PLACEMENT
 
-DO NOT invent a different product. DO NOT generate a generic version. The product in your output MUST match the reference image pixel-for-pixel in its visual identity — only the scene/background/context around it changes.
+You are editing a photograph. Take the product shown in the reference image I provided and place it into a new scene. This is NOT text-to-image generation — this is photo compositing.
+
+PRODUCT PLACEMENT RULES:
+- Extract the EXACT product from the reference (same shape, color, materials, proportions, all details, branding, labels)
+- Preserve the product's visual identity 1:1 — it must be instantly recognizable as the same product
+- Only the scene, lighting, people, and context around the product change
+- Match scene lighting to product lighting so it looks photographed, not pasted
+
+PHOTOGRAPHY STYLE (to avoid AI look):
+- Shoot as if from a real camera: natural depth of field, subtle imperfections, real skin texture, slight film grain
+- NOT a stock photo. NOT corporate. NOT a packshot on white background.
+- Think: iPhone photo by influencer, documentary photography, UGC advertising
+- Natural, candid moments with genuine emotion on faces (not stock-photo smiles to camera)
+- Use cinematic lighting: window light, golden hour, dramatic shadows when relevant
+
+AVOID:
+- Sterile white/grey studio backgrounds (looks like Allegro listing, not FB ad)
+- Corporate stock-photo aesthetic
+- Perfect symmetry and centered composition
+- AI artifacts: plastic skin, dead eyes, weird hands, floating objects
 
 SCENE TO CREATE:
 ${prompt}`

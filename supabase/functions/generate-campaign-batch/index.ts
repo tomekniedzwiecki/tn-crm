@@ -284,35 +284,62 @@ COPY:
 - Dobierz kąty na podstawie LUK konkurencji.
 
 IMAGE PROMPT (dla każdej wersji):
-Generator obrazów (Gemini) dostanie ZDJĘCIE REFERENCYJNE produktu + Twój prompt.
-Generator skopiuje produkt DOKŁADNIE ze zdjęcia referencyjnego. Ty opisujesz tylko SCENĘ dookoła.
+Generator obrazów (Gemini 3) dostanie ZDJĘCIE REFERENCYJNE produktu + Twój prompt. Produkt będzie wklejony 1:1 z referencji. TWOJA ROBOTA: napisać prompt scenariusza jak SCENARZYSTA REKLAMY.
 
-KRYTYCZNE ZASADY image_prompt:
-1. **NIE opisuj wyglądu produktu** (kolor, kształt, materiał, branding) — generator to weźmie z referencji
-2. Zamiast tego pisz: "the product from reference image" / "the bottle shown in the reference"
-3. OPISZ SCENĘ dookoła produktu: osoba, otoczenie, kompozycja, oświetlenie, nastrój
-4. Format: kwadrat 1:1 do feedu FB/IG
-5. Osoba dopasowana do grupy docelowej (wiek, płeć, styl życia, emocja)
-6. Jasne, ciepłe oświetlenie — ciemne tło = niski CTR
-7. Jeden focal point — czytelne na ekranie 4cm telefonu
-8. ZAWSZE kończ: "The product must match the reference image exactly. Professional advertising photography. Facebook ad creative 1080x1080. Photorealistic. No text, no captions, no labels, no watermarks, no overlays."
+NIE OPISUJ PRODUKTU:
+- ŹLE: "black hydrogen bottle with SPE technology"
+- DOBRZE: "the product from reference image" / "the bottle"
+Generator widzi referencję — opisywanie produktu słowami psuje rezultat.
 
-PRZYKŁAD DOBREGO image_prompt (NIE opisuje produktu):
-"Split-screen composition. LEFT HALF: A frustrated woman in her 40s holding a generic metallic water bottle, looking disappointed, dim kitchen lighting. RIGHT HALF: The same woman smiling with energy, holding the product from reference image, bright morning kitchen with natural light streaming through windows. The product from reference must appear exactly as in the reference image. Professional advertising photography. Facebook ad creative 1080x1080. Photorealistic. No text, no captions, no labels, no watermarks, no overlays."
+STRUKTURA DOBREGO IMAGE_PROMPT (5 elementów):
 
-PRZYKŁAD ZŁEGO image_prompt (opisuje produkt):
-"A sleek black hydrogen water bottle with white logo..." ← NIE TAK. Produkt weź z referencji.
+1. KADR I KOMPOZYCJA (zdanie 1):
+"Close-up shot" / "Medium shot" / "Split-screen" / "Over-the-shoulder" / "POV shot" / "Flat lay"
+Konkretna kompozycja, nie "a photo of..."
 
-TYPY SCEN wg kąta:
-- Myth-busting/Porównanie: split-screen, produkt obok generic alternative, kontrast
-- Transformation: before/after, ta sama osoba, różnica wyrazu twarzy
-- Social proof: realna osoba z produktem, naturalna sceneria, UGC vibe
-- Pain point: frustracja BEZ produktu — zmęczenie, ból głowy
-- Technologia: close-up ręki trzymającej produkt, premium feel
-- Curiosity: intrygujący kadr z produktem, "co to?"
+2. GŁÓWNY BOHATER + EMOCJA (zdanie 2):
+Kto jest w kadrze, w jakim stanie emocjonalnym. KONKRETNY wiek, etnografia, ubiór, poza.
+Nie "happy woman" — "a 38-year-old woman in a cream linen shirt, mid-laugh, caught off-guard"
+
+3. AKCJA Z PRODUKTEM (zdanie 3):
+Co robi z produktem. Produkt MUSI być w akcji, nie "held".
+"pouring water from the bottle into a clear glass" > "holding the bottle"
+
+4. SCENERIA I ŚWIATŁO (zdanie 4):
+Konkretne miejsce + konkretne światło.
+"Sun-drenched Scandinavian kitchen with white oak counters, soft window light from left, 85mm lens, shallow depth of field"
+
+5. STYL FOTOGRAFII (zdanie 5):
+Referencja do realnej estetyki, nie "professional photography":
+- "Shot like an Apple iPhone ad — minimal, premium, cinematic"
+- "UGC Instagram Reel aesthetic — slightly grainy, authentic, iPhone 15 Pro"
+- "Patagonia outdoor campaign style — natural, weathered, honest"
+- "Aesop skincare editorial — soft, moody, refined"
+- "Kinfolk magazine still life — calm, intentional, natural materials"
+
+ZAWSZE KOŃCZ TYM BLOKIEM:
+"The product must be rendered exactly as shown in the reference image. Composite the reference product into this scene realistically. 1080x1080 square format. NOT a stock photo. NOT corporate. Natural skin texture, real film grain, authentic imperfections. No text, no captions, no logos, no watermarks, no overlays."
+
+PRZYKŁAD IDEALNY (scroll-stopper na FB):
+
+"Extreme close-up, macro lens. A woman's hand (natural unmanicured nails, visible pores on skin) tilting the product from reference image — stream of water catching morning light, micro-bubbles visible mid-pour. Soft gold-hour window light from camera-right, out-of-focus kitchen greenery in background (bokeh). Shot like a Le Labo product editorial — sensory, intimate, high craft. Composite the reference product into this scene. 1080x1080 square. NOT a stock photo. Natural skin texture, subtle film grain. No text, no logos, no watermarks."
+
+TYPY SCEN WG KĄTA (wybierz BARDZO różne dla 5 wersji):
+
+- Myth-busting: Split-screen composite. LEFT: blurred photo of generic competitor bottle with PPM meter reading "0.2" in red. RIGHT: sharp photo of product from reference with PPM meter reading "1.2" in green. Kitchen countertop. Dramatic lighting contrast.
+
+- Transformation: Two-panel diptych. TOP: tired 42-year-old man in gym clothes, slumped posture, bad morning light. BOTTOM: same man 2 hours later, energized, drinking from product from reference, bright window light. Documentary style.
+
+- Social proof / UGC: iPhone selfie angle, slightly tilted. 29-year-old woman in pajamas, messy bun, genuine surprised smile, holding product from reference in one hand while looking at it. Unmade bed visible. Authentic morning moment. iPhone 15 Pro photo aesthetic.
+
+- Pain point: Medium shot. 45-year-old man at office desk, head in hands, empty coffee mug, afternoon slump, cold fluorescent office light. NO product visible. Documentary tension.
+
+- Technologia / Curiosity: Extreme macro close-up. The product from reference image shown partially — just the activation button and LED indicator glowing blue. Micro-bubbles rising in water. Soft black velvet background. High-end product editorial, like Apple keynote product reveal.
+
+- Authority: Over-the-shoulder shot of a 50-year-old doctor in white coat examining the product from reference on a clinical desk. Medical instruments in bokeh background. Clinical trust lighting.
 
 JSON:
-{"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"prompt opisujący SCENĘ (nie produkt), min 3 zdania"}]}
+{"wow_factor":"...","target_group":"konkretna persona z wiekiem, płcią, stylem życia","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"5-zdaniowy prompt z kadrem, bohaterem, akcją, scenerią, stylem + finalny blok zamykający"}]}
 Zwróć TYLKO JSON.`
 
   // Buduj messages — z obrazem jeśli jest
@@ -355,29 +382,38 @@ COPY:
 - Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny.
 - Polski rynek: bezpośredni ale ciepły. Nie "KUP TERAZ" — "Sprawdź szczegóły"
 
-IMAGE PROMPTS — myśl jak art director:
-Twoje prompty idą do AI image generator (Gemini) + zdjęcie referencyjne produktu.
+IMAGE PROMPTS — jesteś SCENARZYSTĄ REKLAMY, nie opisywaczem produktu:
 
-CO ZATRZYMUJE SCROLL NA FACEBOOKU:
-1. TWARZ z emocją — mózg rozpoznaje twarze w 13ms. Zaskoczenie, ulga, frustracja — NIE uśmiech stockowy
-2. KONTRAST wizualny — jasne na ciemnym, produkt wyróżniony kolorem, split-screen before/after
-3. CZYTELNOŚĆ na 4cm — na telefonie reklama ma ~4cm. Jeden focal point, zero bałaganu
-4. AUTENTYCZNOŚĆ — UGC-style bije studio. Naturalne otoczenie, nie sterylne białe tło
-5. KOLOR — jasne, ciepłe tonacje. Zimne/ciemne zdjęcia mają 20-30% niższy CTR
+Twoje prompty idą do Gemini 3 Pro Image + zdjęcie referencyjne. Produkt jest wklejany 1:1 z referencji.
+NIE opisuj produktu (kolor, kształt, branding) — psujesz rezultat. Pisz "the product from reference image".
 
-CZEGO NIE ROBIĆ:
-- Stockowy uśmiech do kamery = natychmiast pomijane
-- Białe tło + produkt = wygląda jak Allegro, nie jak reklama
-- Tekst na zdjęciu = FB obniża zasięg
-- Ciemne, mroczne zdjęcia = niski CTR na mobile
-- Generyczne sceny "szczęśliwa rodzina" = nikt się nie zatrzyma
+ART DIRECTOR MINDSET — używaj REALNYCH referencji estetycznych:
+- "Shot like Apple iPhone ad" — minimalizm, cinematic, premium
+- "UGC Instagram Reel, iPhone 15 Pro aesthetic" — authentic, grainy, raw
+- "Patagonia outdoor campaign" — natural, honest, weathered
+- "Aesop editorial" — soft, moody, refined
+- "Kinfolk magazine" — calm, intentional
+- "Le Labo product photography" — sensory, intimate
+- "Nike Run Club ad" — dynamic, emotional, documentary
+NIE: "professional photography", "high quality" — to produkuje AI slop.
 
-KRYTYCZNE: NIE opisuj wyglądu produktu w image_prompt!
-Generator obrazów dostanie zdjęcie referencyjne produktu i skopiuje go 1:1.
-Ty opisuj tylko SCENĘ dookoła: osoba, otoczenie, kompozycja, oświetlenie, nastrój.
-Używaj fraz: "the product from reference image", "the bottle shown in the reference".
+5-ZDANIOWA STRUKTURA IMAGE_PROMPT (obowiązkowa):
+1. Kadr (close-up macro / medium / split-screen / POV / over-the-shoulder)
+2. Bohater z konkretną emocją (wiek, ubiór, poza, mimika — NIE "happy person")
+3. Akcja z produktem (pouring, tilting, examining — NIE "holding")
+4. Sceneria + światło (konkretne miejsce + konkretny typ światła, np. "window light 85mm shallow DOF")
+5. Styl referencji (jak "Le Labo editorial" / "Apple ad" / "UGC iPhone selfie")
 
-Jeśli zdjęcie referencyjne widzisz tutaj — użyj go żeby ZROZUMIEĆ co to za produkt (np. butelka wodorowa), ale w image_prompt NIE opisuj jego wyglądu słowami.
+ANTY-WZORCE (nigdy nie używaj):
+- "happy woman smiling at camera" → stockowa generyka, scroll-ignored
+- "white background studio" → wygląda jak Allegro
+- "professional advertising photo" → AI slop, idealnie pikselowe
+- "diverse group of happy people" → corporate stock
+- "modern minimalist kitchen" → za ogólne, zero klimatu
+
+ZAWSZE DODAJ: "Composite the product from reference into this scene. NOT a stock photo. Natural skin texture, real film grain, authentic imperfections. No text, no logos, no watermarks."
+
+Każda z 5 wersji musi mieć BARDZO różny kadr i scenę — nie 5 wariantów tego samego.
 
 Zwracaj TYLKO czysty JSON.`
     })
