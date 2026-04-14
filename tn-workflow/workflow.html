@@ -9908,33 +9908,41 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             try {
                 // ===== STEP 1: RESEARCH =====
-                setPipelineStep('research', 'active', 'Manus przeszukuje Facebook Ad Library...');
+                const existingResearch = adsData?.competitor_research;
+                const hasValidResearch = existingResearch && !existingResearch.parse_error && existingResearch.competitors?.length;
 
-                let researchData = null;
-                try {
-                    const { data, error } = await supabaseClient.functions.invoke('manus-research-ads', {
-                        body: { workflow_id: workflow.id }
-                    });
-                    if (error) throw error;
-                    if (!data?.success) throw new Error(data?.error || 'Błąd Manus');
+                if (hasValidResearch) {
+                    // Research już jest — pomijamy Manusa, oszczędzamy 5 min
+                    setPipelineStep('research', 'done', `Używam istniejącego (${existingResearch.competitors.length} reklam)`);
+                    renderResearchResults(existingResearch);
+                } else {
+                    setPipelineStep('research', 'active', 'Manus przeszukuje Facebook Ad Library...');
 
-                    if (!adsData) adsData = {};
-                    adsData.competitor_research_task_id = data.task_id;
-                    adsData.competitor_research_status = 'pending';
+                    try {
+                        const { data, error } = await supabaseClient.functions.invoke('manus-research-ads', {
+                            body: { workflow_id: workflow.id }
+                        });
+                        if (error) throw error;
+                        if (!data?.success) throw new Error(data?.error || 'Błąd Manus');
 
-                    // Poll aż research się skończy (max 10 min)
-                    setPipelineStep('research', 'active', 'Manus analizuje... (2-5 min)');
-                    researchData = await pollResearchUntilDone(data.task_id, 600000);
+                        if (!adsData) adsData = {};
+                        adsData.competitor_research_task_id = data.task_id;
+                        adsData.competitor_research_status = 'pending';
 
-                    if (researchData && !researchData.parse_error) {
-                        setPipelineStep('research', 'done', `Znaleziono ${researchData.competitors?.length || 0} reklam`);
-                        renderResearchResults(researchData);
-                    } else {
-                        setPipelineStep('research', 'error', 'Nie udało się pobrać wyników');
+                        // Poll aż research się skończy (max 10 min)
+                        setPipelineStep('research', 'active', 'Manus analizuje... (2-5 min)');
+                        const researchData = await pollResearchUntilDone(data.task_id, 600000);
+
+                        if (researchData && !researchData.parse_error) {
+                            setPipelineStep('research', 'done', `Znaleziono ${researchData.competitors?.length || 0} reklam`);
+                            renderResearchResults(researchData);
+                        } else {
+                            setPipelineStep('research', 'error', 'Nie udało się pobrać wyników');
+                        }
+                    } catch (err) {
+                        console.error('Pipeline research error:', err);
+                        setPipelineStep('research', 'error', err.message);
                     }
-                } catch (err) {
-                    console.error('Pipeline research error:', err);
-                    setPipelineStep('research', 'error', err.message);
                 }
 
                 // ===== STEP 2: COPY =====
@@ -10050,7 +10058,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         function renderResearchResults(data) {
-            // Data
+            document.getElementById('research-results')?.classList.remove('hidden');
+
             const dateEl = document.getElementById('research-date');
             if (dateEl && adsData?.competitor_research_at) {
                 dateEl.textContent = new Date(adsData.competitor_research_at).toLocaleDateString('pl-PL', {
@@ -10336,14 +10345,14 @@ Zwróć TYLKO JSON.`;
             const refImageUrl = product.image_url || null;
 
             // Pobierz brand info
-            const { data: branding } = await supabaseClient
+            const { data: brandingArr } = await supabaseClient
                 .from('workflow_branding')
                 .select('type, value')
                 .eq('workflow_id', workflow.id)
-                .eq('type', 'brand_info')
-                .maybeSingle();
+                .eq('type', 'brand_info');
 
             let brandVal = {};
+            const branding = brandingArr?.[0];
             if (branding?.value) {
                 brandVal = typeof branding.value === 'string' ? JSON.parse(branding.value) : branding.value;
             }
@@ -10378,7 +10387,7 @@ Zwróć TYLKO JSON.`;
 
             for (let i = 0; i < creativeTypes.length; i++) {
                 const ct = creativeTypes[i];
-                if (onProgress) onProgress(i, creativeTypes.length);
+                if (onProgress) onProgress(i + 1, creativeTypes.length);
 
                 try {
                     const body = {
