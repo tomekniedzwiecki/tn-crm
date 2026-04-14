@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041407';
+        const ADMIN_APP_VERSION = '2026041410';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -4856,7 +4856,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, campaign_launched, report_sent, scaling_started').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent, scaling_started').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -4941,7 +4941,7 @@
                 // Nav check requires ALL 4 granted: ad account + fanpage + instagram + phone (or admin marked as ready)
                 toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted && !!adsNavStatus?.phone_verified));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
-                toggle('nav-check-content', !!adsNavStatus?.content_ready);
+                toggle('nav-check-content', !!adsNavStatus?.content_shared_with_client);
                 toggle('nav-check-kampania', !!adsNavStatus?.campaign_launched);
                 toggle('nav-check-raport', !!adsNavStatus?.report_sent);
                 toggle('nav-check-skalowanie', !!adsNavStatus?.scaling_started);
@@ -9864,9 +9864,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const overallStatus = document.getElementById('pipeline-overall-status');
             const navCheck = document.getElementById('nav-check-content');
 
-            // Checkbox nawigacji — gotowe gdy content_ready lub mamy kreacje
+            // Checkbox nawigacji — zielony dopiero po udostępnieniu klientowi
             if (navCheck) {
-                if (adsData?.content_ready || hasCreatives) navCheck.classList.remove('hidden');
+                if (adsData?.content_shared_with_client) navCheck.classList.remove('hidden');
                 else navCheck.classList.add('hidden');
             }
 
