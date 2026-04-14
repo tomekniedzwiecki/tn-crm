@@ -10252,13 +10252,32 @@
                     });
                     console.log('Automation trigger fired: budget_funded');
 
-                    // Auto-start campaign pipeline in background
+                    // Auto-start campaign pipeline in background (with error surfacing)
                     supabaseClient.functions.invoke('manus-full-campaign', {
                         body: { workflow_id: workflow.id, include_creatives: true }
-                    }).then(() => {
-                        console.log('Campaign pipeline started in background');
+                    }).then(({ data, error }) => {
+                        if (error) {
+                            console.error('Campaign pipeline invoke error:', error);
+                            // Mark pipeline as start_failed so admin sees the issue
+                            supabaseClient.from('workflow_ads').update({
+                                campaign_pipeline_status: 'start_failed',
+                                campaign_pipeline_step: 'invoke_error'
+                            }).eq('workflow_id', workflow.id).then(() => {});
+                        } else if (!data?.success) {
+                            console.error('Campaign pipeline returned failure:', data);
+                            supabaseClient.from('workflow_ads').update({
+                                campaign_pipeline_status: 'start_failed',
+                                campaign_pipeline_step: 'function_returned_error'
+                            }).eq('workflow_id', workflow.id).then(() => {});
+                        } else {
+                            console.log('Campaign pipeline started:', data.status, data.task_id);
+                        }
                     }).catch(err => {
-                        console.error('Campaign pipeline trigger error:', err);
+                        console.error('Campaign pipeline network error:', err);
+                        supabaseClient.from('workflow_ads').update({
+                            campaign_pipeline_status: 'start_failed',
+                            campaign_pipeline_step: 'network_error'
+                        }).eq('workflow_id', workflow.id).then(() => {});
                     });
 
                     // ads_completed trigger usunięty — pipeline generuje materiały w tle,

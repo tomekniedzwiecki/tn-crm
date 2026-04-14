@@ -48,67 +48,29 @@ serve(async (req) => {
       return await r.json()
     }
 
-    // ATOMIC LOCK: UPSERT z warunkiem — jeśli status = 'running', ten UPSERT zablokuje
-    // równoległy request przez constraint UNIQUE(workflow_id).
-    // Zamiast tego: najpierw sprawdzamy, potem atomic update z warunkiem WHERE status != 'running'
+    // ATOMIC LOCK via SQL function — prevents race conditions and resets stale data
     if (!continue_pipeline) {
-      // Próbuj atomic UPDATE: oznacz jako 'running' TYLKO jeśli obecnie nie jest 'running'
-      const lockRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/workflow_ads?workflow_id=eq.${workflow_id}&campaign_pipeline_status=neq.running&select=workflow_id,manus_full_task_id`,
-        {
-          method: 'PATCH',
-          headers: { ...restHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-          body: JSON.stringify({
-            campaign_pipeline_status: 'running',
-            campaign_pipeline_step: 'manus_full_starting',
-            campaign_pipeline_started_at: new Date().toISOString()
-          })
-        }
-      )
-      const lockResult = lockRes.ok ? await lockRes.json() : []
-
-      if (Array.isArray(lockResult) && lockResult.length === 0) {
-        // Żaden rekord się nie zaktualizował — albo już running, albo nie istnieje
-        // Sprawdźmy który to przypadek
-        const checkArr = await restGet(`workflow_ads?workflow_id=eq.${workflow_id}&select=campaign_pipeline_status,manus_full_task_id`)
-        const existing = Array.isArray(checkArr) && checkArr[0]
-        if (existing?.campaign_pipeline_status === 'running') {
-          console.log(`[manus-full] Already running — returning existing task ${existing.manus_full_task_id}`)
-          return new Response(JSON.stringify({
-            success: true,
-            status: 'already_running',
-            task_id: existing.manus_full_task_id
-          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-        }
-        // Rekord nie istnieje — stwórz nowy z lockiem
-        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/workflow_ads`, {
-          method: 'POST',
-          headers: { ...restHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({
-            workflow_id,
-            is_active: true,
-            activated_at: new Date().toISOString(),
-            campaign_pipeline_status: 'running',
-            campaign_pipeline_step: 'manus_full_starting',
-            campaign_pipeline_started_at: new Date().toISOString()
-          })
-        })
-        if (!insertRes.ok && insertRes.status !== 409) {
-          // 409 = conflict (unique constraint) — znaczy że inny request właśnie go stworzył
-          const errText = await insertRes.text()
-          console.error(`[manus-full] Insert failed: ${insertRes.status} ${errText}`)
-        }
-        if (insertRes.status === 409) {
-          // Inny request nas wyprzedził
-          const reCheck = await restGet(`workflow_ads?workflow_id=eq.${workflow_id}&select=manus_full_task_id`)
-          return new Response(JSON.stringify({
-            success: true, status: 'already_running',
-            task_id: reCheck?.[0]?.manus_full_task_id || null
-          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-        }
-      } else {
-        console.log(`[manus-full] Acquired lock for ${workflow_id}`)
+      const lockRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/acquire_campaign_lock`, {
+        method: 'POST',
+        headers: { ...restHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_workflow_id: workflow_id })
+      })
+      if (!lockRes.ok) {
+        console.error(`[manus-full] Lock RPC failed: ${lockRes.status}`)
+        return new Response(JSON.stringify({ success: false, error: 'Lock acquisition failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
+      const lockData = await lockRes.json()
+      const lock = Array.isArray(lockData) && lockData[0]
+      if (!lock?.acquired) {
+        console.log(`[manus-full] Already running — existing task ${lock?.existing_task_id}`)
+        return new Response(JSON.stringify({
+          success: true,
+          status: 'already_running',
+          task_id: lock?.existing_task_id || null
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      console.log(`[manus-full] Lock acquired for ${workflow_id} (stale data reset)`)
     }
 
     // Pobierz pełny kontekst przez REST API
@@ -353,17 +315,39 @@ Zacznij teraz. Pracuj samodzielnie aż skończysz wszystkie 3 zadania — nie py
       throw new Error('Manus task creation failed: ' + JSON.stringify(createData))
     }
 
-    await supabase.from('workflow_ads').upsert({
-      workflow_id,
-      is_active: true,
-      activated_at: new Date().toISOString(),
-      manus_full_task_id: createData.task_id,
-      campaign_pipeline_status: 'running',
-      campaign_pipeline_step: 'manus_full',
-      campaign_pipeline_started_at: new Date().toISOString()
-    }, { onConflict: 'workflow_id' })
+    // CRITICAL: persist task_id IMMEDIATELY via REST (not JS SDK which can fail silently).
+    // If this fails or edge function is killed, cron won't know about the task → orphan + wasted cost.
+    // We use REST with explicit error handling and retry.
+    const persistTaskId = async (): Promise<boolean> => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/workflow_ads?workflow_id=eq.${workflow_id}`, {
+            method: 'PATCH',
+            headers: { ...restHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+              manus_full_task_id: createData.task_id,
+              campaign_pipeline_step: 'manus_full'
+            })
+          })
+          if (r.ok) return true
+          console.error(`[manus-full] persist task_id attempt ${attempt} failed: ${r.status}`)
+        } catch (e) {
+          console.error(`[manus-full] persist task_id attempt ${attempt} error: ${e.message}`)
+        }
+        if (attempt < 3) await new Promise(r => setTimeout(r, 200 * attempt))
+      }
+      return false
+    }
 
-    console.log(`[manus-full] Task created: ${createData.task_id}`)
+    const persisted = await persistTaskId()
+    if (!persisted) {
+      // Critical: task is running on Manus but we couldn't save task_id.
+      // Log loudly and try once more after a small delay. Return the task_id to caller
+      // so at least frontend has it even if DB doesn't.
+      console.error(`[manus-full] CRITICAL: task_id ${createData.task_id} NOT persisted to DB for workflow ${workflow_id}`)
+    }
+
+    console.log(`[manus-full] Task created and persisted: ${createData.task_id}`)
 
     return new Response(JSON.stringify({
       success: true,

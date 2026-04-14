@@ -10043,7 +10043,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             // Competitors list
             const listEl = document.getElementById('research-competitors-list');
-            if (listEl && data.competitors) {
+            if (listEl && Array.isArray(data.competitors) && data.competitors.length > 0) {
                 listEl.innerHTML = data.competitors.map((c, i) => `
                     <div class="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
                         <div class="flex items-center justify-between mb-1.5">
@@ -10062,17 +10062,17 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             // Gaps
             const gapsEl = document.getElementById('research-gaps');
-            if (gapsEl && data.gaps) {
+            if (gapsEl && Array.isArray(data.gaps)) {
                 gapsEl.innerHTML = data.gaps.map(g => `
-                    <p class="text-[11px] text-zinc-400">• ${escapeHtml(g)}</p>
+                    <p class="text-[11px] text-zinc-400">• ${escapeHtml(typeof g === 'string' ? g : JSON.stringify(g))}</p>
                 `).join('');
             }
 
             // Recommendations
             const recsEl = document.getElementById('research-recommendations');
-            if (recsEl && data.recommendations) {
+            if (recsEl && Array.isArray(data.recommendations)) {
                 recsEl.innerHTML = data.recommendations.map(r => `
-                    <p class="text-[11px] text-zinc-400">• ${escapeHtml(r)}</p>
+                    <p class="text-[11px] text-zinc-400">• ${escapeHtml(typeof r === 'string' ? r : JSON.stringify(r))}</p>
                 `).join('');
             }
         }
@@ -10098,7 +10098,21 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 'Urgency': 'orange', 'Curiosity': 'violet', 'Health': 'emerald', 'Time': 'cyan', 'Money': 'yellow'
             };
 
-            versionsEl.innerHTML = data.versions.map((v, i) => {
+            // Guard: versions must be array
+            let versions = data.versions;
+            if (!Array.isArray(versions)) {
+                if (versions && typeof versions === 'object') {
+                    versions = Object.values(versions).filter(v => v && typeof v === 'object');
+                } else {
+                    versions = [];
+                }
+            }
+            if (versions.length === 0) {
+                versionsEl.innerHTML = '<p class="text-[12px] text-zinc-500 italic">Brak wersji do wyświetlenia</p>';
+                return;
+            }
+
+            versionsEl.innerHTML = versions.map((v, i) => {
                 const color = angleColors[v.angle] || 'zinc';
                 return `
                 <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">

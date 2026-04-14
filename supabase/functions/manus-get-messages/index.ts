@@ -43,11 +43,22 @@ serve(async (req) => {
         return ''
       })
 
+    // Extract attachments from user_messages (debug - verify our upload worked)
+    const userAttachments = messages
+      .filter((m: any) => m.type === 'user_message')
+      .flatMap((m: any) => {
+        const um = m.user_message
+        if (typeof um === 'object' && um?.attachments) return um.attachments
+        return []
+      })
+
     return new Response(JSON.stringify({
       status,
       message_count: messages.length,
       assistant_count: assistantMessages.length,
       user_count: userMessages.length,
+      user_attachments: userAttachments,
+      user_attachments_count: userAttachments.length,
       user_messages: userMessages,
       last_assistant: assistantMessages[assistantMessages.length - 1] || null,
       all_assistant: assistantMessages
