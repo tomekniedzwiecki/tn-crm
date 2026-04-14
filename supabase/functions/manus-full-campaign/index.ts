@@ -49,29 +49,86 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Pobierz pełny kontekst — branding, produkt, raporty
-    const [brandingRes, workflowRes, reportsRes] = await Promise.all([
-      supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflow_id).eq('type', 'brand_info'),
-      supabase.from('workflows').select('id, offer_name, landing_page_url, selected_product_id, customer_name').eq('id', workflow_id).single(),
-      supabase.from('workflow_reports').select('title, type, file_url').eq('workflow_id', workflow_id).not('file_url', 'is', null).limit(10)
+    // REST API helpers — bezpieczniej niż JS SDK dla edge functions
+    const restHeaders = {
+      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+    const restGet = async (path: string) => {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: restHeaders })
+      if (!r.ok) { console.error(`REST ${path} failed: ${r.status}`); return [] }
+      return await r.json()
+    }
+
+    // Pobierz pełny kontekst przez REST API
+    const [brandingArr, workflowArr, reportsArr] = await Promise.all([
+      restGet(`workflow_branding?workflow_id=eq.${workflow_id}&type=eq.brand_info&select=type,value`),
+      restGet(`workflows?id=eq.${workflow_id}&select=id,offer_name,sales_page_url,selected_product_id,customer_name`),
+      restGet(`workflow_reports?workflow_id=eq.${workflow_id}&file_url=not.is.null&select=title,type,file_url&limit=10`)
     ])
+
+    // Stub "res.data" interface for rest of code
+    const brandingRes = { data: brandingArr }
+    const workflowRes = { data: Array.isArray(workflowArr) && workflowArr.length > 0 ? workflowArr[0] : null }
+    const reportsRes = { data: reportsArr }
+
+    console.log(`[manus-full] workflow found=${!!workflowRes.data}, selected_product_id=${workflowRes.data?.selected_product_id}`)
 
     const brandInfo = brandingRes.data?.[0]
     let brandVal: any = {}
     if (brandInfo?.value) brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
 
+    // Pobierz produkt — bezpośrednio przez REST API (bezpieczniej niż JS SDK)
     let product: any = {}
-    if (workflowRes.data?.selected_product_id) {
-      const { data: p } = await supabase.from('workflow_products')
-        .select('name, description, image_url, source_url, price, currency, wholesale_price').eq('id', workflowRes.data.selected_product_id).maybeSingle()
-      if (p) product = p
+    const selectedProductId = workflowRes.data?.selected_product_id
+    console.log(`[manus-full] selected_product_id=${selectedProductId}`)
+
+    if (selectedProductId) {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/workflow_products?id=eq.${selectedProductId}&select=name,description,image_url,source_url,price,currency,wholesale_price`,
+          { headers: restHeaders }
+        )
+        if (res.ok) {
+          const arr = await res.json()
+          if (Array.isArray(arr) && arr.length > 0) {
+            product = arr[0]
+            console.log(`[manus-full] product loaded via REST: name="${product.name}", has_image=${!!product.image_url}`)
+          } else {
+            console.warn(`[manus-full] product ${selectedProductId} not found (empty array)`)
+          }
+        } else {
+          console.error(`[manus-full] product REST fetch failed: ${res.status}`)
+        }
+      } catch (e) {
+        console.error('[manus-full] product REST error:', e.message)
+      }
+    }
+    // Fallback: workflow_products by workflow_id
+    if (!product.image_url) {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/workflow_products?workflow_id=eq.${workflow_id}&image_url=not.is.null&select=name,description,image_url,source_url&limit=1`,
+          { headers: restHeaders }
+        )
+        if (res.ok) {
+          const arr = await res.json()
+          if (Array.isArray(arr) && arr.length > 0) {
+            product = arr[0]
+            console.log(`[manus-full] product via workflow_id fallback: ${product.name}`)
+          }
+        }
+      } catch (e) {}
     }
 
     const brandName = brandVal.name || product.name || ''
     const productName = product.name || brandVal.name || ''
     const productDescription = product.description || brandVal.description || ''
-    const landingUrl = workflowRes.data?.landing_page_url || ''
+    const landingUrl = workflowRes.data?.sales_page_url || ''
     const productImageUrl = product.image_url || ''
+    const productSourceUrl = product.source_url || ''
+
+    console.log(`[manus-full] final context: brand=${brandName}, product=${productName}, image=${productImageUrl ? 'YES' : 'NO'}`)
 
     // Lista raportów z linkami (PDF, infografika, analiza)
     const reportsList = (reportsRes.data || [])
@@ -89,20 +146,27 @@ ${brandVal.tagline ? `**TAGLINE:** ${brandVal.tagline}\n` : ''}**OPIS MARKI:** $
 
 **PRODUKT:** ${productName}
 **OPIS PRODUKTU:** ${productDescription || '(brak)'}
-${product.source_url ? `**Link do produktu u dostawcy:** ${product.source_url}` : ''}
 
-${productImageUrl ? `**ZDJĘCIE REFERENCYJNE PRODUKTU (UŻYWAJ GO W KREACJACH 1:1):**
+=== MATERIAŁY DO POBRANIA I WYKORZYSTANIA ===
+
+${productImageUrl ? `🎯 **ZDJĘCIE PRODUKTU — TEN PRODUKT MA BYĆ NA WSZYSTKICH BANERACH REKLAMOWYCH:**
 ${productImageUrl}
 
-Pobierz to zdjęcie i używaj dokładnie tego produktu w grafikach — zachowaj kształt, kolor, branding. To konkretny fizyczny produkt który sprzedajemy.
-` : '(brak zdjęcia — wygeneruj produkt na podstawie opisu)'}
-
-**LANDING PAGE:** ${landingUrl || '(brak)'}
-
-${reportsList ? `**RAPORTY I ANALIZA PRODUKTU (pobierz i wykorzystaj dla kontekstu):**
+To jest FIZYCZNY PRODUKT który sprzedajemy. Pobierz to zdjęcie i użyj go jako referencji w KAŻDEJ z 5 kreacji graficznych — zachowaj dokładnie jego kształt, kolor, materiał, branding. NIE wymyślaj innego produktu.
+` : '⚠️ BRAK zdjęcia produktu w bazie — wygeneruj produkt wizualnie na podstawie opisu.'}
+${productSourceUrl ? `
+📦 **Link do produktu u dostawcy (dodatkowe zdjęcia, opis techniczny):**
+${productSourceUrl}
+` : ''}
+${landingUrl ? `
+🌐 **Landing page marki (copy, ton komunikacji, branding):**
+${landingUrl}
+` : ''}
+${reportsList ? `
+📊 **RAPORTY I ANALIZY (pobierz — zawierają grupę docelową, USP, analizę rynku):**
 ${reportsList}
 
-W raportach znajdziesz: grupę docelową, USP, analizę rynku, strategię marki. Wykorzystaj to zwłaszcza do copy.` : ''}
+W raportach PDF znajdziesz szczegółową analizę: kim jest typowy klient (wiek, płeć, problemy), jakie ma pragnienia, czego się obawia, jakie są główne USP produktu, kto jest konkurencją. Wykorzystaj te dane szczególnie do copy i doboru persony na grafikach lifestyle.` : ''}
 
 === ZADANIA (wszystko w jednym przebiegu) ===
 

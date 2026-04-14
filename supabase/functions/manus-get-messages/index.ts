@@ -33,10 +33,22 @@ serve(async (req) => {
       })
       .filter((t: string) => t.length > 0)
 
+    // Also extract user messages to inspect what we sent
+    const userMessages = messages
+      .filter((m: any) => m.type === 'user_message')
+      .map((m: any) => {
+        const um = m.user_message
+        if (typeof um === 'string') return um
+        if (typeof um === 'object') return um.content || um.text || JSON.stringify(um)
+        return ''
+      })
+
     return new Response(JSON.stringify({
       status,
       message_count: messages.length,
       assistant_count: assistantMessages.length,
+      user_count: userMessages.length,
+      user_messages: userMessages,
       last_assistant: assistantMessages[assistantMessages.length - 1] || null,
       all_assistant: assistantMessages
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
