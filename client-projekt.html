@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041410';
+        const APP_VERSION = '2026041412';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5692,19 +5692,29 @@
             if (isReady) {
                 // Bramka skonfigurowana
                 box.classList.remove('bento-action');
+                const gatewayAccent = hasNip ? 'from-violet-500/15 to-fuchsia-500/5' : 'from-indigo-500/15 to-violet-500/5';
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br ${gatewayAccent} pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
                             <span class="text-[#666] text-xs uppercase tracking-wide">Bramka płatności</span>
                             <span class="flex items-center gap-1 text-emerald-500 text-xs">
                                 <i class="ph-fill ph-check-circle"></i>
                                 Skonfigurowana
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">${gatewayName} gotowe!</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Bramka płatności skonfigurowana</p>
+                        <div class="relative flex-1 flex flex-col items-center justify-center">
+                            <div class="w-full max-w-[200px] aspect-[1.6/1] rounded-xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] ring-1 ring-white/10 p-3 flex flex-col justify-between shadow-lg relative overflow-hidden">
+                                <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-transparent"></div>
+                                <div class="flex items-center justify-between relative">
+                                    <i class="ph ph-credit-card text-white/60 text-sm"></i>
+                                    <span class="text-[9px] text-white/40 uppercase tracking-wider">Secure</span>
+                                </div>
+                                <div class="relative">
+                                    <div class="text-white text-base font-semibold tracking-wide">${gatewayName}</div>
+                                    <div class="text-[10px] text-white/40 font-mono tracking-widest mt-0.5">•••• •••• •••• ✓</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -5756,18 +5766,26 @@
                 // Stan: Test zaakceptowany
                 box.classList.remove('bento-action');
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.08] via-transparent to-transparent pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
                             <span class="text-[#666] text-xs uppercase tracking-wide">Test sklepu</span>
                             <span class="flex items-center gap-1 text-emerald-500 text-xs">
                                 <i class="ph-fill ph-check-circle"></i>
                                 Zaakceptowany
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">Sklep gotowy!</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Test zakończony pomyślnie</p>
+                        <div class="relative flex-1 flex flex-col justify-center gap-1.5">
+                            ${[
+                                'Zamówienie testowe',
+                                'Płatność przeszła',
+                                'Email potwierdzający'
+                            ].map(label => `
+                                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#0e0e0e] border border-[#1e1e1e]">
+                                    <i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i>
+                                    <span class="text-[12px] text-[#bbb] flex-1 truncate">${label}</span>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `;
