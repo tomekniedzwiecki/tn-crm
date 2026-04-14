@@ -9927,16 +9927,18 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             setPipelineStep('research', 'active', 'Uruchamiam pipeline w tle...');
 
             try {
-                // Odpala edge function w tle — nie czekamy na wynik
-                const { error } = await supabaseClient.functions.invoke('generate-campaign-batch', {
+                // Odpala edge function — nie czekamy na pełny wynik, startujemy polling od razu
+                supabaseClient.functions.invoke('generate-campaign-batch', {
                     body: { workflow_id: workflow.id, include_creatives: !!includeCreatives }
+                }).catch(err => {
+                    // Edge function może timeout-ować na fetch ale działa dalej w tle
+                    console.log('Pipeline invoke finished or timed out:', err?.message || 'ok');
                 });
 
-                if (error) throw error;
+                // Daj chwilę na ustawienie statusu w DB
+                await new Promise(r => setTimeout(r, 2000));
 
-                showToast('Pipeline uruchomiony w tle! Wyniki pojawią się automatycznie.', 'success');
-
-                // Polluj status z bazy
+                showToast('Pipeline uruchomiony! Wyniki pojawią się automatycznie.', 'success');
                 startBackgroundPipelinePolling();
 
             } catch (err) {

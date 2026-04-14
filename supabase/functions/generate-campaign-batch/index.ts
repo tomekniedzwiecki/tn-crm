@@ -37,6 +37,7 @@ serve(async (req) => {
     const body = await req.json()
     workflow_id = body.workflow_id
     const include_creatives = body.include_creatives !== false
+    const continue_pipeline = body.continue_pipeline === true // cron sends this to bypass guard
 
     if (!workflow_id) {
       return new Response(
@@ -45,14 +46,14 @@ serve(async (req) => {
       )
     }
 
-    // Guard: nie odpala jeśli pipeline już działa
+    // Guard: nie odpala jeśli pipeline już działa (chyba że cron kontynuuje po research)
     const { data: current } = await supabase
       .from('workflow_ads')
-      .select('campaign_pipeline_status, competitor_research')
+      .select('campaign_pipeline_status, campaign_pipeline_step, competitor_research')
       .eq('workflow_id', workflow_id)
       .maybeSingle()
 
-    if (current?.campaign_pipeline_status === 'running') {
+    if (current?.campaign_pipeline_status === 'running' && !continue_pipeline) {
       return new Response(
         JSON.stringify({ success: true, status: 'already_running' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

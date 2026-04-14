@@ -134,7 +134,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             workflow_id: row.workflow_id,
-            include_creatives: row.campaign_pipeline_include_creatives !== false
+            include_creatives: row.campaign_pipeline_include_creatives !== false,
+            continue_pipeline: true
           })
         })
 
