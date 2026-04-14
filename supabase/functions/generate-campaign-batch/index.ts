@@ -178,29 +178,46 @@ Zwróć TYLKO JSON bez dodatkowego tekstu.
 // ===== COPY + CREATIVES =====
 
 async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropicKey: string, workflowId: string, includeCreatives: boolean, research: any) {
-  const [brandingRes, mockupRes, productsRes, workflowRes] = await Promise.all([
+  const [brandingRes, workflowRes] = await Promise.all([
     supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflowId).eq('type', 'brand_info'),
-    supabase.from('workflow_branding').select('type, file_url').eq('workflow_id', workflowId).in('type', ['mockup', 'logo']).not('file_url', 'is', null).order('type').limit(5),
-    supabase.from('workflow_products').select('name, description, image_url').eq('workflow_id', workflowId),
-    supabase.from('workflows').select('id, offer_name, landing_page_url').eq('id', workflowId).single()
+    supabase.from('workflows').select('id, offer_name, landing_page_url, selected_product_id').eq('id', workflowId).single()
   ])
 
   const brandInfo = brandingRes.data?.[0]
   let brandVal: any = {}
   if (brandInfo?.value) brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
-  const product = productsRes.data?.[0] || {} as any
   const landingUrl = workflowRes.data?.landing_page_url || ''
+  const selectedProductId = workflowRes.data?.selected_product_id
+
+  // Pobierz produkt — najpierw selected_product_id (globalny katalog), potem workflow_products
+  let product: any = {}
+  if (selectedProductId) {
+    const { data: p } = await supabase.from('workflow_products')
+      .select('name, description, image_url').eq('id', selectedProductId).maybeSingle()
+    if (p) product = p
+  }
+  if (!product.image_url) {
+    const { data: wp } = await supabase.from('workflow_products')
+      .select('name, description, image_url').eq('workflow_id', workflowId).maybeSingle()
+    if (wp) product = wp
+  }
+
   const productName = product.name || brandVal.name || ''
   const productDescription = product.description || brandVal.description || ''
 
-  // Zdjęcie referencyjne: produkt > mockup > logo
-  const refImageUrl = product.image_url
-    || mockupRes.data?.find((m: any) => m.type === 'mockup')?.file_url
-    || mockupRes.data?.find((m: any) => m.type === 'logo')?.file_url
-    || null
+  // Fallback: mockup/logo jeśli brak zdjęcia produktu
+  let refImageUrl = product.image_url || null
+  if (!refImageUrl) {
+    const { data: mockups } = await supabase.from('workflow_branding')
+      .select('type, file_url').eq('workflow_id', workflowId).in('type', ['mockup', 'logo'])
+      .not('file_url', 'is', null).limit(5)
+    refImageUrl = mockups?.find((m: any) => m.type === 'mockup')?.file_url
+      || mockups?.find((m: any) => m.type === 'logo')?.file_url
+      || null
+  }
 
   if (refImageUrl) {
-    console.log(`[campaign] Reference image: ${refImageUrl.substring(0, 80)}...`)
+    console.log(`[campaign] Reference image: ${refImageUrl.substring(0, 80)}`)
   } else {
     console.log('[campaign] WARNING: No reference image found!')
   }
@@ -404,6 +421,9 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
     ]
   }
 
+  console.log(`[campaign] Generating ${imagePrompts.length} creatives with refImageUrl=${refImageUrl ? 'YES' : 'NO'}`)
+  if (refImageUrl) console.log(`[campaign] Reference: ${refImageUrl.substring(0, 100)}`)
+
   // Generuj równolegle
   const results = await Promise.allSettled(imagePrompts.map(async (ip) => {
     const body: any = {
@@ -416,6 +436,9 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
     // ZAWSZE dodaj zdjęcie referencyjne produktu jeśli jest
     if (refImageUrl) {
       body.reference_images = [{ url: refImageUrl, type: 'product' }]
+      console.log(`[campaign] Sending generate-image with product reference for angle=${ip.angle}`)
+    } else {
+      console.warn(`[campaign] NO REFERENCE IMAGE for angle=${ip.angle}`)
     }
 
     const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {

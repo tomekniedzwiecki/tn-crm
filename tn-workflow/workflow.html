@@ -10507,15 +10507,21 @@ Zwróć TYLKO JSON.`;
             }
 
             try {
-                // Pobierz ref image: produkt > mockup > logo
-                const [prodRes, mockupRes] = await Promise.all([
-                    supabaseClient.from('workflow_products').select('image_url').eq('workflow_id', workflow.id),
-                    supabaseClient.from('workflow_branding').select('type, file_url').eq('workflow_id', workflow.id).in('type', ['mockup', 'logo']).not('file_url', 'is', null).limit(3)
-                ]);
-                const refUrl = prodRes.data?.[0]?.image_url
-                    || mockupRes.data?.find(m => m.type === 'mockup')?.file_url
-                    || mockupRes.data?.find(m => m.type === 'logo')?.file_url
-                    || null;
+                // Pobierz ref image: selected_product (global catalog) > workflow_products > mockup > logo
+                let refUrl = null;
+                const selectedId = workflow?.selected_product_id;
+                if (selectedId) {
+                    const { data: p } = await supabaseClient.from('workflow_products').select('image_url').eq('id', selectedId).maybeSingle();
+                    if (p?.image_url) refUrl = p.image_url;
+                }
+                if (!refUrl) {
+                    const { data: wp } = await supabaseClient.from('workflow_products').select('image_url').eq('workflow_id', workflow.id);
+                    if (wp?.[0]?.image_url) refUrl = wp[0].image_url;
+                }
+                if (!refUrl) {
+                    const { data: mockups } = await supabaseClient.from('workflow_branding').select('type, file_url').eq('workflow_id', workflow.id).in('type', ['mockup', 'logo']).not('file_url', 'is', null).limit(3);
+                    refUrl = mockups?.find(m => m.type === 'mockup')?.file_url || mockups?.find(m => m.type === 'logo')?.file_url || null;
+                }
 
                 const body = {
                     prompt: creative.prompt,
