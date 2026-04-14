@@ -2336,55 +2336,97 @@
                                     <i class="ph ph-rocket-launch text-cyan-400"></i>
                                     Uruchomienie kampanii
                                 </h3>
-                                <p class="text-zinc-500 text-sm mt-1">Research, copy, kreacje i uruchomienie kampanii Meta Ads</p>
+                                <p class="text-zinc-500 text-sm mt-1">Automatyczny pipeline: research, copy, kreacje</p>
                             </div>
                             <button onclick="generateAdCopyPrompt()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt do generowania copy reklamowego">
                                 <i class="ph ph-robot"></i> Copy Ads (Claude)
                             </button>
                         </div>
 
-                        <!-- ========== SEKCJA 1: RESEARCH KONKURENCJI ========== -->
-                        <div class="mb-6">
+                        <!-- ========== START PIPELINE ========== -->
+                        <div id="pipeline-start" class="mb-6">
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6">
+                                <div class="flex items-center gap-4 mb-5">
+                                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center">
+                                        <i class="ph ph-magic-wand text-2xl text-cyan-400"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-[15px] font-semibold text-white">Generuj materiały kampanii</h4>
+                                        <p class="text-[12px] text-zinc-500 mt-0.5">Research konkurencji → Copy reklamowe → Kreacje graficzne</p>
+                                    </div>
+                                </div>
+                                <label class="flex items-center gap-2.5 mb-5 cursor-pointer group">
+                                    <input type="checkbox" id="pipeline-include-creatives" checked
+                                        class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-cyan-500 focus:ring-cyan-500/30 focus:ring-offset-0 cursor-pointer">
+                                    <span class="text-[13px] text-zinc-400 group-hover:text-zinc-300 transition-colors">Generuj kreacje graficzne (zdjęcia do reklam)</span>
+                                    <span class="text-[11px] text-zinc-600">~1-2 min extra</span>
+                                </label>
+                                <button onclick="runCampaignPipeline()" id="btn-run-pipeline"
+                                    class="w-full bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white py-3.5 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2">
+                                    <i class="ph ph-play-circle text-lg"></i>
+                                    Generuj kampanię
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ========== PIPELINE PROGRESS ========== -->
+                        <div id="pipeline-progress" class="hidden mb-6">
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-[13px] font-medium text-white">Pipeline kampanii</h4>
+                                    <span id="pipeline-overall-status" class="text-[11px] px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">W toku...</span>
+                                </div>
+                                <div class="space-y-2.5">
+                                    <!-- Step 1: Research -->
+                                    <div id="pipeline-step-research" class="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/30 border border-transparent">
+                                        <div id="pipeline-icon-research" class="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-binoculars text-sm text-zinc-500"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[12px] font-medium text-zinc-400">Research konkurencji</p>
+                                            <p id="pipeline-detail-research" class="text-[11px] text-zinc-600 truncate">Oczekuje...</p>
+                                        </div>
+                                        <i id="pipeline-check-research" class="ph ph-circle text-sm text-zinc-700"></i>
+                                    </div>
+                                    <!-- Step 2: Copy -->
+                                    <div id="pipeline-step-copy" class="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/30 border border-transparent">
+                                        <div id="pipeline-icon-copy" class="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-text-aa text-sm text-zinc-500"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[12px] font-medium text-zinc-400">Copy reklamowe</p>
+                                            <p id="pipeline-detail-copy" class="text-[11px] text-zinc-600 truncate">Oczekuje...</p>
+                                        </div>
+                                        <i id="pipeline-check-copy" class="ph ph-circle text-sm text-zinc-700"></i>
+                                    </div>
+                                    <!-- Step 3: Creatives -->
+                                    <div id="pipeline-step-creatives" class="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/30 border border-transparent">
+                                        <div id="pipeline-icon-creatives" class="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-image text-sm text-zinc-500"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[12px] font-medium text-zinc-400">Kreacje graficzne</p>
+                                            <p id="pipeline-detail-creatives" class="text-[11px] text-zinc-600 truncate">Oczekuje...</p>
+                                        </div>
+                                        <i id="pipeline-check-creatives" class="ph ph-circle text-sm text-zinc-700"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ========== WYNIKI: RESEARCH ========== -->
+                        <div id="research-results" class="hidden mb-6">
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
                                     <i class="ph ph-binoculars text-violet-400"></i>
                                     Research konkurencji
                                 </h4>
-                                <div class="flex items-center gap-2">
-                                    <span id="research-status-badge" class="hidden text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400"></span>
-                                    <button onclick="startCompetitorResearch()" id="btn-start-research" class="text-xs bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
-                                        <i class="ph ph-magnifying-glass"></i> Zbadaj konkurencję
-                                    </button>
-                                </div>
+                                <span id="research-date" class="text-[11px] text-zinc-600"></span>
                             </div>
-                            <div id="research-empty" class="bg-zinc-900/50 border border-white/5 rounded-xl p-5">
-                                <div class="flex items-center gap-3 text-zinc-500">
-                                    <i class="ph ph-binoculars text-2xl"></i>
-                                    <div>
-                                        <p class="text-[13px]">Manus przeszuka Facebook Ad Library i znajdzie reklamy konkurencji</p>
-                                        <p class="text-[11px] text-zinc-600 mt-0.5">Czas: ~2-5 minut. Koszt: ~$0.10</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="research-loading" class="hidden bg-violet-500/5 border border-violet-500/20 rounded-xl p-5">
-                                <div class="flex items-center gap-3">
-                                    <i class="ph ph-spinner animate-spin text-xl text-violet-400"></i>
-                                    <div>
-                                        <p class="text-[13px] text-violet-300">Manus analizuje reklamy konkurencji...</p>
-                                        <p class="text-[11px] text-zinc-500 mt-0.5">To może potrwać 2-5 minut. Dane odświeżą się automatycznie.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="research-results" class="hidden space-y-3">
-                                <!-- Podsumowanie -->
+                            <div class="space-y-3">
                                 <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <span class="text-[12px] text-zinc-500">Znalezione reklamy konkurencji</span>
-                                        <span id="research-date" class="text-[11px] text-zinc-600"></span>
-                                    </div>
                                     <div id="research-competitors-list" class="space-y-2 max-h-[300px] overflow-y-auto"></div>
                                 </div>
-                                <!-- Luki i rekomendacje -->
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
                                         <h5 class="text-[12px] font-medium text-amber-400 mb-2 flex items-center gap-1.5">
@@ -2402,89 +2444,41 @@
                             </div>
                         </div>
 
-                        <!-- ========== SEKCJA 2: COPY REKLAMOWE ========== -->
-                        <div class="mb-6">
+                        <!-- ========== WYNIKI: COPY ========== -->
+                        <div id="copies-results" class="hidden mb-6">
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
                                     <i class="ph ph-text-aa text-cyan-400"></i>
                                     Copy reklamowe
                                 </h4>
+                            </div>
+                            <div id="copies-wow-factor" class="hidden bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-3">
                                 <div class="flex items-center gap-2">
-                                    <button onclick="generateAdCopies()" id="btn-generate-copies" class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
-                                        <i class="ph ph-sparkle"></i> Generuj copy
-                                    </button>
+                                    <i class="ph ph-star text-amber-400"></i>
+                                    <span class="text-[12px] text-amber-300 font-medium">WOW FACTOR:</span>
+                                    <span id="copies-wow-text" class="text-[12px] text-amber-200"></span>
                                 </div>
                             </div>
-                            <div id="copies-empty" class="bg-zinc-900/50 border border-white/5 rounded-xl p-5">
-                                <div class="flex items-center gap-3 text-zinc-500">
-                                    <i class="ph ph-text-aa text-2xl"></i>
-                                    <div>
-                                        <p class="text-[13px]">Wygeneruj 5 wersji copy reklamowego z różnymi kątami</p>
-                                        <p class="text-[11px] text-zinc-600 mt-0.5">Pobiera dane z brandingu, produktu i researchu konkurencji</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="copies-loading" class="hidden bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-5">
-                                <div class="flex items-center gap-3">
-                                    <i class="ph ph-spinner animate-spin text-xl text-cyan-400"></i>
-                                    <p class="text-[13px] text-cyan-300">Generuję copy reklamowe...</p>
-                                </div>
-                            </div>
-                            <div id="copies-results" class="hidden">
-                                <div id="copies-wow-factor" class="hidden bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <i class="ph ph-star text-amber-400"></i>
-                                        <span class="text-[12px] text-amber-300 font-medium">WOW FACTOR:</span>
-                                        <span id="copies-wow-text" class="text-[12px] text-amber-200"></span>
-                                    </div>
-                                </div>
-                                <div id="copies-versions" class="space-y-3"></div>
-                            </div>
+                            <div id="copies-versions" class="space-y-3"></div>
                         </div>
 
-                        <!-- ========== SEKCJA 3: KREACJE GRAFICZNE ========== -->
-                        <div class="mb-6">
+                        <!-- ========== WYNIKI: KREACJE ========== -->
+                        <div id="creatives-results" class="hidden mb-6">
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
                                     <i class="ph ph-image text-pink-400"></i>
                                     Kreacje graficzne
                                 </h4>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="generateAdCreatives()" id="btn-generate-creatives" class="text-xs bg-pink-600 hover:bg-pink-500 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
-                                        <i class="ph ph-image"></i> Generuj zdjęcia
-                                    </button>
-                                </div>
                             </div>
-                            <div id="creatives-empty" class="bg-zinc-900/50 border border-white/5 rounded-xl p-5">
-                                <div class="flex items-center gap-3 text-zinc-500">
-                                    <i class="ph ph-image text-2xl"></i>
-                                    <div>
-                                        <p class="text-[13px]">Wygeneruj 5 zdjęć reklamowych dopasowanych do produktu</p>
-                                        <p class="text-[11px] text-zinc-600 mt-0.5">Lifestyle, problem, before/after, close-up, zestaw</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="creatives-loading" class="hidden bg-pink-500/5 border border-pink-500/20 rounded-xl p-5">
-                                <div class="flex items-center gap-3">
-                                    <i class="ph ph-spinner animate-spin text-xl text-pink-400"></i>
-                                    <div>
-                                        <p class="text-[13px] text-pink-300">Generuję kreacje graficzne...</p>
-                                        <p id="creatives-progress" class="text-[11px] text-zinc-500 mt-0.5">0/5 zdjęć</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="creatives-results" class="hidden">
-                                <div id="creatives-grid" class="grid grid-cols-3 gap-3"></div>
-                            </div>
+                            <div id="creatives-grid" class="grid grid-cols-3 gap-3"></div>
                         </div>
 
-                        <!-- ========== SEKCJA 4: URUCHOMIENIE KAMPANII ========== -->
+                        <!-- ========== STATUS KAMPANII ========== -->
                         <div>
                             <h4 class="text-[14px] font-semibold text-white flex items-center gap-2 mb-3">
                                 <i class="ph ph-rocket-launch text-emerald-400"></i>
                                 Status kampanii
                             </h4>
-                            <!-- Pending state -->
                             <div id="kampania-pending" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
                                 <div class="flex items-center gap-4 mb-4">
                                     <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
@@ -2500,8 +2494,6 @@
                                     Oznacz jako uruchomioną
                                 </button>
                             </div>
-
-                            <!-- Launched state -->
                             <div id="kampania-launched" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
                                 <div class="flex items-center gap-4">
                                     <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
@@ -9775,6 +9767,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
         // Kampania tab
         let researchPollInterval = null;
+        let pipelineRunning = false;
 
         async function loadKampaniaTab() {
             // Make sure we have ads data
@@ -9813,45 +9806,247 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (navCheck) navCheck.classList.add('hidden');
             }
 
-            // === Research konkurencji ===
-            renderResearchSection();
+            // === Pokaż wyniki jeśli są / pokaż start button jeśli nie ma ===
+            const hasResearch = adsData?.competitor_research && !adsData.competitor_research.parse_error;
+            const hasCopies = adsData?.ad_copies?.versions?.length;
+            const hasCreatives = adsData?.ad_creatives?.length;
+            const hasAny = hasResearch || hasCopies || hasCreatives;
 
-            // === Copy reklamowe ===
-            renderCopiesSection();
+            const startEl = document.getElementById('pipeline-start');
+            const progressEl = document.getElementById('pipeline-progress');
 
-            // === Kreacje graficzne ===
-            renderCreativesSection();
+            // Zawsze pokaż start (do ponownego generowania), chyba że pipeline jest w toku
+            if (startEl && !pipelineRunning) {
+                startEl.classList.remove('hidden');
+                // Zmień tekst buttona jeśli już są wyniki
+                const btn = document.getElementById('btn-run-pipeline');
+                if (btn && hasAny) {
+                    btn.innerHTML = '<i class="ph ph-arrows-clockwise text-lg"></i> Wygeneruj ponownie';
+                }
+            }
+            if (progressEl && !pipelineRunning) progressEl.classList.add('hidden');
+
+            // Renderuj istniejące wyniki
+            if (hasResearch) renderResearchResults(adsData.competitor_research);
+            if (hasCopies) renderCopiesResults(adsData.ad_copies);
+            if (hasCreatives) renderCreativesResults(adsData.ad_creatives);
+
+            // Jeśli research jest w toku (np. po refreshu strony) — wznów polling
+            if (adsData?.competitor_research_status === 'pending' && adsData?.competitor_research_task_id) {
+                startResearchPolling();
+            }
         }
 
-        // ---- RESEARCH KONKURENCJI ----
+        // ---- PIPELINE: RESEARCH → COPY → CREATIVES ----
 
-        function renderResearchSection() {
-            const emptyEl = document.getElementById('research-empty');
-            const loadingEl = document.getElementById('research-loading');
-            const resultsEl = document.getElementById('research-results');
-            const statusBadge = document.getElementById('research-status-badge');
+        function setPipelineStep(step, state, detail) {
+            // state: 'waiting' | 'active' | 'done' | 'error' | 'skipped'
+            const iconEl = document.getElementById(`pipeline-icon-${step}`);
+            const detailEl = document.getElementById(`pipeline-detail-${step}`);
+            const checkEl = document.getElementById(`pipeline-check-${step}`);
+            const stepEl = document.getElementById(`pipeline-step-${step}`);
 
-            emptyEl?.classList.add('hidden');
-            loadingEl?.classList.add('hidden');
-            resultsEl?.classList.add('hidden');
-            statusBadge?.classList.add('hidden');
+            if (detailEl) detailEl.textContent = detail || '';
 
-            if (adsData?.competitor_research_status === 'pending') {
-                loadingEl?.classList.remove('hidden');
-                statusBadge?.classList.remove('hidden');
-                statusBadge.textContent = 'Analizuję...';
-                statusBadge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300';
-                // Start polling
-                startResearchPolling();
-            } else if (adsData?.competitor_research && !adsData.competitor_research.parse_error) {
-                resultsEl?.classList.remove('hidden');
-                statusBadge?.classList.remove('hidden');
-                statusBadge.textContent = 'Gotowe';
-                statusBadge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
-                renderResearchResults(adsData.competitor_research);
-            } else {
-                emptyEl?.classList.remove('hidden');
+            if (stepEl) {
+                stepEl.className = 'flex items-center gap-3 p-3 rounded-xl border ' + ({
+                    waiting: 'bg-zinc-800/30 border-transparent',
+                    active: 'bg-violet-500/5 border-violet-500/20',
+                    done: 'bg-emerald-500/5 border-emerald-500/20',
+                    error: 'bg-red-500/5 border-red-500/20',
+                    skipped: 'bg-zinc-800/20 border-transparent opacity-50'
+                }[state] || 'bg-zinc-800/30 border-transparent');
             }
+
+            if (iconEl) {
+                const icons = {
+                    research: 'binoculars', copy: 'text-aa', creatives: 'image'
+                };
+                const icon = icons[step] || 'circle';
+                if (state === 'active') {
+                    iconEl.innerHTML = `<i class="ph ph-spinner animate-spin text-sm text-violet-400"></i>`;
+                    iconEl.className = 'w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center shrink-0';
+                } else if (state === 'done') {
+                    iconEl.innerHTML = `<i class="ph-fill ph-check-circle text-sm text-emerald-400"></i>`;
+                    iconEl.className = 'w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0';
+                } else if (state === 'error') {
+                    iconEl.innerHTML = `<i class="ph ph-warning text-sm text-red-400"></i>`;
+                    iconEl.className = 'w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0';
+                } else {
+                    iconEl.innerHTML = `<i class="ph ph-${icon} text-sm text-zinc-500"></i>`;
+                    iconEl.className = 'w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0';
+                }
+            }
+
+            if (checkEl) {
+                checkEl.className = ({
+                    done: 'ph-fill ph-check-circle text-sm text-emerald-400',
+                    error: 'ph ph-x-circle text-sm text-red-400',
+                    active: 'ph ph-spinner animate-spin text-sm text-violet-400',
+                    skipped: 'ph ph-minus-circle text-sm text-zinc-600',
+                }[state] || 'ph ph-circle text-sm text-zinc-700');
+            }
+        }
+
+        async function runCampaignPipeline() {
+            if (pipelineRunning) return;
+            pipelineRunning = true;
+
+            const includeCreatives = document.getElementById('pipeline-include-creatives')?.checked;
+
+            // Pokaż progress, schowaj start
+            document.getElementById('pipeline-start')?.classList.add('hidden');
+            const progressEl = document.getElementById('pipeline-progress');
+            progressEl?.classList.remove('hidden');
+
+            // Ustaw kreacje na skipped jeśli odznaczone
+            if (!includeCreatives) {
+                setPipelineStep('creatives', 'skipped', 'Pominięte');
+            }
+
+            const overallStatus = document.getElementById('pipeline-overall-status');
+
+            try {
+                // ===== STEP 1: RESEARCH =====
+                setPipelineStep('research', 'active', 'Manus przeszukuje Facebook Ad Library...');
+
+                let researchData = null;
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('manus-research-ads', {
+                        body: { workflow_id: workflow.id }
+                    });
+                    if (error) throw error;
+                    if (!data?.success) throw new Error(data?.error || 'Błąd Manus');
+
+                    if (!adsData) adsData = {};
+                    adsData.competitor_research_task_id = data.task_id;
+                    adsData.competitor_research_status = 'pending';
+
+                    // Poll aż research się skończy (max 10 min)
+                    setPipelineStep('research', 'active', 'Manus analizuje... (2-5 min)');
+                    researchData = await pollResearchUntilDone(data.task_id, 600000);
+
+                    if (researchData && !researchData.parse_error) {
+                        setPipelineStep('research', 'done', `Znaleziono ${researchData.competitors?.length || 0} reklam`);
+                        renderResearchResults(researchData);
+                    } else {
+                        setPipelineStep('research', 'error', 'Nie udało się pobrać wyników');
+                    }
+                } catch (err) {
+                    console.error('Pipeline research error:', err);
+                    setPipelineStep('research', 'error', err.message);
+                }
+
+                // ===== STEP 2: COPY =====
+                setPipelineStep('copy', 'active', 'Claude generuje copy reklamowe...');
+
+                try {
+                    await generateAdCopies();
+                    setPipelineStep('copy', 'done', `${adsData?.ad_copies?.versions?.length || 0} wersji wygenerowanych`);
+                } catch (err) {
+                    console.error('Pipeline copy error:', err);
+                    setPipelineStep('copy', 'error', err.message);
+                }
+
+                // ===== STEP 3: CREATIVES =====
+                if (includeCreatives) {
+                    setPipelineStep('creatives', 'active', 'Generuję zdjęcia reklamowe...');
+
+                    try {
+                        await generateAdCreatives((done, total) => {
+                            setPipelineStep('creatives', 'active', `${done}/${total} zdjęć...`);
+                        });
+                        setPipelineStep('creatives', 'done', `${adsData?.ad_creatives?.length || 0} kreacji`);
+                    } catch (err) {
+                        console.error('Pipeline creatives error:', err);
+                        setPipelineStep('creatives', 'error', err.message);
+                    }
+                }
+
+                // Pipeline done
+                if (overallStatus) {
+                    overallStatus.textContent = 'Gotowe!';
+                    overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
+                }
+                showToast('Pipeline kampanii zakończony!', 'success');
+
+            } catch (err) {
+                console.error('Pipeline error:', err);
+                if (overallStatus) {
+                    overallStatus.textContent = 'Błąd';
+                    overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300';
+                }
+            } finally {
+                pipelineRunning = false;
+                // Pokaż start button ponownie (do re-run)
+                const startEl = document.getElementById('pipeline-start');
+                if (startEl) {
+                    startEl.classList.remove('hidden');
+                    const btn = document.getElementById('btn-run-pipeline');
+                    if (btn) btn.innerHTML = '<i class="ph ph-arrows-clockwise text-lg"></i> Wygeneruj ponownie';
+                }
+            }
+        }
+
+        // Poll research do zakończenia — zwraca researchData lub null
+        function pollResearchUntilDone(taskId, timeoutMs) {
+            return new Promise((resolve) => {
+                const startTime = Date.now();
+                const interval = setInterval(async () => {
+                    if (Date.now() - startTime > timeoutMs) {
+                        clearInterval(interval);
+                        resolve(null);
+                        return;
+                    }
+
+                    try {
+                        const { data } = await supabaseClient.functions.invoke('manus-research-result', {
+                            body: { task_id: taskId, workflow_id: workflow.id }
+                        });
+
+                        if (data?.status === 'completed') {
+                            clearInterval(interval);
+                            // Refresh adsData
+                            const { data: fresh } = await supabaseClient
+                                .from('workflow_ads')
+                                .select('*')
+                                .eq('workflow_id', workflow.id)
+                                .maybeSingle();
+                            if (fresh) adsData = fresh;
+                            resolve(data.research_data || adsData?.competitor_research);
+                        } else if (data?.status === 'expired') {
+                            clearInterval(interval);
+                            resolve(null);
+                        }
+                    } catch (err) {
+                        console.error('Poll error:', err);
+                    }
+                }, 15000); // co 15 sek
+            });
+        }
+
+        // Zachowaj stary polling na wypadek refresha strony
+        function startResearchPolling() {
+            if (researchPollInterval) return;
+            researchPollInterval = setInterval(async () => {
+                if (!adsData?.competitor_research_task_id) {
+                    clearInterval(researchPollInterval);
+                    researchPollInterval = null;
+                    return;
+                }
+                try {
+                    const { data } = await supabaseClient.functions.invoke('manus-research-result', {
+                        body: { task_id: adsData.competitor_research_task_id, workflow_id: workflow.id }
+                    });
+                    if (data?.status === 'completed' || data?.status === 'expired') {
+                        clearInterval(researchPollInterval);
+                        researchPollInterval = null;
+                        const { data: fresh } = await supabaseClient.from('workflow_ads').select('*').eq('workflow_id', workflow.id).maybeSingle();
+                        if (fresh) adsData = fresh;
+                        loadKampaniaTab();
+                    }
+                } catch (err) { console.error('Research poll:', err); }
+            }, 30000);
         }
 
         function renderResearchResults(data) {
@@ -9898,99 +10093,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
-        async function startCompetitorResearch() {
-            const btn = document.getElementById('btn-start-research');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Uruchamiam...';
-            }
-
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('manus-research-ads', {
-                    body: { workflow_id: workflow.id }
-                });
-
-                if (error) throw error;
-                if (!data?.success) throw new Error(data?.error || 'Błąd Manus API');
-
-                // Update local state
-                if (!adsData) adsData = {};
-                adsData.competitor_research_status = 'pending';
-                adsData.competitor_research_task_id = data.task_id;
-
-                showToast('Research uruchomiony! Wyniki za ~2-5 minut.', 'success');
-                renderResearchSection();
-            } catch (err) {
-                console.error('Research error:', err);
-                showToast('Błąd uruchamiania researchu: ' + err.message, 'error');
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ph ph-magnifying-glass"></i> Zbadaj konkurencję';
-                }
-            }
-        }
-
-        function startResearchPolling() {
-            if (researchPollInterval) return;
-            researchPollInterval = setInterval(async () => {
-                if (!adsData?.competitor_research_task_id) {
-                    clearInterval(researchPollInterval);
-                    researchPollInterval = null;
-                    return;
-                }
-
-                try {
-                    const { data, error } = await supabaseClient.functions.invoke('manus-research-result', {
-                        body: {
-                            task_id: adsData.competitor_research_task_id,
-                            workflow_id: workflow.id
-                        }
-                    });
-
-                    if (data?.status === 'completed' || data?.status === 'expired') {
-                        clearInterval(researchPollInterval);
-                        researchPollInterval = null;
-
-                        // Refresh ads data
-                        const { data: freshData } = await supabaseClient
-                            .from('workflow_ads')
-                            .select('*')
-                            .eq('workflow_id', workflow.id)
-                            .maybeSingle();
-                        adsData = freshData;
-
-                        if (data?.status === 'completed') {
-                            showToast('Research konkurencji gotowy!', 'success');
-                        } else {
-                            showToast('Task researchu wygasł', 'error');
-                        }
-                        renderResearchSection();
-                    }
-                } catch (err) {
-                    console.error('Research poll error:', err);
-                }
-            }, 30000); // co 30 sek
-        }
-
         // ---- COPY REKLAMOWE ----
 
-        function renderCopiesSection() {
-            const emptyEl = document.getElementById('copies-empty');
-            const resultsEl = document.getElementById('copies-results');
-
-            emptyEl?.classList.add('hidden');
-            resultsEl?.classList.add('hidden');
-
-            if (adsData?.ad_copies?.versions?.length) {
-                resultsEl?.classList.remove('hidden');
-                renderCopiesResults(adsData.ad_copies);
-            } else {
-                emptyEl?.classList.remove('hidden');
-            }
-        }
-
         function renderCopiesResults(data) {
+            document.getElementById('copies-results')?.classList.remove('hidden');
             // WOW Factor
             const wowEl = document.getElementById('copies-wow-factor');
             const wowText = document.getElementById('copies-wow-text');
@@ -10053,73 +10159,39 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         async function generateAdCopies() {
-            const btn = document.getElementById('btn-generate-copies');
-            const emptyEl = document.getElementById('copies-empty');
-            const loadingEl = document.getElementById('copies-loading');
+            // Pobierz dane do generowania copy
+            const [brandingRes, productsRes] = await Promise.all([
+                supabaseClient.from('workflow_branding').select('type, value, title, notes')
+                    .eq('workflow_id', workflow.id).in('type', ['brand_info']),
+                supabaseClient.from('workflow_products').select('name, description')
+                    .eq('workflow_id', workflow.id)
+            ]);
 
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generuję...';
+            const brandInfo = brandingRes.data?.find(b => b.type === 'brand_info');
+            let brandVal = {};
+            if (brandInfo?.value) {
+                brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value;
             }
-            emptyEl?.classList.add('hidden');
-            loadingEl?.classList.remove('hidden');
 
-            try {
-                // Pobierz dane do generowania copy
-                const [brandingRes, productsRes] = await Promise.all([
-                    supabaseClient.from('workflow_branding').select('type, value, title, notes')
-                        .eq('workflow_id', workflow.id).in('type', ['brand_info']),
-                    supabaseClient.from('workflow_products').select('name, description')
-                        .eq('workflow_id', workflow.id)
-                ]);
+            const product = productsRes.data?.[0] || {};
+            const researchData = adsData?.competitor_research;
+            const landingUrl = workflow?.landing_page_url || '';
 
-                const brandInfo = brandingRes.data?.find(b => b.type === 'brand_info');
-                let brandVal = {};
-                if (brandInfo?.value) {
-                    brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value;
-                }
+            const prompt = buildAdCopyPrompt(brandVal, product, researchData, landingUrl);
 
-                const product = productsRes.data?.[0] || {};
-                const researchData = adsData?.competitor_research;
-                const landingUrl = workflow?.landing_page_url || '';
+            const { data, error } = await supabaseClient.functions.invoke('generate-ad-copy', {
+                body: { workflow_id: workflow.id, prompt }
+            });
 
-                // Buduj prompt do Claude API (edge function)
-                const prompt = buildAdCopyPrompt(brandVal, product, researchData, landingUrl);
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Błąd generowania copy');
 
-                // Wywołaj Claude przez edge function
-                const { data, error } = await supabaseClient.functions.invoke('generate-ad-copy', {
-                    body: {
-                        workflow_id: workflow.id,
-                        prompt: prompt,
-                        brand_name: brandVal.name || '',
-                        product_name: product.name || '',
-                        landing_url: landingUrl
-                    }
-                });
+            const adCopies = data.ad_copies;
+            if (!adsData) adsData = {};
+            adsData.ad_copies = adCopies;
+            adsData.ad_copies_generated_at = new Date().toISOString();
 
-                if (error) throw error;
-                if (!data?.success) throw new Error(data?.error || 'Błąd generowania copy');
-
-                // Edge function już zapisuje do bazy - tylko update local state
-                const adCopies = data.ad_copies;
-                if (!adsData) adsData = {};
-                adsData.ad_copies = adCopies;
-                adsData.ad_copies_generated_at = new Date().toISOString();
-
-                showToast('Copy reklamowe wygenerowane!', 'success');
-                loadingEl?.classList.add('hidden');
-                renderCopiesSection();
-            } catch (err) {
-                console.error('Generate copies error:', err);
-                showToast('Błąd generowania copy: ' + err.message, 'error');
-                loadingEl?.classList.add('hidden');
-                emptyEl?.classList.remove('hidden');
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ph ph-sparkle"></i> Generuj copy';
-                }
-            }
+            renderCopiesResults(adCopies);
         }
 
         function buildAdCopyPrompt(brand, product, research, landingUrl) {
@@ -10182,22 +10254,8 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
 
         // ---- KREACJE GRAFICZNE ----
 
-        function renderCreativesSection() {
-            const emptyEl = document.getElementById('creatives-empty');
-            const resultsEl = document.getElementById('creatives-results');
-
-            emptyEl?.classList.add('hidden');
-            resultsEl?.classList.add('hidden');
-
-            if (adsData?.ad_creatives?.length) {
-                resultsEl?.classList.remove('hidden');
-                renderCreativesResults(adsData.ad_creatives);
-            } else {
-                emptyEl?.classList.remove('hidden');
-            }
-        }
-
         function renderCreativesResults(creatives) {
+            document.getElementById('creatives-results')?.classList.remove('hidden');
             const gridEl = document.getElementById('creatives-grid');
             if (!gridEl) return;
 
@@ -10235,134 +10293,105 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
             if (url) copyToClipboard(url);
         }
 
-        async function generateAdCreatives() {
-            const btn = document.getElementById('btn-generate-creatives');
-            const emptyEl = document.getElementById('creatives-empty');
-            const loadingEl = document.getElementById('creatives-loading');
-            const progressEl = document.getElementById('creatives-progress');
+        async function generateAdCreatives(onProgress) {
+            // Pobierz dane produktu (zdjęcie referencyjne)
+            const { data: products } = await supabaseClient
+                .from('workflow_products')
+                .select('name, description, image_url')
+                .eq('workflow_id', workflow.id);
 
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generuję...';
+            const product = products?.[0] || {};
+            const refImageUrl = product.image_url || null;
+
+            // Pobierz brand info
+            const { data: branding } = await supabaseClient
+                .from('workflow_branding')
+                .select('type, value')
+                .eq('workflow_id', workflow.id)
+                .eq('type', 'brand_info')
+                .maybeSingle();
+
+            let brandVal = {};
+            if (branding?.value) {
+                brandVal = typeof branding.value === 'string' ? JSON.parse(branding.value) : branding.value;
             }
-            emptyEl?.classList.add('hidden');
-            loadingEl?.classList.remove('hidden');
 
-            try {
-                // Pobierz dane produktu (zdjęcie referencyjne)
-                const { data: products } = await supabaseClient
-                    .from('workflow_products')
-                    .select('name, description, image_url')
+            const productDesc = product.description || brandVal.description || '';
+            const productName = product.name || brandVal.name || '';
+
+            const creativeTypes = [
+                {
+                    type: 'lifestyle',
+                    prompt: `A person happily using ${productName} in a modern, bright home interior. The product (${productDesc}) is clearly visible and being used naturally. Lifestyle advertising photography, warm natural lighting, photorealistic. No text, no captions, no labels, no watermarks.`
+                },
+                {
+                    type: 'problem',
+                    prompt: `A frustrated person struggling with a common problem that ${productName} solves. ${productDesc ? 'Context: ' + productDesc : ''} Tense expression, messy situation. Documentary style photography, natural lighting. Shows the real struggle. No text, no captions, no labels, no watermarks.`
+                },
+                {
+                    type: 'before_after',
+                    prompt: `Split view comparison: LEFT side shows a messy/problematic situation (dirty, broken, struggling). RIGHT side shows the clean/perfect result after using ${productName}. Dramatic difference. Professional advertising photography, transformation reveal style. No text, no captions, no labels, no watermarks.`
+                },
+                {
+                    type: 'closeup',
+                    prompt: `Detailed close-up of ${productName}. ${productDesc ? productDesc : 'Premium product'}. Studio product photography on a clean surface, soft professional lighting, premium aesthetic. Sharp focus on product details. E-commerce style. No text, no captions, no labels, no watermarks.`
+                },
+                {
+                    type: 'bundle',
+                    prompt: `Complete product set of ${productName} with all accessories neatly arranged on a clean surface. Premium unboxing aesthetic, all items visible. Studio product photography, e-commerce style, white/light background. No text, no captions, no labels, no watermarks.`
+                }
+            ];
+
+            const creatives = [];
+
+            for (let i = 0; i < creativeTypes.length; i++) {
+                const ct = creativeTypes[i];
+                if (onProgress) onProgress(i, creativeTypes.length);
+
+                try {
+                    const body = {
+                        prompt: ct.prompt,
+                        count: 1,
+                        workflow_id: workflow.id,
+                        type: `ad_${ct.type}`
+                    };
+
+                    if (refImageUrl) {
+                        body.reference_images = [{ url: refImageUrl, type: 'product' }];
+                    }
+
+                    const { data, error } = await supabaseClient.functions.invoke('generate-image', { body });
+
+                    if (error) throw error;
+                    if (data?.images?.[0]?.url) {
+                        creatives.push({
+                            type: ct.type,
+                            url: data.images[0].url,
+                            prompt: ct.prompt,
+                            generated_at: new Date().toISOString()
+                        });
+                    }
+                } catch (imgErr) {
+                    console.error(`Error generating ${ct.type}:`, imgErr);
+                }
+            }
+
+            // Zapisz do bazy
+            if (creatives.length > 0) {
+                await supabaseClient
+                    .from('workflow_ads')
+                    .update({
+                        ad_creatives: creatives,
+                        ad_creatives_generated_at: new Date().toISOString()
+                    })
                     .eq('workflow_id', workflow.id);
 
-                const product = products?.[0] || {};
-                const refImageUrl = product.image_url || null;
-
-                // Pobierz brand info
-                const { data: branding } = await supabaseClient
-                    .from('workflow_branding')
-                    .select('type, value')
-                    .eq('workflow_id', workflow.id)
-                    .eq('type', 'brand_info')
-                    .maybeSingle();
-
-                let brandVal = {};
-                if (branding?.value) {
-                    brandVal = typeof branding.value === 'string' ? JSON.parse(branding.value) : branding.value;
-                }
-
-                const productDesc = product.description || brandVal.description || '';
-                const productName = product.name || brandVal.name || '';
-
-                // 5 typów kreacji
-                const creativeTypes = [
-                    {
-                        type: 'lifestyle',
-                        prompt: `A person happily using ${productName} in a modern, bright home interior. The product (${productDesc}) is clearly visible and being used naturally. Lifestyle advertising photography, warm natural lighting, photorealistic. No text, no captions, no labels, no watermarks.`
-                    },
-                    {
-                        type: 'problem',
-                        prompt: `A frustrated person struggling with a common problem that ${productName} solves. ${productDesc ? 'Context: ' + productDesc : ''} Tense expression, messy situation. Documentary style photography, natural lighting. Shows the real struggle. No text, no captions, no labels, no watermarks.`
-                    },
-                    {
-                        type: 'before_after',
-                        prompt: `Split view comparison: LEFT side shows a messy/problematic situation (dirty, broken, struggling). RIGHT side shows the clean/perfect result after using ${productName}. Dramatic difference. Professional advertising photography, transformation reveal style. No text, no captions, no labels, no watermarks.`
-                    },
-                    {
-                        type: 'closeup',
-                        prompt: `Detailed close-up of ${productName}. ${productDesc ? productDesc : 'Premium product'}. Studio product photography on a clean surface, soft professional lighting, premium aesthetic. Sharp focus on product details. E-commerce style. No text, no captions, no labels, no watermarks.`
-                    },
-                    {
-                        type: 'bundle',
-                        prompt: `Complete product set of ${productName} with all accessories neatly arranged on a clean surface. Premium unboxing aesthetic, all items visible. Studio product photography, e-commerce style, white/light background. No text, no captions, no labels, no watermarks.`
-                    }
-                ];
-
-                const creatives = [];
-
-                for (let i = 0; i < creativeTypes.length; i++) {
-                    const ct = creativeTypes[i];
-                    if (progressEl) progressEl.textContent = `${i}/${creativeTypes.length} zdjęć`;
-
-                    try {
-                        const body = {
-                            prompt: ct.prompt,
-                            count: 1,
-                            workflow_id: workflow.id,
-                            type: `ad_${ct.type}`
-                        };
-
-                        if (refImageUrl) {
-                            body.reference_images = [{ url: refImageUrl, type: 'product' }];
-                        }
-
-                        const { data, error } = await supabaseClient.functions.invoke('generate-image', { body });
-
-                        if (error) throw error;
-                        if (data?.images?.[0]?.url) {
-                            creatives.push({
-                                type: ct.type,
-                                url: data.images[0].url,
-                                prompt: ct.prompt,
-                                generated_at: new Date().toISOString()
-                            });
-                        }
-                    } catch (imgErr) {
-                        console.error(`Error generating ${ct.type}:`, imgErr);
-                    }
-                }
-
-                if (progressEl) progressEl.textContent = `${creatives.length}/${creativeTypes.length} zdjęć`;
-
-                // Zapisz do bazy
-                if (creatives.length > 0) {
-                    await supabaseClient
-                        .from('workflow_ads')
-                        .update({
-                            ad_creatives: creatives,
-                            ad_creatives_generated_at: new Date().toISOString()
-                        })
-                        .eq('workflow_id', workflow.id);
-
-                    if (!adsData) adsData = {};
-                    adsData.ad_creatives = creatives;
-                    adsData.ad_creatives_generated_at = new Date().toISOString();
-                }
-
-                showToast(`Wygenerowano ${creatives.length} kreacji graficznych!`, 'success');
-                loadingEl?.classList.add('hidden');
-                renderCreativesSection();
-            } catch (err) {
-                console.error('Generate creatives error:', err);
-                showToast('Błąd generowania kreacji: ' + err.message, 'error');
-                loadingEl?.classList.add('hidden');
-                emptyEl?.classList.remove('hidden');
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ph ph-image"></i> Generuj zdjęcia';
-                }
+                if (!adsData) adsData = {};
+                adsData.ad_creatives = creatives;
+                adsData.ad_creatives_generated_at = new Date().toISOString();
             }
+
+            renderCreativesResults(creatives);
         }
 
         // ---- MARK CAMPAIGN LAUNCHED ----
@@ -10443,9 +10472,7 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
 
         window.loadKampaniaTab = loadKampaniaTab;
         window.markCampaignLaunched = markCampaignLaunched;
-        window.startCompetitorResearch = startCompetitorResearch;
-        window.generateAdCopies = generateAdCopies;
-        window.generateAdCreatives = generateAdCreatives;
+        window.runCampaignPipeline = runCampaignPipeline;
         window.copySingleAdCopy = copySingleAdCopy;
         window.copyToClipboard = copyToClipboard;
         window.copyCreativeUrl = copyCreativeUrl;
