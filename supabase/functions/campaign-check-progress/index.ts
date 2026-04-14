@@ -207,9 +207,14 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
   }
 
   // === 3. Zapisz wszystko do bazy ===
+  // Sprawdź czy Manus realnie coś zrobił — inaczej oznacz jako failed
+  const hasRealOutput = !!campaignData?.copy || !!campaignData?.research || creatives.length > 0
+  const finalStatus = hasRealOutput ? 'completed' : 'failed'
+  const finalStep = hasRealOutput ? 'done' : 'no_output'
+
   const updates: any = {
-    campaign_pipeline_status: 'completed',
-    campaign_pipeline_step: 'done',
+    campaign_pipeline_status: finalStatus,
+    campaign_pipeline_step: finalStep,
     campaign_pipeline_completed_at: new Date().toISOString(),
     manus_full_completed_at: new Date().toISOString()
   }
@@ -226,6 +231,10 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
   if (creatives.length > 0) {
     updates.ad_creatives = creatives
     updates.ad_creatives_generated_at = new Date().toISOString()
+  }
+
+  if (!hasRealOutput) {
+    console.warn(`[full] ${workflowId} — Manus task stopped with NO output (copy/research/creatives all empty), marked as failed`)
   }
 
   await supabase.from('workflow_ads').update(updates).eq('workflow_id', workflowId)
