@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041313';
+        const APP_VERSION = '2026041401';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1501,6 +1501,11 @@
                             <span>Budżet</span>
                             <i id="dash-nav-check-budzet" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="dash-nav-content" class="dash-nav-item hidden" onclick="switchToDashTab('content')">
+                            <i class="ph ph-magic-wand"></i>
+                            <span>Materiały</span>
+                            <i id="dash-nav-check-content" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                         <div id="dash-nav-raport" class="dash-nav-item hidden" onclick="switchToDashTab('raport')">
                             <i class="ph ph-chart-line-up"></i>
                             <span>Raport</span>
@@ -1620,6 +1625,11 @@
                                 <i class="ph ph-wallet"></i>
                                 <span>Budżet</span>
                                 <i id="dash-nav-check-budzet-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-nav-content-mobile" class="dash-nav-item hidden" onclick="switchToDashTab('content');toggleDashMobileMenu()">
+                                <i class="ph ph-magic-wand"></i>
+                                <span>Materiały</span>
+                                <i id="dash-nav-check-content-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                             <div id="dash-nav-raport-mobile" class="dash-nav-item hidden" onclick="switchToDashTab('raport');toggleDashMobileMenu()">
                                 <i class="ph ph-chart-line-up"></i>
@@ -1904,7 +1914,12 @@
                     <div id="dash-etap4-budzet-content" class="h-full"></div>
                 </div>
 
-                <!-- 3. Kampania Box (Wkrótce) -->
+                <!-- 3. Content Box -->
+                <div id="dash-etap4-box-content" class="bento-box p-0 overflow-hidden opacity-50" style="grid-column: span 4; min-height: 180px;">
+                    <div id="dash-etap4-content-content" class="h-full"></div>
+                </div>
+
+                <!-- 4. Kampania Box (Wkrótce) -->
                 <div id="dash-etap4-box-kampania" class="bento-box p-0 overflow-hidden opacity-50" style="grid-column: span 4; min-height: 180px;">
                     <div id="dash-etap4-kampania-content" class="h-full"></div>
                 </div>
@@ -2066,6 +2081,11 @@
                             <span>Budżet</span>
                             <i id="nav-check-budzet" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="nav-content-desktop" class="dash-nav-item hidden" data-tab="content" onclick="switchTab('content')">
+                            <i class="ph ph-magic-wand"></i>
+                            <span>Materiały</span>
+                            <i id="nav-check-content-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                         <div id="nav-raport-desktop" class="dash-nav-item hidden" data-tab="raport" onclick="switchTab('raport')">
                             <i class="ph ph-chart-bar"></i>
                             <span>Raport</span>
@@ -2190,6 +2210,11 @@
                                 <i class="ph ph-wallet"></i>
                                 <span>Budżet</span>
                                 <i id="nav-check-budzet-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="nav-content-mobile" class="dash-nav-item hidden" data-tab="content" onclick="switchTab('content');toggleMobileMenu()">
+                                <i class="ph ph-magic-wand"></i>
+                                <span>Materiały</span>
+                                <i id="nav-check-content-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                             <div id="nav-raport-mobile" class="dash-nav-item hidden" data-tab="raport" onclick="switchTab('raport');toggleMobileMenu()">
                                 <i class="ph ph-chart-bar"></i>
@@ -4239,6 +4264,53 @@
                 </div>
             </div>
 
+            <!-- TAB: Content (Etap 4) -->
+            <div id="tab-content" class="tab-panel hidden animate-enter">
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex items-start gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-magic-wand text-2xl text-violet-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-semibold text-white mb-2">Materiały reklamowe</h2>
+                            <p class="text-[#888]">Podgląd kompletnych reklam tak jak będą wyglądać na Facebooku.</p>
+                        </div>
+                    </div>
+
+                    <div id="content-preparing" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-6">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="ph ph-spinner animate-spin text-xl text-violet-400"></i>
+                            <h4 class="text-[14px] font-medium text-white">Przygotowujemy Twoje materiały reklamowe</h4>
+                        </div>
+                        <p class="text-[13px] text-zinc-400">Analizujemy konkurencję na Facebook Ads, piszemy copy dopasowane do Twojej grupy docelowej i projektujemy 5 grafik reklamowych. Materiały będą gotowe zwykle w ciągu 10-15 minut.</p>
+                    </div>
+
+                    <div id="content-ready" class="hidden">
+                        <!-- Analiza konkurencji -->
+                        <div id="content-research-section" class="mb-8 hidden">
+                            <h3 class="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                                <i class="ph ph-binoculars text-violet-400"></i>
+                                Analiza konkurencji
+                            </h3>
+                            <p class="text-[13px] text-zinc-500 mb-4">Co robi konkurencja na Facebooku — i jak się wyróżniamy</p>
+                            <div id="content-research-feed" class="space-y-3"></div>
+
+                            <div id="content-research-insights" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                        </div>
+
+                        <!-- Reklamy (FB posty) -->
+                        <div id="content-ads-section">
+                            <h3 class="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                                <i class="ph ph-megaphone text-cyan-400"></i>
+                                Twoje reklamy
+                            </h3>
+                            <p class="text-[13px] text-zinc-500 mb-4">5 wersji gotowych do publikacji — każda z innym kątem</p>
+                            <div id="content-ads-feed" class="space-y-5"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- TAB: Kampania (Etap 4) -->
             <div id="tab-kampania" class="tab-panel hidden animate-enter">
                 <div class="max-w-3xl">
@@ -5731,6 +5803,7 @@
 
             renderEtap4KontoBox();
             renderEtap4BudzetBox();
+            renderEtap4ContentBox();
             renderEtap4KampaniaBox();
             renderEtap4RaportBox();
             renderEtap4SkalowanieBox();
@@ -5844,6 +5917,210 @@
                     </div>
                 `;
             }
+        }
+
+        function renderEtap4ContentBox() {
+            const box = document.getElementById('dash-etap4-box-content');
+            const content = document.getElementById('dash-etap4-content-content');
+            if (!content) return;
+
+            const budgetFunded = adsData?.budget_funded;
+            const contentReady = adsData?.content_ready || (adsData?.ad_creatives?.length > 0);
+            const inProgress = budgetFunded && !contentReady && adsData?.campaign_pipeline_status === 'running';
+
+            if (box) {
+                box.classList.toggle('opacity-50', !budgetFunded);
+                box.classList.toggle('cursor-pointer', budgetFunded);
+                if (budgetFunded) box.onclick = () => switchToDashTab('content');
+            }
+
+            if (contentReady) {
+                const creativesCount = adsData?.ad_creatives?.length || 0;
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Materiały reklamowe</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs"><i class="ph-fill ph-check-circle"></i> Gotowe</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph-fill ph-magic-wand text-5xl text-emerald-500 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Materiały gotowe</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">${creativesCount} kreacji + copy</p>
+                        </div>
+                    </div>`;
+            } else if (inProgress) {
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Materiały reklamowe</span>
+                            <span class="flex items-center gap-1.5 text-violet-400 text-xs"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span> W przygotowaniu</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-spinner animate-spin text-5xl text-violet-400 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Tworzymy materiały</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Research + copy + 5 grafik</p>
+                        </div>
+                    </div>`;
+            } else if (budgetFunded) {
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Materiały reklamowe</span>
+                            <span class="flex items-center gap-1.5 text-zinc-500 text-xs">Wkrótce</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-magic-wand text-5xl text-zinc-600 mb-4"></i>
+                            <h3 class="text-white text-lg font-medium">Materiały reklamowe</h3>
+                            <p class="text-[#666] text-sm text-center mt-2">Copy + kreacje graficzne</p>
+                        </div>
+                    </div>`;
+            } else {
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col justify-center items-center">
+                        <i class="ph ph-magic-wand text-5xl text-zinc-700 mb-4"></i>
+                        <h3 class="text-white text-lg font-medium">Materiały reklamowe</h3>
+                        <p class="text-[#666] text-sm text-center mt-2">Dostępne po doładowaniu budżetu</p>
+                    </div>`;
+            }
+        }
+
+        function loadContentClient() {
+            const preparing = document.getElementById('content-preparing');
+            const ready = document.getElementById('content-ready');
+            const contentReady = adsData?.content_ready || (adsData?.ad_creatives?.length > 0);
+
+            if (!contentReady) {
+                preparing?.classList.remove('hidden');
+                ready?.classList.add('hidden');
+                return;
+            }
+
+            preparing?.classList.add('hidden');
+            ready?.classList.remove('hidden');
+
+            const escapeHTMLClient = (s) => String(s == null ? '' : s)
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+
+            const brandName = adsData?.ad_copies?.brand_name || adsData?.ad_copies?.product_name || window.workflow?.offer_name || 'Twoja marka';
+            const brandInitial = brandName.charAt(0).toUpperCase();
+
+            // === Analiza konkurencji jako feed postów ===
+            const research = adsData?.competitor_research;
+            const researchSection = document.getElementById('content-research-section');
+            const researchFeed = document.getElementById('content-research-feed');
+            const researchInsights = document.getElementById('content-research-insights');
+
+            const competitors = Array.isArray(research?.competitors) ? research.competitors : [];
+            if (competitors.length > 0) {
+                researchSection?.classList.remove('hidden');
+
+                researchFeed.innerHTML = competitors.slice(0, 5).map(c => {
+                    const brand = escapeHTMLClient(c.brand || 'Konkurent');
+                    const initial = brand.charAt(0).toUpperCase();
+                    const headline = escapeHTMLClient(c.headline || '');
+                    const adText = escapeHTMLClient(c.ad_text || '');
+                    const format = escapeHTMLClient(c.format || 'image');
+                    const angle = escapeHTMLClient(c.angle || '');
+                    const adUrl = c.ad_url && (c.ad_url.startsWith('http')) ? c.ad_url : null;
+
+                    return `
+                    <div class="bg-white rounded-lg border border-zinc-200 overflow-hidden shadow-sm">
+                        <div class="p-3 flex items-center gap-2">
+                            <div class="w-10 h-10 rounded-full bg-zinc-300 flex items-center justify-center text-zinc-700 font-bold">${initial}</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[13px] font-semibold text-zinc-900 truncate">${brand}</p>
+                                <p class="text-[11px] text-zinc-500">Sponsorowane · <i class="ph ph-globe text-xs"></i></p>
+                            </div>
+                            ${adUrl ? `<a href="${escapeHTMLClient(adUrl)}" target="_blank" class="text-[11px] text-blue-600 hover:underline">Zobacz</a>` : ''}
+                        </div>
+                        ${adText ? `<p class="px-3 pb-2 text-[13px] text-zinc-800 whitespace-pre-wrap">${adText}</p>` : ''}
+                        <div class="bg-zinc-100 border-y border-zinc-200 p-4 flex items-center justify-center min-h-[120px]">
+                            <div class="text-center">
+                                <i class="ph ph-${format === 'video' ? 'play-circle' : 'image'} text-4xl text-zinc-400 mb-1"></i>
+                                <p class="text-[11px] text-zinc-500 uppercase tracking-wide">${format}</p>
+                            </div>
+                        </div>
+                        ${headline ? `
+                        <div class="p-3 bg-zinc-50 flex items-center justify-between">
+                            <div class="min-w-0">
+                                <p class="text-[11px] text-zinc-500 uppercase">${angle}</p>
+                                <p class="text-[13px] text-zinc-900 font-medium truncate">${headline}</p>
+                            </div>
+                            <button class="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[12px] font-semibold px-3 py-1.5 rounded-md border border-zinc-300">Więcej</button>
+                        </div>` : ''}
+                    </div>`;
+                }).join('');
+
+                // Insights
+                const gaps = Array.isArray(research.gaps) ? research.gaps : [];
+                const recs = Array.isArray(research.recommendations) ? research.recommendations : [];
+                const insights = [];
+                if (gaps.length) insights.push(`
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                        <h5 class="text-[12px] font-semibold text-amber-400 mb-2 flex items-center gap-1.5"><i class="ph ph-lightbulb"></i> Luki konkurencji</h5>
+                        <ul class="space-y-1">${gaps.slice(0,3).map(g => `<li class="text-[11px] text-zinc-300">• ${escapeHTMLClient(typeof g === 'string' ? g : JSON.stringify(g))}</li>`).join('')}</ul>
+                    </div>`);
+                if (recs.length) insights.push(`
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                        <h5 class="text-[12px] font-semibold text-emerald-400 mb-2 flex items-center gap-1.5"><i class="ph ph-target"></i> Jak się wyróżniamy</h5>
+                        <ul class="space-y-1">${recs.slice(0,3).map(r => `<li class="text-[11px] text-zinc-300">• ${escapeHTMLClient(typeof r === 'string' ? r : JSON.stringify(r))}</li>`).join('')}</ul>
+                    </div>`);
+                researchInsights.innerHTML = insights.join('');
+            } else {
+                researchSection?.classList.add('hidden');
+            }
+
+            // === Twoje reklamy jako FB posty ===
+            const versions = Array.isArray(adsData?.ad_copies?.versions) ? adsData.ad_copies.versions : [];
+            const creatives = Array.isArray(adsData?.ad_creatives) ? adsData.ad_creatives : [];
+            const feed = document.getElementById('content-ads-feed');
+
+            // Match creative to version (by index)
+            const posts = versions.slice(0, Math.max(versions.length, creatives.length));
+            feed.innerHTML = posts.map((v, i) => {
+                const creative = creatives[i];
+                const primary = escapeHTMLClient(v?.primary_text || '');
+                const headline = escapeHTMLClient(v?.headline || '');
+                const description = escapeHTMLClient(v?.description || '');
+                const cta = escapeHTMLClient(v?.cta || 'Sprawdź szczegóły');
+                const angle = escapeHTMLClient(v?.angle || '');
+                const imgUrl = creative?.url && creative.url.startsWith('http') ? escapeHTMLClient(creative.url) : '';
+                const landingUrl = adsData?.ad_copies?.landing_url || '';
+                const displayDomain = landingUrl ? (landingUrl.replace(/^https?:\/\//,'').split('/')[0].toUpperCase()) : '';
+
+                return `
+                <div class="bg-white rounded-lg border border-zinc-200 overflow-hidden shadow-sm">
+                    <div class="p-3 flex items-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold">${escapeHTMLClient(brandInitial)}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-semibold text-zinc-900 truncate">${escapeHTMLClient(brandName)}</p>
+                            <p class="text-[11px] text-zinc-500">Sponsorowane · <i class="ph ph-globe text-xs"></i></p>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 uppercase tracking-wide">${angle}</span>
+                    </div>
+                    ${primary ? `<p class="px-3 pb-3 text-[14px] text-zinc-900 whitespace-pre-wrap leading-relaxed">${primary}</p>` : ''}
+                    ${imgUrl ? `
+                    <div class="bg-zinc-100">
+                        <img src="${imgUrl}" alt="" class="w-full aspect-square object-cover" loading="lazy">
+                    </div>` : `
+                    <div class="bg-zinc-100 aspect-square flex items-center justify-center">
+                        <i class="ph ph-image text-6xl text-zinc-300"></i>
+                    </div>`}
+                    <div class="p-3 bg-zinc-50 flex items-center justify-between border-t border-zinc-200">
+                        <div class="min-w-0 flex-1 pr-3">
+                            ${displayDomain ? `<p class="text-[10px] text-zinc-500 uppercase tracking-wide">${escapeHTMLClient(displayDomain)}</p>` : ''}
+                            ${headline ? `<p class="text-[14px] text-zinc-900 font-semibold truncate">${headline}</p>` : ''}
+                            ${description ? `<p class="text-[12px] text-zinc-600 truncate">${description}</p>` : ''}
+                        </div>
+                        <button class="bg-zinc-200 hover:bg-zinc-300 text-zinc-900 text-[12px] font-semibold px-4 py-2 rounded-md whitespace-nowrap">${cta}</button>
+                    </div>
+                    <div class="px-3 py-2 flex items-center justify-around border-t border-zinc-100 text-[12px] text-zinc-600">
+                        <span class="flex items-center gap-1.5"><i class="ph ph-thumbs-up"></i> Lubię to</span>
+                        <span class="flex items-center gap-1.5"><i class="ph ph-chat-circle"></i> Komentarz</span>
+                        <span class="flex items-center gap-1.5"><i class="ph ph-share-fat"></i> Udostępnij</span>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-center text-zinc-500 py-8">Brak wersji do wyświetlenia</p>';
         }
 
         function renderEtap4KampaniaBox() {
@@ -6613,6 +6890,19 @@
             document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasAllAccess);
             document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasAllAccess);
 
+            // Content nav — widoczne gdy budżet doładowany
+            const showContent = !!adsData?.budget_funded;
+            document.getElementById('dash-nav-content')?.classList.toggle('hidden', !showContent);
+            document.getElementById('dash-nav-content-mobile')?.classList.toggle('hidden', !showContent);
+            document.getElementById('nav-content-desktop')?.classList.toggle('hidden', !showContent);
+            document.getElementById('nav-content-mobile')?.classList.toggle('hidden', !showContent);
+
+            // Checkmarks dla Content
+            const contentDone = !!(adsData?.content_ready || adsData?.ad_creatives?.length > 0);
+            ['dash-nav-check-content','dash-nav-check-content-mobile','nav-check-content-desktop','nav-check-content-mobile'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !contentDone);
+            });
+
             // Update Konto reklamowe checkmark (green when ALL 3 granted: ad account + fanpage + instagram)
             // Dashboard screen IDs
             document.getElementById('dash-nav-check-konto-reklamowe')?.classList.toggle('hidden', !hasAllAccess);
@@ -7276,6 +7566,9 @@
                     break;
                 case 'budzet':
                     loadBudzet();
+                    break;
+                case 'content':
+                    loadContentClient();
                     break;
                 case 'kampania':
                     loadKampania();

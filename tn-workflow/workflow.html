@@ -434,6 +434,11 @@
                             Budżet
                             <span id="nav-check-budzet" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('content')" data-tab="content" class="workflow-sidebar-btn">
+                            <i class="ph ph-magic-wand"></i>
+                            Content
+                            <span id="nav-check-content" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                         <button onclick="switchTab('kampania')" data-tab="kampania" class="workflow-sidebar-btn">
                             <i class="ph ph-rocket-launch"></i>
                             Kampania
@@ -2328,15 +2333,15 @@
                         </div>
                     </div><!-- /tab-budzet -->
 
-                    <!-- TAB: Kampania (Etap 4) -->
-                    <div id="tab-kampania" class="workflow-panel hidden">
+                    <!-- TAB: Content (Etap 4) — generowanie materiałów reklamowych -->
+                    <div id="tab-content" class="workflow-panel hidden">
                         <div class="flex items-center justify-between mb-6">
                             <div>
                                 <h3 class="text-lg font-semibold text-white flex items-center gap-2">
-                                    <i class="ph ph-rocket-launch text-cyan-400"></i>
-                                    Uruchomienie kampanii
+                                    <i class="ph ph-magic-wand text-cyan-400"></i>
+                                    Content — materiały reklamowe
                                 </h3>
-                                <p class="text-zinc-500 text-sm mt-1">Automatyczny pipeline: research, copy, kreacje</p>
+                                <p class="text-zinc-500 text-sm mt-1">Automatyczny pipeline: research konkurencji → copy → kreacje graficzne</p>
                             </div>
                             <button onclick="generateAdCopyPrompt()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt do generowania copy reklamowego">
                                 <i class="ph ph-robot"></i> Copy Ads (Claude)
@@ -2473,36 +2478,53 @@
                             <div id="creatives-grid" class="grid grid-cols-3 gap-3"></div>
                         </div>
 
-                        <!-- ========== STATUS KAMPANII ========== -->
-                        <div>
-                            <h4 class="text-[14px] font-semibold text-white flex items-center gap-2 mb-3">
-                                <i class="ph ph-rocket-launch text-emerald-400"></i>
-                                Status kampanii
-                            </h4>
-                            <div id="kampania-pending" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
-                                <div class="flex items-center gap-4 mb-4">
-                                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                                        <i class="ph ph-clock text-xl text-cyan-400"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-[14px] font-medium text-white">Kampania w przygotowaniu</h4>
-                                        <p class="text-[12px] text-[#666]">Uruchom kampanię gdy budżet jest doładowany</p>
-                                    </div>
-                                </div>
-                                <button onclick="markCampaignLaunched()" id="btn-launch-campaign" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors">
-                                    <i class="ph ph-rocket-launch mr-2"></i>
-                                    Oznacz jako uruchomioną
-                                </button>
+                    </div><!-- /tab-content -->
+
+                    <!-- TAB: Kampania (Etap 4) — tylko status uruchomienia -->
+                    <div id="tab-kampania" class="workflow-panel hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i class="ph ph-rocket-launch text-cyan-400"></i>
+                                    Uruchomienie kampanii
+                                </h3>
+                                <p class="text-zinc-500 text-sm mt-1">Status uruchomienia kampanii na Meta Ads</p>
                             </div>
-                            <div id="kampania-launched" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                                        <i class="ph-fill ph-rocket-launch text-xl text-emerald-400"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-[14px] font-medium text-emerald-400">Kampania uruchomiona!</h4>
-                                        <p id="kampania-launched-date" class="text-[12px] text-[#888]">-</p>
-                                    </div>
+                        </div>
+
+                        <div id="kampania-content-warning" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+                            <div class="flex items-center gap-3">
+                                <i class="ph ph-warning text-amber-400 text-xl"></i>
+                                <div>
+                                    <p class="text-[13px] text-amber-300 font-medium">Materiały reklamowe nie są jeszcze gotowe</p>
+                                    <p class="text-[12px] text-zinc-500 mt-0.5">Wygeneruj content w zakładce <button onclick="switchTab('content')" class="text-cyan-400 hover:text-cyan-300 underline">Content</button> zanim uruchomisz kampanię</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="kampania-pending" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                                    <i class="ph ph-clock text-xl text-cyan-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-[14px] font-medium text-white">Kampania w przygotowaniu</h4>
+                                    <p class="text-[12px] text-[#666]">Uruchom kampanię gdy materiały (content) są gotowe i budżet jest doładowany</p>
+                                </div>
+                            </div>
+                            <button onclick="markCampaignLaunched()" id="btn-launch-campaign" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors">
+                                <i class="ph ph-rocket-launch mr-2"></i>
+                                Oznacz jako uruchomioną
+                            </button>
+                        </div>
+                        <div id="kampania-launched" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-rocket-launch text-xl text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-[14px] font-medium text-emerald-400">Kampania uruchomiona!</h4>
+                                    <p id="kampania-launched-date" class="text-[12px] text-[#888]">-</p>
                                 </div>
                             </div>
                         </div>
@@ -4791,7 +4813,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, campaign_launched, report_sent, scaling_started').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, campaign_launched, report_sent, scaling_started').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -4876,6 +4898,7 @@
                 // Nav check requires ALL 4 granted: ad account + fanpage + instagram + phone (or admin marked as ready)
                 toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted && !!adsNavStatus?.phone_verified));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
+                toggle('nav-check-content', !!adsNavStatus?.content_ready);
                 toggle('nav-check-kampania', !!adsNavStatus?.campaign_launched);
                 toggle('nav-check-raport', !!adsNavStatus?.report_sent);
                 toggle('nav-check-skalowanie', !!adsNavStatus?.scaling_started);
@@ -6575,6 +6598,9 @@
                     break;
                 case 'budzet':
                     loadBudzetTab();
+                    break;
+                case 'content':
+                    loadContentTab();
                     break;
                 case 'kampania':
                     loadKampaniaTab();
@@ -9769,8 +9795,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         let researchPollInterval = null;
         let pipelineRunning = false;
 
-        async function loadKampaniaTab() {
-            // Make sure we have ads data
+        async function ensureAdsData() {
             if (!adsData) {
                 const { data } = await supabaseClient
                     .from('workflow_ads')
@@ -9779,34 +9804,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     .maybeSingle();
                 adsData = data;
             }
+        }
 
-            // === Status kampanii ===
-            const pendingEl = document.getElementById('kampania-pending');
-            const launchedEl = document.getElementById('kampania-launched');
-            const navCheck = document.getElementById('nav-check-kampania');
+        // === CONTENT TAB — pipeline generowania materiałów ===
+        async function loadContentTab() {
+            await ensureAdsData();
 
-            if (pendingEl) pendingEl.classList.add('hidden');
-            if (launchedEl) launchedEl.classList.add('hidden');
-
-            if (adsData?.campaign_launched) {
-                if (launchedEl) launchedEl.classList.remove('hidden');
-                if (navCheck) navCheck.classList.remove('hidden');
-
-                const launchDate = adsData.campaign_launched_at;
-                if (launchDate) {
-                    const dateEl = document.getElementById('kampania-launched-date');
-                    if (dateEl) {
-                        dateEl.textContent = 'Uruchomiono ' + new Date(launchDate).toLocaleDateString('pl-PL', {
-                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        });
-                    }
-                }
-            } else {
-                if (pendingEl) pendingEl.classList.remove('hidden');
-                if (navCheck) navCheck.classList.add('hidden');
-            }
-
-            // === Pipeline status ===
             const hasResearch = adsData?.competitor_research && !adsData.competitor_research.parse_error;
             const hasCopies = adsData?.ad_copies?.versions?.length;
             const hasCreatives = adsData?.ad_creatives?.length;
@@ -9816,9 +9819,15 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const startEl = document.getElementById('pipeline-start');
             const progressEl = document.getElementById('pipeline-progress');
             const overallStatus = document.getElementById('pipeline-overall-status');
+            const navCheck = document.getElementById('nav-check-content');
+
+            // Checkbox nawigacji — gotowe gdy content_ready lub mamy kreacje
+            if (navCheck) {
+                if (adsData?.content_ready || hasCreatives) navCheck.classList.remove('hidden');
+                else navCheck.classList.add('hidden');
+            }
 
             if (bgPipelineRunning && !pipelineRunning) {
-                // Pipeline działa w tle — pokaż progress i polluj
                 startEl?.classList.add('hidden');
                 progressEl?.classList.remove('hidden');
 
@@ -9834,11 +9843,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     overallStatus.textContent = 'Generowanie w tle...';
                     overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300';
                 }
-
-                // Poll co 10 sek aż się skończy
                 startBackgroundPipelinePolling();
             } else if (!pipelineRunning) {
-                // Pokaż start button
                 startEl?.classList.remove('hidden');
                 progressEl?.classList.add('hidden');
                 const btn = document.getElementById('btn-run-pipeline');
@@ -9847,10 +9853,45 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
             }
 
-            // Renderuj istniejące wyniki
             if (hasResearch) renderResearchResults(adsData.competitor_research);
             if (hasCopies) renderCopiesResults(adsData.ad_copies);
             if (hasCreatives) renderCreativesResults(adsData.ad_creatives);
+        }
+
+        // === KAMPANIA TAB — tylko status uruchomienia ===
+        async function loadKampaniaTab() {
+            await ensureAdsData();
+
+            const pendingEl = document.getElementById('kampania-pending');
+            const launchedEl = document.getElementById('kampania-launched');
+            const warningEl = document.getElementById('kampania-content-warning');
+            const navCheck = document.getElementById('nav-check-kampania');
+
+            pendingEl?.classList.add('hidden');
+            launchedEl?.classList.add('hidden');
+            warningEl?.classList.add('hidden');
+
+            const hasContent = adsData?.content_ready || adsData?.ad_creatives?.length > 0;
+
+            if (adsData?.campaign_launched) {
+                launchedEl?.classList.remove('hidden');
+                navCheck?.classList.remove('hidden');
+
+                const launchDate = adsData.campaign_launched_at;
+                if (launchDate) {
+                    const dateEl = document.getElementById('kampania-launched-date');
+                    if (dateEl) {
+                        dateEl.textContent = 'Uruchomiono ' + new Date(launchDate).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+            } else {
+                pendingEl?.classList.remove('hidden');
+                navCheck?.classList.add('hidden');
+                // Ostrzeżenie jeśli brak contentu
+                if (!hasContent) warningEl?.classList.remove('hidden');
+            }
         }
 
         // ---- PIPELINE: RESEARCH → COPY → CREATIVES ----
@@ -9977,7 +10018,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         } else if (fresh.campaign_pipeline_status === 'failed') {
                             showToast('Pipeline zakończony z błędem', 'error');
                         }
-                        loadKampaniaTab();
+                        loadContentTab();
+                        updateNavChecks();
                         return;
                     }
 
@@ -10025,7 +10067,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                         researchPollInterval = null;
                         const { data: fresh } = await supabaseClient.from('workflow_ads').select('*').eq('workflow_id', workflow.id).maybeSingle();
                         if (fresh) adsData = fresh;
-                        loadKampaniaTab();
+                        loadContentTab();
+                        updateNavChecks();
                     }
                 } catch (err) { console.error('Research poll:', err); }
             }, 30000);
@@ -10504,6 +10547,7 @@ Zwróć TYLKO JSON.`;
         }
 
         window.loadKampaniaTab = loadKampaniaTab;
+        window.loadContentTab = loadContentTab;
         window.markCampaignLaunched = markCampaignLaunched;
         window.runCampaignPipeline = runCampaignPipeline;
         window.copySingleAdCopy = copySingleAdCopy;

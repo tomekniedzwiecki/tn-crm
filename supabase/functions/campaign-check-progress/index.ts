@@ -233,6 +233,12 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
     updates.ad_creatives_generated_at = new Date().toISOString()
   }
 
+  // Mark Content step as ready when pipeline succeeded with creatives
+  if (hasRealOutput && creatives.length > 0) {
+    updates.content_ready = true
+    updates.content_ready_at = new Date().toISOString()
+  }
+
   if (!hasRealOutput) {
     console.warn(`[full] ${workflowId} — Manus task stopped with NO output (copy/research/creatives all empty), marked as failed`)
   }
