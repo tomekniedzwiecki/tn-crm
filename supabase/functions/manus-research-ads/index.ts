@@ -87,9 +87,9 @@ ZADANIE:
 
 Na końcu zwróć wynik jako JSON. Struktura:
 
-{"category":"${category}","competitors":[{"brand":"nazwa","ad_text":"tekst reklamy","headline":"nagłówek","format":"image lub video","angle":"pain_point lub transformation lub social_proof lub urgency lub curiosity"}],"gaps":["czego nie mówi konkurencja"],"recommendations":["rekomendacja dla ${brandName || 'marki'}"]}
+{"category":"${category}","competitors":[{"brand":"nazwa","ad_text":"tekst reklamy (max 200 znaków)","headline":"nagłówek","format":"image lub video","angle":"pain_point lub transformation lub social_proof lub urgency lub curiosity","ad_url":"https://www.facebook.com/ads/library/?id=XXXXXXXXX"}],"gaps":["czego nie mówi konkurencja"],"recommendations":["rekomendacja dla ${brandName || 'marki'}"]}
 
-Skróć ad_text do max 200 znaków jeśli jest dłuższy.
+Dla każdej reklamy podaj link z Ad Library (ad_url). Skróć ad_text do max 200 znaków.
 Zwróć TYLKO JSON bez dodatkowego tekstu.
 `.trim()
 
