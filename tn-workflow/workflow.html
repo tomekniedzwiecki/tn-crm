@@ -9892,6 +9892,14 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (pipelineRunning) return;
             pipelineRunning = true;
 
+            // Zawsze pobierz świeże dane z bazy przed startem
+            const { data: freshAds } = await supabaseClient
+                .from('workflow_ads')
+                .select('*')
+                .eq('workflow_id', workflow.id)
+                .maybeSingle();
+            if (freshAds) adsData = freshAds;
+
             const includeCreatives = document.getElementById('pipeline-include-creatives')?.checked;
 
             // Pokaż progress, schowaj start
