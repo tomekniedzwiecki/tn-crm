@@ -5984,7 +5984,17 @@
             }
         }
 
-        function loadContentClient() {
+        async function loadContentClient() {
+            // Upewnij się że adsData jest załadowany (może nie być gdy user wchodzi z #content)
+            if (!adsData) {
+                const { data } = await supabaseClient
+                    .from('workflow_ads')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                adsData = data;
+            }
+
             const preparing = document.getElementById('content-preparing');
             const ready = document.getElementById('content-ready');
             const contentReady = adsData?.content_ready || (adsData?.ad_creatives?.length > 0);
@@ -9246,7 +9256,7 @@
                     try {
                         const { data: ads } = await supabaseClient
                             .from('workflow_ads')
-                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, phone_verified, phone_verified_at, budget_funded, budget_funded_at, campaign_launched, campaign_launched_at, report_sent, report_sent_at, report_data')
+                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, phone_verified, phone_verified_at, budget_funded, budget_funded_at, content_ready, content_ready_at, ad_creatives, ad_copies, competitor_research, campaign_pipeline_status, campaign_launched, campaign_launched_at, report_sent, report_sent_at, report_data')
                             .eq('workflow_id', workflow.id)
                             .maybeSingle();
                         adsData = ads;
