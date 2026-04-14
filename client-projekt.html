@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041408';
+        const APP_VERSION = '2026041409';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5999,7 +5999,8 @@
 
             const preparing = document.getElementById('content-preparing');
             const ready = document.getElementById('content-ready');
-            const contentReady = !!adsData?.content_shared_with_client;
+            const isAdminPreview = new URLSearchParams(window.location.search).get('admin_preview') === '1';
+            const contentReady = isAdminPreview ? !!adsData?.content_ready : !!adsData?.content_shared_with_client;
 
             if (!contentReady) {
                 preparing?.classList.remove('hidden');
@@ -6883,8 +6884,9 @@
             document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasAllAccess);
             document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasAllAccess);
 
-            // Content nav — widoczne dopiero gdy admin udostępni klientowi
-            const showContent = !!adsData?.content_shared_with_client;
+            // Content nav — widoczne dopiero gdy admin udostępni klientowi (admin preview omija)
+            const isAdminPreview = new URLSearchParams(window.location.search).get('admin_preview') === '1';
+            const showContent = isAdminPreview ? !!adsData?.content_ready : !!adsData?.content_shared_with_client;
             document.getElementById('dash-nav-content')?.classList.toggle('hidden', !showContent);
             document.getElementById('dash-nav-content-mobile')?.classList.toggle('hidden', !showContent);
             document.getElementById('nav-content-desktop')?.classList.toggle('hidden', !showContent);

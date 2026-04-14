@@ -50,6 +50,14 @@ serve(async (req) => {
     }
 
     const alreadyShared = !!ads.content_shared_with_client
+    const forceResend = !!(req.headers.get('x-force-resend')) // optional resend
+    // `body.force_email === true` re-sends email even if already shared
+    let forceEmailFromBody = false
+    try {
+      const b = await req.clone().json()
+      forceEmailFromBody = !!b.force_email
+    } catch {}
+    const shouldSendEmail = !alreadyShared || forceResend || forceEmailFromBody
 
     // Ustaw flag
     await supabase
@@ -63,8 +71,8 @@ serve(async (req) => {
     const clientName = (workflow.customer_name || 'Kliencie').split(' ')[0]
     const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`
 
-    // Wyślij email tylko raz (gdy pierwsze udostępnienie)
-    if (!alreadyShared) {
+    // Wyślij email (pierwsze udostępnienie lub wymuszone)
+    if (shouldSendEmail) {
       // 1. Automation trigger
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/automation-trigger`, {
@@ -87,28 +95,13 @@ serve(async (req) => {
         })
       } catch (e) { console.error('[share-content] automation-trigger failed:', (e as Error).message) }
 
-      // 2. Email
-      try {
-        const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            to: workflow.customer_email,
-            template: 'content_ready',
-            data: { clientName, projectUrl }
-          })
-        })
-        if (!r.ok) console.error('[share-content] send-email returned', r.status)
-      } catch (e) { console.error('[share-content] send-email failed:', (e as Error).message) }
+      // Email obsługuje automatyzacja (trigger content_ready), nie wysyłamy bezpośrednio
     }
 
     return new Response(JSON.stringify({
       success: true,
       already_shared: alreadyShared,
-      email_sent: !alreadyShared
+      email_sent: shouldSendEmail
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
   } catch (error) {
