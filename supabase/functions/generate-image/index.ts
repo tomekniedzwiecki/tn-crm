@@ -84,28 +84,38 @@ async function generateWithGemini(
   // Build the prompt with STRONG reference instruction
   let finalPrompt = ''
   if (productRefAdded) {
-    finalPrompt = `TASK: PHOTO COMPOSITE / PRODUCT PLACEMENT
+    finalPrompt = `TASK: PHOTO COMPOSITE — PRODUCT REPLICATION
 
-You are editing a photograph. Take the product shown in the reference image I provided and place it into a new scene. This is NOT text-to-image generation — this is photo compositing.
+I provided a reference image of a PHYSICAL PRODUCT. Your job is to REPLICATE this exact product (pixel-identical design) into a new scene. Think of it as product placement in a film — the prop must be the SAME prop, not a lookalike.
 
-PRODUCT PLACEMENT RULES:
-- Extract the EXACT product from the reference (same shape, color, materials, proportions, all details, branding, labels)
-- Preserve the product's visual identity 1:1 — it must be instantly recognizable as the same product
-- Only the scene, lighting, people, and context around the product change
-- Match scene lighting to product lighting so it looks photographed, not pasted
+CRITICAL PRODUCT RULES:
+1. The product in your output MUST be visually identical to the reference:
+   - Same physical shape, dimensions, proportions
+   - Same colors (every part, every component)
+   - Same materials (matte/glossy/metal/plastic — match exactly)
+   - Same buttons, screens, ports, branding placement
+   - Same physical design language
+2. If the reference image has marketing TEXT overlays (like "Ready-to-Use", arrows, labels) — IGNORE the text, but keep the physical product exactly as shown
+3. DO NOT generate a "similar" or "generic version" of this type of product
+4. DO NOT reimagine, redesign, or "improve" the product
+5. DO NOT substitute with a different brand's version
+6. If you cannot render the product faithfully, render it smaller/partially rather than making up a different one
+
+VERIFICATION TEST: If I placed your generated image next to the reference, would someone say "that's the same exact product in a different setting"? If not — you failed. The product identity is HIGHER PRIORITY than scene creativity.
 
 PHOTOGRAPHY STYLE (to avoid AI look):
 - Shoot as if from a real camera: natural depth of field, subtle imperfections, real skin texture, slight film grain
 - NOT a stock photo. NOT corporate. NOT a packshot on white background.
 - Think: iPhone photo by influencer, documentary photography, UGC advertising
-- Natural, candid moments with genuine emotion on faces (not stock-photo smiles to camera)
-- Use cinematic lighting: window light, golden hour, dramatic shadows when relevant
+- Natural candid moments with genuine emotion (not stock-photo smiles to camera)
+- Cinematic lighting: window light, golden hour, dramatic shadows when relevant
 
 AVOID:
 - Sterile white/grey studio backgrounds (looks like Allegro listing, not FB ad)
 - Corporate stock-photo aesthetic
 - Perfect symmetry and centered composition
 - AI artifacts: plastic skin, dead eyes, weird hands, floating objects
+- Generic "better looking" version of the product — stay faithful to reference
 
 SCENE TO CREATE:
 ${prompt}`
