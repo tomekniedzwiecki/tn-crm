@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041402';
+        const ADMIN_APP_VERSION = '2026041407';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2487,6 +2487,38 @@
                                 </h4>
                             </div>
                             <div id="creatives-grid" class="grid grid-cols-3 gap-3"></div>
+                        </div>
+
+                        <!-- ========== UDOSTĘPNIENIE KLIENTOWI ========== -->
+                        <div id="content-share-section" class="hidden mt-6">
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-5">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                        <i class="ph ph-paper-plane-tilt text-violet-400"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-[14px] font-medium text-white">Udostępnij materiały klientowi</h4>
+                                        <p id="content-share-status" class="text-[12px] text-zinc-500">Materiały gotowe — przejrzyj je i kliknij udostępnij, aby pokazać klientowi i wysłać email.</p>
+                                    </div>
+                                </div>
+                                <button onclick="shareContentWithClient()" id="btn-share-content" class="w-full bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white py-3 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    Udostępnij klientowi + wyślij email
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="content-shared-indicator" class="hidden mt-6">
+                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-3">
+                                <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                <div class="flex-1">
+                                    <p class="text-[13px] font-medium text-emerald-400">Udostępnione klientowi</p>
+                                    <p id="content-shared-date" class="text-[11px] text-zinc-500 mt-0.5"></p>
+                                </div>
+                                <button onclick="shareContentWithClient(true)" class="text-[11px] text-zinc-400 hover:text-white px-2.5 py-1 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50">
+                                    Wyślij ponownie
+                                </button>
+                            </div>
                         </div>
 
                     </div><!-- /tab-content -->
@@ -9867,7 +9899,69 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (hasResearch) renderResearchResults(adsData.competitor_research);
             if (hasCopies) renderCopiesResults(adsData.ad_copies);
             if (hasCreatives) renderCreativesResults(adsData.ad_creatives);
+
+            // Share section — widoczna gdy content jest gotowy
+            const shareSection = document.getElementById('content-share-section');
+            const sharedIndicator = document.getElementById('content-shared-indicator');
+            if (hasCreatives) {
+                if (adsData?.content_shared_with_client) {
+                    shareSection?.classList.add('hidden');
+                    sharedIndicator?.classList.remove('hidden');
+                    const dateEl = document.getElementById('content-shared-date');
+                    if (dateEl && adsData.content_shared_at) {
+                        dateEl.textContent = 'Udostępniono ' + new Date(adsData.content_shared_at).toLocaleDateString('pl-PL', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                } else {
+                    shareSection?.classList.remove('hidden');
+                    sharedIndicator?.classList.add('hidden');
+                }
+            } else {
+                shareSection?.classList.add('hidden');
+                sharedIndicator?.classList.add('hidden');
+            }
         }
+
+        async function shareContentWithClient(resend = false) {
+            const btn = document.getElementById('btn-share-content');
+            const originalHTML = btn?.innerHTML;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Udostępniam...';
+            }
+
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('share-content', {
+                    body: { workflow_id: workflow.id }
+                });
+
+                if (error) throw error;
+                if (!data?.success) throw new Error(data?.error || 'Błąd udostępniania');
+
+                // Update local
+                adsData.content_shared_with_client = true;
+                adsData.content_shared_at = new Date().toISOString();
+
+                if (data.email_sent) {
+                    showToast('Udostępnione klientowi + email wysłany!', 'success');
+                } else if (resend) {
+                    showToast('Udostępnienie odświeżone (email już wysłany wcześniej)', 'success');
+                } else {
+                    showToast('Udostępnione klientowi!', 'success');
+                }
+
+                loadContentTab();
+            } catch (err) {
+                console.error('Share content error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML || 'Udostępnij klientowi + wyślij email';
+                }
+            }
+        }
+        window.shareContentWithClient = shareContentWithClient;
 
         // === KAMPANIA TAB — tylko status uruchomienia ===
         async function loadKampaniaTab() {

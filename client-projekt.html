@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041405';
+        const APP_VERSION = '2026041407';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5929,14 +5929,17 @@
             if (!content) return;
 
             const budgetFunded = adsData?.budget_funded;
-            const contentReady = adsData?.content_ready || (adsData?.ad_creatives?.length > 0);
-            const inProgress = budgetFunded && !contentReady && adsData?.campaign_pipeline_status === 'running';
+            const contentShared = !!adsData?.content_shared_with_client;
+            const inProgress = budgetFunded && !contentShared && adsData?.campaign_pipeline_status === 'running';
 
             if (box) {
-                box.classList.toggle('opacity-50', !budgetFunded);
-                box.classList.toggle('cursor-pointer', budgetFunded);
-                if (budgetFunded) box.onclick = () => switchToDashTab('content');
+                box.classList.toggle('opacity-50', !contentShared);
+                box.classList.toggle('cursor-pointer', contentShared);
+                if (contentShared) box.onclick = () => switchToDashTab('content');
+                else box.onclick = null;
             }
+
+            const contentReady = contentShared;
 
             if (contentReady) {
                 const creativesCount = adsData?.ad_creatives?.length || 0;
@@ -6001,7 +6004,7 @@
 
             const preparing = document.getElementById('content-preparing');
             const ready = document.getElementById('content-ready');
-            const contentReady = adsData?.content_ready || (adsData?.ad_creatives?.length > 0);
+            const contentReady = !!adsData?.content_shared_with_client;
 
             if (!contentReady) {
                 preparing?.classList.remove('hidden');
@@ -6885,15 +6888,15 @@
             document.getElementById('nav-budzet-desktop')?.classList.toggle('hidden', !hasAllAccess);
             document.getElementById('nav-budzet-mobile')?.classList.toggle('hidden', !hasAllAccess);
 
-            // Content nav — widoczne gdy budżet doładowany
-            const showContent = !!adsData?.budget_funded;
+            // Content nav — widoczne dopiero gdy admin udostępni klientowi
+            const showContent = !!adsData?.content_shared_with_client;
             document.getElementById('dash-nav-content')?.classList.toggle('hidden', !showContent);
             document.getElementById('dash-nav-content-mobile')?.classList.toggle('hidden', !showContent);
             document.getElementById('nav-content-desktop')?.classList.toggle('hidden', !showContent);
             document.getElementById('nav-content-mobile')?.classList.toggle('hidden', !showContent);
 
-            // Checkmarks dla Content
-            const contentDone = !!(adsData?.content_ready || adsData?.ad_creatives?.length > 0);
+            // Checkmarks dla Content — gdy content już dostępny dla klienta
+            const contentDone = !!adsData?.content_shared_with_client;
             ['dash-nav-check-content','dash-nav-check-content-mobile','nav-check-content-desktop','nav-check-content-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !contentDone);
             });
@@ -9241,7 +9244,7 @@
                     try {
                         const { data: ads } = await supabaseClient
                             .from('workflow_ads')
-                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, phone_verified, phone_verified_at, budget_funded, budget_funded_at, content_ready, content_ready_at, ad_creatives, ad_copies, competitor_research, campaign_pipeline_status, campaign_launched, campaign_launched_at, report_sent, report_sent_at, report_data')
+                            .select('id, is_active, partner_access_granted, partner_access_granted_at, fanpage_access_granted, fanpage_access_granted_at, instagram_access_granted, instagram_access_granted_at, phone_verified, phone_verified_at, budget_funded, budget_funded_at, content_ready, content_ready_at, content_shared_with_client, content_shared_at, ad_creatives, ad_copies, competitor_research, campaign_pipeline_status, campaign_launched, campaign_launched_at, report_sent, report_sent_at, report_data')
                             .eq('workflow_id', workflow.id)
                             .maybeSingle();
                         adsData = ads;
