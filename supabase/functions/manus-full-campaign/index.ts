@@ -37,18 +37,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Guard — nie odpalaj ponownie jeśli już działa
-    const { data: current } = await supabase
-      .from('workflow_ads')
-      .select('campaign_pipeline_status, manus_full_task_id')
-      .eq('workflow_id', workflow_id)
-      .maybeSingle()
-
-    if (current?.campaign_pipeline_status === 'running' && !continue_pipeline) {
-      return new Response(JSON.stringify({ success: true, status: 'already_running', task_id: current.manus_full_task_id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-
     // REST API helpers — bezpieczniej niż JS SDK dla edge functions
     const restHeaders = {
       'apikey': SUPABASE_SERVICE_ROLE_KEY,
@@ -58,6 +46,69 @@ serve(async (req) => {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: restHeaders })
       if (!r.ok) { console.error(`REST ${path} failed: ${r.status}`); return [] }
       return await r.json()
+    }
+
+    // ATOMIC LOCK: UPSERT z warunkiem — jeśli status = 'running', ten UPSERT zablokuje
+    // równoległy request przez constraint UNIQUE(workflow_id).
+    // Zamiast tego: najpierw sprawdzamy, potem atomic update z warunkiem WHERE status != 'running'
+    if (!continue_pipeline) {
+      // Próbuj atomic UPDATE: oznacz jako 'running' TYLKO jeśli obecnie nie jest 'running'
+      const lockRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/workflow_ads?workflow_id=eq.${workflow_id}&campaign_pipeline_status=neq.running&select=workflow_id,manus_full_task_id`,
+        {
+          method: 'PATCH',
+          headers: { ...restHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify({
+            campaign_pipeline_status: 'running',
+            campaign_pipeline_step: 'manus_full_starting',
+            campaign_pipeline_started_at: new Date().toISOString()
+          })
+        }
+      )
+      const lockResult = lockRes.ok ? await lockRes.json() : []
+
+      if (Array.isArray(lockResult) && lockResult.length === 0) {
+        // Żaden rekord się nie zaktualizował — albo już running, albo nie istnieje
+        // Sprawdźmy który to przypadek
+        const checkArr = await restGet(`workflow_ads?workflow_id=eq.${workflow_id}&select=campaign_pipeline_status,manus_full_task_id`)
+        const existing = Array.isArray(checkArr) && checkArr[0]
+        if (existing?.campaign_pipeline_status === 'running') {
+          console.log(`[manus-full] Already running — returning existing task ${existing.manus_full_task_id}`)
+          return new Response(JSON.stringify({
+            success: true,
+            status: 'already_running',
+            task_id: existing.manus_full_task_id
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+        // Rekord nie istnieje — stwórz nowy z lockiem
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/workflow_ads`, {
+          method: 'POST',
+          headers: { ...restHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            workflow_id,
+            is_active: true,
+            activated_at: new Date().toISOString(),
+            campaign_pipeline_status: 'running',
+            campaign_pipeline_step: 'manus_full_starting',
+            campaign_pipeline_started_at: new Date().toISOString()
+          })
+        })
+        if (!insertRes.ok && insertRes.status !== 409) {
+          // 409 = conflict (unique constraint) — znaczy że inny request właśnie go stworzył
+          const errText = await insertRes.text()
+          console.error(`[manus-full] Insert failed: ${insertRes.status} ${errText}`)
+        }
+        if (insertRes.status === 409) {
+          // Inny request nas wyprzedził
+          const reCheck = await restGet(`workflow_ads?workflow_id=eq.${workflow_id}&select=manus_full_task_id`)
+          return new Response(JSON.stringify({
+            success: true, status: 'already_running',
+            task_id: reCheck?.[0]?.manus_full_task_id || null
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+      } else {
+        console.log(`[manus-full] Acquired lock for ${workflow_id}`)
+      }
     }
 
     // Pobierz pełny kontekst przez REST API
@@ -152,7 +203,13 @@ ${brandVal.tagline ? `**TAGLINE:** ${brandVal.tagline}\n` : ''}**OPIS MARKI:** $
 ${productImageUrl ? `🎯 **ZDJĘCIE PRODUKTU — TEN PRODUKT MA BYĆ NA WSZYSTKICH BANERACH REKLAMOWYCH:**
 ${productImageUrl}
 
-To jest FIZYCZNY PRODUKT który sprzedajemy. Pobierz to zdjęcie i użyj go jako referencji w KAŻDEJ z 5 kreacji graficznych — zachowaj dokładnie jego kształt, kolor, materiał, branding. NIE wymyślaj innego produktu.
+⚠️ **KROK ZEROWY (zrób TERAZ, przed wszystkim innym):**
+1. Pobierz to zdjęcie używając swojego narzędzia do pobierania plików (curl, wget, shell tool lub download)
+2. Zapisz do katalogu roboczego jako "product_reference.jpg"
+3. Przeanalizuj wizualnie — jaki jest kształt, kolor, materiał, branding produktu
+4. Potwierdź w kolejnej wiadomości: "Pobrałem zdjęcie, widzę [opis]" — DOPIERO POTEM przechodź do zadań 1-3
+
+To jest FIZYCZNY PRODUKT który sprzedajemy. W KAŻDEJ z 5 kreacji graficznych używaj DOKŁADNIE tego produktu ze zdjęcia — zachowaj kształt, kolor, materiał, branding. NIE wymyślaj innego wariantu.
 ` : '⚠️ BRAK zdjęcia produktu w bazie — wygeneruj produkt wizualnie na podstawie opisu.'}
 ${productSourceUrl ? `
 📦 **Link do produktu u dostawcy (dodatkowe zdjęcia, opis techniczny):**
@@ -240,11 +297,29 @@ Na końcu zwróć:
 Zacznij teraz. Pracuj samodzielnie aż skończysz wszystkie 3 zadania — nie pytaj o nic w międzyczasie. Jeśli czegoś brakuje, załóż sensowne defaulty i kontynuuj.
 `.trim()
 
-    // Utwórz task w Manus
+    // Utwórz task w Manus — ze zdjęciem produktu jako attachment (tak jak ręczny upload)
+    const messagePayload: any = { content: instruction }
+    if (productImageUrl) {
+      // Określ content_type z rozszerzenia URL
+      const urlLower = productImageUrl.toLowerCase()
+      let ct = 'image/jpeg'
+      if (urlLower.includes('.png')) ct = 'image/png'
+      else if (urlLower.includes('.webp')) ct = 'image/webp'
+      else if (urlLower.includes('.avif')) ct = 'image/avif'
+
+      messagePayload.attachments = [{
+        type: 'image',
+        content_type: ct,
+        filename: 'product_reference.' + (ct.split('/')[1] || 'jpg'),
+        url: productImageUrl
+      }]
+      console.log(`[manus-full] Attaching product image: ${productImageUrl.substring(0, 80)}`)
+    }
+
     const createRes = await fetch('https://api.manus.ai/v2/task.create', {
       method: 'POST',
       headers: { 'x-manus-api-key': MANUS_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { content: instruction } })
+      body: JSON.stringify({ message: messagePayload })
     })
     const createData = await createRes.json()
     if (!createRes.ok || !createData.ok) {
