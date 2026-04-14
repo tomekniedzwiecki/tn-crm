@@ -9869,10 +9869,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 listEl.innerHTML = data.competitors.map((c, i) => `
                     <div class="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
                         <div class="flex items-center justify-between mb-1.5">
-                            <span class="text-[12px] font-medium text-white">${c.brand || 'Nieznana marka'}</span>
+                            <span class="text-[12px] font-medium text-white">${escapeHtml(c.brand || 'Nieznana marka')}</span>
                             <div class="flex items-center gap-1.5">
-                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300">${c.format || '?'}</span>
-                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">${c.angle || '?'}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300">${escapeHtml(c.format || '?')}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">${escapeHtml(c.angle || '?')}</span>
                             </div>
                         </div>
                         ${c.headline ? `<p class="text-[11px] text-cyan-300 font-medium mb-0.5">${escapeHtml(c.headline)}</p>` : ''}
@@ -9896,12 +9896,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     <p class="text-[11px] text-zinc-400">• ${escapeHtml(r)}</p>
                 `).join('');
             }
-        }
-
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
         }
 
         async function startCompetitorResearch() {
@@ -10106,16 +10100,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (error) throw error;
                 if (!data?.success) throw new Error(data?.error || 'Błąd generowania copy');
 
-                // Zapisz do bazy
+                // Edge function już zapisuje do bazy - tylko update local state
                 const adCopies = data.ad_copies;
-                await supabaseClient
-                    .from('workflow_ads')
-                    .update({
-                        ad_copies: adCopies,
-                        ad_copies_generated_at: new Date().toISOString()
-                    })
-                    .eq('workflow_id', workflow.id);
-
+                if (!adsData) adsData = {};
                 adsData.ad_copies = adCopies;
                 adsData.ad_copies_generated_at = new Date().toISOString();
 
@@ -10221,15 +10208,15 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
 
             gridEl.innerHTML = creatives.map((c, i) => `
                 <div class="relative group rounded-xl overflow-hidden border border-white/5 bg-zinc-900/50">
-                    <img src="${c.url}" alt="${typeLabels[c.type] || c.type}" class="w-full aspect-square object-cover" loading="lazy">
+                    <img src="${escapeHtml(c.url)}" alt="${escapeHtml(typeLabels[c.type] || c.type)}" class="w-full aspect-square object-cover" loading="lazy">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div class="absolute bottom-0 left-0 right-0 p-3">
-                            <span class="text-[11px] font-medium text-white">${typeLabels[c.type] || c.type}</span>
+                            <span class="text-[11px] font-medium text-white">${escapeHtml(typeLabels[c.type] || c.type)}</span>
                             <div class="flex gap-1.5 mt-1.5">
-                                <a href="${c.url}" target="_blank" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
+                                <a href="${escapeHtml(c.url)}" target="_blank" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
                                     <i class="ph ph-arrow-square-out"></i> Otwórz
                                 </a>
-                                <button onclick="copyToClipboard('${c.url}')" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
+                                <button onclick="copyCreativeUrl(${i})" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
                                     <i class="ph ph-copy"></i> URL
                                 </button>
                             </div>
@@ -10241,6 +10228,11 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => showToast('Skopiowano!', 'success'));
+        }
+
+        function copyCreativeUrl(index) {
+            const url = adsData?.ad_creatives?.[index]?.url;
+            if (url) copyToClipboard(url);
         }
 
         async function generateAdCreatives() {
@@ -10352,6 +10344,7 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
                         })
                         .eq('workflow_id', workflow.id);
 
+                    if (!adsData) adsData = {};
                     adsData.ad_creatives = creatives;
                     adsData.ad_creatives_generated_at = new Date().toISOString();
                 }
@@ -10455,6 +10448,7 @@ Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
         window.generateAdCreatives = generateAdCreatives;
         window.copySingleAdCopy = copySingleAdCopy;
         window.copyToClipboard = copyToClipboard;
+        window.copyCreativeUrl = copyCreativeUrl;
 
         // =============================================
         // RAPORT TAB (Etap 4)

@@ -140,17 +140,18 @@ WAŻNE:
       )
     }
 
-    // Zapisz task ID w workflow_ads
-    const { error: updateError } = await supabase
+    // Zapisz task ID w workflow_ads (upsert pattern)
+    const { data: updateResult } = await supabase
       .from('workflow_ads')
       .update({
         competitor_research_task_id: manusData.task_id,
         competitor_research_status: 'pending'
       })
       .eq('workflow_id', workflow_id)
+      .select()
 
-    if (updateError) {
-      // Może nie ma jeszcze rekordu - utwórz
+    if (!updateResult?.length) {
+      // Nie ma jeszcze rekordu - utwórz
       await supabase
         .from('workflow_ads')
         .insert({

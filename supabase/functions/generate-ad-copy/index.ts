@@ -101,15 +101,30 @@ Zwracaj TYLKO czysty JSON bez markdown, bez komentarzy.`
       )
     }
 
-    // Zapisz do bazy
+    // Zapisz do bazy (upsert pattern)
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
-    await supabase
+    const now = new Date().toISOString()
+
+    const { data: updateResult } = await supabase
       .from('workflow_ads')
       .update({
         ad_copies: adCopies,
-        ad_copies_generated_at: new Date().toISOString()
+        ad_copies_generated_at: now
       })
       .eq('workflow_id', workflow_id)
+      .select()
+
+    if (!updateResult?.length) {
+      await supabase
+        .from('workflow_ads')
+        .insert({
+          workflow_id,
+          is_active: true,
+          activated_at: now,
+          ad_copies: adCopies,
+          ad_copies_generated_at: now
+        })
+    }
 
     return new Response(
       JSON.stringify({ success: true, ad_copies: adCopies }),

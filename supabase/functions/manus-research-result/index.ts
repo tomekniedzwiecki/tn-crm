@@ -53,9 +53,10 @@ serve(async (req) => {
           })
           .eq('workflow_id', workflow_id)
       }
+      // Return 200 so frontend polling can detect expired status
       return new Response(
-        JSON.stringify({ success: false, error: 'Task not found', status: 'expired' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, status: 'expired', message: 'Task not found or expired' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
