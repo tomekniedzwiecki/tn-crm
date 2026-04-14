@@ -228,7 +228,17 @@ W raportach PDF znajdziesz szczegółową analizę: kim jest typowy klient (wiek
 === ZADANIA (wszystko w jednym przebiegu) ===
 
 **1. RESEARCH KONKURENCJI**
-Wejdź na Facebook Ad Library (https://www.facebook.com/ads/library/), filtr kraj=Polska. Znajdź 5-8 aktywnych reklam konkurencji dla tego typu produktu. Zanotuj: marka, tekst reklamy (max 200 znaków), headline, format, kąt. Zidentyfikuj luki i rekomendacje.
+Wejdź na Facebook Ad Library (https://www.facebook.com/ads/library/), filtr kraj=Polska. Znajdź 5-8 aktywnych reklam konkurencji dla tego typu produktu.
+
+Dla KAŻDEJ reklamy zapisz:
+- marka (nazwa fanpage reklamodawcy)
+- ad_text (tekst reklamy, max 200 znaków)
+- headline (nagłówek)
+- format (image / video / carousel)
+- angle (pain_point / transformation / social_proof / urgency / curiosity / myth_busting / authority)
+- **ad_url — pełny link do reklamy w Ad Library** (format: https://www.facebook.com/ads/library/?id=XXXXXXXXXXXXX — MUSI być podany, żeby można było kliknąć i zobaczyć reklamę)
+
+Zidentyfikuj luki (czego NIE robi konkurencja) i rekomendacje dla naszej marki.
 
 **2. COPY REKLAMOWE META ADS (5 wersji, polski rynek)**
 Na podstawie researchu i raportów napisz 5 reklam z RÓŻNYMI kątami (myth-busting, transformation, social proof, curiosity, authority/technology).
