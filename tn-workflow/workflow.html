@@ -10508,12 +10508,15 @@ Zwróć TYLKO JSON.`;
             }
 
             try {
-                // Pobierz ref image
-                const { data: products } = await supabaseClient
-                    .from('workflow_products')
-                    .select('image_url')
-                    .eq('workflow_id', workflow.id);
-                const refUrl = products?.[0]?.image_url || null;
+                // Pobierz ref image: produkt > mockup > logo
+                const [prodRes, mockupRes] = await Promise.all([
+                    supabaseClient.from('workflow_products').select('image_url').eq('workflow_id', workflow.id),
+                    supabaseClient.from('workflow_branding').select('type, file_url').eq('workflow_id', workflow.id).in('type', ['mockup', 'logo']).not('file_url', 'is', null).limit(3)
+                ]);
+                const refUrl = prodRes.data?.[0]?.image_url
+                    || mockupRes.data?.find(m => m.type === 'mockup')?.file_url
+                    || mockupRes.data?.find(m => m.type === 'logo')?.file_url
+                    || null;
 
                 const body = {
                     prompt: creative.prompt,

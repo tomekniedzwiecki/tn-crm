@@ -178,8 +178,9 @@ Zwróć TYLKO JSON bez dodatkowego tekstu.
 // ===== COPY + CREATIVES =====
 
 async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropicKey: string, workflowId: string, includeCreatives: boolean, research: any) {
-  const [brandingRes, productsRes, workflowRes] = await Promise.all([
+  const [brandingRes, mockupRes, productsRes, workflowRes] = await Promise.all([
     supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflowId).eq('type', 'brand_info'),
+    supabase.from('workflow_branding').select('type, file_url').eq('workflow_id', workflowId).in('type', ['mockup', 'logo']).not('file_url', 'is', null).order('type').limit(5),
     supabase.from('workflow_products').select('name, description, image_url').eq('workflow_id', workflowId),
     supabase.from('workflows').select('id, offer_name, landing_page_url').eq('id', workflowId).single()
   ])
@@ -191,7 +192,18 @@ async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropic
   const landingUrl = workflowRes.data?.landing_page_url || ''
   const productName = product.name || brandVal.name || ''
   const productDescription = product.description || brandVal.description || ''
-  const refImageUrl = product.image_url || null
+
+  // Zdjęcie referencyjne: produkt > mockup > logo
+  const refImageUrl = product.image_url
+    || mockupRes.data?.find((m: any) => m.type === 'mockup')?.file_url
+    || mockupRes.data?.find((m: any) => m.type === 'logo')?.file_url
+    || null
+
+  if (refImageUrl) {
+    console.log(`[campaign] Reference image: ${refImageUrl.substring(0, 80)}...`)
+  } else {
+    console.log('[campaign] WARNING: No reference image found!')
+  }
 
   // COPY (Claude generuje copy + prompty do zdjęć)
   await upsertAds(supabase, workflowId, { campaign_pipeline_step: 'copy' })
