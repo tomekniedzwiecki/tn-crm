@@ -80,23 +80,39 @@ async function generateWithGemini(
   // Add reference images if provided
   let productRefAdded = false
   let logoRefAdded = false
+  const refErrors: string[] = []
   if (referenceImages && referenceImages.length > 0) {
     for (const ref of referenceImages) {
-      try {
-        console.log(`Fetching ${ref.type} image: ${ref.url}`)
-        const refImage = await fetchImageAsBase64(ref.url)
-        parts.push({
-          inline_data: {
-            mime_type: refImage.mimeType,
-            data: refImage.base64
-          }
-        })
-        if (ref.type === 'product') productRefAdded = true
-        if (ref.type === 'logo') logoRefAdded = true
-      } catch (err) {
-        console.error(`Failed to fetch ${ref.type} image:`, err)
+      // Retry up to 3x with exponential backoff (AliExpress rate limits)
+      let lastErr: any = null
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`Fetching ${ref.type} image (attempt ${attempt}): ${ref.url}`)
+          const refImage = await fetchImageAsBase64(ref.url)
+          parts.push({
+            inline_data: {
+              mime_type: refImage.mimeType,
+              data: refImage.base64
+            }
+          })
+          if (ref.type === 'product') productRefAdded = true
+          if (ref.type === 'logo') logoRefAdded = true
+          lastErr = null
+          break
+        } catch (err) {
+          lastErr = err
+          console.error(`Attempt ${attempt} failed for ${ref.type}:`, err.message)
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500))
+        }
       }
+      if (lastErr) refErrors.push(`${ref.type}: ${lastErr.message}`)
     }
+  }
+
+  // If product reference was requested but failed to load — FAIL instead of silently generating without it
+  const productRequested = referenceImages?.some(r => r.type === 'product')
+  if (productRequested && !productRefAdded) {
+    throw new Error(`Product reference image could not be loaded after retries. Errors: ${refErrors.join('; ')}`)
   }
 
   // Build the prompt with STRONG reference instruction

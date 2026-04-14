@@ -442,16 +442,45 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
   // Fallback: jeśli Claude nie wygenerował promptów, użyj generycznych
   if (imagePrompts.length === 0) {
     imagePrompts = [
-      { angle: 'lifestyle', prompt: `A person using ${productName} in daily life. ${productDescription || ''}. Professional advertising photography for Facebook/Instagram ad. Square format 1:1. Photorealistic. No text, no captions, no labels, no watermarks, no logos.` },
-      { angle: 'product', prompt: `${productName} product shot, premium aesthetic. ${productDescription || ''}. Studio product photography for e-commerce ad. Square format 1:1. No text, no captions, no labels, no watermarks, no logos.` },
-      { angle: 'benefit', prompt: `Visual representation of the main benefit of ${productName}. ${productDescription || ''}. Professional advertising photography for Facebook/Instagram ad. Square format 1:1. Photorealistic. No text, no captions, no labels, no watermarks, no logos.` }
+      { angle: 'lifestyle', prompt: `A person using ${productName} in daily life. Shot on iPhone 15 Pro, natural window light.` },
+      { angle: 'product', prompt: `The product on a wooden workbench. Shot on Sony A7 IV, 50mm f/2.` },
+      { angle: 'benefit', prompt: `The product in use showing its main benefit. iPhone photo, authentic realistic.` }
     ]
   }
 
-  console.log(`[campaign] Generating ${imagePrompts.length} creatives with refImageUrl=${refImageUrl ? 'YES' : 'NO'}`)
-  if (refImageUrl) console.log(`[campaign] Reference: ${refImageUrl.substring(0, 100)}`)
+  // KRYTYCZNE: pobierz referencję RAZ i skopiuj do Supabase Storage (szybkie CDN, brak rate-limitów AliExpress)
+  let cachedRefUrl: string | null = null
+  if (refImageUrl) {
+    try {
+      console.log(`[campaign] Caching reference image: ${refImageUrl.substring(0, 80)}`)
+      const refRes = await fetch(refImageUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SupabaseEdge/1.0)', 'Accept': 'image/*' }
+      })
+      if (refRes.ok) {
+        const buf = await refRes.arrayBuffer()
+        const ct = (refRes.headers.get('content-type') || 'image/jpeg').split(';')[0].trim()
+        const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg'
+        const filename = `ref-cache/${workflowId}/ref_${Date.now()}.${ext}`
+        const { error: upErr } = await supabase.storage.from('attachments').upload(filename, buf, { contentType: ct, upsert: true })
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from('attachments').getPublicUrl(filename)
+          cachedRefUrl = pub?.publicUrl || null
+          console.log(`[campaign] Reference cached: ${cachedRefUrl?.substring(0, 80)}`)
+        } else {
+          console.error('[campaign] Upload of ref failed:', upErr.message)
+        }
+      } else {
+        console.error(`[campaign] Reference fetch failed: ${refRes.status}`)
+      }
+    } catch (e) {
+      console.error('[campaign] Reference caching error:', e.message)
+    }
+  }
 
-  // Generuj równolegle
+  const finalRefUrl = cachedRefUrl || refImageUrl
+  console.log(`[campaign] Generating ${imagePrompts.length} creatives, refUrl=${finalRefUrl ? 'YES (cached=' + !!cachedRefUrl + ')' : 'NO'}`)
+
+  // Generuj równolegle — każde z 5 wywołań używa tego samego zcache'owanego URL
   const results = await Promise.allSettled(imagePrompts.map(async (ip) => {
     const body: any = {
       prompt: ip.prompt,
@@ -460,12 +489,8 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
       type: `ad_${ip.angle.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
     }
 
-    // ZAWSZE dodaj zdjęcie referencyjne produktu jeśli jest
-    if (refImageUrl) {
-      body.reference_images = [{ url: refImageUrl, type: 'product' }]
-      console.log(`[campaign] Sending generate-image with product reference for angle=${ip.angle}`)
-    } else {
-      console.warn(`[campaign] NO REFERENCE IMAGE for angle=${ip.angle}`)
+    if (finalRefUrl) {
+      body.reference_images = [{ url: finalRefUrl, type: 'product' }]
     }
 
     const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
@@ -478,6 +503,7 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
     if (data?.images?.[0]?.url) {
       return { type: ip.angle, url: data.images[0].url, prompt: ip.prompt, generated_at: new Date().toISOString() }
     }
+    console.error(`[campaign] generate-image failed for angle=${ip.angle}:`, JSON.stringify(data).substring(0, 200))
     return null
   }))
 
