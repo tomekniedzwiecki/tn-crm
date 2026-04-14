@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     reklamy: {
         label: 'Etap 4 - Reklamy',
         description: 'Maile związane z kampaniami reklamowymi',
-        templates: ['ads_activated', 'campaign_launched', 'ad_report']
+        templates: ['ads_activated', 'content_ready', 'campaign_launched', 'ad_report']
     }
 };
 
@@ -157,6 +157,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         icon: 'ph-megaphone-simple',
         color: 'rose'
     },
+    'content_ready': {
+        name: 'Materiały reklamowe gotowe',
+        description: 'Wysyłany gdy pipeline Manusa wygeneruje research, copy i kreacje graficzne',
+        icon: 'ph-magic-wand',
+        color: 'violet'
+    },
     'campaign_launched': {
         name: 'Kampania uruchomiona',
         description: 'Wysyłany gdy admin uruchomi kampanię reklamową',
@@ -221,6 +227,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
         { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
+        { value: 'content_ready', label: 'Materiały reklamowe gotowe' },
         { value: 'campaign_launched', label: 'Kampania uruchomiona' }
     ]
 };
@@ -254,5 +261,6 @@ const TRIGGER_DEFINITIONS = {
     test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
     // Etap 4 - Reklamy
     ads_activated: { label: 'Konfiguracja konta reklamowego', icon: 'ph-megaphone-simple', color: 'rose' },
+    content_ready: { label: 'Materiały reklamowe gotowe', icon: 'ph-magic-wand', color: 'violet' },
     campaign_launched: { label: 'Kampania uruchomiona', icon: 'ph-rocket-launch', color: 'rose' }
 };

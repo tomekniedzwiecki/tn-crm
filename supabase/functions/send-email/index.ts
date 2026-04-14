@@ -47,6 +47,7 @@ const VALID_EMAIL_TYPES = [
   'ads_activated',
   'partner_step_completed',
   'ads_completed',
+  'content_ready',
   'ad_report',
   'direct'
 ]
@@ -77,6 +78,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   ads_activated: 'Ruszamy z reklamami — etap 4 aktywowany!',
   partner_step_completed: 'Konto reklamowe gotowe!',
   ads_completed: 'Budżet doładowany — zaczynamy kampanię!',
+  content_ready: 'Twoje reklamy są gotowe — zobacz materiały!',
   ad_report: 'Raport z kampanii reklamowej — {{period_from}} - {{period_to}}'
 }
 

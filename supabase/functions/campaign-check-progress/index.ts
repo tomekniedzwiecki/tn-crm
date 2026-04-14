@@ -272,6 +272,68 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
   await supabase.from('workflow_ads').update(updates).eq('workflow_id', workflowId)
 
   console.log(`[full] ${workflowId} done: research=${!!campaignData?.research}, copy=${!!campaignData?.copy}, creatives=${creatives.length}`)
+
+  // === 4. Email + automation trigger gdy content gotowy ===
+  if (hasRealOutput && creatives.length > 0) {
+    try {
+      // Pobierz dane workflow
+      const { data: wf } = await supabase
+        .from('workflows')
+        .select('id, customer_name, customer_email, unique_token, offer_name')
+        .eq('id', workflowId)
+        .maybeSingle()
+
+      if (wf?.customer_email) {
+        const clientName = (wf.customer_name || 'Kliencie').split(' ')[0]
+        const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${wf.unique_token}`
+
+        // 1. Automation trigger (jeśli klient ustawił custom flow)
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/automation-trigger`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              trigger_type: 'content_ready',
+              entity_type: 'workflow',
+              entity_id: workflowId,
+              context: {
+                clientName,
+                projectUrl,
+                brandName: wf.offer_name || '',
+                creatives_count: creatives.length
+              }
+            })
+          })
+        } catch (e) { console.error('[full] automation-trigger failed:', (e as Error).message) }
+
+        // 2. Bezpośredni email (domyślny szablon)
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              to: wf.customer_email,
+              template: 'content_ready',
+              data: {
+                clientName,
+                projectUrl
+              }
+            })
+          })
+          console.log(`[full] content_ready email sent to ${wf.customer_email}`)
+        } catch (e) { console.error('[full] send-email failed:', (e as Error).message) }
+      }
+    } catch (e) {
+      console.error('[full] email trigger block error:', (e as Error).message)
+    }
+  }
+
   return true
 }
 
