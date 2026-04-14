@@ -284,62 +284,66 @@ COPY:
 - Dobierz kąty na podstawie LUK konkurencji.
 
 IMAGE PROMPT (dla każdej wersji):
-Generator obrazów (Gemini 3) dostanie ZDJĘCIE REFERENCYJNE produktu + Twój prompt. Produkt będzie wklejony 1:1 z referencji. TWOJA ROBOTA: napisać prompt scenariusza jak SCENARZYSTA REKLAMY.
+Generator obrazów (Gemini Nano Banana) dostanie referencyjne zdjęcie produktu + Twój prompt.
+MODEL DYFUZYJNY reaguje źle na negacje i długie instrukcje — pisz KRÓTKO i POZYTYWNIE.
 
-NIE OPISUJ PRODUKTU:
-- ŹLE: "black hydrogen bottle with SPE technology"
-- DOBRZE: "the product from reference image" / "the bottle"
-Generator widzi referencję — opisywanie produktu słowami psuje rezultat.
+FORMUŁA (wg oficjalnego guide Google Cloud dla Nano Banana):
+[Scena jednym zdaniem]. [Parametry kamery]. [Nastrój/color grade]. [Opcjonalnie: tekst na obrazie].
 
-STRUKTURA DOBREGO IMAGE_PROMPT (5 elementów):
+NIE używaj: "NOT", "DO NOT", "NO stock photo", "IGNORE X" — to zwiększa prawdopodobieństwo tych artefaktów.
+NIE opisuj produktu — model widzi go na referencji. Używaj "the product" / "it".
 
-1. KADR I KOMPOZYCJA (zdanie 1):
-"Close-up shot" / "Medium shot" / "Split-screen" / "Over-the-shoulder" / "POV shot" / "Flat lay"
-Konkretna kompozycja, nie "a photo of..."
+STRUKTURA 3-4 ZDAŃ (max 60 słów):
 
-2. GŁÓWNY BOHATER + EMOCJA (zdanie 2):
-Kto jest w kadrze, w jakim stanie emocjonalnym. KONKRETNY wiek, etnografia, ubiór, poza.
-Nie "happy woman" — "a 38-year-old woman in a cream linen shirt, mid-laugh, caught off-guard"
+Zdanie 1 — AKCJA I SCENA:
+"The product resting on wet concrete in a dimly lit workshop."
+"A 34-year-old woman in grey hoodie holding the product on a messy kitchen counter."
+"The product partially submerged in glass of water, micro-bubbles rising."
 
-3. AKCJA Z PRODUKTEM (zdanie 3):
-Co robi z produktem. Produkt MUSI być w akcji, nie "held".
-"pouring water from the bottle into a clear glass" > "holding the bottle"
+Zdanie 2 — KAMERA (konkretne parametry):
+"Shot on iPhone 15 Pro, slightly overexposed, direct flash."
+"Sony A7 IV, 50mm lens, f/2.0, shallow depth of field."
+"Shot on Canon 5D Mark IV, 35mm, natural window light."
 
-4. SCENERIA I ŚWIATŁO (zdanie 4):
-Konkretne miejsce + konkretne światło.
-"Sun-drenched Scandinavian kitchen with white oak counters, soft window light from left, 85mm lens, shallow depth of field"
+Zdanie 3 — NASTRÓJ / COLOR GRADE:
+"Cinematic color grade, teal shadows, warm highlights."
+"Soft golden hour light, pastel tones."
+"Raw documentary style, natural color."
 
-5. STYL FOTOGRAFII (zdanie 5):
-Referencja do realnej estetyki, nie "professional photography":
-- "Shot like an Apple iPhone ad — minimal, premium, cinematic"
-- "UGC Instagram Reel aesthetic — slightly grainy, authentic, iPhone 15 Pro"
-- "Patagonia outdoor campaign style — natural, weathered, honest"
-- "Aesop skincare editorial — soft, moody, refined"
-- "Kinfolk magazine still life — calm, intentional, natural materials"
+Zdanie 4 (OPCJONALNIE) — TEKST NA OBRAZIE:
+Gemini świetnie renderuje tekst. Dla formatów FB ads dodaj:
+"Bold white sans-serif text at top: 'KAŻDA BUTELKA JEST INNA'."
+"Text overlay in black: '2/10 butelek to tylko marketing'."
 
-ZAWSZE KOŃCZ TYM BLOKIEM:
-"The product must be rendered exactly as shown in the reference image. Composite the reference product into this scene realistically. 1080x1080 square format. NOT a stock photo. NOT corporate. Natural skin texture, real film grain, authentic imperfections. No text, no captions, no logos, no watermarks, no overlays."
+6 FORMATÓW FB ADS KTÓRE KONWERTUJĄ (wybierz różne dla 5 wersji):
 
-PRZYKŁAD IDEALNY (scroll-stopper na FB):
+1. **UGC iPhone selfie** — "amateur-looking" by specjalnie, zatrzymuje scroll bo nie wygląda jak reklama:
+"A 29-year-old woman in pajamas holding the product, iPhone selfie angle, messy bedroom background. Shot on iPhone 15 Pro, slightly overexposed, direct flash."
 
-"Extreme close-up, macro lens. A woman's hand (natural unmanicured nails, visible pores on skin) tilting the product from reference image — stream of water catching morning light, micro-bubbles visible mid-pour. Soft gold-hour window light from camera-right, out-of-focus kitchen greenery in background (bokeh). Shot like a Le Labo product editorial — sensory, intimate, high craft. Composite the reference product into this scene. 1080x1080 square. NOT a stock photo. Natural skin texture, subtle film grain. No text, no logos, no watermarks."
+2. **With vs Without (split-screen)** — kontrast który AI robi najlepiej:
+"Split-screen image. Left side: dark dirty pipe interior. Right side: same pipe but clean and clear, with the product visible. Shot cinematically, dramatic lighting."
 
-TYPY SCEN WG KĄTA (wybierz BARDZO różne dla 5 wersji):
+3. **Myth vs Fact z tekstem** — tekst na obrazie to driver CTR na FB:
+"The product on a marble counter, soft natural light. Bold black sans-serif text overlay top: 'MYTH: wszystkie butelki są takie same'. White text bottom: 'FACT: tylko 2/10 działa'."
 
-- Myth-busting: Split-screen composite. LEFT: blurred photo of generic competitor bottle with PPM meter reading "0.2" in red. RIGHT: sharp photo of product from reference with PPM meter reading "1.2" in green. Kitchen countertop. Dramatic lighting contrast.
+4. **Problem Visualization (bez produktu)** — pokaż ból, nie rozwiązanie:
+"A dark corroded pipe interior, visible rust and buildup, single LED light illuminating damage. Shot with macro lens, documentary style, harsh realistic lighting."
 
-- Transformation: Two-panel diptych. TOP: tired 42-year-old man in gym clothes, slumped posture, bad morning light. BOTTOM: same man 2 hours later, energized, drinking from product from reference, bright window light. Documentary style.
+5. **Product in messy real context** — anti-stockowe:
+"The product on a cluttered kitchen counter next to half-eaten breakfast and open laptop. Shot on iPhone, natural morning window light, authentic imperfect framing."
 
-- Social proof / UGC: iPhone selfie angle, slightly tilted. 29-year-old woman in pajamas, messy bun, genuine surprised smile, holding product from reference in one hand while looking at it. Unmade bed visible. Authentic morning moment. iPhone 15 Pro photo aesthetic.
+6. **Process close-up** — produkt w akcji, buduje zaufanie:
+"Extreme macro close-up. A hand pouring water from the product into a glass, stream catching light, micro-bubbles visible. Sony A7 IV, 85mm macro, f/2.8."
 
-- Pain point: Medium shot. 45-year-old man at office desk, head in hands, empty coffee mug, afternoon slump, cold fluorescent office light. NO product visible. Documentary tension.
-
-- Technologia / Curiosity: Extreme macro close-up. The product from reference image shown partially — just the activation button and LED indicator glowing blue. Micro-bubbles rising in water. Soft black velvet background. High-end product editorial, like Apple keynote product reveal.
-
-- Authority: Over-the-shoulder shot of a 50-year-old doctor in white coat examining the product from reference on a clinical desk. Medical instruments in bokeh background. Clinical trust lighting.
+ZASADY KOŃCOWE:
+- NIE dodawaj "1080x1080", "No watermarks" itp. — zbędne negacje
+- NIE pisz "professional photography" — to produkuje AI slop
+- Zdania konkretne, nie opisowe
+- Max 60 słów na image_prompt
+- Jeśli dodajesz tekst na obrazie, pisz PO POLSKU (to reklama dla Polaków)
 
 JSON:
-{"wow_factor":"...","target_group":"konkretna persona z wiekiem, płcią, stylem życia","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"5-zdaniowy prompt z kadrem, bohaterem, akcją, scenerią, stylem + finalny blok zamykający"}]}
+{"wow_factor":"...","target_group":"konkretna persona","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"krótki prompt 3-4 zdania, max 60 słów, dopasowany format z listy 6"}]}
 Zwróć TYLKO JSON.`
 
   // Buduj messages — z obrazem jeśli jest
@@ -382,38 +386,25 @@ COPY:
 - Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny.
 - Polski rynek: bezpośredni ale ciepły. Nie "KUP TERAZ" — "Sprawdź szczegóły"
 
-IMAGE PROMPTS — jesteś SCENARZYSTĄ REKLAMY, nie opisywaczem produktu:
+IMAGE PROMPTS — pisz dla Gemini Nano Banana, nie dla człowieka:
 
-Twoje prompty idą do Gemini 3 Pro Image + zdjęcie referencyjne. Produkt jest wklejany 1:1 z referencji.
-NIE opisuj produktu (kolor, kształt, branding) — psujesz rezultat. Pisz "the product from reference image".
+MODEL DYFUZYJNY — REGUŁY NAUKOWE (nie opinia):
+1. Negacje ("NOT", "DO NOT", "no stock photo") ZWIĘKSZAJĄ prawdopodobieństwo tych artefaktów w output. Pisz tylko pozytywnie.
+2. Długie prompty (>80 słów) rozpraszają uwagę modelu. Max 60 słów.
+3. Opisywanie produktu tekstem konfliktuje z referencją obrazową. Pisz "the product", nie "the black bottle with logo".
+4. "Professional photography" / "high quality" = AI slop. Używaj konkretnych parametrów: "Shot on iPhone 15 Pro", "Sony A7 IV 50mm f/2".
 
-ART DIRECTOR MINDSET — używaj REALNYCH referencji estetycznych:
-- "Shot like Apple iPhone ad" — minimalizm, cinematic, premium
-- "UGC Instagram Reel, iPhone 15 Pro aesthetic" — authentic, grainy, raw
-- "Patagonia outdoor campaign" — natural, honest, weathered
-- "Aesop editorial" — soft, moody, refined
-- "Kinfolk magazine" — calm, intentional
-- "Le Labo product photography" — sensory, intimate
-- "Nike Run Club ad" — dynamic, emotional, documentary
-NIE: "professional photography", "high quality" — to produkuje AI slop.
+FORMATY FB ADS 2026 (wg research Meta):
+- UGC iPhone selfie (amatorskie) → bije stock 3x w CTR
+- With vs Without (split-screen) → AI świetne w kontraście
+- Myth vs Fact z tekstem na obrazie → tekst to driver CTR
+- Problem Visualization bez produktu → pokaż ból, nie rozwiązanie
+- Messy real context → anti-stockowe
+- Ugly Ad aesthetic → "overexposed flash", "slightly blurry"
 
-5-ZDANIOWA STRUKTURA IMAGE_PROMPT (obowiązkowa):
-1. Kadr (close-up macro / medium / split-screen / POV / over-the-shoulder)
-2. Bohater z konkretną emocją (wiek, ubiór, poza, mimika — NIE "happy person")
-3. Akcja z produktem (pouring, tilting, examining — NIE "holding")
-4. Sceneria + światło (konkretne miejsce + konkretny typ światła, np. "window light 85mm shallow DOF")
-5. Styl referencji (jak "Le Labo editorial" / "Apple ad" / "UGC iPhone selfie")
+Tekst na obrazie: pisz PO POLSKU (to reklamy dla Polaków). Gemini świetnie renderuje polski tekst sans-serif.
 
-ANTY-WZORCE (nigdy nie używaj):
-- "happy woman smiling at camera" → stockowa generyka, scroll-ignored
-- "white background studio" → wygląda jak Allegro
-- "professional advertising photo" → AI slop, idealnie pikselowe
-- "diverse group of happy people" → corporate stock
-- "modern minimalist kitchen" → za ogólne, zero klimatu
-
-ZAWSZE DODAJ: "Composite the product from reference into this scene. NOT a stock photo. Natural skin texture, real film grain, authentic imperfections. No text, no logos, no watermarks."
-
-Każda z 5 wersji musi mieć BARDZO różny kadr i scenę — nie 5 wariantów tego samego.
+KAŻDA z 5 wersji = INNY z powyższych formatów. Nie powtarzaj.
 
 Zwracaj TYLKO czysty JSON.`
     })
