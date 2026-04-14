@@ -267,29 +267,35 @@ COPY:
 - Dobierz kąty na podstawie LUK konkurencji.
 
 IMAGE PROMPT (dla każdej wersji):
-Prompt do AI image generator (Gemini). Generator dostanie też zdjęcie referencyjne produktu.
+Generator obrazów (Gemini) dostanie ZDJĘCIE REFERENCYJNE produktu + Twój prompt.
+Generator skopiuje produkt DOKŁADNIE ze zdjęcia referencyjnego. Ty opisujesz tylko SCENĘ dookoła.
 
-ZASADY image_prompt:
-1. OPISZ DOKŁADNIE produkt z referencji (kolor, kształt, materiał) — nie zgaduj
-2. Scena MUSI pasować do kąta copy i zatrzymać scroll na Facebooku
-3. Format 1080x1080px (kwadrat), do feedu FB/IG
-4. Osoba na zdjęciu: dopasowana do grupy docelowej (wiek, płeć, styl życia)
-5. Produkt jest WIDOCZNY i naturalny w scenie
-6. Jasne, ciepłe oświetlenie — reklamy FB z ciemnym tłem mają niższy CTR
-7. Jeden jasny focal point — na telefonie widzisz 4cm zdjęcia, musi być czytelne
-8. Emocja na twarzy osoby — to ona zatrzymuje scroll, nie produkt
-9. ZAWSZE kończ: "Professional advertising photography. Facebook ad creative 1080x1080. Photorealistic, high-end. No text, no captions, no labels, no watermarks, no logos, no overlays."
+KRYTYCZNE ZASADY image_prompt:
+1. **NIE opisuj wyglądu produktu** (kolor, kształt, materiał, branding) — generator to weźmie z referencji
+2. Zamiast tego pisz: "the product from reference image" / "the bottle shown in the reference"
+3. OPISZ SCENĘ dookoła produktu: osoba, otoczenie, kompozycja, oświetlenie, nastrój
+4. Format: kwadrat 1:1 do feedu FB/IG
+5. Osoba dopasowana do grupy docelowej (wiek, płeć, styl życia, emocja)
+6. Jasne, ciepłe oświetlenie — ciemne tło = niski CTR
+7. Jeden focal point — czytelne na ekranie 4cm telefonu
+8. ZAWSZE kończ: "The product must match the reference image exactly. Professional advertising photography. Facebook ad creative 1080x1080. Photorealistic. No text, no captions, no labels, no watermarks, no overlays."
+
+PRZYKŁAD DOBREGO image_prompt (NIE opisuje produktu):
+"Split-screen composition. LEFT HALF: A frustrated woman in her 40s holding a generic metallic water bottle, looking disappointed, dim kitchen lighting. RIGHT HALF: The same woman smiling with energy, holding the product from reference image, bright morning kitchen with natural light streaming through windows. The product from reference must appear exactly as in the reference image. Professional advertising photography. Facebook ad creative 1080x1080. Photorealistic. No text, no captions, no labels, no watermarks, no overlays."
+
+PRZYKŁAD ZŁEGO image_prompt (opisuje produkt):
+"A sleek black hydrogen water bottle with white logo..." ← NIE TAK. Produkt weź z referencji.
 
 TYPY SCEN wg kąta:
-- Myth-busting/Porównanie: split-screen, dwa produkty obok siebie, kontrast jakości
-- Transformation: before/after, ta sama osoba, dramatyczna różnica wyrazu twarzy
-- Social proof: realna osoba (nie model) z produktem, naturalna sceneria, "selfie" vibe
-- Pain point: frustracja BEZ produktu — zmęczenie, ból głowy, kiepska skóra
-- Technologia: close-up produktu, detale mechanizmu, premium unboxing feel
-- Curiosity: intrygujący kadr — np. ręka trzymająca produkt, reszta ukryta, "co to?"
+- Myth-busting/Porównanie: split-screen, produkt obok generic alternative, kontrast
+- Transformation: before/after, ta sama osoba, różnica wyrazu twarzy
+- Social proof: realna osoba z produktem, naturalna sceneria, UGC vibe
+- Pain point: frustracja BEZ produktu — zmęczenie, ból głowy
+- Technologia: close-up ręki trzymającej produkt, premium feel
+- Curiosity: intrygujący kadr z produktem, "co to?"
 
 JSON:
-{"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"DOKŁADNY prompt do zdjęcia — min 3 zdania, opisz produkt, osobę, scenę, oświetlenie, nastrój"}]}
+{"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"prompt opisujący SCENĘ (nie produkt), min 3 zdania"}]}
 Zwróć TYLKO JSON.`
 
   // Buduj messages — z obrazem jeśli jest
@@ -349,7 +355,12 @@ CZEGO NIE ROBIĆ:
 - Ciemne, mroczne zdjęcia = niski CTR na mobile
 - Generyczne sceny "szczęśliwa rodzina" = nikt się nie zatrzyma
 
-OPISUJ PRODUKT DOKŁADNIE z tego co widzisz na przesłanym zdjęciu referencyjnym. Nie zgaduj — opisz realny kolor, kształt, materiał, detale.
+KRYTYCZNE: NIE opisuj wyglądu produktu w image_prompt!
+Generator obrazów dostanie zdjęcie referencyjne produktu i skopiuje go 1:1.
+Ty opisuj tylko SCENĘ dookoła: osoba, otoczenie, kompozycja, oświetlenie, nastrój.
+Używaj fraz: "the product from reference image", "the bottle shown in the reference".
+
+Jeśli zdjęcie referencyjne widzisz tutaj — użyj go żeby ZROZUMIEĆ co to za produkt (np. butelka wodorowa), ale w image_prompt NIE opisuj jego wyglądu słowami.
 
 Zwracaj TYLKO czysty JSON.`
     })

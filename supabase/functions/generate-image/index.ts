@@ -60,7 +60,8 @@ async function generateWithGemini(
   const parts: any[] = []
 
   // Add reference images if provided
-  let imageContext = ''
+  let productRefAdded = false
+  let logoRefAdded = false
   if (referenceImages && referenceImages.length > 0) {
     for (const ref of referenceImages) {
       try {
@@ -72,25 +73,34 @@ async function generateWithGemini(
             data: refImage.base64
           }
         })
-        if (ref.type === 'logo') {
-          imageContext += 'Image 1 is the LOGO - use it exactly as provided on the mockup. '
-        } else if (ref.type === 'product') {
-          imageContext += 'Image 2 is the PRODUCT - this is what the brand sells, show it in use in the scene. '
-        }
+        if (ref.type === 'product') productRefAdded = true
+        if (ref.type === 'logo') logoRefAdded = true
       } catch (err) {
         console.error(`Failed to fetch ${ref.type} image:`, err)
       }
     }
   }
 
-  // Add prompt with image context
-  if (imageContext) {
-    parts.push({
-      text: `${imageContext}\n\n${prompt}`
-    })
+  // Build the prompt with STRONG reference instruction
+  let finalPrompt = ''
+  if (productRefAdded) {
+    finalPrompt = `CRITICAL PRODUCT REFERENCE: The image I provided shows the EXACT product that must appear in your generated image. You MUST render this exact product with the same:
+- Shape and proportions
+- Color and materials
+- Branding and labels (if visible)
+- All visible details
+
+DO NOT invent a different product. DO NOT generate a generic version. The product in your output MUST match the reference image pixel-for-pixel in its visual identity — only the scene/background/context around it changes.
+
+SCENE TO CREATE:
+${prompt}`
+  } else if (logoRefAdded) {
+    finalPrompt = `The image I provided is the brand LOGO. Use it exactly as provided if placing it on a mockup.\n\n${prompt}`
   } else {
-    parts.push({ text: prompt })
+    finalPrompt = prompt
   }
+
+  parts.push({ text: finalPrompt })
 
   // Generate images (Gemini generates 1 per request)
   for (let i = 0; i < Math.min(count, 4); i++) {
