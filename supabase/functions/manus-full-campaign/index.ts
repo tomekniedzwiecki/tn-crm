@@ -179,7 +179,18 @@ serve(async (req) => {
     const productImageUrl = product.image_url || ''
     const productSourceUrl = product.source_url || ''
 
-    console.log(`[manus-full] final context: brand=${brandName}, product=${productName}, image=${productImageUrl ? 'YES' : 'NO'}`)
+    // Pobierz logo marki z workflow_branding
+    let logoUrl = ''
+    try {
+      const logoArr = await restGet(`workflow_branding?workflow_id=eq.${workflow_id}&type=eq.logo&file_url=not.is.null&select=file_url,title&limit=5`)
+      if (Array.isArray(logoArr) && logoArr.length > 0) {
+        // Preferuj logo o tytule zawierającym "główne" lub pierwszy z listy
+        const main = logoArr.find((l: any) => l.title?.toLowerCase().includes('główne') || l.title?.toLowerCase().includes('main'))
+        logoUrl = (main || logoArr[0]).file_url
+      }
+    } catch (e) { console.error('[manus-full] logo fetch error:', e.message) }
+
+    console.log(`[manus-full] final context: brand=${brandName}, product=${productName}, image=${productImageUrl ? 'YES' : 'NO'}, logo=${logoUrl ? 'YES' : 'NO'}`)
 
     // Lista raportów z linkami (PDF, infografika, analiza)
     const reportsList = (reportsRes.data || [])
@@ -211,6 +222,12 @@ ${productImageUrl}
 
 To jest FIZYCZNY PRODUKT który sprzedajemy. W KAŻDEJ z 5 kreacji graficznych używaj DOKŁADNIE tego produktu ze zdjęcia — zachowaj kształt, kolor, materiał, branding. NIE wymyślaj innego wariantu.
 ` : '⚠️ BRAK zdjęcia produktu w bazie — wygeneruj produkt wizualnie na podstawie opisu.'}
+${logoUrl ? `
+🏷️ **LOGO MARKI — użyj go w kreacjach graficznych:**
+${logoUrl}
+
+Pobierz logo i umieść je na każdej z 5 grafik reklamowych (zwykle w prawym górnym lub dolnym rogu). NIE zmieniaj kształtu ani kolorów logo — użyj go 1:1. To element identyfikacji marki.
+` : ''}
 ${productSourceUrl ? `
 📦 **Link do produktu u dostawcy (dodatkowe zdjęcia, opis techniczny):**
 ${productSourceUrl}
