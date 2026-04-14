@@ -598,9 +598,63 @@
 
     .hero-stat-value {
       font-family: var(--font-heading);
-      font-size: 32px;
+      font-size: 36px;
       font-weight: 700;
-      color: var(--primary);
+      line-height: 1;
+      background: linear-gradient(135deg, var(--primary) 0%, #5CE3FF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+
+    /* Floating feature badges around hero product */
+    .hero-feature-badge {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-white);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 50px;
+      box-shadow: 0 12px 32px rgba(0, 212, 255, 0.15);
+      font-family: var(--font-accent);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--secondary);
+      white-space: nowrap;
+      z-index: 3;
+      animation: badgeFloat 4s ease-in-out infinite;
+    }
+
+    .hero-feature-badge::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+    }
+
+    .hero-feature-badge.hfb-1 { top: 8%; left: -8%; animation-delay: 0s; }
+    .hero-feature-badge.hfb-2 { top: 28%; right: -10%; animation-delay: 1s; }
+    .hero-feature-badge.hfb-3 { bottom: 28%; left: -12%; animation-delay: 2s; }
+    .hero-feature-badge.hfb-4 { bottom: 6%; right: -6%; animation-delay: 3s; }
+
+    .hero-feature-badge.hfb-3::before,
+    .hero-feature-badge.hfb-4::before {
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @media (max-width: 968px) {
+      .hero-feature-badge { display: none; }
     }
 
     .hero-stat-label {
@@ -900,17 +954,43 @@
     }
 
     .problem-stat {
-      padding: 20px;
+      padding: 24px;
       background: var(--bg-white);
       border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
       box-shadow: var(--shadow-md);
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative;
+    }
+
+    .problem-stat::before {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 14px;
+      height: 14px;
+      border-top: 2px solid var(--accent);
+      border-left: 2px solid var(--accent);
+      opacity: 0.5;
+    }
+
+    .problem-stat:hover {
+      transform: translateY(-4px) rotate(-0.5deg);
+      box-shadow: 8px 8px 0 rgba(255, 107, 53, 0.15), 0 12px 32px rgba(10, 22, 40, 0.08);
+      border-color: var(--accent);
     }
 
     .problem-stat-value {
       font-family: var(--font-heading);
-      font-size: 36px;
+      font-size: 44px;
       font-weight: 700;
-      color: var(--accent);
+      line-height: 1;
+      background: linear-gradient(135deg, var(--accent) 0%, #FF9060 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
     }
 
     .problem-stat-label {
@@ -954,8 +1034,17 @@
 
     .bento-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: minmax(360px, auto);
       gap: 24px;
+    }
+
+    .bento-card:nth-child(1) {
+      grid-column: span 2;
+    }
+
+    .bento-card:nth-child(4) {
+      grid-column: span 2;
     }
 
     .bento-card {
@@ -965,7 +1054,37 @@
       border: 1px solid var(--border-light);
       border-radius: var(--radius-xl);
       overflow: hidden;
-      transition: all 0.4s ease;
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .bento-card::before,
+    .bento-card::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
+      opacity: 0.6;
+      transition: opacity 0.3s ease;
+    }
+
+    .bento-card::before {
+      top: 14px;
+      left: 14px;
+      border-top: 2px solid var(--primary);
+      border-left: 2px solid var(--primary);
+    }
+
+    .bento-card::after {
+      bottom: 14px;
+      right: 14px;
+      border-bottom: 2px solid var(--primary);
+      border-right: 2px solid var(--primary);
+    }
+
+    .bento-card:hover::before,
+    .bento-card:hover::after {
+      opacity: 1;
     }
 
     .bento-card:hover {
@@ -1067,9 +1186,14 @@
       line-height: 1.7;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 968px) {
       .bento-grid {
         grid-template-columns: 1fr;
+        grid-auto-rows: auto;
+      }
+      .bento-card:nth-child(1),
+      .bento-card:nth-child(4) {
+        grid-column: span 1;
       }
     }
 
@@ -2337,6 +2461,10 @@
             <div class="hero-image-wrapper">
               <div class="hero-image-glow"></div>
               <div class="hero-image-ring"></div>
+              <span class="hero-feature-badge hfb-1">IP67 Wodoodporny</span>
+              <span class="hero-feature-badge hfb-2">Ekran IPS 4.3"</span>
+              <span class="hero-feature-badge hfb-3">Dual Lens 8.5mm</span>
+              <span class="hero-feature-badge hfb-4">Przewód 5m</span>
               <div class="hero-image">
                 <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/innerscan/1776178525483_0.jpg" alt="InnerScan - kamera endoskopowa w akcji" width="600" height="450" fetchpriority="high" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-xl); box-shadow: 0 25px 50px -12px rgba(0,212,232,0.25);">
               </div>
@@ -2478,6 +2606,13 @@
     </svg>
   </div>
 
+  <!-- Wavy divider: Problem → Solution -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+      <path fill="#F8FAFC" d="M0,30 C360,60 720,0 1080,30 C1260,45 1380,38 1440,30 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
+
   <!-- Solution / Bento -->
   <section class="solution" id="features">
     <div class="container">
@@ -2563,6 +2698,13 @@
       </div>
     </div>
   </section>
+
+  <!-- Wavy divider: Solution → Technology -->
+  <div class="wavy-divider">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+      <path fill="#0A1628" d="M0,30 C300,0 600,60 900,30 C1140,10 1290,45 1440,30 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
 
   <!-- Technology -->
   <section class="technology">
