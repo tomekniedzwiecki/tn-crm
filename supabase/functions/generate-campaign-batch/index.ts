@@ -7,9 +7,9 @@ const corsHeaders = {
 }
 
 /**
- * FAZA 1: Instant start — tworzy Manus task (jeśli potrzebny) i wraca od razu.
- * Jeśli research już jest → odpala FAZĘ 2 inline (copy + creatives, ~2 min).
- * Ciężkie przetwarzanie (Manus polling) robi campaign-check-progress (cron).
+ * Campaign pipeline: instant start.
+ * If research exists → runs copy + creatives inline (~40s).
+ * If not → creates Manus task, returns. Cron continues later.
  */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -37,7 +37,7 @@ serve(async (req) => {
     const body = await req.json()
     workflow_id = body.workflow_id
     const include_creatives = body.include_creatives !== false
-    const continue_pipeline = body.continue_pipeline === true // cron sends this to bypass guard
+    const continue_pipeline = body.continue_pipeline === true
 
     if (!workflow_id) {
       return new Response(
@@ -46,7 +46,7 @@ serve(async (req) => {
       )
     }
 
-    // Guard: nie odpala jeśli pipeline już działa (chyba że cron kontynuuje po research)
+    // Guard: concurrent check
     const { data: current } = await supabase
       .from('workflow_ads')
       .select('campaign_pipeline_status, campaign_pipeline_step, competitor_research')
@@ -60,14 +60,13 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[campaign-batch] Starting for workflow ${workflow_id}`)
+    console.log(`[campaign] Start workflow=${workflow_id} continue=${continue_pipeline}`)
 
-    // Sprawdź czy research istnieje
     const existingResearch = current?.competitor_research
     const hasValidResearch = existingResearch && !existingResearch.parse_error && existingResearch.competitors?.length
 
     if (hasValidResearch || continue_pipeline) {
-      // Research jest (lub cron kontynuuje po nieudanym research) → copy + creatives
+      // Research gotowy (lub cron kontynuuje) → copy + creatives
       await upsertAds(supabase, workflow_id, {
         campaign_pipeline_status: 'running',
         campaign_pipeline_started_at: new Date().toISOString(),
@@ -83,8 +82,7 @@ serve(async (req) => {
       )
     }
 
-    // Research nie ma → tworzymy Manus task i wracamy od razu
-    // Cron (campaign-check-progress) będzie pollował i odpali copy+creatives gdy gotowy
+    // Brak researchu → tworzymy Manus task, cron dopilnuje reszty
     await upsertAds(supabase, workflow_id, {
       campaign_pipeline_status: 'running',
       campaign_pipeline_started_at: new Date().toISOString(),
@@ -94,24 +92,21 @@ serve(async (req) => {
 
     if (MANUS_API_KEY) {
       const taskId = await createManusResearchTask(MANUS_API_KEY, supabase, workflow_id)
-      console.log(`[campaign-batch] Manus task created: ${taskId}, cron will poll`)
+      console.log(`[campaign] Manus task: ${taskId}`)
     } else {
-      // Brak Manusa → od razu copy bez researchu
+      // Brak Manusa → copy bez researchu
       await runCopyAndCreatives(supabase, SUPABASE_URL, ANTHROPIC_API_KEY, workflow_id, include_creatives, null)
     }
 
     return new Response(
-      JSON.stringify({ success: true, status: 'started', has_research: false }),
+      JSON.stringify({ success: true, status: 'started' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('[campaign-batch] Fatal error:', error)
-    // Ustaw status failed w bazie
+    console.error('[campaign] Fatal:', error)
     if (supabase && workflow_id) {
-      try {
-        await upsertAds(supabase, workflow_id, { campaign_pipeline_status: 'failed', campaign_pipeline_step: 'error' })
-      } catch (_) {}
+      try { await upsertAds(supabase, workflow_id, { campaign_pipeline_status: 'failed', campaign_pipeline_step: 'error' }) } catch (_) {}
     }
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
@@ -123,15 +118,14 @@ serve(async (req) => {
 // ===== HELPERS =====
 
 async function upsertAds(supabase: any, workflowId: string, fields: any) {
-  const { data } = await supabase
+  await supabase
     .from('workflow_ads')
     .upsert({ workflow_id: workflowId, ...fields }, { onConflict: 'workflow_id' })
-    .select()
-  return data
 }
 
+// ===== MANUS RESEARCH TASK =====
+
 async function createManusResearchTask(apiKey: string, supabase: any, workflowId: string): Promise<string> {
-  // Pobierz dane produktu
   const [brandingRes, productsRes] = await Promise.all([
     supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflowId).eq('type', 'brand_info'),
     supabase.from('workflow_products').select('name, description').eq('workflow_id', workflowId)
@@ -139,9 +133,7 @@ async function createManusResearchTask(apiKey: string, supabase: any, workflowId
 
   const brandInfo = brandingRes.data?.[0]
   let brandVal: any = {}
-  if (brandInfo?.value) {
-    brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
-  }
+  if (brandInfo?.value) brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
   const product = productsRes.data?.[0] || {} as any
   const brandName = brandVal.name || product.name || ''
   const productName = product.name || brandVal.name || ''
@@ -168,27 +160,24 @@ Dla każdej reklamy podaj link z Ad Library (ad_url). Skróć ad_text do max 200
 Zwróć TYLKO JSON bez dodatkowego tekstu.
 `.trim()
 
-  const createRes = await fetch('https://api.manus.ai/v2/task.create', {
+  const res = await fetch('https://api.manus.ai/v2/task.create', {
     method: 'POST',
     headers: { 'x-manus-api-key': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: { content: instruction } })
   })
-
-  const createData = await createRes.json()
-  if (!createRes.ok || !createData.ok) throw new Error('Manus task creation failed')
+  const data = await res.json()
+  if (!res.ok || !data.ok) throw new Error('Manus task creation failed')
 
   await upsertAds(supabase, workflowId, {
-    competitor_research_task_id: createData.task_id,
+    competitor_research_task_id: data.task_id,
     competitor_research_status: 'pending'
   })
-
-  return createData.task_id
+  return data.task_id
 }
 
-// ===== COPY + CREATIVES (runs within timeout) =====
+// ===== COPY + CREATIVES =====
 
 async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropicKey: string, workflowId: string, includeCreatives: boolean, research: any) {
-  // Pobierz dane
   const [brandingRes, productsRes, workflowRes] = await Promise.all([
     supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflowId).eq('type', 'brand_info'),
     supabase.from('workflow_products').select('name, description, image_url').eq('workflow_id', workflowId),
@@ -197,33 +186,32 @@ async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropic
 
   const brandInfo = brandingRes.data?.[0]
   let brandVal: any = {}
-  if (brandInfo?.value) {
-    brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
-  }
+  if (brandInfo?.value) brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
   const product = productsRes.data?.[0] || {} as any
   const landingUrl = workflowRes.data?.landing_page_url || ''
   const productName = product.name || brandVal.name || ''
   const productDescription = product.description || brandVal.description || ''
+  const refImageUrl = product.image_url || null
 
-  // COPY
+  // COPY (Claude generuje copy + prompty do zdjęć)
   await upsertAds(supabase, workflowId, { campaign_pipeline_step: 'copy' })
+  let adCopies: any = null
   try {
-    await generateCopy(anthropicKey, supabase, workflowId, brandVal, product, research, landingUrl)
+    adCopies = await generateCopy(anthropicKey, supabase, workflowId, brandVal, product, research, landingUrl)
   } catch (err) {
     console.error('[campaign] Copy failed:', err.message)
   }
 
-  // CREATIVES
+  // CREATIVES (użyj promptów z copy)
   if (includeCreatives) {
     await upsertAds(supabase, workflowId, { campaign_pipeline_step: 'creatives' })
     try {
-      await generateCreatives(supabase, supabaseUrl, workflowId, productName, productDescription, product.image_url)
+      await generateCreatives(supabase, supabaseUrl, workflowId, adCopies, productName, productDescription, refImageUrl)
     } catch (err) {
       console.error('[campaign] Creatives failed:', err.message)
     }
   }
 
-  // DONE
   await upsertAds(supabase, workflowId, {
     campaign_pipeline_status: 'completed',
     campaign_pipeline_step: 'done',
@@ -232,13 +220,17 @@ async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropic
   console.log('[campaign] Pipeline completed!')
 }
 
-// ===== CLAUDE COPY =====
+// ===== CLAUDE: COPY + IMAGE PROMPTS =====
 
-async function generateCopy(apiKey: string, supabase: any, workflowId: string, brand: any, product: any, research: any, landingUrl: string) {
+async function generateCopy(apiKey: string, supabase: any, workflowId: string, brand: any, product: any, research: any, landingUrl: string): Promise<any> {
   const brandName = brand.name || product.name || ''
   const productName = product.name || brand.name || ''
 
-  let prompt = `MARKA: ${brandName}\nTAGLINE: ${brand.tagline || ''}\nOPIS: ${brand.description || product.description || ''}\nPRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}\nLANDING PAGE: ${landingUrl || 'brak'}`
+  let prompt = `MARKA: ${brandName}
+TAGLINE: ${brand.tagline || ''}
+OPIS: ${brand.description || product.description || ''}
+PRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}
+LANDING PAGE: ${landingUrl || 'brak'}`
 
   if (research && !research.parse_error && research.competitors?.length) {
     const topAds = research.competitors.slice(0, 5)
@@ -250,16 +242,49 @@ async function generateCopy(apiKey: string, supabase: any, workflowId: string, b
     if (research.recommendations?.length) prompt += `REKOMENDACJE:\n${research.recommendations.map((r: string) => '- ' + r).join('\n')}\n`
   }
 
-  prompt += `\n===== ZADANIE =====\nWygeneruj 5 wersji copy Meta Ads. Dobierz kąty na podstawie LUK konkurencji.\nPrimary Text: hook w pierwszych 125 znakach. Headline: 27-40 znaków. Description: 25-30 znaków.\nNIE podawaj cen. CTA: "Sprawdź szczegóły" / "Zobacz opinie". Ton: bezpośredni, ciepły, polski rynek.\n\nJSON: {"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"..."}]}\nZwróć TYLKO JSON.`
+  prompt += `\n===== ZADANIE =====
+Wygeneruj 5 wersji reklamy Meta Ads. Każda wersja zawiera COPY + PROMPT DO ZDJĘCIA.
+
+Dobierz kąty na podstawie LUK konkurencji.
+
+COPY:
+- Primary Text: hook w pierwszych 125 znakach. Headline: 27-40 znaków. Description: 25-30 znaków.
+- NIE podawaj cen. CTA: "Sprawdź szczegóły" / "Zobacz opinie". Ton: bezpośredni, ciepły, polski rynek.
+
+IMAGE PROMPT (dla każdej wersji):
+- Napisz szczegółowy prompt do wygenerowania zdjęcia reklamowego przez AI (Gemini)
+- Zdjęcie MUSI pasować do kąta i przekazu copy
+- Format: kwadrat (1:1), do reklamy na Facebooku/Instagramie
+- Styl: profesjonalna fotografia reklamowa, nie stockowa
+- Pokazuj PRODUKT w użyciu lub w kontekście problemu/rozwiązania
+- Osoby na zdjęciu: realistyczne, dopasowane do grupy docelowej (wiek, płeć)
+- ZAWSZE kończ promptem: "Professional advertising photography for Facebook/Instagram ad. Square format 1:1. Photorealistic. No text, no captions, no labels, no watermarks, no logos."
+- NIE opisuj elementów produktu których nie znasz — to zrobi referencyjne zdjęcie
+
+JSON:
+{"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"nazwa kąta","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"szczegółowy prompt do zdjęcia reklamowego, dopasowany do tego kąta"}]}
+Zwróć TYLKO JSON.`
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }],
-      system: `Jesteś ekspertem od reklam Meta Ads na polskim rynku e-commerce. WOW FACTOR w pierwszym zdaniu. Emocjonalna konkretność > generyki. Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny. Zwracaj TYLKO czysty JSON.`
+      system: `Jesteś ekspertem od reklam Meta Ads na polskim rynku e-commerce.
+
+COPY: WOW FACTOR w pierwszym zdaniu. Emocjonalna konkretność > generyki. Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny.
+
+IMAGE PROMPTS: Tworzysz prompty do generowania zdjęć reklamowych przez AI.
+- Myśl jak art director kampanii na Facebooku
+- Zdjęcie musi zatrzymać scroll — mocna kompozycja, emocja, kontrast
+- Dostosuj scenę do kąta: pain point = frustracja/problem, transformation = efekt wow, social proof = realna osoba z produktem, curiosity = intrygujący close-up
+- Grupa docelowa musi się rozpoznać na zdjęciu (odpowiedni wiek, styl życia, otoczenie)
+- Produkt jest WIDOCZNY ale naturalny w scenie (nie packshot)
+- Oświetlenie, kolory, nastrój dopasowane do przekazu
+
+Zwracaj TYLKO czysty JSON.`
     })
   })
 
@@ -273,26 +298,47 @@ async function generateCopy(apiKey: string, supabase: any, workflowId: string, b
   const adCopies = JSON.parse(jsonMatch[0])
 
   await upsertAds(supabase, workflowId, { ad_copies: adCopies, ad_copies_generated_at: new Date().toISOString() })
-  console.log(`[campaign] Copy: ${adCopies.versions?.length || 0} versions`)
+  console.log(`[campaign] Copy: ${adCopies.versions?.length || 0} versions with image prompts`)
+
+  return adCopies
 }
 
 // ===== GEMINI CREATIVES =====
 
-async function generateCreatives(supabase: any, supabaseUrl: string, workflowId: string, productName: string, productDescription: string, refImageUrl?: string) {
-  const types = [
-    { type: 'lifestyle', prompt: `A person happily using ${productName} in a modern home interior. The product is clearly visible. Lifestyle advertising photography, warm natural lighting, photorealistic. No text, no captions, no watermarks.` },
-    { type: 'problem', prompt: `A frustrated person struggling with a problem that ${productName} solves. ${productDescription ? 'Context: ' + productDescription : ''} Documentary style, natural lighting. No text, no captions, no watermarks.` },
-    { type: 'before_after', prompt: `Split view: LEFT shows problematic situation, RIGHT shows perfect result after using ${productName}. Dramatic difference. Professional advertising photography. No text, no captions, no watermarks.` },
-    { type: 'closeup', prompt: `Detailed close-up of ${productName}. ${productDescription || 'Premium product'}. Studio product photography, soft lighting, premium aesthetic. No text, no captions, no watermarks.` },
-    { type: 'bundle', prompt: `Complete product set of ${productName} with accessories neatly arranged. Premium unboxing aesthetic. Studio photography, e-commerce style. No text, no captions, no watermarks.` }
-  ]
-
+async function generateCreatives(supabase: any, supabaseUrl: string, workflowId: string, adCopies: any, productName: string, productDescription: string, refImageUrl: string | null) {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  // Generuj równolegle żeby zmieścić się w timeout (5x ~20s = ~20-30s zamiast ~100s)
-  const results = await Promise.allSettled(types.map(async (ct) => {
-    const body: any = { prompt: ct.prompt, count: 1, workflow_id: workflowId, type: `ad_${ct.type}` }
-    if (refImageUrl) body.reference_images = [{ url: refImageUrl, type: 'product' }]
+  // Pobierz prompty z wygenerowanego copy (Claude je napisał)
+  let imagePrompts: { angle: string, prompt: string }[] = []
+
+  if (adCopies?.versions?.length) {
+    imagePrompts = adCopies.versions
+      .filter((v: any) => v.image_prompt)
+      .map((v: any) => ({ angle: v.angle || 'ad', prompt: v.image_prompt }))
+  }
+
+  // Fallback: jeśli Claude nie wygenerował promptów, użyj generycznych
+  if (imagePrompts.length === 0) {
+    imagePrompts = [
+      { angle: 'lifestyle', prompt: `A person using ${productName} in daily life. ${productDescription || ''}. Professional advertising photography for Facebook/Instagram ad. Square format 1:1. Photorealistic. No text, no captions, no labels, no watermarks, no logos.` },
+      { angle: 'product', prompt: `${productName} product shot, premium aesthetic. ${productDescription || ''}. Studio product photography for e-commerce ad. Square format 1:1. No text, no captions, no labels, no watermarks, no logos.` },
+      { angle: 'benefit', prompt: `Visual representation of the main benefit of ${productName}. ${productDescription || ''}. Professional advertising photography for Facebook/Instagram ad. Square format 1:1. Photorealistic. No text, no captions, no labels, no watermarks, no logos.` }
+    ]
+  }
+
+  // Generuj równolegle
+  const results = await Promise.allSettled(imagePrompts.map(async (ip) => {
+    const body: any = {
+      prompt: ip.prompt,
+      count: 1,
+      workflow_id: workflowId,
+      type: `ad_${ip.angle.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+    }
+
+    // ZAWSZE dodaj zdjęcie referencyjne produktu jeśli jest
+    if (refImageUrl) {
+      body.reference_images = [{ url: refImageUrl, type: 'product' }]
+    }
 
     const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
       method: 'POST',
@@ -302,7 +348,7 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
 
     const data = await res.json()
     if (data?.images?.[0]?.url) {
-      return { type: ct.type, url: data.images[0].url, generated_at: new Date().toISOString() }
+      return { type: ip.angle, url: data.images[0].url, prompt: ip.prompt, generated_at: new Date().toISOString() }
     }
     return null
   }))
@@ -314,5 +360,5 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
   if (creatives.length > 0) {
     await upsertAds(supabase, workflowId, { ad_creatives: creatives, ad_creatives_generated_at: new Date().toISOString() })
   }
-  console.log(`[campaign] ${creatives.length} creatives`)
+  console.log(`[campaign] ${creatives.length} creatives generated`)
 }
