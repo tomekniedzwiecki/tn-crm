@@ -6,20 +6,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * FAZA 1: Instant start — tworzy Manus task (jeśli potrzebny) i wraca od razu.
+ * Jeśli research już jest → odpala FAZĘ 2 inline (copy + creatives, ~2 min).
+ * Ciężkie przetwarzanie (Manus polling) robi campaign-check-progress (cron).
+ */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let supabase: any = null
+  let workflow_id: string = ''
+
   try {
     const MANUS_API_KEY = Deno.env.get('MANUS_API_KEY')
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
+    if (!ANTHROPIC_API_KEY) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'ANTHROPIC_API_KEY not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    const { workflow_id, include_creatives = true } = await req.json()
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    const body = await req.json()
+    workflow_id = body.workflow_id
+    const include_creatives = body.include_creatives !== false
 
     if (!workflow_id) {
       return new Response(
@@ -28,96 +45,73 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[campaign-batch] Starting for workflow ${workflow_id}, creatives: ${include_creatives}`)
-
-    // Oznacz że pipeline jest w toku
-    await upsertAds(supabase, workflow_id, {
-      campaign_pipeline_status: 'running',
-      campaign_pipeline_started_at: new Date().toISOString(),
-      campaign_pipeline_step: 'research'
-    })
-
-    // ===== Pobierz dane workflow =====
-    const [brandingRes, productsRes, workflowRes] = await Promise.all([
-      supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflow_id).eq('type', 'brand_info'),
-      supabase.from('workflow_products').select('name, description, image_url').eq('workflow_id', workflow_id),
-      supabase.from('workflows').select('id, offer_name, landing_page_url').eq('id', workflow_id).single()
-    ])
-
-    const brandInfo = brandingRes.data?.[0]
-    let brandVal: any = {}
-    if (brandInfo?.value) {
-      brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
-    }
-    const product = productsRes.data?.[0] || {} as any
-    const landingUrl = workflowRes.data?.landing_page_url || ''
-    const brandName = brandVal.name || product.name || ''
-    const productName = product.name || brandVal.name || ''
-    const productDescription = product.description || brandVal.description || ''
-
-    // ===== STEP 1: RESEARCH =====
-    // Sprawdź czy research już jest
-    const { data: existingAds } = await supabase
+    // Guard: nie odpala jeśli pipeline już działa
+    const { data: current } = await supabase
       .from('workflow_ads')
-      .select('competitor_research')
+      .select('campaign_pipeline_status, competitor_research')
       .eq('workflow_id', workflow_id)
       .maybeSingle()
 
-    let researchData = existingAds?.competitor_research
-    const hasValidResearch = researchData && !researchData.parse_error && researchData.competitors?.length
-
-    if (!hasValidResearch && MANUS_API_KEY) {
-      console.log('[campaign-batch] Starting Manus research...')
-      await upsertAds(supabase, workflow_id, { campaign_pipeline_step: 'research' })
-
-      try {
-        researchData = await runManusResearch(MANUS_API_KEY, supabase, workflow_id, productName, productDescription, brandVal.description, brandName)
-      } catch (err) {
-        console.error('[campaign-batch] Research failed:', err.message)
-        // Continue without research — copy will still work
-      }
-    } else {
-      console.log('[campaign-batch] Using existing research')
+    if (current?.campaign_pipeline_status === 'running') {
+      return new Response(
+        JSON.stringify({ success: true, status: 'already_running' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // ===== STEP 2: COPY =====
-    console.log('[campaign-batch] Generating ad copy...')
-    await upsertAds(supabase, workflow_id, { campaign_pipeline_step: 'copy' })
+    console.log(`[campaign-batch] Starting for workflow ${workflow_id}`)
 
-    try {
-      await generateCopy(ANTHROPIC_API_KEY!, supabase, workflow_id, brandVal, product, researchData, landingUrl)
-    } catch (err) {
-      console.error('[campaign-batch] Copy generation failed:', err.message)
+    // Sprawdź czy research istnieje
+    const existingResearch = current?.competitor_research
+    const hasValidResearch = existingResearch && !existingResearch.parse_error && existingResearch.competitors?.length
+
+    if (hasValidResearch) {
+      // Research jest → od razu copy + creatives (mieści się w timeout)
+      await upsertAds(supabase, workflow_id, {
+        campaign_pipeline_status: 'running',
+        campaign_pipeline_started_at: new Date().toISOString(),
+        campaign_pipeline_step: 'copy',
+        campaign_pipeline_include_creatives: include_creatives
+      })
+
+      await runCopyAndCreatives(supabase, SUPABASE_URL, ANTHROPIC_API_KEY, workflow_id, include_creatives, existingResearch)
+
+      return new Response(
+        JSON.stringify({ success: true, status: 'completed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // ===== STEP 3: CREATIVES =====
-    if (include_creatives) {
-      console.log('[campaign-batch] Generating creatives...')
-      await upsertAds(supabase, workflow_id, { campaign_pipeline_step: 'creatives' })
-
-      try {
-        await generateCreatives(supabase, SUPABASE_URL!, workflow_id, productName, productDescription, product.image_url)
-      } catch (err) {
-        console.error('[campaign-batch] Creatives generation failed:', err.message)
-      }
-    }
-
-    // ===== DONE =====
+    // Research nie ma → tworzymy Manus task i wracamy od razu
+    // Cron (campaign-check-progress) będzie pollował i odpali copy+creatives gdy gotowy
     await upsertAds(supabase, workflow_id, {
-      campaign_pipeline_status: 'completed',
-      campaign_pipeline_step: 'done',
-      campaign_pipeline_completed_at: new Date().toISOString()
+      campaign_pipeline_status: 'running',
+      campaign_pipeline_started_at: new Date().toISOString(),
+      campaign_pipeline_step: 'research',
+      campaign_pipeline_include_creatives: include_creatives
     })
 
-    console.log('[campaign-batch] Pipeline completed!')
+    if (MANUS_API_KEY) {
+      const taskId = await createManusResearchTask(MANUS_API_KEY, supabase, workflow_id)
+      console.log(`[campaign-batch] Manus task created: ${taskId}, cron will poll`)
+    } else {
+      // Brak Manusa → od razu copy bez researchu
+      await runCopyAndCreatives(supabase, SUPABASE_URL, ANTHROPIC_API_KEY, workflow_id, include_creatives, null)
+    }
 
     return new Response(
-      JSON.stringify({ success: true, status: 'completed' }),
+      JSON.stringify({ success: true, status: 'started', has_research: false }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('[campaign-batch] Fatal error:', error)
+    // Ustaw status failed w bazie
+    if (supabase && workflow_id) {
+      try {
+        await upsertAds(supabase, workflow_id, { campaign_pipeline_status: 'failed', campaign_pipeline_step: 'error' })
+      } catch (_) {}
+    }
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -130,20 +124,27 @@ serve(async (req) => {
 async function upsertAds(supabase: any, workflowId: string, fields: any) {
   const { data } = await supabase
     .from('workflow_ads')
-    .update(fields)
-    .eq('workflow_id', workflowId)
+    .upsert({ workflow_id: workflowId, ...fields }, { onConflict: 'workflow_id' })
     .select()
-
-  if (!data?.length) {
-    await supabase
-      .from('workflow_ads')
-      .insert({ workflow_id: workflowId, is_active: true, activated_at: new Date().toISOString(), ...fields })
-  }
+  return data
 }
 
-// ===== MANUS RESEARCH =====
+async function createManusResearchTask(apiKey: string, supabase: any, workflowId: string): Promise<string> {
+  // Pobierz dane produktu
+  const [brandingRes, productsRes] = await Promise.all([
+    supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflowId).eq('type', 'brand_info'),
+    supabase.from('workflow_products').select('name, description').eq('workflow_id', workflowId)
+  ])
 
-async function runManusResearch(apiKey: string, supabase: any, workflowId: string, productName: string, productDescription: string, brandDescription: string, brandName: string): Promise<any> {
+  const brandInfo = brandingRes.data?.[0]
+  let brandVal: any = {}
+  if (brandInfo?.value) {
+    brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
+  }
+  const product = productsRes.data?.[0] || {} as any
+  const brandName = brandVal.name || product.name || ''
+  const productName = product.name || brandVal.name || ''
+  const productDescription = product.description || brandVal.description || ''
   const category = productName || brandName || 'produkt'
 
   const instruction = `
@@ -166,7 +167,6 @@ Dla każdej reklamy podaj link z Ad Library (ad_url). Skróć ad_text do max 200
 Zwróć TYLKO JSON bez dodatkowego tekstu.
 `.trim()
 
-  // Create task
   const createRes = await fetch('https://api.manus.ai/v2/task.create', {
     method: 'POST',
     headers: { 'x-manus-api-key': apiKey, 'Content-Type': 'application/json' },
@@ -176,78 +176,59 @@ Zwróć TYLKO JSON bez dodatkowego tekstu.
   const createData = await createRes.json()
   if (!createRes.ok || !createData.ok) throw new Error('Manus task creation failed')
 
-  const taskId = createData.task_id
-  console.log(`[campaign-batch] Manus task created: ${taskId}`)
-
   await upsertAds(supabase, workflowId, {
-    competitor_research_task_id: taskId,
+    competitor_research_task_id: createData.task_id,
     competitor_research_status: 'pending'
   })
 
-  // Poll for completion (max 15 min)
-  const maxWait = 15 * 60 * 1000
-  const startTime = Date.now()
+  return createData.task_id
+}
 
-  while (Date.now() - startTime < maxWait) {
-    await new Promise(r => setTimeout(r, 20000)) // 20 sec
+// ===== COPY + CREATIVES (runs within timeout) =====
 
-    const detailRes = await fetch(`https://api.manus.ai/v2/task.detail?task_id=${taskId}`, {
-      headers: { 'x-manus-api-key': apiKey, 'Content-Type': 'application/json' }
-    })
+async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropicKey: string, workflowId: string, includeCreatives: boolean, research: any) {
+  // Pobierz dane
+  const [brandingRes, productsRes, workflowRes] = await Promise.all([
+    supabase.from('workflow_branding').select('type, value').eq('workflow_id', workflowId).eq('type', 'brand_info'),
+    supabase.from('workflow_products').select('name, description, image_url').eq('workflow_id', workflowId),
+    supabase.from('workflows').select('id, offer_name, landing_page_url').eq('id', workflowId).single()
+  ])
 
-    const detailData = await detailRes.json()
-    if (!detailRes.ok || !detailData.ok) continue
+  const brandInfo = brandingRes.data?.[0]
+  let brandVal: any = {}
+  if (brandInfo?.value) {
+    brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value
+  }
+  const product = productsRes.data?.[0] || {} as any
+  const landingUrl = workflowRes.data?.landing_page_url || ''
+  const productName = product.name || brandVal.name || ''
+  const productDescription = product.description || brandVal.description || ''
 
-    const task = detailData.task || detailData
-    const isFinished = ['completed', 'done', 'stopped'].includes(task.status)
-    if (!isFinished) continue
-
-    // Get messages
-    const msgRes = await fetch(`https://api.manus.ai/v2/task.listMessages?task_id=${taskId}&limit=50`, {
-      headers: { 'x-manus-api-key': apiKey, 'Content-Type': 'application/json' }
-    })
-    const msgData = await msgRes.json()
-    const messages = msgData.messages || msgData.data || []
-
-    // Find JSON in assistant messages
-    let result = ''
-    for (const msg of [...messages].reverse()) {
-      if (msg.type !== 'assistant_message') continue
-      const content = typeof msg.assistant_message === 'string'
-        ? msg.assistant_message
-        : msg.assistant_message?.content || msg.assistant_message?.text || ''
-      if (content.includes('{') && (content.includes('"competitors"') || content.includes('"gaps"'))) {
-        result = content
-        break
-      }
-    }
-
-    // Parse JSON
-    let researchData = null
-    try {
-      let depth = 0, start = -1, end = -1
-      for (let i = 0; i < result.length; i++) {
-        if (result[i] === '{') { if (depth === 0) start = i; depth++ }
-        else if (result[i] === '}') { depth--; if (depth === 0 && start !== -1) { end = i + 1; break } }
-      }
-      if (start !== -1 && end !== -1) {
-        researchData = JSON.parse(result.substring(start, end))
-      }
-    } catch (e) {
-      console.error('[campaign-batch] Research JSON parse error:', e.message)
-    }
-
-    // Save
-    await upsertAds(supabase, workflowId, {
-      competitor_research: researchData || { raw_result: result, parse_error: true },
-      competitor_research_at: new Date().toISOString(),
-      competitor_research_status: 'completed'
-    })
-
-    return researchData
+  // COPY
+  await upsertAds(supabase, workflowId, { campaign_pipeline_step: 'copy' })
+  try {
+    await generateCopy(anthropicKey, supabase, workflowId, brandVal, product, research, landingUrl)
+  } catch (err) {
+    console.error('[campaign] Copy failed:', err.message)
   }
 
-  throw new Error('Manus research timeout (15 min)')
+  // CREATIVES
+  if (includeCreatives) {
+    await upsertAds(supabase, workflowId, { campaign_pipeline_step: 'creatives' })
+    try {
+      await generateCreatives(supabase, supabaseUrl, workflowId, productName, productDescription, product.image_url)
+    } catch (err) {
+      console.error('[campaign] Creatives failed:', err.message)
+    }
+  }
+
+  // DONE
+  await upsertAds(supabase, workflowId, {
+    campaign_pipeline_status: 'completed',
+    campaign_pipeline_step: 'done',
+    campaign_pipeline_completed_at: new Date().toISOString()
+  })
+  console.log('[campaign] Pipeline completed!')
 }
 
 // ===== CLAUDE COPY =====
@@ -256,11 +237,7 @@ async function generateCopy(apiKey: string, supabase: any, workflowId: string, b
   const brandName = brand.name || product.name || ''
   const productName = product.name || brand.name || ''
 
-  let prompt = `MARKA: ${brandName}
-TAGLINE: ${brand.tagline || ''}
-OPIS: ${brand.description || product.description || ''}
-PRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}
-LANDING PAGE: ${landingUrl || 'brak'}`
+  let prompt = `MARKA: ${brandName}\nTAGLINE: ${brand.tagline || ''}\nOPIS: ${brand.description || product.description || ''}\nPRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}\nLANDING PAGE: ${landingUrl || 'brak'}`
 
   if (research && !research.parse_error && research.competitors?.length) {
     const topAds = research.competitors.slice(0, 5)
@@ -272,13 +249,7 @@ LANDING PAGE: ${landingUrl || 'brak'}`
     if (research.recommendations?.length) prompt += `REKOMENDACJE:\n${research.recommendations.map((r: string) => '- ' + r).join('\n')}\n`
   }
 
-  prompt += `\n===== ZADANIE =====
-Wygeneruj 5 wersji copy Meta Ads. Dobierz kąty na podstawie LUK konkurencji.
-Primary Text: hook w pierwszych 125 znakach. Headline: 27-40 znaków. Description: 25-30 znaków.
-NIE podawaj cen. CTA: "Sprawdź szczegóły" / "Zobacz opinie". Ton: bezpośredni, ciepły, polski rynek.
-
-JSON: {"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"..."}]}
-Zwróć TYLKO JSON.`
+  prompt += `\n===== ZADANIE =====\nWygeneruj 5 wersji copy Meta Ads. Dobierz kąty na podstawie LUK konkurencji.\nPrimary Text: hook w pierwszych 125 znakach. Headline: 27-40 znaków. Description: 25-30 znaków.\nNIE podawaj cen. CTA: "Sprawdź szczegóły" / "Zobacz opinie". Ton: bezpośredni, ciepły, polski rynek.\n\nJSON: {"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"..."}]}\nZwróć TYLKO JSON.`
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -296,25 +267,12 @@ Zwróć TYLKO JSON.`
   const data = await response.json()
   const content = data.content?.[0]?.text || ''
 
-  // Parse JSON
-  let adCopies = null
-  let depth = 0, start = -1, end = -1
-  for (let i = 0; i < content.length; i++) {
-    if (content[i] === '{') { if (depth === 0) start = i; depth++ }
-    else if (content[i] === '}') { depth--; if (depth === 0 && start !== -1) { end = i + 1; break } }
-  }
-  if (start !== -1 && end !== -1) {
-    adCopies = JSON.parse(content.substring(start, end))
-  } else {
-    throw new Error('No JSON in Claude response')
-  }
+  const jsonMatch = content.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON in Claude response')
+  const adCopies = JSON.parse(jsonMatch[0])
 
-  await upsertAds(supabase, workflowId, {
-    ad_copies: adCopies,
-    ad_copies_generated_at: new Date().toISOString()
-  })
-
-  console.log(`[campaign-batch] Copy generated: ${adCopies.versions?.length || 0} versions`)
+  await upsertAds(supabase, workflowId, { ad_copies: adCopies, ad_copies_generated_at: new Date().toISOString() })
+  console.log(`[campaign] Copy: ${adCopies.versions?.length || 0} versions`)
 }
 
 // ===== GEMINI CREATIVES =====
@@ -345,19 +303,14 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
       const data = await res.json()
       if (data?.images?.[0]?.url) {
         creatives.push({ type: ct.type, url: data.images[0].url, generated_at: new Date().toISOString() })
-        console.log(`[campaign-batch] Creative ${ct.type} done`)
       }
     } catch (err) {
-      console.error(`[campaign-batch] Creative ${ct.type} failed:`, err.message)
+      console.error(`[campaign] Creative ${ct.type} failed:`, err.message)
     }
   }
 
   if (creatives.length > 0) {
-    await upsertAds(supabase, workflowId, {
-      ad_creatives: creatives,
-      ad_creatives_generated_at: new Date().toISOString()
-    })
+    await upsertAds(supabase, workflowId, { ad_creatives: creatives, ad_creatives_generated_at: new Date().toISOString() })
   }
-
-  console.log(`[campaign-batch] ${creatives.length} creatives generated`)
+  console.log(`[campaign] ${creatives.length} creatives`)
 }

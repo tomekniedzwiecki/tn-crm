@@ -9965,9 +9965,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     if (fresh.campaign_pipeline_status !== 'running') {
                         clearInterval(bgPipelinePollInterval);
                         bgPipelinePollInterval = null;
+                        pipelineRunning = false;
 
                         if (fresh.campaign_pipeline_status === 'completed') {
                             showToast('Materiały kampanii wygenerowane w tle!', 'success');
+                        } else if (fresh.campaign_pipeline_status === 'failed') {
+                            showToast('Pipeline zakończony z błędem', 'error');
                         }
                         loadKampaniaTab();
                         return;
