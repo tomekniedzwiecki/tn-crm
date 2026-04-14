@@ -76,46 +76,21 @@ serve(async (req) => {
     const instruction = `
 Przeszukaj Facebook Ad Library (https://www.facebook.com/ads/library/) dla reklam w Polsce.
 
-Szukaj reklam dla produktów podobnych do: "${productName || category}"
-${productDescription ? `Opis produktu: ${productDescription}` : ''}
-${brandDescription ? `Opis marki: ${brandDescription}` : ''}
+Produkt: "${productName || category}"
+${productDescription ? `Opis: ${productDescription}` : ''}
 
 ZADANIE:
-1. Wejdź na Facebook Ad Library
-2. Ustaw filtr: Kraj = Polska, Kategoria = Wszystkie reklamy
-3. Wyszukaj frazy związane z produktem (nazwa produktu, kategoria, synonimy)
-4. Znajdź 10-15 AKTYWNYCH reklam konkurencji
-5. Dla każdej reklamy zanotuj: tekst reklamy, typ formatu (obraz/karuzela/video), główny hook
+1. Wejdź na facebook.com/ads/library
+2. Filtr: Kraj=Polska, Kategoria=Wszystkie
+3. Szukaj fraz: nazwa produktu, kategoria, synonimy
+4. Zbierz 5-8 aktywnych reklam konkurencji (nie więcej)
 
-ZWRÓĆ WYNIK W FORMACIE JSON:
-{
-  "category": "${category}",
-  "search_queries": ["fraza1", "fraza2", "fraza3"],
-  "competitors": [
-    {
-      "brand": "nazwa marki",
-      "ad_text": "pełny tekst reklamy (primary text)",
-      "headline": "nagłówek reklamy",
-      "format": "image|carousel|video",
-      "angle": "pain_point|transformation|social_proof|urgency|curiosity",
-      "hook_type": "question|number|contrast|testimonial|myth_busting",
-      "estimated_duration": "active since X days/weeks"
-    }
-  ],
-  "common_angles": ["najczęściej używane kąty reklamowe"],
-  "common_hooks": ["najczęściej używane typy hooków"],
-  "gaps": ["Czego NIE mówi konkurencja - luki do wykorzystania"],
-  "recommendations": [
-    "Konkretna rekomendacja dla ${brandName || 'tej marki'} - jaki kąt wybrać i dlaczego",
-    "Jaki hook będzie najskuteczniejszy na tle konkurencji"
-  ]
-}
+Na końcu zwróć wynik jako JSON. Struktura:
 
-WAŻNE:
-- Szukaj TYLKO aktywnych reklam (nie archiwalnych)
-- Skup się na polskim rynku
-- Jeśli nie znajdziesz dokładnych reklam, szukaj w szerszej kategorii
-- Zwróć TYLKO JSON, bez dodatkowego tekstu
+{"category":"${category}","competitors":[{"brand":"nazwa","ad_text":"tekst reklamy","headline":"nagłówek","format":"image lub video","angle":"pain_point lub transformation lub social_proof lub urgency lub curiosity"}],"gaps":["czego nie mówi konkurencja"],"recommendations":["rekomendacja dla ${brandName || 'marki'}"]}
+
+Skróć ad_text do max 200 znaków jeśli jest dłuższy.
+Zwróć TYLKO JSON bez dodatkowego tekstu.
 `.trim()
 
     // Utwórz task w Manus
