@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041410';
+        const ADMIN_APP_VERSION = '2026041411';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -4941,7 +4941,19 @@
                 // Nav check requires ALL 4 granted: ad account + fanpage + instagram + phone (or admin marked as ready)
                 toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted && !!adsNavStatus?.phone_verified));
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
-                toggle('nav-check-content', !!adsNavStatus?.content_shared_with_client);
+                // Content: żółty gdy wygenerowane ale nie udostępnione, zielony gdy udostępnione
+                const contentNav = document.getElementById('nav-check-content');
+                if (contentNav) {
+                    if (adsNavStatus?.content_shared_with_client) {
+                        contentNav.classList.remove('hidden');
+                        contentNav.innerHTML = '<i class="ph-fill ph-check-circle text-emerald-400 text-sm" title="Udostępnione klientowi"></i>';
+                    } else if (adsNavStatus?.content_ready) {
+                        contentNav.classList.remove('hidden');
+                        contentNav.innerHTML = '<i class="ph-fill ph-check-circle text-amber-400 text-sm" title="Gotowe do udostępnienia"></i>';
+                    } else {
+                        contentNav.classList.add('hidden');
+                    }
+                }
                 toggle('nav-check-kampania', !!adsNavStatus?.campaign_launched);
                 toggle('nav-check-raport', !!adsNavStatus?.report_sent);
                 toggle('nav-check-skalowanie', !!adsNavStatus?.scaling_started);
@@ -9864,10 +9876,17 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const overallStatus = document.getElementById('pipeline-overall-status');
             const navCheck = document.getElementById('nav-check-content');
 
-            // Checkbox nawigacji — zielony dopiero po udostępnieniu klientowi
+            // Checkbox nawigacji — żółty gdy wygenerowane, zielony gdy udostępnione
             if (navCheck) {
-                if (adsData?.content_shared_with_client) navCheck.classList.remove('hidden');
-                else navCheck.classList.add('hidden');
+                if (adsData?.content_shared_with_client) {
+                    navCheck.classList.remove('hidden');
+                    navCheck.innerHTML = '<i class="ph-fill ph-check-circle text-emerald-400 text-sm" title="Udostępnione klientowi"></i>';
+                } else if (adsData?.content_ready) {
+                    navCheck.classList.remove('hidden');
+                    navCheck.innerHTML = '<i class="ph-fill ph-check-circle text-amber-400 text-sm" title="Gotowe do udostępnienia"></i>';
+                } else {
+                    navCheck.classList.add('hidden');
+                }
             }
 
             if (bgPipelineRunning && !pipelineRunning) {

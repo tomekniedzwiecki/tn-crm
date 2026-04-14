@@ -1851,12 +1851,12 @@
                 </div>
 
                 <!-- Account Box -->
-                <div id="dash-etap3-box-account" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 180px;" onclick="switchToDashTab('takedrop')">
+                <div id="dash-etap3-box-account" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 200px;" onclick="switchToDashTab('takedrop')">
                     <div id="dash-etap3-account-content" class="h-full"></div>
                 </div>
 
                 <!-- Landing/Strona Box -->
-                <div id="dash-etap3-box-landing" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 6; min-height: 180px;" onclick="switchToDashTab('landing')">
+                <div id="dash-etap3-box-landing" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 8; min-height: 200px;" onclick="switchToDashTab('landing')">
                     <div id="dash-etap3-landing-content" class="h-full"></div>
                 </div>
 
@@ -5497,19 +5497,27 @@
                 `;
             } else {
                 box.classList.remove('bento-action');
+                const email = takeDropData?.account_email || '';
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.08] via-transparent to-cyan-500/[0.04] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
                             <span class="text-[#666] text-xs uppercase tracking-wide">Konto TakeDrop</span>
                             <span class="flex items-center gap-1 text-emerald-500 text-xs">
                                 <i class="ph-fill ph-check-circle"></i>
                                 Aktywne
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">Konto gotowe!</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">TakeDrop jest skonfigurowany</p>
+                        <div class="relative flex-1 flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 ring-1 ring-emerald-500/30 flex items-center justify-center shadow-lg">
+                                <i class="ph-fill ph-storefront text-3xl text-emerald-400"></i>
+                            </div>
+                            <h3 class="text-white text-base font-semibold mt-3">TakeDrop</h3>
+                            ${email ? `
+                                <div class="mt-3 px-3 py-1.5 rounded-md bg-[#0a0a0a] border border-[#222] text-[11px] font-mono text-[#888] truncate max-w-full">
+                                    ${email}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -5541,19 +5549,40 @@
                 `;
             } else {
                 box.classList.remove('bento-action');
+                const rawDomain = takeDropData?.domain || '';
+                const shortUrl = rawDomain.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'twojsklep.pl';
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Strona</span>
-                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
-                                <i class="ph-fill ph-check-circle"></i>
-                                Gotowa
+                    <div class="h-full p-6 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.07] via-transparent to-emerald-500/[0.04] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Strona sklepu</span>
+                            <span class="flex items-center gap-1.5 text-emerald-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Online
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">Strona gotowa!</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Sklep jest online</p>
+                        <div class="relative flex-1 rounded-lg bg-[#0a0a0a] border border-[#222] overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 px-3 py-2 border-b border-[#1e1e1e]">
+                                <div class="flex gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-[#333]"></span>
+                                    <span class="w-2 h-2 rounded-full bg-[#333]"></span>
+                                    <span class="w-2 h-2 rounded-full bg-[#333]"></span>
+                                </div>
+                                <div class="flex-1 flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0f0f0f] border border-[#1e1e1e]">
+                                    <i class="ph ph-lock-key text-[10px] text-emerald-500"></i>
+                                    <span class="text-[10px] text-[#999] font-mono truncate">${shortUrl}</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 p-4 flex items-center justify-center bg-gradient-to-br from-[#0c0c0c] to-[#080808]">
+                                <div class="text-center">
+                                    <i class="ph ph-globe-hemisphere-west text-3xl text-cyan-500/60"></i>
+                                    <p class="text-[#666] text-xs mt-2">Sklep działa poprawnie</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="relative mt-3 flex items-center justify-between text-[11px] text-[#666]">
+                            <span>Strona sprzedażowa</span>
+                            <span class="text-white/80 flex items-center gap-1">Otwórz <i class="ph ph-arrow-square-out"></i></span>
                         </div>
                     </div>
                 `;
@@ -5572,18 +5601,27 @@
                 // Stan 3: Dokumenty gotowe
                 box.classList.remove('bento-action');
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty</span>
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.06] via-transparent to-transparent pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Dokumenty prawne</span>
                             <span class="flex items-center gap-1 text-emerald-500 text-xs">
                                 <i class="ph-fill ph-check-circle"></i>
                                 Gotowe
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph-fill ph-check-circle text-5xl text-emerald-500 mb-4"></i>
-                            <h3 class="text-white text-lg font-medium">Dokumenty gotowe!</h3>
-                            <p class="text-[#666] text-sm text-center mt-2">Regulamin i polityki są dostępne</p>
+                        <div class="relative flex-1 flex flex-col justify-center gap-1.5">
+                            ${[
+                                {icon: 'ph-scroll', label: 'Regulamin'},
+                                {icon: 'ph-shield-check', label: 'Polityka prywatności'},
+                                {icon: 'ph-arrow-u-up-left', label: 'Polityka zwrotów'}
+                            ].map(d => `
+                                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#0e0e0e] border border-[#1e1e1e]">
+                                    <i class="ph ${d.icon} text-emerald-500/80 text-sm"></i>
+                                    <span class="text-[12px] text-[#bbb] flex-1 truncate">${d.label}</span>
+                                    <i class="ph-fill ph-check-circle text-emerald-500 text-xs"></i>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `;
