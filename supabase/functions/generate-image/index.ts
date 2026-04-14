@@ -137,7 +137,10 @@ ${prompt}`
           parts: parts
         }],
         generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE']
+          responseModalities: ['TEXT', 'IMAGE'],
+          imageConfig: {
+            aspectRatio: '1:1'
+          }
         }
       })
     })
