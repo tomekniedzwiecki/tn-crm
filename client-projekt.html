@@ -10252,6 +10252,15 @@
                     });
                     console.log('Automation trigger fired: budget_funded');
 
+                    // Auto-start campaign pipeline in background
+                    supabaseClient.functions.invoke('generate-campaign-batch', {
+                        body: { workflow_id: workflow.id, include_creatives: true }
+                    }).then(() => {
+                        console.log('Campaign pipeline started in background');
+                    }).catch(err => {
+                        console.error('Campaign pipeline trigger error:', err);
+                    });
+
                     // Email to client (final confirmation)
                     await supabaseClient.functions.invoke('automation-trigger', {
                         body: {

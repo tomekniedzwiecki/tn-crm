@@ -9806,35 +9806,51 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 if (navCheck) navCheck.classList.add('hidden');
             }
 
-            // === Pokaż wyniki jeśli są / pokaż start button jeśli nie ma ===
+            // === Pipeline status ===
             const hasResearch = adsData?.competitor_research && !adsData.competitor_research.parse_error;
             const hasCopies = adsData?.ad_copies?.versions?.length;
             const hasCreatives = adsData?.ad_creatives?.length;
             const hasAny = hasResearch || hasCopies || hasCreatives;
+            const bgPipelineRunning = adsData?.campaign_pipeline_status === 'running';
 
             const startEl = document.getElementById('pipeline-start');
             const progressEl = document.getElementById('pipeline-progress');
+            const overallStatus = document.getElementById('pipeline-overall-status');
 
-            // Zawsze pokaż start (do ponownego generowania), chyba że pipeline jest w toku
-            if (startEl && !pipelineRunning) {
-                startEl.classList.remove('hidden');
-                // Zmień tekst buttona jeśli już są wyniki
+            if (bgPipelineRunning && !pipelineRunning) {
+                // Pipeline działa w tle — pokaż progress i polluj
+                startEl?.classList.add('hidden');
+                progressEl?.classList.remove('hidden');
+
+                const step = adsData?.campaign_pipeline_step || 'research';
+                const steps = ['research', 'copy', 'creatives'];
+                const stepIdx = steps.indexOf(step);
+                steps.forEach((s, i) => {
+                    if (i < stepIdx) setPipelineStep(s, 'done', 'Gotowe');
+                    else if (i === stepIdx) setPipelineStep(s, 'active', 'Generowanie w tle...');
+                    else setPipelineStep(s, 'waiting', 'Oczekuje...');
+                });
+                if (overallStatus) {
+                    overallStatus.textContent = 'Generowanie w tle...';
+                    overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300';
+                }
+
+                // Poll co 10 sek aż się skończy
+                startBackgroundPipelinePolling();
+            } else if (!pipelineRunning) {
+                // Pokaż start button
+                startEl?.classList.remove('hidden');
+                progressEl?.classList.add('hidden');
                 const btn = document.getElementById('btn-run-pipeline');
                 if (btn && hasAny) {
                     btn.innerHTML = '<i class="ph ph-arrows-clockwise text-lg"></i> Wygeneruj ponownie';
                 }
             }
-            if (progressEl && !pipelineRunning) progressEl.classList.add('hidden');
 
             // Renderuj istniejące wyniki
             if (hasResearch) renderResearchResults(adsData.competitor_research);
             if (hasCopies) renderCopiesResults(adsData.ad_copies);
             if (hasCreatives) renderCreativesResults(adsData.ad_creatives);
-
-            // Jeśli research jest w toku (np. po refreshu strony) — wznów polling
-            if (adsData?.competitor_research_status === 'pending' && adsData?.competitor_research_task_id) {
-                startResearchPolling();
-            }
         }
 
         // ---- PIPELINE: RESEARCH → COPY → CREATIVES ----
@@ -9892,153 +9908,95 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (pipelineRunning) return;
             pipelineRunning = true;
 
-            // Zawsze pobierz świeże dane z bazy przed startem
-            const { data: freshAds } = await supabaseClient
-                .from('workflow_ads')
-                .select('*')
-                .eq('workflow_id', workflow.id)
-                .maybeSingle();
-            if (freshAds) adsData = freshAds;
-
             const includeCreatives = document.getElementById('pipeline-include-creatives')?.checked;
 
             // Pokaż progress, schowaj start
             document.getElementById('pipeline-start')?.classList.add('hidden');
-            const progressEl = document.getElementById('pipeline-progress');
-            progressEl?.classList.remove('hidden');
+            document.getElementById('pipeline-progress')?.classList.remove('hidden');
 
-            // Ustaw kreacje na skipped jeśli odznaczone
+            const overallStatus = document.getElementById('pipeline-overall-status');
+            if (overallStatus) {
+                overallStatus.textContent = 'Uruchamiam...';
+                overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300';
+            }
+
             if (!includeCreatives) {
                 setPipelineStep('creatives', 'skipped', 'Pominięte');
             }
 
-            const overallStatus = document.getElementById('pipeline-overall-status');
+            setPipelineStep('research', 'active', 'Uruchamiam pipeline w tle...');
 
             try {
-                // ===== STEP 1: RESEARCH =====
-                const existingResearch = adsData?.competitor_research;
-                const hasValidResearch = existingResearch && !existingResearch.parse_error && existingResearch.competitors?.length;
+                // Odpala edge function w tle — nie czekamy na wynik
+                const { error } = await supabaseClient.functions.invoke('generate-campaign-batch', {
+                    body: { workflow_id: workflow.id, include_creatives: !!includeCreatives }
+                });
 
-                if (hasValidResearch) {
-                    // Research już jest — pomijamy Manusa, oszczędzamy 5 min
-                    setPipelineStep('research', 'done', `Używam istniejącego (${existingResearch.competitors.length} reklam)`);
-                    renderResearchResults(existingResearch);
-                } else {
-                    setPipelineStep('research', 'active', 'Manus przeszukuje Facebook Ad Library...');
+                if (error) throw error;
 
-                    try {
-                        const { data, error } = await supabaseClient.functions.invoke('manus-research-ads', {
-                            body: { workflow_id: workflow.id }
-                        });
-                        if (error) throw error;
-                        if (!data?.success) throw new Error(data?.error || 'Błąd Manus');
+                showToast('Pipeline uruchomiony w tle! Wyniki pojawią się automatycznie.', 'success');
 
-                        if (!adsData) adsData = {};
-                        adsData.competitor_research_task_id = data.task_id;
-                        adsData.competitor_research_status = 'pending';
-
-                        // Poll aż research się skończy (max 10 min)
-                        setPipelineStep('research', 'active', 'Manus analizuje... (2-5 min)');
-                        const researchData = await pollResearchUntilDone(data.task_id, 600000);
-
-                        if (researchData && !researchData.parse_error) {
-                            setPipelineStep('research', 'done', `Znaleziono ${researchData.competitors?.length || 0} reklam`);
-                            renderResearchResults(researchData);
-                        } else {
-                            setPipelineStep('research', 'error', 'Nie udało się pobrać wyników');
-                        }
-                    } catch (err) {
-                        console.error('Pipeline research error:', err);
-                        setPipelineStep('research', 'error', err.message);
-                    }
-                }
-
-                // ===== STEP 2: COPY =====
-                setPipelineStep('copy', 'active', 'Claude generuje copy reklamowe...');
-
-                try {
-                    await generateAdCopies();
-                    setPipelineStep('copy', 'done', `${adsData?.ad_copies?.versions?.length || 0} wersji wygenerowanych`);
-                } catch (err) {
-                    console.error('Pipeline copy error:', err);
-                    setPipelineStep('copy', 'error', err.message);
-                }
-
-                // ===== STEP 3: CREATIVES =====
-                if (includeCreatives) {
-                    setPipelineStep('creatives', 'active', 'Generuję zdjęcia reklamowe...');
-
-                    try {
-                        await generateAdCreatives((done, total) => {
-                            setPipelineStep('creatives', 'active', `${done}/${total} zdjęć...`);
-                        });
-                        setPipelineStep('creatives', 'done', `${adsData?.ad_creatives?.length || 0} kreacji`);
-                    } catch (err) {
-                        console.error('Pipeline creatives error:', err);
-                        setPipelineStep('creatives', 'error', err.message);
-                    }
-                }
-
-                // Pipeline done
-                if (overallStatus) {
-                    overallStatus.textContent = 'Gotowe!';
-                    overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
-                }
-                showToast('Pipeline kampanii zakończony!', 'success');
+                // Polluj status z bazy
+                startBackgroundPipelinePolling();
 
             } catch (err) {
-                console.error('Pipeline error:', err);
-                if (overallStatus) {
-                    overallStatus.textContent = 'Błąd';
-                    overallStatus.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300';
-                }
-            } finally {
+                console.error('Pipeline start error:', err);
+                showToast('Błąd uruchamiania pipeline: ' + err.message, 'error');
                 pipelineRunning = false;
-                // Pokaż start button ponownie (do re-run)
-                const startEl = document.getElementById('pipeline-start');
-                if (startEl) {
-                    startEl.classList.remove('hidden');
-                    const btn = document.getElementById('btn-run-pipeline');
-                    if (btn) btn.innerHTML = '<i class="ph ph-arrows-clockwise text-lg"></i> Wygeneruj ponownie';
-                }
+                document.getElementById('pipeline-start')?.classList.remove('hidden');
+                document.getElementById('pipeline-progress')?.classList.add('hidden');
             }
         }
 
-        // Poll research do zakończenia — zwraca researchData lub null
-        function pollResearchUntilDone(taskId, timeoutMs) {
-            return new Promise((resolve) => {
-                const startTime = Date.now();
-                const interval = setInterval(async () => {
-                    if (Date.now() - startTime > timeoutMs) {
-                        clearInterval(interval);
-                        resolve(null);
+        // Poll background pipeline status
+        let bgPipelinePollInterval = null;
+        function startBackgroundPipelinePolling() {
+            if (bgPipelinePollInterval) return;
+            bgPipelinePollInterval = setInterval(async () => {
+                try {
+                    const { data: fresh } = await supabaseClient
+                        .from('workflow_ads')
+                        .select('*')
+                        .eq('workflow_id', workflow.id)
+                        .maybeSingle();
+                    if (!fresh) return;
+                    adsData = fresh;
+
+                    if (fresh.campaign_pipeline_status !== 'running') {
+                        clearInterval(bgPipelinePollInterval);
+                        bgPipelinePollInterval = null;
+
+                        if (fresh.campaign_pipeline_status === 'completed') {
+                            showToast('Materiały kampanii wygenerowane w tle!', 'success');
+                        }
+                        loadKampaniaTab();
                         return;
                     }
 
-                    try {
-                        const { data } = await supabaseClient.functions.invoke('manus-research-result', {
-                            body: { task_id: taskId, workflow_id: workflow.id }
-                        });
+                    // Update step indicator
+                    const step = fresh.campaign_pipeline_step || 'research';
+                    const steps = ['research', 'copy', 'creatives'];
+                    const stepIdx = steps.indexOf(step);
+                    steps.forEach((s, i) => {
+                        if (i < stepIdx) setPipelineStep(s, 'done', 'Gotowe');
+                        else if (i === stepIdx) setPipelineStep(s, 'active', 'Generowanie w tle...');
+                        else setPipelineStep(s, 'waiting', 'Oczekuje...');
+                    });
 
-                        if (data?.status === 'completed') {
-                            clearInterval(interval);
-                            // Refresh adsData
-                            const { data: fresh } = await supabaseClient
-                                .from('workflow_ads')
-                                .select('*')
-                                .eq('workflow_id', workflow.id)
-                                .maybeSingle();
-                            if (fresh) adsData = fresh;
-                            resolve(data.research_data || adsData?.competitor_research);
-                        } else if (data?.status === 'expired') {
-                            clearInterval(interval);
-                            resolve(null);
-                        }
-                    } catch (err) {
-                        console.error('Poll error:', err);
+                    // Renderuj częściowe wyniki w miarę jak się pojawiają
+                    if (fresh.competitor_research && !fresh.competitor_research.parse_error) {
+                        renderResearchResults(fresh.competitor_research);
                     }
-                }, 15000); // co 15 sek
-            });
+                    if (fresh.ad_copies?.versions?.length) {
+                        renderCopiesResults(fresh.ad_copies);
+                    }
+                    if (fresh.ad_creatives?.length) {
+                        renderCreativesResults(fresh.ad_creatives);
+                    }
+                } catch (err) {
+                    console.error('BG pipeline poll error:', err);
+                }
+            }, 10000); // co 10 sek
         }
 
         // Zachowaj stary polling na wypadek refresha strony
