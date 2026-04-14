@@ -66,8 +66,8 @@ serve(async (req) => {
     const existingResearch = current?.competitor_research
     const hasValidResearch = existingResearch && !existingResearch.parse_error && existingResearch.competitors?.length
 
-    if (hasValidResearch) {
-      // Research jest → od razu copy + creatives (mieści się w timeout)
+    if (hasValidResearch || continue_pipeline) {
+      // Research jest (lub cron kontynuuje po nieudanym research) → copy + creatives
       await upsertAds(supabase, workflow_id, {
         campaign_pipeline_status: 'running',
         campaign_pipeline_started_at: new Date().toISOString(),
@@ -75,7 +75,7 @@ serve(async (req) => {
         campaign_pipeline_include_creatives: include_creatives
       })
 
-      await runCopyAndCreatives(supabase, SUPABASE_URL, ANTHROPIC_API_KEY, workflow_id, include_creatives, existingResearch)
+      await runCopyAndCreatives(supabase, SUPABASE_URL, ANTHROPIC_API_KEY, workflow_id, include_creatives, hasValidResearch ? existingResearch : null)
 
       return new Response(
         JSON.stringify({ success: true, status: 'completed' }),
@@ -287,28 +287,29 @@ async function generateCreatives(supabase: any, supabaseUrl: string, workflowId:
     { type: 'bundle', prompt: `Complete product set of ${productName} with accessories neatly arranged. Premium unboxing aesthetic. Studio photography, e-commerce style. No text, no captions, no watermarks.` }
   ]
 
-  const creatives: any[] = []
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  for (const ct of types) {
-    try {
-      const body: any = { prompt: ct.prompt, count: 1, workflow_id: workflowId, type: `ad_${ct.type}` }
-      if (refImageUrl) body.reference_images = [{ url: refImageUrl, type: 'product' }]
+  // Generuj równolegle żeby zmieścić się w timeout (5x ~20s = ~20-30s zamiast ~100s)
+  const results = await Promise.allSettled(types.map(async (ct) => {
+    const body: any = { prompt: ct.prompt, count: 1, workflow_id: workflowId, type: `ad_${ct.type}` }
+    if (refImageUrl) body.reference_images = [{ url: refImageUrl, type: 'product' }]
 
-      const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
+    const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
 
-      const data = await res.json()
-      if (data?.images?.[0]?.url) {
-        creatives.push({ type: ct.type, url: data.images[0].url, generated_at: new Date().toISOString() })
-      }
-    } catch (err) {
-      console.error(`[campaign] Creative ${ct.type} failed:`, err.message)
+    const data = await res.json()
+    if (data?.images?.[0]?.url) {
+      return { type: ct.type, url: data.images[0].url, generated_at: new Date().toISOString() }
     }
-  }
+    return null
+  }))
+
+  const creatives = results
+    .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value !== null)
+    .map(r => r.value)
 
   if (creatives.length > 0) {
     await upsertAds(supabase, workflowId, { ad_creatives: creatives, ad_creatives_generated_at: new Date().toISOString() })
