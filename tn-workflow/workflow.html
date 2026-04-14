@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041411';
+        const ADMIN_APP_VERSION = '2026041412';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2478,15 +2478,9 @@
                             <div id="copies-versions" class="space-y-3"></div>
                         </div>
 
-                        <!-- ========== WYNIKI: KREACJE ========== -->
-                        <div id="creatives-results" class="hidden mb-6">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
-                                    <i class="ph ph-image text-pink-400"></i>
-                                    Kreacje graficzne
-                                </h4>
-                            </div>
-                            <div id="creatives-grid" class="grid grid-cols-3 gap-3"></div>
+                        <!-- Kreacje graficzne są teraz wyświetlane w kartach copy — ta sekcja ukryta -->
+                        <div id="creatives-results" class="hidden">
+                            <div id="creatives-grid"></div>
                         </div>
 
                         <!-- ========== UDOSTĘPNIENIE KLIENTOWI ========== -->
@@ -10279,39 +10273,103 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 return;
             }
 
+            // Kolumnowy layout do wklejania w Meta Ads Manager — 5 kolumn obok siebie
+            const creatives = Array.isArray(adsData?.ad_creatives) ? adsData.ad_creatives : [];
+            versionsEl.className = 'flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory';
             versionsEl.innerHTML = versions.map((v, i) => {
                 const color = angleColors[v.angle] || 'zinc';
+                const creative = creatives[i];
+                const imgUrl = creative?.url;
+                const safePrimary = escapeHtml(v.primary_text || '');
+                const safeHeadline = escapeHtml(v.headline || '');
+                const safeDescription = escapeHtml(v.description || '');
+                const safeCta = escapeHtml(v.cta || '');
                 return `
-                <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
-                    <div class="flex items-center justify-between mb-3">
+                <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3 flex-shrink-0 w-[320px] snap-start flex flex-col gap-2">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] font-bold text-zinc-500">#${i + 1}</span>
-                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-${color}-500/20 text-${color}-300">${escapeHtml(v.angle || '')}</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-${color}-500/20 text-${color}-300 whitespace-nowrap">${escapeHtml(v.angle || '')}</span>
                         </div>
-                        <button onclick="copySingleAdCopy(${i})" class="text-[11px] text-zinc-500 hover:text-white flex items-center gap-1 transition-colors">
-                            <i class="ph ph-copy"></i> Kopiuj
+                        <button onclick="copySingleAdCopy(${i})" class="text-[10px] text-zinc-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 whitespace-nowrap">
+                            <i class="ph ph-copy"></i> Wszystko
                         </button>
                     </div>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="text-[10px] text-zinc-600 uppercase tracking-wider">Primary Text</label>
-                            <p class="text-[12px] text-zinc-300 mt-0.5">${escapeHtml(v.primary_text || '')}</p>
-                            <span class="text-[10px] text-zinc-600">${(v.primary_text || '').length} znaków</span>
+
+                    <!-- Grafika -->
+                    ${imgUrl ? `
+                    <div class="relative group rounded-lg overflow-hidden border border-white/5 bg-zinc-800">
+                        <img src="${escapeHtml(imgUrl)}" class="w-full aspect-square object-cover" loading="lazy">
+                        <button onclick="copyCreativeUrl(${i})" class="absolute top-2 right-2 text-[10px] px-2 py-1 rounded bg-black/60 backdrop-blur text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="ph ph-copy"></i> URL
+                        </button>
+                        <a href="${escapeHtml(imgUrl)}" download class="absolute bottom-2 right-2 text-[10px] px-2 py-1 rounded bg-black/60 backdrop-blur text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="ph ph-download-simple"></i> Pobierz
+                        </a>
+                    </div>` : `
+                    <div class="rounded-lg bg-zinc-800 aspect-square flex items-center justify-center">
+                        <i class="ph ph-image text-4xl text-zinc-600"></i>
+                    </div>`}
+
+                    <!-- Primary Text -->
+                    <div class="bg-zinc-800/40 rounded-lg p-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">Primary Text</label>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] text-zinc-600">${(v.primary_text || '').length}</span>
+                                <button onclick="copyAdField(${i}, 'primary_text')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                            </div>
                         </div>
-                        <div>
-                            <label class="text-[10px] text-zinc-600 uppercase tracking-wider">Headline</label>
-                            <p class="text-[12px] text-white font-medium mt-0.5">${escapeHtml(v.headline || '')}</p>
-                            <span class="text-[10px] text-zinc-600">${(v.headline || '').length} znaków</span>
-                        </div>
-                        <div>
-                            <label class="text-[10px] text-zinc-600 uppercase tracking-wider">Description</label>
-                            <p class="text-[12px] text-zinc-400 mt-0.5">${escapeHtml(v.description || '')}</p>
-                        </div>
-                        ${v.cta ? `<div class="pt-1"><span class="text-[11px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">${escapeHtml(v.cta)}</span></div>` : ''}
+                        <p class="text-[11px] text-zinc-200 leading-snug whitespace-pre-wrap">${safePrimary}</p>
                     </div>
+
+                    <!-- Headline -->
+                    <div class="bg-zinc-800/40 rounded-lg p-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">Headline</label>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] ${(v.headline || '').length > 40 ? 'text-amber-400' : 'text-zinc-600'}">${(v.headline || '').length}</span>
+                                <button onclick="copyAdField(${i}, 'headline')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                            </div>
+                        </div>
+                        <p class="text-[12px] text-white font-medium leading-snug">${safeHeadline}</p>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="bg-zinc-800/40 rounded-lg p-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">Description</label>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] text-zinc-600">${(v.description || '').length}</span>
+                                <button onclick="copyAdField(${i}, 'description')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-zinc-300 leading-snug">${safeDescription}</p>
+                    </div>
+
+                    <!-- CTA -->
+                    ${v.cta ? `
+                    <div class="bg-zinc-800/40 rounded-lg p-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">CTA</label>
+                            <button onclick="copyAdField(${i}, 'cta')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                        </div>
+                        <span class="inline-block text-[11px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">${safeCta}</span>
+                    </div>` : ''}
                 </div>`;
             }).join('');
         }
+
+        function copyAdField(index, field) {
+            const v = adsData?.ad_copies?.versions?.[index];
+            if (!v) return;
+            const text = v[field] || '';
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${field} skopiowany!`, 'success');
+            });
+        }
+        window.copyAdField = copyAdField;
 
         function copySingleAdCopy(index) {
             const copies = adsData?.ad_copies?.versions;
