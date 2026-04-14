@@ -10195,59 +10195,91 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         }
 
         function buildAdCopyPrompt(brand, product, research, landingUrl) {
-            let prompt = `Wygeneruj copy reklamowe Meta Ads w formacie JSON.
+            const brandName = brand.name || product.name || 'Nieznana marka';
+            const productName = product.name || brand.name || 'Nieznany produkt';
+            const description = brand.description || product.description || '';
 
-MARKA: ${brand.name || 'Nieznana'}
+            let prompt = `MARKA: ${brandName}
 TAGLINE: ${brand.tagline || ''}
-OPIS MARKI: ${brand.description || ''}
+OPIS: ${description}
+PRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}
+LANDING PAGE: ${landingUrl || 'brak'}`;
 
-PRODUKT: ${product.name || 'Nieznany'}
-OPIS PRODUKTU: ${product.description || ''}
-
-LANDING PAGE: ${landingUrl || 'brak'}
+            // Pełne dane z researchu — reklamy konkurencji + analiza
+            if (research && !research.parse_error) {
+                // Top 5 reklam konkurencji z pełnymi tekstami
+                if (research.competitors?.length) {
+                    const topAds = research.competitors.slice(0, 5);
+                    prompt += `\n\n===== REKLAMY KONKURENCJI (z Facebook Ad Library) =====
+Oto co AKTUALNIE puszcza konkurencja. Przeanalizuj ich hooki, kąty i słabości:
 `;
-
-            if (research && !research.parse_error && research.competitors?.length) {
-                prompt += `\nRESEARCH KONKURENCJI:
-Znalezione kąty: ${(research.common_angles || []).join(', ')}
-Luki konkurencji: ${(research.gaps || []).join('; ')}
-Rekomendacje: ${(research.recommendations || []).join('; ')}
+                    topAds.forEach((c, i) => {
+                        prompt += `\n[${i + 1}] ${c.brand || '?'} (${c.format || '?'}, kąt: ${c.angle || '?'})
+Headline: ${c.headline || '-'}
+Tekst: ${c.ad_text || '-'}
 `;
+                    });
+                }
+
+                // Analiza rynku
+                if (research.common_angles?.length) {
+                    prompt += `\nNAJCZĘSTSZE KĄTY KONKURENCJI:\n${research.common_angles.map(a => '- ' + a).join('\n')}`;
+                }
+                if (research.gaps?.length) {
+                    prompt += `\n\nLUKI KONKURENCJI (wykorzystaj to!):\n${research.gaps.map(g => '- ' + g).join('\n')}`;
+                }
+                if (research.recommendations?.length) {
+                    prompt += `\n\nREKOMENDACJE DLA ${brandName}:\n${research.recommendations.map(r => '- ' + r).join('\n')}`;
+                }
             }
 
-            prompt += `
+            prompt += `\n\n===== ZADANIE =====
+
+Na podstawie powyższych danych wygeneruj 5 wersji copy reklamowego.
+
+KROK 1 — WOW FACTOR:
+Jaki JEDEN fakt o ${productName} jest tak zaskakujący, że ktoś MUSI się zatrzymać?
+- Porównaj z konkurencją: co jest 2x/3x/10x lepsze?
+- Szukaj LICZB, nie przymiotników
+- Test kawiarnianego stolika: powiedziałbyś to znajomemu?
+- ZASADA: jeśli hook brzmi jak z folderu reklamowego — jest ZŁY
+
+KROK 2 — DOBIERZ KĄTY:
+NIE kopiuj kątów konkurencji. Na podstawie LUK i REKOMENDACJI dobierz 5 RÓŻNYCH kątów.
+Każdy kąt musi być naprawdę inny (nie parafrazuj tego samego).
+Możliwe kąty: Pain Point, Transformation, Social Proof, Curiosity, Myth-Busting, Technologia, Porównanie, Zdrowie, Czas, Pieniądze — ale wybierz te, które mają sens dla tego produktu.
+
+KROK 3 — NAPISZ COPY:
+Dla każdej wersji:
+- Primary Text: HOOK w pierwszych 125 znakach (99% NIE klika "See more"). Emocjonalna konkretność, nie generyki.
+- Headline: 27-40 znaków (>50 = -30% CTR)
+- Description: 25-30 znaków
+
 ZASADY:
-1. Znajdź WOW FACTOR — jeden fakt tak zaskakujący, że ktoś musi się zatrzymać
-2. Primary Text: max 125 znaków widocznych (hook MUSI być w pierwszych 125 znakach)
-3. Headline: 27-40 znaków (max 50)
-4. Description: 25-30 znaków
-5. Każda wersja = INNY kąt (nie parafrazuj)
-6. NIE podawaj cen
-7. Ton: bezpośredni ale ciepły, polski rynek
-8. CTA: "Sprawdź szczegóły", "Zobacz opinie", "Zamów z darmową dostawą" (nie "Kup teraz")
+- NIE podawaj cen (zmieniają się, reklamy zostają)
+- Ton: bezpośredni ale ciepły, polski rynek
+- CTA: "Sprawdź szczegóły", "Zobacz opinie", "Zamów z darmową dostawą" (NIE "Kup teraz")
+- Konkretne liczby > przymiotniki ("3 minuty" > "szybko")
+- Pokaż, nie mów: "Twoje dziecko pije wodę z kranu. Ile w niej chloru?" > "Czysta woda bez zanieczyszczeń"
 
 ZWRÓĆ JSON:
 {
-  "wow_factor": "opis WOW factor",
-  "target_group": "opis grupy docelowej",
-  "product_name": "nazwa produktu",
-  "landing_url": "${landingUrl}",
+  "wow_factor": "konkretny WOW factor z liczbami",
+  "target_group": "dla kogo (wiek, problemy, styl życia)",
+  "product_name": "${productName}",
+  "landing_url": "${landingUrl || ''}",
   "versions": [
     {
-      "angle": "Pain Point",
-      "primary_text": "tekst reklamowy",
-      "headline": "nagłówek",
-      "description": "opis",
-      "cta": "Sprawdź szczegóły"
-    },
-    { "angle": "Transformation", ... },
-    { "angle": "Social Proof", ... },
-    { "angle": "Curiosity", ... },
-    { "angle": "Health/Time/Money", ... }
+      "angle": "nazwa kąta",
+      "primary_text": "pełny tekst reklamowy (hook w pierwszych 125 znakach!)",
+      "headline": "nagłówek (27-40 znaków)",
+      "description": "opis (25-30 znaków)",
+      "cta": "tekst CTA"
+    }
   ]
 }
 
-Zwróć TYLKO JSON, bez dodatkowego tekstu.`;
+Zwróć TYLKO JSON.`;
 
             return prompt;
         }
