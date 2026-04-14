@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041413';
+        const APP_VERSION = '2026041414';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1806,19 +1806,19 @@
                     <p class="text-[#888] text-sm leading-relaxed">Przygotuj nagrania video według scenariuszy</p>
                 </div>
 
-                <!-- Wprowadzenie Box -->
-                <div id="dash-etap2-box-wprowadzenie" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; aspect-ratio: 1;" onclick="switchToDashTab('video-intro')">
+                <!-- Wprowadzenie Box (top-left) -->
+                <div id="dash-etap2-box-wprowadzenie" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 180px;" onclick="switchToDashTab('video-intro')">
                     <div id="dash-etap2-wprowadzenie-content" class="h-full"></div>
                 </div>
 
-                <!-- Profile Box -->
-                <div id="dash-etap2-box-profile" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; aspect-ratio: 1;" onclick="switchToDashTab('video-profiles')">
-                    <div id="dash-etap2-profile-content" class="h-full"></div>
+                <!-- Nagrania Box (hero - spans 2 rows, right side) -->
+                <div id="dash-etap2-box-nagrania" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 8; grid-row: span 2;" onclick="switchToDashTab('video-recordings')">
+                    <div id="dash-etap2-nagrania-content" class="h-full"></div>
                 </div>
 
-                <!-- Nagrania Box -->
-                <div id="dash-etap2-box-nagrania" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; aspect-ratio: 1;" onclick="switchToDashTab('video-recordings')">
-                    <div id="dash-etap2-nagrania-content" class="h-full"></div>
+                <!-- Profile Box (bottom-left) -->
+                <div id="dash-etap2-box-profile" class="bento-box p-0 overflow-hidden cursor-pointer transition-all" style="grid-column: span 4; min-height: 180px;" onclick="switchToDashTab('video-profiles')">
+                    <div id="dash-etap2-profile-content" class="h-full"></div>
                 </div>
             </div><!-- /dash-bento-etap2 -->
 
@@ -5447,32 +5447,42 @@
                 box.style.pointerEvents = '';
                 box.style.opacity = '';
                 box.classList.remove('bento-action');
-                const thumbs = Math.min(videoCount, 4);
+                const tiles = Math.min(videoCount, 6);
                 content.innerHTML = `
-                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/[0.07] via-transparent to-emerald-500/[0.04] pointer-events-none"></div>
-                        <div class="relative flex items-center justify-between mb-3">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Nagrania</span>
+                    <div class="h-full p-6 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/[0.08] via-transparent to-emerald-500/[0.05] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
+                            <div>
+                                <span class="text-[#666] text-[11px] uppercase tracking-wider font-medium">Twoje nagrania</span>
+                                <div class="flex items-baseline gap-2 mt-1">
+                                    <span class="text-[36px] font-bold text-white leading-none tracking-tight">${videoCount}</span>
+                                    <span class="text-[13px] text-[#666] font-medium">${videoCount === 1 ? 'video' : 'video'}</span>
+                                </div>
+                            </div>
                             <span class="flex items-center gap-1 text-emerald-500 text-xs">
                                 <i class="ph-fill ph-check-circle"></i>
-                                ${videoCount}
+                                Gotowe
                             </span>
                         </div>
-                        <div class="relative flex-1 grid grid-cols-2 gap-1.5 min-h-0">
-                            ${Array.from({length: 4}).map((_, i) => i < thumbs ? `
-                                <div class="rounded-md bg-gradient-to-br from-[#141414] to-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center relative overflow-hidden aspect-video">
-                                    <div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent"></div>
-                                    <div class="relative w-8 h-8 rounded-full bg-white/10 ring-1 ring-white/20 flex items-center justify-center">
-                                        <i class="ph-fill ph-play text-white text-xs ml-0.5"></i>
+                        <div class="relative flex-1 grid grid-cols-3 gap-2 min-h-0">
+                            ${Array.from({length: 6}).map((_, i) => i < tiles ? `
+                                <div class="rounded-lg bg-gradient-to-br from-[#1a1a1a] via-[#0f0f0f] to-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center relative overflow-hidden aspect-[9/16]">
+                                    <div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-violet-500/10"></div>
+                                    <div class="absolute top-1.5 left-1.5 text-[9px] text-white/40 font-mono">0:${String(15 + i * 7).padStart(2, '0')}</div>
+                                    <div class="relative w-10 h-10 rounded-full bg-white/10 ring-1 ring-white/20 flex items-center justify-center backdrop-blur-sm">
+                                        <i class="ph-fill ph-play text-white text-sm ml-0.5"></i>
                                     </div>
                                 </div>
                             ` : `
-                                <div class="rounded-md bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center aspect-video">
-                                    <i class="ph ph-plus text-[#333]"></i>
+                                <div class="rounded-lg bg-[#0a0a0a] border border-dashed border-[#1f1f1f] flex items-center justify-center aspect-[9/16]">
+                                    <i class="ph ph-plus text-[#333] text-lg"></i>
                                 </div>
                             `).join('')}
                         </div>
-                        <div class="relative mt-2 text-[11px] text-[#666]">Etap video ukończony</div>
+                        <div class="relative mt-4 flex items-center justify-between pt-3 border-t border-[#1a1a1a]">
+                            <span class="text-[11px] text-[#888]">Etap video ukończony</span>
+                            <span class="text-[11px] text-white/80 flex items-center gap-1">Zobacz wszystkie <i class="ph ph-arrow-right"></i></span>
+                        </div>
                     </div>
                 `;
             }
