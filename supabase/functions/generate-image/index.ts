@@ -18,26 +18,44 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
-// Fetch image and convert to base64
+// Fetch image and convert to base64 (safe chunking for large images)
 async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
   console.log(`Fetching reference image: ${url}`)
-  const response = await fetch(url)
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; SupabaseEdge/1.0)',
+      'Accept': 'image/jpeg,image/png,image/webp,*/*'
+    }
+  })
   if (!response.ok) {
     throw new Error(`Failed to fetch reference image: ${response.status}`)
   }
 
-  const contentType = response.headers.get('content-type') || 'image/jpeg'
+  let contentType = response.headers.get('content-type') || 'image/jpeg'
+  // Normalize content-type (strip charset, etc.)
+  contentType = contentType.split(';')[0].trim().toLowerCase()
+
   const arrayBuffer = await response.arrayBuffer()
   const uint8Array = new Uint8Array(arrayBuffer)
 
-  // Convert to base64
+  // Chunked base64 encoding to avoid stack overflow on large images
+  const CHUNK_SIZE = 32768
   let binary = ''
-  for (let i = 0; i < uint8Array.length; i++) {
-    binary += String.fromCharCode(uint8Array[i])
+  for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
+    const chunk = uint8Array.subarray(i, Math.min(i + CHUNK_SIZE, uint8Array.length))
+    binary += String.fromCharCode.apply(null, Array.from(chunk))
   }
   const base64 = btoa(binary)
 
-  console.log(`Reference image fetched: ${contentType}, ${base64.length} chars`)
+  // Gemini accepts image/jpeg, image/png, image/webp, image/heic, image/heif
+  // Fallback to image/jpeg if unknown
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  if (!validTypes.includes(contentType)) {
+    console.warn(`Unsupported mime type: ${contentType}, falling back to image/jpeg`)
+    contentType = 'image/jpeg'
+  }
+
+  console.log(`Reference image fetched: ${contentType}, ${uint8Array.length} bytes, ${base64.length} base64 chars`)
   return { base64, mimeType: contentType }
 }
 
@@ -96,6 +114,14 @@ ${prompt}`
   }
 
   parts.push({ text: finalPrompt })
+
+  // Log what we're actually sending to Gemini
+  const partsSummary = parts.map((p: any) => {
+    if (p.inline_data) return `[INLINE_DATA ${p.inline_data.mime_type}, ${p.inline_data.data.length} b64 chars]`
+    if (p.text) return `[TEXT ${p.text.length} chars]`
+    return '[UNKNOWN]'
+  })
+  console.log(`Sending to Gemini — parts: ${JSON.stringify(partsSummary)}`)
 
   // Generate images (Gemini generates 1 per request)
   for (let i = 0; i < Math.min(count, 4); i++) {
