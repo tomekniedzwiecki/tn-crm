@@ -10279,16 +10279,19 @@ Zwróć TYLKO JSON.`;
 
             gridEl.innerHTML = creatives.map((c, i) => `
                 <div class="relative group rounded-xl overflow-hidden border border-white/5 bg-zinc-900/50">
-                    <img src="${escapeHtml(c.url)}" alt="${escapeHtml(typeLabels[c.type] || c.type)}" class="w-full aspect-square object-cover" loading="lazy">
+                    <img src="${escapeHtml(c.url)}" alt="${escapeHtml(c.type || '')}" class="w-full aspect-square object-cover" loading="lazy" id="creative-img-${i}">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div class="absolute bottom-0 left-0 right-0 p-3">
-                            <span class="text-[11px] font-medium text-white">${escapeHtml(typeLabels[c.type] || c.type)}</span>
-                            <div class="flex gap-1.5 mt-1.5">
+                            <span class="text-[11px] font-medium text-white">${escapeHtml(c.type || '')}</span>
+                            <div class="flex flex-wrap gap-1.5 mt-1.5">
                                 <a href="${escapeHtml(c.url)}" target="_blank" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
                                     <i class="ph ph-arrow-square-out"></i> Otwórz
                                 </a>
                                 <button onclick="copyCreativeUrl(${i})" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
                                     <i class="ph ph-copy"></i> URL
+                                </button>
+                                <button onclick="regenerateCreative(${i})" id="btn-regen-${i}" class="text-[10px] px-2 py-1 rounded bg-pink-500/20 text-pink-300 hover:bg-pink-500/30 transition-colors">
+                                    <i class="ph ph-arrows-clockwise"></i> Nowa
                                 </button>
                             </div>
                         </div>
@@ -10489,6 +10492,66 @@ Zwróć TYLKO JSON.`;
         window.copySingleAdCopy = copySingleAdCopy;
         window.copyToClipboard = copyToClipboard;
         window.copyCreativeUrl = copyCreativeUrl;
+        window.regenerateCreative = regenerateCreative;
+
+        async function regenerateCreative(index) {
+            const creative = adsData?.ad_creatives?.[index];
+            if (!creative?.prompt) {
+                showToast('Brak promptu do regeneracji', 'error');
+                return;
+            }
+
+            const btn = document.getElementById(`btn-regen-${index}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
+            }
+
+            try {
+                // Pobierz ref image
+                const { data: products } = await supabaseClient
+                    .from('workflow_products')
+                    .select('image_url')
+                    .eq('workflow_id', workflow.id);
+                const refUrl = products?.[0]?.image_url || null;
+
+                const body = {
+                    prompt: creative.prompt,
+                    count: 1,
+                    workflow_id: workflow.id,
+                    type: `ad_regen_${index}`
+                };
+                if (refUrl) body.reference_images = [{ url: refUrl, type: 'product' }];
+
+                const { data, error } = await supabaseClient.functions.invoke('generate-image', { body });
+                if (error) throw error;
+
+                if (data?.images?.[0]?.url) {
+                    // Update local + DB
+                    adsData.ad_creatives[index].url = data.images[0].url;
+                    adsData.ad_creatives[index].generated_at = new Date().toISOString();
+
+                    await supabaseClient
+                        .from('workflow_ads')
+                        .update({ ad_creatives: adsData.ad_creatives })
+                        .eq('workflow_id', workflow.id);
+
+                    // Update img src
+                    const imgEl = document.getElementById(`creative-img-${index}`);
+                    if (imgEl) imgEl.src = data.images[0].url;
+
+                    showToast('Nowa kreacja wygenerowana!', 'success');
+                }
+            } catch (err) {
+                console.error('Regenerate creative error:', err);
+                showToast('Błąd generowania: ' + err.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Nowa';
+                }
+            }
+        }
 
         // =============================================
         // RAPORT TAB (Etap 4)

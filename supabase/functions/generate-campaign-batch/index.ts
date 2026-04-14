@@ -197,7 +197,7 @@ async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropic
   await upsertAds(supabase, workflowId, { campaign_pipeline_step: 'copy' })
   let adCopies: any = null
   try {
-    adCopies = await generateCopy(anthropicKey, supabase, workflowId, brandVal, product, research, landingUrl)
+    adCopies = await generateCopy(anthropicKey, supabase, workflowId, brandVal, product, research, landingUrl, refImageUrl)
   } catch (err) {
     console.error('[campaign] Copy failed:', err.message)
   }
@@ -222,48 +222,88 @@ async function runCopyAndCreatives(supabase: any, supabaseUrl: string, anthropic
 
 // ===== CLAUDE: COPY + IMAGE PROMPTS =====
 
-async function generateCopy(apiKey: string, supabase: any, workflowId: string, brand: any, product: any, research: any, landingUrl: string): Promise<any> {
+async function generateCopy(apiKey: string, supabase: any, workflowId: string, brand: any, product: any, research: any, landingUrl: string, refImageUrl: string | null): Promise<any> {
   const brandName = brand.name || product.name || ''
   const productName = product.name || brand.name || ''
 
-  let prompt = `MARKA: ${brandName}
+  let textPrompt = `MARKA: ${brandName}
 TAGLINE: ${brand.tagline || ''}
 OPIS: ${brand.description || product.description || ''}
 PRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}
 LANDING PAGE: ${landingUrl || 'brak'}`
 
-  if (research && !research.parse_error && research.competitors?.length) {
-    const topAds = research.competitors.slice(0, 5)
-    prompt += `\n\n===== REKLAMY KONKURENCJI =====\n`
-    topAds.forEach((c: any, i: number) => {
-      prompt += `[${i + 1}] ${c.brand || '?'} (${c.format || '?'}, kąt: ${c.angle || '?'})\nHeadline: ${c.headline || '-'}\nTekst: ${c.ad_text || '-'}\n\n`
-    })
-    if (research.gaps?.length) prompt += `LUKI:\n${research.gaps.map((g: string) => '- ' + g).join('\n')}\n`
-    if (research.recommendations?.length) prompt += `REKOMENDACJE:\n${research.recommendations.map((r: string) => '- ' + r).join('\n')}\n`
+  if (refImageUrl) {
+    textPrompt += `\n\nZDJĘCIE REFERENCYJNE PRODUKTU: Przesyłam Ci zdjęcie produktu. DOKŁADNIE opisz go w image_prompt — kolor, kształt, materiał, detale. Generator obrazów dostanie to samo zdjęcie jako referencję + Twój prompt.`
   }
 
-  prompt += `\n===== ZADANIE =====
-Wygeneruj 5 wersji reklamy Meta Ads. Każda wersja zawiera COPY + PROMPT DO ZDJĘCIA.
+  if (research && !research.parse_error && research.competitors?.length) {
+    const topAds = research.competitors.slice(0, 5)
+    textPrompt += `\n\n===== REKLAMY KONKURENCJI =====\n`
+    topAds.forEach((c: any, i: number) => {
+      textPrompt += `[${i + 1}] ${c.brand || '?'} (${c.format || '?'}, kąt: ${c.angle || '?'})\nHeadline: ${c.headline || '-'}\nTekst: ${c.ad_text || '-'}\n\n`
+    })
+    if (research.gaps?.length) textPrompt += `LUKI:\n${research.gaps.map((g: string) => '- ' + g).join('\n')}\n`
+    if (research.recommendations?.length) textPrompt += `REKOMENDACJE:\n${research.recommendations.map((r: string) => '- ' + r).join('\n')}\n`
+  }
 
-Dobierz kąty na podstawie LUK konkurencji.
+  textPrompt += `\n===== ZADANIE =====
+Wygeneruj 5 wersji reklamy Meta Ads. Każda wersja = COPY + IMAGE PROMPT.
 
 COPY:
 - Primary Text: hook w pierwszych 125 znakach. Headline: 27-40 znaków. Description: 25-30 znaków.
 - NIE podawaj cen. CTA: "Sprawdź szczegóły" / "Zobacz opinie". Ton: bezpośredni, ciepły, polski rynek.
+- Dobierz kąty na podstawie LUK konkurencji.
 
 IMAGE PROMPT (dla każdej wersji):
-- Napisz szczegółowy prompt do wygenerowania zdjęcia reklamowego przez AI (Gemini)
-- Zdjęcie MUSI pasować do kąta i przekazu copy
-- Format: kwadrat (1:1), do reklamy na Facebooku/Instagramie
-- Styl: profesjonalna fotografia reklamowa, nie stockowa
-- Pokazuj PRODUKT w użyciu lub w kontekście problemu/rozwiązania
-- Osoby na zdjęciu: realistyczne, dopasowane do grupy docelowej (wiek, płeć)
-- ZAWSZE kończ promptem: "Professional advertising photography for Facebook/Instagram ad. Square format 1:1. Photorealistic. No text, no captions, no labels, no watermarks, no logos."
-- NIE opisuj elementów produktu których nie znasz — to zrobi referencyjne zdjęcie
+Prompt do AI image generator (Gemini). Generator dostanie też zdjęcie referencyjne produktu.
+
+ZASADY image_prompt:
+1. OPISZ DOKŁADNIE produkt z referencji (kolor, kształt, materiał) — nie zgaduj
+2. Scena MUSI pasować do kąta copy i zatrzymać scroll na Facebooku
+3. Format 1080x1080px (kwadrat), do feedu FB/IG
+4. Osoba na zdjęciu: dopasowana do grupy docelowej (wiek, płeć, styl życia)
+5. Produkt jest WIDOCZNY i naturalny w scenie
+6. Jasne, ciepłe oświetlenie — reklamy FB z ciemnym tłem mają niższy CTR
+7. Jeden jasny focal point — na telefonie widzisz 4cm zdjęcia, musi być czytelne
+8. Emocja na twarzy osoby — to ona zatrzymuje scroll, nie produkt
+9. ZAWSZE kończ: "Professional advertising photography. Facebook ad creative 1080x1080. Photorealistic, high-end. No text, no captions, no labels, no watermarks, no logos, no overlays."
+
+TYPY SCEN wg kąta:
+- Myth-busting/Porównanie: split-screen, dwa produkty obok siebie, kontrast jakości
+- Transformation: before/after, ta sama osoba, dramatyczna różnica wyrazu twarzy
+- Social proof: realna osoba (nie model) z produktem, naturalna sceneria, "selfie" vibe
+- Pain point: frustracja BEZ produktu — zmęczenie, ból głowy, kiepska skóra
+- Technologia: close-up produktu, detale mechanizmu, premium unboxing feel
+- Curiosity: intrygujący kadr — np. ręka trzymająca produkt, reszta ukryta, "co to?"
 
 JSON:
-{"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"nazwa kąta","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"szczegółowy prompt do zdjęcia reklamowego, dopasowany do tego kąta"}]}
+{"wow_factor":"...","target_group":"...","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"DOKŁADNY prompt do zdjęcia — min 3 zdania, opisz produkt, osobę, scenę, oświetlenie, nastrój"}]}
 Zwróć TYLKO JSON.`
+
+  // Buduj messages — z obrazem jeśli jest
+  const userContent: any[] = []
+
+  if (refImageUrl) {
+    try {
+      // Pobierz obraz i przekaż do Claude Vision
+      const imgRes = await fetch(refImageUrl)
+      if (imgRes.ok) {
+        const imgBuffer = await imgRes.arrayBuffer()
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)))
+        const mimeType = imgRes.headers.get('content-type') || 'image/jpeg'
+
+        userContent.push({
+          type: 'image',
+          source: { type: 'base64', media_type: mimeType, data: base64 }
+        })
+        console.log(`[campaign] Product image loaded for Claude Vision (${mimeType}, ${base64.length} chars)`)
+      }
+    } catch (err) {
+      console.error('[campaign] Failed to load product image for Claude:', err.message)
+    }
+  }
+
+  userContent.push({ type: 'text', text: textPrompt })
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -271,18 +311,33 @@ Zwróć TYLKO JSON.`
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8192,
-      messages: [{ role: 'user', content: prompt }],
-      system: `Jesteś ekspertem od reklam Meta Ads na polskim rynku e-commerce.
+      messages: [{ role: 'user', content: userContent }],
+      system: `Jesteś art directorem i copywriterem kampanii Meta Ads na polskim rynku e-commerce.
 
-COPY: WOW FACTOR w pierwszym zdaniu. Emocjonalna konkretność > generyki. Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny.
+COPY:
+- WOW FACTOR w pierwszym zdaniu każdego Primary Text
+- Emocjonalna konkretność > generyki. "3 minuty do pełnej mocy" > "szybko działa"
+- Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny.
+- Polski rynek: bezpośredni ale ciepły. Nie "KUP TERAZ" — "Sprawdź szczegóły"
 
-IMAGE PROMPTS: Tworzysz prompty do generowania zdjęć reklamowych przez AI.
-- Myśl jak art director kampanii na Facebooku
-- Zdjęcie musi zatrzymać scroll — mocna kompozycja, emocja, kontrast
-- Dostosuj scenę do kąta: pain point = frustracja/problem, transformation = efekt wow, social proof = realna osoba z produktem, curiosity = intrygujący close-up
-- Grupa docelowa musi się rozpoznać na zdjęciu (odpowiedni wiek, styl życia, otoczenie)
-- Produkt jest WIDOCZNY ale naturalny w scenie (nie packshot)
-- Oświetlenie, kolory, nastrój dopasowane do przekazu
+IMAGE PROMPTS — myśl jak art director:
+Twoje prompty idą do AI image generator (Gemini) + zdjęcie referencyjne produktu.
+
+CO ZATRZYMUJE SCROLL NA FACEBOOKU:
+1. TWARZ z emocją — mózg rozpoznaje twarze w 13ms. Zaskoczenie, ulga, frustracja — NIE uśmiech stockowy
+2. KONTRAST wizualny — jasne na ciemnym, produkt wyróżniony kolorem, split-screen before/after
+3. CZYTELNOŚĆ na 4cm — na telefonie reklama ma ~4cm. Jeden focal point, zero bałaganu
+4. AUTENTYCZNOŚĆ — UGC-style bije studio. Naturalne otoczenie, nie sterylne białe tło
+5. KOLOR — jasne, ciepłe tonacje. Zimne/ciemne zdjęcia mają 20-30% niższy CTR
+
+CZEGO NIE ROBIĆ:
+- Stockowy uśmiech do kamery = natychmiast pomijane
+- Białe tło + produkt = wygląda jak Allegro, nie jak reklama
+- Tekst na zdjęciu = FB obniża zasięg
+- Ciemne, mroczne zdjęcia = niski CTR na mobile
+- Generyczne sceny "szczęśliwa rodzina" = nikt się nie zatrzyma
+
+OPISUJ PRODUKT DOKŁADNIE z tego co widzisz na przesłanym zdjęciu referencyjnym. Nie zgaduj — opisz realny kolor, kształt, materiał, detale.
 
 Zwracaj TYLKO czysty JSON.`
     })
