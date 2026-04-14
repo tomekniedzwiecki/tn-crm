@@ -741,7 +741,7 @@
             const [videoRes, takedropRes, adsRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, campaign_launched').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -1335,6 +1335,9 @@
             // Budżet reklamowy
             if (!w.ads_stage?.budget_funded) return 'budget';
 
+            // Content — materiały reklamowe (pipeline generuje automatycznie, admin udostępnia)
+            if (!w.ads_stage?.content_shared_with_client) return 'content';
+
             // Kampania uruchomiona
             if (!w.ads_stage?.campaign_launched) return 'campaign';
 
@@ -1759,6 +1762,17 @@
                     status = 'Czekam na doładowanie';
                     icon = 'ph ph-wallet text-amber-400';
                     isClientTask = true;
+                } else if (nextStep === 'content') {
+                    stepName = 'Content reklamowy';
+                    if (w.ads_stage?.content_ready) {
+                        status = 'Przekaż klientowi';
+                        icon = 'ph ph-magic-wand text-cyan-400';
+                        isClientTask = false;
+                    } else {
+                        status = 'Generujemy materiały...';
+                        icon = 'ph ph-magic-wand text-violet-400';
+                        isClientTask = false;
+                    }
                 } else if (nextStep === 'campaign') {
                     stepName = 'Kampania';
                     status = 'Do uruchomienia';
