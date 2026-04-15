@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041510';
+        const ADMIN_APP_VERSION = '2026041511';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -10988,7 +10988,20 @@ Zwróć TYLKO JSON.`;
                     'Ad Set Name','Ad Set Run Status','Optimization Goal','Billing Event',
                     'Age Min','Age Max','Gender','Countries',
                     'Ad Name','Creative Type','Title','Body','Link Description','Call to Action','Link','Image File Name',
+                    'Beneficiary','Payor',
                 ];
+
+                // Beneficjent / Płatnik — wymagane w EU (DSA). Pobierz nazwę marki z brandingu lub fallback.
+                let beneficiary = '';
+                try {
+                    const { data: brandingRow } = await supabaseClient.from('workflow_branding')
+                        .select('value').eq('workflow_id', workflow.id).eq('type', 'brand_info').maybeSingle();
+                    if (brandingRow?.value) {
+                        const bv = typeof brandingRow.value === 'string' ? JSON.parse(brandingRow.value) : brandingRow.value;
+                        beneficiary = bv?.name || '';
+                    }
+                } catch (_) {}
+                if (!beneficiary) beneficiary = spec?.campaign?.name?.replace(/\s*—.*$/, '').trim() || workflow?.offer_name || workflow?.customer_name || 'Marka';
                 const genderMap = { all: 'All', female: 'Women', male: 'Men' };
                 // CTA: Meta akceptuje "Learn More", "Shop Now", "Sign Up", "See Menu" itd.
                 // Manus zwraca po polsku ("Sprawdź szczegóły") — mapujemy na bezpieczny default.
@@ -11033,6 +11046,8 @@ Zwróć TYLKO JSON.`;
                             mapCta(v?.cta),
                             landingUrl,
                             c?.filename || '',
+                            beneficiary,
+                            beneficiary,
                         ]);
                     });
                 });
