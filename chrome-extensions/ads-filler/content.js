@@ -30,6 +30,13 @@
   // Field detection
   // ============================================================
 
+  // Meta Ads Manager — stable wrapper IDs for "Dodaj opcję X" buttons
+  const META_ADD_BUTTON_IDS = {
+    primary_text: 'add-bodies-option-button',
+    headline: 'add-titles-option-button',
+    description: 'add-descriptions-option-button'
+  };
+
   const ADD_BUTTON_PATTERNS = {
     primary_text: [
       /dodaj.*opcj.*tekst/i,
@@ -232,7 +239,14 @@
 
     for (const typeKey of ['primary_text', 'headline', 'description']) {
       if (!result[typeKey].length) continue;
-      const addBtn = pickBtn(ADD_BUTTON_PATTERNS[typeKey]);
+      // Priority 1: Meta stable ID
+      let addBtn = null;
+      const metaId = META_ADD_BUTTON_IDS[typeKey];
+      if (metaId) {
+        addBtn = document.getElementById(metaId);
+      }
+      // Priority 2: text regex
+      if (!addBtn) addBtn = pickBtn(ADD_BUTTON_PATTERNS[typeKey]);
       if (!addBtn) {
         console.log(`[TN Ads Filler] attachBySection: no add button for ${typeKey}`);
         continue;
@@ -517,9 +531,21 @@
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  // Find "Add option" button for a field type. Strategy: look near existing fields
-  // of that type for a button/anchor whose text matches ADD_BUTTON_PATTERNS.
+  // Find "Add option" button for a field type.
+  // Priority 1: Meta's stable wrapper ID (e.g. #add-bodies-option-button)
+  // Priority 2: text/aria-label regex match
   function findAddButton(typeKey, existingFields) {
+    // Priority 1: stable IDs on Meta Ads Manager
+    const metaId = META_ADD_BUTTON_IDS[typeKey];
+    if (metaId) {
+      const wrapper = document.getElementById(metaId);
+      if (wrapper && (wrapper.offsetParent !== null || wrapper.getClientRects().length > 0)) {
+        // Wrapper is a DIV — find the actual clickable inside, fallback to wrapper
+        const innerBtn = wrapper.querySelector('[role="button"], button, a');
+        return innerBtn || wrapper;
+      }
+    }
+
     const patterns = ADD_BUTTON_PATTERNS[typeKey] || [];
     if (!patterns.length) return null;
 
