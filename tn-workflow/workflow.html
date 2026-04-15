@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041507';
+        const ADMIN_APP_VERSION = '2026041508';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2448,6 +2448,20 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ========== FB POST PREVIEW ========== -->
+                        <section id="content-preview-section" class="hidden mb-6">
+                            <div class="flex items-end justify-between mb-3">
+                                <div>
+                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
+                                        <i class="ph ph-facebook-logo text-cyan-400"></i>
+                                        Podgląd reklam (Facebook)
+                                    </h4>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Tak reklamy wyświetlą się w feedzie</p>
+                                </div>
+                            </div>
+                            <div id="content-preview-feed" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                        </section>
 
                         <!-- ========== CAMPAIGN SPEC ========== -->
                         <section id="content-campaign-section" class="hidden mb-6">
@@ -11043,6 +11057,64 @@ Zwróć TYLKO JSON.`;
         }
         window.exportMetaBulkZip = exportMetaBulkZip;
 
+        // ---- FB POST PREVIEW (jak u klienta) ----
+        function renderFbPostPreview() {
+            const section = document.getElementById('content-preview-section');
+            const feed = document.getElementById('content-preview-feed');
+            if (!section || !feed) return;
+            const versions = getVersions();
+            const creatives = getCreatives();
+            const n = Math.max(versions.length, creatives.length);
+            if (!n) { section.classList.add('hidden'); return; }
+            section.classList.remove('hidden');
+            const brandName = adsData?.ad_copies?.brand_name || adsData?.ad_copies?.product_name || workflow?.offer_name || 'Twoja marka';
+            const brandInitial = brandName.charAt(0).toUpperCase();
+            const landingUrl = adsData?.campaign_spec?.campaign?.landing_url || adsData?.ad_copies?.landing_url || workflow?.sales_page_url || '';
+            const displayDomain = landingUrl ? (landingUrl.replace(/^https?:\/\//, '').split('/')[0].toUpperCase()) : '';
+
+            const items = [];
+            for (let i = 0; i < n; i++) {
+                const v = versions[i] || {};
+                const c = creatives[i] || {};
+                const primary = escapeHtml(v.primary_text || '');
+                const primaryShort = primary.length > 160 ? primary.substring(0, 157) + '…' : primary;
+                const headline = escapeHtml(v.headline || '');
+                const description = escapeHtml(v.description || '');
+                const cta = escapeHtml(v.cta || 'Sprawdź szczegóły');
+                const angleLabel = angleStyle(v.angle || c.type).label;
+                const imgUrl = c.url && c.url.startsWith('http') ? escapeHtml(c.url) : '';
+                items.push(`
+                <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm text-zinc-900">
+                    <div class="p-3 flex items-center gap-2">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold text-[14px] flex-shrink-0">${escapeHtml(brandInitial)}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-semibold text-zinc-900 truncate">${escapeHtml(brandName)}</p>
+                            <p class="text-[10px] text-zinc-500">Sponsorowane · <i class="ph ph-globe text-[9px]"></i></p>
+                        </div>
+                        <span class="text-[9px] font-bold text-zinc-400">#${i + 1}</span>
+                        <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 uppercase tracking-wide whitespace-nowrap">${escapeHtml(angleLabel)}</span>
+                    </div>
+                    ${primaryShort ? `<p class="px-3 pb-2 text-[13px] text-zinc-800 whitespace-pre-wrap leading-snug">${primaryShort}</p>` : ''}
+                    ${imgUrl ? `
+                    <a href="${imgUrl}" target="_blank" class="block bg-zinc-100 cursor-zoom-in">
+                        <img src="${imgUrl}" alt="" class="w-full aspect-square object-cover" loading="lazy">
+                    </a>` : `
+                    <div class="bg-zinc-100 aspect-square flex items-center justify-center">
+                        <i class="ph ph-image text-5xl text-zinc-300"></i>
+                    </div>`}
+                    <div class="p-3 bg-zinc-50 flex items-center justify-between border-t border-zinc-200 gap-2">
+                        <div class="min-w-0 flex-1">
+                            ${displayDomain ? `<p class="text-[9px] text-zinc-500 uppercase tracking-wide truncate">${escapeHtml(displayDomain)}</p>` : ''}
+                            ${headline ? `<p class="text-[12px] text-zinc-900 font-semibold truncate leading-tight">${headline}</p>` : ''}
+                            ${description ? `<p class="text-[10px] text-zinc-600 truncate">${description}</p>` : ''}
+                        </div>
+                        <button class="bg-zinc-200 text-zinc-900 text-[11px] font-semibold px-3 py-1.5 rounded whitespace-nowrap flex-shrink-0">${cta}</button>
+                    </div>
+                </div>`);
+            }
+            feed.innerHTML = items.join('');
+        }
+
         // ---- DOGENERUJ KAMPANIĘ (follow-up do Manusa) ----
         async function askManusForCampaign() {
             if (!adsData?.manus_full_task_id) {
@@ -11191,8 +11263,10 @@ Zwróć TYLKO JSON.`;
 
             updateContentStatusBar();
             if (hasAny) {
+                renderFbPostPreview();
                 renderCampaignSpec();
             } else {
+                document.getElementById('content-preview-section')?.classList.add('hidden');
                 document.getElementById('content-campaign-section')?.classList.add('hidden');
             }
         }
