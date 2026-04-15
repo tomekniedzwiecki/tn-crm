@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041501';
+        const ADMIN_APP_VERSION = '2026041502';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2346,110 +2346,102 @@
 
                     <!-- TAB: Content (Etap 4) — generowanie materiałów reklamowych -->
                     <div id="tab-content" class="workflow-panel hidden">
-                        <div class="mb-5">
-                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
-                                <i class="ph ph-magic-wand text-cyan-400"></i>
-                                Content — materiały reklamowe
-                            </h3>
-                            <p class="text-zinc-500 text-sm mt-1">Research konkurencji → copy → kreacje graficzne</p>
+                        <!-- ========== STATUS BAR (sticky) ========== -->
+                        <div id="content-status-bar" class="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-3 bg-zinc-950/80 backdrop-blur-md">
+                            <div class="bg-zinc-900/70 border border-white/5 rounded-2xl p-3.5 flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center shrink-0">
+                                    <i class="ph ph-magic-wand text-cyan-400 text-lg"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h3 class="text-[14px] font-semibold text-white">Content kampanii</h3>
+                                        <span id="content-status-pill" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-medium">—</span>
+                                    </div>
+                                    <p id="content-status-meta" class="text-[11px] text-zinc-500 mt-0.5 truncate">Automatyczny pipeline: research → copy → kreacje</p>
+                                </div>
+                                <div id="content-status-actions" class="flex items-center gap-2 shrink-0"></div>
+                            </div>
                         </div>
 
-                        <!-- ========== UDOSTĘPNIENIE KLIENTOWI (TOP) ========== -->
-                        <div id="content-share-section" class="hidden mb-5">
-                            <div class="bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/30 rounded-2xl p-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-11 h-11 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
-                                        <i class="ph ph-paper-plane-tilt text-violet-300 text-xl"></i>
+                        <!-- ========== EMPTY STATE (przed generacją) ========== -->
+                        <div id="content-empty-state" class="hidden mb-6">
+                            <div class="relative bg-gradient-to-br from-violet-500/5 via-zinc-900/50 to-cyan-500/5 border border-white/5 rounded-3xl p-8 overflow-hidden">
+                                <div class="absolute -top-20 -right-20 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                                <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                                <div class="relative">
+                                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/30 to-cyan-500/30 flex items-center justify-center mb-4">
+                                        <i class="ph ph-sparkle text-2xl text-cyan-300"></i>
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h4 class="text-[14px] font-semibold text-white">Materiały gotowe do udostępnienia</h4>
-                                        <p id="content-share-status" class="text-[12px] text-zinc-400 mt-0.5">Przejrzyj poniżej i wyślij do klienta jednym kliknięciem.</p>
+                                    <h4 class="text-[18px] font-semibold text-white mb-1">Stwórz pakiet materiałów reklamowych</h4>
+                                    <p class="text-[13px] text-zinc-400 mb-5 max-w-lg">W jednym przebiegu otrzymasz research konkurencji z Facebook Ad Library, 5 wersji copy z różnymi kątami i 5 kreacji graficznych 1080×1080 gotowych do Meta Ads.</p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3 flex items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center shrink-0"><i class="ph ph-binoculars text-violet-300"></i></div>
+                                            <div class="min-w-0"><p class="text-[12px] font-medium text-white">Research</p><p class="text-[10px] text-zinc-500">8+ konkurentów</p></div>
+                                        </div>
+                                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3 flex items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center shrink-0"><i class="ph ph-text-aa text-cyan-300"></i></div>
+                                            <div class="min-w-0"><p class="text-[12px] font-medium text-white">Copy</p><p class="text-[10px] text-zinc-500">5 wersji</p></div>
+                                        </div>
+                                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3 flex items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0"><i class="ph ph-image-square text-emerald-300"></i></div>
+                                            <div class="min-w-0"><p class="text-[12px] font-medium text-white">Kreacje</p><p class="text-[10px] text-zinc-500">5 × 1080²</p></div>
+                                        </div>
                                     </div>
-                                    <button onclick="shareContentWithClient()" id="btn-share-content" class="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center gap-2 shrink-0">
-                                        <i class="ph ph-paper-plane-tilt"></i>
-                                        Udostępnij klientowi
-                                    </button>
+                                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <button onclick="runCampaignPipeline()" id="btn-run-pipeline" class="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-6 py-3 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20">
+                                            <i class="ph ph-play-circle text-lg"></i> Generuj kampanię
+                                        </button>
+                                        <label class="flex items-center gap-2 cursor-pointer group text-[12px] text-zinc-400 hover:text-zinc-200">
+                                            <input type="checkbox" id="pipeline-include-creatives" checked class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-cyan-500 focus:ring-cyan-500/30 focus:ring-offset-0 cursor-pointer">
+                                            Generuj kreacje graficzne <span class="text-zinc-600">(~1-2 min)</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="content-shared-indicator" class="hidden mb-5">
-                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 flex items-center gap-3">
-                                <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
-                                <div class="flex-1">
-                                    <p class="text-[13px] font-medium text-emerald-400">Udostępnione klientowi</p>
-                                    <p id="content-shared-date" class="text-[11px] text-zinc-500 mt-0.5"></p>
-                                </div>
-                                <button onclick="shareContentWithClient(true)" class="text-[11px] text-zinc-400 hover:text-white px-2.5 py-1 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50">
-                                    Wyślij ponownie
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- ========== START PIPELINE ========== -->
-                        <div id="pipeline-start" class="mb-6">
-                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6">
-                                <div class="flex items-center gap-4 mb-5">
-                                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center">
-                                        <i class="ph ph-magic-wand text-2xl text-cyan-400"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-[15px] font-semibold text-white">Generuj materiały kampanii</h4>
-                                        <p class="text-[12px] text-zinc-500 mt-0.5">Research konkurencji → Copy reklamowe → Kreacje graficzne</p>
-                                    </div>
-                                </div>
-                                <label class="flex items-center gap-2.5 mb-5 cursor-pointer group">
-                                    <input type="checkbox" id="pipeline-include-creatives" checked
-                                        class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-cyan-500 focus:ring-cyan-500/30 focus:ring-offset-0 cursor-pointer">
-                                    <span class="text-[13px] text-zinc-400 group-hover:text-zinc-300 transition-colors">Generuj kreacje graficzne (zdjęcia do reklam)</span>
-                                    <span class="text-[11px] text-zinc-600">~1-2 min extra</span>
-                                </label>
-                                <button onclick="runCampaignPipeline()" id="btn-run-pipeline"
-                                    class="w-full bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white py-3.5 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2">
-                                    <i class="ph ph-play-circle text-lg"></i>
-                                    Generuj kampanię
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- ========== PIPELINE PROGRESS ========== -->
+                        <!-- ========== PIPELINE PROGRESS (trwa generowanie) ========== -->
                         <div id="pipeline-progress" class="hidden mb-6">
-                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-5">
+                            <div class="bg-zinc-900/50 border border-violet-500/20 rounded-2xl p-5">
                                 <div class="flex items-center justify-between mb-4">
-                                    <h4 class="text-[13px] font-medium text-white">Pipeline kampanii</h4>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="relative flex items-center justify-center w-2.5 h-2.5">
+                                            <div class="absolute inset-0 bg-violet-400 rounded-full animate-ping opacity-75"></div>
+                                            <div class="relative w-2 h-2 bg-violet-400 rounded-full"></div>
+                                        </div>
+                                        <h4 class="text-[13px] font-semibold text-white">Pipeline kampanii</h4>
+                                    </div>
                                     <span id="pipeline-overall-status" class="text-[11px] px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">W toku...</span>
                                 </div>
-                                <div class="space-y-2.5">
-                                    <!-- Step 1: Research -->
-                                    <div id="pipeline-step-research" class="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/30 border border-transparent">
-                                        <div id="pipeline-icon-research" class="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
-                                            <i class="ph ph-binoculars text-sm text-zinc-500"></i>
+                                <div class="space-y-2">
+                                    <div id="pipeline-step-research" class="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-800/30">
+                                        <div id="pipeline-icon-research" class="w-7 h-7 rounded-md bg-zinc-700/50 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-binoculars text-xs text-zinc-500"></i>
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-[12px] font-medium text-zinc-400">Research konkurencji</p>
-                                            <p id="pipeline-detail-research" class="text-[11px] text-zinc-600 truncate">Oczekuje...</p>
+                                            <p id="pipeline-detail-research" class="text-[10px] text-zinc-600 truncate">Oczekuje...</p>
                                         </div>
                                         <i id="pipeline-check-research" class="ph ph-circle text-sm text-zinc-700"></i>
                                     </div>
-                                    <!-- Step 2: Copy -->
-                                    <div id="pipeline-step-copy" class="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/30 border border-transparent">
-                                        <div id="pipeline-icon-copy" class="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
-                                            <i class="ph ph-text-aa text-sm text-zinc-500"></i>
+                                    <div id="pipeline-step-copy" class="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-800/30">
+                                        <div id="pipeline-icon-copy" class="w-7 h-7 rounded-md bg-zinc-700/50 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-text-aa text-xs text-zinc-500"></i>
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-[12px] font-medium text-zinc-400">Copy reklamowe</p>
-                                            <p id="pipeline-detail-copy" class="text-[11px] text-zinc-600 truncate">Oczekuje...</p>
+                                            <p id="pipeline-detail-copy" class="text-[10px] text-zinc-600 truncate">Oczekuje...</p>
                                         </div>
                                         <i id="pipeline-check-copy" class="ph ph-circle text-sm text-zinc-700"></i>
                                     </div>
-                                    <!-- Step 3: Creatives -->
-                                    <div id="pipeline-step-creatives" class="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/30 border border-transparent">
-                                        <div id="pipeline-icon-creatives" class="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
-                                            <i class="ph ph-image text-sm text-zinc-500"></i>
+                                    <div id="pipeline-step-creatives" class="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-800/30">
+                                        <div id="pipeline-icon-creatives" class="w-7 h-7 rounded-md bg-zinc-700/50 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-image text-xs text-zinc-500"></i>
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-[12px] font-medium text-zinc-400">Kreacje graficzne</p>
-                                            <p id="pipeline-detail-creatives" class="text-[11px] text-zinc-600 truncate">Oczekuje...</p>
+                                            <p id="pipeline-detail-creatives" class="text-[10px] text-zinc-600 truncate">Oczekuje...</p>
                                         </div>
                                         <i id="pipeline-check-creatives" class="ph ph-circle text-sm text-zinc-700"></i>
                                     </div>
@@ -2457,32 +2449,71 @@
                             </div>
                         </div>
 
-                        <!-- ========== WYNIKI: COPY ========== -->
-                        <div id="copies-results" class="hidden mb-6">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
-                                    <i class="ph ph-text-aa text-cyan-400"></i>
-                                    Copy reklamowe
-                                </h4>
-                            </div>
-                            <div id="copies-wow-factor" class="hidden bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-3">
+                        <!-- ========== HERO GALLERY — kreacje ========== -->
+                        <section id="content-gallery-section" class="hidden mb-6">
+                            <div class="flex items-end justify-between mb-3">
+                                <div>
+                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
+                                        <i class="ph ph-image-square text-cyan-400"></i>
+                                        Kreacje graficzne <span id="gallery-count" class="text-zinc-500 font-normal"></span>
+                                    </h4>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Klik w kartę = podgląd + pełny copy</p>
+                                </div>
                                 <div class="flex items-center gap-2">
-                                    <i class="ph ph-star text-amber-400"></i>
-                                    <span class="text-[12px] text-amber-300 font-medium">WOW FACTOR:</span>
-                                    <span id="copies-wow-text" class="text-[12px] text-amber-200"></span>
+                                    <button onclick="downloadAllCreatives()" class="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 transition-colors" title="Pobierz wszystkie kreacje">
+                                        <i class="ph ph-download-simple"></i> Pobierz wszystkie
+                                    </button>
+                                    <button onclick="exportCopyToCSV()" class="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 transition-colors" title="Eksportuj copy do CSV (Meta Ads Manager)">
+                                        <i class="ph ph-file-csv"></i> CSV do Meta
+                                    </button>
                                 </div>
                             </div>
-                            <div id="copies-versions" class="space-y-3"></div>
-                        </div>
+                            <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+                        </section>
 
-                        <!-- Kreacje graficzne są teraz wyświetlane w kartach copy — ta sekcja ukryta -->
-                        <div id="creatives-results" class="hidden mb-6">
-                            <div id="creatives-grid"></div>
-                        </div>
+                        <!-- ========== CAMPAIGN SPEC ========== -->
+                        <section id="content-campaign-section" class="hidden mb-6">
+                            <div class="flex items-end justify-between mb-3">
+                                <div>
+                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
+                                        <i class="ph ph-target text-violet-400"></i>
+                                        Specyfikacja kampanii
+                                    </h4>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Gotowa konfiguracja do wklejenia w Meta Ads Manager</p>
+                                </div>
+                                <div id="campaign-meta-chip" class="hidden text-[10px] text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+                                    <i class="ph ph-info"></i><span id="campaign-meta-text"></span>
+                                </div>
+                            </div>
+                            <div id="campaign-spec-body" class="grid grid-cols-1 lg:grid-cols-3 gap-3"></div>
+                        </section>
 
-                        <!-- ========== WYNIKI: RESEARCH (collapsible, na dole — drugorzędny) ========== -->
+                        <!-- ========== COPY TABLE ========== -->
+                        <section id="content-copy-section" class="hidden mb-6">
+                            <div class="flex items-end justify-between mb-3">
+                                <div>
+                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
+                                        <i class="ph ph-text-aa text-cyan-400"></i>
+                                        Copy reklamowe
+                                    </h4>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Klik wiersza = rozwinięcie pełnego tekstu</p>
+                                </div>
+                                <div id="copies-wow-factor" class="hidden flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1">
+                                    <i class="ph ph-star-fill text-amber-400"></i>
+                                    <span id="copies-wow-text" class="truncate max-w-[320px]"></span>
+                                </div>
+                            </div>
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
+                                <div class="grid grid-cols-[40px_110px_1fr_90px_40px] gap-3 px-4 py-2.5 bg-zinc-900/60 border-b border-white/5 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+                                    <div>#</div><div>Kąt</div><div>Headline · Primary</div><div class="text-right">Znaki</div><div></div>
+                                </div>
+                                <div id="copy-table-body" class="divide-y divide-white/5"></div>
+                            </div>
+                        </section>
+
+                        <!-- ========== RESEARCH (collapsible) ========== -->
                         <details id="research-results" class="hidden mb-6 group">
-                            <summary class="list-none cursor-pointer select-none bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-xl p-4 flex items-center gap-3 transition-colors">
+                            <summary class="list-none cursor-pointer select-none bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-2xl p-4 flex items-center gap-3 transition-colors">
                                 <div class="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
                                     <i class="ph ph-binoculars text-violet-400"></i>
                                 </div>
@@ -2490,13 +2521,14 @@
                                     <h4 class="text-[14px] font-semibold text-white">Research konkurencji</h4>
                                     <p class="text-[11px] text-zinc-500 mt-0.5"><span id="research-count" class="text-zinc-400">—</span> · <span id="research-date"></span></p>
                                 </div>
+                                <span class="text-[11px] text-zinc-500 group-open:hidden">Rozwiń</span>
                                 <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
                             </summary>
                             <div class="space-y-3 mt-3">
                                 <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
                                     <div id="research-competitors-list" class="space-y-2 max-h-[300px] overflow-y-auto"></div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
                                         <h5 class="text-[12px] font-medium text-amber-400 mb-2 flex items-center gap-1.5">
                                             <i class="ph ph-lightbulb"></i> Luki konkurencji
@@ -2513,7 +2545,85 @@
                             </div>
                         </details>
 
+                        <!-- legacy holder (niewidoczny) -->
+                        <div id="copies-results" class="hidden"><div id="copies-versions"></div></div>
+                        <div id="creatives-results" class="hidden"><div id="creatives-grid"></div></div>
+
                     </div><!-- /tab-content -->
+
+                    <!-- ========== CREATIVE DRAWER (slide-in z prawej) ========== -->
+                    <div id="creative-drawer" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Szczegóły kreacji">
+                        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCreativeDrawer()"></div>
+                        <div id="creative-drawer-panel" class="absolute right-0 top-0 h-full w-full sm:w-[560px] bg-zinc-950 border-l border-white/10 shadow-2xl flex flex-col">
+                            <div class="flex items-center gap-2 px-4 py-3 border-b border-white/5 shrink-0">
+                                <button onclick="navigateDrawer(-1)" class="w-8 h-8 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-300 flex items-center justify-center" aria-label="Poprzednia"><i class="ph ph-caret-left"></i></button>
+                                <button onclick="navigateDrawer(1)" class="w-8 h-8 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-300 flex items-center justify-center" aria-label="Następna"><i class="ph ph-caret-right"></i></button>
+                                <div class="flex-1 min-w-0 px-1">
+                                    <div class="flex items-center gap-2">
+                                        <span id="drawer-index" class="text-[11px] font-bold text-zinc-500">#1</span>
+                                        <span id="drawer-angle" class="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300"></span>
+                                    </div>
+                                    <p id="drawer-filename" class="text-[10px] text-zinc-600 truncate"></p>
+                                </div>
+                                <button onclick="copyFullBundle()" class="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5" title="Kopiuj cały pakiet"><i class="ph ph-copy"></i> Pakiet</button>
+                                <button onclick="closeCreativeDrawer()" class="w-8 h-8 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-300 flex items-center justify-center" aria-label="Zamknij"><i class="ph ph-x"></i></button>
+                            </div>
+                            <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                                <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden">
+                                    <img id="drawer-image" src="" alt="" class="w-full aspect-square object-cover cursor-zoom-in" onclick="openLightbox(this.src)">
+                                    <div class="flex gap-2 p-2.5 border-t border-white/5">
+                                        <a id="drawer-download" href="#" download class="flex-1 text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-download-simple"></i> Pobierz PNG</a>
+                                        <button onclick="copyDrawerUrl()" class="flex-1 text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-link"></i> Skopiuj URL</button>
+                                    </div>
+                                </div>
+                                <div class="space-y-2.5">
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3">
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <label class="text-[10px] text-zinc-500 uppercase tracking-wider">Primary Text</label>
+                                            <div class="flex items-center gap-2">
+                                                <span id="drawer-primary-chars" class="text-[10px] text-zinc-500"></span>
+                                                <button onclick="copyDrawerField('primary_text')" class="text-[11px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                                            </div>
+                                        </div>
+                                        <p id="drawer-primary" class="text-[12px] text-zinc-100 leading-relaxed whitespace-pre-wrap"></p>
+                                    </div>
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3">
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <label class="text-[10px] text-zinc-500 uppercase tracking-wider">Headline</label>
+                                            <div class="flex items-center gap-2">
+                                                <span id="drawer-headline-chars" class="text-[10px] text-zinc-500"></span>
+                                                <button onclick="copyDrawerField('headline')" class="text-[11px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                                            </div>
+                                        </div>
+                                        <p id="drawer-headline" class="text-[13px] text-white font-semibold leading-snug"></p>
+                                    </div>
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3">
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <label class="text-[10px] text-zinc-500 uppercase tracking-wider">Description</label>
+                                            <div class="flex items-center gap-2">
+                                                <span id="drawer-description-chars" class="text-[10px] text-zinc-500"></span>
+                                                <button onclick="copyDrawerField('description')" class="text-[11px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                                            </div>
+                                        </div>
+                                        <p id="drawer-description" class="text-[12px] text-zinc-300 leading-snug"></p>
+                                    </div>
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3">
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <label class="text-[10px] text-zinc-500 uppercase tracking-wider">CTA</label>
+                                            <button onclick="copyDrawerField('cta')" class="text-[11px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                                        </div>
+                                        <span id="drawer-cta" class="inline-block text-[12px] px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-300 font-medium"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== LIGHTBOX ========== -->
+                    <div id="content-lightbox" class="hidden fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm items-center justify-center p-8" onclick="closeLightbox()">
+                        <img id="lightbox-img" src="" alt="" class="max-w-full max-h-full rounded-xl shadow-2xl">
+                        <button onclick="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center" aria-label="Zamknij"><i class="ph ph-x text-xl"></i></button>
+                    </div>
 
                     <!-- TAB: Kampania (Etap 4) — tylko status uruchomienia -->
                     <div id="tab-kampania" class="workflow-panel hidden">
@@ -9911,27 +10021,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             if (hasCopies) renderCopiesResults(adsData.ad_copies);
             if (hasCreatives) renderCreativesResults(adsData.ad_creatives);
 
-            // Share section — widoczna gdy content jest gotowy
-            const shareSection = document.getElementById('content-share-section');
-            const sharedIndicator = document.getElementById('content-shared-indicator');
-            if (hasCreatives) {
-                if (adsData?.content_shared_with_client) {
-                    shareSection?.classList.add('hidden');
-                    sharedIndicator?.classList.remove('hidden');
-                    const dateEl = document.getElementById('content-shared-date');
-                    if (dateEl && adsData.content_shared_at) {
-                        dateEl.textContent = 'Udostępniono ' + new Date(adsData.content_shared_at).toLocaleDateString('pl-PL', {
-                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        });
-                    }
-                } else {
-                    shareSection?.classList.remove('hidden');
-                    sharedIndicator?.classList.add('hidden');
-                }
-            } else {
-                shareSection?.classList.add('hidden');
-                sharedIndicator?.classList.add('hidden');
-            }
+            // Nowy orchestrator (status bar + gallery + copy table + empty state)
+            renderContentTab();
         }
 
         async function shareContentWithClient(resend = false) {
@@ -10555,6 +10646,519 @@ Zwróć TYLKO JSON.`;
             const url = adsData?.ad_creatives?.[index]?.url;
             if (url) copyToClipboard(url);
         }
+        window.copyCreativeUrl = copyCreativeUrl;
+
+        // ===================================================================
+        // ==== NEW CONTENT TAB ORCHESTRATOR + GALLERY + DRAWER + EXPORT ====
+        // ===================================================================
+
+        const ANGLE_STYLES = {
+            pain_point: { label: 'Pain Point', cls: 'bg-red-500/15 text-red-300' },
+            transformation: { label: 'Transformation', cls: 'bg-blue-500/15 text-blue-300' },
+            social_proof: { label: 'Social Proof', cls: 'bg-amber-500/15 text-amber-300' },
+            urgency: { label: 'Urgency', cls: 'bg-orange-500/15 text-orange-300' },
+            curiosity: { label: 'Curiosity', cls: 'bg-violet-500/15 text-violet-300' },
+            myth_busting: { label: 'Myth Busting', cls: 'bg-cyan-500/15 text-cyan-300' },
+            before_after: { label: 'Before/After', cls: 'bg-emerald-500/15 text-emerald-300' },
+            authority: { label: 'Authority', cls: 'bg-indigo-500/15 text-indigo-300' },
+            health: { label: 'Health', cls: 'bg-emerald-500/15 text-emerald-300' },
+        };
+        function angleStyle(raw) {
+            if (!raw) return { label: '—', cls: 'bg-zinc-800 text-zinc-400' };
+            const key = String(raw).toLowerCase().replace(/[\s-]/g, '_');
+            return ANGLE_STYLES[key] || { label: String(raw), cls: 'bg-zinc-700/60 text-zinc-200' };
+        }
+        function fmtPlDateTime(iso) {
+            if (!iso) return '';
+            try {
+                return new Date(iso).toLocaleString('pl-PL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            } catch { return ''; }
+        }
+        function getVersions() {
+            const v = adsData?.ad_copies?.versions;
+            if (Array.isArray(v)) return v;
+            if (v && typeof v === 'object') return Object.values(v).filter(x => x && typeof x === 'object');
+            return [];
+        }
+        function getCreatives() {
+            return Array.isArray(adsData?.ad_creatives) ? adsData.ad_creatives : [];
+        }
+
+        // ---- STATUS BAR ----
+        function updateContentStatusBar() {
+            const pill = document.getElementById('content-status-pill');
+            const meta = document.getElementById('content-status-meta');
+            const actions = document.getElementById('content-status-actions');
+            if (!pill || !actions) return;
+
+            const creatives = getCreatives();
+            const versions = getVersions();
+            const running = adsData?.campaign_pipeline_status === 'running';
+            const failed = adsData?.campaign_pipeline_status === 'failed';
+            const ready = creatives.length > 0 || versions.length > 0;
+            const shared = !!adsData?.content_shared_with_client;
+
+            // pill
+            if (running) {
+                pill.textContent = 'Generowanie...';
+                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 font-medium';
+            } else if (failed) {
+                pill.textContent = 'Błąd';
+                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 font-medium';
+            } else if (shared) {
+                pill.textContent = 'Wysłane do klienta';
+                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium';
+            } else if (ready) {
+                pill.textContent = 'Gotowe do wysłania';
+                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 font-medium';
+            } else {
+                pill.textContent = 'Brak materiałów';
+                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-medium';
+            }
+
+            // meta
+            if (meta) {
+                if (ready) {
+                    const parts = [];
+                    if (creatives.length) parts.push(`${creatives.length} kreacji`);
+                    if (versions.length) parts.push(`${versions.length} wersji copy`);
+                    const when = adsData?.ad_creatives_generated_at || adsData?.ad_copies_generated_at;
+                    if (when) parts.push(fmtPlDateTime(when));
+                    if (shared && adsData?.content_shared_at) parts.push(`→ klient ${fmtPlDateTime(adsData.content_shared_at)}`);
+                    meta.textContent = parts.join(' · ');
+                } else if (running) {
+                    meta.textContent = 'Pipeline działa w tle — odśwież za chwilę';
+                } else {
+                    meta.textContent = 'Automatyczny pipeline: research → copy → kreacje';
+                }
+            }
+
+            // actions
+            actions.innerHTML = '';
+            if (ready && !shared) {
+                const b = document.createElement('button');
+                b.id = 'btn-share-content';
+                b.onclick = () => shareContentWithClient();
+                b.className = 'bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-4 py-2 rounded-lg text-[12px] font-semibold transition-all flex items-center gap-2 shadow-lg shadow-violet-500/20';
+                b.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Udostępnij klientowi';
+                actions.appendChild(b);
+            } else if (shared) {
+                const b = document.createElement('button');
+                b.onclick = () => shareContentWithClient(true);
+                b.className = 'text-[11px] text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5';
+                b.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Wyślij ponownie';
+                actions.appendChild(b);
+            }
+            if (ready) {
+                const meta = document.createElement('button');
+                meta.onclick = exportMetaBulkZip;
+                meta.className = 'text-[11px] text-zinc-200 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5';
+                meta.innerHTML = '<i class="ph ph-file-zip"></i> Pakiet Meta';
+                meta.title = 'Pobierz ZIP: XLSX + 5 PNG gotowe do importu w Meta Ads Manager';
+                actions.appendChild(meta);
+            }
+        }
+
+        // ---- GALLERY ----
+        function renderCreativeGallery() {
+            const section = document.getElementById('content-gallery-section');
+            const grid = document.getElementById('gallery-grid');
+            const countEl = document.getElementById('gallery-count');
+            if (!section || !grid) return;
+            const creatives = getCreatives();
+            const versions = getVersions();
+            if (!creatives.length) { section.classList.add('hidden'); return; }
+            section.classList.remove('hidden');
+            if (countEl) countEl.textContent = `· ${creatives.length}`;
+            grid.innerHTML = creatives.map((c, i) => {
+                const v = versions[i] || {};
+                const a = angleStyle(v.angle || c.type);
+                return `
+                    <button type="button" onclick="openCreativeDrawer(${i})" class="group relative text-left bg-zinc-900/50 hover:bg-zinc-900 border border-white/5 hover:border-violet-500/40 rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cyan-500/40 focus:outline-none">
+                        <div class="relative aspect-square bg-zinc-800 overflow-hidden">
+                            <img src="${escapeHtml(c.url || '')}" alt="${escapeHtml(v.headline || c.filename || '')}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                            <div class="absolute top-2 left-2 flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white">#${i + 1}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full ${a.cls} backdrop-blur">${escapeHtml(a.label)}</span>
+                            </div>
+                            <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1.5">
+                                <span class="text-[10px] px-2 py-1 rounded bg-white/15 backdrop-blur text-white flex items-center gap-1"><i class="ph ph-arrow-square-out"></i> Otwórz</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5">
+                            <p class="text-[12px] font-medium text-white line-clamp-1">${escapeHtml(v.headline || c.filename || 'Kreacja ' + (i + 1))}</p>
+                            <p class="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml((v.primary_text || '').slice(0, 80))}</p>
+                        </div>
+                    </button>`;
+            }).join('');
+        }
+
+        // ---- COPY TABLE ----
+        function renderCopyTable() {
+            const section = document.getElementById('content-copy-section');
+            const body = document.getElementById('copy-table-body');
+            if (!section || !body) return;
+            const versions = getVersions();
+            const wowEl = document.getElementById('copies-wow-factor');
+            const wowText = document.getElementById('copies-wow-text');
+            if (adsData?.ad_copies?.wow_factor && wowEl && wowText) {
+                wowText.textContent = adsData.ad_copies.wow_factor;
+                wowEl.classList.remove('hidden');
+            }
+            if (!versions.length) { section.classList.add('hidden'); return; }
+            section.classList.remove('hidden');
+            body.innerHTML = versions.map((v, i) => {
+                const a = angleStyle(v.angle);
+                const primary = v.primary_text || '';
+                const primaryLen = primary.length;
+                const headlineLen = (v.headline || '').length;
+                const lenCls = primaryLen > 125 ? 'text-amber-400' : 'text-zinc-500';
+                return `
+                <div class="copy-row group">
+                    <div class="grid grid-cols-[40px_110px_1fr_90px_40px] gap-3 px-4 py-3 items-center hover:bg-zinc-900/40 cursor-pointer transition-colors" onclick="toggleCopyRow(${i})">
+                        <span class="text-[11px] font-bold text-zinc-500">#${i + 1}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${a.cls} truncate text-center">${escapeHtml(a.label)}</span>
+                        <div class="min-w-0">
+                            <p class="text-[12px] font-semibold text-white truncate">${escapeHtml(v.headline || '—')}</p>
+                            <p class="text-[11px] text-zinc-400 line-clamp-1">${escapeHtml(primary)}</p>
+                        </div>
+                        <div class="text-right text-[10px] ${lenCls} tabular-nums">${primaryLen}/125 · ${headlineLen}/40</div>
+                        <button onclick="event.stopPropagation(); openCreativeDrawer(${i})" class="justify-self-end w-7 h-7 rounded-md bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-300 hover:text-white flex items-center justify-center" title="Otwórz drawer"><i class="ph ph-arrow-square-out text-xs"></i></button>
+                    </div>
+                    <div class="copy-row-expanded hidden px-4 pb-3 pt-0">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div class="bg-zinc-800/40 border border-white/5 rounded-lg p-2.5">
+                                <div class="flex items-center justify-between mb-1"><span class="text-[9px] uppercase tracking-wider text-zinc-500">Primary</span><button onclick="copyAdField(${i}, 'primary_text')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button></div>
+                                <p class="text-[11px] text-zinc-100 leading-relaxed whitespace-pre-wrap">${escapeHtml(primary)}</p>
+                            </div>
+                            <div class="bg-zinc-800/40 border border-white/5 rounded-lg p-2.5">
+                                <div class="flex items-center justify-between mb-1"><span class="text-[9px] uppercase tracking-wider text-zinc-500">Description</span><button onclick="copyAdField(${i}, 'description')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button></div>
+                                <p class="text-[11px] text-zinc-200 leading-snug">${escapeHtml(v.description || '')}</p>
+                                ${v.cta ? `<div class="mt-2 flex items-center gap-1.5"><span class="text-[9px] uppercase tracking-wider text-zinc-500">CTA:</span><span class="text-[11px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">${escapeHtml(v.cta)}</span></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        function toggleCopyRow(i) {
+            const rows = document.querySelectorAll('#copy-table-body .copy-row');
+            const r = rows[i];
+            if (!r) return;
+            const ex = r.querySelector('.copy-row-expanded');
+            ex?.classList.toggle('hidden');
+        }
+        window.toggleCopyRow = toggleCopyRow;
+
+        // ---- DRAWER ----
+        let drawerIndex = 0;
+        function openCreativeDrawer(i) {
+            const creatives = getCreatives();
+            const versions = getVersions();
+            if (!creatives[i] && !versions[i]) return;
+            drawerIndex = i;
+            renderDrawerContent();
+            const d = document.getElementById('creative-drawer');
+            d?.classList.remove('hidden');
+            d?.classList.add('flex');
+            document.addEventListener('keydown', drawerKeyHandler);
+        }
+        function closeCreativeDrawer() {
+            const d = document.getElementById('creative-drawer');
+            d?.classList.add('hidden');
+            d?.classList.remove('flex');
+            document.removeEventListener('keydown', drawerKeyHandler);
+        }
+        function navigateDrawer(dir) {
+            const n = Math.max(getCreatives().length, getVersions().length);
+            drawerIndex = (drawerIndex + dir + n) % n;
+            renderDrawerContent();
+        }
+        function drawerKeyHandler(e) {
+            if (e.key === 'Escape') closeCreativeDrawer();
+            else if (e.key === 'ArrowLeft') navigateDrawer(-1);
+            else if (e.key === 'ArrowRight') navigateDrawer(1);
+        }
+        function renderDrawerContent() {
+            const i = drawerIndex;
+            const c = getCreatives()[i] || {};
+            const v = getVersions()[i] || {};
+            const a = angleStyle(v.angle || c.type);
+            const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val || ''; };
+            set('drawer-index', `#${i + 1}`);
+            const angleEl = document.getElementById('drawer-angle');
+            if (angleEl) { angleEl.textContent = a.label; angleEl.className = `text-[10px] px-2 py-0.5 rounded-full ${a.cls}`; }
+            set('drawer-filename', c.filename || '');
+            const img = document.getElementById('drawer-image');
+            if (img) img.src = c.url || '';
+            const dl = document.getElementById('drawer-download');
+            if (dl) { dl.href = c.url || '#'; dl.setAttribute('download', c.filename || 'creative.png'); }
+            set('drawer-primary', v.primary_text || '');
+            set('drawer-primary-chars', `${(v.primary_text || '').length}/125`);
+            set('drawer-headline', v.headline || '');
+            set('drawer-headline-chars', `${(v.headline || '').length}/40`);
+            set('drawer-description', v.description || '');
+            set('drawer-description-chars', `${(v.description || '').length}/30`);
+            set('drawer-cta', v.cta || 'Sprawdź szczegóły');
+        }
+        function copyDrawerField(field) {
+            const v = getVersions()[drawerIndex];
+            if (!v) return;
+            copyToClipboard(v[field] || '');
+        }
+        function copyDrawerUrl() {
+            const c = getCreatives()[drawerIndex];
+            if (c?.url) copyToClipboard(c.url);
+        }
+        function copyFullBundle() {
+            const c = getCreatives()[drawerIndex] || {};
+            const v = getVersions()[drawerIndex] || {};
+            const text = [
+                `Angle: ${v.angle || c.type || ''}`,
+                `Headline: ${v.headline || ''}`,
+                `Primary Text:\n${v.primary_text || ''}`,
+                `Description: ${v.description || ''}`,
+                `CTA: ${v.cta || 'Sprawdź szczegóły'}`,
+                `Image: ${c.url || ''}`,
+                `File: ${c.filename || ''}`,
+            ].join('\n\n');
+            navigator.clipboard.writeText(text).then(() => showToast('Pakiet skopiowany!', 'success'));
+        }
+        window.openCreativeDrawer = openCreativeDrawer;
+        window.closeCreativeDrawer = closeCreativeDrawer;
+        window.navigateDrawer = navigateDrawer;
+        window.copyDrawerField = copyDrawerField;
+        window.copyDrawerUrl = copyDrawerUrl;
+        window.copyFullBundle = copyFullBundle;
+
+        // ---- LIGHTBOX ----
+        function openLightbox(src) {
+            const lb = document.getElementById('content-lightbox');
+            const img = document.getElementById('lightbox-img');
+            if (img) img.src = src;
+            lb?.classList.remove('hidden');
+            lb?.classList.add('flex');
+        }
+        function closeLightbox() {
+            const lb = document.getElementById('content-lightbox');
+            lb?.classList.add('hidden');
+            lb?.classList.remove('flex');
+        }
+        window.openLightbox = openLightbox;
+        window.closeLightbox = closeLightbox;
+
+        // ---- DOWNLOAD ALL (sekwencyjnie przez <a download>) ----
+        async function downloadAllCreatives() {
+            const creatives = getCreatives();
+            if (!creatives.length) return;
+            showToast('Pobieram ' + creatives.length + ' kreacji...', 'info');
+            for (let i = 0; i < creatives.length; i++) {
+                const c = creatives[i];
+                try {
+                    const res = await fetch(c.url);
+                    const blob = await res.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = c.filename || `creative_${i + 1}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+                    await new Promise(r => setTimeout(r, 300));
+                } catch (e) { console.error('Download failed', e); }
+            }
+        }
+        window.downloadAllCreatives = downloadAllCreatives;
+
+        // ---- EXPORT META BULK ZIP (XLSX + PNG) ----
+        async function loadLib(src, globalName) {
+            if (window[globalName]) return window[globalName];
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src; s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+            return window[globalName];
+        }
+        async function exportMetaBulkZip() {
+            const creatives = getCreatives();
+            const versions = getVersions();
+            if (!creatives.length && !versions.length) { showToast('Brak materiałów', 'error'); return; }
+            showToast('Buduję pakiet Meta...', 'info');
+            try {
+                const [JSZipLib, XLSXLib] = await Promise.all([
+                    loadLib('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'JSZip'),
+                    loadLib('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', 'XLSX'),
+                ]);
+                const zip = new JSZipLib();
+                // Landing URL: najpierw campaign_spec, potem sales_page_url z workflow (Etap 3 krok Strona sprzedażowa)
+                const landingUrl = adsData?.campaign_spec?.campaign?.landing_url || workflow?.sales_page_url || '';
+                // Campaign spec z adsData lub fallback
+                const spec = adsData?.campaign_spec || null;
+                const campaignName = spec?.campaign?.name || `${workflow?.customer_name || 'Kampania'} — Launch`;
+                const dailyBudget = spec?.campaign?.daily_budget_total || 10;
+                const adSets = Array.isArray(spec?.ad_sets) && spec.ad_sets.length >= 2
+                    ? spec.ad_sets
+                    : [
+                        { name: campaignName + ' — Grupa A', age_min: 25, age_max: 55, gender: 'all', interests: [], creatives: [0, 1, 2, 3, 4] },
+                        { name: campaignName + ' — Grupa B', age_min: 25, age_max: 55, gender: 'all', interests: [], creatives: [0, 1, 2, 3, 4] },
+                    ];
+
+                // Nagłówki Meta Bulk Import (camel + space zgodnie ze schematem)
+                const headers = [
+                    'Campaign Name','Campaign Objective','Campaign Daily Budget','Campaign Status',
+                    'Ad Set Name','Ad Set Daily Budget','Ad Set Run Status','Optimization Goal','Billing Event',
+                    'Age Min','Age Max','Gender','Countries','Interests','Placement',
+                    'Ad Name','Title','Body','Link Description','Call to Action','Link','Image File Name',
+                ];
+                const rows = [];
+                adSets.forEach((as, asi) => {
+                    const creativeIdxs = Array.isArray(as.creatives) ? as.creatives : [0,1,2,3,4];
+                    creativeIdxs.forEach(ci => {
+                        const c = creatives[ci]; const v = versions[ci];
+                        if (!c && !v) return;
+                        rows.push([
+                            campaignName, 'OUTCOME_SALES', dailyBudget, 'PAUSED',
+                            as.name || `Grupa ${asi + 1}`, '', 'PAUSED', 'OFFSITE_CONVERSIONS', 'IMPRESSIONS',
+                            as.age_min || 25, as.age_max || 55, (as.gender || 'all').toUpperCase(),
+                            'PL', (Array.isArray(as.interests) ? as.interests.join(',') : ''), 'Advantage+',
+                            `${as.name || ('Grupa ' + (asi + 1))} — #${ci + 1}`,
+                            (v?.headline || '').slice(0, 40),
+                            v?.primary_text || '',
+                            (v?.description || '').slice(0, 30),
+                            v?.cta || 'SHOP_NOW',
+                            landingUrl,
+                            c?.filename || '',
+                        ]);
+                    });
+                });
+
+                const ws = XLSXLib.utils.aoa_to_sheet([headers, ...rows]);
+                const wb = XLSXLib.utils.book_new();
+                XLSXLib.utils.book_append_sheet(wb, ws, 'Ads');
+                const xlsxBuf = XLSXLib.write(wb, { bookType: 'xlsx', type: 'array' });
+                zip.file('kampania_meta.xlsx', xlsxBuf);
+                zip.file('README.txt',
+                    `Import do Meta Ads Manager:\n\n1. Rozpakuj ZIP do folderu na dysku.\n2. Meta Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel.\n3. Wybierz kampania_meta.xlsx — Meta podpina pliki PNG z tego folderu.\n4. Sprawdź draft i opublikuj.\n\nBudżet dzienny: ${dailyBudget} zł na kampanię (CBO).\nCel: Sprzedaż (OUTCOME_SALES).\nPlacement: Advantage+.\n`);
+
+                // Dodaj PNG-i
+                for (const c of creatives) {
+                    if (!c?.url) continue;
+                    try {
+                        const res = await fetch(c.url);
+                        const blob = await res.blob();
+                        zip.file(c.filename || 'creative.png', blob);
+                    } catch (e) { console.error('img', e); }
+                }
+
+                const out = await zip.generateAsync({ type: 'blob' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(out);
+                a.download = `${(workflow?.customer_name || 'kampania').replace(/\s+/g, '_')}_meta_ads.zip`;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+                showToast('Pakiet Meta pobrany!', 'success');
+            } catch (e) {
+                console.error('exportMetaBulkZip', e);
+                showToast('Błąd eksportu: ' + e.message, 'error');
+            }
+        }
+        window.exportMetaBulkZip = exportMetaBulkZip;
+
+        // ---- CAMPAIGN SPEC RENDERER ----
+        function renderCampaignSpec() {
+            const section = document.getElementById('content-campaign-section');
+            const body = document.getElementById('campaign-spec-body');
+            const chip = document.getElementById('campaign-meta-chip');
+            const chipText = document.getElementById('campaign-meta-text');
+            if (!section || !body) return;
+            const spec = adsData?.campaign_spec;
+            if (!spec || !Array.isArray(spec.ad_sets) || spec.ad_sets.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            section.classList.remove('hidden');
+            const camp = spec.campaign || {};
+            if (chip && chipText) {
+                chipText.textContent = `${camp.daily_budget_total || 10} zł/dzień · CBO · Advantage+`;
+                chip.classList.remove('hidden');
+            }
+
+            const campCard = `
+                <div class="bg-zinc-900/50 border border-violet-500/20 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center"><i class="ph ph-megaphone-simple text-violet-300"></i></div>
+                        <span class="text-[11px] uppercase tracking-wider text-violet-300 font-semibold">Kampania</span>
+                    </div>
+                    <p class="text-[14px] font-semibold text-white mb-2 truncate" title="${escapeHtml(camp.name || '')}">${escapeHtml(camp.name || 'Kampania')}</p>
+                    <dl class="space-y-1.5 text-[11px]">
+                        <div class="flex justify-between"><dt class="text-zinc-500">Cel</dt><dd class="text-zinc-200">${escapeHtml(camp.objective || 'OUTCOME_SALES')}</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Budżet/dzień</dt><dd class="text-emerald-300 font-semibold">${camp.daily_budget_total || 10} zł</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Optymalizacja</dt><dd class="text-zinc-200">${escapeHtml(camp.optimization_goal || 'OFFSITE_CONVERSIONS')}</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Placement</dt><dd class="text-zinc-200">Advantage+</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Status</dt><dd><span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">${escapeHtml(camp.status || 'PAUSED')}</span></dd></div>
+                    </dl>
+                </div>`;
+
+            const adSetCards = spec.ad_sets.map((as, i) => {
+                const letter = String.fromCharCode(65 + i);
+                const interests = Array.isArray(as.interests) ? as.interests : [];
+                const creativeIdxs = Array.isArray(as.creatives) ? as.creatives : [];
+                const genderLabel = as.gender === 'female' ? 'Kobiety' : as.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
+                return `
+                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center"><span class="text-[12px] font-bold text-cyan-300">${letter}</span></div>
+                        <span class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Grupa ${letter}</span>
+                    </div>
+                    <p class="text-[13px] font-semibold text-white mb-2 line-clamp-2">${escapeHtml(as.name || 'Grupa ' + letter)}</p>
+                    <dl class="space-y-1.5 text-[11px] mb-3">
+                        <div class="flex justify-between"><dt class="text-zinc-500">Wiek</dt><dd class="text-zinc-200">${as.age_min || 25}–${as.age_max || 55}</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Płeć</dt><dd class="text-zinc-200">${genderLabel}</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Kraj</dt><dd class="text-zinc-200">Polska</dd></div>
+                    </dl>
+                    ${interests.length ? `<div class="mb-3"><div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Interests</div><div class="flex flex-wrap gap-1">${interests.slice(0, 8).map(x => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800/80 text-zinc-300">${escapeHtml(x)}</span>`).join('')}</div></div>` : ''}
+                    ${creativeIdxs.length ? `<div class="mb-2"><div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Kreacje</div><div class="flex flex-wrap gap-1">${creativeIdxs.map(ci => `<button onclick="openCreativeDrawer(${ci})" class="text-[10px] px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 hover:bg-violet-500/25">#${ci + 1}</button>`).join('')}</div></div>` : ''}
+                    ${as.rationale ? `<p class="text-[10px] text-zinc-500 italic border-t border-white/5 pt-2 mt-2 line-clamp-3">${escapeHtml(as.rationale)}</p>` : ''}
+                </div>`;
+            }).join('');
+
+            body.innerHTML = campCard + adSetCards;
+        }
+
+        // ---- ORCHESTRATOR ----
+        function renderContentTab() {
+            const creatives = getCreatives();
+            const versions = getVersions();
+            const running = adsData?.campaign_pipeline_status === 'running';
+            const hasAny = creatives.length > 0 || versions.length > 0;
+
+            const empty = document.getElementById('content-empty-state');
+            const progress = document.getElementById('pipeline-progress');
+            if (running) {
+                empty?.classList.add('hidden');
+                progress?.classList.remove('hidden');
+            } else if (!hasAny) {
+                empty?.classList.remove('hidden');
+                progress?.classList.add('hidden');
+            } else {
+                empty?.classList.add('hidden');
+                progress?.classList.add('hidden');
+            }
+
+            updateContentStatusBar();
+            if (hasAny) {
+                renderCreativeGallery();
+                renderCopyTable();
+                renderCampaignSpec();
+            } else {
+                document.getElementById('content-gallery-section')?.classList.add('hidden');
+                document.getElementById('content-copy-section')?.classList.add('hidden');
+                document.getElementById('content-campaign-section')?.classList.add('hidden');
+            }
+        }
+        window.renderContentTab = renderContentTab;
 
         async function generateAdCreatives(onProgress) {
             // Pobierz dane produktu (zdjęcie referencyjne)

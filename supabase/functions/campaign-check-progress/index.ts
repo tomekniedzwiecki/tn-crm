@@ -254,6 +254,10 @@ async function handleFullManusTask(supabase: any, apiKey: string, supabaseUrl: s
     updates.ad_copies = campaignData.copy
     updates.ad_copies_generated_at = new Date().toISOString()
   }
+  if (campaignData?.campaign_spec) {
+    updates.campaign_spec = campaignData.campaign_spec
+    updates.campaign_spec_at = new Date().toISOString()
+  }
   if (creatives.length > 0) {
     updates.ad_creatives = creatives
     updates.ad_creatives_generated_at = new Date().toISOString()

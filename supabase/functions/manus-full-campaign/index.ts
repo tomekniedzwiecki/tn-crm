@@ -257,11 +257,31 @@ ZASADY grafik:
 - NIE białe tło studio (to wygląda jak Allegro)
 - Produkt 1:1 z referencji — żadnej reimaginacji
 
+**4. SPECYFIKACJA KAMPANII META ADS**
+Na podstawie researchu, raportów i copy zaproponuj **jedną kampanię** z **2 grupami odbiorców (ad sets)** gotową do wklejenia w Meta Ads Manager.
+
+WYMAGANIA KAMPANII:
+- Cel: **OUTCOME_SALES** (Sprzedaż/Purchase)
+- Budżet: **10 zł dziennie na poziomie kampanii** (CBO — Campaign Budget Optimization, NIE per ad set)
+- Optymalizacja: OFFSITE_CONVERSIONS (Purchase event z pikseli Mety)
+- Placement: **Advantage+ (automatyczne)** — Meta sama dobiera umiejscowienia
+- Landing URL: użyj podanego linku do strony sprzedażowej
+- Status: PAUSED (do sprawdzenia przez admina przed publikacją)
+
+2 ad sety — RÓŻNE persony (NIE duplikat!). Dobierz na bazie raportów i analizy produktu. Dla KAŻDEJ grupy:
+- name: krótka opisowa nazwa (np. "Mamy alergików 28-45", "Zamożni profesjonaliści 35-55")
+- age_min, age_max: przedział wiekowy
+- gender: "all" / "female" / "male"
+- interests: tablica 3-6 konkretnych interests (po polsku lub po angielsku zgodnie z katalogiem Mety — np. "Allergy", "Home cleaning", "Parenting", "Sustainable living")
+- behaviors: opcjonalnie zachowania zakupowe (np. "Online shoppers", "Engaged shoppers")
+- creatives: lista INDEKSÓW kreacji (0-4) które pasują do tej grupy (minimum 2 per grupa — MOŻE być ten sam indeks w obu grupach)
+- rationale: 1 zdanie dlaczego ta persona dla tego produktu
+
 === OUTPUT ===
 
 Na końcu zwróć:
 
-1. **Plik JSON** "campaign.json" z research + copy:
+1. **Plik JSON** "campaign.json" z research + copy + campaign_spec:
 \`\`\`json
 {
   "research": {
@@ -275,6 +295,21 @@ Na końcu zwróć:
     "versions": [
       {"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"..."}
     ]
+  },
+  "campaign_spec": {
+    "campaign": {
+      "name": "${brandName} — Launch",
+      "objective": "OUTCOME_SALES",
+      "daily_budget_total": 10,
+      "optimization_goal": "OFFSITE_CONVERSIONS",
+      "placement": "advantage_plus",
+      "status": "PAUSED",
+      "landing_url": "${landingUrl || ''}"
+    },
+    "ad_sets": [
+      {"name":"...","age_min":25,"age_max":45,"gender":"all","interests":["..."],"behaviors":["..."],"creatives":[0,2,3],"rationale":"..."},
+      {"name":"...","age_min":30,"age_max":55,"gender":"female","interests":["..."],"behaviors":["..."],"creatives":[1,4],"rationale":"..."}
+    ]
   }
 }
 \`\`\`
@@ -283,7 +318,7 @@ Na końcu zwróć:
 
 3. Krótkie (3-5 zdań) podsumowanie co zrobiłeś.
 
-Zacznij teraz. Pracuj samodzielnie aż skończysz wszystkie 3 zadania — nie pytaj o nic w międzyczasie. Jeśli czegoś brakuje, załóż sensowne defaulty i kontynuuj.
+Zacznij teraz. Pracuj samodzielnie aż skończysz wszystkie 4 zadania — nie pytaj o nic w międzyczasie. Jeśli czegoś brakuje, załóż sensowne defaulty i kontynuuj.
 `.trim()
 
     // Utwórz task w Manus — ze zdjęciem produktu jako attachment (tak jak ręczny upload)
