@@ -441,23 +441,53 @@
     return null;
   }
 
+  // Try to reveal "Dodaj opcję X" button by interacting with last existing field
+  // (Meta renders the button only after focus+blur on a sibling input)
+  async function revealAddButton(typeKey, fields) {
+    const last = fields[typeKey][fields[typeKey].length - 1]?.element;
+    if (!last) return null;
+
+    // Try 1: focus the last field, trigger mouseenter on its wrapper
+    try {
+      const wrapper = last.closest('[role="group"], [class*="field" i], [data-testid]') || last.parentElement;
+      if (wrapper) {
+        wrapper.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        wrapper.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      }
+      last.focus();
+      await sleep(200);
+      // Trigger blur to convince Meta the user "exited" the field
+      last.blur();
+      document.body.focus();
+      await sleep(400);
+    } catch (e) {
+      console.warn('[TN Ads Filler] revealAddButton error', e);
+    }
+
+    return findAddButton(typeKey, fields[typeKey]);
+  }
+
   async function ensureFieldCount(typeKey, neededCount, maxClicks = 10) {
     let fields = scanFields();
     let clicks = 0;
     console.log(`[TN Ads Filler] ${typeKey}: have ${fields[typeKey].length}, need ${neededCount}`);
-    const extraFields = []; // newly-added fields we couldn't match by label
+    const extraFields = [];
 
     while (fields[typeKey].length + extraFields.length < neededCount && clicks < maxClicks) {
-      const btn = findAddButton(typeKey, fields[typeKey]);
+      let btn = findAddButton(typeKey, fields[typeKey]);
       if (!btn) {
-        console.warn(`[TN Ads Filler] No add button found for ${typeKey}`);
+        // Try revealing button by interacting with last field
+        console.log(`[TN Ads Filler] Trying to reveal add button for ${typeKey}`);
+        btn = await revealAddButton(typeKey, fields);
+      }
+      if (!btn) {
+        console.warn(`[TN Ads Filler] No add button found for ${typeKey} even after reveal attempt`);
         break;
       }
       console.log(`[TN Ads Filler] Click #${clicks + 1} for ${typeKey}:`, btn.innerText || btn.textContent);
 
       const before = snapshotInputs();
       btn.scrollIntoView({ block: 'center', behavior: 'instant' });
-      // Focus first (some dropdowns/menus need focus before click)
       try { btn.focus(); } catch {}
       dispatchRealClick(btn);
       clicks++;
@@ -467,17 +497,14 @@
         console.warn(`[TN Ads Filler] No new field appeared after click for ${typeKey}`);
         break;
       }
-      // Re-scan; if label-based scan picked it up, great; otherwise track manually
       const prevCount = fields[typeKey].length;
       fields = scanFields();
       if (fields[typeKey].length === prevCount) {
-        // Label-based scan missed it — add manually
         extraFields.push({ element: newField, label: `${typeKey} (auto #${extraFields.length + 1})` });
         console.log(`[TN Ads Filler] Fallback: tracking new field manually for ${typeKey}`);
       }
     }
 
-    // Merge extras into fields list so fillFields can use them
     if (extraFields.length) {
       fields[typeKey] = [...fields[typeKey], ...extraFields];
     }
@@ -620,16 +647,20 @@
               })(),
               parent_text: (el.parentElement?.innerText || '').slice(0, 80)
             }));
-          const addButtons = Array.from(document.querySelectorAll('button, [role="button"]'))
+          const allButtons = Array.from(document.querySelectorAll('button, [role="button"], [role="switch"], [role="checkbox"]'))
             .filter(b => b.offsetParent !== null)
-            .filter(b => /dodaj|add/i.test(b.innerText || b.textContent || ''))
-            .slice(0, 20)
             .map(b => ({
-              text: (b.innerText || b.textContent || '').slice(0, 80).trim(),
+              text: (b.innerText || b.textContent || '').slice(0, 60).trim(),
               aria_label: b.getAttribute('aria-label'),
+              role: b.getAttribute('role'),
               testid: b.getAttribute('data-testid'),
-              disabled: b.disabled
-            }));
+              aria_checked: b.getAttribute('aria-checked'),
+              aria_pressed: b.getAttribute('aria-pressed')
+            }))
+            .filter(b => b.text || b.aria_label);
+          const addButtons = allButtons.filter(b =>
+            /dodaj|add|opcj|option|wiele|multiple|wariant|variant/i.test((b.text + ' ' + (b.aria_label || '')))
+          ).slice(0, 30);
           sendResponse({
             ok: true,
             report: {
