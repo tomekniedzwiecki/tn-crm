@@ -623,45 +623,32 @@
 
   async function ensureFieldCount(typeKey, neededCount, maxClicks = 10) {
     let fields = scanFields();
-    let clicks = 0;
-    console.log(`[TN Ads Filler] ${typeKey}: have ${fields[typeKey].length}, need ${neededCount}`);
-    const extraFields = [];
+    const startCount = fields[typeKey].length;
+    const clicksNeeded = Math.max(0, neededCount - startCount);
+    console.log(`[TN Ads Filler] ${typeKey}: have ${startCount}, need ${neededCount} → clicking ${clicksNeeded}×`);
 
-    while (fields[typeKey].length + extraFields.length < neededCount && clicks < maxClicks) {
+    for (let i = 0; i < clicksNeeded && i < maxClicks; i++) {
+      // Re-scan every iteration so findAddButton has up-to-date field list
+      fields = scanFields();
       let btn = findAddButton(typeKey, fields[typeKey]);
       if (!btn) {
-        // Try revealing button by interacting with last field
-        console.log(`[TN Ads Filler] Trying to reveal add button for ${typeKey}`);
         btn = await revealAddButton(typeKey, fields);
       }
       if (!btn) {
-        console.warn(`[TN Ads Filler] No add button found for ${typeKey} even after reveal attempt`);
+        console.warn(`[TN Ads Filler] ${typeKey}: no add button on click #${i + 1}`);
         break;
       }
-      console.log(`[TN Ads Filler] Click #${clicks + 1} for ${typeKey}:`, btn.innerText || btn.textContent);
-
-      const before = snapshotInputs();
+      console.log(`[TN Ads Filler] ${typeKey} click #${i + 1}:`, (btn.innerText || btn.textContent || '').trim());
       btn.scrollIntoView({ block: 'center', behavior: 'instant' });
       try { btn.focus(); } catch {}
       dispatchRealClick(btn);
-      clicks++;
-
-      const newField = await waitForNewField(before, 1500);
-      if (!newField) {
-        console.warn(`[TN Ads Filler] No new field appeared after click for ${typeKey}`);
-        break;
-      }
-      const prevCount = fields[typeKey].length;
-      fields = scanFields();
-      if (fields[typeKey].length === prevCount) {
-        extraFields.push({ element: newField, label: `${typeKey} (auto #${extraFields.length + 1})` });
-        console.log(`[TN Ads Filler] Fallback: tracking new field manually for ${typeKey}`);
-      }
+      // Fixed delay — don't rely on waitForNewField (Meta's hidden pre-rendered fields don't trigger it)
+      await sleep(450);
     }
 
-    if (extraFields.length) {
-      fields[typeKey] = [...fields[typeKey], ...extraFields];
-    }
+    // Final re-scan (attachBySection will catch unlabeled pre-rendered fields revealed by clicks)
+    fields = scanFields();
+    console.log(`[TN Ads Filler] ${typeKey}: after expand have ${fields[typeKey].length}`);
     return fields;
   }
 
