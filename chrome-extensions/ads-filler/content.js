@@ -283,18 +283,44 @@
     return null;
   }
 
+  function dispatchRealClick(el) {
+    const rect = el.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, view: window };
+    el.dispatchEvent(new PointerEvent('pointerdown', opts));
+    el.dispatchEvent(new MouseEvent('mousedown', opts));
+    el.dispatchEvent(new PointerEvent('pointerup', opts));
+    el.dispatchEvent(new MouseEvent('mouseup', opts));
+    el.dispatchEvent(new MouseEvent('click', opts));
+  }
+
   async function ensureFieldCount(typeKey, neededCount, maxClicks = 10) {
     let fields = scanFields();
     let clicks = 0;
+    console.log(`[TN Ads Filler] ${typeKey}: have ${fields[typeKey].length}, need ${neededCount}`);
     while (fields[typeKey].length < neededCount && clicks < maxClicks) {
       const btn = findAddButton(typeKey, fields[typeKey]);
-      if (!btn) break;
+      if (!btn) {
+        console.warn(`[TN Ads Filler] No add button found for ${typeKey}`);
+        break;
+      }
+      console.log(`[TN Ads Filler] Clicking add button for ${typeKey}:`, btn.innerText || btn.textContent);
       btn.scrollIntoView({ block: 'center', behavior: 'instant' });
-      btn.click();
+      dispatchRealClick(btn);
       clicks++;
-      // Wait for React to render new field
-      await sleep(350);
+      await sleep(600);
+      const before = fields[typeKey].length;
       fields = scanFields();
+      if (fields[typeKey].length === before) {
+        // Maybe need more time — one more wait cycle
+        await sleep(400);
+        fields = scanFields();
+        if (fields[typeKey].length === before) {
+          console.warn(`[TN Ads Filler] Click didn't add field for ${typeKey}`);
+          break;
+        }
+      }
     }
     return fields;
   }
