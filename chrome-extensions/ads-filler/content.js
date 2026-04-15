@@ -515,20 +515,28 @@
   const FIELD_SELECTOR = 'input[type="text"], input:not([type]), textarea, [contenteditable="true"]';
 
   function snapshotInputs() {
-    return new Set(document.querySelectorAll(FIELD_SELECTOR));
+    const map = new Map();
+    document.querySelectorAll(FIELD_SELECTOR).forEach(el => {
+      map.set(el, el.offsetParent !== null);
+    });
+    return map;
   }
 
-  async function waitForNewField(beforeSet, timeoutMs = 2500) {
+  async function waitForNewField(beforeMap, timeoutMs = 2500) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       const current = document.querySelectorAll(FIELD_SELECTOR);
       for (const el of current) {
-        if (beforeSet.has(el)) continue;
-        // Must be visible & editable
-        if (el.offsetParent === null) continue;
         if (el.disabled || el.readOnly) continue;
         if (isInPreviewArea(el)) continue;
-        return el;
+        const isVisibleNow = el.offsetParent !== null;
+        if (!isVisibleNow) continue;
+        const wasKnown = beforeMap.has(el);
+        const wasVisibleBefore = wasKnown ? beforeMap.get(el) : false;
+        // Count as "new" either: fresh element, OR became visible from hidden
+        if (!wasKnown || !wasVisibleBefore) {
+          return el;
+        }
       }
       await sleep(100);
     }
