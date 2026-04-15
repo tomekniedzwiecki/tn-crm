@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041520';
+        const ADMIN_APP_VERSION = '2026041521';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -11006,18 +11006,6 @@ Zwróć TYLKO JSON.`;
 
                 // Beneficjent = nazwa marki z brandingu (wymagane dla EU/DSA). Płatnika NIE dodajemy —
                 // bez kolumny Payor Meta przyjmuje domyślnie że płatnik = reklamodawca (checkbox 'różnią się' wyłączony).
-                let beneficiary = '';
-                try {
-                    const { data: brandingRow } = await supabaseClient.from('workflow_branding')
-                        .select('value').eq('workflow_id', workflow.id).eq('type', 'brand_info').maybeSingle();
-                    if (brandingRow?.value) {
-                        const bv = typeof brandingRow.value === 'string' ? JSON.parse(brandingRow.value) : brandingRow.value;
-                        beneficiary = bv?.name || '';
-                    }
-                } catch (_) {}
-                if (!beneficiary) beneficiary = spec?.campaign?.name?.replace(/\s*—.*$/, '').trim() || workflow?.offer_name || workflow?.customer_name || 'Marka';
-
-                // Beneficjent / Płatnik — wymagane w EU (DSA). Pobierz nazwę marki z brandingu lub fallback.
                 let beneficiary = '';
                 try {
                     const { data: brandingRow } = await supabaseClient.from('workflow_branding')
