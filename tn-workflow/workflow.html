@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041412';
+        const ADMIN_APP_VERSION = '2026041501';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2346,17 +2346,44 @@
 
                     <!-- TAB: Content (Etap 4) — generowanie materiałów reklamowych -->
                     <div id="tab-content" class="workflow-panel hidden">
-                        <div class="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
-                                    <i class="ph ph-magic-wand text-cyan-400"></i>
-                                    Content — materiały reklamowe
-                                </h3>
-                                <p class="text-zinc-500 text-sm mt-1">Automatyczny pipeline: research konkurencji → copy → kreacje graficzne</p>
+                        <div class="mb-5">
+                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-magic-wand text-cyan-400"></i>
+                                Content — materiały reklamowe
+                            </h3>
+                            <p class="text-zinc-500 text-sm mt-1">Research konkurencji → copy → kreacje graficzne</p>
+                        </div>
+
+                        <!-- ========== UDOSTĘPNIENIE KLIENTOWI (TOP) ========== -->
+                        <div id="content-share-section" class="hidden mb-5">
+                            <div class="bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/30 rounded-2xl p-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-11 h-11 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
+                                        <i class="ph ph-paper-plane-tilt text-violet-300 text-xl"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-[14px] font-semibold text-white">Materiały gotowe do udostępnienia</h4>
+                                        <p id="content-share-status" class="text-[12px] text-zinc-400 mt-0.5">Przejrzyj poniżej i wyślij do klienta jednym kliknięciem.</p>
+                                    </div>
+                                    <button onclick="shareContentWithClient()" id="btn-share-content" class="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center gap-2 shrink-0">
+                                        <i class="ph ph-paper-plane-tilt"></i>
+                                        Udostępnij klientowi
+                                    </button>
+                                </div>
                             </div>
-                            <button onclick="generateAdCopyPrompt()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Kopiuj prompt do generowania copy reklamowego">
-                                <i class="ph ph-robot"></i> Copy Ads (Claude)
-                            </button>
+                        </div>
+
+                        <div id="content-shared-indicator" class="hidden mb-5">
+                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 flex items-center gap-3">
+                                <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                                <div class="flex-1">
+                                    <p class="text-[13px] font-medium text-emerald-400">Udostępnione klientowi</p>
+                                    <p id="content-shared-date" class="text-[11px] text-zinc-500 mt-0.5"></p>
+                                </div>
+                                <button onclick="shareContentWithClient(true)" class="text-[11px] text-zinc-400 hover:text-white px-2.5 py-1 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50">
+                                    Wyślij ponownie
+                                </button>
+                            </div>
                         </div>
 
                         <!-- ========== START PIPELINE ========== -->
@@ -2430,36 +2457,6 @@
                             </div>
                         </div>
 
-                        <!-- ========== WYNIKI: RESEARCH ========== -->
-                        <div id="research-results" class="hidden mb-6">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
-                                    <i class="ph ph-binoculars text-violet-400"></i>
-                                    Research konkurencji
-                                </h4>
-                                <span id="research-date" class="text-[11px] text-zinc-600"></span>
-                            </div>
-                            <div class="space-y-3">
-                                <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
-                                    <div id="research-competitors-list" class="space-y-2 max-h-[300px] overflow-y-auto"></div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
-                                        <h5 class="text-[12px] font-medium text-amber-400 mb-2 flex items-center gap-1.5">
-                                            <i class="ph ph-lightbulb"></i> Luki konkurencji
-                                        </h5>
-                                        <div id="research-gaps" class="space-y-1"></div>
-                                    </div>
-                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
-                                        <h5 class="text-[12px] font-medium text-emerald-400 mb-2 flex items-center gap-1.5">
-                                            <i class="ph ph-target"></i> Rekomendacje
-                                        </h5>
-                                        <div id="research-recommendations" class="space-y-1"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- ========== WYNIKI: COPY ========== -->
                         <div id="copies-results" class="hidden mb-6">
                             <div class="flex items-center justify-between mb-3">
@@ -2479,41 +2476,42 @@
                         </div>
 
                         <!-- Kreacje graficzne są teraz wyświetlane w kartach copy — ta sekcja ukryta -->
-                        <div id="creatives-results" class="hidden">
+                        <div id="creatives-results" class="hidden mb-6">
                             <div id="creatives-grid"></div>
                         </div>
 
-                        <!-- ========== UDOSTĘPNIENIE KLIENTOWI ========== -->
-                        <div id="content-share-section" class="hidden mt-6">
-                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-5">
-                                <div class="flex items-center gap-3 mb-4">
-                                    <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                                        <i class="ph ph-paper-plane-tilt text-violet-400"></i>
+                        <!-- ========== WYNIKI: RESEARCH (collapsible, na dole — drugorzędny) ========== -->
+                        <details id="research-results" class="hidden mb-6 group">
+                            <summary class="list-none cursor-pointer select-none bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-xl p-4 flex items-center gap-3 transition-colors">
+                                <div class="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                                    <i class="ph ph-binoculars text-violet-400"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-[14px] font-semibold text-white">Research konkurencji</h4>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5"><span id="research-count" class="text-zinc-400">—</span> · <span id="research-date"></span></p>
+                                </div>
+                                <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <div class="space-y-3 mt-3">
+                                <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
+                                    <div id="research-competitors-list" class="space-y-2 max-h-[300px] overflow-y-auto"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
+                                        <h5 class="text-[12px] font-medium text-amber-400 mb-2 flex items-center gap-1.5">
+                                            <i class="ph ph-lightbulb"></i> Luki konkurencji
+                                        </h5>
+                                        <div id="research-gaps" class="space-y-1"></div>
                                     </div>
-                                    <div class="flex-1">
-                                        <h4 class="text-[14px] font-medium text-white">Udostępnij materiały klientowi</h4>
-                                        <p id="content-share-status" class="text-[12px] text-zinc-500">Materiały gotowe — przejrzyj je i kliknij udostępnij, aby pokazać klientowi i wysłać email.</p>
+                                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4">
+                                        <h5 class="text-[12px] font-medium text-emerald-400 mb-2 flex items-center gap-1.5">
+                                            <i class="ph ph-target"></i> Rekomendacje
+                                        </h5>
+                                        <div id="research-recommendations" class="space-y-1"></div>
                                     </div>
                                 </div>
-                                <button onclick="shareContentWithClient()" id="btn-share-content" class="w-full bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white py-3 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2">
-                                    <i class="ph ph-paper-plane-tilt"></i>
-                                    Udostępnij klientowi + wyślij email
-                                </button>
                             </div>
-                        </div>
-
-                        <div id="content-shared-indicator" class="hidden mt-6">
-                            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-3">
-                                <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
-                                <div class="flex-1">
-                                    <p class="text-[13px] font-medium text-emerald-400">Udostępnione klientowi</p>
-                                    <p id="content-shared-date" class="text-[11px] text-zinc-500 mt-0.5"></p>
-                                </div>
-                                <button onclick="shareContentWithClient(true)" class="text-[11px] text-zinc-400 hover:text-white px-2.5 py-1 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50">
-                                    Wyślij ponownie
-                                </button>
-                            </div>
-                        </div>
+                        </details>
 
                     </div><!-- /tab-content -->
 
@@ -10200,6 +10198,13 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 dateEl.textContent = new Date(adsData.competitor_research_at).toLocaleDateString('pl-PL', {
                     day: 'numeric', month: 'short', year: 'numeric'
                 });
+            }
+
+            // Count
+            const countEl = document.getElementById('research-count');
+            if (countEl) {
+                const n = Array.isArray(data.competitors) ? data.competitors.length : 0;
+                countEl.textContent = `${n} ${n === 1 ? 'konkurent' : (n >= 2 && n <= 4 ? 'konkurentów' : 'konkurentów')}`;
             }
 
             // Competitors list
