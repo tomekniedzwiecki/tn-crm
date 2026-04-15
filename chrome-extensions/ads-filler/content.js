@@ -58,7 +58,9 @@
       /^main\s*text/i,
       /^tekst\s*g[lł][oó]wny/i,
       /poinformuj\s*odbiorc/i,
-      /tell people what your ad is about/i
+      /tell people what your ad is about/i,
+      /wprowad[zź].*kolejn.*wersj.*tekst/i,
+      /enter another.*primary text/i
     ],
     headline: [
       /^nag[lł][oó]wek/i,
@@ -66,14 +68,18 @@
       /^tytu[lł]/i,
       /^title$/i,
       /napisz.*kr[oó]tki.*nag[lł][oó]wek/i,
-      /write a short headline/i
+      /write a short headline/i,
+      /wprowad[zź].*kolejn.*wersj.*nag[lł][oó]wk/i,
+      /enter another.*headline/i
     ],
     description: [
       /^opis/i,
       /^description/i,
       /za[lł][aą]cz.*dodatkowe.*informacj/i,
       /include additional details/i,
-      /include additional information/i
+      /include additional information/i,
+      /wprowad[zź].*kolejn.*wersj.*opis/i,
+      /enter another.*description/i
     ],
     cta: [
       /^wezwanie\s*do\s*dzia[lł]ania/i,
@@ -160,7 +166,55 @@
         result[type].push({ element: input, label: signals[0] || '' });
       }
     }
+
+    // Section-based fallback: find containers with the "Dodaj opcję X" button
+    // and attach any unrecognized fields inside them to the matching type.
+    attachByAddButton(result);
+
     return result;
+  }
+
+  // Find section containing "Dodaj opcję tekstu/nagłówka/opisu" button and
+  // attach any visible inputs/textareas inside that section to matching type.
+  function attachByAddButton(result) {
+    const allKnown = new Set(Object.values(result).flat().map(f => f.element));
+    const allBtns = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .filter(b => b.offsetParent !== null);
+
+    const typeFromBtn = (btn) => {
+      const txt = clean(btn.innerText || btn.textContent || '');
+      if (!/dodaj|add/i.test(txt)) return null;
+      if (ADD_BUTTON_PATTERNS.primary_text.some(re => re.test(txt))) return 'primary_text';
+      if (ADD_BUTTON_PATTERNS.headline.some(re => re.test(txt))) return 'headline';
+      if (ADD_BUTTON_PATTERNS.description.some(re => re.test(txt))) return 'description';
+      return null;
+    };
+
+    for (const btn of allBtns) {
+      const type = typeFromBtn(btn);
+      if (!type) continue;
+      // Walk up to find the section container (big enough to include sibling fields)
+      let container = btn.parentElement;
+      for (let i = 0; i < 6 && container; i++) {
+        // If container has at least one known field of this type, stop here
+        const hasKnown = result[type].some(f => container.contains(f.element));
+        if (hasKnown) break;
+        container = container.parentElement;
+      }
+      if (!container) continue;
+      // Pick up visible textareas/inputs inside container that aren't already known
+      const siblings = container.querySelectorAll(FIELD_SELECTOR);
+      for (const el of siblings) {
+        if (allKnown.has(el)) continue;
+        if (el.offsetParent === null) continue;
+        if (el.disabled || el.readOnly) continue;
+        // Skip obvious URL fields
+        const signals = collectLabelSignals(el);
+        if (signals.some(s => EXCLUDE_PATTERNS.some(re => re.test(s)))) continue;
+        result[type].push({ element: el, label: `${type} (by section)` });
+        allKnown.add(el);
+      }
+    }
   }
 
   // Walk up the DOM looking for a label-like text
