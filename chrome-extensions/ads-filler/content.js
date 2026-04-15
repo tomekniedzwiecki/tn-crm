@@ -216,12 +216,63 @@
   // Smart setters (React/Vue compatible)
   // ============================================================
 
-  function setInputValue(el, value) {
-    if (el.isContentEditable) {
-      el.focus();
+  function fillContentEditable(el, value) {
+    el.focus();
+    // Select all existing content so it gets replaced
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch {}
+
+    // Strategy 1: simulate paste (best for Lexical/Draft.js in Meta Ads)
+    try {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', value);
+      const pasteEvent = new ClipboardEvent('paste', {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true
+      });
+      // Some editors block paste; check if it was prevented
+      const accepted = el.dispatchEvent(pasteEvent);
+      if (accepted && el.textContent && el.textContent.includes(value.slice(0, 20))) {
+        return true;
+      }
+    } catch {}
+
+    // Strategy 2: beforeinput with insertFromPaste
+    try {
+      const dt2 = new DataTransfer();
+      dt2.setData('text/plain', value);
+      el.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'insertFromPaste',
+        data: value,
+        dataTransfer: dt2,
+        bubbles: true,
+        cancelable: true
+      }));
+      if (el.textContent && el.textContent.includes(value.slice(0, 20))) return true;
+    } catch {}
+
+    // Strategy 3: execCommand insertText (legacy but works)
+    try {
       document.execCommand('selectAll', false, null);
       document.execCommand('insertText', false, value);
-      return true;
+      if (el.textContent && el.textContent.includes(value.slice(0, 20))) return true;
+    } catch {}
+
+    // Strategy 4: direct textContent as last resort (may not trigger React)
+    el.textContent = value;
+    el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: value, bubbles: true }));
+    return true;
+  }
+
+  function setInputValue(el, value) {
+    if (el.isContentEditable) {
+      return fillContentEditable(el, value);
     }
 
     const tag = el.tagName;
@@ -229,14 +280,16 @@
                   tag === 'SELECT' ? HTMLSelectElement.prototype :
                   HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+
+    el.focus();
     if (setter) {
       setter.call(el, value);
     } else {
       el.value = value;
     }
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    // React listens to input + change; some editors also want keydown/keyup
+    el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: value, bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.dispatchEvent(new Event('blur', { bubbles: true }));
     return true;
   }
 
