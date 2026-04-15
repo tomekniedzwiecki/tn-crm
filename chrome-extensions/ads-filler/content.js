@@ -183,9 +183,9 @@
       }
     }
 
-    // Note: section-based attachment disabled — too aggressive, caused chaos when
-    // Meta renders unlabeled TEXTAREAs both for primary_text and headline in same container.
-    // We rely purely on label matching + waitForNewField snapshot diff during auto-expand.
+    // Section-based attach: for each type, find common ancestor of (known field + "Dodaj opcję X" button)
+    // Every unlabeled input inside that ancestor is assumed to belong to this type.
+    attachBySection(result);
 
     // Dedup: if multiple fields share identical aria-label AND sit inside the same
     // parent chain (likely Meta rendering a preview twin), keep only the first one.
@@ -209,7 +209,53 @@
     return result;
   }
 
-  // Find section containing "Dodaj opcję tekstu/nagłówka/opisu" button and
+  // Find common ancestor of two DOM nodes
+  function commonAncestor(a, b) {
+    const ancestors = new Set();
+    let node = a;
+    while (node) { ancestors.add(node); node = node.parentElement; }
+    node = b;
+    while (node && !ancestors.has(node)) node = node.parentElement;
+    return node;
+  }
+
+  // Precise section attach: for each type with a known field, find the "Dodaj opcję X" button,
+  // compute common ancestor, and collect every unlabeled input in that subtree as the same type.
+  function attachBySection(result) {
+    const allKnown = new Set(Object.values(result).flat().map(f => f.element));
+    const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .filter(b => b.offsetParent !== null);
+
+    const pickBtn = (patterns) => btns.find(b =>
+      patterns.some(re => re.test(clean(b.innerText || b.textContent || '')))
+    );
+
+    for (const typeKey of ['primary_text', 'headline', 'description']) {
+      if (!result[typeKey].length) continue;
+      const addBtn = pickBtn(ADD_BUTTON_PATTERNS[typeKey]);
+      if (!addBtn) continue;
+      const known = result[typeKey][0].element;
+      const container = commonAncestor(known, addBtn);
+      if (!container || container === document.body || container === document.documentElement) continue;
+      const inputs = container.querySelectorAll(FIELD_SELECTOR);
+      for (const el of inputs) {
+        if (allKnown.has(el)) continue;
+        if (el.offsetParent === null) continue;
+        if (el.disabled || el.readOnly) continue;
+        if (isInPreviewArea(el)) continue;
+        // Skip URL fields
+        const signals = collectLabelSignals(el);
+        if (signals.some(s => EXCLUDE_PATTERNS.some(re => re.test(s)))) continue;
+        // Skip if it matches a DIFFERENT type by label
+        const altType = matchFieldTypeFromSignals(signals);
+        if (altType && altType !== typeKey) continue;
+        result[typeKey].push({ element: el, label: `${typeKey} (section)` });
+        allKnown.add(el);
+      }
+    }
+  }
+
+  // OLD: Find section containing "Dodaj opcję tekstu/nagłówka/opisu" button and
   // attach any visible inputs/textareas inside that section to matching type.
   function attachByAddButton(result) {
     const allKnown = new Set(Object.values(result).flat().map(f => f.element));
