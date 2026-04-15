@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041508';
+        const ADMIN_APP_VERSION = '2026041509';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -10984,23 +10984,27 @@ Zwróć TYLKO JSON.`;
                 const genderMap = { all: 'All', female: 'Women', male: 'Men' };
                 // CTA: Meta akceptuje "Learn More", "Shop Now", "Sign Up", "See Menu" itd.
                 // Manus zwraca po polsku ("Sprawdź szczegóły") — mapujemy na bezpieczny default.
+                // Meta wymaga API enuma (UPPER_SNAKE_CASE) w kolumnie Call to Action
                 const ctaMap = {
-                    'sprawdź szczegóły': 'Learn More',
-                    'sprawdz szczegoly': 'Learn More',
-                    'zobacz opinie': 'Learn More',
-                    'kup teraz': 'Shop Now',
-                    'zamów': 'Shop Now',
-                    'zapisz się': 'Sign Up',
-                    'dowiedz się więcej': 'Learn More',
+                    'sprawdź szczegóły': 'LEARN_MORE',
+                    'sprawdz szczegoly': 'LEARN_MORE',
+                    'zobacz opinie': 'SEE_MORE',
+                    'kup teraz': 'SHOP_NOW',
+                    'zamów': 'ORDER_NOW',
+                    'zamów teraz': 'ORDER_NOW',
+                    'zapisz się': 'SIGN_UP',
+                    'dowiedz się więcej': 'LEARN_MORE',
+                    'zobacz szczegóły': 'SEE_DETAILS',
+                    'zobacz więcej': 'SEE_MORE',
                 };
+                const allowedCta = new Set(['SHOP_NOW','LEARN_MORE','SIGN_UP','BOOK_NOW','CONTACT_US','DOWNLOAD','GET_OFFER','SUBSCRIBE','ORDER_NOW','BUY_NOW','SEE_MORE','SEE_DETAILS','APPLY_NOW','GET_QUOTE']);
                 const mapCta = (raw) => {
                     const k = String(raw || '').toLowerCase().trim();
-                    if (!k) return 'Learn More';
+                    if (!k) return 'LEARN_MORE';
                     if (ctaMap[k]) return ctaMap[k];
-                    // Jeśli już angielskie z Meta enum
-                    const allowed = ['Shop Now','Learn More','Sign Up','Book Now','Contact Us','Download','Get Offer','Subscribe','Order Now'];
-                    const match = allowed.find(x => x.toLowerCase() === k);
-                    return match || 'Learn More';
+                    const upper = k.toUpperCase().replace(/\s+/g, '_');
+                    if (allowedCta.has(upper)) return upper;
+                    return 'LEARN_MORE';
                 };
                 const rows = [];
                 // Reguła: KAŻDA grupa odbiorców dostaje WSZYSTKIE 5 kreacji (A/B test pełny).
