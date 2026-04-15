@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041504';
+        const ADMIN_APP_VERSION = '2026041505';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -11036,9 +11036,10 @@ Zwróć TYLKO JSON.`;
                     return match || 'Learn More';
                 };
                 const rows = [];
+                // Reguła: KAŻDA grupa odbiorców dostaje WSZYSTKIE 5 kreacji (A/B test pełny).
+                const allCreativeIdxs = creatives.map((_, i) => i);
                 adSets.forEach((as, asi) => {
-                    const creativeIdxs = Array.isArray(as.creatives) ? as.creatives : [0,1,2,3,4];
-                    creativeIdxs.forEach(ci => {
+                    allCreativeIdxs.forEach(ci => {
                         const c = creatives[ci]; const v = versions[ci];
                         if (!c && !v) return;
                         rows.push([

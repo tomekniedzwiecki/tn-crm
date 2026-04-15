@@ -56,7 +56,7 @@ WYMAGANIA:
 - age_min, age_max, gender ("all" | "female" | "male")
 - interests: 3-6 konkretnych po angielsku zgodnie z katalogiem Mety
 - behaviors: opcjonalnie ("Online shoppers" itd.)
-- creatives: lista indeksów kreacji (0-4) dopasowanych do grupy (min 2)
+- creatives: ZAWSZE [0,1,2,3,4] — każda grupa dostaje WSZYSTKIE 5 kreacji (Meta sama zoptymalizuje, pełen A/B test)
 - rationale: 1 zdanie — dlaczego ta persona
 
 === WYMAGANY OUTPUT ===
@@ -75,8 +75,8 @@ Zwróć TYLKO czysty JSON (bez fence \`\`\`), dokładnie taki:
       "landing_url": "${landingUrl}"
     },
     "ad_sets": [
-      {"name":"...","age_min":25,"age_max":45,"gender":"all","interests":["..."],"behaviors":["..."],"creatives":[0,2,3],"rationale":"..."},
-      {"name":"...","age_min":30,"age_max":55,"gender":"female","interests":["..."],"behaviors":["..."],"creatives":[1,4],"rationale":"..."}
+      {"name":"...","age_min":25,"age_max":45,"gender":"all","interests":["..."],"behaviors":["..."],"creatives":[0,1,2,3,4],"rationale":"..."},
+      {"name":"...","age_min":30,"age_max":55,"gender":"female","interests":["..."],"behaviors":["..."],"creatives":[0,1,2,3,4],"rationale":"..."}
     ]
   }
 }

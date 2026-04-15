@@ -274,7 +274,7 @@ WYMAGANIA KAMPANII:
 - gender: "all" / "female" / "male"
 - interests: tablica 3-6 konkretnych interests (po polsku lub po angielsku zgodnie z katalogiem Mety — np. "Allergy", "Home cleaning", "Parenting", "Sustainable living")
 - behaviors: opcjonalnie zachowania zakupowe (np. "Online shoppers", "Engaged shoppers")
-- creatives: lista INDEKSÓW kreacji (0-4) które pasują do tej grupy (minimum 2 per grupa — MOŻE być ten sam indeks w obu grupach)
+- creatives: ZAWSZE [0,1,2,3,4] — każda grupa dostaje WSZYSTKIE 5 kreacji (Meta sama zoptymalizuje który baner działa dla której persony, to jest pełen A/B test)
 - rationale: 1 zdanie dlaczego ta persona dla tego produktu
 
 === OUTPUT ===
@@ -307,8 +307,8 @@ Na końcu zwróć:
       "landing_url": "${landingUrl || ''}"
     },
     "ad_sets": [
-      {"name":"...","age_min":25,"age_max":45,"gender":"all","interests":["..."],"behaviors":["..."],"creatives":[0,2,3],"rationale":"..."},
-      {"name":"...","age_min":30,"age_max":55,"gender":"female","interests":["..."],"behaviors":["..."],"creatives":[1,4],"rationale":"..."}
+      {"name":"...","age_min":25,"age_max":45,"gender":"all","interests":["..."],"behaviors":["..."],"creatives":[0,1,2,3,4],"rationale":"..."},
+      {"name":"...","age_min":30,"age_max":55,"gender":"female","interests":["..."],"behaviors":["..."],"creatives":[0,1,2,3,4],"rationale":"..."}
     ]
   }
 }
