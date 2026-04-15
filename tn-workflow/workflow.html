@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041503';
+        const ADMIN_APP_VERSION = '2026041504';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -11005,13 +11005,36 @@ Zwróć TYLKO JSON.`;
                         { name: campaignName + ' — Grupa B', age_min: 25, age_max: 55, gender: 'all', interests: [], creatives: [0, 1, 2, 3, 4] },
                     ];
 
-                // Nagłówki Meta Bulk Import (camel + space zgodnie ze schematem)
+                // Nagłówki Meta Bulk Import — human-readable labels (Meta NIE akceptuje API enumów w XLSX!)
+                // Placement/Interests pomijamy — admin doda ręcznie w Ads Managerze (bo kolumna Interests w XLSX ma
+                // nietrywialny format z ID-kami z katalogu targetingu, a Advantage+ jest defaultem gdy Placement pusty).
                 const headers = [
-                    'Campaign Name','Campaign Objective','Campaign Daily Budget','Campaign Status',
-                    'Ad Set Name','Ad Set Daily Budget','Ad Set Run Status','Optimization Goal','Billing Event',
-                    'Age Min','Age Max','Gender','Countries','Interests','Placement',
-                    'Ad Name','Title','Body','Link Description','Call to Action','Link','Image File Name',
+                    'Campaign Name','Campaign Objective','Campaign Daily Budget','Campaign Status','Buying Type',
+                    'Ad Set Name','Ad Set Run Status','Optimization Goal','Billing Event',
+                    'Age Min','Age Max','Gender','Countries',
+                    'Ad Name','Creative Type','Title','Body','Link Description','Call to Action','Link','Image File Name',
                 ];
+                const genderMap = { all: 'All', female: 'Women', male: 'Men' };
+                // CTA: Meta akceptuje "Learn More", "Shop Now", "Sign Up", "See Menu" itd.
+                // Manus zwraca po polsku ("Sprawdź szczegóły") — mapujemy na bezpieczny default.
+                const ctaMap = {
+                    'sprawdź szczegóły': 'Learn More',
+                    'sprawdz szczegoly': 'Learn More',
+                    'zobacz opinie': 'Learn More',
+                    'kup teraz': 'Shop Now',
+                    'zamów': 'Shop Now',
+                    'zapisz się': 'Sign Up',
+                    'dowiedz się więcej': 'Learn More',
+                };
+                const mapCta = (raw) => {
+                    const k = String(raw || '').toLowerCase().trim();
+                    if (!k) return 'Learn More';
+                    if (ctaMap[k]) return ctaMap[k];
+                    // Jeśli już angielskie z Meta enum
+                    const allowed = ['Shop Now','Learn More','Sign Up','Book Now','Contact Us','Download','Get Offer','Subscribe','Order Now'];
+                    const match = allowed.find(x => x.toLowerCase() === k);
+                    return match || 'Learn More';
+                };
                 const rows = [];
                 adSets.forEach((as, asi) => {
                     const creativeIdxs = Array.isArray(as.creatives) ? as.creatives : [0,1,2,3,4];
@@ -11019,15 +11042,15 @@ Zwróć TYLKO JSON.`;
                         const c = creatives[ci]; const v = versions[ci];
                         if (!c && !v) return;
                         rows.push([
-                            campaignName, 'OUTCOME_SALES', dailyBudget, 'PAUSED',
-                            as.name || `Grupa ${asi + 1}`, '', 'PAUSED', 'OFFSITE_CONVERSIONS', 'IMPRESSIONS',
-                            as.age_min || 25, as.age_max || 55, (as.gender || 'all').toUpperCase(),
-                            'PL', (Array.isArray(as.interests) ? as.interests.join(',') : ''), 'Advantage+',
+                            campaignName, 'Outcome Sales', dailyBudget, 'Paused', 'Auction',
+                            as.name || `Grupa ${asi + 1}`, 'Paused', 'Offsite Conversions', 'Impressions',
+                            as.age_min || 25, as.age_max || 55, genderMap[as.gender] || 'All', 'PL',
                             `${as.name || ('Grupa ' + (asi + 1))} — #${ci + 1}`,
+                            'Link Ad',
                             (v?.headline || '').slice(0, 40),
                             v?.primary_text || '',
                             (v?.description || '').slice(0, 30),
-                            v?.cta || 'SHOP_NOW',
+                            mapCta(v?.cta),
                             landingUrl,
                             c?.filename || '',
                         ]);
@@ -11040,7 +11063,7 @@ Zwróć TYLKO JSON.`;
                 const xlsxBuf = XLSXLib.write(wb, { bookType: 'xlsx', type: 'array' });
                 zip.file('kampania_meta.xlsx', xlsxBuf);
                 zip.file('README.txt',
-                    `Import do Meta Ads Manager:\n\n1. Rozpakuj ZIP do folderu na dysku.\n2. Meta Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel.\n3. Wybierz kampania_meta.xlsx — Meta podpina pliki PNG z tego folderu.\n4. Sprawdź draft i opublikuj.\n\nBudżet dzienny: ${dailyBudget} zł na kampanię (CBO).\nCel: Sprzedaż (OUTCOME_SALES).\nPlacement: Advantage+.\n`);
+                    `Import do Meta Ads Manager:\n\n1. Rozpakuj ZIP do folderu na dysku.\n2. Meta Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel → wybierz kampania_meta.xlsx.\n3. Meta podpina pliki PNG z tego folderu automatycznie (Image File Name).\n4. Po imporcie ręcznie dodaj w Ads Managerze:\n   - Zainteresowania (Interests) — XLSX ich nie obsługuje prosto, są w adminie CRM\n   - Pixel Meta (jeśli inny niż default)\n5. Sprawdź draft kampanii, opublikuj.\n\nBudżet: ${dailyBudget} zł/dzień na poziomie KAMPANII (CBO).\nCel: Outcome Sales (Sprzedaż/Purchase).\nBuying Type: Auction.\nBillingEvent: Impressions.\nOptymalizacja: Offsite Conversions (Purchase z pixela).\nPlacement: nieustawione → Meta użyje Advantage+ (zalecane).\nStatus: Paused (trzeba opublikować ręcznie po review).\n`);
 
                 // Dodaj PNG-i
                 for (const c of creatives) {
