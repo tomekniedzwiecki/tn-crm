@@ -102,6 +102,21 @@
   // Normalise label text
   const clean = (s) => String(s || '').replace(/\s+/g, ' ').replace(/[*•·:]/g, '').trim();
 
+  // Detect whether element is in a preview/presentation area (Meta shows ad preview on the right)
+  function isInPreviewArea(el) {
+    let node = el;
+    for (let i = 0; i < 15 && node; i++) {
+      const pagelet = node.getAttribute?.('data-pagelet') || '';
+      const aria = node.getAttribute?.('aria-label') || '';
+      const role = node.getAttribute?.('role') || '';
+      const cls = node.getAttribute?.('class') || '';
+      if (/preview|podgl[aą]d/i.test(pagelet + ' ' + aria + ' ' + cls)) return true;
+      if (role === 'presentation' && /preview|podgl/i.test(aria)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
   function matchFieldType(text) {
     const t = clean(text);
     if (!t) return null;
@@ -159,6 +174,7 @@
       // Skip hidden
       if (input.offsetParent === null && input.getClientRects().length === 0) continue;
       if (input.disabled || input.readOnly) continue;
+      if (isInPreviewArea(input)) continue;
 
       const signals = collectLabelSignals(input);
       const type = matchFieldTypeFromSignals(signals);
@@ -170,6 +186,25 @@
     // Section-based fallback: find containers with the "Dodaj opcję X" button
     // and attach any unrecognized fields inside them to the matching type.
     attachByAddButton(result);
+
+    // Dedup: if multiple fields share identical aria-label AND sit inside the same
+    // parent chain (likely Meta rendering a preview twin), keep only the first one.
+    for (const type of Object.keys(result)) {
+      const seen = new Set();
+      result[type] = result[type].filter(f => {
+        const aria = f.element.getAttribute('aria-label') || '';
+        const placeholder = f.element.placeholder || '';
+        const key = aria + '|' + placeholder + '|' + f.element.tagName;
+        // Only dedup when key is non-empty (avoid collapsing 5 unlabeled TEXTAREAs)
+        if (!aria && !placeholder) return true;
+        if (seen.has(key)) {
+          console.log(`[TN Ads Filler] dedup: dropping ${type} twin (${aria || placeholder})`);
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+    }
 
     return result;
   }
@@ -566,24 +601,29 @@
   }
 
   async function fillFields(versions, options = {}) {
-    const { variantIndex = null, onlyType = null } = options;
+    const { variantIndex = null, onlyType = null, autoExpand = false } = options;
 
-    // If filling all variants, expand field count to match versions count
+    // Auto-expand is OFF by default (too fragile on Meta Ads DOM).
+    // User adds fields manually via "Dodaj opcję X" button — we fill whatever is present.
     let fields = scanFields();
-    if (variantIndex == null) {
+    if (variantIndex == null && autoExpand) {
       for (const typeKey of ['primary_text', 'headline', 'description']) {
         if (onlyType && onlyType !== typeKey) continue;
         const expanded = await ensureFieldCount(typeKey, versions.length);
-        // Merge expanded for this type (preserves any extras tracked manually)
         fields[typeKey] = expanded[typeKey];
-        // Also refresh other types in case DOM changed
-        fields.headline = fields.headline || expanded.headline;
-        fields.description = fields.description || expanded.description;
-        fields.cta = fields.cta || expanded.cta;
       }
     }
 
-    const stats = { filled: 0, skipped: 0, byType: {} };
+    const stats = { filled: 0, skipped: 0, byType: {}, missing: {} };
+    // Track how many variants we couldn't place (no field available)
+    if (variantIndex == null) {
+      for (const typeKey of ['primary_text', 'headline', 'description']) {
+        const available = fields[typeKey].length;
+        if (available < versions.length) {
+          stats.missing[typeKey] = versions.length - available;
+        }
+      }
+    }
 
     const fillOne = (items, typeKey, valueFor) => {
       if (onlyType && onlyType !== typeKey) return;
@@ -744,11 +784,16 @@
             sendResponse({ ok: false, error: 'no_versions' });
             return;
           }
-          toast('Dodaję pola i wypełniam...', 'info');
+          toast('Wypełniam dostępne pola...', 'info');
           const stats = await fillFields(msg.versions);
-          const summary = `Wypełniono ${stats.filled} pól` +
-            (stats.skipped ? ` (${stats.skipped} pominięto)` : '');
-          toast(summary, stats.filled > 0 ? 'success' : 'warn');
+          const missingParts = Object.entries(stats.missing || {})
+            .map(([k, n]) => `${k}: brak ${n}`);
+          let summary = `Wypełniono ${stats.filled} pól`;
+          if (stats.skipped) summary += ` (${stats.skipped} pominięto)`;
+          if (missingParts.length) {
+            summary += `. Kliknij ręcznie "Dodaj opcję..." w Meta dla: ${missingParts.join(', ')}, potem uruchom wypełnianie ponownie.`;
+          }
+          toast(summary, stats.filled > 0 ? (missingParts.length ? 'warn' : 'success') : 'error');
           sendResponse({ ok: true, stats });
         } else if (msg.type === 'fill_variant') {
           const idx = msg.variant_index;
