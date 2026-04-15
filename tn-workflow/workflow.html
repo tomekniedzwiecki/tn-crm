@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041516';
+        const ADMIN_APP_VERSION = '2026041517';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -10959,16 +10959,29 @@ Zwróć TYLKO JSON.`;
                     loadLib('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', 'XLSX'),
                 ]);
                 const zip = new JSZipLib();
-                // Landing URL: ZAWSZE z Etap 3 krok 7 "URL strony" (workflows.sales_page_url) — to jest
-                // źródło prawdy; campaign_spec może mieć zdezaktualizowany URL wygenerowany przez Manusa.
-                // Pobieramy świeżo z bazy, bo cache workflow.sales_page_url mógł być stary.
-                let landingUrl = workflow?.sales_page_url || '';
+                // Landing URL: priorytet = prawdziwy sklep klienta (workflow_takedrop.domain/landing_url),
+                // bo to on odbiera ruch z reklam i ma pixel. Dopiero fallbackiem jest wewnętrzna
+                // landing page (workflows.sales_page_url) i na końcu campaign_spec.
+                const normalizeUrl = (u) => {
+                    if (!u) return '';
+                    const s = String(u).trim();
+                    if (!s) return '';
+                    return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`;
+                };
+                let landingUrl = '';
                 try {
-                    const { data: freshWf } = await supabaseClient.from('workflows')
-                        .select('sales_page_url').eq('id', workflow.id).maybeSingle();
-                    if (freshWf?.sales_page_url) landingUrl = freshWf.sales_page_url;
+                    const { data: td } = await supabaseClient.from('workflow_takedrop')
+                        .select('domain, landing_url, checkout_link').eq('workflow_id', workflow.id).maybeSingle();
+                    landingUrl = normalizeUrl(td?.landing_url || td?.domain || td?.checkout_link || '');
                 } catch (_) {}
-                if (!landingUrl) landingUrl = adsData?.campaign_spec?.campaign?.landing_url || '';
+                if (!landingUrl) {
+                    try {
+                        const { data: freshWf } = await supabaseClient.from('workflows')
+                            .select('sales_page_url').eq('id', workflow.id).maybeSingle();
+                        landingUrl = normalizeUrl(freshWf?.sales_page_url || '');
+                    } catch (_) {}
+                }
+                if (!landingUrl) landingUrl = normalizeUrl(adsData?.campaign_spec?.campaign?.landing_url || '');
                 // Campaign spec z adsData lub fallback
                 const spec = adsData?.campaign_spec || null;
                 const campaignName = spec?.campaign?.name || `${workflow?.customer_name || 'Kampania'} — Launch`;
