@@ -183,9 +183,9 @@
       }
     }
 
-    // Section-based fallback: find containers with the "Dodaj opcję X" button
-    // and attach any unrecognized fields inside them to the matching type.
-    attachByAddButton(result);
+    // Note: section-based attachment disabled — too aggressive, caused chaos when
+    // Meta renders unlabeled TEXTAREAs both for primary_text and headline in same container.
+    // We rely purely on label matching + waitForNewField snapshot diff during auto-expand.
 
     // Dedup: if multiple fields share identical aria-label AND sit inside the same
     // parent chain (likely Meta rendering a preview twin), keep only the first one.
@@ -518,14 +518,19 @@
     return new Set(document.querySelectorAll(FIELD_SELECTOR));
   }
 
-  async function waitForNewField(beforeSet, timeoutMs = 1500) {
+  async function waitForNewField(beforeSet, timeoutMs = 2500) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       const current = document.querySelectorAll(FIELD_SELECTOR);
       for (const el of current) {
-        if (!beforeSet.has(el)) return el;
+        if (beforeSet.has(el)) continue;
+        // Must be visible & editable
+        if (el.offsetParent === null) continue;
+        if (el.disabled || el.readOnly) continue;
+        if (isInPreviewArea(el)) continue;
+        return el;
       }
-      await sleep(80);
+      await sleep(100);
     }
     return null;
   }
@@ -601,10 +606,11 @@
   }
 
   async function fillFields(versions, options = {}) {
-    const { variantIndex = null, onlyType = null, autoExpand = false } = options;
+    const { variantIndex = null, onlyType = null, autoExpand = true } = options;
 
-    // Auto-expand is OFF by default (too fragile on Meta Ads DOM).
-    // User adds fields manually via "Dodaj opcję X" button — we fill whatever is present.
+    // Auto-expand: click "Dodaj opcję X" to match variant count.
+    // Uses snapshot diff (not label matching) to track newly-added fields,
+    // so even Meta's unlabeled TEXTAREAs are placed correctly.
     let fields = scanFields();
     if (variantIndex == null && autoExpand) {
       for (const typeKey of ['primary_text', 'headline', 'description']) {
