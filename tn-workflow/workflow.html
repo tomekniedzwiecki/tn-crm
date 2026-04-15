@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041524';
+        const ADMIN_APP_VERSION = '2026041525';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -11394,19 +11394,19 @@ Zwróć TYLKO JSON.`;
             // ---- Step 3: Reklamy ----
             renderStepAds(landingUrl, progress);
 
-            // ---- Autoopen pierwszej nieukończonej sekcji ----
+            // ---- Autoopen TYLKO przy pierwszym renderze (nie nadpisuj user-toggle) ----
             const s1 = document.getElementById('step-campaign');
             const s2 = document.getElementById('step-adsets');
             const s3 = document.getElementById('step-ads');
-            if (s1 && s2 && s3) {
-                // nie nadpisujemy jeśli user ręcznie otworzył
-                if (!s1.hasAttribute('data-user-toggled')) {
-                    const doneCampaign = !!progress.campaign;
-                    const doneAdsets = (progress.adsets || []).filter(Boolean).length >= 2;
-                    s1.open = !doneCampaign;
-                    s2.open = doneCampaign && !doneAdsets;
-                    s3.open = doneCampaign && doneAdsets;
-                }
+            if (s1 && s2 && s3 && !window.__stepperInit) {
+                const doneCampaign = !!progress.campaign;
+                const doneAdsets = (progress.adsets || []).filter(Boolean).length >= 2;
+                s1.open = !doneCampaign;
+                s2.open = doneCampaign && !doneAdsets;
+                s3.open = doneCampaign && doneAdsets;
+                // Zapisz toggle-y użytkownika, żeby nie zamykać przy re-renderze
+                [s1, s2, s3].forEach(d => d.addEventListener('toggle', () => { d.dataset.userToggled = '1'; }));
+                window.__stepperInit = true;
             }
 
             // Progres ogólny
