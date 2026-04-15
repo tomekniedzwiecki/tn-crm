@@ -51,7 +51,8 @@ function renderList(query) {
     ? allWorkflows.filter(w =>
         (w.offer_name || '').toLowerCase().includes(q) ||
         (w.customer_name || '').toLowerCase().includes(q) ||
-        (w.brand_name || '').toLowerCase().includes(q))
+        (w.brand_name || '').toLowerCase().includes(q) ||
+        (w.product_name || '').toLowerCase().includes(q))
     : allWorkflows;
 
   const list = $('workflow-list');
@@ -59,15 +60,21 @@ function renderList(query) {
     list.innerHTML = '<div class="empty"><p>Brak workflow z wygenerowanym copy</p></div>';
     return;
   }
-  list.innerHTML = filtered.map(w => `
-    <div class="workflow-item" data-id="${escapeHTML(w.workflow_id)}">
-      <div class="name">${escapeHTML(w.offer_name)}</div>
-      <div class="meta">
-        ${w.customer_name ? `<span>${escapeHTML(w.customer_name)}</span>` : ''}
-        <span class="pill">${w.versions.length} wariantów</span>
+  list.innerHTML = filtered.map(w => {
+    const metaParts = [];
+    if (w.customer_name) metaParts.push(escapeHTML(w.customer_name));
+    if (w.brand_name && w.brand_name !== w.offer_name) metaParts.push(escapeHTML(w.brand_name));
+    if (w.product_name && w.product_name !== w.offer_name && w.product_name !== w.brand_name) metaParts.push(escapeHTML(w.product_name));
+    return `
+      <div class="workflow-item" data-id="${escapeHTML(w.workflow_id)}">
+        <div class="name">${escapeHTML(w.offer_name)}</div>
+        <div class="meta">
+          ${metaParts.length ? `<span>${metaParts.join(' · ')}</span>` : ''}
+          <span class="pill">${w.versions.length} wariantów</span>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   list.querySelectorAll('.workflow-item').forEach(el => {
     el.addEventListener('click', () => selectWorkflow(el.dataset.id));
