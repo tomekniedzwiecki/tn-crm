@@ -7,6 +7,26 @@
   window.__TN_ADS_FILLER__ = true;
 
   // ============================================================
+  // Log buffer — captures all [TN Ads Filler] messages
+  // ============================================================
+  const LOG_BUFFER = [];
+  const MAX_LOGS = 200;
+  ['log', 'warn', 'error'].forEach(level => {
+    const orig = console[level].bind(console);
+    console[level] = (...args) => {
+      const msg = args.map(a => {
+        try { return typeof a === 'string' ? a : JSON.stringify(a); }
+        catch { return String(a); }
+      }).join(' ');
+      if (msg.includes('[TN Ads Filler]')) {
+        LOG_BUFFER.push({ t: Date.now(), level, msg });
+        if (LOG_BUFFER.length > MAX_LOGS) LOG_BUFFER.shift();
+      }
+      orig(...args);
+    };
+  });
+
+  // ============================================================
   // Field detection
   // ============================================================
 
@@ -570,6 +590,58 @@
       try {
         if (msg.type === 'ping') {
           sendResponse({ ok: true, pong: true });
+        } else if (msg.type === 'diagnose') {
+          const fields = scanFields();
+          const fieldDump = ['primary_text','headline','description','cta'].flatMap(type =>
+            fields[type].map(f => ({
+              type,
+              tag: f.element.tagName,
+              editable: f.element.isContentEditable,
+              label_matched: f.label,
+              aria_label: f.element.getAttribute('aria-label'),
+              placeholder: f.element.placeholder,
+              current_value: (f.element.value || f.element.textContent || '').slice(0, 80)
+            }))
+          );
+          const unmatchedInputs = Array.from(document.querySelectorAll(FIELD_SELECTOR))
+            .filter(el => el.offsetParent !== null && !el.disabled && !el.readOnly)
+            .filter(el => !['primary_text','headline','description','cta'].some(type =>
+              fields[type].some(f => f.element === el)))
+            .slice(0, 10)
+            .map(el => ({
+              tag: el.tagName,
+              editable: el.isContentEditable,
+              aria_label: el.getAttribute('aria-label'),
+              placeholder: el.placeholder,
+              labelledby_text: (() => {
+                const id = el.getAttribute('aria-labelledby');
+                if (!id) return null;
+                return id.split(/\s+/).map(x => document.getElementById(x)?.innerText || '').join(' | ');
+              })(),
+              parent_text: (el.parentElement?.innerText || '').slice(0, 80)
+            }));
+          const addButtons = Array.from(document.querySelectorAll('button, [role="button"]'))
+            .filter(b => b.offsetParent !== null)
+            .filter(b => /dodaj|add/i.test(b.innerText || b.textContent || ''))
+            .slice(0, 20)
+            .map(b => ({
+              text: (b.innerText || b.textContent || '').slice(0, 80).trim(),
+              aria_label: b.getAttribute('aria-label'),
+              testid: b.getAttribute('data-testid'),
+              disabled: b.disabled
+            }));
+          sendResponse({
+            ok: true,
+            report: {
+              url: location.href,
+              title: document.title,
+              matched_fields: fieldDump,
+              unmatched_inputs: unmatchedInputs,
+              add_buttons: addButtons,
+              logs: LOG_BUFFER.slice(-80),
+              user_agent: navigator.userAgent
+            }
+          });
         } else if (msg.type === 'scan') {
           const fields = scanFields();
           sendResponse({

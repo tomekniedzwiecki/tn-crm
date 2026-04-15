@@ -259,4 +259,52 @@ $('btn-back').addEventListener('click', () => {
 $('search').addEventListener('input', (e) => renderList(e.target.value));
 $('btn-fill-all').addEventListener('click', fillAll);
 
+async function copyDiagnosis() {
+  const btn = $('btn-diagnose');
+  btn.disabled = true;
+  btn.textContent = 'Zbieram dane...';
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error('Brak aktywnej karty');
+    await ensureContentScript(tab.id);
+    const resp = await chrome.tabs.sendMessage(tab.id, { type: 'diagnose' });
+    if (!resp?.ok) throw new Error(resp?.error || 'diagnose failed');
+    const r = resp.report;
+    const md = [
+      `# TN Ads Filler — diagnoza`,
+      `**URL:** ${r.url}`,
+      `**Title:** ${r.title}`,
+      ``,
+      `## Dopasowane pola (${r.matched_fields.length})`,
+      '```json',
+      JSON.stringify(r.matched_fields, null, 2),
+      '```',
+      ``,
+      `## Niedopasowane inputy (${r.unmatched_inputs.length})`,
+      '```json',
+      JSON.stringify(r.unmatched_inputs, null, 2),
+      '```',
+      ``,
+      `## Przyciski "Dodaj/Add" (${r.add_buttons.length})`,
+      '```json',
+      JSON.stringify(r.add_buttons, null, 2),
+      '```',
+      ``,
+      `## Logi (${r.logs.length})`,
+      '```',
+      r.logs.map(l => `[${new Date(l.t).toISOString().slice(11,19)}] ${l.level}: ${l.msg}`).join('\n'),
+      '```'
+    ].join('\n');
+    await navigator.clipboard.writeText(md);
+    btn.textContent = '✓ Skopiowano do schowka';
+  } catch (e) {
+    btn.textContent = '✗ ' + e.message.slice(0, 40);
+  }
+  setTimeout(() => {
+    btn.textContent = '📋 Kopiuj diagnozę (dla Claude)';
+    btn.disabled = false;
+  }, 3000);
+}
+$('btn-diagnose').addEventListener('click', copyDiagnosis);
+
 init();
