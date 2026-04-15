@@ -10,6 +10,27 @@
   // Field detection
   // ============================================================
 
+  const ADD_BUTTON_PATTERNS = {
+    primary_text: [
+      /dodaj.*opcj.*tekst/i,
+      /dodaj.*podstawowy.*tekst/i,
+      /dodaj.*tekst/i,
+      /add.*primary.*text/i,
+      /add.*text.*option/i
+    ],
+    headline: [
+      /dodaj.*nag[lł][oó]wek/i,
+      /dodaj.*opcj.*nag[lł]/i,
+      /add.*headline/i,
+      /add.*title/i
+    ],
+    description: [
+      /dodaj.*opcj.*opis/i,
+      /dodaj.*opis/i,
+      /add.*description/i
+    ]
+  };
+
   const FIELD_PATTERNS = {
     primary_text: [
       /^podstawowy\s*tekst/i,
@@ -206,8 +227,70 @@
     }, 2000);
   }
 
-  function fillFields(versions, options = {}) {
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // Find "Add option" button for a field type. Strategy: look near existing fields
+  // of that type for a button/anchor whose text matches ADD_BUTTON_PATTERNS.
+  function findAddButton(typeKey, existingFields) {
+    const patterns = ADD_BUTTON_PATTERNS[typeKey] || [];
+    if (!patterns.length) return null;
+
+    // Collect candidate container sections — walk up from last existing field
+    const searchRoots = [];
+    if (existingFields && existingFields.length) {
+      const last = existingFields[existingFields.length - 1].element;
+      let node = last;
+      for (let i = 0; i < 8 && node; i++) {
+        searchRoots.push(node);
+        node = node.parentElement;
+      }
+    }
+    searchRoots.push(document);
+
+    const isVisible = (el) => el.offsetParent !== null || el.getClientRects().length > 0;
+
+    for (const root of searchRoots) {
+      const buttons = root.querySelectorAll('button, [role="button"], a');
+      for (const btn of buttons) {
+        if (!isVisible(btn)) continue;
+        if (btn.disabled) continue;
+        const txt = clean(btn.innerText || btn.textContent || btn.getAttribute('aria-label') || '');
+        if (!txt || txt.length > 80) continue;
+        if (patterns.some(re => re.test(txt))) {
+          return btn;
+        }
+      }
+    }
+    return null;
+  }
+
+  async function ensureFieldCount(typeKey, neededCount, maxClicks = 10) {
+    let fields = scanFields();
+    let clicks = 0;
+    while (fields[typeKey].length < neededCount && clicks < maxClicks) {
+      const btn = findAddButton(typeKey, fields[typeKey]);
+      if (!btn) break;
+      btn.scrollIntoView({ block: 'center', behavior: 'instant' });
+      btn.click();
+      clicks++;
+      // Wait for React to render new field
+      await sleep(350);
+      fields = scanFields();
+    }
+    return fields;
+  }
+
+  async function fillFields(versions, options = {}) {
     const { variantIndex = null, onlyType = null } = options;
+
+    // If filling all variants, expand field count to match versions count
+    if (variantIndex == null) {
+      for (const typeKey of ['primary_text', 'headline', 'description']) {
+        if (onlyType && onlyType !== typeKey) continue;
+        await ensureFieldCount(typeKey, versions.length);
+      }
+    }
+
     const fields = scanFields();
     const stats = { filled: 0, skipped: 0, byType: {} };
 
@@ -293,49 +376,50 @@
   // ============================================================
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    try {
-      if (msg.type === 'ping') {
-        sendResponse({ ok: true, pong: true });
-        return true;
-      }
-      if (msg.type === 'scan') {
-        const fields = scanFields();
-        sendResponse({
-          ok: true,
-          counts: {
-            primary_text: fields.primary_text.length,
-            headline: fields.headline.length,
-            description: fields.description.length,
-            cta: fields.cta.length
+    (async () => {
+      try {
+        if (msg.type === 'ping') {
+          sendResponse({ ok: true, pong: true });
+        } else if (msg.type === 'scan') {
+          const fields = scanFields();
+          sendResponse({
+            ok: true,
+            counts: {
+              primary_text: fields.primary_text.length,
+              headline: fields.headline.length,
+              description: fields.description.length,
+              cta: fields.cta.length
+            }
+          });
+        } else if (msg.type === 'fill_all') {
+          if (!Array.isArray(msg.versions) || msg.versions.length === 0) {
+            toast('Brak wariantów do wypełnienia', 'error');
+            sendResponse({ ok: false, error: 'no_versions' });
+            return;
           }
-        });
-      } else if (msg.type === 'fill_all') {
-        if (!Array.isArray(msg.versions) || msg.versions.length === 0) {
-          toast('Brak wariantów do wypełnienia', 'error');
-          sendResponse({ ok: false, error: 'no_versions' });
-          return true;
+          toast('Dodaję pola i wypełniam...', 'info');
+          const stats = await fillFields(msg.versions);
+          const summary = `Wypełniono ${stats.filled} pól` +
+            (stats.skipped ? ` (${stats.skipped} pominięto)` : '');
+          toast(summary, stats.filled > 0 ? 'success' : 'warn');
+          sendResponse({ ok: true, stats });
+        } else if (msg.type === 'fill_variant') {
+          const idx = msg.variant_index;
+          if (!Number.isInteger(idx) || !Array.isArray(msg.versions) || !msg.versions[idx]) {
+            sendResponse({ ok: false, error: 'invalid_variant' });
+            return;
+          }
+          const stats = await fillFields(msg.versions, { variantIndex: idx });
+          toast(`Wariant ${idx + 1}: wypełniono ${stats.filled} pól`, stats.filled > 0 ? 'success' : 'warn');
+          sendResponse({ ok: true, stats });
+        } else {
+          sendResponse({ ok: false, error: 'unknown' });
         }
-        const stats = fillFields(msg.versions);
-        const summary = `Wypełniono ${stats.filled} pól` +
-          (stats.skipped ? ` (${stats.skipped} pominięto)` : '');
-        toast(summary, stats.filled > 0 ? 'success' : 'warn');
-        sendResponse({ ok: true, stats });
-      } else if (msg.type === 'fill_variant') {
-        const idx = msg.variant_index;
-        if (!Number.isInteger(idx) || !Array.isArray(msg.versions) || !msg.versions[idx]) {
-          sendResponse({ ok: false, error: 'invalid_variant' });
-          return true;
-        }
-        const stats = fillFields(msg.versions, { variantIndex: idx });
-        toast(`Wariant ${idx + 1}: wypełniono ${stats.filled} pól`, stats.filled > 0 ? 'success' : 'warn');
-        sendResponse({ ok: true, stats });
-      } else {
-        sendResponse({ ok: false, error: 'unknown' });
+      } catch (e) {
+        console.error('[TN Ads Filler] message error', e);
+        sendResponse({ ok: false, error: e.message });
       }
-    } catch (e) {
-      console.error('[TN Ads Filler] message error', e);
-      sendResponse({ ok: false, error: e.message });
-    }
+    })();
     return true;
   });
 
