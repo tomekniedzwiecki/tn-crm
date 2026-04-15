@@ -111,29 +111,48 @@
     const wrappingLabel = el.closest('label');
     if (wrappingLabel) return wrappingLabel.innerText;
 
-    // 5. placeholder fallback
-    if (el.placeholder) return el.placeholder;
-
-    // 6. Walk up ancestors, look for sibling heading/label-like text
+    // 5. Walk up ancestors, look for text labels above the element
     let node = el;
-    for (let depth = 0; depth < 6 && node; depth++) {
+    for (let depth = 0; depth < 10 && node; depth++) {
       const parent = node.parentElement;
       if (!parent) break;
-      // look for previous sibling with text
-      let sib = parent.previousElementSibling;
+
+      // Check all previous siblings (not just first) at this level
+      let sib = node.previousElementSibling;
       while (sib) {
-        const txt = (sib.innerText || '').trim();
-        if (txt && txt.length < 60 && txt.length > 1) return txt;
+        // Try direct text of common label tags
+        const tag = sib.tagName;
+        const isLabelish = tag === 'LABEL' || tag === 'STRONG' || tag === 'B' ||
+                           /^H[1-6]$/.test(tag) || tag === 'LEGEND' || tag === 'DT' ||
+                           tag === 'SPAN' || tag === 'DIV' || tag === 'P';
+        if (isLabelish) {
+          // Strip info-icon buttons/svgs to get cleaner text
+          const clone = sib.cloneNode(true);
+          clone.querySelectorAll('button, svg, [role="tooltip"], [aria-hidden="true"]').forEach(n => n.remove());
+          const txt = (clone.innerText || clone.textContent || '').trim();
+          if (txt && txt.length > 1 && txt.length < 100) return txt;
+        }
         sib = sib.previousElementSibling;
       }
-      // look for first heading inside parent
-      const heading = parent.querySelector('label, [role="heading"], h1, h2, h3, h4, h5, h6, legend, dt, [data-testid*="label" i]');
-      if (heading && heading !== el && !heading.contains(el)) {
-        const txt = (heading.innerText || '').trim();
-        if (txt) return txt;
+
+      // Check for heading/label elements inside parent that come BEFORE our element
+      const headings = parent.querySelectorAll('label, strong, [role="heading"], h1, h2, h3, h4, h5, h6, legend, dt, [data-testid*="label" i]');
+      for (const h of headings) {
+        if (h === el || h.contains(el)) continue;
+        // ensure it appears before our node in DOM order
+        const pos = h.compareDocumentPosition(el);
+        if (!(pos & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+        const clone = h.cloneNode(true);
+        clone.querySelectorAll('button, svg, [role="tooltip"]').forEach(n => n.remove());
+        const txt = (clone.innerText || clone.textContent || '').trim();
+        if (txt && txt.length > 1 && txt.length < 100) return txt;
       }
+
       node = parent;
     }
+
+    // 6. placeholder last-ditch fallback
+    if (el.placeholder) return el.placeholder;
 
     return '';
   }
