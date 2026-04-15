@@ -658,7 +658,24 @@
     // Auto-expand: click "Dodaj opcję X" to match variant count.
     // After expansion, re-scan so attachBySection picks up unlabeled newly-visible fields.
     let fields = scanFields();
+
+    // Pre-step: if Meta shows "Zobacz więcej wariantów" and we're short on fields, click it
+    // to reveal the full 5x5 layout.
     if (variantIndex == null && autoExpand) {
+      const seeMoreBtn = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .filter(b => b.offsetParent !== null)
+        .find(b => /zobacz.*wi[eę]cej.*wariant|see more.*variant|more variations?/i.test(
+          clean(b.innerText || b.textContent || '')
+        ));
+      const shortOnFields = fields.primary_text.length < 2 || fields.headline.length < 2 || fields.description.length < 2;
+      if (seeMoreBtn && shortOnFields) {
+        console.log('[TN Ads Filler] Clicking "Zobacz więcej wariantów" to reveal 5x5 layout');
+        seeMoreBtn.scrollIntoView({ block: 'center', behavior: 'instant' });
+        dispatchRealClick(seeMoreBtn);
+        await sleep(800);
+        fields = scanFields();
+      }
+
       for (const typeKey of ['primary_text', 'headline', 'description']) {
         if (onlyType && onlyType !== typeKey) continue;
         await ensureFieldCount(typeKey, versions.length);
