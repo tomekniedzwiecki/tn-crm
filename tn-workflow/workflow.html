@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041509';
+        const ADMIN_APP_VERSION = '2026041510';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -10959,8 +10959,16 @@ Zwróć TYLKO JSON.`;
                     loadLib('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', 'XLSX'),
                 ]);
                 const zip = new JSZipLib();
-                // Landing URL: najpierw campaign_spec, potem sales_page_url z workflow (Etap 3 krok Strona sprzedażowa)
-                const landingUrl = adsData?.campaign_spec?.campaign?.landing_url || workflow?.sales_page_url || '';
+                // Landing URL: ZAWSZE z Etap 3 krok 7 "URL strony" (workflows.sales_page_url) — to jest
+                // źródło prawdy; campaign_spec może mieć zdezaktualizowany URL wygenerowany przez Manusa.
+                // Pobieramy świeżo z bazy, bo cache workflow.sales_page_url mógł być stary.
+                let landingUrl = workflow?.sales_page_url || '';
+                try {
+                    const { data: freshWf } = await supabaseClient.from('workflows')
+                        .select('sales_page_url').eq('id', workflow.id).maybeSingle();
+                    if (freshWf?.sales_page_url) landingUrl = freshWf.sales_page_url;
+                } catch (_) {}
+                if (!landingUrl) landingUrl = adsData?.campaign_spec?.campaign?.landing_url || '';
                 // Campaign spec z adsData lub fallback
                 const spec = adsData?.campaign_spec || null;
                 const campaignName = spec?.campaign?.name || `${workflow?.customer_name || 'Kampania'} — Launch`;
