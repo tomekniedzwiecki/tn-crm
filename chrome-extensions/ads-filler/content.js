@@ -685,21 +685,30 @@
     // After expansion, re-scan so attachBySection picks up unlabeled newly-visible fields.
     let fields = scanFields();
 
-    // Pre-step: if Meta shows "Zobacz więcej wariantów" and we're short on fields, click it
-    // to reveal the full 5x5 layout.
+    // Pre-step: check if the ad creative editor is open (contains Meta's #add-*-option-button wrappers)
+    // If not, try to navigate there by clicking the "Tekst" sidebar tab (if visible).
     if (variantIndex == null && autoExpand) {
-      const seeMoreBtn = Array.from(document.querySelectorAll('button, [role="button"]'))
-        .filter(b => b.offsetParent !== null)
-        .find(b => /zobacz.*wi[eę]cej.*wariant|see more.*variant|more variations?/i.test(
-          clean(b.innerText || b.textContent || '')
-        ));
-      const shortOnFields = fields.primary_text.length < 2 || fields.headline.length < 2 || fields.description.length < 2;
-      if (seeMoreBtn && shortOnFields) {
-        console.log('[TN Ads Filler] Clicking "Zobacz więcej wariantów" to reveal 5x5 layout');
-        seeMoreBtn.scrollIntoView({ block: 'center', behavior: 'instant' });
-        dispatchRealClick(seeMoreBtn);
-        await sleep(800);
-        fields = scanFields();
+      const editorOpen = !!document.getElementById('add-bodies-option-button');
+      if (!editorOpen) {
+        console.log('[TN Ads Filler] Ad creative editor NOT open — attempting to navigate');
+        // Try clicking the "Tekst" sidebar tab (only works if editor dialog is already open)
+        const textTab = Array.from(document.querySelectorAll('[role="button"], button, div'))
+          .filter(b => b.offsetParent !== null)
+          .find(b => {
+            const t = (b.innerText || b.textContent || '').trim();
+            return t === 'Tekst' || t === 'Text';
+          });
+        if (textTab) {
+          console.log('[TN Ads Filler] Clicking "Tekst" sidebar tab');
+          dispatchRealClick(textTab);
+          await sleep(700);
+          fields = scanFields();
+        }
+        if (!document.getElementById('add-bodies-option-button')) {
+          toast('Otwórz w Meta: "Ustaw materiał reklamowy" → "Tekst", potem uruchom ponownie', 'warn');
+          console.warn('[TN Ads Filler] Editor still not open, stopping auto-expand');
+          // Still fill whatever fields are visible
+        }
       }
 
       for (const typeKey of ['primary_text', 'headline', 'description']) {
