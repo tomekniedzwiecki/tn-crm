@@ -233,11 +233,15 @@
     for (const typeKey of ['primary_text', 'headline', 'description']) {
       if (!result[typeKey].length) continue;
       const addBtn = pickBtn(ADD_BUTTON_PATTERNS[typeKey]);
-      if (!addBtn) continue;
+      if (!addBtn) {
+        console.log(`[TN Ads Filler] attachBySection: no add button for ${typeKey}`);
+        continue;
+      }
       const known = result[typeKey][0].element;
       const container = commonAncestor(known, addBtn);
-      if (!container || container === document.body || container === document.documentElement) continue;
+      if (!container || container === document.documentElement) continue;
       const inputs = container.querySelectorAll(FIELD_SELECTOR);
+      let attached = 0;
       for (const el of inputs) {
         if (allKnown.has(el)) continue;
         if (el.offsetParent === null) continue;
@@ -251,7 +255,9 @@
         if (altType && altType !== typeKey) continue;
         result[typeKey].push({ element: el, label: `${typeKey} (section)` });
         allKnown.add(el);
+        attached++;
       }
+      if (attached) console.log(`[TN Ads Filler] attachBySection: ${typeKey} +${attached} fields (container tag=${container.tagName})`);
     }
   }
 
@@ -663,15 +669,21 @@
     const { variantIndex = null, onlyType = null, autoExpand = true } = options;
 
     // Auto-expand: click "Dodaj opcję X" to match variant count.
-    // Uses snapshot diff (not label matching) to track newly-added fields,
-    // so even Meta's unlabeled TEXTAREAs are placed correctly.
+    // After expansion, re-scan so attachBySection picks up unlabeled newly-visible fields.
     let fields = scanFields();
     if (variantIndex == null && autoExpand) {
       for (const typeKey of ['primary_text', 'headline', 'description']) {
         if (onlyType && onlyType !== typeKey) continue;
-        const expanded = await ensureFieldCount(typeKey, versions.length);
-        fields[typeKey] = expanded[typeKey];
+        await ensureFieldCount(typeKey, versions.length);
       }
+      // Re-scan so attachBySection sees the final DOM with all pre-rendered fields visible
+      fields = scanFields();
+      console.log('[TN Ads Filler] post-expand counts:', {
+        primary_text: fields.primary_text.length,
+        headline: fields.headline.length,
+        description: fields.description.length,
+        cta: fields.cta.length
+      });
     }
 
     const stats = { filled: 0, skipped: 0, byType: {}, missing: {} };
