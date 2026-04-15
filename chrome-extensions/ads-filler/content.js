@@ -295,32 +295,63 @@
     el.dispatchEvent(new MouseEvent('click', opts));
   }
 
+  const FIELD_SELECTOR = 'input[type="text"], input:not([type]), textarea, [contenteditable="true"]';
+
+  function snapshotInputs() {
+    return new Set(document.querySelectorAll(FIELD_SELECTOR));
+  }
+
+  async function waitForNewField(beforeSet, timeoutMs = 1500) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const current = document.querySelectorAll(FIELD_SELECTOR);
+      for (const el of current) {
+        if (!beforeSet.has(el)) return el;
+      }
+      await sleep(80);
+    }
+    return null;
+  }
+
   async function ensureFieldCount(typeKey, neededCount, maxClicks = 10) {
     let fields = scanFields();
     let clicks = 0;
     console.log(`[TN Ads Filler] ${typeKey}: have ${fields[typeKey].length}, need ${neededCount}`);
-    while (fields[typeKey].length < neededCount && clicks < maxClicks) {
+    const extraFields = []; // newly-added fields we couldn't match by label
+
+    while (fields[typeKey].length + extraFields.length < neededCount && clicks < maxClicks) {
       const btn = findAddButton(typeKey, fields[typeKey]);
       if (!btn) {
         console.warn(`[TN Ads Filler] No add button found for ${typeKey}`);
         break;
       }
-      console.log(`[TN Ads Filler] Clicking add button for ${typeKey}:`, btn.innerText || btn.textContent);
+      console.log(`[TN Ads Filler] Click #${clicks + 1} for ${typeKey}:`, btn.innerText || btn.textContent);
+
+      const before = snapshotInputs();
       btn.scrollIntoView({ block: 'center', behavior: 'instant' });
+      // Focus first (some dropdowns/menus need focus before click)
+      try { btn.focus(); } catch {}
       dispatchRealClick(btn);
       clicks++;
-      await sleep(600);
-      const before = fields[typeKey].length;
-      fields = scanFields();
-      if (fields[typeKey].length === before) {
-        // Maybe need more time — one more wait cycle
-        await sleep(400);
-        fields = scanFields();
-        if (fields[typeKey].length === before) {
-          console.warn(`[TN Ads Filler] Click didn't add field for ${typeKey}`);
-          break;
-        }
+
+      const newField = await waitForNewField(before, 1500);
+      if (!newField) {
+        console.warn(`[TN Ads Filler] No new field appeared after click for ${typeKey}`);
+        break;
       }
+      // Re-scan; if label-based scan picked it up, great; otherwise track manually
+      const prevCount = fields[typeKey].length;
+      fields = scanFields();
+      if (fields[typeKey].length === prevCount) {
+        // Label-based scan missed it — add manually
+        extraFields.push({ element: newField, label: `${typeKey} (auto #${extraFields.length + 1})` });
+        console.log(`[TN Ads Filler] Fallback: tracking new field manually for ${typeKey}`);
+      }
+    }
+
+    // Merge extras into fields list so fillFields can use them
+    if (extraFields.length) {
+      fields[typeKey] = [...fields[typeKey], ...extraFields];
     }
     return fields;
   }
@@ -329,14 +360,20 @@
     const { variantIndex = null, onlyType = null } = options;
 
     // If filling all variants, expand field count to match versions count
+    let fields = scanFields();
     if (variantIndex == null) {
       for (const typeKey of ['primary_text', 'headline', 'description']) {
         if (onlyType && onlyType !== typeKey) continue;
-        await ensureFieldCount(typeKey, versions.length);
+        const expanded = await ensureFieldCount(typeKey, versions.length);
+        // Merge expanded for this type (preserves any extras tracked manually)
+        fields[typeKey] = expanded[typeKey];
+        // Also refresh other types in case DOM changed
+        fields.headline = fields.headline || expanded.headline;
+        fields.description = fields.description || expanded.description;
+        fields.cta = fields.cta || expanded.cta;
       }
     }
 
-    const fields = scanFields();
     const stats = { filled: 0, skipped: 0, byType: {} };
 
     const fillOne = (items, typeKey, valueFor) => {
