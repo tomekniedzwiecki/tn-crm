@@ -294,6 +294,10 @@
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     try {
+      if (msg.type === 'ping') {
+        sendResponse({ ok: true, pong: true });
+        return true;
+      }
       if (msg.type === 'scan') {
         const fields = scanFields();
         sendResponse({

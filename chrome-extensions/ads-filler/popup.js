@@ -95,6 +95,24 @@ async function selectWorkflow(id) {
   renderVariants();
 }
 
+async function ensureContentScript(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'ping' });
+    return true;
+  } catch {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        files: ['content.js']
+      });
+      return true;
+    } catch (e) {
+      console.error('Injection failed:', e);
+      return false;
+    }
+  }
+}
+
 async function scanCurrentPage() {
   const status = $('scan-status');
   status.textContent = 'Skanuję stronę...';
@@ -104,9 +122,20 @@ async function scanCurrentPage() {
       status.textContent = '⚠ Brak aktywnej karty';
       return;
     }
+    if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:') || tab.url.startsWith('chrome-extension://'))) {
+      status.textContent = '⚠ Ta strona systemowa nie może być skanowana';
+      $('btn-fill-all').disabled = true;
+      return;
+    }
+    const injected = await ensureContentScript(tab.id);
+    if (!injected) {
+      status.textContent = '⚠ Nie udało się wstrzyknąć skryptu na tej stronie';
+      $('btn-fill-all').disabled = true;
+      return;
+    }
     const resp = await chrome.tabs.sendMessage(tab.id, { type: 'scan' }).catch(() => null);
     if (!resp?.ok) {
-      status.textContent = '⚠ Strona nie jest obsługiwana — otwórz Meta Ads / TakeDrop';
+      status.textContent = '⚠ Nie znaleziono pól formularza';
       $('btn-fill-all').disabled = true;
       return;
     }
