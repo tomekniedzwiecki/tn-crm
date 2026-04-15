@@ -36,17 +36,24 @@
       /^podstawowy\s*tekst/i,
       /^primary\s*text/i,
       /^main\s*text/i,
-      /^tekst\s*g[lł][oó]wny/i
+      /^tekst\s*g[lł][oó]wny/i,
+      /poinformuj\s*odbiorc/i,
+      /tell people what your ad is about/i
     ],
     headline: [
       /^nag[lł][oó]wek/i,
       /^headline/i,
       /^tytu[lł]/i,
-      /^title$/i
+      /^title$/i,
+      /napisz.*kr[oó]tki.*nag[lł][oó]wek/i,
+      /write a short headline/i
     ],
     description: [
       /^opis/i,
-      /^description/i
+      /^description/i,
+      /za[lł][aą]cz.*dodatkowe.*informacj/i,
+      /include additional details/i,
+      /include additional information/i
     ],
     cta: [
       /^wezwanie\s*do\s*dzia[lł]ania/i,
@@ -56,14 +63,62 @@
     ]
   };
 
+  // Patterns that EXCLUDE a field from being matched (e.g. URL fields)
+  const EXCLUDE_PATTERNS = [
+    /adres\s*url/i,
+    /wprowad[zź].*url/i,
+    /website\s*url/i,
+    /enter.*url/i,
+    /display.*link/i,
+    /link.*wy[sś]wietlan/i
+  ];
+
   // Normalise label text
   const clean = (s) => String(s || '').replace(/\s+/g, ' ').replace(/[*•·:]/g, '').trim();
 
   function matchFieldType(text) {
     const t = clean(text);
     if (!t) return null;
+    if (EXCLUDE_PATTERNS.some(re => re.test(t))) return null;
     for (const [type, patterns] of Object.entries(FIELD_PATTERNS)) {
       if (patterns.some(re => re.test(t))) return type;
+    }
+    return null;
+  }
+
+  // Collect ALL label-like text signals for a field (aria-label, labelledby, placeholder, nearby)
+  function collectLabelSignals(el) {
+    const signals = [];
+    const aria = el.getAttribute('aria-label');
+    if (aria) signals.push(aria);
+    const labelledBy = el.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      labelledBy.split(/\s+/).forEach(id => {
+        const lbl = document.getElementById(id);
+        if (lbl) signals.push(lbl.innerText || lbl.textContent || '');
+      });
+    }
+    if (el.id) {
+      const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      if (lbl) signals.push(lbl.innerText);
+    }
+    if (el.placeholder) signals.push(el.placeholder);
+    const wrap = el.closest('label');
+    if (wrap) signals.push(wrap.innerText);
+    // Heuristic walk
+    const walked = findLabelFor(el);
+    if (walked) signals.push(walked);
+    return signals.filter(Boolean);
+  }
+
+  function matchFieldTypeFromSignals(signals) {
+    for (const sig of signals) {
+      const t = clean(sig);
+      if (!t) continue;
+      if (EXCLUDE_PATTERNS.some(re => re.test(t))) return null;
+      for (const [type, patterns] of Object.entries(FIELD_PATTERNS)) {
+        if (patterns.some(re => re.test(t))) return type;
+      }
     }
     return null;
   }
@@ -79,10 +134,10 @@
       if (input.offsetParent === null && input.getClientRects().length === 0) continue;
       if (input.disabled || input.readOnly) continue;
 
-      const label = findLabelFor(input);
-      const type = matchFieldType(label);
+      const signals = collectLabelSignals(input);
+      const type = matchFieldTypeFromSignals(signals);
       if (type) {
-        result[type].push({ element: input, label });
+        result[type].push({ element: input, label: signals[0] || '' });
       }
     }
     return result;
