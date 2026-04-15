@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041502';
+        const ADMIN_APP_VERSION = '2026041503';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -11066,6 +11066,50 @@ Zwróć TYLKO JSON.`;
         }
         window.exportMetaBulkZip = exportMetaBulkZip;
 
+        // ---- DOGENERUJ KAMPANIĘ (follow-up do Manusa) ----
+        async function askManusForCampaign() {
+            if (!adsData?.manus_full_task_id) {
+                showToast('Brak wątku Manusa dla tego workflow', 'error');
+                return;
+            }
+            const btn = document.getElementById('btn-ask-campaign');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Wysyłam do Manusa...'; }
+            try {
+                const { data: sent, error } = await supabaseClient.functions.invoke('manus-ask-campaign', {
+                    body: { workflow_id: workflow.id }
+                });
+                if (error || !sent?.ok) throw new Error(sent?.error || error?.message || 'Błąd wysyłki');
+                showToast('Pytanie wysłane do Manusa. Sprawdzam odpowiedź co 20 s...', 'info');
+                if (btn) btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Manus odpowiada...';
+                // Polling co 20 s, max 6 min
+                const start = Date.now();
+                const poll = async () => {
+                    if (Date.now() - start > 6 * 60 * 1000) {
+                        showToast('Timeout — sprawdź ręcznie później', 'error');
+                        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Sprawdź ponownie'; }
+                        return;
+                    }
+                    const { data: fetched } = await supabaseClient.functions.invoke('manus-fetch-campaign-spec', {
+                        body: { workflow_id: workflow.id }
+                    });
+                    if (fetched?.ok && fetched.campaign_spec) {
+                        adsData.campaign_spec = fetched.campaign_spec;
+                        adsData.campaign_spec_at = new Date().toISOString();
+                        renderCampaignSpec();
+                        showToast('Specyfikacja kampanii gotowa!', 'success');
+                        return;
+                    }
+                    setTimeout(poll, 20000);
+                };
+                setTimeout(poll, 20000);
+            } catch (e) {
+                console.error(e);
+                showToast('Błąd: ' + e.message, 'error');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-sparkle"></i> Dogeneruj kampanię'; }
+            }
+        }
+        window.askManusForCampaign = askManusForCampaign;
+
         // ---- CAMPAIGN SPEC RENDERER ----
         function renderCampaignSpec() {
             const section = document.getElementById('content-campaign-section');
@@ -11074,7 +11118,28 @@ Zwróć TYLKO JSON.`;
             const chipText = document.getElementById('campaign-meta-text');
             if (!section || !body) return;
             const spec = adsData?.campaign_spec;
-            if (!spec || !Array.isArray(spec.ad_sets) || spec.ad_sets.length === 0) {
+            const hasSpec = spec && Array.isArray(spec.ad_sets) && spec.ad_sets.length > 0;
+            const hasContent = getCreatives().length > 0 || getVersions().length > 0;
+            const hasManus = !!adsData?.manus_full_task_id;
+
+            // Pokaż CTA do dogenerowania jeśli brak spec ale mamy manus thread
+            if (!hasSpec && hasContent && hasManus) {
+                section.classList.remove('hidden');
+                chip?.classList.add('hidden');
+                body.innerHTML = `
+                    <div class="lg:col-span-3 bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0"><i class="ph ph-sparkle text-violet-300"></i></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-semibold text-white">Masz już content, dogeneruj kampanię</p>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Manus ma kontekst z tego wątku — dopyta się o 2 grupy odbiorców, budżet 10 zł/dzień CBO, cel Sprzedaż, Advantage+.</p>
+                        </div>
+                        <button id="btn-ask-campaign" onclick="askManusForCampaign()" class="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-4 py-2 rounded-lg text-[12px] font-semibold flex items-center gap-2 shrink-0 shadow-lg shadow-violet-500/20">
+                            <i class="ph ph-sparkle"></i> Dogeneruj kampanię
+                        </button>
+                    </div>`;
+                return;
+            }
+            if (!hasSpec) {
                 section.classList.add('hidden');
                 return;
             }
