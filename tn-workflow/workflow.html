@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041522';
+        const ADMIN_APP_VERSION = '2026041524';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2449,35 +2449,93 @@
                             </div>
                         </div>
 
-                        <!-- ========== FB POST PREVIEW ========== -->
+                        <!-- ========== STEPPER: TRYB RĘCZNEGO TWORZENIA W META ========== -->
+                        <section id="content-stepper" class="hidden mb-6 space-y-4">
+                            <!-- Mini progress bar -->
+                            <div class="bg-zinc-900/70 border border-white/5 rounded-xl p-3 flex items-center gap-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <span class="text-[11px] text-zinc-400 font-medium">Postęp w Meta Ads Manager</span>
+                                        <span id="stepper-progress-text" class="text-[11px] text-zinc-300 tabular-nums">0/12</span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                                        <div id="stepper-progress-bar" class="h-full bg-gradient-to-r from-violet-500 to-cyan-500 transition-all" style="width:0%"></div>
+                                    </div>
+                                </div>
+                                <a href="https://adsmanager.facebook.com/adsmanager/" target="_blank" rel="noopener" class="text-[11px] text-white bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 shrink-0">
+                                    <i class="ph ph-arrow-square-out"></i> Otwórz Ads Manager
+                                </a>
+                                <button onclick="resetStepperProgress()" class="text-[11px] text-zinc-400 hover:text-white px-2.5 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5" title="Zacznij od nowa">
+                                    <i class="ph ph-arrow-counter-clockwise"></i>
+                                </button>
+                            </div>
+
+                            <!-- KROK 1: Kampania -->
+                            <details id="step-campaign" class="group bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
+                                <summary class="list-none cursor-pointer select-none p-4 flex items-center gap-3 hover:bg-zinc-900/80 transition-colors">
+                                    <div id="step-campaign-icon" class="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center shrink-0">
+                                        <span class="text-[13px] font-bold text-violet-300">1</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-[14px] font-semibold text-white">Kampania</h4>
+                                        <p class="text-[11px] text-zinc-500">W Ads Managerze: + Utwórz → Cel: Sprzedaż</p>
+                                    </div>
+                                    <span id="step-campaign-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">Do zrobienia</span>
+                                    <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
+                                </summary>
+                                <div id="step-campaign-body" class="px-4 pb-4 border-t border-white/5 pt-4 space-y-2"></div>
+                            </details>
+
+                            <!-- KROK 2: Grupy odbiorców (side-by-side) -->
+                            <details id="step-adsets" class="group bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
+                                <summary class="list-none cursor-pointer select-none p-4 flex items-center gap-3 hover:bg-zinc-900/80 transition-colors">
+                                    <div id="step-adsets-icon" class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                                        <span class="text-[13px] font-bold text-cyan-300">2</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-[14px] font-semibold text-white">Grupy odbiorców <span class="text-zinc-500 font-normal">· 2</span></h4>
+                                        <p class="text-[11px] text-zinc-500">W Ads Managerze: Dodaj zestaw reklam × 2</p>
+                                    </div>
+                                    <span id="step-adsets-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">0/2</span>
+                                    <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
+                                </summary>
+                                <div id="step-adsets-body" class="px-4 pb-4 border-t border-white/5 pt-4 grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+                            </details>
+
+                            <!-- KROK 3: Reklamy -->
+                            <details id="step-ads" class="group bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
+                                <summary class="list-none cursor-pointer select-none p-4 flex items-center gap-3 hover:bg-zinc-900/80 transition-colors">
+                                    <div id="step-ads-icon" class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                                        <span class="text-[13px] font-bold text-emerald-300">3</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-[14px] font-semibold text-white">Reklamy <span class="text-zinc-500 font-normal">· 5 × 2 grupy</span></h4>
+                                        <p class="text-[11px] text-zinc-500">W Ads Managerze: Dodaj 5 reklam do każdego zestawu</p>
+                                    </div>
+                                    <span id="step-ads-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">0/5</span>
+                                    <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
+                                </summary>
+                                <div class="px-4 pb-4 border-t border-white/5 pt-4">
+                                    <!-- Nawigator reklam -->
+                                    <div id="step-ads-nav" class="flex gap-2 mb-4 overflow-x-auto pb-1"></div>
+                                    <!-- Aktywna reklama -->
+                                    <div id="step-ads-body"></div>
+                                </div>
+                            </details>
+                        </section>
+
+                        <!-- ========== FB POST PREVIEW (na dole, jako quick look) ========== -->
                         <section id="content-preview-section" class="hidden mb-6">
                             <div class="flex items-end justify-between mb-3">
                                 <div>
                                     <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
                                         <i class="ph ph-facebook-logo text-cyan-400"></i>
-                                        Podgląd reklam (Facebook)
+                                        Szybki podgląd (jak wyświetli się na FB)
                                     </h4>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5">Tak reklamy wyświetlą się w feedzie</p>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Kontekst wizualny dla tworzenia reklam</p>
                                 </div>
                             </div>
                             <div id="content-preview-feed" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-                        </section>
-
-                        <!-- ========== CAMPAIGN SPEC ========== -->
-                        <section id="content-campaign-section" class="hidden mb-6">
-                            <div class="flex items-end justify-between mb-3">
-                                <div>
-                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
-                                        <i class="ph ph-target text-violet-400"></i>
-                                        Specyfikacja kampanii
-                                    </h4>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5">Gotowa konfiguracja do wklejenia w Meta Ads Manager</p>
-                                </div>
-                                <div id="campaign-meta-chip" class="hidden text-[10px] text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-                                    <i class="ph ph-info"></i><span id="campaign-meta-text"></span>
-                                </div>
-                            </div>
-                            <div id="campaign-spec-body" class="grid grid-cols-1 lg:grid-cols-3 gap-3"></div>
                         </section>
 
                         <!-- ========== RESEARCH (collapsible) ========== -->
@@ -10718,11 +10776,18 @@ Zwróć TYLKO JSON.`;
             }
             if (ready) {
                 const meta = document.createElement('button');
-                meta.onclick = exportMetaBulkZip;
+                meta.onclick = () => exportMetaBulkZip(true);
                 meta.className = 'text-[11px] text-zinc-200 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5';
                 meta.innerHTML = '<i class="ph ph-file-zip"></i> Pakiet Meta';
-                meta.title = 'Pobierz ZIP: XLSX + 5 PNG gotowe do importu w Meta Ads Manager';
+                meta.title = 'ZIP: XLSX + 5 PNG — pełna kampania z reklamami (może wymagać ręcznej publikacji dla nowych kont, błąd #3738001)';
                 actions.appendChild(meta);
+
+                const structOnly = document.createElement('button');
+                structOnly.onclick = exportMetaStructureOnly;
+                structOnly.className = 'text-[11px] text-zinc-200 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5';
+                structOnly.innerHTML = '<i class="ph ph-frame-corners"></i> Tylko struktura';
+                structOnly.title = 'XLSX tylko z kampanią + 2 grupami odbiorców (bez reklam). Obchodzi ograniczenie Meta #3738001. Reklamy dodajesz ręcznie w Ads Managerze.';
+                actions.appendChild(structOnly);
             }
         }
 
@@ -10948,7 +11013,10 @@ Zwróć TYLKO JSON.`;
             });
             return window[globalName];
         }
-        async function exportMetaBulkZip() {
+        function exportMetaStructureOnly() { return exportMetaBulkZip(false); }
+        window.exportMetaStructureOnly = exportMetaStructureOnly;
+
+        async function exportMetaBulkZip(withAds = true) {
             const creatives = getCreatives();
             const versions = getVersions();
             if (!creatives.length && !versions.length) { showToast('Brak materiałów', 'error'); return; }
@@ -11043,51 +11111,63 @@ Zwróć TYLKO JSON.`;
                 };
                 const rows = [];
                 // Reguła: KAŻDA grupa odbiorców dostaje WSZYSTKIE 5 kreacji (A/B test pełny).
+                // Dla withAds=false generujemy tylko 1 wiersz per ad set bez reklam — Meta utworzy
+                // kampanię + grupy odbiorców, reklamy admin doda ręcznie.
                 const allCreativeIdxs = creatives.map((_, i) => i);
                 adSets.forEach((as, asi) => {
-                    allCreativeIdxs.forEach(ci => {
-                        const c = creatives[ci]; const v = versions[ci];
-                        if (!c && !v) return;
+                    const pushRow = (ci) => {
+                        const c = ci != null ? creatives[ci] : null;
+                        const v = ci != null ? versions[ci] : null;
                         rows.push([
                             campaignName, 'Outcome Sales', dailyBudget, 'Paused', 'Auction', 'Lowest Cost',
                             as.name || `Grupa ${asi + 1}`, 'Paused', 'OFFSITE_CONVERSIONS', 'IMPRESSIONS',
                             as.age_min || 25, as.age_max || 55, genderMap[as.gender] || 'All', 'PL',
-                            `${as.name || ('Grupa ' + (asi + 1))} — #${ci + 1}`,
-                            'Link Page Post Ad',
-                            (v?.headline || '').slice(0, 40),
-                            v?.primary_text || '',
-                            (v?.description || '').slice(0, 30),
-                            mapCta(v?.cta),
-                            landingUrl,
-                            c?.filename || '',
+                            withAds ? `${as.name || ('Grupa ' + (asi + 1))} — #${ci + 1}` : '',
+                            withAds ? 'Link Page Post Ad' : '',
+                            withAds ? (v?.headline || '').slice(0, 40) : '',
+                            withAds ? (v?.primary_text || '') : '',
+                            withAds ? (v?.description || '').slice(0, 30) : '',
+                            withAds ? mapCta(v?.cta) : '',
+                            withAds ? landingUrl : '',
+                            withAds ? (c?.filename || '') : '',
                             beneficiary,
-                            beneficiary, // Payer = Beneficiary (ta sama marka) żeby Meta nie zaznaczała "różnią się"
+                            beneficiary,
                         ]);
-                    });
+                    };
+                    if (withAds && allCreativeIdxs.length) {
+                        allCreativeIdxs.forEach(ci => pushRow(ci));
+                    } else {
+                        pushRow(null); // pojedynczy wiersz tylko z kampanią + ad setem
+                    }
                 });
 
                 const ws = XLSXLib.utils.aoa_to_sheet([headers, ...rows]);
                 const wb = XLSXLib.utils.book_new();
                 XLSXLib.utils.book_append_sheet(wb, ws, 'Ads');
                 const xlsxBuf = XLSXLib.write(wb, { bookType: 'xlsx', type: 'array' });
-                zip.file('kampania_meta.xlsx', xlsxBuf);
-                zip.file('README.txt',
-                    `Import do Meta Ads Manager:\n\n1. Rozpakuj ZIP do folderu na dysku.\n2. Meta Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel → wybierz kampania_meta.xlsx.\n3. Meta podpina pliki PNG z tego folderu automatycznie (Image File Name).\n4. Po imporcie ręcznie dodaj w Ads Managerze:\n   - Zainteresowania (Interests) — XLSX ich nie obsługuje prosto, są w adminie CRM\n   - Pixel Meta (jeśli inny niż default)\n5. Sprawdź draft kampanii, opublikuj.\n\nBudżet: ${dailyBudget} zł/dzień na poziomie KAMPANII (CBO).\nCel: Outcome Sales (Sprzedaż/Purchase).\nBuying Type: Auction.\nBillingEvent: Impressions.\nOptymalizacja: Offsite Conversions (Purchase z pixela).\nPlacement: nieustawione → Meta użyje Advantage+ (zalecane).\nStatus: Paused (trzeba opublikować ręcznie po review).\n`);
+                const xlsxName = withAds ? 'kampania_meta.xlsx' : 'kampania_meta_struktura.xlsx';
+                zip.file(xlsxName, xlsxBuf);
+                zip.file('README.txt', withAds
+                    ? `Import do Meta Ads Manager (pełna kampania):\n\n1. Rozpakuj ZIP do folderu.\n2. Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel → wybierz ${xlsxName}.\n3. Meta podpina 5 plików PNG z tego folderu automatycznie (Image File Name).\n4. Po imporcie uzupełnij ręcznie w Ads Managerze:\n   - Zainteresowania (Interests) — w adminie CRM\n   - Pixel Meta + zdarzenie Purchase\n5. Status: Paused → opublikuj po review.\n\nBudżet: ${dailyBudget} zł/dzień (CBO).\nCel: Outcome Sales. Placement: Advantage+. Strategia: Lowest Cost.\n`
+                    : `Import STRUKTURY kampanii (tylko kampania + 2 grupy odbiorców, bez reklam):\n\n1. Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel → ${xlsxName}.\n2. Meta utworzy 1 kampanię + 2 ad sety w statusie Paused.\n3. Dla każdego ad seta dodaj reklamy RĘCZNIE w Ads Managerze:\n   - Kliknij ad set → Utwórz nową reklamę\n   - Wybierz format (Jedna grafika), wgraj 5 PNG-ów z osobnego pakietu kreacji\n   - Wklej Primary Text / Headline / Description / CTA z panelu CRM (zakładka Content, drawer kreacji)\n4. Opublikuj.\n\nTen plik obchodzi ograniczenie Meta #3738001 (bulk publish zablokowany dla nowych kont) — publikacja struktury bez reklam jest dozwolona od razu.\n\nBudżet: ${dailyBudget} zł/dzień (CBO). Cel: Outcome Sales. Placement: Advantage+.\n`);
 
-                // Dodaj PNG-i
-                for (const c of creatives) {
-                    if (!c?.url) continue;
-                    try {
-                        const res = await fetch(c.url);
-                        const blob = await res.blob();
-                        zip.file(c.filename || 'creative.png', blob);
-                    } catch (e) { console.error('img', e); }
+                // PNG tylko w pełnej paczce
+                if (withAds) {
+                    for (const c of creatives) {
+                        if (!c?.url) continue;
+                        try {
+                            const res = await fetch(c.url);
+                            const blob = await res.blob();
+                            zip.file(c.filename || 'creative.png', blob);
+                        } catch (e) { console.error('img', e); }
+                    }
                 }
 
                 const out = await zip.generateAsync({ type: 'blob' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(out);
-                a.download = `${(workflow?.customer_name || 'kampania').replace(/\s+/g, '_')}_meta_ads.zip`;
+                const suffix = withAds ? '_meta_ads' : '_meta_struktura';
+                a.download = `${(workflow?.customer_name || 'kampania').replace(/\s+/g, '_')}${suffix}.zip`;
                 document.body.appendChild(a); a.click(); a.remove();
                 setTimeout(() => URL.revokeObjectURL(a.href), 1500);
                 showToast('Pakiet Meta pobrany!', 'success');
@@ -11200,6 +11280,372 @@ Zwróć TYLKO JSON.`;
         }
         window.askManusForCampaign = askManusForCampaign;
 
+        // ===================================================================
+        // ==== CONTENT STEPPER: 3-step asystent do ręcznego tworzenia w Meta
+        // ===================================================================
+
+        function stepperProgressKey() { return `content-progress-${workflow?.id}`; }
+        function loadStepperProgress() {
+            try { return JSON.parse(localStorage.getItem(stepperProgressKey()) || '{}'); } catch { return {}; }
+        }
+        function saveStepperProgress(p) {
+            try { localStorage.setItem(stepperProgressKey(), JSON.stringify(p)); } catch {}
+        }
+        function markStepperDone(key, value = true) {
+            const p = loadStepperProgress();
+            p[key] = value;
+            saveStepperProgress(p);
+            renderContentStepper();
+        }
+        window.markStepperDone = markStepperDone;
+
+        function resetStepperProgress() {
+            if (!confirm('Zacząć tworzenie kampanii od nowa? Lokalny postęp zostanie wyczyszczony.')) return;
+            try { localStorage.removeItem(stepperProgressKey()); } catch {}
+            renderContentStepper();
+        }
+        window.resetStepperProgress = resetStepperProgress;
+
+        // Klik-do-kopiowania pojedynczego pola
+        function copyStepperField(el, value) {
+            if (typeof value !== 'string') value = String(value ?? '');
+            navigator.clipboard.writeText(value).then(() => {
+                if (el) {
+                    const orig = el.innerHTML;
+                    el.classList.add('ring-2', 'ring-emerald-400/60');
+                    const icon = el.querySelector('.copy-icon');
+                    if (icon) { icon.classList.remove('ph-copy'); icon.classList.add('ph-check'); icon.classList.add('text-emerald-400'); }
+                    setTimeout(() => {
+                        el.classList.remove('ring-2', 'ring-emerald-400/60');
+                        if (icon) { icon.classList.remove('ph-check','text-emerald-400'); icon.classList.add('ph-copy'); }
+                    }, 1200);
+                }
+                showToast('Skopiowano!', 'success');
+            });
+        }
+        window.copyStepperField = copyStepperField;
+
+        // Komponent CopyField — label + wartość + [kopiuj]
+        function copyFieldHtml(label, value, opts = {}) {
+            const v = value == null ? '' : String(value);
+            const disabled = opts.info === true || v === '';
+            const limit = opts.limit;
+            const overLimit = limit && v.length > limit;
+            const charCls = overLimit ? 'text-amber-400' : 'text-zinc-500';
+            const badge = opts.info
+                ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 uppercase tracking-wider">info</span>'
+                : '';
+            const attr = disabled ? '' : `onclick="copyStepperField(this, ${JSON.stringify(v).replace(/"/g, '&quot;')})" role="button" tabindex="0"`;
+            const hover = disabled ? '' : 'hover:border-violet-500/40 hover:bg-zinc-900/80 cursor-pointer';
+            return `
+            <div class="copy-field bg-zinc-900/50 border border-white/5 ${hover} rounded-xl px-3 py-2.5 transition-all" ${attr}>
+                <div class="flex items-center justify-between gap-2 mb-0.5">
+                    <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">${escapeHtml(label)}</span>
+                    <div class="flex items-center gap-2">
+                        ${badge}
+                        ${limit ? `<span class="text-[9px] tabular-nums ${charCls}">${v.length}/${limit}</span>` : ''}
+                        ${disabled ? '' : '<i class="ph ph-copy copy-icon text-[13px] text-zinc-500"></i>'}
+                    </div>
+                </div>
+                <div class="text-[13px] text-white ${opts.multiline ? 'whitespace-pre-wrap leading-snug' : 'truncate'} font-medium">${escapeHtml(v || '—')}</div>
+            </div>`;
+        }
+
+        function getSpec() { return adsData?.campaign_spec || {}; }
+        function getAdSets() { return Array.isArray(getSpec().ad_sets) ? getSpec().ad_sets : []; }
+        function getBrandName() {
+            const spec = getSpec();
+            return spec.campaign?.name?.replace(/\s*—.*$/, '').trim() || workflow?.offer_name || workflow?.customer_name || 'Marka';
+        }
+        function getLandingUrlSync() {
+            return (adsData?.takedrop?.landing_url || adsData?.takedrop?.domain || workflow?.sales_page_url || getSpec().campaign?.landing_url || '')
+                .replace(/^(?!https?:\/\/)/i, match => match ? 'https://' + match : 'https://');
+        }
+        function normalizeUrl(u) {
+            if (!u) return '';
+            const s = String(u).trim();
+            return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`;
+        }
+
+        // ---- RENDER STEPPER ----
+        async function renderContentStepper() {
+            const section = document.getElementById('content-stepper');
+            if (!section) return;
+            section.classList.remove('hidden');
+            const progress = loadStepperProgress();
+
+            // Fetch takedrop dla landing_url
+            let landingUrl = '';
+            try {
+                const { data: td } = await supabaseClient.from('workflow_takedrop')
+                    .select('domain, landing_url, checkout_link').eq('workflow_id', workflow.id).maybeSingle();
+                landingUrl = normalizeUrl(td?.landing_url || td?.domain || td?.checkout_link || '');
+            } catch {}
+            if (!landingUrl) landingUrl = normalizeUrl(workflow?.sales_page_url || getSpec().campaign?.landing_url || '');
+
+            const brandName = getBrandName();
+
+            // ---- Step 1: Kampania ----
+            renderStepCampaign(brandName, progress);
+
+            // ---- Step 2: Grupy ----
+            renderStepAdSets(progress);
+
+            // ---- Step 3: Reklamy ----
+            renderStepAds(landingUrl, progress);
+
+            // ---- Autoopen pierwszej nieukończonej sekcji ----
+            const s1 = document.getElementById('step-campaign');
+            const s2 = document.getElementById('step-adsets');
+            const s3 = document.getElementById('step-ads');
+            if (s1 && s2 && s3) {
+                // nie nadpisujemy jeśli user ręcznie otworzył
+                if (!s1.hasAttribute('data-user-toggled')) {
+                    const doneCampaign = !!progress.campaign;
+                    const doneAdsets = (progress.adsets || []).filter(Boolean).length >= 2;
+                    s1.open = !doneCampaign;
+                    s2.open = doneCampaign && !doneAdsets;
+                    s3.open = doneCampaign && doneAdsets;
+                }
+            }
+
+            // Progres ogólny
+            const adsetsDone = (progress.adsets || []).filter(Boolean).length;
+            const adsDone = (progress.ads || []).filter(Boolean).length;
+            const campaignDone = progress.campaign ? 1 : 0;
+            const total = 1 + 2 + 5; // kampania + 2 grupy + 5 reklam
+            const done = campaignDone + adsetsDone + adsDone;
+            const bar = document.getElementById('stepper-progress-bar');
+            const txt = document.getElementById('stepper-progress-text');
+            if (bar) bar.style.width = `${(done / total) * 100}%`;
+            if (txt) txt.textContent = `${done}/${total}`;
+
+            // Badges na summary
+            const badgeCampaign = document.getElementById('step-campaign-badge');
+            if (badgeCampaign) {
+                if (progress.campaign) { badgeCampaign.textContent = 'Gotowe'; badgeCampaign.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300'; }
+                else { badgeCampaign.textContent = 'Do zrobienia'; badgeCampaign.className = 'text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400'; }
+            }
+            const badgeAdsets = document.getElementById('step-adsets-badge');
+            if (badgeAdsets) {
+                const cls = adsetsDone === 2 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-400';
+                badgeAdsets.textContent = `${adsetsDone}/2`;
+                badgeAdsets.className = `text-[10px] px-2 py-0.5 rounded-full ${cls}`;
+            }
+            const badgeAds = document.getElementById('step-ads-badge');
+            if (badgeAds) {
+                const cls = adsDone === 5 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-400';
+                badgeAds.textContent = `${adsDone}/5`;
+                badgeAds.className = `text-[10px] px-2 py-0.5 rounded-full ${cls}`;
+            }
+        }
+        window.renderContentStepper = renderContentStepper;
+
+        // ---- Step 1 body ----
+        function renderStepCampaign(brandName, progress) {
+            const body = document.getElementById('step-campaign-body');
+            if (!body) return;
+            const camp = getSpec().campaign || {};
+            const campName = camp.name || `${brandName} — Launch`;
+            const budget = camp.daily_budget_total || 10;
+            const done = !!progress.campaign;
+
+            body.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    ${copyFieldHtml('Cel kampanii', 'Sprzedaż', { info: true })}
+                    ${copyFieldHtml('Nazwa kampanii', campName)}
+                    ${copyFieldHtml('Strategia budżetu', 'Budżet kampanii (CBO)', { info: true })}
+                    ${copyFieldHtml('Dzienny budżet', String(budget))}
+                    ${copyFieldHtml('Strategia oferty', 'Najniższy koszt', { info: true })}
+                    ${copyFieldHtml('Beneficjent', brandName)}
+                    ${copyFieldHtml('Płatnik', brandName)}
+                    ${copyFieldHtml('Status', 'Wstrzymana (na start)', { info: true })}
+                </div>
+                <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-white/5">
+                    <p class="text-[11px] text-zinc-500">W Ads Managerze kliknij <span class="text-zinc-300">+ Utwórz</span> → wybierz cel <span class="text-zinc-300">Sprzedaż</span> → wypełnij powyższe pola</p>
+                    ${done
+                        ? `<button onclick="markStepperDone('campaign', false)" class="text-[11px] text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5 shrink-0"><i class="ph ph-arrow-counter-clockwise"></i> Cofnij</button>`
+                        : `<button onclick="markStepperDone('campaign', true)" class="text-[12px] font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 px-4 py-2 rounded-lg flex items-center gap-1.5 shrink-0"><i class="ph ph-check"></i> Kampania gotowa</button>`
+                    }
+                </div>`;
+        }
+
+        // ---- Step 2 body ----
+        function renderStepAdSets(progress) {
+            const body = document.getElementById('step-adsets-body');
+            if (!body) return;
+            const adSets = getAdSets();
+            if (!adSets.length) { body.innerHTML = '<p class="text-[12px] text-zinc-500 italic col-span-full">Brak specyfikacji grup odbiorców — wygeneruj przez Manusa.</p>'; return; }
+            const progAdsets = progress.adsets || [];
+            body.innerHTML = adSets.map((as, i) => {
+                const letter = String.fromCharCode(65 + i);
+                const interests = Array.isArray(as.interests) ? as.interests : [];
+                const behaviors = Array.isArray(as.behaviors) ? as.behaviors : [];
+                const genderPl = as.gender === 'female' ? 'Kobiety' : as.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
+                const done = !!progAdsets[i];
+                return `
+                <div class="bg-zinc-900/40 border ${done ? 'border-emerald-500/30' : 'border-white/10'} rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center"><span class="text-[13px] font-bold text-cyan-300">${letter}</span></div>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-[10px] uppercase tracking-wider text-cyan-300 font-semibold">Grupa ${letter}</span>
+                            <p class="text-[13px] font-semibold text-white line-clamp-1">${escapeHtml(as.name || 'Grupa ' + letter)}</p>
+                        </div>
+                        ${done ? '<i class="ph ph-check-circle text-emerald-400 text-lg"></i>' : ''}
+                    </div>
+                    <div class="space-y-2">
+                        ${copyFieldHtml('Nazwa zestawu', as.name || `Grupa ${letter}`)}
+                        ${copyFieldHtml('Lokalizacja konwersji', 'Strona internetowa', { info: true })}
+                        ${copyFieldHtml('Pixel / zdarzenie', 'Wybierz pixel i Kup w Ads Managerze', { info: true })}
+                        ${copyFieldHtml('Kraj', 'Polska', { info: true })}
+                        <div class="grid grid-cols-2 gap-2">
+                            ${copyFieldHtml('Wiek (min)', String(as.age_min || 25))}
+                            ${copyFieldHtml('Wiek (max)', String(as.age_max || 55))}
+                        </div>
+                        ${copyFieldHtml('Płeć', genderPl, { info: true })}
+                        ${interests.length ? `
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Zainteresowania · ${interests.length}</span>
+                                <button onclick='copyStepperField(this, ${JSON.stringify(interests.join(", "))})' class="text-[10px] text-violet-300 hover:text-white flex items-center gap-1"><i class="ph ph-copy"></i> Wszystkie</button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${interests.map(x => `<button onclick='copyStepperField(this, ${JSON.stringify(x)})' class="text-[11px] px-2 py-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-white/5 transition-colors">${escapeHtml(x)} <i class="ph ph-copy text-[9px] opacity-60"></i></button>`).join('')}
+                            </div>
+                        </div>` : ''}
+                        ${behaviors.length ? `
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Zachowania · ${behaviors.length}</span>
+                                <button onclick='copyStepperField(this, ${JSON.stringify(behaviors.join(", "))})' class="text-[10px] text-violet-300 hover:text-white flex items-center gap-1"><i class="ph ph-copy"></i> Wszystkie</button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${behaviors.map(x => `<button onclick='copyStepperField(this, ${JSON.stringify(x)})' class="text-[11px] px-2 py-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-white/5 transition-colors">${escapeHtml(x)} <i class="ph ph-copy text-[9px] opacity-60"></i></button>`).join('')}
+                            </div>
+                        </div>` : ''}
+                        ${copyFieldHtml('Umiejscowienia', 'Advantage+ (automatyczne)', { info: true })}
+                        ${as.rationale ? `<p class="text-[11px] text-zinc-500 italic bg-zinc-900/40 border border-white/5 rounded-lg p-2.5">💡 ${escapeHtml(as.rationale)}</p>` : ''}
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-white/5">
+                        ${done
+                            ? `<button onclick="toggleAdsetDone(${i}, false)" class="w-full text-[11px] text-zinc-400 hover:text-white px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center justify-center gap-1.5"><i class="ph ph-arrow-counter-clockwise"></i> Cofnij Grupę ${letter}</button>`
+                            : `<button onclick="toggleAdsetDone(${i}, true)" class="w-full text-[12px] font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 px-4 py-2 rounded-lg flex items-center justify-center gap-1.5"><i class="ph ph-check"></i> Grupa ${letter} gotowa</button>`
+                        }
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        function toggleAdsetDone(i, value) {
+            const p = loadStepperProgress();
+            p.adsets = p.adsets || [];
+            p.adsets[i] = value;
+            saveStepperProgress(p);
+            renderContentStepper();
+        }
+        window.toggleAdsetDone = toggleAdsetDone;
+
+        // ---- Step 3 body ----
+        let currentAdIndex = 0;
+        function renderStepAds(landingUrl, progress) {
+            const nav = document.getElementById('step-ads-nav');
+            const body = document.getElementById('step-ads-body');
+            if (!nav || !body) return;
+            const versions = getVersions();
+            const creatives = getCreatives();
+            const n = Math.max(versions.length, creatives.length);
+            if (!n) { body.innerHTML = '<p class="text-[12px] text-zinc-500 italic">Brak reklam — wygeneruj copy + kreacje.</p>'; nav.innerHTML = ''; return; }
+            if (currentAdIndex >= n) currentAdIndex = 0;
+            const progAds = progress.ads || [];
+
+            // Nav tabs
+            nav.innerHTML = Array.from({ length: n }).map((_, i) => {
+                const active = i === currentAdIndex;
+                const done = !!progAds[i];
+                const v = versions[i] || {};
+                const angleLabel = angleStyle(v.angle).label;
+                return `
+                <button onclick="setCurrentAd(${i})" class="shrink-0 px-3 py-2 rounded-lg border text-left flex items-center gap-2 transition-all ${active ? 'bg-violet-500/15 border-violet-500/40' : 'bg-zinc-900/50 border-white/5 hover:border-white/20'}">
+                    <span class="text-[11px] font-bold ${active ? 'text-violet-200' : 'text-zinc-400'}">#${i + 1}</span>
+                    <span class="text-[10px] ${active ? 'text-zinc-200' : 'text-zinc-500'}">${escapeHtml(angleLabel)}</span>
+                    ${done ? '<i class="ph ph-check-circle text-emerald-400 text-[13px]"></i>' : ''}
+                </button>`;
+            }).join('');
+
+            // Active ad body — 3 kolumny
+            const i = currentAdIndex;
+            const v = versions[i] || {};
+            const c = creatives[i] || {};
+            const cta = v.cta || 'Dowiedz się więcej';
+            const imgUrl = c.url || '';
+            const displayDomain = landingUrl ? landingUrl.replace(/^https?:\/\//i, '').split('/')[0] : '';
+            const done = !!progAds[i];
+            body.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr_240px] gap-4">
+                <!-- Kolumna 1: grafika -->
+                <div class="space-y-2">
+                    <div class="bg-zinc-900/70 border border-white/5 rounded-xl overflow-hidden">
+                        ${imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="" class="w-full aspect-square object-cover">` : `<div class="w-full aspect-square flex items-center justify-center bg-zinc-900"><i class="ph ph-image text-5xl text-zinc-600"></i></div>`}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <a href="${escapeHtml(imgUrl || '#')}" download="${escapeHtml(c.filename || 'ad.png')}" class="text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-download-simple"></i> PNG</a>
+                        <a href="${escapeHtml(imgUrl || '#')}" target="_blank" rel="noopener" class="text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-arrow-square-out"></i> Pełny</a>
+                    </div>
+                </div>
+                <!-- Kolumna 2: teksty -->
+                <div class="space-y-2">
+                    ${copyFieldHtml('Tekst główny (Primary)', v.primary_text || '', { limit: 125, multiline: true })}
+                    ${copyFieldHtml('Nagłówek (Headline)', v.headline || '', { limit: 40 })}
+                    ${copyFieldHtml('Opis linku (Description)', v.description || '', { limit: 30 })}
+                    ${copyFieldHtml('CTA', cta, { info: true })}
+                    ${copyFieldHtml('Adres URL witryny', landingUrl)}
+                    ${displayDomain ? copyFieldHtml('Adres wyświetlany', displayDomain) : ''}
+                </div>
+                <!-- Kolumna 3: META UI helper -->
+                <div class="space-y-2">
+                    <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-3">
+                        <p class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-2">W Ads Managerze wybierz</p>
+                        <ul class="space-y-1.5 text-[11px] text-zinc-300">
+                            <li class="flex gap-2"><i class="ph ph-check text-emerald-400 shrink-0 mt-0.5"></i><span>Format: <b>Jedna grafika lub film</b></span></li>
+                            <li class="flex gap-2"><i class="ph ph-check text-emerald-400 shrink-0 mt-0.5"></i><span>Multi-advertiser: <b>wyłącz</b></span></li>
+                            <li class="flex gap-2"><i class="ph ph-check text-emerald-400 shrink-0 mt-0.5"></i><span>Zaawansowane ulepszenia: <b>wyłącz</b> (żeby nie podmieniał tekstu)</span></li>
+                            <li class="flex gap-2"><i class="ph ph-check text-emerald-400 shrink-0 mt-0.5"></i><span>Destynacja: <b>Witryna internetowa</b></span></li>
+                            <li class="flex gap-2"><i class="ph ph-check text-emerald-400 shrink-0 mt-0.5"></i><span>CTA: <b>${escapeHtml(cta)}</b></span></li>
+                        </ul>
+                    </div>
+                    <div class="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                        <p class="text-[10px] uppercase tracking-wider text-amber-300 font-medium mb-1">📌 Pamiętaj</p>
+                        <p class="text-[11px] text-zinc-300 leading-snug">Tę samą reklamę <b>skopiuj do obu grup A i B</b> (Duplikuj → wybierz drugą grupę).</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Action bar -->
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="setCurrentAd(${(i - 1 + n) % n})" class="text-[11px] text-zinc-300 hover:text-white px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5"><i class="ph ph-caret-left"></i> Poprzednia</button>
+                    <span class="text-[11px] text-zinc-500">${i + 1} / ${n}</span>
+                    <button onclick="setCurrentAd(${(i + 1) % n})" class="text-[11px] text-zinc-300 hover:text-white px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5">Następna <i class="ph ph-caret-right"></i></button>
+                </div>
+                ${done
+                    ? `<button onclick="toggleAdDone(${i}, false)" class="text-[11px] text-zinc-400 hover:text-white px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5"><i class="ph ph-arrow-counter-clockwise"></i> Cofnij reklamę #${i + 1}</button>`
+                    : `<button onclick="toggleAdDone(${i}, true)" class="text-[12px] font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 px-4 py-2 rounded-lg flex items-center gap-1.5"><i class="ph ph-check"></i> Reklama #${i + 1} gotowa</button>`
+                }
+            </div>`;
+        }
+        function setCurrentAd(i) { currentAdIndex = i; renderContentStepper(); }
+        function toggleAdDone(i, value) {
+            const p = loadStepperProgress();
+            p.ads = p.ads || [];
+            p.ads[i] = value;
+            saveStepperProgress(p);
+            if (value) {
+                const n = Math.max(getVersions().length, getCreatives().length);
+                if (i + 1 < n) currentAdIndex = i + 1;
+            }
+            renderContentStepper();
+        }
+        window.setCurrentAd = setCurrentAd;
+        window.toggleAdDone = toggleAdDone;
+
         // ---- CAMPAIGN SPEC RENDERER ----
         function renderCampaignSpec() {
             const section = document.getElementById('content-campaign-section');
@@ -11304,11 +11750,11 @@ Zwróć TYLKO JSON.`;
 
             updateContentStatusBar();
             if (hasAny) {
+                renderContentStepper();
                 renderFbPostPreview();
-                renderCampaignSpec();
             } else {
+                document.getElementById('content-stepper')?.classList.add('hidden');
                 document.getElementById('content-preview-section')?.classList.add('hidden');
-                document.getElementById('content-campaign-section')?.classList.add('hidden');
             }
         }
         window.renderContentTab = renderContentTab;
