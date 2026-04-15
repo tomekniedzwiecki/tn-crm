@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041505';
+        const ADMIN_APP_VERSION = '2026041506';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -2449,28 +2449,6 @@
                             </div>
                         </div>
 
-                        <!-- ========== HERO GALLERY — kreacje ========== -->
-                        <section id="content-gallery-section" class="hidden mb-6">
-                            <div class="flex items-end justify-between mb-3">
-                                <div>
-                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
-                                        <i class="ph ph-image-square text-cyan-400"></i>
-                                        Kreacje graficzne <span id="gallery-count" class="text-zinc-500 font-normal"></span>
-                                    </h4>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5">Klik w kartę = podgląd + pełny copy</p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="downloadAllCreatives()" class="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 transition-colors" title="Pobierz wszystkie kreacje">
-                                        <i class="ph ph-download-simple"></i> Pobierz wszystkie
-                                    </button>
-                                    <button onclick="exportCopyToCSV()" class="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 transition-colors" title="Eksportuj copy do CSV (Meta Ads Manager)">
-                                        <i class="ph ph-file-csv"></i> CSV do Meta
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"></div>
-                        </section>
-
                         <!-- ========== CAMPAIGN SPEC ========== -->
                         <section id="content-campaign-section" class="hidden mb-6">
                             <div class="flex items-end justify-between mb-3">
@@ -2486,29 +2464,6 @@
                                 </div>
                             </div>
                             <div id="campaign-spec-body" class="grid grid-cols-1 lg:grid-cols-3 gap-3"></div>
-                        </section>
-
-                        <!-- ========== COPY TABLE ========== -->
-                        <section id="content-copy-section" class="hidden mb-6">
-                            <div class="flex items-end justify-between mb-3">
-                                <div>
-                                    <h4 class="text-[14px] font-semibold text-white flex items-center gap-2">
-                                        <i class="ph ph-text-aa text-cyan-400"></i>
-                                        Copy reklamowe
-                                    </h4>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5">Klik wiersza = rozwinięcie pełnego tekstu</p>
-                                </div>
-                                <div id="copies-wow-factor" class="hidden flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1">
-                                    <i class="ph ph-star-fill text-amber-400"></i>
-                                    <span id="copies-wow-text" class="truncate max-w-[320px]"></span>
-                                </div>
-                            </div>
-                            <div class="bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
-                                <div class="grid grid-cols-[40px_110px_1fr_90px_40px] gap-3 px-4 py-2.5 bg-zinc-900/60 border-b border-white/5 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
-                                    <div>#</div><div>Kąt</div><div>Headline · Primary</div><div class="text-right">Znaki</div><div></div>
-                                </div>
-                                <div id="copy-table-body" class="divide-y divide-white/5"></div>
-                            </div>
                         </section>
 
                         <!-- ========== RESEARCH (collapsible) ========== -->
@@ -10018,10 +9973,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
 
             if (hasResearch) renderResearchResults(adsData.competitor_research);
-            if (hasCopies) renderCopiesResults(adsData.ad_copies);
-            if (hasCreatives) renderCreativesResults(adsData.ad_creatives);
 
-            // Nowy orchestrator (status bar + gallery + copy table + empty state)
+            // Nowy orchestrator (status bar + campaign spec + research + empty state)
             renderContentTab();
         }
 
@@ -11238,12 +11191,8 @@ Zwróć TYLKO JSON.`;
 
             updateContentStatusBar();
             if (hasAny) {
-                renderCreativeGallery();
-                renderCopyTable();
                 renderCampaignSpec();
             } else {
-                document.getElementById('content-gallery-section')?.classList.add('hidden');
-                document.getElementById('content-copy-section')?.classList.add('hidden');
                 document.getElementById('content-campaign-section')?.classList.add('hidden');
             }
         }
