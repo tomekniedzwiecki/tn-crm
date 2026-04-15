@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041417';
+        const APP_VERSION = '2026041501';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4370,6 +4370,23 @@
                             <div id="content-ads-feed" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                         </div>
 
+                        <!-- Plan kampanii — 2 grupy odbiorców + konfiguracja -->
+                        <div id="content-campaign-section" class="hidden mb-8">
+                            <div class="flex items-end justify-between mb-3">
+                                <div>
+                                    <h3 class="text-[15px] font-semibold text-white flex items-center gap-2">
+                                        <i class="ph ph-target text-violet-400"></i>
+                                        Plan kampanii
+                                    </h3>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Jak będziemy docierać do Twoich klientów na Facebooku i Instagramie</p>
+                                </div>
+                                <div id="client-campaign-chip" class="hidden text-[10px] text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+                                    <i class="ph ph-info"></i><span id="client-campaign-chip-text"></span>
+                                </div>
+                            </div>
+                            <div id="client-campaign-body" class="grid grid-cols-1 lg:grid-cols-3 gap-3"></div>
+                        </div>
+
                         <!-- Analiza konkurencji — kompaktowa lista, zawsze widoczna -->
                         <div id="content-research-section" class="hidden">
                             <div class="mb-3">
@@ -6282,6 +6299,9 @@
                 </div>`;
             }).join('') || '<p class="text-center text-zinc-500 py-8 col-span-full">Brak wersji do wyświetlenia</p>';
 
+            // === Plan kampanii (campaign_spec) ===
+            renderClientCampaignSpec(escapeHTMLClient);
+
             // === Analiza konkurencji — kompaktowa lista ===
             const research = adsData?.competitor_research;
             const researchSection = document.getElementById('content-research-section');
@@ -6333,6 +6353,66 @@
             }
         }
 
+
+        // Render Plan kampanii dla klienta — 3 karty (kampania + 2 grupy A/B) stylem adminowskim
+        function renderClientCampaignSpec(esc) {
+            const section = document.getElementById('content-campaign-section');
+            const body = document.getElementById('client-campaign-body');
+            const chip = document.getElementById('client-campaign-chip');
+            const chipText = document.getElementById('client-campaign-chip-text');
+            if (!section || !body) return;
+            const spec = adsData?.campaign_spec;
+            if (!spec || !Array.isArray(spec.ad_sets) || spec.ad_sets.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            section.classList.remove('hidden');
+            const camp = spec.campaign || {};
+            if (chip && chipText) {
+                chipText.textContent = `${camp.daily_budget_total || 10} zł/dzień · cel Sprzedaż · Advantage+`;
+                chip.classList.remove('hidden');
+            }
+
+            const campCard = `
+                <div class="bg-zinc-900/50 border border-violet-500/30 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center"><i class="ph ph-megaphone-simple text-violet-300"></i></div>
+                        <span class="text-[11px] uppercase tracking-wider text-violet-300 font-semibold">Kampania</span>
+                    </div>
+                    <p class="text-[14px] font-semibold text-white mb-2 truncate" title="${esc(camp.name || '')}">${esc(camp.name || 'Kampania')}</p>
+                    <dl class="space-y-1.5 text-[11px]">
+                        <div class="flex justify-between"><dt class="text-zinc-500">Cel</dt><dd class="text-zinc-200">Sprzedaż (Purchase)</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Budżet/dzień</dt><dd class="text-emerald-300 font-semibold">${camp.daily_budget_total || 10} zł</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Platformy</dt><dd class="text-zinc-200">Facebook + Instagram</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Umiejscowienia</dt><dd class="text-zinc-200">Advantage+ (auto)</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Kraj</dt><dd class="text-zinc-200">Polska</dd></div>
+                    </dl>
+                </div>`;
+
+            const adSetCards = spec.ad_sets.map((as, i) => {
+                const letter = String.fromCharCode(65 + i);
+                const interests = Array.isArray(as.interests) ? as.interests : [];
+                const creativeIdxs = Array.isArray(as.creatives) ? as.creatives : [];
+                const genderLabel = as.gender === 'female' ? 'Kobiety' : as.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
+                return `
+                <div class="bg-zinc-900/50 border border-white/10 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center"><span class="text-[12px] font-bold text-cyan-300">${letter}</span></div>
+                        <span class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Grupa ${letter}</span>
+                    </div>
+                    <p class="text-[13px] font-semibold text-white mb-2 line-clamp-2">${esc(as.name || 'Grupa ' + letter)}</p>
+                    <dl class="space-y-1.5 text-[11px] mb-3">
+                        <div class="flex justify-between"><dt class="text-zinc-500">Wiek</dt><dd class="text-zinc-200">${as.age_min || 25}–${as.age_max || 55} lat</dd></div>
+                        <div class="flex justify-between"><dt class="text-zinc-500">Płeć</dt><dd class="text-zinc-200">${genderLabel}</dd></div>
+                    </dl>
+                    ${interests.length ? `<div class="mb-3"><div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Zainteresowania</div><div class="flex flex-wrap gap-1">${interests.slice(0, 8).map(x => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800/80 text-zinc-300">${esc(x)}</span>`).join('')}</div></div>` : ''}
+                    ${creativeIdxs.length ? `<div class="mb-2"><div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Reklamy w tej grupie</div><div class="flex flex-wrap gap-1">${creativeIdxs.map(ci => `<span class="text-[10px] px-2 py-0.5 rounded bg-violet-500/15 text-violet-300">Reklama #${ci + 1}</span>`).join('')}</div></div>` : ''}
+                    ${as.rationale ? `<p class="text-[10px] text-zinc-500 italic border-t border-white/5 pt-2 mt-2 line-clamp-3">${esc(as.rationale)}</p>` : ''}
+                </div>`;
+            }).join('');
+
+            body.innerHTML = campCard + adSetCards;
+        }
 
         function renderEtap4KampaniaBox() {
             const box = document.getElementById('dash-etap4-box-kampania');
