@@ -12,7 +12,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     pipeline: {
         label: 'Pipeline',
         description: 'Maile wysyłane w ramach automatyzacji pipeline leadów',
-        templates: ['pipeline_offer_cancelled']
+        templates: ['pipeline_offer_cancelled', 'pipeline_business_takeover']
     },
     oferty: {
         label: 'Oferty',
@@ -64,6 +64,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Gmail-style mail: informacja że oferta nie jest już aktualna',
         icon: 'ph-x-circle',
         color: 'rose'
+    },
+    'pipeline_business_takeover': {
+        name: 'Gotowy biznes do przejęcia',
+        description: 'Propozycja przejęcia gotowego biznesu (klient zrezygnował ze względów zdrowotnych)',
+        icon: 'ph-handshake',
+        color: 'orange'
     },
     'offer_created': {
         name: 'Oferta utworzona',
