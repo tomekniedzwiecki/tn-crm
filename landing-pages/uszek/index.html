@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uszek — Zobacz, zanim wyczyścisz. Domowy otoskop z kamerą Full HD</title>
+<meta name="description" content="Uszek to domowy otoskop z kamerą Full HD i aplikacją mobilną. Koniec z czyszczeniem uszu na oślep — bezpieczna higiena dla całej rodziny.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Mono:wght@400;500&display=swap&subset=latin-ext" rel="stylesheet">
+<style>
+:root{
+  --primary:#00B4A6; --primary-rgb:0,180,166;
+  --secondary:#0EA5E9; --secondary-rgb:14,165,233;
+  --accent:#FFB547; --accent-rgb:255,181,71;
+  --navy:#1A1F2E; --slate:#64748B; --sky:#F0F9FF;
+  --bg:#FDFDFC; --bg-alt:#F6F9FA;
+  --text:#0F1B2D; --text-soft:#475569;
+  --border:#E8EEF1;
+  --radius:16px; --radius-lg:24px; --radius-xl:32px;
+  --shadow-sm:0 2px 8px rgba(0,180,166,.06);
+  --shadow-md:0 10px 30px rgba(0,180,166,.1);
+  --shadow-lg:0 24px 60px rgba(0,180,166,.22);
+  --font-heading:'Fraunces',serif;
+  --font-body:'Plus Jakarta Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);color:var(--text);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4{font-family:var(--font-heading);color:var(--navy);line-height:1.08;letter-spacing:-.025em;font-variation-settings:"opsz" 144,"SOFT" 50}
+h1 em,h2 em{font-family:var(--font-heading);font-style:italic;font-weight:500;font-variation-settings:"opsz" 144,"SOFT" 100}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:3px;color:var(--primary);font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:999px;font-weight:600;font-size:15px;font-family:var(--font-body);transition:.25s;cursor:pointer;border:none;position:relative;overflow:hidden}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#00A093);color:#fff;box-shadow:0 8px 20px rgba(0,180,166,.35)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,180,166,.45)}
+.btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.fade-in{opacity:0;transform:translateY(30px);transition:.9s cubic-bezier(.2,.8,.2,1)}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+.fade-in:nth-child(2){transition-delay:.08s}
+.fade-in:nth-child(3){transition-delay:.16s}
+.fade-in:nth-child(4){transition-delay:.24s}
+
+/* subtle noise texture */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:1000;opacity:.25;mix-blend-mode:multiply;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.12 0 0 0 0 0.18 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+/* HEADER */
+.header{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(18px);background:rgba(255,255,255,.78);border-bottom:1px solid rgba(0,180,166,.08)}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.logo{height:36px}
+.nav-links{display:flex;gap:36px;align-items:center;font-size:14px;font-weight:500;color:var(--text-soft)}
+.nav-links a:hover{color:var(--primary)}
+.hamburger{display:none;background:none;border:0;cursor:pointer;padding:8px}
+.hamburger span{display:block;width:24px;height:2px;background:var(--navy);margin:5px 0;transition:.3s}
+@media(max-width:900px){.nav-links{display:none}.hamburger{display:block}}
+
+/* MOBILE MENU */
+.mobile-menu{position:fixed;inset:0;background:#fff;z-index:99;display:none;flex-direction:column;align-items:center;justify-content:center;gap:32px;font-size:22px;font-family:var(--font-heading);font-weight:600}
+.mobile-menu.open{display:flex}
+.mobile-menu a{color:var(--navy)}
+
+/* HERO */
+.hero{position:relative;padding:150px 0 120px;overflow:hidden;background:radial-gradient(at 15% 20%,rgba(0,180,166,.12) 0%,transparent 50%),radial-gradient(at 85% 80%,rgba(14,165,233,.1) 0%,transparent 50%),radial-gradient(at 70% 10%,rgba(255,181,71,.08) 0%,transparent 45%),#FDFDFC}
+.hero::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:80px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 80' preserveAspectRatio='none'><path d='M0,40 C360,80 720,0 1080,40 C1260,60 1350,50 1440,40 L1440,80 L0,80 Z' fill='%23FFFFFF'/></svg>") center/cover no-repeat;z-index:3}
+.hero-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:60px;align-items:center;position:relative;z-index:2}
+.hero-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,180,166,.18) 0%,transparent 70%);top:-200px;right:-150px;animation:glow-pulse 6s ease-in-out infinite alternate;z-index:0}
+.hero-glow-2{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(14,165,233,.15) 0%,transparent 70%);bottom:-200px;left:-100px;animation:glow-pulse 8s ease-in-out infinite alternate-reverse;z-index:0}
+@keyframes glow-pulse{from{transform:scale(.9);opacity:.7}to{transform:scale(1.1);opacity:1}}
+.hero-bg-animation{position:absolute;top:50%;right:18%;transform:translateY(-50%);width:500px;height:500px;pointer-events:none;z-index:0}
+.vibration-wave{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(0,180,166,.12);animation:vibration-pulse 4s ease-out infinite}
+.vibration-wave-1{width:220px;height:220px}
+.vibration-wave-2{width:340px;height:340px;animation-delay:1s}
+.vibration-wave-3{width:460px;height:460px;animation-delay:2s}
+@keyframes vibration-pulse{0%{transform:translate(-50%,-50%) scale(.8);opacity:.5}100%{transform:translate(-50%,-50%) scale(1.2);opacity:0}}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(0,180,166,.1);color:var(--primary);border-radius:999px;font-size:12px;font-weight:600;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:22px}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--primary);animation:blink 2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.3}}
+.hero h1{font-size:clamp(34px,5vw,60px);font-weight:800;margin-bottom:22px}
+.hero h1 .hl{background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{font-size:18px;color:var(--text-soft);margin-bottom:32px;max-width:540px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:28px}
+.hero-trust{display:flex;gap:24px;font-size:13px;color:var(--slate);font-weight:500;flex-wrap:wrap}
+.hero-trust span::before{content:'✓';color:var(--primary);font-weight:700;margin-right:6px}
+.hero-visual{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;animation:productFloat 5s ease-in-out infinite}
+.hero-visual::before{content:'';position:absolute;inset:-40px;border:1.5px dashed rgba(0,180,166,.35);border-radius:50%;animation:rotate 22s linear infinite;z-index:-1}
+.hero-visual::after{content:'';position:absolute;inset:10px;background:radial-gradient(circle,rgba(0,180,166,.22),transparent 65%);border-radius:50%;z-index:-1;filter:blur(10px)}
+@keyframes productFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.hero-visual>.img-ph{width:88%!important;height:88%!important;border-radius:50%!important;box-shadow:var(--shadow-lg)}
+.feat-badge{position:absolute;background:#fff;padding:12px 18px;border-radius:999px;box-shadow:0 10px 24px rgba(0,180,166,.18);font-size:13px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:8px;animation:badgeFloat 4s ease-in-out infinite;z-index:4}
+.feat-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.feat-badge.b1{top:8%;left:-10%;animation-delay:0s}
+.feat-badge.b2{top:18%;right:-12%;animation-delay:1s}.feat-badge.b2 .dot{background:var(--secondary)}
+.feat-badge.b3{bottom:18%;left:-8%;animation-delay:2s}.feat-badge.b3 .dot{background:var(--accent)}
+.feat-badge.b4{bottom:5%;right:-5%;animation-delay:1.5s}
+@keyframes badgeFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero-visual-placeholder{font-family:var(--font-mono);font-size:13px;color:var(--slate);text-align:center;padding:40px}
+.hero-visual-placeholder strong{display:block;font-size:15px;color:var(--primary);margin-bottom:8px}
+
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr;gap:40px}.hero{padding:110px 0 70px}}
+
+/* TRUST BAR */
+.trust-bar{padding:28px 0;background:linear-gradient(90deg,rgba(0,180,166,.04),rgba(14,165,233,.04));border-top:1px solid rgba(0,180,166,.1);border-bottom:1px solid rgba(0,180,166,.1)}
+.trust-items{display:flex;justify-content:center;gap:24px;flex-wrap:nowrap}
+.trust-item{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-shrink:0}
+.trust-icon{width:40px;height:40px;flex-shrink:0;border-radius:10px;background:rgba(0,180,166,.1);display:grid;place-items:center;color:var(--primary);font-size:20px}
+.trust-text{white-space:nowrap}
+.trust-text strong{display:block;font-size:13px;color:var(--navy);font-weight:700}
+.trust-text span{font-size:12px;color:var(--slate)}
+@media(max-width:768px){.trust-items{flex-wrap:wrap;gap:14px}.trust-text{white-space:normal}}
+
+/* SECTION */
+section{padding:90px 0;position:relative}
+.section-head{text-align:center;margin-bottom:60px}
+.section-head h2{font-size:clamp(28px,3.5vw,44px);font-weight:700;margin:14px 0 16px}
+.section-head p{font-size:17px;color:var(--text-soft);max-width:640px;margin:0 auto}
+
+/* PROBLEM */
+.problem{background:linear-gradient(180deg,#FFFBF5 0%,#FFF5EC 100%)}
+.problem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:50px}
+.pain-card{background:#fff;padding:32px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);transition:.3s}
+.pain-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
+.pain-icon{width:48px;height:48px;border-radius:12px;background:rgba(255,181,71,.15);display:grid;place-items:center;color:var(--accent);font-size:24px;margin-bottom:18px}
+.pain-card h3{font-size:18px;margin-bottom:10px}
+.pain-card p{font-size:15px;color:var(--text-soft)}
+.pain-stat{margin-top:50px;text-align:center;padding:36px;background:#fff;border-radius:var(--radius-lg);border:1px solid rgba(255,181,71,.3)}
+.pain-stat strong{font-family:var(--font-heading);font-size:72px;font-weight:600;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;color:transparent;display:block;line-height:1;letter-spacing:-.04em;font-style:italic}
+.pain-stat span{font-size:15px;color:var(--text-soft);margin-top:8px;display:block}
+@media(max-width:768px){.problem-grid{grid-template-columns:1fr}}
+
+/* SOLUTION / BENTO */
+.solution{background:linear-gradient(180deg,#fff 0%,rgba(14,165,233,.04) 100%)}
+.bento{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:50px}
+.bento-card{position:relative;padding:40px;background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;transition:.35s}
+.bento-card:hover{transform:translateY(-6px) rotate(-.5deg);border-color:var(--primary);box-shadow:0 20px 40px rgba(0,180,166,.18)}
+.bento-card:nth-child(2):hover{border-color:var(--secondary);box-shadow:0 16px 32px rgba(14,165,233,.12)}
+.bento-card:nth-child(3):hover{border-color:var(--accent);box-shadow:0 16px 32px rgba(255,181,71,.15)}
+.bento-icon{width:56px;height:56px;border-radius:14px;background:rgba(0,180,166,.1);display:grid;place-items:center;color:var(--primary);font-size:26px;margin-bottom:22px}
+.bento-card:nth-child(2) .bento-icon{background:rgba(14,165,233,.1);color:var(--secondary)}
+.bento-card:nth-child(3) .bento-icon{background:rgba(255,181,71,.15);color:var(--accent)}
+.bento-card:nth-child(4) .bento-icon{background:rgba(0,180,166,.1);color:var(--primary)}
+.bento-card h3{font-size:22px;margin-bottom:12px}
+.bento-card p{font-size:15px;color:var(--text-soft)}
+@media(max-width:768px){.bento{grid-template-columns:1fr}}
+
+/* HOW IT WORKS */
+.how{background:linear-gradient(180deg,rgba(255,181,71,.05) 0%,#fff 100%)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:50px}
+.step{text-align:center;position:relative}
+.step-num{font-family:var(--font-heading);font-size:14px;font-weight:700;color:#fff;background:var(--primary);width:44px;height:44px;border-radius:50%;display:grid;place-items:center;margin:0 auto 20px;box-shadow:0 6px 16px rgba(0,180,166,.3)}
+.step:nth-child(2) .step-num{background:var(--secondary);box-shadow:0 6px 16px rgba(14,165,233,.3)}
+.step:nth-child(3) .step-num{background:var(--accent);box-shadow:0 6px 16px rgba(255,181,71,.35)}
+.step h3{font-size:20px;margin-bottom:10px}
+.step p{font-size:15px;color:var(--text-soft)}
+@media(max-width:768px){.steps{grid-template-columns:1fr;gap:30px}}
+
+/* COMPARISON */
+.comparison{background:linear-gradient(180deg,rgba(14,165,233,.05) 0%,#fff 100%)}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:50px}
+.comparison-card{padding:40px;border-radius:var(--radius-lg);background:#fff;border:1px solid var(--border)}
+.comparison-card.highlight{border:2px solid var(--primary);box-shadow:var(--shadow-lg);background:linear-gradient(180deg,#fff,rgba(0,180,166,.03))}
+.comparison-card h3{font-size:22px;margin-bottom:8px}
+.comparison-card.highlight h3{color:var(--primary)}
+.comparison-desc{font-size:14px;color:var(--text-soft);margin-bottom:20px}
+.comparison-card ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+.comparison-card li{font-size:15px;color:var(--text-soft);padding-left:24px;position:relative}
+.comparison-card li::before{content:'—';position:absolute;left:0;color:var(--slate);font-weight:700}
+.comparison-card.highlight li::before{content:'→';color:var(--primary)}
+@media(max-width:768px){.comparison-grid{grid-template-columns:1fr}}
+
+/* TESTIMONIALS */
+.testimonials{background:linear-gradient(180deg,#fff 0%,rgba(0,180,166,.03) 100%)}
+.test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:50px}
+.test-card{padding:32px;background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.stars{color:var(--accent);font-size:16px;margin-bottom:14px;letter-spacing:2px}
+.test-text{font-size:15px;color:var(--text);margin-bottom:20px;font-style:italic}
+.test-author{display:flex;align-items:center;gap:12px}
+.test-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;display:grid;place-items:center;font-weight:700}
+.test-name{font-size:14px;font-weight:600;color:var(--navy)}
+.test-role{font-size:12px;color:var(--slate)}
+@media(max-width:900px){.test-grid{grid-template-columns:1fr}}
+
+/* FAQ */
+.faq{background:linear-gradient(180deg,rgba(14,165,233,.04) 0%,#fff 100%)}
+.faq-list{max-width:760px;margin:50px auto 0;display:flex;flex-direction:column;gap:14px}
+.faq-item{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;transition:.25s}
+.faq-item[open]{border-color:var(--primary);box-shadow:var(--shadow-sm)}
+.faq-q{padding:20px 24px;cursor:pointer;font-weight:600;font-size:16px;color:var(--navy);display:flex;justify-content:space-between;align-items:center;list-style:none}
+.faq-q::-webkit-details-marker{display:none}
+.faq-q::after{content:'+';font-size:24px;color:var(--primary);font-weight:400;transition:.25s}
+.faq-item[open] .faq-q::after{transform:rotate(45deg)}
+.faq-a{padding:0 24px 22px;font-size:15px;color:var(--text-soft);line-height:1.7}
+
+/* OFFER */
+.offer{background:linear-gradient(135deg,rgba(0,180,166,.06) 0%,#fff 50%,rgba(14,165,233,.06) 100%)}
+.offer-box{max-width:680px;margin:0 auto;position:relative;padding:56px 48px;background:#fff;border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden;text-align:center}
+.offer-box::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary),var(--secondary),var(--accent),var(--primary));background-size:200% 100%;animation:border-beam 3s linear infinite}
+@keyframes border-beam{to{background-position:-200% 0}}
+.offer-badge{display:inline-block;padding:6px 14px;background:rgba(255,181,71,.15);color:#B45309;border-radius:999px;font-size:12px;font-weight:600;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:20px}
+.offer h2{font-size:36px;margin-bottom:14px}
+.offer-price{font-family:var(--font-heading);margin:28px 0}
+.offer-price .amount{font-size:88px;font-weight:600;color:var(--primary);font-style:italic;letter-spacing:-.04em}
+.offer-price .currency{font-size:24px;font-weight:600;color:var(--slate);vertical-align:top;margin-left:4px}
+.offer-price .old{display:block;font-size:16px;color:var(--slate);text-decoration:line-through;margin-top:4px}
+.offer-includes{text-align:left;max-width:420px;margin:0 auto 28px;display:flex;flex-direction:column;gap:10px}
+.offer-includes li{list-style:none;padding-left:28px;position:relative;font-size:15px;color:var(--text-soft)}
+.offer-includes li::before{content:'✓';position:absolute;left:0;color:var(--primary);font-weight:700;font-size:18px}
+.offer .btn-primary{padding:18px 40px;font-size:17px}
+.offer-guarantee{margin-top:20px;font-size:13px;color:var(--slate)}
+
+/* CTA BANNER */
+.cta-banner{background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);padding:80px 0;text-align:center;color:#fff}
+.cta-banner h2{color:#fff;font-size:clamp(26px,3vw,38px);margin-bottom:16px}
+.cta-banner p{color:rgba(255,255,255,.9);font-size:17px;max-width:600px;margin:0 auto 28px}
+.cta-banner .btn{background:#fff;color:var(--primary);padding:16px 36px;font-size:16px}
+.cta-banner .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.18)}
+
+/* FOOTER */
+.footer{background:#FAFAFA;padding:60px 0 30px;border-top:3px solid transparent;background-image:linear-gradient(#FAFAFA,#FAFAFA),linear-gradient(90deg,var(--primary),var(--secondary));background-origin:border-box;background-clip:padding-box,border-box}
+.footer-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:40px;margin-bottom:40px}
+.footer-brand img{height:32px;margin-bottom:16px}
+.footer-brand p{font-size:14px;color:var(--slate);max-width:320px}
+.footer h4{font-size:14px;font-family:var(--font-body);font-weight:600;color:var(--navy);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}
+.footer ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.footer li a{font-size:14px;color:var(--slate)}
+.footer li a:hover{color:var(--primary)}
+.footer-bottom{padding-top:24px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--slate)}
+@media(max-width:768px){.footer-grid{grid-template-columns:1fr;gap:30px}}
+
+/* STICKY CTA MOBILE */
+.sticky-cta{display:none;position:fixed;bottom:0;left:0;right:0;padding:14px 20px;background:#fff;border-top:1px solid var(--border);z-index:90;box-shadow:0 -4px 20px rgba(0,0,0,.08)}
+.sticky-cta .btn{width:100%;justify-content:center}
+@media(max-width:768px){.sticky-cta{display:block}body{padding-bottom:80px}}
+
+/* IMG PLACEHOLDER */
+.img-ph{background:linear-gradient(135deg,rgba(0,180,166,.08),rgba(14,165,233,.08));border:1.5px dashed rgba(0,180,166,.25);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--slate);font-family:var(--font-mono);font-size:12px;padding:20px;line-height:1.5}
+.img-ph strong{display:block;color:var(--primary);font-size:13px;margin-bottom:6px;font-weight:600}
+
+/* PRODUCT SHOWCASE */
+.showcase{background:#fff}
+.showcase-grid{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:16px;margin-top:50px;height:560px}
+.showcase-grid .img-ph:nth-child(1){grid-row:span 2}
+@media(max-width:768px){.showcase-grid{grid-template-columns:1fr 1fr;height:auto;grid-template-rows:repeat(4,200px)}.showcase-grid .img-ph:nth-child(1){grid-row:auto;grid-column:span 2}}
+
+/* STEP IMG */
+.step .img-ph{aspect-ratio:4/3;margin-bottom:20px}
+
+/* PERSONAS */
+.personas{background:linear-gradient(180deg,#fff 0%,rgba(0,180,166,.04) 100%)}
+.persona-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:50px}
+.persona-card{background:#fff;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow-sm);transition:.3s}
+.persona-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
+.persona-card .img-ph{aspect-ratio:4/3;border-radius:0;border:none;border-bottom:1px solid var(--border)}
+.persona-body{padding:28px}
+.persona-body h3{font-size:20px;margin-bottom:6px}
+.persona-role{font-family:var(--font-mono);font-size:11px;color:var(--primary);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+.persona-body p{font-size:14px;color:var(--text-soft)}
+@media(max-width:768px){.persona-grid{grid-template-columns:1fr}}
+
+/* PACKAGE */
+.package{background:linear-gradient(180deg,rgba(0,180,166,.04),#fff)}
+.package-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;margin-top:50px}
+.package-visual{aspect-ratio:1/1;border-radius:var(--radius-xl)}
+.package-list{display:flex;flex-direction:column;gap:20px}
+.package-item{display:flex;gap:16px;align-items:flex-start}
+.package-num{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(0,180,166,.1);color:var(--primary);display:grid;place-items:center;font-weight:700;font-family:var(--font-heading)}
+.package-item h4{font-size:16px;margin-bottom:4px}
+.package-item p{font-size:14px;color:var(--text-soft)}
+@media(max-width:768px){.package-grid{grid-template-columns:1fr;gap:40px}}
+
+/* COOKIE */
+.cookie{position:fixed;bottom:20px;left:20px;right:20px;max-width:460px;padding:20px;background:var(--navy);color:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:95;display:none;font-size:13px;line-height:1.5}
+.cookie.show{display:block}
+.cookie button{margin-top:12px;padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="container nav">
+    <a href="#"><img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/uszek/logo.png" alt="Uszek" class="logo" width="165" height="36"></a>
+    <nav class="nav-links">
+      <a href="#funkcje">Funkcje</a>
+      <a href="#jak-dziala">Jak działa</a>
+      <a href="#opinie">Opinie</a>
+      <a href="#faq">FAQ</a>
+      <a href="#kup" class="btn btn-primary" style="padding:10px 22px;font-size:14px">Zamów Uszka</a>
+    </nav>
+    <button class="hamburger" onclick="document.getElementById('mmenu').classList.toggle('open')"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mmenu" onclick="this.classList.remove('open')">
+  <a href="#funkcje">Funkcje</a>
+  <a href="#jak-dziala">Jak działa</a>
+  <a href="#opinie">Opinie</a>
+  <a href="#faq">FAQ</a>
+  <a href="#kup" class="btn btn-primary">Zamów Uszka</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow-2"></div>
+  <div class="hero-bg-animation">
+    <div class="vibration-wave vibration-wave-1"></div>
+    <div class="vibration-wave vibration-wave-2"></div>
+    <div class="vibration-wave vibration-wave-3"></div>
+  </div>
+  <div class="container hero-grid">
+    <div class="hero-content fade-in">
+      <span class="hero-badge">Nowość · Health-Tech 2026</span>
+      <h1>Koniec z czyszczeniem uszu <em class="hl">na oślep</em></h1>
+      <p class="hero-sub">Uszek to domowy otoskop z kamerą Full HD, który pokazuje wnętrze ucha na Twoim telefonie w czasie rzeczywistym. Bezpieczna higiena dla całej rodziny — od malucha po seniora.</p>
+      <div class="hero-cta">
+        <a href="#kup" class="btn btn-primary">Zamawiam z rabatem -25%</a>
+        <a href="#jak-dziala" class="btn btn-ghost">Zobacz jak działa</a>
+      </div>
+      <div class="hero-trust">
+        <span>Kamera 1080p Full HD</span>
+        <span>Silikonowe końcówki</span>
+        <span>Darmowa dostawa</span>
+      </div>
+    </div>
+    <div class="hero-visual fade-in">
+      <span class="feat-badge b1"><span class="dot"></span>Full HD 1080p</span>
+      <span class="feat-badge b2"><span class="dot"></span>WiFi na żywo</span>
+      <span class="feat-badge b3"><span class="dot"></span>Silikon medyczny</span>
+      <span class="feat-badge b4"><span class="dot"></span>Dla całej rodziny</span>
+      <div class="img-ph" style="width:100%;height:100%;aspect-ratio:1/1;border:none;border-radius:var(--radius-xl)" data-fetchpriority="high">
+        <div><strong>[ZDJĘCIE HERO 1:1]</strong>Uszek w dłoni + ekran telefonu pokazujący podgląd wnętrza ucha na żywo. Białe tło, soft light. Zalecane: 1200×1200 WebP.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCT SHOWCASE -->
+<section class="showcase">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Galeria</span>
+      <h2>Uszek z bliska</h2>
+      <p>Precyzyjna konstrukcja, medyczny silikon i kamera Full HD — szczegóły, które robią różnicę.</p>
+    </div>
+    <div class="showcase-grid fade-in">
+      <div class="img-ph"><div><strong>[GŁÓWNE UJĘCIE 2:1]</strong>Uszek na białym tle, ujęcie 3/4, widoczny obiektyw kamery z ringiem LED</div></div>
+      <div class="img-ph"><div><strong>[DETAL KOŃCÓWKI]</strong>Makro silikonowej łyżeczki na końcu urządzenia</div></div>
+      <div class="img-ph"><div><strong>[APLIKACJA]</strong>Zrzut ekranu z aplikacji Uszek pokazującej podgląd wnętrza ucha</div></div>
+      <div class="img-ph"><div><strong>[W DŁONI]</strong>Ergonomia — urządzenie trzymane w dłoni</div></div>
+      <div class="img-ph"><div><strong>[ZESTAW 6 KOŃCÓWEK]</strong>Wymienne końcówki w różnych rozmiarach</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust-bar">
+  <div class="container trust-items">
+    <div class="trust-item"><div class="trust-icon">⚡</div><div class="trust-text"><strong>Dostawa 24h</strong><span>Magazyn w Polsce</span></div></div>
+    <div class="trust-item"><div class="trust-icon">🛡️</div><div class="trust-text"><strong>90 dni na zwrot</strong><span>Bez ryzyka</span></div></div>
+    <div class="trust-item"><div class="trust-icon">📱</div><div class="trust-text"><strong>iOS + Android</strong><span>Polska aplikacja</span></div></div>
+    <div class="trust-item"><div class="trust-icon">★</div><div class="trust-text"><strong>4.8 / 5</strong><span>Ocena klientów</span></div></div>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<section class="problem">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Problem</span>
+      <h2>Patyczki higieniczne robią więcej szkody niż pożytku</h2>
+      <p>Laryngolodzy od lat powtarzają to samo — klasyczne patyczki zamiast czyścić, wpychają woskowinę głębiej. A Ty czyścisz na ślepo, nie widząc co robisz.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="pain-card fade-in">
+        <div class="pain-icon">!</div>
+        <h3>Strach przed uszkodzeniem</h3>
+        <p>Jedno głębsze pchnięcie i błona bębenkowa pęka. Ból, utrata słuchu, tygodnie leczenia. Czyścisz w ciemno, bo nie widzisz co się dzieje w środku.</p>
+      </div>
+      <div class="pain-card fade-in">
+        <div class="pain-icon">⛔</div>
+        <h3>Ubijanie woskowiny</h3>
+        <p>Patyczek zamiast wyjmować — dociska. Powstaje korek, który blokuje słuch i prowadzi do zapaleń. Im częściej czyścisz, tym gorzej.</p>
+      </div>
+      <div class="pain-card fade-in">
+        <div class="pain-icon">💸</div>
+        <h3>Kosztowne wizyty</h3>
+        <p>Prywatna wizyta u laryngologa to 150–300 zł. Publiczna — miesiące czekania. A korek potrafi wracać co kilka miesięcy.</p>
+      </div>
+    </div>
+    <div class="img-ph fade-in" style="margin-top:40px;aspect-ratio:3/1;width:100%"><div><strong>[ILUSTRACJA PROBLEMU]</strong>Porównanie: patyczek vs Uszek — co widać (nic) vs co widać (czysty obraz wnętrza ucha)</div></div>
+    <div class="pain-stat fade-in">
+      <strong>8 na 10</strong>
+      <span>Polaków czyści uszy patyczkami, choć laryngolodzy odradzają tę metodę od lat</span>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTION BENTO -->
+<section class="solution" id="funkcje">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Rozwiązanie</span>
+      <h2>Poznaj Uszka — bezpieczeństwo potwierdzone wzrokiem</h2>
+      <p>Uszek łączy mikrokamerę Full HD, oświetlenie LED i delikatną silikonową końcówkę w jednym urządzeniu. Widzisz dokładnie to samo co laryngolog — na ekranie swojego telefonu.</p>
+    </div>
+    <div class="bento">
+      <div class="bento-card fade-in">
+        <div class="bento-icon">📹</div>
+        <h3>Kamera 1080p Full HD</h3>
+        <p>Obiektyw 3,5 mm z pierścieniem diod LED pokazuje każdy detal przewodu słuchowego. Stabilizacja 6-osiowa sprawia, że obraz jest zawsze pionowy.</p>
+      </div>
+      <div class="bento-card fade-in">
+        <div class="bento-icon">📲</div>
+        <h3>Podgląd na żywo przez WiFi</h3>
+        <p>Aplikacja Uszek na iOS i Androida wyświetla obraz w czasie rzeczywistym. Zrzut ekranu możesz pokazać lekarzowi — bez zbędnej wizyty.</p>
+      </div>
+      <div class="bento-card fade-in">
+        <div class="bento-icon">🪶</div>
+        <h3>Miękki silikon medyczny</h3>
+        <p>Wymienne końcówki z silikonu spożywczego są bezpieczne nawet dla dzieci. Zestaw zawiera 6 łyżeczek w różnych rozmiarach.</p>
+      </div>
+      <div class="bento-card fade-in">
+        <div class="bento-icon">🔋</div>
+        <h3>90 minut na jednym ładowaniu</h3>
+        <p>Akumulator litowy 250 mAh ładuje się przez USB-C. Wodoodporna obudowa IPX6 — mycie pod bieżącą wodą bez obaw.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="jak-dziala">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Jak to działa</span>
+      <h2>3 kroki do czystych uszu</h2>
+      <p>Proste jak naładowanie telefonu. Nie musisz być lekarzem — wystarczy, że patrzysz na ekran.</p>
+    </div>
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="img-ph"><div><strong>[KROK 1 — ZDJĘCIE]</strong>Ręka włącza urządzenie, telefon obok</div></div>
+        <div class="step-num">1</div>
+        <h3>Połącz z telefonem</h3>
+        <p>Włącz Uszka i zeskanuj kod QR z instrukcji. Aplikacja połączy się przez WiFi w 5 sekund — bez kabli.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="img-ph"><div><strong>[KROK 2 — ZDJĘCIE]</strong>Nakładanie silikonowej końcówki</div></div>
+        <div class="step-num">2</div>
+        <h3>Wybierz końcówkę</h3>
+        <p>Nałóż odpowiednią łyżeczkę silikonową — mniejszą dla dziecka, większą dla dorosłego. Zmiana trwa sekundę.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="img-ph"><div><strong>[KROK 3 — ZDJĘCIE]</strong>Osoba używa Uszka patrząc na ekran telefonu</div></div>
+        <div class="step-num">3</div>
+        <h3>Czyść patrząc na ekran</h3>
+        <p>Powoli wsuwaj końcówkę. Widzisz dokładnie gdzie jesteś. Gdy dostrzeżesz woskowinę — delikatnie ją wyjmujesz.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section class="comparison">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Porównanie</span>
+      <h2>Uszek vs tradycyjne metody</h2>
+      <p>Dlaczego 5000+ polskich rodzin wybrało Uszka zamiast patyczków?</p>
+    </div>
+    <div class="comparison-grid">
+      <div class="comparison-card fade-in">
+        <h3>Patyczki higieniczne</h3>
+        <p class="comparison-desc">Najpopularniejsza, ale najbardziej ryzykowna metoda higieny uszu w polskich domach.</p>
+        <ul>
+          <li>Czyszczenie na ślepo — nie widzisz co robisz</li>
+          <li>Ubijanie woskowiny zamiast jej usuwania</li>
+          <li>Realne ryzyko uszkodzenia błony bębenkowej</li>
+          <li>Trzeba kupować stale, generują odpady</li>
+          <li>Brak możliwości skontrolowania stanu ucha</li>
+        </ul>
+      </div>
+      <div class="comparison-card highlight fade-in">
+        <h3>Uszek</h3>
+        <p class="comparison-desc">Pełna kontrola wzrokowa, precyzja gabinetu i bezpieczeństwo całej rodziny w jednym urządzeniu.</p>
+        <ul>
+          <li>Podgląd Full HD na żywo — widzisz każdy ruch</li>
+          <li>Precyzyjne wyjmowanie łyżeczką pod kontrolą</li>
+          <li>Silikon medyczny bezpieczny nawet dla niemowląt</li>
+          <li>Jedna inwestycja na lata — zwraca się po pierwszej wizycie u laryngologa</li>
+          <li>Zrzuty ekranu możesz wysłać lekarzowi</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials" id="opinie">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Opinie klientów</span>
+      <h2>Co mówią o Uszku polskie rodziny</h2>
+      <p>Tysiące zadowolonych klientów — mamy, gadżeciarze i seniorzy.</p>
+    </div>
+    <div class="test-grid">
+      <div class="test-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="test-text">"Syn ciągle narzekał na ból ucha. Zamiast pędzić do laryngologa, zajrzałam Uszkiem i zobaczyłam duży korek. Poradziłam sobie sama w domu. Oszczędziłam 200 zł i dwie godziny czekania."</p>
+        <div class="test-author"><div class="test-avatar">MK</div><div><div class="test-name">Magda K.</div><div class="test-role">Mama 2 dzieci, Wrocław</div></div></div>
+      </div>
+      <div class="test-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="test-text">"Noszę słuchawki 8h dziennie. Odkąd mam Uszka, raz w tygodniu robię szybki przegląd i koniec. Obraz wyraźny, stabilizacja działa, aplikacja intuicyjna. Polecam każdemu technofrikowi."</p>
+        <div class="test-author"><div class="test-avatar">KN</div><div><div class="test-name">Kamil N.</div><div class="test-role">Biohacker, Warszawa</div></div></div>
+      </div>
+      <div class="test-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="test-text">"Kupiłem Uszka tacie na 70 urodziny. Od lat skarżył się na zatkane uszy. Teraz co miesiąc robi sobie sam przegląd. Mówi, że znów słyszy ptaki za oknem. Najlepszy prezent świata."</p>
+        <div class="test-author"><div class="test-avatar">PW</div><div><div class="test-name">Paweł W.</div><div class="test-role">Kraków</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PERSONAS -->
+<section class="personas">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">Dla kogo</span>
+      <h2>Uszek zna Twoją codzienność</h2>
+      <p>Jedno urządzenie, trzy różne potrzeby — każdy domownik znajdzie coś dla siebie.</p>
+    </div>
+    <div class="persona-grid">
+      <div class="persona-card fade-in">
+        <div class="img-ph"><div><strong>[PERSONA: MAMA]</strong>Mama z dzieckiem, Uszek w dłoni, ciepłe domowe światło</div></div>
+        <div class="persona-body">
+          <p class="persona-role">Dla rodziców</p>
+          <h3>Koniec lęku przy uszach dziecka</h3>
+          <p>Widzisz dokładnie co robisz. Żadnego wpychania patyczka „mniej więcej tutaj". Kiedy dziecko narzeka na ból ucha — zaglądasz w 30 sekund i wiesz czy to korek, czy wizyta u laryngologa.</p>
+        </div>
+      </div>
+      <div class="persona-card fade-in">
+        <div class="img-ph"><div><strong>[PERSONA: GADŻECIARZ]</strong>Mężczyzna 30+ z słuchawkami, korzysta z aplikacji na telefonie</div></div>
+        <div class="persona-body">
+          <p class="persona-role">Dla technofilów</p>
+          <h3>Pełna kontrola nad własnym ciałem</h3>
+          <p>Słuchawki douszne 8h dziennie? Uszek daje Ci wgląd, którego wcześniej nie miałeś. Aplikacja, Full HD, zrzuty ekranu — Twój osobisty otoskop z poziomem kontroli godnym biohackera.</p>
+        </div>
+      </div>
+      <div class="persona-card fade-in">
+        <div class="img-ph"><div><strong>[PERSONA: SENIOR]</strong>Senior 65+ korzysta z urządzenia, ewentualnie z pomocą dziecka</div></div>
+        <div class="persona-body">
+          <p class="persona-role">Dla seniorów</p>
+          <h3>Odzyskaj czystość dźwięku</h3>
+          <p>Nagromadzenie woskowiny izoluje od świata — głosy wnuków, telewizji, rozmów. Uszek to proste rozwiązanie bez wizyt w przychodni. Duży obraz na ekranie telefonu, prosty interfejs, bezpieczne końcówki.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PACKAGE -->
+<section class="package">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">W zestawie</span>
+      <h2>Co dostajesz z Uszkiem</h2>
+      <p>Wszystko gotowe do pracy od pierwszej minuty. Bez dokupywania, bez niespodzianek.</p>
+    </div>
+    <div class="package-grid">
+      <div class="img-ph package-visual fade-in"><div><strong>[UNBOXING / ZESTAW]</strong>Otwarte pudełko Uszek z wszystkimi akcesoriami rozłożonymi na białym tle</div></div>
+      <div class="package-list fade-in">
+        <div class="package-item"><div class="package-num">1</div><div><h4>Otoskop Uszek</h4><p>Urządzenie z kamerą 1080p, LED i WiFi. Korpus ze wzmocnionego tworzywa.</p></div></div>
+        <div class="package-item"><div class="package-num">2</div><div><h4>6 wymiennych końcówek</h4><p>Silikonowe łyżeczki w 3 rozmiarach — dla dziecka, kobiety i mężczyzny.</p></div></div>
+        <div class="package-item"><div class="package-num">3</div><div><h4>Kabel USB-C</h4><p>Szybkie ładowanie w 40 minut. Pasuje do większości dzisiejszych ładowarek.</p></div></div>
+        <div class="package-item"><div class="package-num">4</div><div><h4>Etui ochronne</h4><p>Zabierz Uszka w podróż lub trzymaj bezpiecznie w łazience.</p></div></div>
+        <div class="package-item"><div class="package-num">5</div><div><h4>Polska instrukcja + QR</h4><p>Krok po kroku. Link do filmów instruktażowych na telefonie.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-head fade-in">
+      <span class="section-label">FAQ</span>
+      <h2>Najczęstsze pytania</h2>
+      <p>Wszystko co musisz wiedzieć przed zakupem.</p>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item fade-in"><summary class="faq-q">Czy Uszek jest bezpieczny dla dzieci?</summary><div class="faq-a">Tak. Końcówki wykonane są z medycznego silikonu, a średnica 3,5 mm jest dopasowana do przewodu słuchowego dziecka od 3 roku życia. Dzięki podglądowi na żywo widzisz dokładnie, jak głęboko wprowadzasz urządzenie — praktycznie eliminując ryzyko zranienia.</div></details>
+      <details class="faq-item fade-in"><summary class="faq-q">Czy aplikacja jest po polsku?</summary><div class="faq-a">Tak, aplikacja Uszek jest dostępna po polsku na iOS (15+) i Androida (8+). Połączenie WiFi jest szyfrowane i nie wymaga logowania — Twoje nagrania pozostają tylko na Twoim telefonie.</div></details>
+      <details class="faq-item fade-in"><summary class="faq-q">Ile wytrzymuje bateria?</summary><div class="faq-a">Akumulator 250 mAh wystarcza na około 60–90 minut ciągłej pracy. Ładowanie przez USB-C trwa ok. 40 minut. W codziennym użyciu jedno ładowanie starcza na 2–3 tygodnie.</div></details>
+      <details class="faq-item fade-in"><summary class="faq-q">Czy mogę zwrócić produkt jeśli się nie spodoba?</summary><div class="faq-a">Tak. Dajemy Ci 90 dni na przetestowanie Uszka. Jeśli z jakiegoś powodu produkt nie spełni Twoich oczekiwań, zwrócimy pełną kwotę — bez pytań, bez haczyków.</div></details>
+      <details class="faq-item fade-in"><summary class="faq-q">Czy Uszek zastępuje wizytę u laryngologa?</summary><div class="faq-a">Nie — Uszek to narzędzie higieny i podglądu, nie urządzenie medyczne do stawiania diagnoz. W przypadku bólu, stanu zapalnego lub silnie zatkanego ucha zawsze konsultuj się z lekarzem. Zrzut ekranu z Uszka możesz mu pokazać, by przyspieszyć diagnozę.</div></details>
+      <details class="faq-item fade-in"><summary class="faq-q">Jak szybko dostanę zamówienie?</summary><div class="faq-a">Wysyłamy z magazynu w Polsce (InPost). Zamówienia złożone do 13:00 trafiają do Ciebie następnego dnia roboczego. Dostawa jest darmowa w całej Polsce.</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- OFFER -->
+<section class="offer" id="kup">
+  <div class="container">
+    <div class="offer-box fade-in">
+      <span class="offer-badge">Oferta startowa · -25%</span>
+      <h2>Zacznij bezpieczną higienę uszu już dziś</h2>
+      <p style="color:var(--text-soft);max-width:480px;margin:0 auto">Pełny zestaw Uszek z akcesoriami, polską aplikacją i 90-dniową gwarancją zwrotu pieniędzy.</p>
+      <div class="offer-price">
+        <span class="amount">149</span><span class="currency">zł</span>
+        <span class="old">199 zł</span>
+      </div>
+      <ul class="offer-includes">
+        <li>Otoskop Uszek z kamerą 1080p Full HD</li>
+        <li>6 wymiennych końcówek silikonowych</li>
+        <li>Kabel USB-C do ładowania</li>
+        <li>Etui ochronne + polska instrukcja</li>
+        <li>Dożywotni dostęp do aplikacji mobilnej</li>
+        <li>Darmowa dostawa InPost w 24h</li>
+      </ul>
+      <a href="#" class="btn btn-primary">Zamawiam Uszka za 149 zł</a>
+      <p class="offer-guarantee">🛡️ 90 dni gwarancji zwrotu · Płatność BLIK, karta, za pobraniem</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-banner">
+  <div class="container">
+    <h2>Przestań czyścić uszy na oślep</h2>
+    <p>Dołącz do tysięcy polskich rodzin, które postawiły na bezpieczną higienę uszu z Uszkiem.</p>
+    <a href="#kup" class="btn">Zamów Uszka — 149 zł</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/uszek/logo.png" alt="Uszek" width="150" height="32">
+        <p>Domowy otoskop z kamerą Full HD. Bezpieczna higiena uszu dla całej rodziny — od malucha po seniora.</p>
+      </div>
+      <div>
+        <h4>Produkt</h4>
+        <ul>
+          <li><a href="#funkcje">Funkcje</a></li>
+          <li><a href="#jak-dziala">Jak działa</a></li>
+          <li><a href="#opinie">Opinie</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kontakt</h4>
+        <ul>
+          <li><a href="mailto:kontakt@uszek.pl">kontakt@uszek.pl</a></li>
+          <li>Pon–Pt 9:00–17:00</li>
+          <li>Regulamin · Polityka prywatności</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Uszek. Wszystkie prawa zastrzeżone.</div>
+  </div>
+</footer>
+
+<!-- STICKY CTA -->
+<div class="sticky-cta"><a href="#kup" class="btn btn-primary">Zamów Uszka — 149 zł</a></div>
+
+<!-- COOKIE -->
+<div class="cookie" id="cookie">
+  Używamy plików cookies, aby zapewnić najlepsze wrażenia z korzystania ze strony. Kontynuując, akceptujesz naszą politykę prywatności.
+  <br><button onclick="localStorage.setItem('c','1');this.parentElement.classList.remove('show')">Akceptuję</button>
+</div>
+
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&e.target.classList.add('visible')),{threshold:.12});
+document.querySelectorAll('.fade-in').forEach(el=>io.observe(el));
+if(!localStorage.getItem('c'))setTimeout(()=>document.getElementById('cookie').classList.add('show'),1500);
+</script>
+</body>
+</html>
