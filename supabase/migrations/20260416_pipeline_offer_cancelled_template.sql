@@ -15,7 +15,7 @@ VALUES (
 <body style="margin:0;padding:20px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px;line-height:1.5;">
   <div style="max-width:600px;">
     <p style="margin:0 0 14px 0;">Cześć,</p>
-    <p style="margin:0 0 14px 0;">daję znać, że oferta którą Ci przedstawiłem nie jest już aktualna.</p>
+    <p style="margin:0 0 14px 0;">daję znać, że oferta którą Ci przedstawiłem <strong>nie jest już aktualna</strong>.</p>
     <p style="margin:0 0 20px 0;">Pozdrawiam,</p>
     <table cellpadding="0" cellspacing="0" border="0" width="380">
       <tr>
