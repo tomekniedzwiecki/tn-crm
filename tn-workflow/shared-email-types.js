@@ -9,6 +9,11 @@ const EMAIL_TEMPLATE_CATEGORIES = {
         description: 'Maile dla nowych leadów',
         templates: ['zapisy_confirmation', 'lead_intro_video']
     },
+    pipeline: {
+        label: 'Pipeline',
+        description: 'Maile wysyłane w ramach automatyzacji pipeline leadów',
+        templates: ['pipeline_offer_cancelled']
+    },
     oferty: {
         label: 'Oferty',
         description: 'Maile związane z ofertami',
@@ -53,6 +58,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany 7 minut po zapisie z linkiem do YT',
         icon: 'ph-youtube-logo',
         color: 'red'
+    },
+    'pipeline_offer_cancelled': {
+        name: 'Anulowanie oferty',
+        description: 'Gmail-style mail: informacja że oferta nie jest już aktualna',
+        icon: 'ph-x-circle',
+        color: 'rose'
     },
     'offer_created': {
         name: 'Oferta utworzona',
