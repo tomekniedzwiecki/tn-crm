@@ -34,10 +34,33 @@ Kompletny plik `index.html` gotowy do wrzucenia do folderu `landing-pages/[nazwa
 
 ### Kroki po wygenerowaniu HTML (OBOWIĄZKOWE!)
 
-1. **Pobierz logo** z `workflow_branding` (type='logo')
+1. **Pobierz GŁÓWNE logo** z `workflow_branding` (type='logo') — wybierz to, które ma w polu `notes` JSON z `"is_main": true`. Przykład:
+   ```bash
+   node -e "const d=require('c:/tmp/wb.json'); console.log(d.filter(x=>x.type==='logo').find(x=>{try{return JSON.parse(x.notes||'{}').is_main}catch(e){return false}})?.file_url)"
+   ```
+   NIGDY nie zgaduj po tytule (np. "Logo premium") — użytkownik oznacza główne logo w panelu flagą `is_main`, która trafia do `notes`.
 2. **Przytnij logo** używając `sharp().trim()` (usuwa białe marginesy!)
 3. **Upload logo** do `attachments/landing/[nazwa-marki]/logo.png`
 4. **Użyj pełnego URL** w HTML: `https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/[nazwa-marki]/logo.png`
+
+## ⛔ NIGDY NIE KOPIUJ ZDJĘĆ Z INNEGO WORKFLOW ⛔
+
+**To jest krytyczna zasada — naruszenie = oszustwo wobec klienta.**
+
+Kiedy kopiujesz szablon innego landingu (np. `czystosz/index.html`) jako bazę dla nowego, **MUSISZ** usunąć WSZYSTKIE `<img src>` wskazujące na zasoby należące do tamtego workflow i zastąpić je:
+
+1. **Zdjęciami z BIEŻĄCEGO workflow** (`workflow_branding` type='mockup' lub 'logo', `workflow_reports` type='report_infographic`) — jedyne dozwolone źródło
+2. **Wyraźnymi placeholderami** jeśli brak własnych zdjęć — np. kolorowy blok z tekstem `[PLACEHOLDER: opis zdjęcia]` lub `https://placehold.co/800x600/4A9D8E/FFF?text=Robot+Miotka`
+
+**Jak rozpoznać obce zdjęcia:** URL zawiera inne UUID workflow w ścieżce `ai-generated/<UUID>/`. Przed zapisem pliku uruchom:
+
+```bash
+grep -oE "ai-generated/[a-f0-9-]{36}" landing-pages/[nazwa]/index.html | sort -u
+```
+
+Wynik MUSI zawierać wyłącznie UUID bieżącego workflow. Każdy inny UUID = bug do naprawy natychmiast.
+
+**Dlaczego to jest krytyczne:** Zdjęcia z innego workflow przedstawiają inny produkt pod inną marką. Klient dostaje landing ze zdjęciami konkurencji, co jest nie do zaakceptowania.
 
 ## Hosting assetów (WAŻNE!)
 
