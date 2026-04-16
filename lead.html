@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -557,6 +558,10 @@
                         <i class="ph ph-whatsapp-logo text-green-500"></i>
                         WhatsApp
                         <span class="tab-badge" id="whatsapp-tab-count">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="nda" onclick="switchTab('nda')">
+                        <i class="ph ph-file-lock text-amber-400"></i>
+                        NDA
                     </button>
                 </div>
 
@@ -1358,6 +1363,52 @@
                         </div>
                     </div>
                 </div><!-- /tab-whatsapp -->
+
+                <!-- Tab: NDA -->
+                <div id="tab-nda" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Form -->
+                        <div class="space-y-4">
+                            <div class="bg-zinc-900 border border-white/10 rounded-xl p-5">
+                                <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                                    <i class="ph ph-identification-card text-amber-400"></i>
+                                    Dane leada do NDA
+                                </h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs text-zinc-400 mb-1">Imię</label>
+                                        <input id="nda-first-name" type="text" class="w-full bg-zinc-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" oninput="renderNdaPreview()">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-zinc-400 mb-1">Nazwisko</label>
+                                        <input id="nda-last-name" type="text" class="w-full bg-zinc-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" oninput="renderNdaPreview()">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-xs text-zinc-400 mb-1">E-mail</label>
+                                        <input id="nda-email" type="email" class="w-full bg-zinc-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" oninput="renderNdaPreview()">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-xs text-zinc-400 mb-1">Telefon</label>
+                                        <input id="nda-phone" type="text" class="w-full bg-zinc-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" oninput="renderNdaPreview()">
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="downloadNdaPdf()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                                <i class="ph ph-file-pdf text-lg"></i>
+                                Pobierz PDF
+                            </button>
+                            <p class="text-xs text-zinc-500 text-center">Po pobraniu załącz plik do maila do leada.</p>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="bg-zinc-900 border border-white/10 rounded-xl p-4">
+                            <div class="text-xs text-zinc-500 uppercase tracking-wider mb-3 px-1">Podgląd dokumentu</div>
+                            <div id="nda-preview-wrapper" style="background:#fff;color:#111;border-radius:8px;overflow:hidden;max-height:700px;overflow-y:auto;">
+                                <div id="nda-preview" style="padding:48px 56px;font-family:'Times New Roman',Georgia,serif;font-size:12px;line-height:1.65;color:#111;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /tab-nda -->
 
             </div>
         </div>
@@ -5456,6 +5507,127 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (tabName === 'email' && allEmails.length === 0) {
                 loadEmailHistoryFull();
             }
+
+            // Prefill NDA form from lead on first open
+            if (tabName === 'nda') {
+                prefillNdaForm();
+                renderNdaPreview();
+            }
+        }
+
+        // ============ NDA GENERATOR ============
+
+        function prefillNdaForm() {
+            if (!lead) return;
+            const fn = document.getElementById('nda-first-name');
+            const ln = document.getElementById('nda-last-name');
+            const em = document.getElementById('nda-email');
+            const ph = document.getElementById('nda-phone');
+            if (!fn.value && !ln.value && lead.name) {
+                const parts = lead.name.trim().split(/\s+/);
+                fn.value = parts[0] || '';
+                ln.value = parts.slice(1).join(' ');
+            }
+            if (!em.value) em.value = lead.email || '';
+            if (!ph.value) ph.value = lead.phone || '';
+        }
+
+        function renderNdaPreview() {
+            const firstName = (document.getElementById('nda-first-name')?.value || '').trim();
+            const lastName = (document.getElementById('nda-last-name')?.value || '').trim();
+            const email = (document.getElementById('nda-email')?.value || '').trim();
+            const phone = (document.getElementById('nda-phone')?.value || '').trim();
+            const fullName = `${firstName} ${lastName}`.trim() || '___________________________';
+
+            const today = new Date().toLocaleDateString('pl-PL', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            const html = `
+                <div style="text-align:center;margin-bottom:32px;">
+                    <div style="font-size:10px;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:8px;">Umowa o zachowaniu poufności</div>
+                    <h1 style="font-size:22px;font-weight:700;margin:0;letter-spacing:1px;">NDA</h1>
+                    <div style="height:2px;width:60px;background:#111;margin:12px auto 0;"></div>
+                </div>
+
+                <p style="margin:0 0 18px;">Zawarta dnia <strong>${today}</strong> pomiędzy:</p>
+
+                <div style="margin-bottom:14px;">
+                    <p style="margin:0;"><strong>Tomasz Niedźwiecki</strong> prowadzący działalność gospodarczą pod firmą <strong>Tomasz Niedźwiecki AI</strong></p>
+                    <p style="margin:2px 0;">ul. Grawerska 30L, 51-180 Wrocław, NIP: 6972240255</p>
+                    <p style="margin:2px 0;">e-mail: ceo@tomekniedzwiecki.pl</p>
+                    <p style="margin:6px 0 0;font-style:italic;">zwany dalej <strong>„Ujawniającym"</strong></p>
+                </div>
+
+                <p style="text-align:center;margin:10px 0;">a</p>
+
+                <div style="margin-bottom:22px;">
+                    <p style="margin:0;"><strong>${fullName}</strong></p>
+                    <p style="margin:2px 0;">e-mail: ${email || '___________________________'}</p>
+                    <p style="margin:2px 0;">telefon: ${phone || '___________________________'}</p>
+                    <p style="margin:6px 0 0;font-style:italic;">zwany dalej <strong>„Odbiorcą"</strong></p>
+                </div>
+
+                <p style="margin:0 0 18px;">Strony zawierają niniejszą umowę w związku z zamiarem przedstawienia Odbiorcy poufnych informacji dotyczących gotowego biznesu e-commerce zbudowanego przez Ujawniającego (dalej <strong>„Biznes"</strong>), w celu umożliwienia Odbiorcy podjęcia decyzji o ewentualnym jego przejęciu.</p>
+
+                <h2 style="font-size:13px;font-weight:700;margin:22px 0 8px;">§ 1. Przedmiot poufności</h2>
+                <p style="margin:0 0 10px;">Poufne są wszelkie informacje udostępnione Odbiorcy w związku z prezentacją Biznesu, w szczególności: nazwa marki, domena, logotyp i identyfikacja wizualna, produkty i ich źródła, dane finansowe, strategia reklamowa, landing page, zaplecze sklepu, bazy kontaktów oraz wszelkie inne materiały przekazane w formie ustnej, pisemnej lub elektronicznej.</p>
+
+                <h2 style="font-size:13px;font-weight:700;margin:22px 0 8px;">§ 2. Zobowiązania Odbiorcy</h2>
+                <p style="margin:0 0 6px;">Odbiorca zobowiązuje się, że:</p>
+                <p style="margin:0 0 4px;padding-left:18px;">1. zachowa przekazane informacje w ścisłej tajemnicy i nie udostępni ich osobom trzecim;</p>
+                <p style="margin:0 0 4px;padding-left:18px;">2. nie wykorzysta przekazanych informacji do uruchomienia konkurencyjnego projektu ani nie przekaże ich podmiotom prowadzącym działalność konkurencyjną;</p>
+                <p style="margin:0 0 4px;padding-left:18px;">3. nie będzie kopiował, reprodukował ani w inny sposób utrwalał przekazanych materiałów poza zakresem niezbędnym do oceny oferty;</p>
+                <p style="margin:0 0 10px;padding-left:18px;">4. wykorzysta otrzymane informacje <strong>wyłącznie</strong> w celu oceny przejęcia Biznesu.</p>
+
+                <h2 style="font-size:13px;font-weight:700;margin:22px 0 8px;">§ 3. Okres obowiązywania</h2>
+                <p style="margin:0 0 10px;">Zobowiązanie do zachowania poufności obowiązuje przez okres <strong>24 miesięcy</strong> od daty podpisania niniejszej umowy, niezależnie od tego, czy strony zawrą dalszą współpracę.</p>
+
+                <h2 style="font-size:13px;font-weight:700;margin:22px 0 8px;">§ 4. Postanowienia końcowe</h2>
+                <p style="margin:0 0 6px;">1. W sprawach nieuregulowanych stosuje się przepisy Kodeksu cywilnego.</p>
+                <p style="margin:0 0 6px;">2. Umowa sporządzona w dwóch jednobrzmiących egzemplarzach, po jednym dla każdej ze stron.</p>
+                <p style="margin:0 0 30px;">3. Wszelkie zmiany umowy wymagają formy pisemnej pod rygorem nieważności.</p>
+
+                <table width="100%" style="margin-top:40px;">
+                    <tr>
+                        <td style="width:45%;vertical-align:top;">
+                            <div style="border-top:1px solid #111;padding-top:6px;">
+                                <div style="font-size:11px;color:#555;">Ujawniający</div>
+                                <div style="font-size:12px;font-weight:600;margin-top:2px;">Tomasz Niedźwiecki</div>
+                            </div>
+                        </td>
+                        <td style="width:10%;"></td>
+                        <td style="width:45%;vertical-align:top;">
+                            <div style="border-top:1px solid #111;padding-top:6px;">
+                                <div style="font-size:11px;color:#555;">Odbiorca</div>
+                                <div style="font-size:12px;font-weight:600;margin-top:2px;">${fullName}</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            `;
+            const preview = document.getElementById('nda-preview');
+            if (preview) preview.innerHTML = html;
+        }
+
+        function downloadNdaPdf() {
+            const firstName = (document.getElementById('nda-first-name')?.value || '').trim();
+            const lastName = (document.getElementById('nda-last-name')?.value || '').trim();
+            if (!firstName && !lastName) {
+                alert('Wpisz imię i nazwisko leada.');
+                return;
+            }
+            const slug = `${firstName}_${lastName}`.replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
+            const date = new Date().toISOString().slice(0, 10);
+            const filename = `NDA_${slug}_${date}.pdf`;
+
+            const element = document.getElementById('nda-preview');
+            const opts = {
+                margin:       [12, 12, 12, 12],
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, backgroundColor: '#ffffff' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opts).from(element).save();
         }
 
         // ============ FULL EMAIL HISTORY (EMAIL TAB) ============
