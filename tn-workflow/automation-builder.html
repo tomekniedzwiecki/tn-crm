@@ -978,6 +978,31 @@
                 `;
             }
 
+            // Pipeline status filter for lead_status_changed
+            if (flow.trigger_type === 'lead_status_changed') {
+                const leadStatuses = [
+                    { value: 'new', label: 'Nowy' },
+                    { value: 'contacted', label: 'Skontaktowany' },
+                    { value: 'qualified', label: 'Zakwalifikowany' },
+                    { value: 'proposal', label: 'Propozycja' },
+                    { value: 'negotiation', label: 'Negocjacje' },
+                    { value: 'won', label: 'Wygrany' },
+                    { value: 'lost', label: 'Przegrany' },
+                    { value: 'abandoned', label: 'Porzucony' }
+                ];
+                const current = flow.trigger_filters?.status || '';
+                html += `
+                    <div>
+                        <label class="block text-sm text-[#888] mb-2">Status pipeline</label>
+                        <select id="filter-lead-status" class="input-field" onchange="updateTriggerFilter()">
+                            <option value="" ${!current ? 'selected' : ''}>Dowolny status (każda zmiana)</option>
+                            ${leadStatuses.map(s => `<option value="${s.value}" ${current === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
+                        </select>
+                        <p class="text-xs text-[#666] mt-2">Flow odpali się, gdy lead wejdzie do wybranego statusu.</p>
+                    </div>
+                `;
+            }
+
             // Stage filter for stage_completed
             if (stageRelatedTriggers.includes(flow.trigger_type)) {
                 html += `
@@ -1020,6 +1045,11 @@
             const stageIndex = document.getElementById('filter-stage')?.value;
             if (stageIndex) {
                 filters.stage_index = stageIndex;
+            }
+
+            const leadStatus = document.getElementById('filter-lead-status')?.value;
+            if (leadStatus) {
+                filters.status = leadStatus;
             }
 
             flow.trigger_filters = filters;

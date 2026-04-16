@@ -325,6 +325,43 @@ async function processActionStep(
     // Build email data from context
     const context = execution.context || {}
 
+    // Walidacja statusu leada: jeśli entity_type='lead' i context ma expected_status,
+    // sprawdź czy lead nadal siedzi w tym statusie. Jeśli nie — skip (nie failuj, nie retryuj).
+    if (execution.entity_type === 'lead' && context.expected_status && !to_admin) {
+      const { data: currentLead } = await supabase
+        .from('leads')
+        .select('status')
+        .eq('id', execution.entity_id)
+        .single()
+
+      if (!currentLead) {
+        return {
+          log: {
+            timestamp,
+            action: 'send_email',
+            email_type,
+            skipped: true,
+            reason: 'lead_not_found'
+          }
+        }
+      }
+
+      if (currentLead.status !== context.expected_status) {
+        console.log(`[automation-executor] Lead ${execution.entity_id} left status ${context.expected_status} (now: ${currentLead.status}) — skipping email`)
+        return {
+          log: {
+            timestamp,
+            action: 'send_email',
+            email_type,
+            skipped: true,
+            reason: 'lead_status_changed',
+            expected_status: context.expected_status,
+            current_status: currentLead.status
+          }
+        }
+      }
+    }
+
     // Determine recipient email
     let recipientEmail = context.email
 

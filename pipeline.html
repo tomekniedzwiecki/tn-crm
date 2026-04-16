@@ -1335,6 +1335,31 @@
             lead.status = newStage;
             lead.activities = updatedActivities;
             renderPipeline();
+
+            // Trigger automatyzacji "lead_status_changed"
+            // Filter = { status: newStage } — flow z pasującym statusem w trigger_filters odpali
+            // expected_status w context pozwala executorowi pominąć email jeśli lead zmienił status przed delayem
+            try {
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'lead_status_changed',
+                        entity_type: 'lead',
+                        entity_id: leadId,
+                        context: {
+                            email: lead.email,
+                            name: lead.name,
+                            phone: lead.phone,
+                            company: lead.company,
+                            deal_value: lead.deal_value,
+                            previous_status: oldStatus,
+                            expected_status: newStage
+                        },
+                        filters: { status: newStage }
+                    }
+                });
+            } catch (err) {
+                console.warn('[pipeline] automation-trigger invocation failed:', err);
+            }
         }
 
         // Add Lead Modal

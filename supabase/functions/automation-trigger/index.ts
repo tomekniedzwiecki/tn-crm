@@ -35,6 +35,32 @@ Deno.serve(async (req) => {
     // Auto-fetch entity data if not provided in context
     let enrichedContext = { ...context }
 
+    if (entity_type === 'lead' && !context.email) {
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('email, name, phone, company, deal_value, status, status_entered_at')
+        .eq('id', entity_id)
+        .single()
+
+      if (lead) {
+        const clientName = (lead.name || '').split(' ')[0] || 'Cześć'
+        enrichedContext = {
+          ...enrichedContext,
+          email: lead.email,
+          clientName,
+          name: lead.name,
+          phone: lead.phone,
+          company: lead.company,
+          deal_value: lead.deal_value,
+          expected_status: enrichedContext.expected_status || lead.status,
+          status_entered_at: lead.status_entered_at
+        }
+        console.log(`[automation-trigger] Enriched context with lead data, email: ${lead.email}, status: ${lead.status}`)
+      } else {
+        console.warn(`[automation-trigger] Could not fetch lead ${entity_id}`)
+      }
+    }
+
     if (entity_type === 'workflow' && !context.email) {
       // Fetch workflow data to get customer email, name, etc.
       const { data: workflow } = await supabase

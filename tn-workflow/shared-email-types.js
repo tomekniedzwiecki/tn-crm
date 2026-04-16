@@ -201,7 +201,8 @@ const EMAIL_TYPES_GROUPED = Object.entries(EMAIL_TEMPLATE_CATEGORIES).reduce((ac
 // Triggers grouped by category
 const TRIGGERS_BY_CATEGORY = {
     lead: [
-        { value: 'lead_created', label: 'Nowy lead' }
+        { value: 'lead_created', label: 'Nowy lead' },
+        { value: 'lead_status_changed', label: 'Lead wszedł do statusu pipeline' }
     ],
     offer: [
         { value: 'offer_created', label: 'Oferta utworzona' },
@@ -236,6 +237,7 @@ const TRIGGERS_BY_CATEGORY = {
 const TRIGGER_DEFINITIONS = {
     // Leady
     lead_created: { label: 'Nowy lead', icon: 'ph-user-plus', color: 'emerald' },
+    lead_status_changed: { label: 'Lead wszedł do statusu pipeline', icon: 'ph-funnel', color: 'emerald' },
     // Oferty
     offer_created: { label: 'Oferta utworzona', icon: 'ph-file-text', color: 'blue' },
     offer_viewed: { label: 'Oferta obejrzana', icon: 'ph-eye', color: 'blue' },
