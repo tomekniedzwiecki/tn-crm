@@ -1,12 +1,12 @@
 -- Szablon: pipeline_offer_cancelled
--- Prosty, Gmail-style email informujący że oferta nie jest już aktualna.
--- Kategoria: pipeline (nowa sekcja dla maili wysyłanych w ramach lead pipeline automation).
+-- UWAGA: email-templates.html UI oraz send-email edge function czytają szablony
+-- z tabeli `settings` z kluczami email_template_<type>_{subject,body},
+-- NIE z tabeli `email_templates`. Dlatego upsert idzie do settings.
 
-INSERT INTO email_templates (email_type, subject, body, variables, is_active, updated_at)
-VALUES (
-  'pipeline_offer_cancelled',
-  'anulowanie',
-  '<!DOCTYPE html>
+INSERT INTO settings (key, value) VALUES
+('email_template_pipeline_offer_cancelled_subject', 'anulowanie'),
+('email_template_pipeline_offer_cancelled_body',
+'<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -44,13 +44,5 @@ VALUES (
     </table>
   </div>
 </body>
-</html>',
-  '[]'::jsonb,
-  true,
-  NOW()
-)
-ON CONFLICT (email_type) DO UPDATE SET
-  subject = EXCLUDED.subject,
-  body = EXCLUDED.body,
-  variables = EXCLUDED.variables,
-  updated_at = NOW();
+</html>')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
