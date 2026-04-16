@@ -23,6 +23,9 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 const VALID_EMAIL_TYPES = [
   'zapisy_confirmation',
   'lead_intro_video',
+  // Pipeline (sales tool — lead_status_changed automations)
+  'pipeline_offer_cancelled',
+  'pipeline_business_takeover',
   'proforma_generated',
   'invoice_sent',
   'contract_sent',
