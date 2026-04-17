@@ -47,6 +47,38 @@ grep -oE "ai-generated/[a-f0-9-]{36}" "$FILE" | sort -u
 # 8. ZAKAZANE obietnice wysyłki (dropshipping ≠ 24h / magazyn w PL)
 echo "Zakazane obietnice (powinno być 0):"
 grep -ciE "wysy[łl]ka 24|w 24 ?h|polski magazyn|z magazynu w Polsc|D\+1" "$FILE"
+
+# 9. Header biały + brak wordmark obok logo (zasada bezwarunkowa z DESIGN.md)
+echo "Header backdrop-filter (powinno być 0 — header MA BYĆ biały #FFFFFF):"
+grep -cE "\.header\s*\{[^}]*backdrop-filter" "$FILE"
+echo "Logo z wordmarkiem obok img (powinno być 0):"
+grep -nE "class=\"logo\"[^>]*>[^<]*<img[^>]*>\s*[A-Za-zĄĆĘŁŃÓŚŻŹąćęłńóśżź]" "$FILE" | head -3
+
+# 10. Fade-in safety (kryt. lekcja #1 z PROCEDURE)
+echo "html.js gate w <head> (powinno być ≥ 1):"
+grep -cE "document\.documentElement\.classList\.add..js" "$FILE"
+echo "Safety timeout 2500ms (powinno być 1):"
+grep -cE "setTimeout.*fade-in.*2500" "$FILE"
+
+# 11. Inline img sizing — zabronione (PATTERN 16 — wszystko w CSS)
+echo "Img z inline style sizing (powinno być 0):"
+grep -cE "<img[^>]*style=\"[^\"]*(height|width|aspect-ratio):" "$FILE"
+
+# 12. OG image pełny URL Supabase (nie względny)
+echo "OG image ma pełny Supabase URL (powinno być 1):"
+grep -cE 'property="og:image"[^>]*yxmavwkwnfuphjqbelws' "$FILE"
+
+# 13. Fonty z latin-ext dla polskich znaków
+echo "Fonty z subset=latin-ext (powinno być 1):"
+grep -cE "subset=latin-ext" "$FILE"
+
+# 14. Brief placeholders (każdy MUSI mieć 'Brief: ' — 4-polowy format)
+echo "Brief placeholders z formatowaniem (0 gdy wszystkie obrazy są, 3-6 gdy czekamy na klienta):"
+grep -c "Brief: " "$FILE"
+
+# 15. Bento/tile pustych komórek grida — symptom: tile-hero span 2×2 z niewystarczającą liczbą tiles
+echo "tile-hero span (2×2 = ryzyko pustych komórek, chyba że masz 5 tiles):"
+grep -cE "grid-row\s*:\s*span 2" "$FILE"
 ```
 
 **Oczekiwane:**
@@ -61,6 +93,14 @@ grep -ciE "wysy[łl]ka 24|w 24 ?h|polski magazyn|z magazynu w Polsc|D\+1" "$FILE
 | Lorem/TODO | 0 | napisz realny copy |
 | UUIDs | TYLKO bieżący workflow | **bug** — usuń obce natychmiast |
 | Zakazane obietnice wysyłki | 0 | usuń — dropshipping ≠ 24h / magazyn PL |
+| Header backdrop-filter | 0 | header MA BYĆ czysty #FFFFFF (DESIGN.md sekcja 0) |
+| Wordmark obok logo | 0 | tylko `<img>`, bez napisu marki obok |
+| html.js gate | ≥ 1 | dodaj `<script>document.documentElement.classList.add('js')</script>` do `<head>` |
+| Safety timeout fade-in | 1 | dodaj `setTimeout(...fade-in..., 2500)` |
+| Inline img sizing | 0 | przenieś do CSS (PATTERN 16) |
+| OG image full URL | 1 | zastąp `/landing-pages/...` pełnym Supabase URL |
+| subset=latin-ext | 1 | dodaj `&subset=latin-ext` do URL Google Fonts |
+| grid-row span 2 | 0 lub parzyste wypełnienie | ryzyko pustych komórek — policz tiles × span (PATTERN 16) |
 
 **NIE przechodź dalej** dopóki każda kontrola nie jest zielona.
 
@@ -216,13 +256,75 @@ Landing MUSI odzwierciedlać ustalenia z raportu. Sprawdź:
 
 ## 4. Weryfikacja techniczna
 
+### 4.A Podstawowa technika
 - [ ] Logo ma pełny URL Supabase (nie względny)
 - [ ] Fonty mają `&subset=latin-ext` (polskie znaki)
 - [ ] Hero image ma `fetchpriority="high"` (bez `loading="lazy"`)
 - [ ] Wszystkie `<img>` mają `width` i `height` (CLS)
 - [ ] `preconnect` do fonts.googleapis.com i fonts.gstatic.com
 - [ ] Meta title < 60 znaków, meta description < 160 znaków
+- [ ] OG image ma **pełny URL Supabase**, nie `/landing-pages/...`
 - [ ] **Header jest ZAWSZE widoczny** (position: fixed, bez hide-on-scroll JS)
+- [ ] `<script>document.documentElement.classList.add('js')</script>` w `<head>` (fade-in gate)
+- [ ] Fade-in CSS gated behind `html.js` (`html.js .fade-in{opacity:0}`, NIE `.fade-in{opacity:0}`)
+- [ ] Fade-in JS ma `setTimeout` safety fallback 2500ms
+
+### 4.B Zasady bezwarunkowe headera (z CLAUDE_LANDING_DESIGN.md sekcja 0)
+
+- [ ] Header ma tło **czysto białe `#FFFFFF`** — NIE `rgba(...)` z `backdrop-filter`, NIE `var(--paper)`
+- [ ] Logo w headerze to **tylko `<img>`** — bez napisu tekstowego obok (jeśli logo zawiera nazwę marki)
+- [ ] `position: fixed; top: 0; z-index ≥ 100`
+
+```bash
+# Szybki grep-check
+grep -E "background\s*:\s*#FFFFFF|background\s*:\s*white" landing-pages/$SLUG/index.html | head -3
+grep -cE "backdrop-filter" landing-pages/$SLUG/index.html  # powinno być 0 w headerze
+```
+
+### 4.C Layout integrity (z CLAUDE_LANDING_PATTERNS.md pattern 16)
+
+- [ ] **Bento / tile grids nie mają pustych komórek** — policz tiles + spany, sprawdź że wypełnia grid
+- [ ] Tile-hero (featured) ma wewnętrzny 2-col grid (nie pionowy banner) — tekst + figure
+- [ ] Wszystkie `<img>` w tile mają `object-fit: cover` + `object-position` w CSS
+- [ ] **Brak inline `style="height:..."`, `style="width:..."`, `style="aspect-ratio:..."`** na `<img>`
+- [ ] Aspect-ratio dobrany do orientacji zdjęć w sekcji (patrz tabela w PATTERNS pattern 16)
+
+```bash
+# Sanity check — img z inline sizing
+grep -nE '<img[^>]*style="[^"]*(height|width|aspect-ratio):' landing-pages/$SLUG/index.html
+# Powinno być 0 wyników
+```
+
+### 4.D Placeholder briefs (dla sekcji bez zdjęć)
+
+Każdy brief placeholder MUSI mieć 4 pola (ph-mark, ph-title, ph-size, ph-note LUB editorial variant z imieniem + meta + brief):
+
+- [ ] Brief zawiera: nazwę elementu, orientację + rozmiar px, krótki opis kompozycji dla fotografa
+- [ ] NIE ma brief'u typu „Hero Image" / „TODO" / „[brak]" — to porzucone placeholdery
+- [ ] Każdy brief ma wyraźną dyrektywę dla fotografa / grafika (np. „Brief: kadr od ramion w górę, naturalne światło okna, spokój")
+
+```bash
+# Count briefs (editorial pattern — „Brief: " w HTML)
+grep -c "Brief: " landing-pages/$SLUG/index.html
+# Typowa wartość: 0-6 (0 gdy wszystkie obrazy wygenerowane, 3-6 gdy czekamy na klienta)
+```
+
+### 4.E Aspect-ratio integrity per sekcja
+
+Typ zdjęcia → aspect-ratio obecny w CSS dla odpowiedniej klasy:
+
+| Sekcja | Klasa | aspect-ratio |
+|---|---|---|
+| Hero | `.hero-figure` | 4/5 (pionowy) |
+| Problem/Challenge | `.challenge-figure` / `.problem-visual` | 4/3 |
+| Tile (bento) | `.tile-figure` | 4/3 |
+| Tile-hero featured | `.tile.tile-hero .tile-figure` | `auto` + `height:100%` |
+| Ritual/How step | `.act-figure` / `.step-image` | 4/3 |
+| Spec Sheet | `.spec-figure` | 1/1 + `min-height` |
+| Persona portrait | `.persona-figure` | 4/5 |
+| Offer packshot | `.offer-figure` | 4/3 lub 1/1 |
+
+Sprawdź czy każda sekcja ma **własny** aspect-ratio, NIE globalne wymuszenie jednej wartości.
 
 ---
 

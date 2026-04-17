@@ -38,7 +38,26 @@ cat /c/tmp/[slug]_manifesto.md
 
 **Brak manifesta** = stop. Wróć do `CLAUDE_LANDING_DIRECTION.md` i napisz je pierwsze.
 
-### 1.2 Dane produktu + branding (Supabase)
+### 1.2 Znajdź PRAWDZIWĄ referencję produktu (nie brand mockup!)
+
+**KLUCZOWA pułapka:** `workflow_branding` type=`mockup` zawiera **brandingowe mockupy** (logo na bluzie, logo na powerbanku, logo na kubku) — NIE zdjęcia realnego produktu. Użycie ich jako `reference_image` daje Gemini nonsens.
+
+**Hierarchia szukania referencji:**
+
+1. **`workflow_products.image_url`** — jeśli istnieje i pokazuje faktyczny produkt ✅
+2. **Istniejące `ai-generated/[slug]/*.jpg` z poprzednich generacji** — jeśli landing miał już obrazy produktowe, weź jedno jako baseline ✅
+3. **`workflow_branding` type=`infographic` lub `report_infographic`** — czasem zawiera packshot ⚠️
+4. **Obraz z raportu strategicznego** (pierwsza strona raportu PDF często ma packshot) ⚠️
+5. **Brand mockupy** (type=`mockup`) — ❌ **ostateczność, tylko do uzyskania logo/kolorystyki, NIE kształtu produktu**
+
+**Jak rozpoznać prawdziwy product photo:**
+- Pokazuje jeden produkt bez otaczających ubrań/gadżetów z logo
+- Proporcje produktu zgodne z opisem w `brand_info.description`
+- Brak logo marki w kadrze (lub logo jest na samym produkcie, subtelnie)
+
+**Zweryfikuj przed użyciem:** pobierz kandydata (`curl -o` + `Read` tool) i upewnij się że widzisz **produkt** z briefu, nie „moodboard brandowy".
+
+### 1.3 Dane produktu + branding (Supabase)
 
 ```bash
 set -a && source /c/repos_tn/tn-crm/.env && set +a
@@ -55,7 +74,7 @@ curl -s ".../workflow_products?workflow_id=eq.[UUID]&select=*" ...
 curl -s ".../workflow_branding?workflow_id=eq.[UUID]&type=eq.mockup&select=file_url" ...
 ```
 
-### 1.3 Raport strategiczny (PDF)
+### 1.4 Raport strategiczny (PDF)
 
 Raport `workflow_reports` type=`report_pdf` zawiera:
 - **Persony** (3 segmenty: imię, wiek, sytuacja, frustracje, marzenia)
@@ -64,7 +83,7 @@ Raport `workflow_reports` type=`report_pdf` zawiera:
 
 **Bez osadzenia w personie** → generyczne obrazki konkurencji. Z personą → zdjęcia, które klient mówi „to jestem ja!".
 
-### 1.4 Landing HTML — zmapuj wszystkie sloty
+### 1.5 Landing HTML — zmapuj wszystkie sloty
 
 ```bash
 grep -nE "(hero-figure|tile-figure|act-figure|spec-figure|persona-figure|offer-figure|hero-placeholder|bento-image|step-image|offer-product|img-placeholder)" landing-pages/[slug]/index.html
@@ -180,6 +199,35 @@ Gemini 3 Pro Image Preview (Nano Banana) najlepiej reaguje na **krótkie, pozyty
 4. **OSOBY = PERSONA Z RAPORTU.** Nie „młoda kobieta" — konkretnie „woman in her mid-30s, natural makeup, slightly tired morning expression, Scandinavian knit cardigan".
 5. **SYTUACJA > POZOWANIE.** „Anna stojąca obok produktu i uśmiechająca się" (stock) vs „Anna w kuchni, kawa w dłoni, spojrzenie przez okno na świeżo umyte szyby" (scena).
 6. **ATMOSPHERIC STACKING.** Światło + pogoda + pora dnia + wnętrze = atmosfera. „Soft morning light streaming through east-facing window, light cloud cover softening shadows, 7am autumn feel, minimalist bedroom."
+
+### 5.1.1 Shape constraint (UCIEKAJ przed driftem kształtu produktu)
+
+**Problem:** Gemini 3 Pro Image Preview zna już produkty konkurencji (Ecovacs, Dyson, Hobot) i lubi „interpretować" kształt zamiast trzymać się referencji. Rezultat: generuje „generic robot window cleaner" zamiast dokładnego produktu klienta.
+
+**Lekcja z Vitrix:** pierwsza próba tile_hero dała owalny robot z jednym okrągłym elementem — zupełnie inny kształt niż referencja (prostokąt z zaokrąglonymi rogami + central disc). Rozwiązanie — zacznij prompt od:
+
+```
+MATCH THE PRODUCT IN REFERENCE IMAGE EXACTLY — do not redesign or modify shape.
+Product: [DOKŁADNY opis geometrii — rectangular/oval/circular/cylindrical],
+[opis głównego elementu frontalnego], [opis bocznych/tylnych elementów],
+[opis materiałów i kolorów PRZYTRZYMYWANYCH tylko z referencji].
+```
+
+**Przykład (Vitrix tile-hero v2):**
+```
+MATCH THE PRODUCT IN REFERENCE IMAGE EXACTLY — do not redesign or modify shape.
+Product: rectangular white plastic body with rounded corners (not oval,
+not circular overall), a single LARGE central silver-white circular motor
+disc dominating the front face, two gray fabric microfiber pads mounted on
+the back, black rubber side seals, small physical button below the disc.
+```
+
+Użyj tej techniki zawsze gdy:
+- Produkt ma nietypowy kształt którego Gemini może „nie znać"
+- Poprzednia generacja wygenerowała inny kształt
+- Produkt ma specyficzne detale (liczba LED, kształt przycisku, proporcja części)
+
+**NIE dodawaj** fikcyjnych funkcji „żeby upewnić się" że robot wygląda na tech. Tylko to co **widać** na referencji.
 
 ### 5.2 Stały suffix do KAŻDEGO promptu (realism injector — KRYTYCZNE)
 
@@ -361,25 +409,74 @@ Inne wartości → model odrzuca lub zwraca 1:1.
 }
 ```
 
-### 6.3 Bash generator
+### 6.3 Bash generator — KRYTYCZNE: użyj plików JSON, nie inline
+
+**Lekcja z Vitrix:** inline JSON z heredoc + `jq -n` ŁAMIE SIĘ przy długich promptach z polskimi znakami / cudzysłowami. Wszystkie pierwsze 3 generacje zwróciły `{"error":"Unexpected end of JSON input"}`.
+
+**POPRAWNY wzorzec — payload w pliku:**
+
+```bash
+# 1. Zapisz payload do pliku (Write tool, format JSON)
+# -> c:/tmp/payload_hero.json zawiera {"prompt":"...","count":1,"workflow_id":"...","type":"hero","aspect_ratio":"4:5","reference_images":[...]}
+
+# 2. Wywołaj curl z --data-binary @file
+set -a && source /c/repos_tn/tn-crm/.env && set +a
+curl -sS -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+  -H "Content-Type: application/json" \
+  --data-binary @/c/tmp/payload_hero.json
+```
+
+### 6.3.1 Batch parallel fire (13-14 obrazów naraz)
+
+**Lekcja z Vitrix:** ~14 obrazów przez Gemini to ~90s sekwencyjnie albo ~30s równolegle. Batch parallel w bash:
 
 ```bash
 set -a && source /c/repos_tn/tn-crm/.env && set +a
 
-# Przykład: generuj hero
-curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image" \
+# Zapisz wszystkie payloady jako c:/tmp/payload_[name].json (Write tool)
+# Lista slotów:
+SLOTS="hero challenge offer tile_hero tile_safety tile_nav tile_control ritual_1 ritual_2 ritual_3 persona_anna persona_marek persona_kasia spec"
+
+# Fire all in parallel with &, then wait
+for p in $SLOTS; do
+  curl -sS -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+    -H "Content-Type: application/json" \
+    --data-binary @/c/tmp/payload_${p}.json > /c/tmp/gen_${p}.json 2>&1 &
+done
+wait
+
+# Extract URLs + report
+for p in $SLOTS; do
+  URL=$(grep -oE 'https://[^"]+\.jpg' /c/tmp/gen_${p}.json | head -1)
+  if [ -n "$URL" ]; then echo "$p: OK $URL"; else echo "$p: FAIL $(cat /c/tmp/gen_${p}.json | head -c 200)"; fi
+done
+```
+
+### 6.3.2 Legacy pattern (pojedynczy curl, jeden slot)
+
+```bash
+set -a && source /c/repos_tn/tn-crm/.env && set +a
+curl -sS -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/generate-image" \
   -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "[PROMPT]",
-    "count": 1,
-    "workflow_id": "vitrix",
-    "type": "hero",
-    "aspect_ratio": "4:5",
-    "reference_images": [
-      {"url": "[URL_PRODUKTU]", "type": "product"}
-    ]
-  }'
+  --data-binary @/c/tmp/payload_hero.json
+# Zwraca: {"images":[{"url":"https://.../ai-generated/[slug]/[timestamp]_0.jpg"}]}
+```
+
+### 6.3.3 Pobieranie wygenerowanego obrazu do sprawdzenia
+
+```bash
+# Wzór Node.js (nie bash — Windows bash ma problemy z piped curl + binary)
+node -e "
+const https=require('https');const fs=require('fs');
+const url='[URL_Z_RESPONSE]';
+const f=fs.createWriteStream('C:/tmp/check_img.jpg');
+https.get(url,r=>{r.pipe(f);f.on('finish',()=>console.log('downloaded'))});"
+
+# Potem Read tool:
+# Read c:/tmp/check_img.jpg
 ```
 
 Zwraca:
