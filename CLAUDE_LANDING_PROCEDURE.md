@@ -128,7 +128,42 @@ grep -iE "24 ?h|w 24|polski magazyn|magazyn.* Polsce|D\+1" landing-pages/[SLUG]/
 ```
 Powinno być 0 trafień.
 
-### 6. Oversized editorial numeral > animated glow orbs
+### 6. ⛔ Polskie diakrytyki + UPPERCASE — potrzebują `line-height ≥ 1.2`
+
+Litery **Ł Ś Ć Ź Ż Ń Ó** mają kreski/kropki nad/pod znakiem. Domyślne
+`line-height: 1` + `text-transform: uppercase` + `letter-spacing`
+**obcina diakrytyki** — widać artefakty, odcięte kreski, nakładanie na
+sąsiedni wiersz (zwłaszcza w headerze „RYTU**Ł**" czy „ZAM**Ó**W").
+
+**Widoczne najczęściej w:**
+- Nav links, header CTA
+- Eyebrow / kicker („N**º** 03 — ATELIER")
+- Trust strip strong, buttons, footer headers
+- Tile kickers, spec keys, persona meta
+
+**Zawsze dodawaj do klas z `text-transform: uppercase`:**
+```css
+.nav-link, .eyebrow, .header-cta, .trust-item strong,
+.btn, .footer-col h4, .tile-kicker {
+  line-height: 1.4;   /* minimum 1.2, bezpieczne 1.4 */
+  text-transform: uppercase;
+  letter-spacing: ...;
+}
+```
+
+**Lub jedna globalna reguła (zalecane dla editorial/luxury):**
+```css
+[class*="eyebrow"], [class*="kicker"], [class*="label"],
+.nav-link, .header-cta, .mobile-link, .page-number,
+.trust-item strong, .btn, .footer-col h4 {
+  line-height: 1.4;
+}
+```
+
+**Kontrola:** screenshot headera na 375 px — sprawdź „RYTU**Ł**", „ZAM**Ó**W",
+„FUNKCJE". Jeśli widzisz „wysuwającą się" kreskę ponad linią → zwiększ `line-height`.
+
+### 7. Oversized editorial numeral > animated glow orbs
 
 Dla produktów premium/luxury/lifestyle — pojedyncza wielka cyfra w tle hero (Fraunces italic, 280-440px, color: paper-3) wygląda 10× bardziej profesjonalnie niż animowane glow orby. To jeden element, który klient zapamięta.
 
