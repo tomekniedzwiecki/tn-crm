@@ -546,17 +546,27 @@ if ('IntersectionObserver' in window) {
 
 ---
 
-## 13. Typography stack — Fraunces + Italiana + Inter
+## 13. Typography stack — Fraunces + Cormorant Garamond + Inter
 
 **Kiedy:** kierunek Editorial/Luxury. Fraunces ma `font-variation-settings` dla `opsz` i `SOFT` — wykorzystaj.
 
+> ⚠️ **Nie używaj `Italiana`** — ma uszkodzony glif polskiej „Ł" w uppercase
+> (kreska wystaje ponad literę). Zamiennik: Cormorant Garamond (ten sam
+> editorial feel, poprawne PL diakrytyki).
+
 **Head:**
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Italiana&display=swap&subset=latin-ext" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap&subset=latin-ext" rel="stylesheet">
 ```
 
 **CSS:**
 ```css
+:root {
+  --font-display:   'Fraunces', Georgia, serif;
+  --font-editorial: 'Cormorant Garamond', 'Didot', serif;  /* NIE Italiana */
+  --font-body:      'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-display);   /* Fraunces */
   font-weight: 500; line-height: 1.02;

@@ -35,7 +35,9 @@ Dla produktów premium/lifestyle/AGD. Wzorzec referencyjny: `landing-pages/parom
 
 **Fonty:**
 - Display: **Fraunces** (variable, `opsz 144, SOFT 30–90`) — headlines
-- Editorial: **Italiana** / Didot — eyebrows, page numbers, captions
+- Editorial: **Cormorant Garamond** (300/400) — eyebrows, page numbers, captions
+  ⚠️ NIE używaj `Italiana` — ma uszkodzony glif polskiej „Ł" w uppercase
+  (kreska wystaje nad literę). Szczegóły w `CLAUDE_LANDING_PROCEDURE.md` lekcja #6.
 - Body: **Inter** — czytelny neutralny
 
 **Kolorystyka:**

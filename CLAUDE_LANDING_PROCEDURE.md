@@ -163,6 +163,26 @@ sąsiedni wiersz (zwłaszcza w headerze „RYTU**Ł**" czy „ZAM**Ó**W").
 **Kontrola:** screenshot headera na 375 px — sprawdź „RYTU**Ł**", „ZAM**Ó**W",
 „FUNKCJE". Jeśli widzisz „wysuwającą się" kreskę ponad linią → zwiększ `line-height`.
 
+**UWAGA — nie każdy font renderuje „Ł" poprawnie w uppercase:**
+
+| Font | Polska „Ł" w UPPERCASE | Używać? |
+|------|-------------------------|---------|
+| **Italiana** | ❌ ukośna kreska wychodzi **ponad** górną belkę (jak apostrof nad L) | NIE |
+| **Playfair Display SC** | ❌ czasem obcięte | ostrożnie |
+| **Fraunces** | ✅ prawidłowa | TAK |
+| **Cormorant Garamond** | ✅ prawidłowa, elegancka | TAK (editorial) |
+| **Libre Bodoni** | ✅ prawidłowa | TAK |
+| **EB Garamond** | ✅ prawidłowa | TAK |
+| **Inter** | ✅ prawidłowa | TAK (body/nav) |
+| **Poppins, Roboto, Space Grotesk** | ✅ prawidłowa | TAK |
+
+**Przed wyborem fontu editorial dla eyebrow / page-numbers — przetestuj go
+na frazie `Nº 04 — RYTUAŁ` i `ZAMÓW · 249 ZŁ`.** Jeśli Ł ma kreskę nad
+literą → wymień font.
+
+**Zamiennik Italiana:** `Cormorant Garamond` (waga 300/400) — ten sam
+editorial feel, poprawne PL.
+
 ### 7. Oversized editorial numeral > animated glow orbs
 
 Dla produktów premium/luxury/lifestyle — pojedyncza wielka cyfra w tle hero (Fraunces italic, 280-440px, color: paper-3) wygląda 10× bardziej profesjonalnie niż animowane glow orby. To jeden element, który klient zapamięta.
