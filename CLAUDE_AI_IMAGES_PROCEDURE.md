@@ -10,7 +10,7 @@ Obrazy AI to **90% sukcesu landing page** — ludzie nie czytają nagłówków, 
 
 Trzy zasady fundamentalne:
 
-1. **Obrazy realizują manifesto.** Nie generujesz „zdjęcia produktowego" — generujesz obraz, który pasuje do kierunku (Panoramic Calm, Editorial/Luxury, Playful, …). Manifesto z `/c/tmp/[slug]_manifesto.md` jest pierwszym źródłem prawdy.
+1. **Obrazy realizują manifesto.** Nie generujesz „zdjęcia produktowego" — generujesz obraz, który pasuje do kierunku (Panoramic Calm, Editorial/Luxury, Playful, …). Manifesto z `landing-pages/[slug]/_brief.md` jest pierwszym źródłem prawdy.
 2. **Spójność > różnorodność.** Wszystkie obrazy na jednej stronie wyglądają jakby zrobiła je ta sama ekipa fotograficzna tego samego dnia. Światło, paleta, styl kadrowania, atmosfera — identyczne.
 3. **Kontekst realny > abstrakcyjne tło.** Produkt w sytuacji persony (konkretnej osoby z raportu strategicznego) zawsze pobija produkt na białym tle.
 
@@ -27,7 +27,7 @@ Gdy użytkownik wywołuje procedurę, wykonaj **wszystkie kroki do końca** bez 
 ### 1.1 Manifesto (jeśli istnieje)
 
 ```bash
-cat /c/tmp/[slug]_manifesto.md
+cat landing-pages/[slug]/_brief.md
 ```
 
 **Z manifesta weź:**
@@ -95,7 +95,7 @@ Zrób tabelę: sekcja → selektor → docelowy aspect-ratio.
 
 ## KROK 2 — Zdefiniuj photo system (spójność)
 
-Zanim wygenerujesz PIERWSZY obraz, zapisz w `/c/tmp/[slug]_photosystem.md`:
+Zanim wygenerujesz PIERWSZY obraz, zapisz w `landing-pages/[slug]/_brief.md (sekcja Photo System)`:
 
 ```markdown
 # [MARKA] Photo System
@@ -200,34 +200,17 @@ Gemini 3 Pro Image Preview (Nano Banana) najlepiej reaguje na **krótkie, pozyty
 5. **SYTUACJA > POZOWANIE.** „Anna stojąca obok produktu i uśmiechająca się" (stock) vs „Anna w kuchni, kawa w dłoni, spojrzenie przez okno na świeżo umyte szyby" (scena).
 6. **ATMOSPHERIC STACKING.** Światło + pogoda + pora dnia + wnętrze = atmosfera. „Soft morning light streaming through east-facing window, light cloud cover softening shadows, 7am autumn feel, minimalist bedroom."
 
-### 5.1.1 Shape constraint (UCIEKAJ przed driftem kształtu produktu)
+### 5.1.1 Shape constraint (drift kształtu produktu)
 
-**Problem:** Gemini 3 Pro Image Preview zna już produkty konkurencji (Ecovacs, Dyson, Hobot) i lubi „interpretować" kształt zamiast trzymać się referencji. Rezultat: generuje „generic robot window cleaner" zamiast dokładnego produktu klienta.
+Pełen pattern z przykładami: [`CLAUDE_LANDING_PATTERNS.md` pattern 22](CLAUDE_LANDING_PATTERNS.md#22-shape-constraint-match-product-reference-exactly).
 
-**Lekcja z Vitrix:** pierwsza próba tile_hero dała owalny robot z jednym okrągłym elementem — zupełnie inny kształt niż referencja (prostokąt z zaokrąglonymi rogami + central disc). Rozwiązanie — zacznij prompt od:
-
+Krótko: **każdy prompt z `reference_images[{type:'product'}]` musi zaczynać się od:**
 ```
 MATCH THE PRODUCT IN REFERENCE IMAGE EXACTLY — do not redesign or modify shape.
-Product: [DOKŁADNY opis geometrii — rectangular/oval/circular/cylindrical],
-[opis głównego elementu frontalnego], [opis bocznych/tylnych elementów],
-[opis materiałów i kolorów PRZYTRZYMYWANYCH tylko z referencji].
+Product: [dokładny opis geometrii, materiałów, detali z referencji — tylko to co widać].
 ```
 
-**Przykład (Vitrix tile-hero v2):**
-```
-MATCH THE PRODUCT IN REFERENCE IMAGE EXACTLY — do not redesign or modify shape.
-Product: rectangular white plastic body with rounded corners (not oval,
-not circular overall), a single LARGE central silver-white circular motor
-disc dominating the front face, two gray fabric microfiber pads mounted on
-the back, black rubber side seals, small physical button below the disc.
-```
-
-Użyj tej techniki zawsze gdy:
-- Produkt ma nietypowy kształt którego Gemini może „nie znać"
-- Poprzednia generacja wygenerowała inny kształt
-- Produkt ma specyficzne detale (liczba LED, kształt przycisku, proporcja części)
-
-**NIE dodawaj** fikcyjnych funkcji „żeby upewnić się" że robot wygląda na tech. Tylko to co **widać** na referencji.
+Bez tego Gemini 3 Pro Image Preview dryfuje w stronę „generic robot cleaner / headphones / steamer" — drift kształtu. Lekcja z Vitrix: pierwsza próba tile_hero dała owalny robot zamiast prostokątnego.
 
 ### 5.2 Stały suffix do KAŻDEGO promptu (realism injector — KRYTYCZNE)
 
@@ -678,8 +661,8 @@ Podaj link: `https://tn-crm.vercel.app/landing-pages/[slug]/`
 
 ## Checklist gotowości
 
-- [ ] Manifesto jest w `/c/tmp/[slug]_manifesto.md`
-- [ ] Photo System zapisany w `/c/tmp/[slug]_photosystem.md`
+- [ ] Manifesto jest w `landing-pages/[slug]/_brief.md`
+- [ ] Photo System zapisany w `landing-pages/[slug]/_brief.md (sekcja Photo System)`
 - [ ] Mapowanie kierunek → fotostyle wybrane
 - [ ] Wszystkie sloty obrazów zidentyfikowane (min. 12)
 - [ ] Referencja produktu dostępna (workflow_products.image_url lub mockup)

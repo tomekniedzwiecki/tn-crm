@@ -1,21 +1,167 @@
-# Procedura: Generowanie Landing Page dla Workflow
+# Procedura: Landing Page — MASTER FLOW (autonomiczny)
 
-> **⚠️ STOP! TO JEST ETAP 1 Z 5 — NIE COMMITUJ PO WYGENEROWANIU HTML!**
+> **🚀 AUTO-RUN TRIGGER**
 >
-> Pełna procedura landing page składa się z 5 OBOWIĄZKOWYCH etapów:
+> Gdy użytkownik mówi:
+> - „Przygotuj landing dla projektu [UUID]"
+> - „Zrób landing dla [UUID]"
+> - „Wygeneruj stronę sprzedażową [UUID]"
+> - lub wskazuje ten plik (`CLAUDE_LANDING_PROCEDURE.md`)
 >
-> | Etap | Plik | Co robisz |
-> |------|------|-----------|
-> | **1. Generowanie** | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Generujesz roboczy HTML |
-> | **2. Weryfikacja treści** | `CLAUDE_LANDING_REVIEW.md` | Kompletność, Hero deep dive, copy |
-> | **2.5. Direction (manifesto)** | `CLAUDE_LANDING_DIRECTION.md` | Autonomicznie wybierasz kierunek estetyczny z danych Supabase (NIE pytasz użytkownika) |
-> | **3. Design** | `CLAUDE_LANDING_DESIGN.md` | Implementujesz manifesto w CSS/HTML |
-> | **4. Wizualna weryfikacja** | `CLAUDE_LANDING_VERIFY.md` | Playwright screenshot 3 viewportów + deploy |
->
-> **Dopiero po przejściu wszystkich 5 etapów robisz commit & deploy!**
->
-> **Gotowe snippety** (signature patterns, fade-in safe, bento, spec sheet, editorial numerals):
-> → `CLAUDE_LANDING_PATTERNS.md` — biblioteka kopiuj-wklej.
+> → **Autonomicznie wykonaj wszystkie 5 etapów od ETAP 1 do ETAP 4, BEZ pytania o nic.**
+> Zakończ commitem, pushem i linkiem do deploya.
+
+---
+
+## Przegląd flow (5 etapów — wszystkie OBOWIĄZKOWE)
+
+| # | Etap | Plik | Output |
+|---|------|------|--------|
+| **1** | Generowanie | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Roboczy `landing-pages/[slug]/index.html` |
+| **2** | Weryfikacja treści | `CLAUDE_LANDING_REVIEW.md` | Audyt + fixy copy |
+| **2.5** | Direction (manifesto) | `CLAUDE_LANDING_DIRECTION.md` | `landing-pages/[slug]/_brief.md` (persystentny) |
+| **3** | Design polish | `CLAUDE_LANDING_DESIGN.md` | Finalne CSS/HTML zgodne z manifesto |
+| **4** | Wizualna weryfikacja | `CLAUDE_LANDING_VERIFY.md` | Playwright screenshoty + deploy |
+
+Dodatkowo:
+- `CLAUDE_LANDING_PATTERNS.md` — biblioteka gotowych snippetów (signature elements, JS effects, layout discipline)
+- `CLAUDE_AI_IMAGES_PROCEDURE.md` — generowanie obrazów AI (wywoływana wewnątrz ETAP 3)
+
+---
+
+## Checklist auto-run (wykonaj sekwencyjnie)
+
+```
+[ ] 0.  Walidacja wejścia — czy masz wszystko?
+         - workflow_id + dostęp do Supabase (.env)
+         - brand_info, produkty, raport PDF (jeśli któryś brak → STOP, wróć do brandingu)
+[ ] 1.  ETAP 1 — Generuj szkielet HTML (sekcje tego pliku, od „KRYTYCZNE LEKCJE" niżej)
+[ ] 2.  ETAP 2 — Przeczytaj `CLAUDE_LANDING_REVIEW.md` i wykonaj weryfikację treści
+[ ] 3.  ETAP 2.5 — Przeczytaj `CLAUDE_LANDING_DIRECTION.md`, napisz manifesto
+        → zapisz do `landing-pages/[slug]/_brief.md` (nie /c/tmp/!)
+[ ] 4.  ETAP 3 — Przeczytaj `CLAUDE_LANDING_DESIGN.md` i dopracuj design zgodnie z manifesto
+        → w tym wywołanie `CLAUDE_AI_IMAGES_PROCEDURE.md` dla obrazów
+[ ] 5.  ETAP 4 — Przeczytaj `CLAUDE_LANDING_VERIFY.md`, uruchom Playwright verify
+[ ] 6.  Commit + push + podaj link do https://tn-crm.vercel.app/landing-pages/[slug]/
+```
+
+**KRYTYCZNE:** NIE rób commitów pośrednich. Jeden commit na końcu z pełnym deliverem.
+
+---
+
+## Kiedy STOP (nie uruchamiaj flow)
+
+Przerwij i poinformuj użytkownika, jeśli:
+- Brak `.env` z `SUPABASE_SERVICE_KEY` → nie można pobrać danych
+- `workflow_branding` type=`brand_info` pusty → wróć do `CLAUDE_BRANDING_PROCEDURE.md`
+- `workflow_reports` type=`report_pdf` brak → raport strategiczny jest podstawą person i copy
+- `workflow_products` pusty + brak referencji produktu w `ai-generated/` → nie masz z czego generować obrazów
+
+Te przypadki wymagają powrotu do wcześniejszych etapów workflow, nie próbuj „wymyślać" contentu.
+
+---
+
+## 🔄 MODYFIKACJA istniejącego landingu (continuation protocol)
+
+Gdy user mówi „popraw X w landingu [slug]" / „zmień Y" / „dodaj Z":
+
+### 1. Branch strategy
+Nie wymagany feature branch — to pojedynczy edit. Pracuj bezpośrednio na `main`.
+
+### 2. Zawsze zacznij od reading
+```bash
+cat landing-pages/[slug]/_brief.md   # Manifesto projektu — kontekst decyzji
+head -100 landing-pages/[slug]/index.html   # Stan aktualny
+```
+
+### 3. Przed zmianą strukturalną — sprawdź verify
+```bash
+bash scripts/verify-landing.sh [slug]
+# zapisz stan "before" w pamięci
+```
+
+### 4. Zmiany ograniczone do wskazanego zakresu
+- NIE rób „przy okazji" refactorów
+- NIE zmieniaj manifesta jeśli user prosi o drobną poprawkę
+- Update `_brief.md` → sekcja 6 „Decisions log" + 1 wiersz z datą/powodem
+
+### 5. Re-run verify + Playwright po zmianach
+```bash
+bash scripts/verify-landing.sh [slug]   # musi zostać 18/18 PASS
+node _shoot.mjs                          # wizualna weryfikacja
+```
+
+### 6. Commit z precyzyjnym opisem
+```bash
+git add landing-pages/[slug]/
+git commit -m "$(cat <<EOF
+[slug]: [krótki opis zmiany]
+
+Kontekst: [dlaczego użytkownik poprosił]
+Co zmienione: [lista precyzyjna]
+_brief.md: zaktualizowany (decisions log v[N])
+EOF
+)"
+git push
+```
+
+---
+
+## 🖼️ Image naming convention (obrazy AI)
+
+**Problem:** stare konwencje używały timestampów (`1776413349881_0.jpg`) — nieczytelne, trudno znaleźć który obraz odpowiada któremu slotowi.
+
+**Nowa konwencja (opcjonalna — zależy od upsert w edge function):**
+
+```
+ai-generated/[slug]/
+├── hero.jpg                   # Nº 01 hero
+├── challenge.jpg              # Nº 02 problem
+├── tile-hero.jpg              # Nº 03 featured bento
+├── tile-safety.jpg            # Nº 03 bento 2
+├── tile-navigation.jpg        # Nº 03 bento 3
+├── tile-control.jpg           # Nº 03 bento 4
+├── ritual-1.jpg               # Nº 04 krok 1
+├── ritual-2.jpg               # Nº 04 krok 2
+├── ritual-3.jpg               # Nº 04 krok 3
+├── spec.jpg                   # Nº 05 spec sheet
+├── persona-anna.jpg           # Nº 07.01
+├── persona-marek.jpg          # Nº 07.02
+├── persona-kasia.jpg          # Nº 07.03
+└── offer.jpg                  # Nº 10 packshot
+```
+
+**Jak włączyć:** edge function `generate-image` musi dostać parameter `custom_filename`. Obecnie używa `Date.now()_index.ext` — kompatybilność wstecz. Gdy dodasz `filename` w payloadzie, upsert nadpisze stary plik.
+
+**Do dodania w edge function** (tylko gdy będzie robione):
+```typescript
+const { filename } = body
+// ...
+const finalFilename = filename
+  ? `ai-generated/${workflow_id}/${filename}.${ext}`
+  : `ai-generated/${workflow_id || 'temp'}/${Date.now()}_${index}.${ext}`
+const { error } = await supabase.storage
+  .from('attachments')
+  .upload(finalFilename, bytes, { contentType: img.mimeType, upsert: true })
+```
+
+**Do czasu wdrożenia** — zostajemy przy timestamp names, pomaga `_brief.md` jako mapping (sekcja 7).
+
+---
+
+## 🧹 Cleanup starych obrazów (manual — opcjonalnie)
+
+Gdy landing przechodzi regenerację (jak Vitrix — 14 starych → 14 nowych), stare pliki zostają w storage. Nie linkowane, ale zajmują miejsce.
+
+```bash
+# List nieużywanych obrazów w storage dla slug
+grep -oE "ai-generated/[a-z-]+/[0-9_]+\.(jpg|png)" landing-pages/[slug]/index.html | sort -u > /c/tmp/used_urls.txt
+
+# (Manually diff vs lista w storage — edge function nie wspiera list API bez service keya bezpośrednio)
+# Alternatywa: zostawić jak jest — storage tanie, a stare pliki mogą być przydatne dla rollbacku
+```
+
+Rekomendacja: **nie usuwaj automatycznie**. Stary obraz = rollback option gdy nowy jest gorszy.
 
 ---
 

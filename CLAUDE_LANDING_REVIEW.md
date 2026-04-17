@@ -281,13 +281,15 @@ grep -E "background\s*:\s*#FFFFFF|background\s*:\s*white" landing-pages/$SLUG/in
 grep -cE "backdrop-filter" landing-pages/$SLUG/index.html  # powinno być 0 w headerze
 ```
 
-### 4.C Layout integrity (z CLAUDE_LANDING_PATTERNS.md pattern 16)
+### 4.C Layout integrity (cross-ref: `CLAUDE_LANDING_DESIGN.md` sekcja G)
 
-- [ ] **Bento / tile grids nie mają pustych komórek** — policz tiles + spany, sprawdź że wypełnia grid
+Szczegółowe zasady + anti-patterns znajdziesz w DESIGN.md „G. Layout Discipline". Tu tylko szybka checklista do weryfikacji:
+
+- [ ] **Bento / tile grids nie mają pustych komórek** — policz `liczba_tiles × 1 + Σ(span_extra) = komórki grida`
 - [ ] Tile-hero (featured) ma wewnętrzny 2-col grid (nie pionowy banner) — tekst + figure
 - [ ] Wszystkie `<img>` w tile mają `object-fit: cover` + `object-position` w CSS
 - [ ] **Brak inline `style="height:..."`, `style="width:..."`, `style="aspect-ratio:..."`** na `<img>`
-- [ ] Aspect-ratio dobrany do orientacji zdjęć w sekcji (patrz tabela w PATTERNS pattern 16)
+- [ ] Aspect-ratio dobrany do orientacji zdjęć w sekcji (portret 4/5, packshot 1/1, lifestyle 4/3)
 
 ```bash
 # Sanity check — img z inline sizing
@@ -367,7 +369,7 @@ Po zakończeniu weryfikacji przedstaw krótki raport:
 
 **OBOWIĄZKOWE** — po weryfikacji treści przejdź kolejno:
 
-1. **ETAP 2.5 — `CLAUDE_LANDING_DIRECTION.md`** — audytujesz produkt, autonomicznie wybierasz kierunek estetyczny, piszesz **Design Manifesto** do `/c/tmp/[slug]_manifesto.md`. **NIE PYTAJ użytkownika.**
+1. **ETAP 2.5 — `CLAUDE_LANDING_DIRECTION.md`** — audytujesz produkt, autonomicznie wybierasz kierunek estetyczny, piszesz **Design Manifesto** do `landing-pages/[slug]/_brief.md`. **NIE PYTAJ użytkownika.**
 2. **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`** — implementujesz manifesto: typografia, paleta, signature element
 3. **ETAP 4 — `CLAUDE_LANDING_VERIFY.md`** — Playwright screenshot w 3 viewportach
 

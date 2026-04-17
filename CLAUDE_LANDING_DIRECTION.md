@@ -6,7 +6,7 @@
 
 **Dlaczego obowiązkowy:** bez tego etapu każdy landing premium zaczyna wyglądać jak paromia, każdy pet-care jak pupilnik, każdy wellness jak h2vital. Preset = skrót myślowy. Framework niżej wymusza świeżą analizę per produkt.
 
-**Rezultat:** plik `/c/tmp/[slug]_manifesto.md` (NIE commituj — to artefakt roboczy). Manifesto steruje decyzjami w ETAP 3.
+**Rezultat:** plik `landing-pages/[slug]/_brief.md` — **commitowany** razem z landingiem (persystentny brief projektu, nie artefakt roboczy). Zawiera Design Manifesto + Photo System + Personas + Decisions log. Steruje decyzjami w ETAP 3 oraz generowaniem obrazów w `CLAUDE_AI_IMAGES_PROCEDURE.md`.
 
 ---
 
@@ -82,7 +82,7 @@ Ref 3: Linear → kolorowe gradienty w detalach (radial gradient w rogu karty, n
 
 ## Krok 3 — Design Manifesto (5 linijek)
 
-Zapisz w `/c/tmp/[slug]_manifesto.md` dokładnie w tym formacie:
+Zapisz w `landing-pages/[slug]/_brief.md` dokładnie w tym formacie:
 
 ```markdown
 # [MARKA] — Design Manifesto
@@ -162,11 +162,22 @@ Jeśli którakolwiek decyzja jest pusta → manifesto jest niekompletne, wróć 
 
 ## Krok 6 — Zapisz i przejdź dalej
 
-```bash
-# Zapisz manifesto
-mkdir -p /c/tmp && cat > /c/tmp/[slug]_manifesto.md << 'EOF'
-[treść manifesto]
-EOF
+Użyj Write tool żeby zapisać brief do `landing-pages/[slug]/_brief.md` (commituj razem z landingiem). **NIE używaj `/c/tmp/`** — to artefakty efemeryczne.
+
+Struktura `_brief.md` (sekcje obowiązkowe):
+```markdown
+# [BRAND] — Landing Brief
+
+**Status:** 🟢/🟡/🔴 · **Kierunek:** [NAZWA] · **Workflow:** [UUID]
+
+## 1. Design Manifesto          (5 linijek z Kroku 3)
+## 2. Photo System              (lighting, paleta scen, kadrowanie, realism injector)
+## 3. Personas                  (3 z raportu PDF — imię, wiek, cytat)
+## 4. Mapping manifesto → kod   (Krok 5, tabela)
+## 5. Moodboard (3 marki)       (Krok 2)
+## 6. Decisions log             (zmiany od pierwszej wersji, datowane)
+## 7. JS Effects zaimplementowane
+## 8. Live link
 ```
 
 Następnie: **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`**. Każda decyzja w ETAP 3 MUSI być zgodna z manifesto. Jeśli coś się kłóci — zaktualizuj manifesto PRZED zmianą kodu.
@@ -177,7 +188,7 @@ Następnie: **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`**. Każda decyzja w ETAP 3 M
 
 - [ ] Audyt produktu z danych Supabase (nie z głowy)
 - [ ] 3 realne marki referencyjne wybrane (spoza `landing-pages/`)
-- [ ] Manifesto w `/c/tmp/[slug]_manifesto.md` — wszystkie 5 linijek wypełnione
+- [ ] Manifesto w `landing-pages/[slug]/_brief.md` — wszystkie 5 linijek wypełnione
 - [ ] Nazwa kierunku jest WŁASNA (nie z listy presetów)
 - [ ] Test unikalności: manifesto nie pasuje do 5 innych produktów
 - [ ] Test ryzyka: min. 1 element odważny
