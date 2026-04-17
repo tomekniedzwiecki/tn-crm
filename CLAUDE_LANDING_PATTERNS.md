@@ -596,6 +596,86 @@ h1 em, h2 em, h3 em {
 
 ---
 
+## 15. Trust Strip — inline-flex bez łamania linii
+
+**Kiedy:** pod hero, zwykle ciemny pasek z 4–5 itemami: `strong · span`.
+
+**KRYTYCZNE**: bez `white-space:nowrap` na dzieciach flex, na mobile każda
+część (`strong`, `em`, `span`) ląduje w osobnej linii — rozjazd 3 linie per item.
+
+**HTML:**
+```html
+<section class="trust-strip">
+  <div class="container">
+    <div class="trust-item">
+      <strong>30 dni</strong> <em>·</em> <span>na zwrot bez pytań</span>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-item">
+      <strong>Darmowa dostawa</strong> <em>·</em> <span>InPost · DPD · kurier</span>
+    </div>
+    <!-- ... -->
+  </div>
+</section>
+```
+
+**CSS (OBOWIĄZKOWY wzorzec):**
+```css
+.trust-strip { background: var(--ink); color: var(--paper-2); padding: 32px 0; }
+
+.trust-strip .container {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 20px;
+}
+
+.trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;            /* KRYTYCZNE — bez tego łamie się */
+  white-space: nowrap;
+  font-family: var(--font-body); font-size: 13px;
+  color: rgba(245,241,234,.85);
+}
+.trust-item strong {
+  font-family: var(--font-editorial);
+  font-size: 12px; letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--paper-2); font-weight: 400;
+  white-space: nowrap;          /* KRYTYCZNE */
+}
+.trust-item span { white-space: nowrap; font-size: 12px; }
+.trust-item em { font-style: normal; color: var(--gold); font-size: 12px; }
+
+.trust-divider {
+  width: 1px; height: 20px;
+  background: rgba(245,241,234,.2);
+  flex-shrink: 0;
+}
+
+/* Mobile: 5 itemów pod sobą, każdy w 1 linii */
+@media (max-width: 900px) {
+  .trust-strip .container {
+    flex-direction: column; justify-content: center; align-items: center;
+    gap: 12px;
+  }
+  .trust-divider { display: none; }
+  .trust-item strong, .trust-item span, .trust-item em { font-size: 11px; }
+}
+
+@media (max-width: 420px) {
+  .trust-item strong, .trust-item span, .trust-item em {
+    font-size: 10px; letter-spacing: .16em;
+  }
+}
+```
+
+**Anti-pattern (NIE RÓB):**
+- ❌ `.trust-item { display: flex }` bez `flex-wrap: nowrap` na mobile → każdy element w osobnej linii
+- ❌ Strong/span bez `white-space: nowrap` → łamią się w połowie słowa
+
+---
+
 ## Kiedy NIE używać tych patternów
 
 - **Sportowa/tech/gaming** marka → kierunek retro-futuristic, brutalist. Te patterny są za „miękkie".

@@ -152,4 +152,5 @@ Nie commituj skryptów screenshot do repo — są utility.
 | Cookie banner za wysoki | Mobile: zakrywa CTA w hero | `padding:12px 14px` na mobile |
 | Mobile menu nie chowa się | Pierwsze otwarcie widać menu | `transform:translateY(-100%)` + `.open { translateY(0) }` |
 | Overflow horizontal | Pasek scrolla poziomy | `body { overflow-x: hidden }` + sprawdź elementy z `width > 100%` |
-| Hero headline uciete | „Niena..." zamiast „Nienagannie" | `font-size: clamp(Xpx, Yvw, Zpx)` — mniejszy min |
+| Hero headline ucięte | „Niena..." zamiast „Nienagannie" | `font-size: clamp(Xpx, Yvw, Zpx)` — mniejszy min |
+| **Trust strip rozjeżdża się** | Mobile: `strong` / `·` / `span` każde w osobnej linii (3 linie per item) | `.trust-item { display:inline-flex; flex-wrap:nowrap; white-space:nowrap }` + `strong/span/em { white-space:nowrap }`. Na ≤900px `container { flex-direction:column }` |
