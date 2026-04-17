@@ -170,10 +170,44 @@ Nº 01 Hero (asymetryczny, oversized numeral w tle) · Nº 02 Manifesto (sticky 
 
 **Sprawdź:**
 - [ ] Page load ma orchestrated reveal (staggered animations)
+- [ ] Hero ma split headline char-by-char reveal (z `.js-split`)
+- [ ] Kluczowe liczby mają counter animation od 0 do target (z `.js-counter`)
+- [ ] CTA buttony są magnetic (kursor je subtelnie przyciąga)
+- [ ] Bento tiles mają subtle 3D tilt (max 4°, z perspective 900px)
 - [ ] Hover states są zaskakujące (nie tylko kolor)
 - [ ] Scroll animations dodają wartość (nie rozpraszają)
 - [ ] Jest przynajmniej jeden "wow moment"
 - [ ] Animacje są płynne (60fps, transform/opacity only)
+- [ ] **Wszystko respektuje `prefers-reduced-motion: reduce`**
+
+### D.1 OBOWIĄZKOWA paleta JS effects
+
+Od teraz **każdy landing MUSI mieć minimum 4 JS effects** (bez nich wygląda statycznie, jak plik PDF):
+
+| # | Efekt | Klasa / hook | Gdzie użyć | Referencja |
+|---|---|---|---|---|
+| 1 | **Split headline reveal** | `.js-split` na H1 hero | Jeden hero headline — char-by-char staggered reveal (18-22ms delay) | `CLAUDE_LANDING_PATTERNS.md` pattern 17 |
+| 2 | **Number counter** | `.js-counter` + `data-target` + `data-suffix` | Hero stats (3 liczby), offer savings — liczą od 0 w 1.4s easing cubic | pattern 18 |
+| 3 | **Magnetic CTA** | `.magnetic` na `.btn-primary` | CTA w hero + offer + finale — kursor przyciąga (0.18 factor, `(hover:hover)` only) | pattern 19 |
+| 4 | **Tile 3D tilt** | Na `.tile:not(.tile-hero)` | Bento/feature tiles — subtle rotateX/Y max 4°, perspective 900px | pattern 20 |
+| 5 | **Scroll parallax numerals** | JS `.hero-numeral`, `.finale-numeral` | Editorial numerals unoszą się przy scroll — speed 0.12-0.18 | pattern 21 |
+
+**NIE dodawaj** bez potrzeby:
+- ❌ Cursor followers (dot / circle chasing cursor) — odciąga uwagę
+- ❌ Glitch / shake effects — nie pasuje do Editorial/Calm
+- ❌ Confetti / particle explosions — playful/toy only
+- ❌ Auto-play video w tle hero — powód #1 bounce rate
+- ❌ Scroll-jacking / snap scrolling — frustracja użytkownika
+
+### D.2 Kiedy który efekt pasuje do kierunku
+
+| Kierunek | JS effects pasujące | Unikaj |
+|---|---|---|
+| **Editorial/Panoramic Calm** | Split headline (powolny), number counter, magnetic CTA (subtle), scroll parallax numerals | Tilt dramatyczny, cursor chase |
+| **Playful/Toy** | Tile tilt (mocniejszy 8-10°), bouncy hover, marquee, emoji floating | Magnetic CTA (za subtle) |
+| **Brutalist** | Hard text reveal (bez easing), cursor dot, glitch text | Split char-by-char (za delikatny) |
+| **Organic/Natural** | Smooth blob morph, soft magnetic, gentle parallax | Tilt, counter (statyczny) |
+| **Retro-Futuristic** | Terminal typing effect, neon glow pulse, glitch | Magnetic subtle, slow counter |
 
 **Techniki:**
 ```css

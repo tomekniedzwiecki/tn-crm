@@ -827,6 +827,263 @@ Gdy kafelka zajmuje 2+ kolumn, **nie rób z niej pionowej** (tekst-nad-figurą n
 
 ---
 
+## 17. Split Headline Reveal (char-by-char staggered)
+
+**Kiedy:** hero H1 — subtelny editorial reveal na load. Kinfolk / Aesop vibe.
+
+**HTML:**
+```html
+<h1 class="hero-headline js-split">Panoramiczny widok, <em>wolny weekend</em>.</h1>
+```
+
+**CSS (gated behind `html.js`):**
+```css
+html.js .split-char{
+  display:inline-block;opacity:0;
+  transform:translateY(30%) rotate(2deg);
+  transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1);
+}
+html.js .split-char.visible{opacity:1;transform:translateY(0) rotate(0)}
+html.js .split-word{display:inline-block;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){
+  html.js .split-char,html.js .split-char.visible{opacity:1;transform:none;transition:none}
+}
+```
+
+**JS:**
+```js
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+document.querySelectorAll('.js-split').forEach(h => {
+  const walk = (node) => {
+    if (node.nodeType === 3) {
+      const frag = document.createDocumentFragment();
+      node.textContent.split(/(\s+)/).forEach(word => {
+        if (/^\s+$/.test(word)) { frag.appendChild(document.createTextNode(word)); return; }
+        const ws = document.createElement('span'); ws.className = 'split-word';
+        [...word].forEach(ch => {
+          const s = document.createElement('span'); s.className = 'split-char'; s.textContent = ch;
+          ws.appendChild(s);
+        });
+        frag.appendChild(ws);
+      });
+      node.parentNode.replaceChild(frag, node);
+    } else if (node.nodeType === 1) [...node.childNodes].forEach(walk);
+  };
+  walk(h);
+});
+if (!reducedMotion) {
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.js-split .split-char').forEach((c, i) => {
+      c.style.transitionDelay = (i * 22) + 'ms';
+      setTimeout(() => c.classList.add('visible'), 200);
+    });
+  });
+} else {
+  document.querySelectorAll('.split-char').forEach(c => c.classList.add('visible'));
+}
+```
+
+**Kluczowe detale:**
+- Podział na WORDS (owijane w `.split-word` z `white-space:nowrap`) żeby zapobiec łamaniu słowa w środku
+- CHARS dostają `opacity:0 + translateY + rotate(2deg)` → czytelne „pojawianie się" z lekkim tilt
+- Delay 22ms per char + staggered delay (word-by-word też działa)
+- `<em>` nested zachowuje się poprawnie (walk przez childNodes)
+
+**Anti-pattern:** char delay > 50ms per char — widz się nudzi. Trzymaj 15-25ms.
+
+---
+
+## 18. Number Counter (liczby animowane od 0 do target)
+
+**Kiedy:** hero stats (3-4 kluczowe liczby), offer savings, porównanie.
+
+**HTML:**
+```html
+<div class="hero-stat-value">
+  <span class="js-counter" data-target="5800" data-suffix=" Pa">0 Pa</span>
+</div>
+```
+
+**CSS:**
+```css
+html.js .js-counter{display:inline-block;font-variant-numeric:tabular-nums}
+/* tabular-nums — liczby mają stałą szerokość, nie skaczą podczas animacji */
+```
+
+**JS:**
+```js
+const counters = document.querySelectorAll('.js-counter');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const animateCounter = (el) => {
+  if (el.dataset.animated) return;
+  el.dataset.animated = '1';
+  const target = parseInt(el.dataset.target, 10);
+  const suffix = el.dataset.suffix || '';
+  if (reducedMotion) { el.textContent = target.toLocaleString('pl-PL').replace(/,/g, ' ') + suffix; return; }
+  const duration = 1400;
+  const start = performance.now();
+  const tick = (now) => {
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);  // easeOutCubic
+    el.textContent = Math.round(target * eased).toLocaleString('pl-PL').replace(/,/g, ' ') + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+const cio = new IntersectionObserver(
+  es => es.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); cio.unobserve(e.target); } }),
+  { threshold: 0.5 }
+);
+counters.forEach(c => cio.observe(c));
+```
+
+**Kluczowe detale:**
+- `data-target` + `data-suffix` oddzielone — łatwa modyfikacja bez dotykania JS
+- `.toLocaleString('pl-PL').replace(/,/g, ' ')` → `5 800 Pa` (polska konwencja separator tysięcy = spacja)
+- `threshold: 0.5` — counter odpala gdy 50% elementu widoczne, nie przy 0%
+- `dataset.animated` guard — counter nie odpala się 2× przy ponownym scroll
+
+---
+
+## 19. Magnetic CTA Button (kursor subtelnie przyciąga button)
+
+**Kiedy:** primary CTA w hero + offer + final CTA. Dodaje „życia" buttonowi bez krzyczenia.
+
+**HTML:**
+```html
+<a href="#offer" class="btn btn-primary magnetic">Zamów</a>
+```
+
+**CSS:**
+```css
+html.js .magnetic{transition:transform .3s cubic-bezier(.22,1,.36,1)}
+@media (prefers-reduced-motion: reduce){
+  html.js .magnetic{transform:none!important}
+}
+```
+
+**JS:**
+```js
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!reducedMotion && matchMedia('(hover: hover)').matches) {
+  document.querySelectorAll('.magnetic').forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const r = btn.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width / 2) * 0.18;
+      const dy = (e.clientY - r.top - r.height / 2) * 0.18;
+      btn.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  });
+}
+```
+
+**Kluczowe detale:**
+- `(hover: hover)` media query — NIE odpala się na touch (telefon, tablet — tam magnetic drażni)
+- Factor `0.18` — button rusza się max 18% odległości kursora od środka. Więcej (>0.3) = za „skakający"
+- `transition .3s` na `transform` — smooth kiedy kursor wychodzi z buttonu
+- Działa też na `<button>` i `<a>` — dodaj klasę `.magnetic` gdziekolwiek
+
+---
+
+## 20. Tile 3D Tilt (subtle rotateX/Y na mouse)
+
+**Kiedy:** bento tiles, karty feature, karty pricing — dodaje głębi bez flashy.
+
+**KRYTYCZNE:** max 4° tilt. Większe (8°+) = playful/toy direction, nie Editorial.
+
+**HTML:**
+```html
+<div class="tile">
+  <div class="tile-body">...</div>
+  <div class="tile-figure"><img src="..." alt="..."></div>
+</div>
+```
+
+**CSS:**
+```css
+html.js .tile{will-change:transform}
+html.js .tile.tilt-active{transition:transform .08s linear}
+/* tilt-active — podczas hover, szybkie mikrotransitions */
+```
+
+**JS:**
+```js
+if (!reducedMotion && matchMedia('(hover: hover)').matches) {
+  document.querySelectorAll('.tile:not(.tile-hero)').forEach(tile => {
+    tile.addEventListener('mouseenter', () => tile.classList.add('tilt-active'));
+    tile.addEventListener('mousemove', (e) => {
+      const r = tile.getBoundingClientRect();
+      const rx = ((e.clientY - r.top - r.height / 2) / r.height) * -4;
+      const ry = ((e.clientX - r.left - r.width / 2) / r.width) * 4;
+      tile.style.transform = `translateY(-6px) perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    });
+    tile.addEventListener('mouseleave', () => {
+      tile.classList.remove('tilt-active');
+      tile.style.transform = '';
+    });
+  });
+}
+```
+
+**Kluczowe detale:**
+- `translateY(-6px)` zachowany z baseline hover — tilt się KUMULUJE z liftem
+- `perspective(900px)` — im większe, tym subtelniejszy tilt. 500px = dramatic, 900-1200px = Editorial
+- `tilt-active` class zmienia transition na szybki 0.08s podczas mouse-move — smoother
+- Bez `tilt-active` w CSS, standardowe `transition: transform .5s` powodowałoby laggy ruch
+- Wyjątek dla `.tile-hero` (featured banner) — tilt tam wygląda dziwnie bo karta jest 2-col wide
+
+---
+
+## 21. Scroll Parallax Editorial Numerals
+
+**Kiedy:** oversized numerals w hero / finale / sekcjach — unoszą się z scroll, dodają depth.
+
+**HTML:**
+```html
+<section class="hero">
+  <div class="hero-numeral" aria-hidden="true">5800<sup>Pa</sup></div>
+  ...
+</section>
+```
+
+**JS:**
+```js
+const parallaxEls = [
+  { el: document.querySelector('.hero-numeral'), speed: 0.18, baseRotate: -3 },
+  { el: document.querySelector('.finale-numeral'), speed: 0.12, baseRotate: 0 },
+].filter(x => x.el);
+if (parallaxEls.length && !reducedMotion) {
+  let ticking = false;
+  const apply = () => {
+    const y = window.scrollY;
+    parallaxEls.forEach(({el, speed, baseRotate}) => {
+      const rect = el.getBoundingClientRect();
+      const midpoint = y + rect.top + rect.height / 2;
+      const delta = (y + window.innerHeight / 2 - midpoint) * speed;
+      // Special handling dla finale-numeral (która jest centered przez translate(-50%,-50%))
+      const translate = el.classList.contains('finale-numeral')
+        ? `translate(-50%, calc(-50% + ${delta}px))`
+        : `translateY(${delta}px)`;
+      el.style.transform = `${translate} rotate(${baseRotate}deg)`;
+    });
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(apply); ticking = true; }
+  }, { passive: true });
+  apply();
+}
+```
+
+**Kluczowe detale:**
+- `speed` 0.1-0.2 (hero) vs 0.08-0.12 (finale) — im niżej na stronie, tym wolniejsze
+- `requestAnimationFrame` + `ticking` flag — nie spamujemy `scroll` event
+- `{ passive: true }` — browser hint że scroll nie jest blokowany
+- Zachowuje `baseRotate` (np. hero tilted -3°) — parallax kumuluje się z rotate
+
+---
+
 ## Kiedy NIE używać tych patternów
 
 - **Sportowa/tech/gaming** marka → kierunek retro-futuristic, brutalist. Te patterny są za „miękkie".

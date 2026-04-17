@@ -146,6 +146,19 @@
     /* Fade-in gated behind html.js (fallback-safe) */
     html.js .fade-in{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
     html.js .fade-in.visible{opacity:1;transform:translateY(0)}
+    /* ─── JS Effects: split headline, counter, magnetic button, tile tilt ─── */
+    html.js .split-char{display:inline-block;opacity:0;transform:translateY(30%) rotate(2deg);transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
+    html.js .split-char.visible{opacity:1;transform:translateY(0) rotate(0)}
+    html.js .split-word{display:inline-block;white-space:nowrap}
+    html.js .js-counter{display:inline-block;font-variant-numeric:tabular-nums}
+    html.js .magnetic{transition:transform .3s cubic-bezier(.22,1,.36,1)}
+    html.js .tile{will-change:transform}
+    html.js .tile.tilt-active{transition:transform .08s linear}
+    @media (prefers-reduced-motion: reduce){
+      html.js .split-char,html.js .split-char.visible{opacity:1;transform:none;transition:none}
+      html.js .magnetic{transform:none!important}
+    }
+
     /* Staggered reveal for grids (atelier tiles, personas, voices, ritual, offer items) */
     html.js .atelier-grid .fade-in:nth-child(2){transition-delay:.08s}
     html.js .atelier-grid .fade-in:nth-child(3){transition-delay:.16s}
@@ -156,6 +169,11 @@
     html.js .persona-grid .fade-in:nth-child(3){transition-delay:.2s}
     html.js .voice-grid .fade-in:nth-child(2){transition-delay:.1s}
     html.js .epoch-grid .fade-in:nth-child(2){transition-delay:.1s}
+    html.js .faq-list .fade-in:nth-child(2){transition-delay:.06s}
+    html.js .faq-list .fade-in:nth-child(3){transition-delay:.12s}
+    html.js .faq-list .fade-in:nth-child(4){transition-delay:.18s}
+    html.js .faq-list .fade-in:nth-child(5){transition-delay:.24s}
+    html.js .faq-list .fade-in:nth-child(6){transition-delay:.3s}
 
     /* ─── Header ──────────────────────────── */
     .header{
@@ -725,23 +743,23 @@
       <div class="hero-grid">
         <div class="hero-text fade-in">
           <div class="eyebrow hero-eyebrow"><span class="num">Nº 01</span><span class="line"></span><span>Vitrix — Robot do mycia okien</span></div>
-          <h1 class="hero-headline">Panoramiczny widok, <em>wolny weekend</em>.</h1>
+          <h1 class="hero-headline js-split">Panoramiczny widok, <em>wolny weekend</em>.</h1>
           <p class="hero-lede">Robot do mycia okien, który pracuje sam. 5800 Pa mocy ssania, wbudowany UPS na wypadek zaniku prądu, automatyczna nawigacja — Ty odzyskujesz sobotę, on mysli szyby.</p>
           <div class="hero-actions">
-            <a href="#offer" class="btn btn-primary">Zamów — 499 zł</a>
+            <a href="#offer" class="btn btn-primary magnetic">Zamów — 499 zł</a>
             <a href="#rytual" class="btn btn-ghost">Zobacz rytuał</a>
           </div>
           <div class="hero-stats">
             <div class="hero-stat">
-              <div class="hero-stat-value">5800 Pa</div>
+              <div class="hero-stat-value"><span class="js-counter" data-target="5800" data-suffix=" Pa">0 Pa</span></div>
               <div class="hero-stat-label">Moc ssania</div>
             </div>
             <div class="hero-stat">
-              <div class="hero-stat-value">20 min</div>
+              <div class="hero-stat-value"><span class="js-counter" data-target="20" data-suffix=" min">0 min</span></div>
               <div class="hero-stat-label">UPS awaryjny</div>
             </div>
             <div class="hero-stat">
-              <div class="hero-stat-value">30 dni</div>
+              <div class="hero-stat-value"><span class="js-counter" data-target="30" data-suffix=" dni">0 dni</span></div>
               <div class="hero-stat-label">Na zwrot</div>
             </div>
           </div>
@@ -757,7 +775,7 @@
   <!-- Trust strip -->
   <section class="trust-strip">
     <div class="container">
-      <div class="trust-strip-inner">
+      <div class="trust-strip-inner fade-in">
         <span><b>5800 Pa</b>moc ssania</span>
         <span class="sep">·</span>
         <span><b>30 dni</b>zwrot bez pytań</span>
@@ -1038,27 +1056,27 @@
           <p class="section-lede">Sześć pytań, które dostajemy najczęściej. Jeśli Twoje nie jest tutaj — napisz na <a href="mailto:kontakt@vitrix.pl" style="color:var(--teal);text-decoration:underline">kontakt@vitrix.pl</a>.</p>
         </div>
         <div class="faq-list fade-in">
-          <div class="faq-item">
+          <div class="faq-item fade-in">
             <button class="faq-q">Czy jest bezpieczny na dużych wysokościach?<span class="mark">+</span></button>
             <div class="faq-a"><div class="faq-a-inner">Tak. Podwójny system: linka bezpieczeństwa 5 m + zasilanie awaryjne UPS, które utrzymuje ssanie przez 20 minut po zaniku prądu. To wystarczająco, żeby spokojnie zdjąć robota.</div></div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item fade-in">
             <button class="faq-q">Na jakich powierzchniach działa?<span class="mark">+</span></button>
             <div class="faq-a"><div class="faq-a-inner">Wszystkie gładkie: szkło, lustra, płytki ceramiczne, marmur. Minimalny format 40 × 40 cm. Działa na pionie i pod kątem. Nie działa na ryflowanych ani pęknietych szybach.</div></div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item fade-in">
             <button class="faq-q">Ile trwa mycie jednego okna?<span class="mark">+</span></button>
             <div class="faq-a"><div class="faq-a-inner">Standard (1×1,5 m) — 10–15 minut. Panorama 2×2,5 m — do 30 minut. W tym czasie robisz cokolwiek innego.</div></div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item fade-in">
             <button class="faq-q">Specjalne płyny?<span class="mark">+</span></button>
             <div class="faq-a"><div class="faq-a-inner">Nie. Zwykły płyn do szyb ze sklepu albo woda z kroplą octu. Spryskaj szybę lub nasącz ściereczkę. Unikaj płynów z wysoką zawartością alkoholu — osłabiają ssanie.</div></div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item fade-in">
             <button class="faq-q">Gwarancja i zwroty?<span class="mark">+</span></button>
             <div class="faq-a"><div class="faq-a-inner">30 dni na zwrot bez pytań — jeśli się nie sprawdzi, oddajesz, my zwracamy 100% kwoty. 2 lata pełnej gwarancji producenta na wszystkie części.</div></div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item fade-in">
             <button class="faq-q">Czym Vitrix różni się od Ecovacs / Hobot / Kärcher?<span class="mark">+</span></button>
             <div class="faq-a"><div class="faq-a-inner">Porównywalna moc ssania (5000–6000 Pa u konkurencji), trzykrotnie niższa cena. Główna różnica: brak aplikacji — sterowanie pilotem. Dla wielu osób to plus: zero parowania, zero aktualizacji, zero kont. Efekt czyszczenia identyczny.</div></div>
           </div>
@@ -1132,7 +1150,7 @@
         <div class="eyebrow center light"><span class="line"></span><span class="num">Finał</span><span class="line"></span></div>
         <h2>Czysty widok. <em>Wolna sobota.</em></h2>
         <p>Pilot, 15 minut, 499 zł. Dalej sam zdecyduj, czy dalej wchodzisz na drabinę.</p>
-        <a href="https://vitrix.pl/checkout?products=103042102-321230281" class="btn btn-light">Zamów — 499 zł</a>
+        <a href="https://vitrix.pl/checkout?products=103042102-321230281" class="btn btn-light magnetic">Zamów — 499 zł</a>
       </div>
     </div>
   </section>
@@ -1140,7 +1158,7 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer-grid fade-in">
         <div class="footer-brand">
           <a href="#top" class="logo"><img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/vitrix/logo.png" alt="Vitrix" width="32" height="32"> Vitrix</a>
           <p>Robot do mycia okien. Panoramiczny widok, wolny weekend. Jakość premium w przystępnej cenie.</p>
@@ -1222,6 +1240,106 @@
           hamburger.classList.remove('active');
           mobileMenu.classList.remove('open');
         });
+      });
+    }
+
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ─── 1. SPLIT HEADLINE REVEAL (char-by-char staggered) ───
+    // Rozbija tekst na chars w <span class="split-char">, revealuje po scroll-in (lub od razu dla hero)
+    const splitHeadlines = document.querySelectorAll('.js-split');
+    splitHeadlines.forEach(h => {
+      const walk = (node) => {
+        if (node.nodeType === 3) {
+          const text = node.textContent;
+          const frag = document.createDocumentFragment();
+          text.split(/(\s+)/).forEach(word => {
+            if (/^\s+$/.test(word)) { frag.appendChild(document.createTextNode(word)); return; }
+            const wordSpan = document.createElement('span');
+            wordSpan.className = 'split-word';
+            [...word].forEach((ch, i) => {
+              const s = document.createElement('span');
+              s.className = 'split-char';
+              s.textContent = ch;
+              s.style.transitionDelay = (i * 18) + 'ms';
+              wordSpan.appendChild(s);
+            });
+            frag.appendChild(wordSpan);
+          });
+          node.parentNode.replaceChild(frag, node);
+        } else if (node.nodeType === 1) {
+          [...node.childNodes].forEach(walk);
+        }
+      };
+      walk(h);
+    });
+    // Reveal hero split immediately on load (stagger between words accumulates)
+    if (!reducedMotion) {
+      requestAnimationFrame(() => {
+        let delay = 0;
+        document.querySelectorAll('.js-split .split-char').forEach((c, i) => {
+          c.style.transitionDelay = (i * 22) + 'ms';
+          setTimeout(() => c.classList.add('visible'), 200);
+        });
+      });
+    } else {
+      document.querySelectorAll('.split-char').forEach(c => c.classList.add('visible'));
+    }
+
+    // ─── 2. NUMBER COUNTER (hero stats liczą się od 0 do target gdy wejdą w viewport) ───
+    const counters = document.querySelectorAll('.js-counter');
+    const animateCounter = (el) => {
+      if (el.dataset.animated) return;
+      el.dataset.animated = '1';
+      const target = parseInt(el.dataset.target, 10);
+      const suffix = el.dataset.suffix || '';
+      const duration = 1400;
+      const start = performance.now();
+      if (reducedMotion) { el.textContent = target.toLocaleString('pl-PL').replace(/,/g, ' ') + suffix; return; }
+      const tick = (now) => {
+        const p = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const val = Math.round(target * eased);
+        el.textContent = val.toLocaleString('pl-PL').replace(/,/g, ' ') + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    if ('IntersectionObserver' in window) {
+      const cio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); cio.unobserve(e.target); } }), { threshold: 0.5 });
+      counters.forEach(c => cio.observe(c));
+    } else {
+      counters.forEach(animateCounter);
+    }
+
+    // ─── 3. MAGNETIC CTA BUTTONS (kursor subtelnie przyciąga button) ───
+    if (!reducedMotion && matchMedia('(hover: hover)').matches) {
+      document.querySelectorAll('.magnetic').forEach(btn => {
+        btn.addEventListener('mousemove', (e) => {
+          const r = btn.getBoundingClientRect();
+          const cx = r.left + r.width / 2;
+          const cy = r.top + r.height / 2;
+          const dx = (e.clientX - cx) * 0.18;
+          const dy = (e.clientY - cy) * 0.18;
+          btn.style.transform = `translate(${dx}px, ${dy}px)`;
+        });
+        btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+      });
+    }
+
+    // ─── 4. TILE TILT (subtle 3D tilt, max 4deg) ───
+    if (!reducedMotion && matchMedia('(hover: hover)').matches) {
+      document.querySelectorAll('.tile:not(.tile-hero)').forEach(tile => {
+        tile.addEventListener('mouseenter', () => tile.classList.add('tilt-active'));
+        tile.addEventListener('mousemove', (e) => {
+          const r = tile.getBoundingClientRect();
+          const cx = r.left + r.width / 2;
+          const cy = r.top + r.height / 2;
+          const rx = ((e.clientY - cy) / r.height) * -4;
+          const ry = ((e.clientX - cx) / r.width) * 4;
+          tile.style.transform = `translateY(-6px) perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+        });
+        tile.addEventListener('mouseleave', () => { tile.classList.remove('tilt-active'); tile.style.transform = ''; });
       });
     }
 
