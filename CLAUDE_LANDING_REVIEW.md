@@ -6,6 +6,61 @@ Ta procedura jest **obowiązkowa** — nie kończ pracy nad landingiem bez jej w
 
 ---
 
+## 0. Automatyczne kontrole (uruchom najpierw)
+
+Zanim zaczniesz ręczną inspekcję, wykonaj te komendy z `landing-pages/[SLUG]/index.html`.
+Każda odpowiada na konkretne pytanie z checklisty.
+
+```bash
+SLUG=paromia  # zmień na aktualny
+FILE="landing-pages/$SLUG/index.html"
+
+# 1. Liczba placeholderów na zdjęcia (wymóg: 12-20)
+echo "Placeholdery:"
+grep -cE '<div class="(hero-placeholder-ph|tile-figure|ritual-fig|spec-fig|persona-figure|offer-figure-inner|img-placeholder|ph-box)"' "$FILE"
+
+# 2. Ciągłość numeracji Nº (brak luk, brak duplikatów)
+echo "Numeracja Nº:"
+grep -oE "Nº [0-9]+" "$FILE" | sort -u
+
+# 3. Czy wszystkie CTA prowadzą do tego samego miejsca
+echo "Docelowe linki CTA (btn-primary + btn-cta + offer-cta):"
+grep -oE 'href="#[a-z-]+"' "$FILE" | sort -u
+
+# 4. Liczba słów w hero headline + subheadline (wymóg: H1 ≤10, lede ≤25)
+echo "Hero word count:"
+awk '/hero-headline/,/<\/h1>/' "$FILE" | sed 's/<[^>]*>//g;s/&nbsp;/ /g' | wc -w
+awk '/hero-lede/,/<\/p>/' "$FILE" | sed 's/<[^>]*>//g;s/&nbsp;/ /g' | wc -w
+
+# 5. "Power words do UNIKANIA" — czy copy nie brzmi korporacyjnie
+echo "Korporacyjne słowa (powinno być 0):"
+grep -ciE "innowacyjn|najwyższ[ae] jakość|profesjonaln.*rozwiązan|kompleksow|charakteryzuje się|implementacj" "$FILE"
+
+# 6. Brak "lorem ipsum" ani pustych placeholderów tekstu
+echo "Lorem/TODO/Placeholder tekst:"
+grep -ciE "lorem ipsum|TODO|placeholder text|\[BRAK\]" "$FILE"
+
+# 7. Brak obcych UUID (z innego workflow)
+echo "UUIDs w obrazach (powinien być TYLKO bieżący workflow_id):"
+grep -oE "ai-generated/[a-f0-9-]{36}" "$FILE" | sort -u
+```
+
+**Oczekiwane:**
+| Kontrola | Oczekiwane | Jeśli inaczej |
+|----------|-----------|---------------|
+| Placeholdery | 12-20 | dodaj więcej figur w bento/ritual/personas |
+| Numeracja Nº | ciągła (Nº 01, 02, 03, … bez luk) | przenumeruj brakujące |
+| Linki CTA | max 2 unikalne (np. `#zamow` + kotwice menu) | zunifikuj do jednego `#offer/#zamow` |
+| Hero headline | ≤ 10 słów | skróć |
+| Hero subheadline | ≤ 25 słów | skróć |
+| Power words | 0 | zamień na konkret |
+| Lorem/TODO | 0 | napisz realny copy |
+| UUIDs | TYLKO bieżący workflow | **bug** — usuń obce natychmiast |
+
+**NIE przechodź dalej** dopóki każda kontrola nie jest zielona.
+
+---
+
 ## 1. Checklist sekcji i obrazów
 
 Checklist pokrywa **funkcje** sekcji, nie dokładne nazwy. Dla kierunku
@@ -92,7 +147,9 @@ Użyj jednej z tych formuł:
 - ❌ Subheadline zaczynający się od nazwy: "Pupilnik to..."
 - ❌ Żargon techniczny w pierwszych 3 sekundach
 - ❌ Ogólniki: "Najlepsze rozwiązanie", "Innowacyjny produkt"
-- ❌ **ZAKŁADANIE SYTUACJI ODBIORCY:** "Twoje dziecko raczkuje...", "Twój pies...", "Masz apartament..." — NIE WIESZ czy odbiorca ma dziecko/psa/apartament! Używaj uniwersalnych sformułowań lub pytań ("Masz dość...?", "Czy zdarza Ci się...?")
+- ❌ **ZAKŁADANIE SYTUACJI ODBIORCY W HERO:** "Twoje dziecko raczkuje...", "Twój pies...", "Masz apartament..." — NIE WIESZ czy odbiorca ma dziecko/psa/apartament! W hero używaj uniwersalnych pytań/stwierdzeń ("Masz dość...?", "Dla tych, którzy...")
+- ✅ **Zakładanie sytuacji DOZWOLONE W PERSONAS** — sekcja Nº 07 „Dla Kogo" celowo segmentuje. Tam można i trzeba pisać „32 l. · Warszawa · HR/Marketing · capsule wardrobe". Odbiorca świadomie sprawdza, do której grupy należy.
+- ⚠️ **Liczba + jednostka w hero** — OK jeśli jednostka jest oczywista (sekundy, minuty, zł, %). UNIKAJ jednostek specjalistycznych (kPa, HEPA, SPF 50, lm) jeśli grupa docelowa ich nie używa na co dzień. Zamień „30 kPa" → „para pod ciśnieniem"; szczegół techniczny zostaw w Spec Sheet.
 
 ### E. Test 5 sekund
 
@@ -136,6 +193,19 @@ Dla **każdej sekcji** zadaj sobie pytania:
 - [ ] Ceny i rabaty są spójne w całym dokumencie
 - [ ] Gwarancja/zwrot jest wyraźnie komunikowana
 - [ ] Brak błędów ortograficznych i gramatycznych
+- [ ] Każdy placeholder ma 4 pola: mark, title, size (px), note dla fotografa (nie tylko „Hero Image")
+
+### D. Spójność z raportem strategicznym (workflow_reports type=report_pdf)
+
+Landing MUSI odzwierciedlać ustalenia z raportu. Sprawdź:
+
+- [ ] **Główny pain point** w hero = główny pain point z sekcji „Psychologia sprzedaży" raportu
+- [ ] **Persony** (Nº 07 Dla Kogo) = 3 segmenty z sekcji „Grupa docelowa" raportu (imię/wiek/lokalizacja/frustracja — skopiuj, nie wymyślaj)
+- [ ] **USP / statystyki** (26 s, 30 kPa, 99,9%) = liczby z sekcji „Specyfikacja techniczna" raportu
+- [ ] **Cena** = „sweet spot" z raportu (nie wzięta z kapelusza)
+- [ ] **Tagline / headline** pokrywa się z „styl marki" / „tone of voice" z raportu
+
+**Dlaczego:** raport PDF to kontrakt strategiczny z klientem. Rozjazd landing ↔ raport = klient dostaje niespójny produkt.
 
 ---
 
