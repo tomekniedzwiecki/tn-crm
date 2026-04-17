@@ -43,6 +43,10 @@ grep -ciE "lorem ipsum|TODO|placeholder text|\[BRAK\]" "$FILE"
 # 7. Brak obcych UUID (z innego workflow)
 echo "UUIDs w obrazach (powinien być TYLKO bieżący workflow_id):"
 grep -oE "ai-generated/[a-f0-9-]{36}" "$FILE" | sort -u
+
+# 8. ZAKAZANE obietnice wysyłki (dropshipping ≠ 24h / magazyn w PL)
+echo "Zakazane obietnice (powinno być 0):"
+grep -ciE "wysy[łl]ka 24|w 24 ?h|polski magazyn|z magazynu w Polsc|D\+1" "$FILE"
 ```
 
 **Oczekiwane:**
@@ -56,6 +60,7 @@ grep -oE "ai-generated/[a-f0-9-]{36}" "$FILE" | sort -u
 | Power words | 0 | zamień na konkret |
 | Lorem/TODO | 0 | napisz realny copy |
 | UUIDs | TYLKO bieżący workflow | **bug** — usuń obce natychmiast |
+| Zakazane obietnice wysyłki | 0 | usuń — dropshipping ≠ 24h / magazyn PL |
 
 **NIE przechodź dalej** dopóki każda kontrola nie jest zielona.
 

@@ -1,17 +1,18 @@
 # Procedura: Generowanie Landing Page dla Workflow
 
-> **⚠️ STOP! TO JEST ETAP 1 Z 4 — NIE COMMITUJ PO WYGENEROWANIU HTML!**
+> **⚠️ STOP! TO JEST ETAP 1 Z 5 — NIE COMMITUJ PO WYGENEROWANIU HTML!**
 >
-> Pełna procedura landing page składa się z 4 OBOWIĄZKOWYCH etapów:
+> Pełna procedura landing page składa się z 5 OBOWIĄZKOWYCH etapów:
 >
 > | Etap | Plik | Co robisz |
 > |------|------|-----------|
-> | **1. Generowanie** | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Generujesz HTML |
-> | **2. Weryfikacja** | `CLAUDE_LANDING_REVIEW.md` | Sprawdzasz kompletność, Hero, placeholdery |
-> | **3. Design** | `CLAUDE_LANDING_DESIGN.md` | Dopracowujesz estetykę, animacje, typografię |
+> | **1. Generowanie** | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Generujesz roboczy HTML |
+> | **2. Weryfikacja treści** | `CLAUDE_LANDING_REVIEW.md` | Kompletność, Hero deep dive, copy |
+> | **2.5. Direction (manifesto)** | `CLAUDE_LANDING_DIRECTION.md` | Autonomicznie wybierasz kierunek estetyczny z danych Supabase (NIE pytasz użytkownika) |
+> | **3. Design** | `CLAUDE_LANDING_DESIGN.md` | Implementujesz manifesto w CSS/HTML |
 > | **4. Wizualna weryfikacja** | `CLAUDE_LANDING_VERIFY.md` | Playwright screenshot 3 viewportów + deploy |
 >
-> **Dopiero po przejściu wszystkich 4 etapów robisz commit & deploy!**
+> **Dopiero po przejściu wszystkich 5 etapów robisz commit & deploy!**
 >
 > **Gotowe snippety** (signature patterns, fade-in safe, bento, spec sheet, editorial numerals):
 > → `CLAUDE_LANDING_PATTERNS.md` — biblioteka kopiuj-wklej.
@@ -95,7 +96,39 @@ Absolute positioning (spec badges nad produktem, floating elements) psuje się n
 
 **Nigdy nie commituj bez sprawdzenia screenshotem.** ETAP 4 (`CLAUDE_LANDING_VERIFY.md`) jest obowiązkowy. Code review nie wyłapuje bugów typu „80% strony niewidoczne przez opacity:0".
 
-### 5. Oversized editorial numeral > animated glow orbs
+### 5. ⛔ NIE obiecuj „wysyłki 24h" ani „magazynu w Polsce"
+
+Nigdy nie umieszczaj w trust-bar / FAQ / hero tych sformułowań:
+
+- ❌ „Wysyłka 24 h" / „Wysyłamy w 24h"
+- ❌ „z magazynu w Polsce" / „z polskiego magazynu"
+- ❌ „D+1"
+
+**Dlaczego:** Większość produktów jest w Fazie 1 modelu (dropshipping
+AliExpress / agent w Chinach). Realna dostawa = 10–14 dni, nie 24 h.
+Magazyn w Polsce to Faza 3, nieliczne projekty. Fałszywa obietnica =
+masa zwrotów i reklamacji.
+
+**Zamiast tego w trust-bar:**
+- ✅ „30 dni na zwrot" / „Bez pytań"
+- ✅ „Darmowa dostawa" / „InPost · DPD · kurier"
+- ✅ „2 lata gwarancji" / „polska obsługa"
+- ✅ „Bezpieczna płatność" / „Przelewy24 · BLIK"
+
+**FAQ „Kiedy otrzymam przesyłkę?":**
+```
+Przesyłka dociera w 1–3 dni robocze od zaksięgowania wpłaty.
+Dostawa InPostem, DPD lub kurierem — darmowa.
+```
+(bez konkretnej godziny wysyłki)
+
+**Kontrola po generowaniu:**
+```bash
+grep -iE "24 ?h|w 24|polski magazyn|magazyn.* Polsce|D\+1" landing-pages/[SLUG]/index.html
+```
+Powinno być 0 trafień.
+
+### 6. Oversized editorial numeral > animated glow orbs
 
 Dla produktów premium/luxury/lifestyle — pojedyncza wielka cyfra w tle hero (Fraunces italic, 280-440px, color: paper-3) wygląda 10× bardziej profesjonalnie niż animowane glow orby. To jeden element, który klient zapamięta.
 
