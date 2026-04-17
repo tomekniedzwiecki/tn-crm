@@ -58,11 +58,12 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 
 Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
-### Generowanie landing page (4 etapy + biblioteka patternów)
+### Generowanie landing page (5 etapów + biblioteka patternów)
 **Pliki:**
 - `CLAUDE_LANDING_PROCEDURE.md` — ETAP 1: generowanie (zaczyna się od **KRYTYCZNYCH LEKCJI** — przeczytaj pierwsze 80 linii!)
 - `CLAUDE_LANDING_REVIEW.md` — ETAP 2: weryfikacja treści
-- `CLAUDE_LANDING_DESIGN.md` — ETAP 3: dopracowanie estetyki
+- `CLAUDE_LANDING_DIRECTION.md` — **ETAP 2.5: OBOWIĄZKOWY** wybór kierunku estetycznego (manifesto, referencje spoza `landing-pages/`)
+- `CLAUDE_LANDING_DESIGN.md` — ETAP 3: dopracowanie estetyki (zgodnie z manifesto z ETAP 2.5)
 - `CLAUDE_LANDING_VERIFY.md` — ETAP 4: **OBOWIĄZKOWY** Playwright screenshot 3 viewportów przed deployem
 - `CLAUDE_LANDING_PATTERNS.md` — biblioteka signature snippetów (kopiuj-wklej)
 
@@ -79,8 +80,11 @@ Kiedy uzytkownik mowi "zrob landing dla workflow X":
 **ETAP 2 — Weryfikacja treści** (`CLAUDE_LANDING_REVIEW.md`) — OBOWIĄZKOWY:
 kompletność sekcji, placeholdery, Hero deep dive, grupa docelowa, technikalia.
 
+**ETAP 2.5 — Wybór kierunku estetycznego** (`CLAUDE_LANDING_DIRECTION.md`) — OBOWIĄZKOWY:
+audyt produktu, 3 realne marki referencyjne spoza `landing-pages/`, napisanie **Design Manifesto** (5 linijek) do `/c/tmp/[slug]_manifesto.md`, walidacja anty-generic. **NIE PYTAJ użytkownika o kierunek — decyduj autonomicznie z danych Supabase.**
+
 **ETAP 3 — Dopracowanie designu** (`CLAUDE_LANDING_DESIGN.md`) — OBOWIĄZKOWY:
-kierunek estetyczny, typografia, głębia kolorów, asymetria, animacje, tekstury.
+implementacja manifesto z ETAP 2.5 w CSS/HTML: typografia, głębia kolorów, asymetria, animacje, tekstury, signature element.
 
 **ETAP 4 — Wizualna weryfikacja** (`CLAUDE_LANDING_VERIFY.md`) — OBOWIĄZKOWY:
 1. `npm install -D playwright && npx playwright install chromium` (pierwszy raz)

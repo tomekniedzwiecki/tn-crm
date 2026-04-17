@@ -231,9 +231,11 @@ Landing MUSI odzwierciedlać ustalenia z raportu. Sprawdź:
 Po przejściu checklisty:
 
 1. **Jeśli są braki w treściach** — popraw je i przejdź ponownie przez sekcje z problemami
-2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 3: DESIGN** (patrz sekcja 7 poniżej)
+2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 2.5: DIRECTION** (`CLAUDE_LANDING_DIRECTION.md`)
 
-**NIE COMMITUJ JESZCZE** — najpierw dopracuj design w ETAP 3, potem wizualna weryfikacja w ETAP 4 (`CLAUDE_LANDING_VERIFY.md`).
+Kolejność: ETAP 2 (treści OK) → **ETAP 2.5 (manifesto kierunku)** → ETAP 3 (design polish) → ETAP 4 (Playwright) → commit.
+
+**NIE COMMITUJ JESZCZE** — najpierw manifesto, potem design, potem weryfikacja wizualna.
 
 ---
 
@@ -259,12 +261,13 @@ Po zakończeniu weryfikacji przedstaw krótki raport:
 
 ---
 
-## 7. ETAP 3 + 4: Design i Wizualna weryfikacja
+## 7. ETAP 2.5 + 3 + 4: Direction, Design i Wizualna weryfikacja
 
 **OBOWIĄZKOWE** — po weryfikacji treści przejdź kolejno:
 
-1. **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`** — estetyka, typografia, animacje
-2. **ETAP 4 — `CLAUDE_LANDING_VERIFY.md`** — Playwright screenshot w 3 viewportach
+1. **ETAP 2.5 — `CLAUDE_LANDING_DIRECTION.md`** — audytujesz produkt, autonomicznie wybierasz kierunek estetyczny, piszesz **Design Manifesto** do `/c/tmp/[slug]_manifesto.md`. **NIE PYTAJ użytkownika.**
+2. **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`** — implementujesz manifesto: typografia, paleta, signature element
+3. **ETAP 4 — `CLAUDE_LANDING_VERIFY.md`** — Playwright screenshot w 3 viewportach
 
 Dopiero po ETAP 4 (pozytywna weryfikacja wizualna) wykonaj deploy:
 
