@@ -46,16 +46,32 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver((es) => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
-  }), { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+  }), { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
   document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
-  // Safety: po 2.5s wszystko jeszcze niewidzialne → pokaż
-  setTimeout(() => document.querySelectorAll('.fade-in:not(.visible)').forEach(el => el.classList.add('visible')), 2500);
+  // Safety fallback: po 3s pokaż TYLKO te elementy które user powinien już widzieć
+  // (above-the-fold lub w viewport). Elementy poniżej czekają na IntersectionObserver
+  setTimeout(() => {
+    document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) el.classList.add('visible');
+    });
+  }, 3000);
 } else {
   document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
 }
 ```
 
 **Dlaczego:** crawler, fullpage screenshot, print, slow JS, wyłączony JS = 80% strony niewidoczne. Bez `html.js` gate'u nigdy tego nie zauważysz.
+
+**KRYTYCZNE — safety timeout MUSI filtrować po pozycji!** Typowy błąd:
+```js
+// ❌ ŹLE — po 2.5s wszystkie fade-in (też te na końcu strony) stają się visible
+setTimeout(() => document.querySelectorAll('.fade-in:not(.visible)')
+  .forEach(el => el.classList.add('visible')), 2500);
+```
+To psuje scroll-reveal — użytkownik siedzi w hero 3 sekundy, a cała strona (nawet offer 10 ekranów niżej) już się „odkryła". Gdy doscrolluje, nic się nie pojawia, bo wszystko już jest `.visible`.
+
+**✅ Poprawnie**: safety filtruje `getBoundingClientRect().top < window.innerHeight` — pokazuje tylko to co user powinien widzieć NA EKRANIE.
 
 ### 2. Element absolutnie pozycjonowany WEWNĄTRZ karty nie przetrwa mobile
 
