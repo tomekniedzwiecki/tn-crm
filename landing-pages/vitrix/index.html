@@ -76,6 +76,13 @@
       -moz-osx-font-smoothing:grayscale;
       overflow-x:hidden;
       text-rendering:optimizeLegibility;
+      position:relative;
+    }
+    /* Film grain overlay — subtelna tekstura na całym landing (Panoramic Calm editorial) */
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:200;
+      background-image:url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity:.16;mix-blend-mode:multiply;
     }
 
     img{max-width:100%;display:block;height:auto}
@@ -324,8 +331,10 @@
     }
 
     /* ─── Nº 03 Atelier (asymmetric bento) ─── */
-    .atelier{background:var(--paper);padding:var(--sec) 0}
-    .atelier-header{margin-bottom:80px;max-width:760px}
+    .atelier{background:var(--paper);padding:calc(var(--sec) * 1.1) 0;position:relative}
+    .atelier::before{content:"03";position:absolute;top:60px;right:-20px;font-family:var(--font-editorial);font-style:italic;font-size:clamp(200px,22vw,380px);line-height:.8;color:rgba(13,33,55,.04);letter-spacing:-.06em;pointer-events:none;user-select:none;z-index:0}
+    .atelier .container{position:relative;z-index:1}
+    .atelier-header{margin-bottom:80px;max-width:760px;padding-left:clamp(0px,4vw,80px)}
     .atelier-header h2{margin-top:24px}
 
     .atelier-grid{
@@ -338,9 +347,11 @@
       padding:36px;border-radius:var(--radius);
       display:flex;flex-direction:column;
       position:relative;overflow:hidden;
-      transition:all .4s cubic-bezier(.22,1,.36,1);
+      transition:transform .5s cubic-bezier(.22,1,.36,1),box-shadow .5s cubic-bezier(.22,1,.36,1),border-color .3s;
     }
-    .tile:hover{border-color:var(--rule-strong);box-shadow:var(--sh-md);transform:translateY(-2px)}
+    .tile:hover{border-color:rgba(var(--navy-rgb),.3);box-shadow:0 24px 48px rgba(var(--navy-rgb),.12),0 8px 16px rgba(var(--teal-rgb),.08);transform:translateY(-6px)}
+    .tile:hover .tile-figure img{transform:scale(1.04)}
+    .tile .tile-figure img{transition:transform 1.2s cubic-bezier(.22,1,.36,1)}
     .tile-num{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);margin-bottom:20px}
     .tile-num b{color:var(--navy);font-weight:700}
     .tile h3{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;color:var(--navy);line-height:1.25}
@@ -462,7 +473,9 @@
     }
 
     /* ─── Nº 06 Dwie epoki (comparison) ───── */
-    .epochs{background:var(--paper);padding:var(--sec) 0}
+    .epochs{background:var(--paper);padding:calc(var(--sec) * .85) 0;position:relative}
+    .epochs::before{content:"06";position:absolute;top:-.3em;right:-20px;font-family:var(--font-editorial);font-style:italic;font-size:clamp(180px,20vw,320px);line-height:.8;color:rgba(13,33,55,.04);letter-spacing:-.06em;pointer-events:none;user-select:none;z-index:0}
+    .epochs .container{position:relative;z-index:1}
     .epochs-header{text-align:center;margin-bottom:72px;max-width:720px;margin-left:auto;margin-right:auto}
     .epochs-header h2{margin-top:24px}
     .epoch-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px}
@@ -488,12 +501,16 @@
     }
 
     /* ─── Nº 07 Dla Kogo (personas) ───────── */
-    .personas{background:var(--paper-2);padding:var(--sec) 0}
-    .personas-header{margin-bottom:72px;max-width:720px}
+    .personas{background:var(--paper-2);padding:calc(var(--sec) * 1.15) 0;position:relative;overflow:hidden}
+    .personas::before{content:"07";position:absolute;top:80px;left:-40px;font-family:var(--font-editorial);font-style:italic;font-size:clamp(200px,22vw,380px);line-height:.8;color:rgba(13,33,55,.035);letter-spacing:-.06em;pointer-events:none;user-select:none;z-index:0}
+    .personas .container{position:relative;z-index:1}
+    .personas-header{margin:0 0 72px auto;max-width:680px;padding-left:10%}
     .personas-header h2{margin-top:24px}
     .persona-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
-    .persona{background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;transition:all .4s cubic-bezier(.22,1,.36,1)}
-    .persona:hover{border-color:var(--rule-strong);transform:translateY(-2px);box-shadow:var(--sh-md)}
+    .persona{background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;transition:transform .6s cubic-bezier(.22,1,.36,1),box-shadow .6s cubic-bezier(.22,1,.36,1),border-color .3s}
+    .persona:hover{border-color:rgba(var(--navy-rgb),.25);transform:translateY(-6px);box-shadow:0 24px 50px rgba(var(--navy-rgb),.12)}
+    .persona:hover .persona-figure img{transform:scale(1.03)}
+    .persona-figure img{transition:transform 1.4s cubic-bezier(.22,1,.36,1)}
     .persona-figure{aspect-ratio:4/5;background:var(--paper-3);position:relative;overflow:hidden}
     .persona-body{padding:32px}
     .persona-meta{font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);margin-bottom:14px}
@@ -535,7 +552,7 @@
     }
 
     /* ─── Nº 09 Pytania (FAQ) ──────────────── */
-    .faq{background:var(--paper-2);padding:var(--sec) 0}
+    .faq{background:var(--paper-2);padding:calc(var(--sec) * .9) 0}
     .faq-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:96px;align-items:start}
     .faq-sticky{position:sticky;top:112px}
     .faq-sticky h2{margin-top:24px}
@@ -581,8 +598,9 @@
     .offer-price-stack{display:flex;flex-direction:column;gap:0}
     .offer-price-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--slate);margin-bottom:4px}
     .offer-price-row{display:flex;align-items:baseline;gap:18px;margin-bottom:8px}
-    .offer-price-new{font-family:var(--font-display);font-size:clamp(56px,6.5vw,96px);font-weight:700;color:var(--navy);letter-spacing:-.04em;line-height:.9}
-    .offer-price-new sup{font-family:var(--font-body);font-size:.22em;font-weight:500;vertical-align:top;margin-left:6px;letter-spacing:.04em;color:var(--ink-2)}
+    .offer-price-new{font-family:var(--font-display);font-size:clamp(72px,9vw,140px);font-weight:700;color:var(--navy);letter-spacing:-.055em;line-height:.85;position:relative}
+    .offer-price-new::before{content:"";position:absolute;left:-20px;top:10%;bottom:15%;width:3px;background:var(--teal)}
+    .offer-price-new sup{font-family:var(--font-editorial);font-style:italic;font-size:.28em;font-weight:400;vertical-align:top;margin-left:8px;letter-spacing:-.01em;color:var(--teal)}
     .offer-price-old{font-family:var(--font-editorial);font-style:italic;font-size:20px;color:var(--coral);text-decoration:line-through}
     .offer-savings{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);padding:8px 0 0;border-top:1px solid var(--rule);margin-top:8px}
 
@@ -1212,6 +1230,28 @@
           mobileMenu.classList.remove('open');
         });
       });
+    }
+
+    // Scroll parallax dla editorial numerals (hero + finale) — subtle Y translate
+    const parallaxEls = [
+      { el: document.querySelector('.hero-numeral'), speed: 0.18, baseRotate: -3 },
+      { el: document.querySelector('.finale-numeral'), speed: 0.12, baseRotate: 0 },
+    ].filter(x => x.el);
+    if (parallaxEls.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      let ticking = false;
+      const apply = () => {
+        const y = window.scrollY;
+        parallaxEls.forEach(({el, speed, baseRotate}) => {
+          const rect = el.getBoundingClientRect();
+          const midpoint = y + rect.top + rect.height / 2;
+          const delta = (y + window.innerHeight / 2 - midpoint) * speed;
+          const translate = el.classList.contains('finale-numeral') ? `translate(-50%, calc(-50% + ${delta}px))` : `translateY(${delta}px)`;
+          el.style.transform = `${translate} rotate(${baseRotate}deg)`;
+        });
+        ticking = false;
+      };
+      window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(apply); ticking = true; } }, { passive: true });
+      apply();
     }
 
     // FAQ accordion
