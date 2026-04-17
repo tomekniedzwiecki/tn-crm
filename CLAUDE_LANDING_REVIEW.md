@@ -239,13 +239,15 @@ Po zakończeniu weryfikacji przedstaw krótki raport:
 ```
 ## Landing Page Review: [nazwa]
 
-### Sekcje: [X/15] kompletne
-### Obrazy: [X] placeholderów
-### Copy: [status]
+### Sekcje: [X/16] funkcji pokrytych
+### Placeholdery: [X] (wymóg 12–20)
+### Hero: test 5 sekund — [pass/fail]
+### Copy: [status] (power words, lorem, subheadline ≤25 słów)
+### Spójność z raportem PDF: [ok/rozjazd]
 
 ### Uwagi:
 - [ewentualne sugestie do treści]
-- [sekcje wymagające zdjęć od klienta]
+- [sekcje wymagające zdjęć od klienta — z briefem]
 
 ### Link: https://tn-crm.vercel.app/landing-pages/[nazwa]/
 ```
