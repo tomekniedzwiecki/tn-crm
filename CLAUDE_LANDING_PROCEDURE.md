@@ -32,20 +32,58 @@ Dodatkowo:
 ## Checklist auto-run (wykonaj sekwencyjnie)
 
 ```
-[ ] 0.  Walidacja wejścia — czy masz wszystko?
-         - workflow_id + dostęp do Supabase (.env)
-         - brand_info, produkty, raport PDF (jeśli któryś brak → STOP, wróć do brandingu)
-[ ] 1.  ETAP 1 — Generuj szkielet HTML (sekcje tego pliku, od „KRYTYCZNE LEKCJE" niżej)
-[ ] 2.  ETAP 2 — Przeczytaj `CLAUDE_LANDING_REVIEW.md` i wykonaj weryfikację treści
+[ ] 0.  Walidacja wejścia (bash snippet niżej — wszystkie 3 muszą przejść)
+[ ] 1.  ETAP 1 — Generuj szkielet HTML (sekcje 2-6 tego pliku — zacznij od „KRYTYCZNE LEKCJE")
+[ ] 2.  ETAP 2 — Przeczytaj `CLAUDE_LANDING_REVIEW.md`, uruchom grep sanity + Hero deep dive
 [ ] 3.  ETAP 2.5 — Przeczytaj `CLAUDE_LANDING_DIRECTION.md`, napisz manifesto
         → zapisz do `landing-pages/[slug]/_brief.md` (nie /c/tmp/!)
-[ ] 4.  ETAP 3 — Przeczytaj `CLAUDE_LANDING_DESIGN.md` i dopracuj design zgodnie z manifesto
+[ ] 4.  ETAP 3 — Przeczytaj `CLAUDE_LANDING_DESIGN.md`, dopracuj design zgodnie z manifesto
         → w tym wywołanie `CLAUDE_AI_IMAGES_PROCEDURE.md` dla obrazów
-[ ] 5.  ETAP 4 — Przeczytaj `CLAUDE_LANDING_VERIFY.md`, uruchom Playwright verify
+[ ] 5.  ETAP 4 — Przeczytaj `CLAUDE_LANDING_VERIFY.md`, uruchom:
+        → bash scripts/verify-landing.sh [slug]  (target: 18/18 PASS)
+        → bash scripts/screenshot-landing.sh [slug]  (3 viewports)
 [ ] 6.  Commit + push + podaj link do https://tn-crm.vercel.app/landing-pages/[slug]/
 ```
 
 **KRYTYCZNE:** NIE rób commitów pośrednich. Jeden commit na końcu z pełnym deliverem.
+
+### ETAP 0 — walidacja wejścia (bash snippet)
+
+```bash
+set -a && source /c/repos_tn/tn-crm/.env && set +a
+
+# Podstaw UUID (z promptu użytkownika)
+UUID="[UUID]"
+
+# Check 1: Workflow istnieje
+WF=$(curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflows?id=eq.$UUID&select=id,customer_name" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+[ "$WF" = "[]" ] && echo "❌ Workflow nie istnieje" && exit 1
+echo "✅ Workflow: $WF"
+
+# Check 2: brand_info (nazwa marki + tagline + description)
+BI=$(curl -s ".../workflow_branding?workflow_id=eq.$UUID&type=eq.brand_info&select=value" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+[ "$BI" = "[]" ] && echo "❌ Brak brand_info — wróć do CLAUDE_BRANDING_PROCEDURE.md" && exit 1
+echo "✅ brand_info: $(echo "$BI" | head -c 150)"
+
+# Check 3: Raport strategiczny PDF
+RP=$(curl -s ".../workflow_reports?workflow_id=eq.$UUID&type=eq.report_pdf&select=file_url" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+[ "$RP" = "[]" ] && echo "❌ Brak raportu PDF — bez niego nie ma person i copy" && exit 1
+echo "✅ report_pdf: obecny"
+
+# Check 4 (opcjonalny warning): workflow_products
+PR=$(curl -s ".../workflow_products?workflow_id=eq.$UUID&select=name,price" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+[ "$PR" = "[]" ] && echo "⚠️  Brak workflow_products — cena/zestaw z raportu lub deep research"
+
+# Slug = lowercase nazwa marki z brand_info
+SLUG=$(echo "$BI" | grep -oE '"name":"[^"]+"' | head -1 | sed 's/"name":"//; s/"$//' | tr '[:upper:]' '[:lower:]')
+echo "✅ SLUG: $SLUG → landing-pages/$SLUG/"
+```
+
+Jeśli którykolwiek check ❌ — **nie idź dalej**, zgłoś użytkownikowi czego brak.
 
 ---
 
@@ -58,6 +96,46 @@ Przerwij i poinformuj użytkownika, jeśli:
 - `workflow_products` pusty + brak referencji produktu w `ai-generated/` → nie masz z czego generować obrazów
 
 Te przypadki wymagają powrotu do wcześniejszych etapów workflow, nie próbuj „wymyślać" contentu.
+
+---
+
+## 📦 MIGRACJA starego landingu (retrospective brief)
+
+**Problem:** landingi sprzed kwietnia 2026 (paromia, h2vital, pupilnik, vibestrike, …) nie mają `_brief.md`. Gdy user prosi o modyfikację, trzeba zrekonstruować brief retrospektywnie.
+
+### Kroki migracji
+
+1. **Przeczytaj HTML** żeby zrozumieć kierunek:
+   ```bash
+   grep -E "font-family|--primary|--accent|aspect-ratio" landing-pages/[slug]/index.html | head -30
+   ```
+
+2. **Pobierz branding z Supabase** (źródło prawdy):
+   ```bash
+   curl ".../workflow_branding?workflow_id=eq.$UUID&type=in.(brand_info,color,font)&select=*"
+   ```
+
+3. **Zidentyfikuj kierunek** patrząc na istniejące landing:
+   - Fraunces + Italiana + gold accents → Editorial/Luxury (paromia)
+   - Plus Jakarta + Instrument Serif + navy → Panoramic Calm (vitrix)
+   - Playful + rounded + saturated → Playful/Toy (pupilnik)
+   - Neon + black + glitch → Retro-Futuristic (vibestrike)
+
+4. **Utwórz `_brief.md`** używając template z `CLAUDE_LANDING_DIRECTION.md` Krok 3. Sekcja 6 (Decisions log) pusta lub jeden wpis „2026-04-XX migracja retrospektywna".
+
+5. **Uruchom verify:**
+   ```bash
+   bash scripts/verify-landing.sh [slug]
+   ```
+   Jeśli landing jest stary — pewne checks mogą failować (np. brak JS effects w pre-2026). Popraw w osobnym commit po zatwierdzeniu briefu.
+
+6. **Commit brief osobno** przed modyfikacjami:
+   ```bash
+   git add landing-pages/[slug]/_brief.md
+   git commit -m "[slug]: Migrate — retrospective brief + photo system"
+   ```
+
+**Docelowo:** wszystkie landingi w repo mają `_brief.md`. Robimy to na żądanie gdy user modyfikuje starego landing — nie migrujemy wszystkich na raz.
 
 ---
 

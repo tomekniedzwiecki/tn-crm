@@ -59,13 +59,30 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
 ### Generowanie landing page (5 etapów + biblioteka patternów)
-**Pliki:**
-- `CLAUDE_LANDING_PROCEDURE.md` — ETAP 1: generowanie (zaczyna się od **KRYTYCZNYCH LEKCJI** — przeczytaj pierwsze 80 linii!)
-- `CLAUDE_LANDING_REVIEW.md` — ETAP 2: weryfikacja treści
-- `CLAUDE_LANDING_DIRECTION.md` — **ETAP 2.5: OBOWIĄZKOWY** wybór kierunku estetycznego (manifesto, referencje spoza `landing-pages/`)
-- `CLAUDE_LANDING_DESIGN.md` — ETAP 3: dopracowanie estetyki (zgodnie z manifesto z ETAP 2.5)
-- `CLAUDE_LANDING_VERIFY.md` — ETAP 4: **OBOWIĄZKOWY** Playwright screenshot 3 viewportów przed deployem
-- `CLAUDE_LANDING_PATTERNS.md` — biblioteka signature snippetów (kopiuj-wklej)
+
+**🎯 TRIGGER FRAZY (AUTO-RUN):**
+- „Przygotuj landing dla projektu [UUID]"
+- „Zrób landing dla [UUID]" / „Zrób landing dla workflow [nazwa]"
+- „Wygeneruj stronę sprzedażową [UUID]"
+- Cytowanie `CLAUDE_LANDING_PROCEDURE.md` w kontekście nowego landinga
+
+Gdy słyszysz którąkolwiek frazę → **otwórz `CLAUDE_LANDING_PROCEDURE.md`** i wykonaj **AUTO-RUN** (wszystkie 5 etapów autonomicznie, bez pytania użytkownika). Zacznij od sekcji „AUTO-RUN TRIGGER" + „Checklist auto-run".
+
+**Master entry-point i nawigacja:** [`CLAUDE_LANDING.md`](CLAUDE_LANDING.md) — index/cheatsheet, flowchart, final checklist.
+
+**Pliki (szczegółowe):**
+- `CLAUDE_LANDING_PROCEDURE.md` — **MASTER ENTRY** + ETAP 1: generowanie (zaczyna się od AUTO-RUN trigger + **KRYTYCZNYCH LEKCJI**)
+- `CLAUDE_LANDING_REVIEW.md` — ETAP 2: weryfikacja treści (18 automatycznych kontroli)
+- `CLAUDE_LANDING_DIRECTION.md` — **ETAP 2.5: OBOWIĄZKOWY** manifesto → `landing-pages/[slug]/_brief.md`
+- `CLAUDE_LANDING_DESIGN.md` — ETAP 3: dopracowanie estetyki + JS effects + layout discipline
+- `CLAUDE_LANDING_VERIFY.md` — ETAP 4: **OBOWIĄZKOWY** Playwright screenshot 3 viewportów
+- `CLAUDE_LANDING_PATTERNS.md` — biblioteka 22 signature snippetów (kopiuj-wklej)
+
+**Automatyzacja:**
+- `scripts/verify-landing.sh [slug]` — one-command 18-check verification
+- `scripts/screenshot-landing.sh [slug]` — Playwright 3 viewports (zamiast ad-hoc _shoot.mjs)
+- `landing-pages/_templates/README.md` — mapping kierunek → baseline do kopiowania
+- `landing-pages/[slug]/_brief.md` — persystentny brief (commitowany, nie /c/tmp/)
 
 Kiedy uzytkownik mowi "zrob landing dla workflow X":
 

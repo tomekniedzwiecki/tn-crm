@@ -98,8 +98,25 @@ if [ -z "$LOGO_TEXT" ]; then
   echo "  ✅ Logo bez wordmark obok (tylko <img>)"
   PASS=$((PASS + 1))
 else
-  echo "  ❌ Logo ma wordmark: \"$LOGO_TEXT\""
-  FAIL=$((FAIL + 1))
+  # Warning, nie fail — legitimate cases: logo-symbol bez nazwy marki
+  echo "  ⚠️  Logo ma tekst: \"$LOGO_TEXT\" — OK tylko jeśli logo jest SYMBOLEM bez nazwy marki"
+  WARN=$((WARN + 1))
+fi
+
+# Logo.png file existence check
+LOGO_FILE="landing-pages/$SLUG/logo.png"
+if [ -f "$LOGO_FILE" ]; then
+  LOGO_SIZE=$(wc -c < "$LOGO_FILE")
+  if [ "$LOGO_SIZE" -gt 500 ]; then
+    echo "  ✅ Logo.png istnieje (${LOGO_SIZE} bytes)"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Logo.png za mały (${LOGO_SIZE} bytes) — prawdopodobnie corrupt"
+    WARN=$((WARN + 1))
+  fi
+else
+  echo "  ⚠️  Brak landing-pages/$SLUG/logo.png (HTML linkuje przez URL — OK jeśli celowe)"
+  WARN=$((WARN + 1))
 fi
 
 # ─── 4. Fade-in safety ───
@@ -135,6 +152,34 @@ check "OG image = pełny URL Supabase" "1" "$OG"
 
 LATIN=$(grep -cE "subset=latin-ext" "$FILE" || true)
 check "Fonty z subset=latin-ext (polskie znaki)" "1" "$LATIN"
+
+# Meta title length (≤ 60 znaków)
+TITLE=$(grep -oE "<title>[^<]+</title>" "$FILE" | sed 's/<title>//; s|</title>||')
+TITLE_LEN=${#TITLE}
+if [ "$TITLE_LEN" -gt 0 ] && [ "$TITLE_LEN" -le 60 ]; then
+  echo "  ✅ Meta title ≤ 60 znaków ($TITLE_LEN)"
+  PASS=$((PASS + 1))
+elif [ "$TITLE_LEN" -gt 60 ]; then
+  echo "  ⚠️  Meta title $TITLE_LEN znaków (SEO: ≤ 60)"
+  WARN=$((WARN + 1))
+else
+  echo "  ❌ Brak <title>"
+  FAIL=$((FAIL + 1))
+fi
+
+# Meta description length (≤ 160 znaków)
+DESC=$(grep -oE 'name="description"[^>]*content="[^"]+"' "$FILE" | sed 's/.*content="//; s/"$//')
+DESC_LEN=${#DESC}
+if [ "$DESC_LEN" -gt 0 ] && [ "$DESC_LEN" -le 160 ]; then
+  echo "  ✅ Meta description ≤ 160 znaków ($DESC_LEN)"
+  PASS=$((PASS + 1))
+elif [ "$DESC_LEN" -gt 160 ]; then
+  echo "  ⚠️  Meta description $DESC_LEN znaków (SEO: ≤ 160)"
+  WARN=$((WARN + 1))
+else
+  echo "  ❌ Brak meta description"
+  FAIL=$((FAIL + 1))
+fi
 
 # ─── 7. JS effects coverage (DESIGN.md D.1) ───
 echo ""
@@ -195,6 +240,6 @@ else
   echo "✅ Landing gotowy do ETAP 4 (Playwright visual verify)"
   echo ""
   echo "Następny krok:"
-  echo "  node _shoot.mjs  # z CLAUDE_LANDING_VERIFY.md"
-  echo "  # potem obejrzyj screenshoty i commit"
+  echo "  bash scripts/screenshot-landing.sh $SLUG"
+  echo "  # Potem obejrzyj screenshoty (Read tool) i commit"
 fi
