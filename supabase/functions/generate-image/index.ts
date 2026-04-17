@@ -64,7 +64,8 @@ async function generateWithGemini(
   prompt: string,
   count: number,
   apiKey: string,
-  referenceImages?: { url: string; type: 'logo' | 'product' }[]
+  referenceImages?: { url: string; type: 'logo' | 'product' }[],
+  aspectRatio?: string
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
 
   const model = 'gemini-3-pro-image-preview'
@@ -155,7 +156,7 @@ ${prompt}`
         generationConfig: {
           responseModalities: ['TEXT', 'IMAGE'],
           imageConfig: {
-            aspectRatio: '1:1'
+            aspectRatio: aspectRatio || '1:1'
           }
         }
       })
@@ -214,7 +215,16 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images } = body
+    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images, aspect_ratio } = body
+
+    // Validate aspect_ratio against Gemini-supported values
+    const ALLOWED_ASPECT_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']
+    const finalAspectRatio = aspect_ratio && ALLOWED_ASPECT_RATIOS.includes(aspect_ratio)
+      ? aspect_ratio
+      : '1:1'
+    if (aspect_ratio && aspect_ratio !== finalAspectRatio) {
+      console.warn(`Unsupported aspect_ratio "${aspect_ratio}" — falling back to 1:1. Allowed: ${ALLOWED_ASPECT_RATIOS.join(', ')}`)
+    }
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), {
@@ -236,7 +246,8 @@ Deno.serve(async (req) => {
       console.log(`Reference image: ${reference_image_url} (legacy format)`)
     }
 
-    const result = await generateWithGemini(prompt, count, apiKey, refImages)
+    console.log(`Aspect ratio: ${finalAspectRatio}`)
+    const result = await generateWithGemini(prompt, count, apiKey, refImages, finalAspectRatio)
 
     // Upload to Supabase Storage
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
