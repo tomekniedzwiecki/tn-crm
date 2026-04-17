@@ -17,6 +17,9 @@
   <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/paromia/logo.png" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Italiana&display=swap&subset=latin-ext" rel="stylesheet">
 
+  <!-- Mark JS-enabled before first paint (gates fade-in opacity) -->
+  <script>document.documentElement.classList.add('js')</script>
+
   <style>
     /* ═══════════════════════════════════════════════════════════
        PAROMIA — EDITORIAL / LUXURY
@@ -407,6 +410,9 @@
       font-family:var(--font-editorial);
       font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--slate);
     }
+
+    /* Mobile-only: 3-column spec row pod figurą */
+    .hero-spec-stack-mobile{display:none}
 
     /* ═══════════════ TRUST STRIP ═══════════════ */
     .trust-strip{
@@ -1131,9 +1137,11 @@
     }
     .footer-bottom-left{display:flex;gap:32px}
 
-    /* ═══════════════ ANIMATIONS ═══════════════ */
-    .fade-in{opacity:0;transform:translateY(30px);transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
-    .fade-in.visible{opacity:1;transform:translateY(0)}
+    /* ═══════════════ ANIMATIONS ═══════════════
+       Fade-in działa TYLKO gdy <html> ma klasę .js (dodawaną w <head>).
+       Bez JS — wszystko widoczne od razu (crawler, print, bot, fullpage screenshot). */
+    html.js .fade-in{opacity:0;transform:translateY(30px);transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
+    html.js .fade-in.visible{opacity:1;transform:translateY(0)}
 
     @keyframes steamDrift{
       0%,100%{transform:translate(0,0) scale(1);opacity:.3}
@@ -1175,10 +1183,27 @@
       .hero-lede{font-size:17px;margin:28px 0}
       .hero-ctas{flex-direction:column;gap:12px}
       .hero-ctas .btn{width:100%}
-      .hero-visual{min-height:420px}
-      .hero-spec-stack{bottom:24px;left:16px;gap:10px}
-      .hero-spec{padding:10px 14px}
-      .hero-spec strong{font-size:20px}
+      .hero-visual{min-height:auto}
+      /* Hero visual na mobile: square figure, chipsy mniejsze, spec schowany do pod-figury */
+      .hero-figure{aspect-ratio:1/1}
+      .hero-placeholder-ph{position:absolute;inset:16px;padding:20px 16px}
+      .hero-placeholder-ph .ph-mark{font-size:56px}
+      .hero-placeholder-ph .ph-title{font-size:22px}
+      .hero-placeholder-ph .ph-note{display:none}
+      .hero-chips{top:20px;left:20px;right:20px}
+      .hero-chip{font-size:9px;padding:8px 10px;letter-spacing:.2em}
+      .hero-figure .hero-spec-stack{display:none}
+      .hero-spec-stack-mobile{
+        display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+        margin-top:16px;
+      }
+      .hero-spec-stack-mobile .hero-spec{
+        padding:10px 8px;flex-direction:column;align-items:flex-start;gap:2px;
+        background:var(--paper-2);border:1px solid var(--rule);border-left:2px solid var(--teal);
+        font-family:var(--font-body);
+      }
+      .hero-spec-stack-mobile .hero-spec strong{font-family:var(--font-display);font-size:18px;font-weight:500;color:var(--ink);line-height:1;letter-spacing:-.02em}
+      .hero-spec-stack-mobile .hero-spec span{font-family:var(--font-editorial);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--slate)}
       .manifesto-stats{grid-template-columns:1fr 1fr;gap:24px}
       .manifesto-lede{font-size:20px}
       .stat-num{font-size:42px}
@@ -1220,11 +1245,16 @@
       position:fixed;bottom:24px;left:24px;right:24px;
       max-width:440px;margin:0 auto;
       background:var(--ink);color:var(--paper-2);
-      padding:20px 24px;border-radius:4px;
+      padding:16px 20px;border-radius:4px;
       box-shadow:var(--sh-xl);
       z-index:200;opacity:0;visibility:hidden;transform:translateY(10px);
       transition:all .5s ease;
-      display:flex;gap:16px;align-items:center;justify-content:space-between;
+      display:flex;gap:14px;align-items:center;justify-content:space-between;
+    }
+    @media (max-width:768px){
+      .cookie{bottom:12px;left:12px;right:12px;padding:12px 14px;gap:10px}
+      .cookie p{font-size:11px;line-height:1.4}
+      .cookie button{padding:8px 12px;font-size:10px;letter-spacing:.22em}
     }
     .cookie.show{opacity:1;visibility:visible;transform:translateY(0)}
     .cookie p{font-size:13px;color:rgba(245,241,234,.75);margin:0;line-height:1.5}
@@ -1320,21 +1350,21 @@
               <div class="ph-note">Wstaw zdjęcie produktu na neutralnym tle (ivory/paper).<br>Orientacja pionowa 4:5, przycięte ciasno.</div>
             </div>
             <div class="hero-spec-stack">
-              <div class="hero-spec">
-                <strong>26″</strong><span>do gotowości</span>
-              </div>
-              <div class="hero-spec">
-                <strong>30 kPa</strong><span>ciśnienie pary</span>
-              </div>
-              <div class="hero-spec">
-                <strong>730 g</strong><span>waga w dłoni</span>
-              </div>
+              <div class="hero-spec"><strong>26″</strong><span>do gotowości</span></div>
+              <div class="hero-spec"><strong>30 kPa</strong><span>ciśnienie pary</span></div>
+              <div class="hero-spec"><strong>730 g</strong><span>waga w dłoni</span></div>
             </div>
           </figure>
           <figcaption class="hero-caption">
             <span class="hero-caption-title">FIG. 01 — Paromia Handheld</span>
             <span class="hero-caption-meta">Nº 2026 / Edition I</span>
           </figcaption>
+          <!-- Mobile-only static spec row (desktop ukrywa) -->
+          <div class="hero-spec-stack-mobile">
+            <div class="hero-spec"><strong>26″</strong><span>do gotowości</span></div>
+            <div class="hero-spec"><strong>30 kPa</strong><span>ciśnienie pary</span></div>
+            <div class="hero-spec"><strong>730 g</strong><span>waga w dłoni</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1910,11 +1940,22 @@
   </div>
 
   <script>
-    // Fade-in observer
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
-    }, { threshold: 0.12 });
-    document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+    // Fade-in observer (tylko gdy IntersectionObserver istnieje,
+    // inaczej elementy są widoczne — patrz CSS html.js)
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+      }, { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+      document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+
+      // Safety: po 2.5 s wszystko co jeszcze nie jest visible — pokaż
+      // (bot bez scrolla, slow page, user prefers-reduced-motion)
+      setTimeout(() => {
+        document.querySelectorAll('.fade-in:not(.visible)').forEach(el => el.classList.add('visible'));
+      }, 2500);
+    } else {
+      document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+    }
 
     // Hamburger
     const h = document.getElementById('hamburger');

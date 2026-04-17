@@ -58,36 +58,40 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 
 Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
-### Generowanie landing page (3 etapy)
-**Pliki:** `CLAUDE_LANDING_PROCEDURE.md` + `CLAUDE_LANDING_REVIEW.md` + `CLAUDE_LANDING_DESIGN.md`
+### Generowanie landing page (4 etapy + biblioteka patternów)
+**Pliki:**
+- `CLAUDE_LANDING_PROCEDURE.md` — ETAP 1: generowanie (zaczyna się od **KRYTYCZNYCH LEKCJI** — przeczytaj pierwsze 80 linii!)
+- `CLAUDE_LANDING_REVIEW.md` — ETAP 2: weryfikacja treści
+- `CLAUDE_LANDING_DESIGN.md` — ETAP 3: dopracowanie estetyki
+- `CLAUDE_LANDING_VERIFY.md` — ETAP 4: **OBOWIĄZKOWY** Playwright screenshot 3 viewportów przed deployem
+- `CLAUDE_LANDING_PATTERNS.md` — biblioteka signature snippetów (kopiuj-wklej)
 
 Kiedy uzytkownik mowi "zrob landing dla workflow X":
 
 **ETAP 1 — Generowanie** (`CLAUDE_LANDING_PROCEDURE.md`):
-1. Przeczytaj procedurę
+1. Przeczytaj sekcję KRYTYCZNE LEKCJE (fade-in bug, mobile dual-bank, placeholder briefy)
 2. Pobierz branding, produkty, raporty z Supabase
-3. Wybierz motyw (ciemny/jasny) na podstawie kategorii
-4. Napisz copy dla kazdej sekcji (PAS framework)
-5. Wygeneruj kompletny `index.html` z inline CSS/JS
+3. Wybierz kierunek estetyczny
+4. Napisz copy (PAS framework, Senior Copywriter Playbook)
+5. Wygeneruj `index.html` — używaj gotowych snippetów z `CLAUDE_LANDING_PATTERNS.md`
 6. Zapisz do `landing-pages/[nazwa-marki]/index.html`
 
 **ETAP 2 — Weryfikacja treści** (`CLAUDE_LANDING_REVIEW.md`) — OBOWIĄZKOWY:
-1. Sprawdź kompletność sekcji (15 wymaganych)
-2. Sprawdź placeholdery zdjęć (min. 15-20)
-3. **HERO DEEP DIVE** — najważniejsza sekcja! (test 5 sekund)
-4. Zweryfikuj treści pod kątem grupy docelowej
-5. Sprawdź technikalia (fonty, meta, PageSpeed)
+kompletność sekcji, placeholdery, Hero deep dive, grupa docelowa, technikalia.
 
 **ETAP 3 — Dopracowanie designu** (`CLAUDE_LANDING_DESIGN.md`) — OBOWIĄZKOWY:
-1. Wybierz kierunek estetyczny (Luxury, Playful, Brutalist, Organic, Editorial, Retro-Futuristic)
-2. Dopracuj typografię (charakterystyczne fonty, nie generyczne)
-3. Dodaj głębię kolorom (nie czysty #000/#FFF)
-4. Przełam przewidywalność układu (asymetria, overlap, grid-breaking)
-5. Dodaj animacje i micro-interactions (staggered reveal, zaskakujące hovery)
-6. Dodaj tekstury i głębię tłom
-7. Dopiero po pozytywnej weryfikacji: commit & deploy
+kierunek estetyczny, typografia, głębia kolorów, asymetria, animacje, tekstury.
 
-Wzorce: `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (jasny, pet care, Playful/Toy-like).
+**ETAP 4 — Wizualna weryfikacja** (`CLAUDE_LANDING_VERIFY.md`) — OBOWIĄZKOWY:
+1. `npm install -D playwright && npx playwright install chromium` (pierwszy raz)
+2. Uruchom `_shoot.mjs` → screenshoty 3 viewportów (desktop 1440, tablet 768, mobile 375)
+3. Obejrzyj wszystkie — checklist z pliku
+4. Napraw wyłapane bugi, powtórz
+5. Dopiero po pozytywnej weryfikacji: commit & deploy
+
+**Dlaczego ETAP 4 jest obowiązkowy:** code review nie wyłapuje `opacity:0 + JS zależnego` buga, który ukrył 80% strony. Zawsze sprawdzaj screenshotem.
+
+Wzorce: `landing-pages/paromia/` (editorial/luxury), `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (playful/pet care).
 
 ### Generowanie copy reklamowego Meta Ads
 **Plik:** `CLAUDE_ADS_COPY_PROCEDURE.md`

@@ -19,16 +19,44 @@ Przed zmianami odpowiedz:
 
 Strona musi mieć **ODWAŻNY, SPÓJNY KIERUNEK**. Wybierz jeden:
 
-| Kierunek | Charakterystyka | Dla jakich produktów |
-|----------|-----------------|---------------------|
-| **Luxury/Refined** | Dużo białej przestrzeni, subtelne animacje, złote/srebrne akcenty | Premium, kosmetyki, biżuteria |
-| **Playful/Toy-like** | Zaokrąglone kształty, żywe kolory, bounce animations | Produkty dla dzieci, pet care, gadżety |
-| **Brutalist/Raw** | Mocne kontrasty, surowe fonty, grid-breaking elementy | Tech, startupy, edgy brands |
-| **Organic/Natural** | Miękkie gradienty, naturalne kolory, fluid shapes | Wellness, eko, zdrowie |
-| **Editorial/Magazine** | Duża typografia, asymetryczne layouty, dużo zdjęć | Lifestyle, moda, artykuły |
-| **Retro-Futuristic** | Neon na ciemnym, glitch effects, cyber vibes | Gaming, tech, młody target |
+| Kierunek | Charakterystyka | Dla jakich produktów | Referencje |
+|----------|-----------------|---------------------|-------------|
+| **Editorial/Luxury** ⭐ | Oversized serif, magazine numbering (Nº 01–10), asymetria, ciepłe neutralne tła, rzadki gold accent | Premium AGD, kosmetyki, home, lifestyle, travel | `landing-pages/paromia/` |
+| **Playful/Toy-like** | Zaokrąglone kształty, żywe kolory, bounce animations | Pet care, dzieci, gadżety | `landing-pages/pupilnik/` |
+| **Brutalist/Raw** | Mocne kontrasty, surowe fonty, grid-breaking | Tech, startupy, edgy | — |
+| **Organic/Natural** | Miękkie gradienty, naturalne kolory, fluid shapes | Wellness, eko, zdrowie | `landing-pages/h2vital/` |
+| **Retro-Futuristic** | Neon na ciemnym, glitch, cyber vibes | Gaming, tech, młody target | `landing-pages/vibestrike/` |
 
 **ZAPISZ WYBRANY KIERUNEK** — wszystkie decyzje muszą być z nim spójne.
+
+### Editorial/Luxury — preset (kopiuj-wklej)
+
+Dla produktów premium/lifestyle/AGD. Wzorzec referencyjny: `landing-pages/paromia/`.
+
+**Fonty:**
+- Display: **Fraunces** (variable, `opsz 144, SOFT 30–90`) — headlines
+- Editorial: **Italiana** / Didot — eyebrows, page numbers, captions
+- Body: **Inter** — czytelny neutralny
+
+**Kolorystyka:**
+- Tła: Bone Ivory `#F5F1EA` / `#FAF7F2` / `#EEE8DE` — warstwy ciepłego papieru
+- Ink: `#1A1A1F` (ciemny z nutą granatu, nie czysty czarny)
+- Primary: kolor marki (np. Steam Teal `#1E6F7A`)
+- Gold accent: `#C9A961` — rzadko, tylko w specsheet/final CTA
+
+**Sekcje** (10 + header/footer):
+Nº 01 Hero (asymetryczny, oversized numeral w tle) · Nº 02 Manifesto (sticky left + pull quote right) · Nº 03 Atelier/Features (asymmetric bento z 1 ciemną hero-tile) · Nº 04 Rytuał (3 akty z okrągłymi rzymskimi, linią łączącą) · Nº 05 Spec Sheet (ciemne tło) · Nº 06 Comparison (Poprzedni wiek vs Nowy standard) · Nº 07 Głosy (pull quotes, jedna featured ciemna) · Nº 08 FAQ (sticky-side layout) · Nº 09 Oferta · Nº 10 Final CTA (ciemny z gigantyczną cyfrą w tle).
+
+**Rytm tła:** jasno / jasno / jasno / jasno / **CIEMNO** / jasno / jasno / jasno / jasno / **CIEMNO** / **CIEMNO** (footer). Min. 2 ciemne pasy między jasnymi — to tempo redakcyjne.
+
+**Signature elements:**
+1. Magazine numbering (eyebrow `Nº 03 — Atelier`)
+2. Oversized editorial numeral w hero i final CTA
+3. Tile page numbers (`01 / 06` w rogu karty)
+4. FIG. 01 caption pod hero visual
+5. Italic em na kluczowych słowach (1–2 per headline, Fraunces `SOFT 90`)
+
+**Wszystkie snippety HTML/CSS** → `CLAUDE_LANDING_PATTERNS.md` (14 gotowych wzorców).
 
 ---
 

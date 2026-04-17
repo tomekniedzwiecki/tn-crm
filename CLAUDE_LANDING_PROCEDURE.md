@@ -1,16 +1,119 @@
 # Procedura: Generowanie Landing Page dla Workflow
 
-> **⚠️ STOP! TO JEST ETAP 1 Z 3 — NIE COMMITUJ PO WYGENEROWANIU HTML!**
+> **⚠️ STOP! TO JEST ETAP 1 Z 4 — NIE COMMITUJ PO WYGENEROWANIU HTML!**
 >
-> Pełna procedura landing page składa się z 3 OBOWIĄZKOWYCH etapów:
+> Pełna procedura landing page składa się z 4 OBOWIĄZKOWYCH etapów:
 >
 > | Etap | Plik | Co robisz |
 > |------|------|-----------|
 > | **1. Generowanie** | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Generujesz HTML |
 > | **2. Weryfikacja** | `CLAUDE_LANDING_REVIEW.md` | Sprawdzasz kompletność, Hero, placeholdery |
 > | **3. Design** | `CLAUDE_LANDING_DESIGN.md` | Dopracowujesz estetykę, animacje, typografię |
+> | **4. Wizualna weryfikacja** | `CLAUDE_LANDING_VERIFY.md` | Playwright screenshot 3 viewportów + deploy |
 >
-> **Dopiero po przejściu wszystkich 3 etapów robisz commit & deploy!**
+> **Dopiero po przejściu wszystkich 4 etapów robisz commit & deploy!**
+>
+> **Gotowe snippety** (signature patterns, fade-in safe, bento, spec sheet, editorial numerals):
+> → `CLAUDE_LANDING_PATTERNS.md` — biblioteka kopiuj-wklej.
+
+---
+
+## ⛔ KRYTYCZNE LEKCJE — PRZECZYTAJ ZANIM ZACZNIESZ
+
+Te problemy kosztowały godziny debugowania. Nie powtarzaj ich.
+
+### 1. Fade-in z `opacity:0` MUSI mieć fallback bez JS
+
+**Antywzorzec (ŹLE, ukrywa 80% strony gdy JS padnie / bot crawluje):**
+```css
+.fade-in { opacity: 0; transform: translateY(30px); transition: ... }
+.fade-in.visible { opacity: 1; }
+```
+
+**Poprawnie (gate'uj przez klasę `.js` na `<html>`):**
+```html
+<head>
+  ...
+  <script>document.documentElement.classList.add('js')</script>
+</head>
+```
+```css
+html.js .fade-in { opacity: 0; transform: translateY(30px); transition: ... }
+html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
+```
+```js
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver((es) => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+  }), { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+  // Safety: po 2.5s wszystko jeszcze niewidzialne → pokaż
+  setTimeout(() => document.querySelectorAll('.fade-in:not(.visible)').forEach(el => el.classList.add('visible')), 2500);
+} else {
+  document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+}
+```
+
+**Dlaczego:** crawler, fullpage screenshot, print, slow JS, wyłączony JS = 80% strony niewidoczne. Bez `html.js` gate'u nigdy tego nie zauważysz.
+
+### 2. Element absolutnie pozycjonowany WEWNĄTRZ karty nie przetrwa mobile
+
+Absolute positioning (spec badges nad produktem, floating elements) psuje się na mobile gdy kontener ma inny aspect-ratio. **Dwa banki treści:** jeden absolute desktop, drugi static mobile (pod kartą) z `display:none` na przeciwległym viewporcie.
+
+```html
+<figure class="hero-figure">
+  <div class="hero-spec-stack"><!-- absolute, desktop only --></div>
+</figure>
+<div class="hero-spec-stack-mobile"><!-- static, mobile only --></div>
+```
+```css
+.hero-spec-stack-mobile { display: none; }
+@media (max-width:768px) {
+  .hero-figure .hero-spec-stack { display: none; }
+  .hero-spec-stack-mobile { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px; }
+}
+```
+
+### 3. Placeholder MUSI być briefem dla klienta, nie „TODO"
+
+**ŹLE:**
+```html
+<div class="img-placeholder">Hero Image 1200×900</div>
+```
+
+**DOBRZE (4 pola: aspect, size px, content, ton/światło):**
+```html
+<div class="ph">
+  <div class="ph-mark">P</div>
+  <div class="ph-title">Fotografia produktowa</div>
+  <div class="ph-size">Paromia Handheld · 1200 × 1500</div>
+  <div class="ph-note">Neutralne tło (ivory/paper). Orientacja pionowa 4:5, przycięte ciasno. Światło miękkie, boczne.</div>
+</div>
+```
+
+### 4. Weryfikuj wizualnie w przeglądarce ZANIM commit
+
+**Nigdy nie commituj bez sprawdzenia screenshotem.** ETAP 4 (`CLAUDE_LANDING_VERIFY.md`) jest obowiązkowy. Code review nie wyłapuje bugów typu „80% strony niewidoczne przez opacity:0".
+
+### 5. Oversized editorial numeral > animated glow orbs
+
+Dla produktów premium/luxury/lifestyle — pojedyncza wielka cyfra w tle hero (Fraunces italic, 280-440px, color: paper-3) wygląda 10× bardziej profesjonalnie niż animowane glow orby. To jeden element, który klient zapamięta.
+
+```html
+<div class="hero-numeral">26<sup>sek.</sup></div>
+```
+```css
+.hero-numeral {
+  position: absolute; top: -40px; right: -20px; z-index: -1;
+  font-family: var(--font-display);
+  font-size: clamp(280px, 28vw, 440px);
+  font-weight: 300; font-style: italic;
+  color: var(--paper-3); letter-spacing: -.04em; line-height: .78;
+  user-select: none;
+}
+```
+
+---
 
 ---
 
