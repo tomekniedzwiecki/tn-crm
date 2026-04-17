@@ -150,17 +150,15 @@
     /* ─── Header ──────────────────────────── */
     .header{
       position:fixed;top:0;left:0;right:0;z-index:100;
-      background:rgba(248,250,252,.82);
-      backdrop-filter:saturate(180%) blur(20px);
-      -webkit-backdrop-filter:saturate(180%) blur(20px);
+      background:#FFFFFF;
       border-bottom:1px solid var(--rule);
     }
     .header-inner{
-      max-width:var(--container);margin:0 auto;padding:18px 32px;
+      max-width:var(--container);margin:0 auto;padding:16px 32px;
       display:flex;align-items:center;justify-content:space-between;gap:24px;
     }
-    .logo{display:flex;align-items:center;gap:10px;font-family:var(--font-editorial);font-style:italic;font-size:26px;color:var(--navy);letter-spacing:-.01em}
-    .logo img{height:32px;width:auto}
+    .logo{display:inline-flex;align-items:center}
+    .logo img{height:36px;width:auto;display:block}
     .nav{display:flex;gap:28px;align-items:center}
     .nav a{font-family:var(--font-body);font-size:14px;color:var(--ink-2);font-weight:500;transition:color .3s}
     .nav a:hover{color:var(--teal)}
@@ -323,43 +321,53 @@
     .atelier-grid{
       display:grid;
       grid-template-columns:repeat(3,1fr);
-      grid-auto-rows:minmax(320px,auto);
       gap:24px;
     }
     .tile{
       background:var(--paper-2);border:1px solid var(--rule);
-      padding:40px;border-radius:var(--radius);
+      padding:36px;border-radius:var(--radius);
       display:flex;flex-direction:column;
       position:relative;overflow:hidden;
       transition:all .4s cubic-bezier(.22,1,.36,1);
     }
     .tile:hover{border-color:var(--rule-strong);box-shadow:var(--sh-md);transform:translateY(-2px)}
-    .tile-num{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);margin-bottom:24px}
+    .tile-num{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);margin-bottom:20px}
     .tile-num b{color:var(--navy);font-weight:700}
-    .tile h3{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;color:var(--navy);line-height:1.2}
-    .tile p{color:var(--ink-2);font-size:15px;line-height:1.65}
+    .tile h3{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;color:var(--navy);line-height:1.25}
+    .tile p{color:var(--ink-2);font-size:15px;line-height:1.65;flex:1}
     .tile-figure{
-      margin:24px -40px -40px;aspect-ratio:16/10;
+      margin:24px -36px -36px;aspect-ratio:4/3;
       background:var(--paper-3);border-top:1px solid var(--rule);
       position:relative;overflow:hidden;
     }
-    .tile-figure img{width:100%;height:100%;object-fit:cover}
+    .tile-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
 
-    .tile.tile-hero{grid-column:span 2;grid-row:span 2;background:var(--navy);border-color:var(--navy);color:var(--paper-2)}
+    /* tile-hero: banner pełnej szerokości (3 kolumny) z dwiema kolumnami wewnątrz */
+    .tile.tile-hero{
+      grid-column:1 / -1;
+      background:var(--navy);border-color:var(--navy);color:var(--paper-2);
+      padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0;
+      min-height:380px;
+    }
+    .tile.tile-hero .tile-body{padding:56px 56px 56px 56px;display:flex;flex-direction:column;justify-content:center}
     .tile.tile-hero .tile-num{color:var(--slate-2)}
     .tile.tile-hero .tile-num b{color:var(--paper-2)}
-    .tile.tile-hero h3{color:var(--paper-2);font-size:clamp(32px,3vw,48px);letter-spacing:-.03em}
+    .tile.tile-hero h3{color:var(--paper-2);font-size:clamp(28px,2.6vw,40px);letter-spacing:-.03em;margin-bottom:16px}
     .tile.tile-hero h3 em{color:var(--teal)}
-    .tile.tile-hero p{color:var(--slate-2);font-size:17px;max-width:420px}
-    .tile.tile-hero .tile-figure{background:var(--midnight);border-top:1px solid rgba(255,255,255,.08)}
+    .tile.tile-hero p{color:var(--slate-2);font-size:16px;max-width:460px;line-height:1.6;flex:0}
+    .tile.tile-hero .tile-figure{
+      margin:0;aspect-ratio:auto;height:100%;min-height:380px;
+      background:var(--midnight);border-top:0;border-left:1px solid rgba(255,255,255,.08);
+    }
 
-    @media (max-width:1024px){
+    @media (max-width:900px){
       .atelier-grid{grid-template-columns:repeat(2,1fr)}
-      .tile.tile-hero{grid-column:span 2;grid-row:span 1}
+      .tile.tile-hero{grid-column:1 / -1;grid-template-columns:1fr;min-height:0}
+      .tile.tile-hero .tile-body{padding:36px 32px}
+      .tile.tile-hero .tile-figure{order:-1;min-height:0;aspect-ratio:16/10;border-left:0;border-bottom:1px solid rgba(255,255,255,.08)}
     }
     @media (max-width:600px){
       .atelier-grid{grid-template-columns:1fr}
-      .tile.tile-hero{grid-column:span 1}
       .tile{padding:32px}
       .tile-figure{margin:20px -32px -32px}
     }
@@ -407,26 +415,36 @@
       pointer-events:none;
     }
     .spec .container{position:relative;z-index:1}
-    .spec-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:96px;align-items:center}
-    .spec-header h2{color:var(--paper-2);margin-bottom:24px}
+    .spec-header{max-width:760px;margin:0 auto 80px;text-align:center}
+    .spec-header h2{color:var(--paper-2);margin-top:24px;margin-bottom:24px}
     .spec-header h2 em{color:var(--teal)}
-    .spec-header .section-lede{color:var(--slate-2)}
+    .spec-header .section-lede{color:var(--slate-2);margin:0 auto}
+
+    .spec-body{
+      display:grid;grid-template-columns:1.1fr 1fr;gap:72px;align-items:stretch;
+      max-width:1100px;margin:0 auto;
+    }
     .spec-figure{
-      aspect-ratio:1/1;
-      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
       border-radius:var(--radius);overflow:hidden;position:relative;
+      min-height:520px;
     }
-    .spec-list{margin-top:56px;border-top:1px solid rgba(255,255,255,.12)}
+    .spec-list{display:flex;flex-direction:column;justify-content:center}
+    .spec-list-title{font-family:var(--font-mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+    .spec-list-sub{font-family:var(--font-editorial);font-style:italic;font-size:24px;color:var(--paper-2);margin-bottom:32px;line-height:1.2}
     .spec-row{
-      display:grid;grid-template-columns:120px 1fr auto;gap:24px;align-items:baseline;
-      padding:24px 0;border-bottom:1px solid rgba(255,255,255,.08);
+      display:grid;grid-template-columns:1fr auto;gap:16px;align-items:baseline;
+      padding:20px 0;border-top:1px solid rgba(255,255,255,.1);
     }
-    .spec-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate-2)}
-    .spec-value{font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--paper-2);letter-spacing:-.01em}
-    .spec-unit{font-family:var(--font-mono);font-size:11px;color:var(--teal);letter-spacing:.12em}
+    .spec-row:last-child{border-bottom:1px solid rgba(255,255,255,.1)}
+    .spec-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate-2);line-height:1.4}
+    .spec-value-group{text-align:right;white-space:nowrap}
+    .spec-value{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--paper-2);letter-spacing:-.02em;line-height:1}
+    .spec-unit{display:block;font-family:var(--font-mono);font-size:9px;color:var(--teal);letter-spacing:.18em;margin-top:4px}
 
     @media (max-width:900px){
-      .spec-grid{grid-template-columns:1fr;gap:48px}
+      .spec-body{grid-template-columns:1fr;gap:40px;max-width:520px}
+      .spec-figure{min-height:320px;aspect-ratio:1/1}
     }
 
     /* ─── Nº 06 Dwie epoki (comparison) ───── */
@@ -525,38 +543,59 @@
       .faq-sticky{position:static}
     }
 
-    /* ─── Nº 10 Oferta ────────────────────── */
-    .offer{background:var(--paper);padding:var(--sec) 0;position:relative}
-    .offer-header{text-align:center;margin-bottom:64px;max-width:720px;margin-left:auto;margin-right:auto}
-    .offer-header h2{margin-top:24px}
-    .offer-box{
-      max-width:920px;margin:0 auto;
-      background:var(--paper-2);border:1px solid var(--rule-strong);
-      border-radius:var(--radius-lg);overflow:hidden;
-      display:grid;grid-template-columns:1fr 1.1fr;gap:0;
-      box-shadow:var(--sh-lg);
+    /* ─── Nº 10 Oferta (editorial spec-sheet) ──── */
+    .offer{background:var(--paper-2);padding:var(--sec) 0;position:relative}
+    .offer-shell{max-width:1100px;margin:0 auto}
+    .offer-head{display:grid;grid-template-columns:auto 1fr auto;gap:32px;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--rule-strong)}
+    .offer-tag{font-family:var(--font-mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal)}
+    .offer-headline{font-family:var(--font-editorial);font-style:italic;font-size:clamp(32px,3.6vw,56px);color:var(--navy);line-height:.95;letter-spacing:-.02em;margin:0}
+    .offer-sku{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);text-align:right;line-height:1.5}
+    .offer-sku b{color:var(--navy);font-weight:700}
+
+    .offer-main{display:grid;grid-template-columns:1.2fr 1fr;gap:64px;padding:56px 0;align-items:start}
+    .offer-figure{
+      aspect-ratio:4/3;background:var(--paper-3);
+      border:1px solid var(--rule);border-radius:var(--radius);
+      overflow:hidden;position:relative;
     }
-    .offer-figure{background:var(--paper-3);aspect-ratio:1/1;position:relative;overflow:hidden}
-    .offer-figure img{width:100%;height:100%;object-fit:cover}
-    .offer-body{padding:56px}
-    .offer-tag{font-family:var(--font-mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--teal);margin-bottom:20px}
-    .offer-title{font-size:clamp(28px,3vw,40px);font-weight:700;letter-spacing:-.025em;color:var(--navy);line-height:1.1;margin-bottom:24px}
-    .offer-price-row{display:flex;align-items:baseline;gap:16px;margin-bottom:8px}
-    .offer-price-old{font-family:var(--font-editorial);font-style:italic;font-size:22px;color:var(--coral);text-decoration:line-through;text-decoration-thickness:1px}
-    .offer-price-new{font-family:var(--font-display);font-size:clamp(44px,5vw,64px);font-weight:700;color:var(--navy);letter-spacing:-.03em;line-height:1}
-    .offer-price-new sup{font-family:var(--font-body);font-size:.3em;font-weight:500;vertical-align:super;margin-left:4px;letter-spacing:.02em}
-    .offer-savings{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin-bottom:32px}
-    .offer-list{list-style:none;padding:0;margin:0 0 32px;border-top:1px solid var(--rule)}
-    .offer-list li{padding:14px 0;border-bottom:1px solid var(--rule);display:flex;gap:16px;align-items:baseline;font-size:15px;color:var(--ink-2);line-height:1.5}
-    .offer-list li::before{content:attr(data-n);font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;color:var(--slate);min-width:28px}
-    .offer-btn{display:flex;width:100%;margin-bottom:20px;padding:22px 32px;font-size:14px}
-    .offer-guarantee{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--slate);text-align:center}
-    .offer-guarantee b{color:var(--navy);font-weight:700}
+    .offer-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
+    .offer-figure-caption{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);margin-top:14px}
+
+    .offer-price-stack{display:flex;flex-direction:column;gap:0}
+    .offer-price-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--slate);margin-bottom:4px}
+    .offer-price-row{display:flex;align-items:baseline;gap:18px;margin-bottom:8px}
+    .offer-price-new{font-family:var(--font-display);font-size:clamp(56px,6.5vw,96px);font-weight:700;color:var(--navy);letter-spacing:-.04em;line-height:.9}
+    .offer-price-new sup{font-family:var(--font-body);font-size:.22em;font-weight:500;vertical-align:top;margin-left:6px;letter-spacing:.04em;color:var(--ink-2)}
+    .offer-price-old{font-family:var(--font-editorial);font-style:italic;font-size:20px;color:var(--coral);text-decoration:line-through}
+    .offer-savings{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);padding:8px 0 0;border-top:1px solid var(--rule);margin-top:8px}
+
+    .offer-btn{display:flex;width:100%;margin:32px 0 16px;padding:24px 32px;font-size:14px}
+    .offer-guarantee-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:24px;border-top:1px solid var(--rule)}
+    .offer-guar{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);line-height:1.5}
+    .offer-guar b{color:var(--navy);font-weight:700;display:block;font-size:13px;letter-spacing:-.01em;text-transform:none;font-family:var(--font-display);margin-bottom:2px}
+
+    .offer-contents{border-top:1px solid var(--rule-strong);padding-top:48px}
+    .offer-contents-head{display:flex;justify-content:space-between;align-items:baseline;gap:24px;margin-bottom:28px;flex-wrap:wrap}
+    .offer-contents-title{font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--navy);letter-spacing:-.01em}
+    .offer-contents-sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate)}
+    .offer-contents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--rule)}
+    .offer-item{padding:22px 24px 22px 0;border-bottom:1px solid var(--rule);display:flex;gap:14px;align-items:baseline}
+    .offer-item:nth-child(3n){padding-right:0}
+    .offer-item:nth-child(3n-2){padding-right:24px;border-right:1px solid var(--rule)}
+    .offer-item:nth-child(3n-1){padding-left:24px;padding-right:24px;border-right:1px solid var(--rule)}
+    .offer-item:nth-child(3n){padding-left:24px}
+    .offer-item .num{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;color:var(--teal);min-width:20px}
+    .offer-item .desc{font-size:14px;color:var(--ink-2);line-height:1.55}
+    .offer-item .desc b{color:var(--navy);font-weight:600;display:block;font-size:13px;letter-spacing:-.005em;margin-bottom:2px}
 
     @media (max-width:900px){
-      .offer-box{grid-template-columns:1fr}
-      .offer-figure{aspect-ratio:16/10}
-      .offer-body{padding:40px 28px}
+      .offer-head{grid-template-columns:1fr;gap:12px}
+      .offer-sku{text-align:left}
+      .offer-main{grid-template-columns:1fr;gap:40px;padding:40px 0}
+      .offer-price-new{font-size:clamp(48px,14vw,72px)}
+      .offer-guarantee-row{grid-template-columns:1fr}
+      .offer-contents-grid{grid-template-columns:1fr}
+      .offer-item,.offer-item:nth-child(3n),.offer-item:nth-child(3n-1),.offer-item:nth-child(3n-2){padding:18px 0;border-right:0}
     }
 
     /* ─── Finał (dark CTA) ────────────────── */
@@ -627,9 +666,8 @@
   <!-- Header -->
   <header class="header">
     <div class="header-inner">
-      <a href="#top" class="logo">
-        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/vitrix/logo.png" alt="Vitrix" width="32" height="32">
-        Vitrix
+      <a href="#top" class="logo" aria-label="Vitrix — strona główna">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/vitrix/logo.png" alt="Vitrix" width="140" height="36">
       </a>
       <nav class="nav">
         <a href="#atelier">Funkcje</a>
@@ -741,11 +779,13 @@
 
       <div class="atelier-grid">
         <div class="tile tile-hero fade-in">
-          <div class="tile-num"><b>A.01</b> — Core</div>
-          <h3>Moc ssania <em>5800 Pa</em>. Klasa odniesienia.</h3>
-          <p>Trzy razy taniej niż Ecovacs czy Hobot, porównywalna siła przylegania. Trzyma się pewnie nawet na mokrej szybie, pod kątem, na oknach wielkoformatowych 2×2 m.</p>
+          <div class="tile-body">
+            <div class="tile-num"><b>A.01</b> — Core</div>
+            <h3>Moc ssania <em>5800 Pa</em>. Klasa odniesienia.</h3>
+            <p>Trzy razy taniej niż Ecovacs czy Hobot, porównywalna siła przylegania. Trzyma się pewnie nawet na mokrej szybie, pod kątem, na oknach wielkoformatowych 2×2 m.</p>
+          </div>
           <div class="tile-figure">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/vitrix/1776059897924_0.jpg" alt="Detal przylegania robota do szyby" width="800" height="500" loading="lazy">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/vitrix/1776059897924_0.jpg" alt="Detal przylegania robota do szyby" width="800" height="600" loading="lazy">
           </div>
         </div>
 
@@ -823,29 +863,29 @@
   <!-- ═════════ Nº 05 Specyfikacja (dark) ═════════ -->
   <section class="spec">
     <div class="container">
-      <div class="spec-grid">
-        <div class="spec-header fade-in">
-          <div class="eyebrow light"><span class="num">Nº 05</span><span class="line"></span><span>Specyfikacja</span></div>
-          <h2 class="section-title">Precyzja <em>na liczbach</em>.</h2>
-          <p class="section-lede">Dla tych, którzy chcą wiedzieć co kupują. Pełna karta techniczna bez marketingowego żargonu — tylko liczby, które mają znaczenie podczas pracy z szybą 2 m².</p>
+      <div class="spec-header fade-in">
+        <div class="eyebrow center light"><span class="line"></span><span class="num">Nº 05</span><span>Specyfikacja</span><span class="line"></span></div>
+        <h2 class="section-title">Precyzja <em>na liczbach</em>.</h2>
+        <p class="section-lede">Dla tych, którzy chcą wiedzieć co kupują. Karta techniczna bez marketingowego żargonu — tylko liczby, które mają znaczenie w pracy z szybą 2 m².</p>
+      </div>
+      <div class="spec-body">
+        <div class="spec-figure fade-in">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:48px;text-align:center;gap:12px;color:var(--slate-2);font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase">
+            <div style="font-family:var(--font-editorial);font-style:italic;font-size:72px;color:var(--paper-2);line-height:1;letter-spacing:-.02em">Fig.</div>
+            <div style="font-family:var(--font-display);font-size:22px;color:var(--paper-2);font-weight:700;text-transform:none;letter-spacing:-.01em">Przekrój techniczny</div>
+            <div style="font-size:10px;max-width:300px;margin-top:14px;line-height:1.5">Ilustracja inżynieryjna — komora ssania, czujniki krawędzi, akumulator UPS, silnik wodzenia · 1000 × 1000 px</div>
+            <div style="margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.14);font-size:9px;opacity:.7;max-width:260px;line-height:1.6">Brief: render 3D lub wire-frame od strony przylegania, tło midnight #0A1628, bez cieni</div>
+          </div>
         </div>
-        <div class="fade-in">
-          <div class="spec-figure">
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px;text-align:center;gap:10px;color:var(--slate-2);font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase">
-              <div style="font-family:var(--font-editorial);font-style:italic;font-size:64px;color:var(--paper-2);line-height:1;letter-spacing:-.02em">Fig.</div>
-              <div style="font-family:var(--font-display);font-size:28px;color:var(--paper-2);font-weight:700">Przekrój techniczny</div>
-              <div style="font-size:10px;max-width:280px;margin-top:16px">Ilustracja inżynieryjna Vitrix — komora ssania, czujniki krawędzi, akumulator UPS, silnik wodzenia · 1000 × 1000 px, orientacja kwadrat</div>
-              <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);font-size:9px;opacity:.6">Brief dla fotografa / grafika: render 3D lub wire-frame od strony przylegania, tło czyste midnight #0A1628, bez cieni</div>
-            </div>
-          </div>
-          <div class="spec-list">
-            <div class="spec-row"><span class="spec-label">Moc ssania</span><span class="spec-value">5800 Pa</span><span class="spec-unit">PASCAL</span></div>
-            <div class="spec-row"><span class="spec-label">Zasilanie awaryjne</span><span class="spec-value">20 min</span><span class="spec-unit">UPS · LI-ION</span></div>
-            <div class="spec-row"><span class="spec-label">Minimalny format szyby</span><span class="spec-value">40 × 40 cm</span><span class="spec-unit">CM × CM</span></div>
-            <div class="spec-row"><span class="spec-label">Linka bezpieczeństwa</span><span class="spec-value">5 m</span><span class="spec-unit">KEVLAR</span></div>
-            <div class="spec-row"><span class="spec-label">Masa</span><span class="spec-value">3,2 kg</span><span class="spec-unit">KG</span></div>
-            <div class="spec-row"><span class="spec-label">Odporność</span><span class="spec-value">IPX4</span><span class="spec-unit">ROZPRYSKI WODY</span></div>
-          </div>
+        <div class="spec-list fade-in">
+          <div class="spec-list-title">Karta techniczna</div>
+          <div class="spec-list-sub">Sześć liczb, które decydują o pracy.</div>
+          <div class="spec-row"><span class="spec-label">Moc ssania</span><div class="spec-value-group"><span class="spec-value">5800 Pa</span><span class="spec-unit">Pascal</span></div></div>
+          <div class="spec-row"><span class="spec-label">Zasilanie awaryjne</span><div class="spec-value-group"><span class="spec-value">20 min</span><span class="spec-unit">UPS Li-Ion</span></div></div>
+          <div class="spec-row"><span class="spec-label">Format szyby min.</span><div class="spec-value-group"><span class="spec-value">40 × 40 cm</span><span class="spec-unit">Szer. × wys.</span></div></div>
+          <div class="spec-row"><span class="spec-label">Linka bezpieczeństwa</span><div class="spec-value-group"><span class="spec-value">5 m</span><span class="spec-unit">Kevlar</span></div></div>
+          <div class="spec-row"><span class="spec-label">Masa</span><div class="spec-value-group"><span class="spec-value">3,2 kg</span><span class="spec-unit">Kilogramy</span></div></div>
+          <div class="spec-row"><span class="spec-label">Odporność</span><div class="spec-value-group"><span class="spec-value">IPX4</span><span class="spec-unit">Rozpryski wody</span></div></div>
         </div>
       </div>
     </div>
@@ -1022,33 +1062,56 @@
   <!-- ═════════ Nº 10 Oferta ═════════ -->
   <section class="offer" id="offer">
     <div class="container">
-      <div class="offer-header fade-in">
-        <div class="eyebrow center"><span class="line"></span><span class="num">Nº 10</span><span>Oferta</span><span class="line"></span></div>
-        <h2 class="section-title">Weekend wraca <em>za 499 zł</em>.</h2>
-      </div>
-      <div class="offer-box fade-in">
-        <div class="offer-figure">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/vitrix/1776061463987_0.jpg" alt="Kompletny zestaw Vitrix — robot, pilot, ściereczki, linka" width="800" height="800" loading="lazy">
+      <div class="offer-shell">
+
+        <div class="offer-head fade-in">
+          <span class="offer-tag">Nº 10 · Oferta</span>
+          <h2 class="offer-headline">Weekend wraca <em style="color:var(--teal);font-family:inherit">po cichu</em>.</h2>
+          <div class="offer-sku"><b>Bestseller 2026</b><br>SKU · VTX-5800-STD</div>
         </div>
-        <div class="offer-body">
-          <div class="offer-tag">Zestaw startowy · Bestseller 2026</div>
-          <h3 class="offer-title">Vitrix — Robot do mycia okien</h3>
-          <div class="offer-price-row">
-            <span class="offer-price-old">699 zł</span>
-            <span class="offer-price-new">499<sup>zł</sup></span>
+
+        <div class="offer-main fade-in">
+          <div>
+            <div class="offer-figure">
+              <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/vitrix/1776061463987_0.jpg" alt="Zestaw startowy Vitrix — robot, pilot, akcesoria" width="900" height="675" loading="lazy">
+            </div>
+            <div class="offer-figure-caption">Fig. 10 — Zestaw startowy Vitrix, komplet 6 elementów.</div>
           </div>
-          <div class="offer-savings">Oszczędzasz 200 zł · rabat −29%</div>
-          <ul class="offer-list">
-            <li data-n="01">Robot Vitrix, moc ssania 5800 Pa, masa 3,2 kg</li>
-            <li data-n="02">Pilot zdalnego sterowania + baterie</li>
-            <li data-n="03">Zestaw 4 ściereczek z mikrofibry</li>
-            <li data-n="04">Linka bezpieczeństwa kevlar, 5 m</li>
-            <li data-n="05">Zasilacz z UPS + przedłużacz 3 m</li>
-            <li data-n="06">Instrukcja PL + 2 lata gwarancji producenta</li>
-          </ul>
-          <a href="https://vitrix.pl/checkout?products=103042102-321230281" class="btn btn-primary offer-btn">Zamów za 499 zł</a>
-          <div class="offer-guarantee"><b>30 dni</b> na zwrot bez pytań · <b>2 lata</b> gwarancji</div>
+
+          <div>
+            <div class="offer-price-stack">
+              <div class="offer-price-label">Cena promocyjna · obowiązuje do końca miesiąca</div>
+              <div class="offer-price-row">
+                <span class="offer-price-new">499<sup>zł</sup></span>
+                <span class="offer-price-old">699 zł</span>
+              </div>
+              <div class="offer-savings">Oszczędzasz 200 zł · rabat −29%</div>
+            </div>
+
+            <a href="https://vitrix.pl/checkout?products=103042102-321230281" class="btn btn-primary offer-btn">Zamów — odbierz weekend</a>
+
+            <div class="offer-guarantee-row">
+              <div class="offer-guar"><b>30 dni</b>Zwrot bez pytań</div>
+              <div class="offer-guar"><b>2 lata</b>Gwarancja producenta</div>
+            </div>
+          </div>
         </div>
+
+        <div class="offer-contents fade-in">
+          <div class="offer-contents-head">
+            <div class="offer-contents-title">Zawartość zestawu</div>
+            <div class="offer-contents-sub">Sześć elementów · dostawa w 48 h</div>
+          </div>
+          <div class="offer-contents-grid">
+            <div class="offer-item"><span class="num">01</span><span class="desc"><b>Robot Vitrix</b>Moc ssania 5800 Pa · masa 3,2 kg</span></div>
+            <div class="offer-item"><span class="num">02</span><span class="desc"><b>Pilot zdalny</b>Pełna kontrola · baterie w zestawie</span></div>
+            <div class="offer-item"><span class="num">03</span><span class="desc"><b>4 ściereczki</b>Mikrofibra 100% · prane do 60 °C</span></div>
+            <div class="offer-item"><span class="num">04</span><span class="desc"><b>Linka bezpieczeństwa</b>Kevlar · długość 5 m</span></div>
+            <div class="offer-item"><span class="num">05</span><span class="desc"><b>Zasilacz z UPS</b>Li-Ion · przedłużacz 3 m w komplecie</span></div>
+            <div class="offer-item"><span class="num">06</span><span class="desc"><b>Dokumenty</b>Instrukcja PL · karta gwarancyjna 2 lata</span></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>

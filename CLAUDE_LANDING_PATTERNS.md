@@ -686,6 +686,147 @@ część (`strong`, `em`, `span`) ląduje w osobnej linii — rozjazd 3 linie pe
 
 ---
 
+## 16. Dyscyplina obrazów w boxach (IMAGE-BOX FIT) — krytyczny pattern
+
+**Dlaczego osobny pattern:** „zdjęcia nie mieszczą się w boxach" to najczęstszy widoczny bug landing pages. Ucięte krawędzie, puste komórki grida, rozjechane proporcje, figura za mała vs kafelka — to rzuca się klientowi w oczy bardziej niż typografia.
+
+### Zasada 1 — Policz komórki grida ZANIM napiszesz pierwszą kafelkę
+
+Bento z asymetrycznie powiększoną kartą to klasyczna pułapka.
+
+**Formuła:**
+```
+liczba_tiles × 1  +  Σ(span_extra każdej tile) = pełna liczba komórek grida
+```
+
+**Przykład złego layoutu:** 3 kolumny, 4 tiles, jedna ma `grid-column:span 2; grid-row:span 2` (zajmuje 4 komórki). 4 tiles = 3 normalne (po 1) + 1 featured (4) = 7 komórek z 3×3=9 → **2 puste = widoczne dziury**.
+
+**Dobre layouty dla 4 tiles z jedną featured:**
+
+| Wariant | Układ | Komórek |
+|---|---|---|
+| **Banner top (3-col)** | hero `grid-column:1/-1` (row 1), 3 tiles row 2 | 3+3=6 |
+| **Zebra (2-col)** | hero span 2 row 1, 2 tiles row 2, 4. tile span 2 row 3 | 2+2+2=6 |
+| **L-shape (2-col)** | hero span 2 row 1, 2 tiles row 2, 1 tile span 2 row 3 | 2+2+2=6 |
+
+Przed kodowaniem zrób rysunek ASCII:
+```
+┌──────────────────┐
+│ HERO (span 1/-1) │  row 1
+├─────┬─────┬──────┤
+│ T2  │ T3  │  T4  │  row 2 — perfect fill
+└─────┴─────┴──────┘
+```
+
+### Zasada 2 — aspect-ratio dopasowany do orientacji zdjęć
+
+**Nigdy nie wymuszaj jednego aspect-ratio globalnie.** Dostosuj do typu zdjęć w sekcji.
+
+| Typ zdjęcia | aspect-ratio | Dlaczego |
+|---|---|---|
+| Produkt packshot | `1/1` lub `4/5` | Symetria, eliminuje cropping |
+| Produkt w użyciu / lifestyle | `4/3` lub `16/10` | Krajobraz, osoba + kontekst |
+| Przekrój techniczny | `1/1` | Symetria, centered |
+| Hero / banner | `16/9` lub `21/9` | Cinematograficzne |
+| Portret persony | `4/5` | Pionowy, twarz + ramiona w kadrze |
+| How-it-works krok | `4/3` | Instruktaż |
+
+**Anti-pattern:** `aspect-ratio: 16/10` dla zdjęcia portretowego 4/5 + `object-fit:cover` → cropujesz twarz do pasa. Rozwiązanie: dopasuj aspect-ratio boxa do zdjęcia, nie odwrotnie.
+
+### Zasada 3 — `object-fit:cover` ZAWSZE razem z `object-position`
+
+```css
+.tile-figure img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center;  /* decyduje CO zostaje w kadrze przy cropowaniu */
+}
+```
+
+| Pozycja | Kiedy |
+|---|---|
+| `center` | Packshoty, lifestyle krajobrazowy, domyślne |
+| `center top` | Portrety (głowa zawsze w kadrze), produkty pionowe |
+| `center 40%` | Produkty w użyciu (twarz nad akcją) |
+| `center bottom` | Gdy ważna jest podstawa / detal dolny |
+
+### Zasada 4 — separacja `tile-body` + `tile-figure` flexem (nieświadoma wyrównywaczka wysokości)
+
+Kafelki mają różne długości tekstu. Bez wyrównania figury pływają na różnych wysokościach → wygląda niechlujnie.
+
+**HTML:**
+```html
+<div class="tile">
+  <div class="tile-body">
+    <div class="tile-num">A.01</div>
+    <h3>Title</h3>
+    <p>Body — dowolnej długości.</p>
+  </div>
+  <div class="tile-figure">
+    <img src="..." alt="...">
+  </div>
+</div>
+```
+
+**CSS:**
+```css
+.tile { display:flex; flex-direction:column; height:100% }
+.tile-body { padding:32px; flex:1 }   /* rośnie, wypełnia wolną przestrzeń */
+.tile-figure {
+  aspect-ratio: 4/3;
+  background: var(--paper-3);
+  border-top: 1px solid var(--rule);
+}
+.tile-figure img { width:100%; height:100%; object-fit:cover; object-position:center }
+```
+
+**Efekt:** wszystkie figury wyrównane na dnie. Tekst rośnie, figura stała.
+
+### Zasada 5 — tile-hero (featured) ma wewnętrzny grid 2-kolumnowy
+
+Gdy kafelka zajmuje 2+ kolumn, **nie rób z niej pionowej** (tekst-nad-figurą na całej szerokości wygląda jak zwykła kafelka przeciągnięta). Zrób wewnętrzny 2-col grid: tekst lewo, figura prawo.
+
+```css
+.tile.tile-hero {
+  grid-column: 1 / -1;                     /* full width w zewn. gridzie */
+  display: grid; grid-template-columns: 1fr 1fr;
+  padding: 0;                              /* wewn. body/figure mają swój padding */
+  min-height: 380px;
+}
+.tile.tile-hero .tile-body { padding:56px; display:flex; flex-direction:column; justify-content:center }
+.tile.tile-hero .tile-figure {
+  margin: 0;
+  aspect-ratio: auto;                      /* wypełnia wysokość grida */
+  height: 100%; min-height: 380px;
+  border-top: 0;
+  border-left: 1px solid var(--rule);
+}
+
+@media (max-width:900px) {
+  .tile.tile-hero { grid-template-columns: 1fr; min-height: 0 }
+  .tile.tile-hero .tile-figure {
+    order: -1;                             /* na mobile figura na górze */
+    aspect-ratio: 16/10;                   /* wracamy do fixed ratio */
+    height: auto; min-height: 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+}
+```
+
+### Anty-wzorce (NIE RÓB)
+
+| ❌ Złe | ✅ Dobre |
+|---|---|
+| Bento 3-col z hero spans 2×2 + 3 zwykłe tiles → 2 puste komórki | Policz tiles × span przed CSS, wybierz układ bez dziur |
+| Jeden globalny `aspect-ratio` dla wszystkich figure'ów | Per-sekcję (portret 4/5, packshot 1/1, lifestyle 16/10) |
+| `object-fit: cover` bez `object-position` | Zawsze parą — position decyduje co zostaje po cropie |
+| `tile-figure { aspect-ratio: 16/10 }` + tile-hero wysoki na 2 wiersze → figura dziwnie spłaszczona | Tile-hero: `aspect-ratio: auto; height:100%` (wypełnia grida) |
+| `<img width="800" height="500">` gdy zdjęcie realnie 4/5 | Dopasuj `width/height` do realnej proporcji (CLS + właściwy crop) |
+| Kafelki bez `flex:1` na body → figury na różnych wysokościach | `tile-body { flex:1 }` wyrównuje automatycznie |
+
+---
+
 ## Kiedy NIE używać tych patternów
 
 - **Sportowa/tech/gaming** marka → kierunek retro-futuristic, brutalist. Te patterny są za „miękkie".

@@ -1,8 +1,57 @@
 # Procedura dopracowania designu Landing Page
 
-**Kiedy wywołać:** Po zakończeniu weryfikacji treści (CLAUDE_LANDING_REVIEW.md).
+**Kiedy wywołać:** Po zakończeniu weryfikacji treści (CLAUDE_LANDING_REVIEW.md) **i manifesto kierunku** (CLAUDE_LANDING_DIRECTION.md).
 
 Ta procedura przekształca "poprawny szablon" w **wyróżniającą się stronę marki**.
+
+---
+
+## 0. Zasady bezwarunkowe (przed wszystkim innym)
+
+Te zasady obowiązują **niezależnie od wybranego kierunku** (Editorial, Organic, Playful, Brutalist, własny). Nie mają wyjątków.
+
+### 0.1 Header ZAWSZE biały
+
+```css
+.header{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:#FFFFFF;               /* nie paper-2, nie backdrop-filter, nie rgba — czysty #FFF */
+  border-bottom:1px solid var(--rule);
+}
+```
+
+**Dlaczego:**
+- Biały header zawsze kontrastuje z zawartością poniżej (hero, sekcje ciemne), niezależnie od palety produktu.
+- Logo klienta jest zaprojektowane na białym tle — każdy inny kolor w headerze psuje jego czytelność.
+- Użytkownik ustalił tę zasadę jako bezwzględną dla wszystkich landingów.
+
+**NIE rób:** `rgba(...)` z `backdrop-filter: blur()` ani `var(--paper)` (off-white). Header ma być #FFFFFF zawsze.
+
+### 0.2 Logo w headerze: tylko grafika, bez napisu tekstowego obok
+
+Jeśli logo zawiera już nazwę marki, **nie dublujemy jej tekstem obok**.
+
+```html
+<!-- ✅ DOBRZE -->
+<a href="#top" class="logo" aria-label="[Marka] — strona główna">
+  <img src="...logo.png" alt="[Marka]" width="140" height="36">
+</a>
+
+<!-- ❌ ŹLE — dublowanie nazwy -->
+<a href="#top" class="logo">
+  <img src="...logo.png" alt="[Marka]"> [Marka]
+</a>
+```
+
+Wyjątek: logo klienta jest bez napisu (tylko symbol) i marka jest mało znana → można dodać wordmark obok. Ale **nigdy gdy logo już zawiera nazwę**.
+
+### 0.3 Header MA BYĆ fixed + zawsze widoczny
+
+- `position: fixed; top: 0;`
+- Bez hide-on-scroll JavaScript
+- Z-index ≥ 100
+
+Obowiązkowe — Conversion Toolkit wymaga, użytkownik scrollujący powinien mieć CTA w headerze stale dostępne.
 
 ---
 
