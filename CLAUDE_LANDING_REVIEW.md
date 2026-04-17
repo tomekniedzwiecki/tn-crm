@@ -8,29 +8,44 @@ Ta procedura jest **obowiązkowa** — nie kończ pracy nad landingiem bez jej w
 
 ## 1. Checklist sekcji i obrazów
 
-Sprawdź czy landing zawiera **wszystkie** poniższe sekcje z miejscami na zdjęcia:
+Checklist pokrywa **funkcje** sekcji, nie dokładne nazwy. Dla kierunku
+Editorial/Luxury (patrz `CLAUDE_LANDING_DESIGN.md`) nazwy mogą wyglądać
+inaczej, ale każda **funkcja** musi być pokryta.
 
-| # | Sekcja | Min. obrazów | Sprawdzone |
-|---|--------|--------------|------------|
-| 1 | Header + Logo | 1 (logo) | [ ] |
-| 2 | Hero | 1-2 (produkt główny) | [ ] |
-| 3 | Trust Bar | 0 (ikony SVG) | [ ] |
-| 4 | Product Showcase / Gallery | 2-4 (galeria produktu) | [ ] |
-| 5 | Problem | 1 (ilustracja problemu) | [ ] |
-| 6 | Solution / Benefits | 3-4 (każda korzyść = 1 obraz) | [ ] |
-| 7 | Technology / How It's Made | 1 (wizualizacja technologii) | [ ] |
-| 8 | How It Works (kroki) | 3 (każdy krok = 1 obraz) | [ ] |
-| 9 | Personas / For Who | 3 (każda persona = 1 obraz) | [ ] |
-| 10 | Testimonials | 0 (awatary tekstowe OK) | [ ] |
-| 11 | Package / What's Included | 1 (zestaw/unboxing) | [ ] |
-| 12 | Offer / Pricing | 1 (produkt w ofercie) | [ ] |
-| 13 | FAQ | 0 | [ ] |
-| 14 | CTA Banner | 0 | [ ] |
-| 15 | Footer | 1 (logo) | [ ] |
+| # | Funkcja | Editorial nazwa (przykład) | Min. obrazów | OK |
+|---|---------|---------------------------|--------------|-----|
+| 1 | Header + Logo | — | 1 (logo) | [ ] |
+| 2 | Hero | Nº 01 | 1–2 (produkt główny) | [ ] |
+| 3 | Trust Bar | Trust Strip | 0 (ikony/SVG) | [ ] |
+| 4 | Product Showcase / Gallery | rozproszone w bento figures | 2–4 zdjęcia detali | [ ] |
+| 5 | Problem | Nº 02 Manifesto | 1 (ilustracja) | [ ] |
+| 6 | Solution / Benefits | Nº 03 Atelier (bento) | 3–4 (figure w tile) | [ ] |
+| 7 | Technology / How It's Made | Nº 05 Spec Sheet | 1 (przekrój techniczny) | [ ] |
+| 8 | How It Works (kroki) | Nº 04 Rytuał | 3 (każdy akt = 1 obraz) | [ ] |
+| 9 | Personas / For Who | Nº 07 Dla Kogo | 3 (każda persona = 1 portret) | [ ] |
+| 10 | Comparison | Nº 06 Dwie epoki | 0 (tekst + lista) | [ ] |
+| 11 | Testimonials | Nº 08 Głosy | 0 (awatary-inicjały OK) | [ ] |
+| 12 | Package / What's Included | w Offer | 1 (zestaw/unboxing) | [ ] |
+| 13 | Offer / Pricing | Nº 10 Oferta | 1 (produkt w ofercie) | [ ] |
+| 14 | FAQ | Nº 09 Pytania | 0 | [ ] |
+| 15 | CTA Banner / Final | Nº 11 Finał | 0 | [ ] |
+| 16 | Footer | — | 1 (logo) | [ ] |
 
-**Minimum obrazów na stronie: 15-20 placeholderów**
+**Minimum placeholderów obrazów na stronie: 12–20.**
 
-Jeśli brakuje sekcji lub obrazów — **dodaj je przed kontynuowaniem**.
+Editorial/Luxury typowo ląduje na dolnej granicy (12–15) — typografia
+dominuje. Playful/Tech — górna granica (18–20). **NIGDY** poniżej 12.
+
+### Mapowanie — jak potraktować brak dokładnego odpowiednika
+
+| Procedura wymaga | Editorial odpowiednik | Co sprawdzić |
+|------------------|----------------------|--------------|
+| „Product Gallery" jako sekcja | figury w bento t-tall + hero-figure + offer-figure | Czy łącznie ≥ 3 widoki produktu z różnych ujęć? |
+| „How It's Made" osobno | wewnątrz Spec Sheet | Czy jest wizualizacja technologii / przekrój? |
+| „Personas" sekcja | Nº 07 Dla Kogo | 3 karty × {portret + imię + meta + pull quote} |
+| „Package" | lista w Offer | Wyraźna lista 4–6 pozycji zestawu startowego |
+
+Jeśli brakuje **funkcji** (nie samej nazwy) — dodaj ją przed kontynuowaniem.
 
 ---
 
@@ -143,7 +158,7 @@ Po przejściu checklisty:
 1. **Jeśli są braki w treściach** — popraw je i przejdź ponownie przez sekcje z problemami
 2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 3: DESIGN** (patrz sekcja 7 poniżej)
 
-**NIE COMMITUJ JESZCZE** — najpierw dopracuj design w ETAP 3!
+**NIE COMMITUJ JESZCZE** — najpierw dopracuj design w ETAP 3, potem wizualna weryfikacja w ETAP 4 (`CLAUDE_LANDING_VERIFY.md`).
 
 ---
 
@@ -167,15 +182,14 @@ Po zakończeniu weryfikacji przedstaw krótki raport:
 
 ---
 
-## 7. ETAP 3: Dopracowanie designu
+## 7. ETAP 3 + 4: Design i Wizualna weryfikacja
 
-**OBOWIĄZKOWY** — po weryfikacji treści przejdź do:
+**OBOWIĄZKOWE** — po weryfikacji treści przejdź kolejno:
 
-**Plik:** `CLAUDE_LANDING_DESIGN.md`
+1. **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`** — estetyka, typografia, animacje
+2. **ETAP 4 — `CLAUDE_LANDING_VERIFY.md`** — Playwright screenshot w 3 viewportach
 
-Ten etap przekształca "poprawny szablon" w **wyróżniającą się stronę marki**.
-
-Po zakończeniu ETAP 3 wróć tutaj i wykonaj deploy:
+Dopiero po ETAP 4 (pozytywna weryfikacja wizualna) wykonaj deploy:
 
 ```bash
 cd /c/repos_tn/tn-crm && git add landing-pages/[nazwa]/ && git commit -m "Add [nazwa] landing page" && git push
