@@ -265,6 +265,76 @@
             margin-bottom: 16px;
             padding: 0 12px;
         }
+        .sidebar-progress {
+            position: relative;
+            margin-bottom: 16px;
+            padding: 0 12px;
+        }
+        .sidebar-progress-track {
+            height: 3px;
+            background: var(--b-1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .sidebar-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #c4b5fd);
+            width: 0%;
+            transition: width 180ms;
+            border-radius: 2px;
+        }
+        .sidebar-progress-text {
+            font-family: 'Geist Mono', monospace;
+            font-size: 10px;
+            color: var(--t-4);
+            margin-top: 8px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .sidebar-progress-text b { color: var(--t-1); }
+
+        /* Sticky CTA banner between sections */
+        .mid-cta {
+            margin: 48px 0;
+            padding: 28px 32px;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.02));
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .mid-cta-text { flex: 1; min-width: 240px; }
+        .mid-cta-text strong {
+            display: block;
+            font-size: 20px;
+            color: var(--t-0);
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+        .mid-cta-text p {
+            font-size: 14px;
+            color: var(--t-2);
+            line-height: 1.5;
+        }
+        .mid-cta-btn {
+            padding: 12px 22px;
+            background: linear-gradient(180deg, #818cf8, #6366f1);
+            color: white;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 200ms;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.35);
+        }
+        .mid-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -4px var(--accent-glow);
+        }
         .sidebar-nav ul { list-style: none; padding: 0; }
         .sidebar-nav a {
             display: flex;
@@ -547,6 +617,12 @@
         <!-- STICKY SIDEBAR -->
         <aside class="sidebar-nav">
             <div class="sidebar-nav-label">Moduły platformy</div>
+            <div class="sidebar-progress">
+                <div class="sidebar-progress-track">
+                    <div class="sidebar-progress-fill" id="sidebar-progress-fill"></div>
+                </div>
+                <div class="sidebar-progress-text"><b id="sidebar-progress-current">1</b> z 8 modułów</div>
+            </div>
             <ul>
                 <li><a href="#cases"><span class="sidebar-nav-num">01</span><span>Zarządzanie sprawami</span></a></li>
                 <li><a href="#clients"><span class="sidebar-nav-num">02</span><span>Klienci i pracodawcy</span></a></li>
@@ -679,6 +755,15 @@
                     <div class="feature-item"><span class="feature-item-ico">→</span><div class="feature-item-text"><b>Live language switching</b> — klient zmienia język w trakcie wypełniania</div></div>
                 </div>
             </section>
+
+            <!-- MID-PAGE CTA -->
+            <div class="mid-cta">
+                <div class="mid-cta-text">
+                    <strong>Widzisz funkcje, które Ci pasują?</strong>
+                    <p>30-minutowe demo na żywo. Pokazujemy każdy moduł na prawdziwych danych kancelarii GetMyPermit.</p>
+                </div>
+                <a href="mailto:hello@lexora.pl?subject=Demo%20po%20funkcjach" class="mid-cta-btn">Umów demo →</a>
+            </div>
 
             <!-- 05 · LEADS -->
             <section class="module" id="leads">
@@ -827,19 +912,30 @@
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Active sidebar link
+    // Active sidebar link + progress fill
     const modules = document.querySelectorAll('.module');
     const navLinks = document.querySelectorAll('.sidebar-nav a');
+    const progressFill = document.getElementById('sidebar-progress-fill');
+    const progressCurrent = document.getElementById('sidebar-progress-current');
+    const moduleIds = ['cases', 'clients', 'finance', 'intake', 'leads', 'admin', 'integrations', 'security'];
     if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const id = entry.target.id;
                     navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+                    const idx = moduleIds.indexOf(id);
+                    if (idx >= 0 && progressFill) {
+                        const pct = ((idx + 1) / moduleIds.length) * 100;
+                        progressFill.style.width = pct + '%';
+                        if (progressCurrent) progressCurrent.textContent = idx + 1;
+                    }
                 }
             });
         }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
         modules.forEach(m => observer.observe(m));
+        // Initialize progress at first module
+        if (progressFill) progressFill.style.width = '12.5%';
     }
 </script>
 </body>
