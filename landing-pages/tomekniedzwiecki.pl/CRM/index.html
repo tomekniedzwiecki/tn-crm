@@ -116,7 +116,11 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            display: inline-block;
+            padding-bottom: 0.08em;
+            line-height: 1.12;
         }
+        h1, h2 { padding-bottom: 0.04em; }
 
         .mono { font-family: 'Geist Mono', 'SF Mono', Menlo, monospace; }
         .eyebrow {
@@ -265,6 +269,13 @@
             position: relative;
             overflow: hidden;
         }
+        .hero-canvas {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.7;
+        }
         .hero::before {
             content: '';
             position: absolute;
@@ -275,20 +286,7 @@
                 radial-gradient(ellipse 60% 40% at 30% 30%, rgba(99, 102, 241, 0.22), transparent 55%),
                 radial-gradient(ellipse 50% 40% at 70% 60%, rgba(139, 92, 246, 0.18), transparent 55%);
             pointer-events: none;
-            z-index: 0;
-        }
-        .hero::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
-            background-size: 72px 72px;
-            mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
-            -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
-            pointer-events: none;
-            z-index: 0;
+            z-index: 1;
         }
         .hero-inner {
             position: relative;
@@ -760,10 +758,20 @@
             font-weight: 700;
         }
         .niche-icon {
-            font-size: 40px;
-            margin-bottom: 20px;
-            display: inline-block;
+            width: 44px;
+            height: 44px;
+            margin-bottom: 24px;
+            color: var(--accent-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .niche-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke-width: 1.5;
+        }
+        .niche-card.live .niche-icon { color: var(--success); }
         .niche-card h3 {
             font-size: 22px;
             margin-bottom: 10px;
@@ -1452,6 +1460,13 @@
             position: relative;
             overflow: hidden;
         }
+        .final-canvas {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.85;
+        }
         .final::before {
             content: '';
             position: absolute;
@@ -1460,6 +1475,7 @@
                 radial-gradient(ellipse 60% 50% at 30% 40%, rgba(99, 102, 241, 0.2), transparent 55%),
                 radial-gradient(ellipse 50% 40% at 70% 70%, rgba(139, 92, 246, 0.15), transparent 55%);
             pointer-events: none;
+            z-index: 1;
         }
         .final-inner { position: relative; max-width: 820px; margin: 0 auto; padding: 0 24px; }
         .final h2 {
@@ -1559,11 +1575,12 @@
 
 <!-- HERO -->
 <section class="hero" id="top">
+    <canvas class="hero-canvas" id="hero-canvas"></canvas>
     <div class="container">
         <div class="hero-inner">
             <div class="hero-badge">
                 <span class="hero-badge-tag">NEW</span>
-                <span>MOS 2.0 ready · deploy w 4 tygodnie</span>
+                <span>MOS 2.0 · wdrożenie w 4 tygodnie</span>
             </div>
             <h1>Platforma <span class="italic-accent">wzrostu</span> dla kancelarii prawnej.</h1>
             <p class="lead hero-lead">
@@ -1758,7 +1775,14 @@
 
         <div class="niches-grid">
             <div class="niche-card live">
-                <span class="niche-icon">🌐</span>
+                <div class="niche-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M3 12h18"/>
+                        <path d="M12 3a13 13 0 0 1 0 18"/>
+                        <path d="M12 3a13 13 0 0 0 0 18"/>
+                    </svg>
+                </div>
                 <h3>Imigracja · karty pobytu</h3>
                 <p>TRC, pobyt stały, Blue Card, rezydent długoterminowy UE. Intake w 5 językach, OCR paszportu, gotowy pipeline MOS 2.0. Anchor klient: <b>GetMyPermit</b>.</p>
                 <div class="niche-stats">
@@ -1769,7 +1793,15 @@
             </div>
 
             <div class="niche-card soon">
-                <span class="niche-icon">⚖️</span>
+                <div class="niche-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 3v18"/>
+                        <path d="M6 9l-3 6h6z"/>
+                        <path d="M18 9l-3 6h6z"/>
+                        <path d="M6 9h12"/>
+                        <path d="M8 21h8"/>
+                    </svg>
+                </div>
                 <h3>Upadłość konsumencka</h3>
                 <p>Mass-market: ~17 000 spraw rocznie w Polsce, trend +15% r/r. Ten sam playbook co imigracja — intake, pipeline, dokumenty, windykacja. Dostosowanie do niszy: 2-3 tygodnie.</p>
                 <div class="niche-stats">
@@ -1780,7 +1812,14 @@
             </div>
 
             <div class="niche-card soon">
-                <span class="niche-icon">💍</span>
+                <div class="niche-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="8" cy="14" r="5"/>
+                        <circle cx="16" cy="14" r="5"/>
+                        <path d="M8 4l0 5"/>
+                        <path d="M16 4l0 5"/>
+                    </svg>
+                </div>
                 <h3>Rozwody · prawo rodzinne</h3>
                 <p>180 000 rozwodów rocznie w PL. Mass-market + powtarzalne procesy. Nasza platforma dopasowana: intake emocjonalnie bezpieczny, procesy alimentacyjne, podział majątku.</p>
                 <div class="niche-stats">
@@ -1863,7 +1902,7 @@
                             </div>
                             <div>
                                 <div class="b-chart-stat-num">184<span style="font-size: 0.55em;"> zł</span></div>
-                                <div class="b-chart-stat-label">CPL</div>
+                                <div class="b-chart-stat-label">Koszt leada</div>
                             </div>
                         </div>
                         <svg class="b-chart-svg" viewBox="0 0 300 90" preserveAspectRatio="none">
@@ -2100,14 +2139,14 @@
                 <div class="price-amount">
                     <span class="price-value" style="font-size: 32px;">Wycena</span>
                 </div>
-                <p class="price-desc">10+ prawników, wiele oddziałów. Dedykowane rozwiązanie, SLA &lt;4h.</p>
+                <p class="price-desc">10+ prawników, wiele oddziałów. Dedykowane rozwiązanie z gwarantowanym czasem reakcji.</p>
                 <ul class="price-features">
                     <li>Wszystko z Growth</li>
                     <li>Dedykowany dev zakres</li>
                     <li>Multi-oddział</li>
                     <li>Raporty dla zarządu</li>
                     <li>SSO, ERP, księgowość</li>
-                    <li>SLA &lt;4h</li>
+                    <li>Gwarantowana reakcja w 4h</li>
                 </ul>
                 <a href="#cta" class="price-cta">Wycena indywidualna</a>
             </div>
@@ -2148,7 +2187,7 @@
                     <span class="faq-q-sign"></span>
                 </button>
                 <div class="faq-a">
-                    <p>Tak — założenie architektoniczne Lexory. Interfejs w polskim, flow dopasowany do realnego procesu kancelarii. Bez „ustaw API token w Settings".</p>
+                    <p>Tak — założenie Lexory. Interfejs w polskim, dopasowany do realnego procesu kancelarii. Bez żadnych technicznych ustawień, o których nie słyszałeś.</p>
                     <p>Nasz zespół zajmuje się całą stroną techniczną. Szkolenie na żywo zamyka się w jeden dzień, dokumentacja pozwala nowemu pracownikowi wejść w 2 dni.</p>
                 </div>
             </div>
@@ -2160,7 +2199,7 @@
                 </button>
                 <div class="faq-a">
                     <p>Lexora nie zastępuje LEX-a ani Legalisa — to narzędzia do prawa materialnego, my jesteśmy systemem operacyjnym. Używasz równolegle.</p>
-                    <p>Integracje: podatnik.gov.pl, KRS API, GUS, Supabase, e-mail (Resend), WhatsApp Business. Specyficzne integracje wyceniamy osobno.</p>
+                    <p>Automatycznie pobieramy dane firm z rejestrów publicznych (NIP z Ministerstwa Finansów, dane z GUS). Łączymy się z e-mailem, WhatsApp Business i innymi narzędziami, których używacie.</p>
                 </div>
             </div>
 
@@ -2181,8 +2220,8 @@
                     <span class="faq-q-sign"></span>
                 </button>
                 <div class="faq-a">
-                    <p>Tak. Dane fizycznie w EU-West-1 (Frankfurt), zero transferu do USA. AES-256 at-rest + TLS 1.3. Każdy dostęp do danych osobowych logowany, retencja 2 lata.</p>
-                    <p>Podpisujemy UPPD przed startem. ISO 27001 planowana Q4 2026.</p>
+                    <p>Tak. Dane są fizycznie w Unii Europejskiej (Frankfurt), nie opuszczają jej ani przez chwilę. Wszystko jest zaszyfrowane, a każdy dostęp do danych klientów zapisujemy — przechowujemy taką historię przez 2 lata (zgodnie z RODO).</p>
+                    <p>Podpisujemy umowę powierzenia przetwarzania danych przed startem współpracy. Certyfikację ISO 27001 planujemy na koniec 2026 — już teraz stosujemy wszystkie jej wymagania.</p>
                 </div>
             </div>
 
@@ -2192,7 +2231,7 @@
                     <span class="faq-q-sign"></span>
                 </button>
                 <div class="faq-a">
-                    <p>Tak. Kodeks etyki adwokackiej zabrania wynagrodzenia zależnego od wyniku sprawy. Nasz SaaS to stały abonament — żadna opłata nie jest powiązana z wygraną klienta.</p>
+                    <p>Tak. Kodeks etyki adwokackiej zabrania wynagrodzenia zależnego od wyniku sprawy. Nasz model to stały abonament za platformę — żadna opłata nie jest powiązana z wygraną klienta.</p>
                 </div>
             </div>
         </div>
@@ -2201,6 +2240,7 @@
 
 <!-- FINAL CTA -->
 <section class="final" id="cta">
+    <canvas class="final-canvas" id="final-canvas"></canvas>
     <div class="final-inner">
         <h2>Porozmawiajmy o <span class="italic-accent">Twojej kancelarii</span>.</h2>
         <p class="lead">30 minut bez zobowiązań. Powiesz nam gdzie boli, pokażemy konkretne rozwiązanie. Albo powiemy szczerze, że nie pasujemy.</p>
@@ -2300,6 +2340,205 @@
             });
         });
     });
+
+    // ======================================================
+    // CANVAS EFFECTS — Hero tunnel + Final wavy starfield
+    // ======================================================
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Hero: "tunnel of stars" — 3000 points in a cylinder, forward flight + mouse parallax
+    (function heroTunnel() {
+        const canvas = document.getElementById('hero-canvas');
+        if (!canvas || reduceMotion) return;
+        const ctx = canvas.getContext('2d');
+        const DPR = Math.min(window.devicePixelRatio || 1, 2);
+        const POINTS = window.innerWidth < 768 ? 1200 : 2400;
+        const points = [];
+        const palette = [
+            [129, 140, 248],  // indigo-400
+            [167, 139, 250],  // violet-400
+            [196, 181, 253],  // violet-300
+            [255, 255, 255],
+        ];
+        let w = 0, h = 0;
+        let mx = 0, my = 0, camX = 0, camY = 0, rotZ = 0;
+        let running = true;
+
+        function resize() {
+            const rect = canvas.getBoundingClientRect();
+            w = rect.width; h = rect.height;
+            canvas.width = w * DPR;
+            canvas.height = h * DPR;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        function init() {
+            resize();
+            for (let i = 0; i < POINTS; i++) {
+                const r = 20 + Math.random() * 40;
+                const theta = Math.random() * Math.PI * 2;
+                const roll = Math.random();
+                const c = palette[roll < 0.1 ? 3 : roll < 0.4 ? 0 : 1];
+                points.push({
+                    x: Math.cos(theta) * r,
+                    y: Math.sin(theta) * r,
+                    z: (Math.random() - 0.5) * 2000,
+                    c,
+                });
+            }
+        }
+
+        const focal = 320;
+        const camZ = 50;
+
+        function frame() {
+            if (!running) return;
+            ctx.clearRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'lighter';
+            camX += (mx * 4 - camX) * 0.04;
+            camY += (my * 4 - camY) * 0.04;
+            rotZ += 0.0004;
+            const cR = Math.cos(rotZ), sR = Math.sin(rotZ);
+            const halfW = w / 2, halfH = h / 2;
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                p.z += 0.55;
+                if (p.z > 200) p.z -= 2000;
+                const rx = p.x * cR - p.y * sR;
+                const ry = p.x * sR + p.y * cR;
+                const dz = p.z + camZ;
+                if (dz < 1) continue;
+                const scale = focal / dz;
+                const sx = halfW + (rx - camX) * scale;
+                const sy = halfH + (ry - camY) * scale;
+                if (sx < -10 || sx > w + 10 || sy < -10 || sy > h + 10) continue;
+                const fog = Math.max(0, 1 - Math.abs(p.z) / 900);
+                const size = Math.max(0.35, scale * 0.7);
+                ctx.fillStyle = 'rgba(' + p.c[0] + ',' + p.c[1] + ',' + p.c[2] + ',' + (fog * 0.7) + ')';
+                ctx.beginPath();
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            requestAnimationFrame(frame);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+            my = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+        }, { passive: true });
+        window.addEventListener('resize', resize);
+        // Pause when not in viewport
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting && !running) { running = true; frame(); }
+                else if (!e.isIntersecting && running) running = false;
+            });
+        });
+        io.observe(canvas);
+
+        init();
+        frame();
+    })();
+
+    // Final CTA: wavy starfield plane
+    (function finalWave() {
+        const canvas = document.getElementById('final-canvas');
+        if (!canvas || reduceMotion) return;
+        const ctx = canvas.getContext('2d');
+        const DPR = Math.min(window.devicePixelRatio || 1, 2);
+        const POINTS = window.innerWidth < 768 ? 1800 : 3200;
+        const points = [];
+        const palette = [
+            [255, 255, 255],
+            [129, 140, 248],
+            [167, 139, 250],
+            [14, 165, 233],  // sky
+        ];
+        let w = 0, h = 0;
+        let mx = 0, my = 0, camX = 0, camY = 0, t = 0;
+        let running = true;
+
+        function resize() {
+            const rect = canvas.getBoundingClientRect();
+            w = rect.width; h = rect.height;
+            canvas.width = w * DPR;
+            canvas.height = h * DPR;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        function init() {
+            resize();
+            for (let i = 0; i < POINTS; i++) {
+                const roll = Math.random();
+                const c = palette[roll < 0.2 ? 0 : roll < 0.5 ? 1 : roll < 0.8 ? 2 : 3];
+                points.push({
+                    x: (Math.random() - 0.5) * 400,
+                    z: (Math.random() - 0.5) * 400,
+                    c,
+                });
+            }
+        }
+
+        const focal = 260;
+        const camZ = 120;
+        const camYBase = 40;
+        const pitch = -0.4;
+
+        function frame() {
+            if (!running) return;
+            ctx.clearRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'lighter';
+            camX += (mx * 10 - camX) * 0.04;
+            camY += (my * 6 - camY) * 0.04;
+            t += 0.003;
+            const cP = Math.cos(pitch), sP = Math.sin(pitch);
+            const halfW = w / 2, halfH = h / 2;
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const y = Math.sin(p.x * 0.02 + t) * 15 + Math.cos(p.z * 0.03 + t) * 15;
+                // tilt plane down
+                const ry = y * cP - p.z * sP;
+                const rz = y * sP + p.z * cP;
+                const dz = rz + camZ;
+                if (dz < 1) continue;
+                const scale = focal / dz;
+                const sx = halfW + (p.x - camX) * scale;
+                const sy = halfH + (ry - camYBase - camY) * scale;
+                if (sx < -10 || sx > w + 10 || sy < -10 || sy > h + 10) continue;
+                const fog = Math.max(0, 1 - Math.abs(rz) / 350);
+                const size = Math.max(0.3, scale * 0.55);
+                ctx.fillStyle = 'rgba(' + p.c[0] + ',' + p.c[1] + ',' + p.c[2] + ',' + (fog * 0.6) + ')';
+                ctx.beginPath();
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            requestAnimationFrame(frame);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+            my = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+        }, { passive: true });
+        window.addEventListener('resize', resize);
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting && !running) { running = true; frame(); }
+                else if (!e.isIntersecting && running) running = false;
+            });
+        });
+        io.observe(canvas);
+
+        init();
+        frame();
+    })();
 </script>
 </body>
 </html>
