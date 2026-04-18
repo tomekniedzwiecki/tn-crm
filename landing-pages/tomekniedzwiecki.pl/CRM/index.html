@@ -701,6 +701,122 @@
         .s-head h2 { margin-bottom: 20px; }
         .s-head .lead { max-width: 600px; margin: 0 auto; }
 
+        /* ==================== BEFORE/AFTER ==================== */
+        .beforeafter-section {
+            padding: 140px 0;
+            border-top: 1px solid var(--b-1);
+        }
+        .ba-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) { .ba-grid { grid-template-columns: 1fr; } }
+        .ba-card {
+            padding: 36px 32px;
+            border-radius: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ba-card-before {
+            background: var(--bg-1);
+            border: 1px solid var(--b-1);
+        }
+        .ba-card-after {
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.02)), var(--bg-1);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+        .ba-card-after::before {
+            content: '';
+            position: absolute;
+            top: -30%; right: -20%;
+            width: 60%; height: 100%;
+            background: radial-gradient(ellipse, rgba(99, 102, 241, 0.15), transparent 60%);
+            pointer-events: none;
+        }
+        .ba-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-family: 'Geist Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+        .ba-tag-before {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+        .ba-tag-after {
+            background: rgba(52, 211, 153, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+        .ba-card h3 {
+            font-size: 24px;
+            margin-bottom: 24px;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+        }
+        .ba-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--b-1);
+        }
+        .ba-stat-num {
+            font-size: 32px;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin-bottom: 4px;
+        }
+        .ba-card-before .ba-stat-num { color: var(--t-1); }
+        .ba-card-after .ba-stat-num { color: var(--t-0); }
+        .ba-stat-label {
+            font-family: 'Geist Mono', monospace;
+            font-size: 10px;
+            color: var(--t-3);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .ba-list {
+            list-style: none;
+            padding: 0;
+        }
+        .ba-list li {
+            display: flex;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 14px;
+            color: var(--t-2);
+            line-height: 1.5;
+            align-items: flex-start;
+        }
+        .ba-list li::before {
+            flex-shrink: 0;
+            margin-top: 2px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        .ba-card-before .ba-list li::before {
+            content: '✕';
+            color: var(--danger);
+        }
+        .ba-card-after .ba-list li::before {
+            content: '✓';
+            color: var(--success);
+        }
+
         /* ==================== PHILOSOPHY ==================== */
         .philo-section {
             padding: 140px 0;
@@ -796,14 +912,34 @@
             border-radius: 18px;
             position: relative;
             overflow: hidden;
-            transition: all 240ms;
+            transition: all 320ms cubic-bezier(0.2, 0.9, 0.3, 1);
             display: flex;
             flex-direction: column;
         }
-        .niche-card:hover {
-            border-color: var(--b-2);
-            transform: translateY(-3px);
+        .niche-card::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -30%;
+            width: 160%; height: 200%;
+            background: radial-gradient(ellipse 40% 30% at 50% 50%, rgba(99, 102, 241, 0.18), transparent 60%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 400ms;
         }
+        .niche-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            transform: translateY(-4px);
+            box-shadow: 0 24px 48px -20px rgba(99, 102, 241, 0.25);
+        }
+        .niche-card:hover::after { opacity: 1; }
+        .niche-card.live:hover::after {
+            background: radial-gradient(ellipse 40% 30% at 50% 50%, rgba(52, 211, 153, 0.18), transparent 60%);
+        }
+        .niche-card.live:hover {
+            border-color: rgba(52, 211, 153, 0.4);
+            box-shadow: 0 24px 48px -20px rgba(52, 211, 153, 0.25);
+        }
+        .niche-card > * { position: relative; z-index: 1; }
         .niche-card.live {
             border-color: rgba(52, 211, 153, 0.25);
             background: linear-gradient(180deg, rgba(52, 211, 153, 0.06), rgba(52, 211, 153, 0.01)), var(--bg);
@@ -1249,20 +1385,22 @@
             color: var(--t-2);
             background: var(--bg-1);
             border-bottom: 1px solid var(--b-1);
-        }
-        .comp-table th.featured {
-            background: linear-gradient(180deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.02));
-            color: var(--t-0);
             position: relative;
         }
+        .comp-table th.featured {
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.14), rgba(99, 102, 241, 0.04));
+            color: var(--t-0);
+            padding-top: 28px;
+        }
         .comp-table th.featured::before {
-            content: 'Lexora';
+            content: 'NASZ SYSTEM';
             position: absolute;
-            top: 4px; left: 16px;
+            top: 8px; left: 16px;
             font-family: 'Geist Mono', monospace;
             font-size: 9px;
-            color: var(--accent-text);
-            letter-spacing: 0.1em;
+            color: var(--accent);
+            letter-spacing: 0.14em;
+            font-weight: 600;
         }
         .comp-table td {
             padding: 15px 16px;
@@ -1795,20 +1933,20 @@
     <div class="container">
         <div class="metrics-grid">
             <div class="metric">
-                <div class="metric-num num-display">5 075</div>
+                <div class="metric-num num-display" data-count="5075">0</div>
                 <div class="metric-label">Spraw w systemie</div>
             </div>
             <div class="metric">
-                <div class="metric-num num-display">3 846</div>
+                <div class="metric-num num-display" data-count="3846">0</div>
                 <div class="metric-label">Klientów kancelarii</div>
             </div>
             <div class="metric">
-                <div class="metric-num num-display">5<sup>języków</sup></div>
-                <div class="metric-label">Intake klienta</div>
+                <div class="metric-num num-display" data-count="5" data-suffix="języków">0<sup>języków</sup></div>
+                <div class="metric-label">Ankieta klienta</div>
             </div>
             <div class="metric">
-                <div class="metric-num num-display">99.9<sup>%</sup></div>
-                <div class="metric-label">Uptime Q1 2026</div>
+                <div class="metric-num num-display" data-count="99.9" data-suffix="%">0<sup>%</sup></div>
+                <div class="metric-label">Dostępność Q1 2026</div>
             </div>
         </div>
     </div>
@@ -1838,6 +1976,79 @@
             <div class="logo">· Karty pobytu</div>
             <div class="logo">· MOS 2.0 ready</div>
             <div class="logo">· Meta + Google Ads</div>
+        </div>
+    </div>
+</section>
+
+<!-- BEFORE / AFTER -->
+<section class="beforeafter-section" id="beforeafter">
+    <div class="container">
+        <div class="s-head">
+            <span class="eyebrow">Konkretne liczby</span>
+            <h2>Kancelaria <span class="italic-accent">przed i po</span> Lexorze.</h2>
+            <p class="lead">Dane z GetMyPermit — kancelarii imigracyjnej we Wrocławiu. Pierwsze 6 miesięcy z nami.</p>
+        </div>
+
+        <div class="ba-grid">
+            <div class="ba-card ba-card-before">
+                <span class="ba-tag ba-tag-before">● Przed Lexorą</span>
+                <h3>Chaos w 6 narzędziach</h3>
+                <div class="ba-stats">
+                    <div>
+                        <div class="ba-stat-num">~8h</div>
+                        <div class="ba-stat-label">Dziennie na papierologię</div>
+                    </div>
+                    <div>
+                        <div class="ba-stat-num">6+</div>
+                        <div class="ba-stat-label">Różnych narzędzi</div>
+                    </div>
+                    <div>
+                        <div class="ba-stat-num">~45%</div>
+                        <div class="ba-stat-label">Leadów ginie bez kontaktu</div>
+                    </div>
+                    <div>
+                        <div class="ba-stat-num">—</div>
+                        <div class="ba-stat-label">Brak widoczności pracy zespołu</div>
+                    </div>
+                </div>
+                <ul class="ba-list">
+                    <li>Excel do spraw, Gmail do klientów, Word do pism</li>
+                    <li>Klient pyta „gdzie moja sprawa?" 2-3 razy w tygodniu</li>
+                    <li>Prawnik przepisuje te same dane do 4 systemów</li>
+                    <li>Nikt nie wie, które sprawy stoją od 30 dni</li>
+                    <li>Leady z Facebooka czekają 12+ godzin na odpowiedź</li>
+                </ul>
+            </div>
+
+            <div class="ba-card ba-card-after">
+                <span class="ba-tag ba-tag-after">● Z Lexorą</span>
+                <h3>Jedna platforma. Cała kancelaria.</h3>
+                <div class="ba-stats">
+                    <div>
+                        <div class="ba-stat-num">~2.5h</div>
+                        <div class="ba-stat-label">Dziennie na papierologię</div>
+                    </div>
+                    <div>
+                        <div class="ba-stat-num">1</div>
+                        <div class="ba-stat-label">Jedna platforma</div>
+                    </div>
+                    <div>
+                        <div class="ba-stat-num">&lt;5%</div>
+                        <div class="ba-stat-label">Leadów bez kontaktu (auto-routing)</div>
+                    </div>
+                    <div>
+                        <div class="ba-stat-num">Live</div>
+                        <div class="ba-stat-label">Panel właściciela odświeżany co 30s</div>
+                    </div>
+                </div>
+                <ul class="ba-list">
+                    <li>Sprawy, klienci, pisma, finanse — jedno miejsce</li>
+                    <li>Klient ma własny panel statusu — zero pytań</li>
+                    <li>Dane wpisujesz raz, system używa ich wszędzie</li>
+                    <li>Automatyczne alerty na sprawy w ciszy &gt;14 dni</li>
+                    <li>Leady z kampanii trafiają od razu do prawnika specjalisty</li>
+                </ul>
+            </div>
         </div>
     </div>
 </section>
@@ -2102,6 +2313,13 @@
                     </div>
                 </div>
             </div>
+
+            <div style="margin-top: 48px;">
+                <a href="/crm/case-study/getmypermit" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; background: rgba(255,255,255,0.04); border: 1px solid var(--b-2); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--t-1); transition: all 200ms;">
+                    Przeczytaj pełne case study
+                    <span style="transition: transform 200ms;">→</span>
+                </a>
+            </div>
         </div>
     </div>
 </section>
@@ -2120,7 +2338,7 @@
                 <thead>
                     <tr>
                         <th>Funkcja</th>
-                        <th class="featured" style="padding-top: 26px;">Lexora</th>
+                        <th class="featured">Lexora</th>
                         <th>Kleos</th>
                         <th>Mecenas.iT</th>
                         <th>LegallyCRM</th>
@@ -2454,6 +2672,71 @@
             });
         });
     });
+
+    // Count-up animation on metric band + case study stats
+    (function countUp() {
+        if (!('IntersectionObserver' in window)) return;
+        const format = (n) => {
+            if (n >= 1000) return n.toLocaleString('pl-PL').replace(/,/g, ' ');
+            return n % 1 !== 0 ? n.toFixed(1) : String(n);
+        };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting || entry.target.dataset.counted) return;
+                entry.target.dataset.counted = '1';
+                const target = parseFloat(entry.target.dataset.count);
+                const suffix = entry.target.dataset.suffix;
+                const duration = 1600;
+                const start = performance.now();
+                function tick(now) {
+                    const progress = Math.min((now - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const val = target * eased;
+                    const formatted = format(val % 1 !== 0 ? val : Math.floor(val));
+                    entry.target.innerHTML = suffix ? (formatted + '<sup>' + suffix + '</sup>') : formatted;
+                    if (progress < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            });
+        }, { threshold: 0.5 });
+        document.querySelectorAll('[data-count]').forEach(el => observer.observe(el));
+    })();
+
+    // Product preview auto-cycle between tabs (Live pulse / Sprawy / Leady)
+    (function productCycle() {
+        const items = document.querySelectorAll('.preview-sidebar .ps-item');
+        const title = document.querySelector('.preview-toolbar h4');
+        const kpis = document.querySelector('.preview-kpis');
+        const streamTitle = document.querySelector('.preview-section-title');
+        if (!items.length || !title) return;
+
+        const views = [
+            { label: 'Live pulse zespołu', activeIdx: 0 },
+            { label: 'Sprawy · 143 aktywne', activeIdx: 1 },
+            { label: 'Leady · 47 w pipeline', activeIdx: 5 },
+        ];
+        let current = 0;
+
+        function cycle() {
+            current = (current + 1) % views.length;
+            const view = views[current];
+            title.style.transition = 'opacity 300ms';
+            title.style.opacity = '0';
+            setTimeout(() => {
+                title.textContent = view.label;
+                title.style.opacity = '1';
+                items.forEach((it, i) => it.classList.toggle('active', i === view.activeIdx));
+            }, 300);
+        }
+
+        let timer = setInterval(cycle, 4200);
+        // Pause when hovering product preview
+        const preview = document.querySelector('.hero-preview');
+        if (preview) {
+            preview.addEventListener('mouseenter', () => clearInterval(timer));
+            preview.addEventListener('mouseleave', () => { timer = setInterval(cycle, 4200); });
+        }
+    })();
 
     // ======================================================
     // CANVAS EFFECTS — Hero tunnel + Final wavy starfield

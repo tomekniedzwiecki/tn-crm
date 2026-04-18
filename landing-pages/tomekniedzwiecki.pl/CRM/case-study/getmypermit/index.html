@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#09090b">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Jak kancelaria imigracyjna GetMyPermit wdrożyła Lexorę w 4 tygodnie i uporządkowała chaos 6 narzędzi w jedną platformę — pełne case study z liczbami.">
+    <meta property="og:title" content="Case study: GetMyPermit × Lexora — 4 tygodnie od chaosu do jednej platformy">
+    <title>Case study: GetMyPermit × Lexora</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2270%22 font-size=%2270%22 font-family=%22system-ui%22 font-weight=%22700%22 text-anchor=%22middle%22 fill=%22%23fff%22>L</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap&subset=latin-ext" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #09090b;
+            --bg-1: #0e0e11;
+            --bg-2: #141419;
+            --bg-3: #1c1c23;
+            --t-0: #fafafa;
+            --t-1: #e4e4e7;
+            --t-2: #a1a1aa;
+            --t-3: #71717a;
+            --t-4: #52525b;
+            --b-1: rgba(255,255,255,0.06);
+            --b-2: rgba(255,255,255,0.1);
+            --b-3: rgba(255,255,255,0.14);
+            --accent: #818cf8;
+            --accent-strong: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-text: #a5b4fc;
+            --accent-glow: rgba(99, 102, 241, 0.35);
+            --success: #34d399;
+            --danger: #f87171;
+            --max-w: 1040px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--t-1);
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            font-size: 17px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        img { max-width: 100%; display: block; }
+        a { color: inherit; text-decoration: none; }
+
+        h1, h2, h3, h4 {
+            color: var(--t-0);
+            font-weight: 600;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            padding-bottom: 0.04em;
+        }
+        h1 { font-size: clamp(40px, 6vw, 72px); letter-spacing: -0.05em; line-height: 0.98; }
+        h2 { font-size: clamp(28px, 3.5vw, 42px); letter-spacing: -0.03em; }
+        h3 { font-size: 22px; line-height: 1.2; }
+
+        .italic-accent {
+            font-style: italic;
+            font-weight: 500;
+            background: linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 50%, #ddd6fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            padding-bottom: 0.08em;
+            line-height: 1.12;
+        }
+
+        .mono { font-family: 'Geist Mono', monospace; }
+        .eyebrow {
+            font-family: 'Geist Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: var(--max-w);
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+        @media (max-width: 640px) { .container { padding: 0 20px; } }
+
+        /* NAV */
+        .nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(9, 9, 11, 0.72);
+            backdrop-filter: blur(20px) saturate(140%);
+            -webkit-backdrop-filter: blur(20px) saturate(140%);
+            border-bottom: 1px solid var(--b-1);
+        }
+        .nav-inner {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        @media (max-width: 640px) { .nav-inner { padding: 14px 20px; } }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.03em;
+            color: var(--t-0);
+        }
+        .nav-brand-mark {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, var(--accent-strong), #8b5cf6);
+            color: white;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .nav-back {
+            margin-left: auto;
+            font-size: 14px;
+            color: var(--t-2);
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 200ms;
+        }
+        .nav-back:hover { color: var(--t-0); }
+        .nav-back::before { content: '←'; }
+        .nav-cta {
+            padding: 8px 16px;
+            background: var(--t-0);
+            color: var(--bg) !important;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-cta:hover { background: white; }
+
+        /* HERO */
+        .cs-hero {
+            padding: 140px 0 72px;
+            border-bottom: 1px solid var(--b-1);
+            position: relative;
+            overflow: hidden;
+        }
+        .cs-hero::before {
+            content: '';
+            position: absolute;
+            top: -20%; left: 50%;
+            transform: translateX(-50%);
+            width: 1000px; height: 600px;
+            background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(99, 102, 241, 0.15), transparent 60%);
+            pointer-events: none;
+        }
+        .cs-hero-inner { position: relative; }
+        .cs-breadcrumb {
+            font-family: 'Geist Mono', monospace;
+            font-size: 12px;
+            color: var(--t-3);
+            letter-spacing: 0.08em;
+            margin-bottom: 32px;
+        }
+        .cs-breadcrumb a { color: var(--t-2); }
+        .cs-breadcrumb a:hover { color: var(--t-0); }
+        .cs-breadcrumb span { color: var(--t-4); margin: 0 8px; }
+        .cs-hero h1 { margin-bottom: 24px; max-width: 20ch; }
+        .cs-hero-lead {
+            font-size: clamp(17px, 1.7vw, 21px);
+            color: var(--t-2);
+            max-width: 640px;
+            line-height: 1.55;
+        }
+
+        .cs-meta-row {
+            margin-top: 56px;
+            padding-top: 32px;
+            border-top: 1px solid var(--b-1);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+        @media (max-width: 700px) { .cs-meta-row { grid-template-columns: repeat(2, 1fr); } }
+        .cs-meta-label {
+            font-family: 'Geist Mono', monospace;
+            font-size: 11px;
+            color: var(--t-4);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 6px;
+        }
+        .cs-meta-value {
+            font-size: 16px;
+            color: var(--t-0);
+            font-weight: 500;
+        }
+
+        /* STATS BAND */
+        .cs-stats {
+            padding: 80px 0;
+            background: var(--bg-1);
+            border-bottom: 1px solid var(--b-1);
+        }
+        .cs-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 700px) { .cs-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .cs-stat {
+            text-align: center;
+            padding: 20px;
+        }
+        .cs-stat-num {
+            font-size: clamp(36px, 5vw, 56px);
+            font-weight: 600;
+            color: var(--t-0);
+            line-height: 1;
+            letter-spacing: -0.05em;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 10px;
+        }
+        .cs-stat-num sup { font-size: 0.4em; color: var(--accent); vertical-align: super; font-weight: 500; }
+        .cs-stat-label {
+            font-family: 'Geist Mono', monospace;
+            font-size: 11px;
+            color: var(--t-3);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* CONTENT */
+        .cs-body {
+            padding: 100px 0;
+        }
+        .cs-section { margin-bottom: 72px; }
+        .cs-section:last-child { margin-bottom: 0; }
+        .cs-section-head {
+            margin-bottom: 32px;
+        }
+        .cs-section-head .eyebrow { display: block; margin-bottom: 12px; }
+        .cs-section h2 { margin-bottom: 0; }
+        .cs-prose p {
+            font-size: 17px;
+            line-height: 1.7;
+            color: var(--t-1);
+            margin-bottom: 20px;
+            max-width: 760px;
+        }
+        .cs-prose p:last-child { margin-bottom: 0; }
+        .cs-prose strong { color: var(--t-0); font-weight: 600; }
+        .cs-prose em {
+            font-style: italic;
+            background: linear-gradient(135deg, #a5b4fc, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* TIMELINE */
+        .cs-timeline {
+            display: grid;
+            gap: 12px;
+        }
+        .cs-tl-item {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 24px;
+            padding: 24px 28px;
+            background: var(--bg-1);
+            border: 1px solid var(--b-1);
+            border-radius: 12px;
+            align-items: center;
+        }
+        @media (max-width: 640px) {
+            .cs-tl-item { grid-template-columns: 1fr; gap: 10px; padding: 20px; }
+            .cs-tl-num { font-size: 32px; }
+        }
+        .cs-tl-num {
+            font-size: 40px;
+            font-weight: 600;
+            color: var(--t-0);
+            line-height: 1;
+            letter-spacing: -0.04em;
+            opacity: 0.9;
+        }
+        .cs-tl-body h4 {
+            font-size: 17px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .cs-tl-body p {
+            font-size: 14px;
+            color: var(--t-2);
+            line-height: 1.5;
+            margin: 0;
+        }
+        .cs-tl-time {
+            font-family: 'Geist Mono', monospace;
+            font-size: 11px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            white-space: nowrap;
+        }
+
+        /* QUOTE */
+        .cs-quote {
+            padding: 48px 40px;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.02));
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 18px;
+            position: relative;
+        }
+        .cs-quote::before {
+            content: '\201F';
+            position: absolute;
+            top: 12px; left: 28px;
+            font-size: 80px;
+            line-height: 1;
+            color: var(--accent);
+            font-family: Georgia, serif;
+            opacity: 0.5;
+        }
+        .cs-quote-text {
+            font-size: clamp(20px, 2vw, 26px);
+            line-height: 1.4;
+            color: var(--t-0);
+            margin: 20px 0 32px;
+            letter-spacing: -0.015em;
+            font-weight: 400;
+        }
+        .cs-quote-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-top: 24px;
+            border-top: 1px solid var(--b-1);
+        }
+        .cs-avatar {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .cs-quote-name { font-weight: 600; color: var(--t-0); font-size: 15px; }
+        .cs-quote-role { font-size: 13px; color: var(--t-3); margin-top: 2px; }
+
+        /* RESULTS GRID */
+        .cs-results {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 32px;
+        }
+        @media (max-width: 800px) { .cs-results { grid-template-columns: 1fr; } }
+        .cs-result-card {
+            padding: 28px 24px;
+            background: var(--bg-1);
+            border: 1px solid var(--b-1);
+            border-radius: 14px;
+        }
+        .cs-result-num {
+            font-size: 36px;
+            font-weight: 600;
+            color: var(--success);
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin-bottom: 12px;
+        }
+        .cs-result-label {
+            font-size: 14px;
+            color: var(--t-0);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .cs-result-desc {
+            font-size: 13px;
+            color: var(--t-3);
+            line-height: 1.5;
+        }
+
+        /* FINAL CTA */
+        .cs-final {
+            padding: 120px 0;
+            border-top: 1px solid var(--b-1);
+            background: var(--bg-1);
+            text-align: center;
+        }
+        .cs-final h2 { margin-bottom: 20px; font-size: clamp(32px, 4vw, 52px); }
+        .cs-final p { color: var(--t-2); max-width: 540px; margin: 0 auto 36px; font-size: 17px; }
+        .cs-final-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 22px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 200ms;
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, #818cf8, #6366f1);
+            color: white;
+            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.35);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -4px var(--accent-glow);
+        }
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--t-1);
+            border: 1px solid var(--b-2);
+        }
+        .btn-ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--b-3); }
+        .btn-arrow::after { content: '→'; transition: transform 200ms; }
+        .btn-arrow:hover::after { transform: translateX(3px); }
+
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--b-1);
+            font-family: 'Geist Mono', monospace;
+            font-size: 12px;
+            color: var(--t-4);
+            text-align: center;
+            letter-spacing: 0.04em;
+        }
+        footer a { color: var(--t-3); }
+        footer a:hover { color: var(--t-0); }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="/crm" class="nav-brand">
+            <span class="nav-brand-mark">L</span>
+            Lexora
+        </a>
+        <a href="/crm#case" class="nav-back">Wróć do strony głównej</a>
+        <a href="/crm#cta" class="nav-cta">Umów demo</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="cs-hero">
+    <div class="container">
+        <div class="cs-hero-inner">
+            <div class="cs-breadcrumb">
+                <a href="/crm">Lexora</a><span>›</span><a href="/crm#case">Case studies</a><span>›</span>GetMyPermit
+            </div>
+            <span class="eyebrow" style="margin-bottom: 24px; display: inline-block;">Case study · kwiecień 2026</span>
+            <h1>Jak GetMyPermit przeszła z <span class="italic-accent">chaosu sześciu narzędzi</span> na jedną platformę w 4 tygodnie.</h1>
+            <p class="cs-hero-lead">Kancelaria imigracyjna z Wrocławia obsługująca klientów z całego świata. Uruchomiła Lexorę miesiąc przed startem rządowego MOS 2.0. Kiedy konkurencja czytała instrukcje, oni już przyjmowali klientów.</p>
+
+            <div class="cs-meta-row">
+                <div>
+                    <div class="cs-meta-label">Klient</div>
+                    <div class="cs-meta-value">GetMyPermit</div>
+                </div>
+                <div>
+                    <div class="cs-meta-label">Branża</div>
+                    <div class="cs-meta-value">Kancelaria imigracyjna</div>
+                </div>
+                <div>
+                    <div class="cs-meta-label">Zespół</div>
+                    <div class="cs-meta-value">12 osób</div>
+                </div>
+                <div>
+                    <div class="cs-meta-label">Czas wdrożenia</div>
+                    <div class="cs-meta-value">4 tygodnie</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- STATS -->
+<section class="cs-stats">
+    <div class="container">
+        <div class="cs-stats-grid">
+            <div class="cs-stat">
+                <div class="cs-stat-num">5 075</div>
+                <div class="cs-stat-label">Spraw w systemie</div>
+            </div>
+            <div class="cs-stat">
+                <div class="cs-stat-num">3 846</div>
+                <div class="cs-stat-label">Profili klientów</div>
+            </div>
+            <div class="cs-stat">
+                <div class="cs-stat-num">5</div>
+                <div class="cs-stat-label">Języków intake</div>
+            </div>
+            <div class="cs-stat">
+                <div class="cs-stat-num">99.9<sup>%</sup></div>
+                <div class="cs-stat-label">Uptime Q1 2026</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- BODY -->
+<section class="cs-body">
+    <div class="container">
+
+        <!-- Challenge -->
+        <div class="cs-section">
+            <div class="cs-section-head">
+                <span class="eyebrow">Wyzwanie</span>
+                <h2>Chaos w sześciu narzędziach — i deadline rządowego MOS 2.0.</h2>
+            </div>
+            <div class="cs-prose">
+                <p>GetMyPermit obsługuje cudzoziemców z całego świata — Ukrainę, Indie, Nepal, Filipiny. Każdego miesiąca setki spraw: karta pobytu czasowego, stała, Blue Card, rezydent długoterminowy UE. Procesy powtarzalne, ale <strong>rozproszone między Excela, Gmaila, Worda, trzy systemy do faktur i jeden do rozliczeń</strong>.</p>
+                <p>Prawnik codziennie tracił <strong>~8 godzin na papierologię</strong> — przepisywanie danych z ankiety do wniosku, szukanie dokumentów w folderach mailowych, nadgonione odpowiedzi klientom. Klient pytał „gdzie moja sprawa?" dwa razy w tygodniu, bo nikt nie miał jednego widoku pipeline'u.</p>
+                <p>A w kwietniu 2026 rząd uruchamiał <strong>MOS 2.0 — obowiązkowy elektroniczny system składania wniosków</strong>. Konkurencja czytała instrukcje rządowe i paliła się. Paweł Stachurski szukał czegoś, co pozwoliłoby mu być gotowym <em>przed</em> startem — z pełnym procesem końca do końca.</p>
+            </div>
+        </div>
+
+        <!-- Solution -->
+        <div class="cs-section">
+            <div class="cs-section-head">
+                <span class="eyebrow">Rozwiązanie</span>
+                <h2>Platforma szyta pod proces kancelarii, nie odwrotnie.</h2>
+            </div>
+            <div class="cs-prose">
+                <p>W 2 tygodnie zrobiliśmy <strong>discovery + setup</strong>: poznaliśmy każdy etap pracy kancelarii, wszystkie typy spraw (7 kategorii), etapy (10 statusów), specyfikę dokumentów dla każdej narodowości klienta. System <em>dopasowaliśmy do Pawła</em> — jego terminologia, jego pipeline, jego alerty.</p>
+                <p>W kolejnym tygodniu <strong>migracja danych</strong> — ze starych Excel-i, z Google Drive, z folderów mailowych. Niewielka porcja danych wymagała ręcznej weryfikacji, ale automatyczne narzędzia wykonały 90% pracy.</p>
+                <p>W ostatnim tygodniu <strong>szkolenie zespołu + uruchomienie</strong>. Jeden dzień live-a z 12 osobami. Nowy pracownik wchodzi teraz w 2 dni, zamiast 2 tygodni.</p>
+                <p>Najważniejsze: intake klienta w <strong>5 językach</strong> (polski, angielski, ukraiński, rosyjski, hindi) z OCR paszportu i auto-uzupełnianiem NIP-u pracodawcy z rejestru Ministerstwa Finansów. Klient wypełnia sam — prawnik nie tracił już 30 minut na przepisywanie danych.</p>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="cs-section">
+            <div class="cs-section-head">
+                <span class="eyebrow">Harmonogram</span>
+                <h2>Od pierwszej rozmowy do produkcji — 4 tygodnie.</h2>
+            </div>
+            <div class="cs-timeline">
+                <div class="cs-tl-item">
+                    <div class="cs-tl-num">01</div>
+                    <div class="cs-tl-body">
+                        <h4>Discovery i projekt procesu</h4>
+                        <p>30-minutowa rozmowa wstępna, potem 3-dniowy warsztat. Zmapowaliśmy 10 etapów spraw, 7 kategorii, specyfikę dokumentów per klient.</p>
+                    </div>
+                    <div class="cs-tl-time">Tydzień 1</div>
+                </div>
+                <div class="cs-tl-item">
+                    <div class="cs-tl-num">02</div>
+                    <div class="cs-tl-body">
+                        <h4>Setup platformy + migracja danych</h4>
+                        <p>System skonfigurowany pod proces GetMyPermit. Dane migrowane z Excela i folderów mailowych (5 000+ spraw, 3 800+ klientów).</p>
+                    </div>
+                    <div class="cs-tl-time">Tydzień 2-3</div>
+                </div>
+                <div class="cs-tl-item">
+                    <div class="cs-tl-num">03</div>
+                    <div class="cs-tl-body">
+                        <h4>Szkolenie zespołu</h4>
+                        <p>Jednodniowy warsztat live dla 12 osób. Dokumentacja wideo + ściągawki pozwoliły nowym pracownikom wejść w 2 dni.</p>
+                    </div>
+                    <div class="cs-tl-time">Tydzień 4</div>
+                </div>
+                <div class="cs-tl-item">
+                    <div class="cs-tl-num">04</div>
+                    <div class="cs-tl-body">
+                        <h4>Uruchomienie + MOS 2.0 ready</h4>
+                        <p>Platforma działa przed oficjalnym startem rządowego systemu. Zespół przetestował workflow, klienci zaczęli używać ankiety w 5 językach.</p>
+                    </div>
+                    <div class="cs-tl-time">Tydzień 4</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="cs-section">
+            <div class="cs-section-head">
+                <span class="eyebrow">Wyniki</span>
+                <h2>Co zmieniło się po 6 miesiącach z Lexorą.</h2>
+            </div>
+            <div class="cs-prose">
+                <p>Zmiany widoczne już po 30 dniach. Poniżej konkretne liczby z GetMyPermit po pierwszych 6 miesiącach współpracy.</p>
+            </div>
+            <div class="cs-results">
+                <div class="cs-result-card">
+                    <div class="cs-result-num">−70%</div>
+                    <div class="cs-result-label">Czasu na papierologię</div>
+                    <div class="cs-result-desc">Z ~8h dziennie do ~2.5h. Dane wpisywane raz, system używa ich wszędzie.</div>
+                </div>
+                <div class="cs-result-card">
+                    <div class="cs-result-num">6 → 1</div>
+                    <div class="cs-result-label">Liczba narzędzi</div>
+                    <div class="cs-result-desc">Excel, Gmail, Word, faktury, rozliczenia — wszystko w jednej platformie.</div>
+                </div>
+                <div class="cs-result-card">
+                    <div class="cs-result-num">2 dni</div>
+                    <div class="cs-result-label">Onboarding nowego pracownika</div>
+                    <div class="cs-result-desc">Zamiast 2 tygodni. Dokumentacja + szablony + auto-hints w systemie.</div>
+                </div>
+                <div class="cs-result-card">
+                    <div class="cs-result-num">0</div>
+                    <div class="cs-result-label">Pytań „gdzie moja sprawa?"</div>
+                    <div class="cs-result-desc">Klient ma własny panel statusu. Automatyczne powiadomienia o postępie.</div>
+                </div>
+                <div class="cs-result-card">
+                    <div class="cs-result-num">99.9%</div>
+                    <div class="cs-result-label">Uptime systemu</div>
+                    <div class="cs-result-desc">Infrastruktura w Unii Europejskiej, backupy co godzinę, zero incydentów bezpieczeństwa.</div>
+                </div>
+                <div class="cs-result-card">
+                    <div class="cs-result-num">MOS 2.0</div>
+                    <div class="cs-result-label">Gotowość przed konkurencją</div>
+                    <div class="cs-result-desc">Miesiąc wcześniej niż rynek. Kancelaria przyjmowała klientów, gdy inni czytali instrukcje.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quote -->
+        <div class="cs-section">
+            <div class="cs-quote">
+                <p class="cs-quote-text">Przed Lexorą mieliśmy chaos w Excelu i sześciu narzędziach. Teraz rano otwieram panel i wiem, co dzieje się w firmie — gdzie są pieniądze, gdzie są ryzyka, kto efektywnie pracuje. W ciągu 4 tygodni dostaliśmy system, który konkurenci budują latami.</p>
+                <div class="cs-quote-meta">
+                    <div class="cs-avatar">PS</div>
+                    <div>
+                        <div class="cs-quote-name">Paweł Stachurski</div>
+                        <div class="cs-quote-role">Założyciel, GetMyPermit · kancelaria imigracyjna, Wrocław</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom line -->
+        <div class="cs-section">
+            <div class="cs-section-head">
+                <span class="eyebrow">Wnioski</span>
+                <h2>Dlaczego to się udało.</h2>
+            </div>
+            <div class="cs-prose">
+                <p><strong>Po pierwsze — specjalizacja.</strong> Zamiast generycznego CRM-a dopasowaliśmy platformę do realnego procesu kancelarii imigracyjnej. Pipeline pod karty pobytu, dokumenty pod MOS 2.0, ankieta w językach klientów.</p>
+                <p><strong>Po drugie — harmonogram bez kompromisów.</strong> 4 tygodnie to nie marketingowe hasło — to realne tempo, jeśli wiadomo <em>jak wdrażać</em>. Discovery, setup, migracja, szkolenie. Każdy tydzień z konkretnym deliverable.</p>
+                <p><strong>Po trzecie — partnerstwo, nie dostawa.</strong> Miesięczny przegląd z liczbami. Growth session co kwartał. System rośnie z kancelarią, a my jesteśmy obok, nie „za mailem supportu".</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="cs-final">
+    <div class="container">
+        <h2>Twoja kancelaria może mieć to samo.</h2>
+        <p>30-minutowa rozmowa wstępna. Bez zobowiązań. Powiedz nam gdzie boli — pokażemy konkretne rozwiązanie.</p>
+        <div class="cs-final-ctas">
+            <a href="mailto:hello@lexora.pl?subject=Demo%20po%20case%20study%20GetMyPermit" class="btn btn-primary">Umów 30-min demo</a>
+            <a href="/crm/funkcje" class="btn btn-ghost btn-arrow">Zobacz wszystkie funkcje</a>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="container">
+        <div>© 2026 LEXORA · <a href="/crm">tomekniedzwiecki.pl/crm</a></div>
+    </div>
+</footer>
+
+</body>
+</html>
