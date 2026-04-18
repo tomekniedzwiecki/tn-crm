@@ -14,6 +14,70 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap&subset=latin-ext" rel="stylesheet">
+
+    <!-- JSON-LD: Organization + SoftwareApplication + FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://tomekniedzwiecki.pl/crm#organization",
+          "name": "Lexora",
+          "description": "Platforma wzrostu dla kancelarii prawnych — CRM, ankieta klienta, kampanie leadowe w jednej platformie.",
+          "url": "https://tomekniedzwiecki.pl/crm",
+          "email": "hello@lexora.pl",
+          "foundingDate": "2026",
+          "address": { "@type": "PostalAddress", "addressLocality": "Wrocław", "addressCountry": "PL" },
+          "sameAs": ["https://tomekniedzwiecki.pl"]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Lexora",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "description": "System operacyjny dla kancelarii prawnych. CRM, ankieta klienta w 5 językach, kampanie leadowe, panel właściciela.",
+          "offers": [
+            { "@type": "Offer", "name": "Starter", "price": "2500", "priceCurrency": "PLN" },
+            { "@type": "Offer", "name": "Growth", "price": "5000", "priceCurrency": "PLN" },
+            { "@type": "Offer", "name": "Scale", "price": "15000", "priceCurrency": "PLN" }
+          ],
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "5",
+            "reviewCount": "1",
+            "bestRating": "5"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Ile trwa wdrożenie platformy Lexora?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Typowo 4 tygodnie od pierwszej rozmowy do uruchomienia: 1 tydzień poznanie procesu, 2 tygodnie konfiguracja i migracja danych, 1 tydzień szkolenie i start." }
+            },
+            {
+              "@type": "Question",
+              "name": "Czy zespół kancelarii poradzi sobie bez działu IT?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Tak. Interfejs jest po polsku, dopasowany do realnego procesu kancelarii. Szkolenie zamyka się w jeden dzień, nowy pracownik wchodzi w 2 dni." }
+            },
+            {
+              "@type": "Question",
+              "name": "Czy platforma Lexora jest zgodna z RODO?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Tak. Dane są fizycznie w Unii Europejskiej (Frankfurt), szyfrowane, a każdy dostęp logowany z retencją 2 lata. Podpisujemy umowę powierzenia przetwarzania danych." }
+            },
+            {
+              "@type": "Question",
+              "name": "Ile kosztuje Lexora?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Starter od 2 500 zł/msc (1-3 prawników), Growth od 5 000 zł/msc (4-10 prawników), Scale od 15 000 zł/msc (kancelaria sieciowa). Przy abonamencie rocznym -20%." }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <style>
         :root {
             /* Linear-inspired dark palette */
@@ -60,6 +124,14 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        *:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+        button:focus-visible, a:focus-visible {
+            outline-offset: 4px;
+        }
         html { scroll-behavior: smooth; }
         body {
             background: var(--bg);
@@ -2928,9 +3000,20 @@
 
         const focal = 420;
         const camZ = 80;
+        const TARGET_FPS = 40;
+        const FRAME_INTERVAL = 1000 / TARGET_FPS;
+        let lastFrameTime = 0;
 
-        function frame() {
+        function frame(now) {
             if (!running) return;
+            if (now - lastFrameTime < FRAME_INTERVAL) {
+                requestAnimationFrame(frame);
+                return;
+            }
+            // Adjust z speed based on actual elapsed time so motion looks consistent
+            const dt = Math.min(50, now - lastFrameTime) / 16.67;
+            lastFrameTime = now;
+
             ctx.clearRect(0, 0, w, h);
             ctx.globalCompositeOperation = 'lighter';
             camX += (mx * 12 - camX) * 0.04;
@@ -2938,7 +3021,7 @@
             const halfW = w / 2, halfH = h / 2;
             for (let i = 0; i < points.length; i++) {
                 const p = points[i];
-                p.z += 0.7;
+                p.z += 0.7 * dt;
                 if (p.z > 200) p.z -= 1800;
                 const dz = p.z + camZ;
                 if (dz < 1) continue;
@@ -2979,7 +3062,7 @@
         io.observe(canvas);
 
         init();
-        frame();
+        requestAnimationFrame(frame);
     })();
 
     // Final CTA: wavy starfield plane
@@ -3027,14 +3110,24 @@
         const camZ = 120;
         const camYBase = 40;
         const pitch = -0.4;
+        const TARGET_FPS_F = 40;
+        const FRAME_INTERVAL_F = 1000 / TARGET_FPS_F;
+        let lastFrameTimeF = 0;
 
-        function frame() {
+        function frame(now) {
             if (!running) return;
+            if (now - lastFrameTimeF < FRAME_INTERVAL_F) {
+                requestAnimationFrame(frame);
+                return;
+            }
+            const dt = Math.min(50, now - lastFrameTimeF) / 16.67;
+            lastFrameTimeF = now;
+
             ctx.clearRect(0, 0, w, h);
             ctx.globalCompositeOperation = 'lighter';
             camX += (mx * 10 - camX) * 0.04;
             camY += (my * 6 - camY) * 0.04;
-            t += 0.003;
+            t += 0.003 * dt;
             const cP = Math.cos(pitch), sP = Math.sin(pitch);
             const halfW = w / 2, halfH = h / 2;
             for (let i = 0; i < points.length; i++) {
@@ -3075,7 +3168,7 @@
         io.observe(canvas);
 
         init();
-        frame();
+        requestAnimationFrame(frame);
     })();
 </script>
 </body>
