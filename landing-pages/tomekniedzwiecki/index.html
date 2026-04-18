@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#faf8f3">
+    <meta name="description" content="Buduję kancelariom prawnym system, który obsługuje 3× więcej spraw bez dokładania godzin. CRM + intake od klienta + kampanie leadowe + analityka zespołu.">
+    <meta property="og:title" content="Tomek Niedźwiecki — kancelaria która działa jak firma, nie jak biuro">
+    <meta property="og:description" content="Buduję kancelariom prawnym system, który obsługuje 3× więcej spraw bez dokładania godzin.">
+    <meta property="og:type" content="website">
+    <title>Tomek Niedźwiecki — system wzrostu dla kancelarii prawnych</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;500&display=swap&subset=latin-ext" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #faf8f3;
+            --bg-contrast: #f0ede6;
+            --bg-card: #ffffff;
+            --bg-dark: #1e3a5f;
+
+            --text: #1e3a5f;
+            --text-body: #44403c;
+            --text-muted: #78716c;
+            --text-soft: #a8a29e;
+
+            --accent: #991b1b;
+            --accent-hover: #7f1d1d;
+            --success: #166534;
+            --warn: #a16207;
+
+            --border: #e7e5e0;
+            --border-strong: #d6d3cc;
+
+            --r-sm: 8px;
+            --r-md: 12px;
+            --r-lg: 20px;
+            --r-xl: 28px;
+
+            --shadow-sm: 0 1px 2px rgba(30, 58, 95, 0.05);
+            --shadow-md: 0 4px 12px -4px rgba(30, 58, 95, 0.08), 0 2px 4px -2px rgba(30, 58, 95, 0.04);
+            --shadow-lg: 0 20px 50px -15px rgba(30, 58, 95, 0.15);
+
+            --content-max: 1200px;
+            --prose-max: 780px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+        body {
+            background: var(--bg);
+            color: var(--text-body);
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            font-size: 17px;
+            line-height: 1.6;
+            font-optical-sizing: auto;
+        }
+        img { max-width: 100%; display: block; }
+        a { color: inherit; text-decoration: none; }
+        button { font-family: inherit; cursor: pointer; border: none; background: transparent; }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-family: 'Fraunces', Georgia, serif;
+            font-variation-settings: 'opsz' 144;
+            color: var(--text);
+            font-weight: 500;
+            line-height: 1.15;
+            letter-spacing: -0.01em;
+        }
+        h1 { font-size: clamp(40px, 6vw, 68px); line-height: 1.08; letter-spacing: -0.025em; }
+        h2 { font-size: clamp(32px, 4.5vw, 48px); letter-spacing: -0.02em; line-height: 1.12; }
+        h3 { font-size: clamp(22px, 2.5vw, 28px); line-height: 1.25; }
+        h4 { font-size: 20px; line-height: 1.3; }
+
+        .eyebrow {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--accent);
+            display: inline-block;
+        }
+        .lead {
+            font-size: clamp(18px, 2vw, 21px);
+            line-height: 1.55;
+            color: var(--text-body);
+            font-weight: 400;
+        }
+        .micro {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-muted);
+        }
+        .num {
+            font-family: 'Space Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        /* Layout */
+        .container {
+            max-width: var(--content-max);
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        section { padding: 100px 0; }
+        @media (max-width: 768px) {
+            section { padding: 64px 0; }
+        }
+
+        /* Nav */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(250, 248, 243, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid transparent;
+            transition: border-color 200ms;
+        }
+        .nav.scrolled { border-bottom-color: var(--border); }
+        .nav-inner {
+            max-width: var(--content-max);
+            margin: 0 auto;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        .nav-brand {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 20px;
+            color: var(--text);
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-brand .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            margin-left: auto;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            padding: 10px 18px;
+            background: var(--accent);
+            color: white;
+            border-radius: var(--r-sm);
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 160ms;
+        }
+        .nav-cta:hover { background: var(--accent-hover); }
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 28px;
+            border-radius: var(--r-sm);
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: -0.005em;
+            transition: all 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 1px 3px rgba(153, 27, 27, 0.25);
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -6px rgba(153, 27, 27, 0.4);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1.5px solid var(--border-strong);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--text);
+        }
+        .btn-arrow::after {
+            content: '→';
+            transition: transform 180ms;
+        }
+        .btn-arrow:hover::after { transform: translateX(3px); }
+
+        /* HERO */
+        .hero {
+            padding: 72px 0 100px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -200px;
+            right: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(30, 58, 95, 0.04), transparent 70%);
+            pointer-events: none;
+        }
+        .hero-inner {
+            position: relative;
+            max-width: 920px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .hero-eyebrow {
+            margin-bottom: 24px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px;
+            background: rgba(153, 27, 27, 0.06);
+            border: 1px solid rgba(153, 27, 27, 0.15);
+            border-radius: 999px;
+        }
+        .hero h1 {
+            margin-bottom: 24px;
+        }
+        .hero h1 em {
+            font-style: italic;
+            color: var(--accent);
+            font-weight: 400;
+        }
+        .hero-lead {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-body);
+            line-height: 1.55;
+            max-width: 680px;
+            margin: 0 auto 40px;
+        }
+        .hero-ctas {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 56px;
+        }
+        .hero-proof {
+            max-width: 700px;
+            margin: 56px auto 0;
+            padding: 24px 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            text-align: left;
+            box-shadow: var(--shadow-sm);
+        }
+        .hero-proof-badge {
+            flex-shrink: 0;
+            width: 52px;
+            height: 52px;
+            background: var(--bg-dark);
+            color: white;
+            border-radius: var(--r-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fraunces', serif;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .hero-proof-text { flex: 1; min-width: 0; }
+        .hero-proof-name { font-weight: 600; color: var(--text); font-size: 15px; margin-bottom: 2px; }
+        .hero-proof-role { font-size: 13px; color: var(--text-muted); }
+        .hero-proof-stat {
+            flex-shrink: 0;
+            text-align: right;
+            border-left: 1px solid var(--border);
+            padding-left: 20px;
+        }
+        .hero-proof-stat-num {
+            font-family: 'Fraunces', serif;
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        .hero-proof-stat-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 4px;
+        }
+        @media (max-width: 640px) {
+            .hero-proof { flex-direction: column; text-align: center; padding: 20px; }
+            .hero-proof-stat { border-left: none; border-top: 1px solid var(--border); padding: 16px 0 0; text-align: center; }
+        }
+
+        /* Problem section */
+        .problem {
+            background: var(--bg-contrast);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .section-head {
+            max-width: var(--prose-max);
+            margin: 0 auto 64px;
+            text-align: center;
+        }
+        .section-head .eyebrow { margin-bottom: 16px; }
+        .section-head h2 { margin-bottom: 20px; }
+        .section-head .lead { max-width: 620px; margin: 0 auto; }
+
+        .pain-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 900px) { .pain-grid { grid-template-columns: 1fr; } }
+        .pain-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 32px 28px;
+            position: relative;
+        }
+        .pain-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--accent);
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+        .pain-card h3 {
+            font-size: 22px;
+            margin-bottom: 14px;
+            color: var(--text);
+        }
+        .pain-card p {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        /* Modules section */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 768px) { .modules-grid { grid-template-columns: 1fr; } }
+
+        .module-card {
+            padding: 36px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            transition: border-color 200ms, transform 200ms;
+        }
+        .module-card:hover {
+            border-color: var(--text);
+            transform: translateY(-2px);
+        }
+        .module-ico {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-dark);
+            color: white;
+            border-radius: var(--r-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-family: 'Fraunces', serif;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .module-card h3 {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+        .module-card p {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-bottom: 20px;
+            line-height: 1.55;
+        }
+        .module-list {
+            list-style: none;
+            padding: 0;
+        }
+        .module-list li {
+            display: flex;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 14px;
+            color: var(--text-body);
+            align-items: flex-start;
+        }
+        .module-list li::before {
+            content: '';
+            flex-shrink: 0;
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            margin-top: 9px;
+        }
+
+        /* Case study */
+        .case {
+            background: var(--bg-dark);
+            color: #e7e5e0;
+            position: relative;
+            overflow: hidden;
+        }
+        .case::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -300px;
+            transform: translateY(-50%);
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(250, 248, 243, 0.05), transparent 70%);
+            pointer-events: none;
+        }
+        .case h2, .case h3 { color: #faf8f3; }
+        .case .section-head .eyebrow { color: #fca5a5; }
+        .case .section-head .lead { color: #d6d3cc; }
+        .case-body {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 48px;
+            align-items: center;
+        }
+        @media (max-width: 900px) { .case-body { grid-template-columns: 1fr; } }
+        .case-story h3 { font-size: 28px; margin-bottom: 20px; }
+        .case-story p {
+            color: #d6d3cc;
+            font-size: 16px;
+            line-height: 1.65;
+            margin-bottom: 16px;
+        }
+        .case-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+        .case-stat {
+            background: rgba(250, 248, 243, 0.04);
+            border: 1px solid rgba(250, 248, 243, 0.12);
+            border-radius: var(--r-md);
+            padding: 24px 20px;
+        }
+        .case-stat-num {
+            font-family: 'Fraunces', serif;
+            font-size: 38px;
+            font-weight: 600;
+            color: #faf8f3;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+        .case-stat-num sup {
+            font-size: 18px;
+            vertical-align: super;
+            color: #fca5a5;
+            font-weight: 400;
+        }
+        .case-stat-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: #a8a29e;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            line-height: 1.4;
+        }
+        .case-quote {
+            max-width: 780px;
+            margin: 64px auto 0;
+            padding: 32px;
+            background: rgba(250, 248, 243, 0.04);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 var(--r-md) var(--r-md) 0;
+        }
+        .case-quote-text {
+            font-family: 'Fraunces', serif;
+            font-style: italic;
+            font-size: 20px;
+            line-height: 1.5;
+            color: #faf8f3;
+            margin-bottom: 16px;
+        }
+        .case-quote-author {
+            font-size: 14px;
+            color: #a8a29e;
+        }
+        .case-quote-author strong { color: #faf8f3; font-weight: 600; }
+
+        /* Process */
+        .process-list {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .process-step {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 24px;
+            padding: 28px 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            align-items: center;
+            transition: border-color 200ms;
+        }
+        .process-step:hover { border-color: var(--border-strong); }
+        .process-step-num {
+            font-family: 'Fraunces', serif;
+            font-size: 48px;
+            font-weight: 500;
+            color: var(--text);
+            line-height: 1;
+            opacity: 0.9;
+        }
+        .process-step h4 { font-size: 19px; margin-bottom: 4px; color: var(--text); }
+        .process-step-desc { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+        .process-step-time {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: right;
+            white-space: nowrap;
+        }
+        @media (max-width: 640px) {
+            .process-step { grid-template-columns: 1fr; gap: 12px; padding: 20px; }
+            .process-step-num { font-size: 36px; }
+            .process-step-time { text-align: left; }
+        }
+
+        /* Pricing */
+        .pricing {
+            background: var(--bg-contrast);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
+
+        .price-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 36px 32px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .price-card.featured {
+            border: 2px solid var(--bg-dark);
+            box-shadow: var(--shadow-lg);
+            transform: scale(1.02);
+        }
+        @media (max-width: 900px) {
+            .price-card.featured { transform: none; }
+        }
+        .price-card.featured::before {
+            content: 'Najpopularniejszy';
+            position: absolute;
+            top: -12px;
+            left: 32px;
+            background: var(--bg-dark);
+            color: #faf8f3;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: 999px;
+        }
+
+        .price-tier {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .price-name {
+            font-family: 'Fraunces', serif;
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 14px;
+        }
+        .price-amount {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .price-from { font-size: 13px; color: var(--text-muted); }
+        .price-value {
+            font-family: 'Fraunces', serif;
+            font-size: 44px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1;
+            letter-spacing: -0.02em;
+            font-variant-numeric: tabular-nums;
+        }
+        .price-unit { font-size: 14px; color: var(--text-muted); }
+        .price-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 14px 0 24px;
+            line-height: 1.5;
+            min-height: 42px;
+        }
+        .price-features {
+            list-style: none;
+            margin-bottom: 28px;
+            flex: 1;
+        }
+        .price-features li {
+            display: flex;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--text-body);
+            line-height: 1.5;
+            border-bottom: 1px dashed var(--border);
+        }
+        .price-features li:last-child { border-bottom: none; }
+        .price-features li::before {
+            content: '✓';
+            flex-shrink: 0;
+            color: var(--success);
+            font-weight: 700;
+        }
+        .price-cta {
+            display: block;
+            text-align: center;
+            padding: 14px;
+            border-radius: var(--r-sm);
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 180ms;
+            border: 1.5px solid var(--border-strong);
+            color: var(--text);
+        }
+        .price-cta:hover { border-color: var(--text); background: var(--bg); }
+        .price-card.featured .price-cta {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .price-card.featured .price-cta:hover { background: var(--accent-hover); }
+
+        .pricing-addon {
+            max-width: 820px;
+            margin: 40px auto 0;
+            padding: 28px 32px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--r-md);
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        @media (max-width: 640px) { .pricing-addon { grid-template-columns: 1fr; } }
+        .pricing-addon-badge {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            background: rgba(153, 27, 27, 0.08);
+            padding: 6px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .pricing-addon-text { font-size: 14px; color: var(--text-body); line-height: 1.55; }
+        .pricing-addon-text strong { color: var(--text); }
+
+        /* FAQ */
+        .faq-list {
+            max-width: 820px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            overflow: hidden;
+            transition: border-color 200ms;
+        }
+        .faq-item.open { border-color: var(--border-strong); }
+        .faq-q {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 22px 28px;
+            text-align: left;
+            width: 100%;
+            font-family: 'Fraunces', serif;
+            font-size: 19px;
+            font-weight: 500;
+            color: var(--text);
+            line-height: 1.35;
+            transition: background 160ms;
+        }
+        .faq-q:hover { background: rgba(30, 58, 95, 0.02); }
+        .faq-q-sign {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            position: relative;
+            color: var(--text-muted);
+        }
+        .faq-q-sign::before, .faq-q-sign::after {
+            content: '';
+            position: absolute;
+            background: currentColor;
+            transition: transform 200ms;
+        }
+        .faq-q-sign::before {
+            top: 50%; left: 0; right: 0;
+            height: 1.5px;
+            transform: translateY(-50%);
+        }
+        .faq-q-sign::after {
+            left: 50%; top: 0; bottom: 0;
+            width: 1.5px;
+            transform: translateX(-50%);
+        }
+        .faq-item.open .faq-q-sign::after { transform: translateX(-50%) rotate(90deg); }
+        .faq-a {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 260ms ease;
+            padding: 0 28px;
+            color: var(--text-body);
+            font-size: 15px;
+            line-height: 1.65;
+        }
+        .faq-item.open .faq-a { max-height: 400px; padding: 0 28px 24px; }
+
+        /* About */
+        .about {
+            background: var(--bg-contrast);
+            border-top: 1px solid var(--border);
+        }
+        .about-inner {
+            max-width: 820px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+        @media (max-width: 640px) { .about-inner { grid-template-columns: 1fr; text-align: center; } }
+        .about-avatar {
+            width: 160px;
+            height: 160px;
+            background: var(--bg-dark);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fraunces', serif;
+            font-size: 64px;
+            font-weight: 500;
+            margin: 0 auto;
+        }
+        .about h3 { font-size: 26px; margin-bottom: 14px; }
+        .about p { color: var(--text-body); font-size: 16px; line-height: 1.65; margin-bottom: 12px; }
+        .about p:last-child { margin-bottom: 0; }
+        .about-creds {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .about-creds span { display: flex; align-items: center; gap: 6px; }
+        .about-creds strong { color: var(--text); font-weight: 600; }
+        @media (max-width: 640px) { .about-creds { justify-content: center; } }
+
+        /* Final CTA */
+        .final {
+            padding: 120px 0;
+            text-align: center;
+            background: var(--bg-dark);
+            color: #faf8f3;
+        }
+        .final h2 { color: #faf8f3; max-width: 820px; margin: 0 auto 24px; }
+        .final .lead { color: #d6d3cc; max-width: 620px; margin: 0 auto 40px; }
+        .final-ctas {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .final .btn-secondary {
+            background: transparent;
+            color: #faf8f3;
+            border-color: rgba(250, 248, 243, 0.3);
+        }
+        .final .btn-secondary:hover {
+            background: rgba(250, 248, 243, 0.08);
+            border-color: #faf8f3;
+        }
+        .final-sub {
+            margin-top: 32px;
+            font-size: 14px;
+            color: #a8a29e;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .footer-inner {
+            max-width: var(--content-max);
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        footer a { color: var(--text-muted); }
+        footer a:hover { color: var(--text); }
+        .footer-right { display: flex; gap: 24px; }
+
+        /* Reveal animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 700ms cubic-bezier(0.2, 0.9, 0.3, 1), transform 700ms cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1; transform: none; transition: none; }
+            html { scroll-behavior: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav" id="nav">
+    <div class="nav-inner">
+        <a href="#top" class="nav-brand">
+            <span class="dot"></span>
+            Tomek Niedźwiecki
+        </a>
+        <div class="nav-links">
+            <a href="#system">System</a>
+            <a href="#case">Klient</a>
+            <a href="#cennik">Cennik</a>
+            <a href="#faq">FAQ</a>
+        </div>
+        <a href="#kontakt" class="nav-cta">Umów rozmowę</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="top">
+    <div class="container">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">
+                <span class="eyebrow">Dla kancelarii prawnych</span>
+            </div>
+            <h1>Kancelaria, która działa<br>jak firma. <em>Nie jak biuro.</em></h1>
+            <p class="hero-lead">
+                Buduję system, który przyjmuje klientów, prowadzi sprawy i zdobywa nowych — żeby Twoi prawnicy nie żonglowali Excelem, Gmailem i kampanią reklamową jednocześnie.
+            </p>
+            <div class="hero-ctas">
+                <a href="#kontakt" class="btn btn-primary">Umów 30-min rozmowę</a>
+                <a href="#case" class="btn btn-secondary btn-arrow">Zobacz jak to wygląda u Pawła</a>
+            </div>
+
+            <div class="hero-proof reveal">
+                <div class="hero-proof-badge">P</div>
+                <div class="hero-proof-text">
+                    <div class="hero-proof-name">Paweł Stachurski</div>
+                    <div class="hero-proof-role">GetMyPermit · kancelaria imigracyjna, Wrocław</div>
+                </div>
+                <div class="hero-proof-stat">
+                    <div class="hero-proof-stat-num num">5 075</div>
+                    <div class="hero-proof-stat-label">spraw w systemie</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem">
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow">Co zwykle boli</span>
+            <h2>Kancelaria rośnie w chaosie</h2>
+            <p class="lead">Im więcej spraw, tym więcej tracisz. Znasz to?</p>
+        </div>
+
+        <div class="pain-grid">
+            <div class="pain-card reveal">
+                <div class="pain-num">01</div>
+                <h3>Prawnik traci 30% czasu na papierologii</h3>
+                <p>Przepisywanie danych, szukanie dokumentów, nadrabianie emaili. Godzina prawnika kosztuje 300-500 zł — a większość znika w pracy, której zrobiłby CRM albo asystent.</p>
+            </div>
+            <div class="pain-card reveal">
+                <div class="pain-num">02</div>
+                <h3>Leady tylko z poleceń</h3>
+                <p>Każdy miesiąc to loteria. "Ile dzwonków będzie w tym miesiącu?" Brakuje powtarzalnego źródła klientów — a konkurenci już mają kampanie w Google i Facebooku.</p>
+            </div>
+            <div class="pain-card reveal">
+                <div class="pain-num">03</div>
+                <h3>Przy 100 sprawach system się sypie</h3>
+                <p>Excel nie pokaże, która sprawa stoi od 30 dni. Kto co ma do zrobienia. Kto zarabia. Zatrudniasz kolejnego prawnika, ale chaos rośnie proporcjonalnie.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SYSTEM / MODULES -->
+<section id="system">
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow">Co dostajesz</span>
+            <h2>System, który prowadzi kancelarię za Ciebie</h2>
+            <p class="lead">Cztery moduły. Jedna platforma. Zero integracyjnego bałaganu.</p>
+        </div>
+
+        <div class="modules-grid">
+            <div class="module-card reveal">
+                <div class="module-ico">CRM</div>
+                <h3>Operacyjny CRM</h3>
+                <p>Sprawy, klienci, dokumenty, zadania, finanse. Wszystko w jednym miejscu, dopasowane pod realny proces kancelarii imigracyjnej / upadłościowej / rodzinnej.</p>
+                <ul class="module-list">
+                    <li>Pipeline spraw z etapami (zlecenie → aktywna → decyzja)</li>
+                    <li>Automatyczne powiadomienia o terminach i cisza w sprawie</li>
+                    <li>Zadania per prawnik + overdue alerty</li>
+                    <li>Finanse: faktury, płatności, windykacja z automatyzacją</li>
+                </ul>
+            </div>
+
+            <div class="module-card reveal">
+                <div class="module-ico" style="font-family: 'Fraunces', serif;">I</div>
+                <h3>Intake od klienta</h3>
+                <p>Wysyłasz jeden link. Klient wypełnia formularz w 15 minut w swoim języku. OCR czyta paszport automatycznie, a Ty dostajesz gotową sprawę z kompletem dokumentów.</p>
+                <ul class="module-list">
+                    <li>5 języków: polski, angielski, ukraiński, rosyjski, hindi</li>
+                    <li>17 mikro-ekranów — nic nie przytłacza klienta</li>
+                    <li>OCR paszportu + walidacja NIP-u pracodawcy</li>
+                    <li>Auto-flagi ryzyka (paszport wygasa, pensja &lt; minimum krajowego)</li>
+                </ul>
+            </div>
+
+            <div class="module-card reveal">
+                <div class="module-ico" style="font-family: 'Fraunces', serif;">M</div>
+                <h3>Kampanie leadowe</h3>
+                <p>Meta Ads + Google Ads prowadzone przeze mnie. Lead trafia prosto do CRM, automatycznie jest rozdzielany do prawnika, a Ty widzisz koszt na sprawę w panelu.</p>
+                <ul class="module-list">
+                    <li>Pełen setup kampanii — creative, targeting, landing</li>
+                    <li>Leady integrujące się bezpośrednio z CRM</li>
+                    <li>Monthly review z liczbami (koszt leadu, konwersja, ROAS)</li>
+                    <li>Rozliczenie performance — płacisz za rezultaty, nie czas</li>
+                </ul>
+            </div>
+
+            <div class="module-card reveal">
+                <div class="module-ico" style="font-family: 'Fraunces', serif;">A</div>
+                <h3>Panel właściciela</h3>
+                <p>Osobny widok tylko dla Ciebie. Live strumień aktywności, scoreboard prawników, sprawy na ryzyku, finansowy pulse — wszystko w 5 zakładkach.</p>
+                <ul class="module-list">
+                    <li>Kto zalogowany teraz, co robi, kto nie pracował od 3 dni</li>
+                    <li>Activity score per prawnik (sprawy ukończone, overdue, przychód)</li>
+                    <li>Auto-wykrywanie spraw krytycznych (cisza &gt;30 dni, paszport wygasa)</li>
+                    <li>Audit log — kto co usunął, kto oglądał hasła klientów</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CASE STUDY -->
+<section class="case" id="case">
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow">Anchor klient</span>
+            <h2>GetMyPermit — kancelaria imigracyjna</h2>
+            <p class="lead">Paweł Stachurski, Wrocław. System uruchomiony przed startem MOS 2.0 (rządowy portal kart pobytu).</p>
+        </div>
+
+        <div class="case-body">
+            <div class="case-story reveal">
+                <h3>Co zbudowaliśmy</h3>
+                <p>Kancelaria obsługująca cudzoziemców z całego świata — Ukraina, Indie, Nepal, Filipiny. Skala: 3 tysiące aktywnych klientów, 5 tysięcy spraw, kilkunastu prawników i asystentów.</p>
+                <p>Zamiast Excela i 6 różnych narzędzi — jeden CRM z intake formem w 5 językach, automatycznym OCR paszportów, kolejką wniosków MOS 2.0 i panelem właściciela do zarządzania zespołem.</p>
+                <p>System wystartował miesiąc przed oficjalnym uruchomieniem MOS 2.0. Kancelaria była gotowa kiedy konkurenci dopiero czytali instrukcję.</p>
+            </div>
+
+            <div class="case-stats reveal">
+                <div class="case-stat">
+                    <div class="case-stat-num num">5 075</div>
+                    <div class="case-stat-label">Spraw w systemie</div>
+                </div>
+                <div class="case-stat">
+                    <div class="case-stat-num num">3 846</div>
+                    <div class="case-stat-label">Klientów w bazie</div>
+                </div>
+                <div class="case-stat">
+                    <div class="case-stat-num num">15<sup>ekranów</sup></div>
+                    <div class="case-stat-label">Intake klienta, 5 języków</div>
+                </div>
+                <div class="case-stat">
+                    <div class="case-stat-num num">24<sup>/7</sup></div>
+                    <div class="case-stat-label">Live audit + monitoring</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="case-quote reveal">
+            <p class="case-quote-text">"Przed systemem mieliśmy chaos w Excelu. Teraz widzę każdą sprawę, każdego klienta, każdego prawnika. Rano otwieram panel i wiem co dzieje się w firmie."</p>
+            <p class="case-quote-author"><strong>Paweł Stachurski</strong> · GetMyPermit, kancelaria imigracyjna</p>
+        </div>
+    </div>
+</section>
+
+<!-- PROCES -->
+<section>
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow">Jak pracujemy</span>
+            <h2>Od pierwszej rozmowy do działającego systemu</h2>
+            <p class="lead">Czyste 4 kroki. Bez ukrytego zakresu, bez „wkrótce dostarczymy".</p>
+        </div>
+
+        <div class="process-list">
+            <div class="process-step reveal">
+                <div class="process-step-num">01</div>
+                <div>
+                    <h4>Discovery call</h4>
+                    <p class="process-step-desc">30 minut rozmowy o Twojej kancelarii. Ile spraw, ile osób, gdzie boli, czego próbowaliście. Wychodzę z konkretną propozycją albo powiem że nie pasujemy.</p>
+                </div>
+                <div class="process-step-time">30 min · bezpłatnie</div>
+            </div>
+            <div class="process-step reveal">
+                <div class="process-step-num">02</div>
+                <div>
+                    <h4>Setup i migracja</h4>
+                    <p class="process-step-desc">Konfiguracja CRM pod Twój proces, migracja danych z istniejących narzędzi (Excel, Notion, inne CRMy). Intake form w Twoim brandingu i językach Twoich klientów.</p>
+                </div>
+                <div class="process-step-time">2 tygodnie</div>
+            </div>
+            <div class="process-step reveal">
+                <div class="process-step-num">03</div>
+                <div>
+                    <h4>Szkolenie zespołu</h4>
+                    <p class="process-step-desc">Jeden dzień na żywo dla całego zespołu. Pokazuję każdy workflow, dopasowujemy na miejscu co wymaga poprawek. Dokumentacja pisana tak, żeby nowy pracownik wszedł w 2 dni.</p>
+                </div>
+                <div class="process-step-time">1 dzień</div>
+            </div>
+            <div class="process-step reveal">
+                <div class="process-step-num">04</div>
+                <div>
+                    <h4>Monthly growth review</h4>
+                    <p class="process-step-desc">Co miesiąc analiza — jak pracuje zespół, co działa w kampaniach, jakie funkcje trzeba rozwijać. Wspólnie decydujemy gdzie inwestujemy następne godziny developmentu.</p>
+                </div>
+                <div class="process-step-time">miesięcznie</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="cennik">
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow">Cennik</span>
+            <h2>Przewidywalny koszt. Skalowalny w górę.</h2>
+            <p class="lead">System + support + drobne zmiany w stałej cenie. Duże funkcje wyceniane osobno.</p>
+        </div>
+
+        <div class="pricing-grid">
+            <div class="price-card reveal">
+                <div class="price-tier">Starter</div>
+                <div class="price-name">Kancelaria butikowa</div>
+                <div class="price-amount">
+                    <span class="price-from">od</span>
+                    <span class="price-value">2 500</span>
+                    <span class="price-unit">zł / msc</span>
+                </div>
+                <p class="price-desc">1-3 prawników, do 30 aktywnych spraw miesięcznie. Dla firm które chcą uporządkować operację.</p>
+                <ul class="price-features">
+                    <li>CRM + intake form + panel właściciela</li>
+                    <li>Do 10h drobnych zmian / msc</li>
+                    <li>Support e-mailowy do 24h</li>
+                    <li>Miesięczny przegląd z liczbami</li>
+                    <li>Onboarding i szkolenie zespołu</li>
+                </ul>
+                <a href="#kontakt" class="price-cta">Umów rozmowę</a>
+            </div>
+
+            <div class="price-card featured reveal">
+                <div class="price-tier">Growth</div>
+                <div class="price-name">Rosnąca kancelaria</div>
+                <div class="price-amount">
+                    <span class="price-from">od</span>
+                    <span class="price-value">5 000</span>
+                    <span class="price-unit">zł / msc</span>
+                </div>
+                <p class="price-desc">4-10 prawników, do 100 spraw / msc. Gdy chcesz nie tylko uporządkować, ale też skalować.</p>
+                <ul class="price-features">
+                    <li>Wszystko ze Starter</li>
+                    <li>Do 20h zmian i rozwoju / msc</li>
+                    <li>Priorytetowy support (kanał Slack / WhatsApp)</li>
+                    <li>Integracje: e-mail, WhatsApp Business, podatnik.gov.pl</li>
+                    <li>Dedykowany moduł automatyzacji</li>
+                    <li>Kwartalny strategy session</li>
+                </ul>
+                <a href="#kontakt" class="price-cta">Umów rozmowę</a>
+            </div>
+
+            <div class="price-card reveal">
+                <div class="price-tier">Scale</div>
+                <div class="price-name">Kancelaria sieciowa</div>
+                <div class="price-amount">
+                    <span class="price-value" style="font-size: 32px;">Wycena</span>
+                </div>
+                <p class="price-desc">10+ prawników, wiele oddziałów, 100+ spraw / msc. Gdy potrzebujesz dedykowanego rozwiązania.</p>
+                <ul class="price-features">
+                    <li>Wszystko z Growth</li>
+                    <li>Dedykowany zakres developmentu</li>
+                    <li>Multi-oddziałowa architektura</li>
+                    <li>Zaawansowana analityka + raporty dla zarządu</li>
+                    <li>Integracje enterprise (SSO, ERP, księgowość)</li>
+                    <li>SLA z czasem reakcji &lt; 4h</li>
+                </ul>
+                <a href="#kontakt" class="price-cta">Wycena indywidualna</a>
+            </div>
+        </div>
+
+        <div class="pricing-addon reveal">
+            <span class="pricing-addon-badge">Opcjonalnie</span>
+            <p class="pricing-addon-text">
+                <strong>Kampanie leadowe:</strong> pełne prowadzenie Meta Ads + Google Ads. 12% budżetu reklamowego za obsługę + performance fee od konwertowanych leadów. Płacisz za wyniki — nie za godziny.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow">Częste pytania</span>
+            <h2>Zanim zadzwonisz</h2>
+        </div>
+
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-q">
+                    Czy kancelaria adwokacka może legalnie pracować na tym modelu?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Tak. Kodeks etyki adwokackiej zabrania wynagrodzenia zależnego od wyniku sprawy (pactum de quota litis). Mój model oparty jest na stałym abonamencie za system + osobny performance marketing — żadna z tych opłat nie jest powiązana z wygraną sprawy klienta. Firmy usługowe (nie adwokackie) mają jeszcze większą elastyczność i mogą wchodzić w bardziej performance-oparte umowy.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-q">
+                    Gdzie są przechowywane dane klientów?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Supabase (infrastruktura AWS, region EU-West-1 we Frankfurcie). Zgodność z RODO, szyfrowanie at-rest i in-transit. Dane klienta są Twoją własnością — możesz je wyeksportować w dowolnym momencie. Credentials do gov.pl są dodatkowo logowane z każdym dostępem (kto otwierał, kiedy, z jakiego IP) — audit trail spełniający wymogi RODO.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-q">
+                    Co jeśli używamy już innego CRM-a?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Migracja jest częścią onboarding-u. Wcześniej migrowałem z Excela, Notion, Trello i dwóch branżowych CRM-ów z Ukrainy. Dla typowej kancelarii to 2-7 dni pracy zależnie od ilości danych — wliczone w setup. Nie musisz robić nic poza udostępnieniem eksportu z obecnego systemu.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-q">
+                    Jak długo trwa wdrożenie?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Od pierwszej rozmowy do działającego systemu: 3-4 tygodnie dla Starter, 4-6 tygodni dla Growth. W tym czasie: 1 tydzień setupu, 1-2 tygodnie migracji i dopasowania procesów, 1 dzień szkolenia, potem miesiąc adaptacji z aktywnym wsparciem. Nie "kiedyś będzie gotowe" — konkretny harmonogram z datami.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-q">
+                    Co się stanie, jeśli zechcę odejść po roku?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Dane zawsze Twoje — eksport pełny w CSV/SQL. Kod źródłowy można wykupić (opcja buyout po wycenie) albo odejść i korzystać z systemu jako klient innego dostawcy. Umowa ma 3-miesięczny okres wypowiedzenia, żeby obie strony miały czas na spokojne przekazanie. Nie blokuję nikogo pod groźbą utraty danych.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-q">
+                    Czy obsługujecie tylko kancelarie imigracyjne?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Obecnie: imigracja (Paweł, pierwsze wdrożenie). W pipeline: upadłość konsumencka, prawo rodzinne, prawo pracy. System jest na tyle generyczny, że dopasowanie do nowej specjalizacji to 2-3 tygodnie pracy nad domeną (terminologia, pipeline'y, specyficzne dokumenty). Jeśli jesteś zainteresowany — porozmawiajmy, mogę być pierwszym dostawcą w Twojej niszy.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-q">
+                    Czy muszę mieć wiedzę techniczną w zespole?
+                    <span class="faq-q-sign"></span>
+                </button>
+                <div class="faq-a">
+                    <p>Nie. System jest zbudowany tak, żeby z niego korzystał każdy prawnik i asystent — bez szkoleń IT. Interfejs w polskim, flow dopasowany do realnego procesu kancelarii. Ja zajmuję się całą stroną techniczną: hosting, backupy, aktualizacje, bezpieczeństwo. Twój zespół tylko pracuje.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about">
+    <div class="container">
+        <div class="about-inner reveal">
+            <div class="about-avatar">T</div>
+            <div>
+                <span class="eyebrow" style="margin-bottom: 10px;">O mnie</span>
+                <h3>Tomek Niedźwiecki</h3>
+                <p>15 lat w e-commerce. Budowałem, skalowałem i sprzedawałem biznesy. Zespoły, które prowadziłem, wygenerowały razem ponad 70 mln zł przychodu.</p>
+                <p>Teraz specjalizuję się w budowaniu systemów operacyjnych i marketingowych dla kancelarii prawnych — bo to rynek, gdzie świetnie działające procesy cyfrowe są jeszcze rzadkością, a popyt na nich rośnie.</p>
+                <div class="about-creds">
+                    <span><strong>Anchor klient:</strong> GetMyPermit</span>
+                    <span><strong>Bazowany w:</strong> Wrocław / PL</span>
+                    <span><strong>Pracuje z:</strong> 3-15 os. kancelariami</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final" id="kontakt">
+    <div class="container">
+        <h2>Porozmawiajmy o Twojej kancelarii</h2>
+        <p class="lead">30 minut bez zobowiązań. Powiesz mi gdzie boli, pokażę konkretne rozwiązanie. Albo powiem szczerze że nie pasujemy — i oszczędzimy sobie nawzajem czasu.</p>
+        <div class="final-ctas">
+            <a href="mailto:tomek@tomekniedzwiecki.pl?subject=Rozmowa%20o%20kancelarii&body=Cze%C5%9B%C4%87%20Tomek%2C%0A%0AMam%20kancelari%C4%99%20specjalizuj%C4%85c%C4%85%20si%C4%99%20w%3A%20%5Bimigracja%20%2F%20upad%C5%82o%C5%9B%C4%87%20%2F%20rodzinne%20%2F%20inne%5D%0ALiczba%20os%C3%B3b%20w%20zespole%3A%20%5B%5D%0A%C5%9Arednio%20spraw%2Fmsc%3A%20%5B%5D%0AG%C5%82%C3%B3wny%20problem%3A%20%5B%5D%0A%0AZadzwonisz%3F%20Preferowany%20termin%3A%20%5B%5D" class="btn btn-primary">Napisz maila</a>
+            <a href="https://wa.me/48500000000?text=Cze%C5%9B%C4%87%20Tomek%2C%20chcia%C5%82bym%20porozmawia%C4%87%20o%20kancelarii" class="btn btn-secondary btn-arrow">WhatsApp</a>
+        </div>
+        <p class="final-sub">Odpowiadam w 24h. Jeśli piszesz w weekend — w poniedziałek rano.</p>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-inner">
+        <div>© 2026 Tomek Niedźwiecki · System wzrostu dla kancelarii prawnych</div>
+        <div class="footer-right">
+            <a href="mailto:tomek@tomekniedzwiecki.pl">tomek@tomekniedzwiecki.pl</a>
+            <a href="#top">Do góry ↑</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Sticky nav shadow on scroll
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Reveal on scroll
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    } else {
+        document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+    }
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = btn.closest('.faq-item');
+            const wasOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+            if (!wasOpen) item.classList.add('open');
+        });
+    });
+</script>
+</body>
+</html>
