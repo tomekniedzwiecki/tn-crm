@@ -83,8 +83,8 @@
             line-height: 1.1;
             letter-spacing: -0.025em;
         }
-        h1 { font-size: clamp(44px, 7vw, 80px); line-height: 1.02; letter-spacing: -0.04em; }
-        h2 { font-size: clamp(36px, 5vw, 56px); line-height: 1.08; letter-spacing: -0.03em; }
+        h1 { font-size: clamp(48px, 8vw, 96px); line-height: 0.98; letter-spacing: -0.045em; }
+        h2 { font-size: clamp(36px, 5vw, 60px); line-height: 1.05; letter-spacing: -0.035em; }
         h3 { font-size: clamp(24px, 3vw, 32px); line-height: 1.2; }
         h4 { font-size: 20px; line-height: 1.3; }
 
@@ -463,12 +463,51 @@
         .stream-time { font-size: 9px; color: var(--text-light-mut); font-family: 'Space Mono', monospace; }
 
         /* ======================================== */
-        /* LOGO STRIP                                 */
+        /* METRIC BAND                                */
         /* ======================================== */
-        .logo-strip {
-            padding: 56px 0 40px;
+        .metric-band {
+            padding: 48px 0;
             background: var(--light-1);
             border-bottom: 1px solid var(--border);
+        }
+        .metric-band-inner {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+            align-items: center;
+        }
+        @media (max-width: 900px) { .metric-band-inner { grid-template-columns: repeat(2, 1fr); gap: 24px; } }
+        .metric-item { text-align: center; }
+        .metric-item-num {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(32px, 4vw, 44px);
+            font-weight: 600;
+            color: var(--text-dark);
+            line-height: 1;
+            letter-spacing: -0.035em;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 8px;
+        }
+        .metric-item-num sup { font-size: 18px; color: var(--accent); vertical-align: super; font-weight: 400; }
+        .metric-item-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dark-mut);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* ======================================== */
+        /* LOGO STRIP - SCROLLING                     */
+        /* ======================================== */
+        .logo-strip {
+            padding: 56px 0 60px;
+            background: var(--light-0);
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
         }
         .logo-strip-label {
             text-align: center;
@@ -477,34 +516,50 @@
             color: var(--text-dark-mut);
             text-transform: uppercase;
             letter-spacing: 0.14em;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
         }
-        .logos-grid {
+        .logos-track-wrapper {
+            position: relative;
+            overflow: hidden;
+            mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+            -webkit-mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+        }
+        .logos-track {
             display: flex;
-            justify-content: center;
+            gap: 60px;
             align-items: center;
-            gap: 48px;
-            flex-wrap: wrap;
-            opacity: 0.65;
+            animation: scroll-logos 30s linear infinite;
+            width: max-content;
+        }
+        @keyframes scroll-logos {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
         }
         .logo-item {
             font-family: 'Fraunces', serif;
             font-size: 22px;
             font-weight: 600;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.025em;
             color: var(--text-dark-sec);
             display: flex;
             align-items: center;
             gap: 6px;
+            opacity: 0.6;
+            flex-shrink: 0;
+            white-space: nowrap;
+            transition: opacity 200ms;
         }
+        .logo-item:hover { opacity: 1; }
         .logo-item-placeholder {
             font-family: 'Space Mono', monospace;
             font-size: 12px;
             color: var(--text-dark-mut);
-            padding: 10px 16px;
+            padding: 10px 18px;
             border: 1.5px dashed var(--border);
             border-radius: 8px;
             letter-spacing: 0.04em;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* ======================================== */
@@ -608,7 +663,256 @@
         }
 
         /* ======================================== */
-        /* FEATURE SECTIONS                           */
+        /* BENTO GRID (main features)                 */
+        /* ======================================== */
+        .bento {
+            padding: 140px 0;
+            background: var(--light-0);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-auto-rows: minmax(260px, auto);
+            gap: 16px;
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) { .bento-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 540px) { .bento-grid { grid-template-columns: 1fr; } }
+        .bento-card {
+            position: relative;
+            padding: 32px;
+            background: var(--light-1);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .bento-card:hover {
+            transform: translateY(-2px);
+            border-color: #cbd5e1;
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.12);
+        }
+        .bento-card.dark {
+            background: var(--dark-0);
+            color: var(--text-light);
+            border-color: var(--dark-2);
+        }
+        .bento-card.dark h3 { color: var(--text-light); }
+        .bento-card.accent {
+            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+            color: white;
+            border-color: #7f1d1d;
+        }
+        .bento-card.accent h3,
+        .bento-card.accent p { color: white; }
+        .bento-card.accent::before {
+            content: '';
+            position: absolute;
+            top: -40%; right: -20%;
+            width: 80%; height: 140%;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.12), transparent 60%);
+            pointer-events: none;
+        }
+
+        /* Bento sizes */
+        .bento-1x1 { grid-column: span 2; grid-row: span 1; }
+        .bento-2x1 { grid-column: span 3; grid-row: span 1; }
+        .bento-2x2 { grid-column: span 3; grid-row: span 2; }
+        .bento-1x2 { grid-column: span 2; grid-row: span 2; }
+        .bento-3x1 { grid-column: span 3; grid-row: span 1; }
+        @media (max-width: 900px) {
+            .bento-1x1, .bento-2x1, .bento-2x2, .bento-1x2, .bento-3x1 { grid-column: span 2; grid-row: auto; }
+        }
+        @media (max-width: 540px) {
+            .bento-1x1, .bento-2x1, .bento-2x2, .bento-1x2, .bento-3x1 { grid-column: span 1; }
+        }
+
+        .bento-kicker {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--accent);
+            margin-bottom: 14px;
+        }
+        .bento-card.dark .bento-kicker,
+        .bento-card.accent .bento-kicker { color: #fca5a5; }
+        .bento-card.accent .bento-kicker { color: rgba(255,255,255,0.7); }
+        .bento-card h3 {
+            font-size: clamp(22px, 2.2vw, 30px);
+            margin-bottom: 12px;
+            line-height: 1.15;
+            letter-spacing: -0.025em;
+        }
+        .bento-card p {
+            font-size: 15px;
+            color: var(--text-dark-sec);
+            line-height: 1.55;
+            margin-bottom: 20px;
+        }
+        .bento-card.dark p { color: var(--text-light-sec); }
+
+        .bento-visual {
+            margin-top: auto;
+            position: relative;
+        }
+
+        /* Mini kanban in bento */
+        .bento-kanban {
+            display: flex;
+            gap: 6px;
+        }
+        .bento-kanban-col {
+            flex: 1;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .bento-card.dark .bento-kanban-col {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+        }
+        .bento-kanban-head {
+            font-family: 'Space Mono', monospace;
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dark-mut);
+            margin-bottom: 6px;
+        }
+        .bento-card.dark .bento-kanban-head { color: var(--text-light-mut); }
+        .bento-mini-card {
+            background: var(--light-1);
+            border-radius: 4px;
+            padding: 5px 6px;
+            margin-bottom: 4px;
+            font-size: 9px;
+            line-height: 1.3;
+        }
+        .bento-card.dark .bento-mini-card {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-light-sec);
+        }
+        .bento-mini-card b { font-weight: 600; color: var(--text-dark); }
+        .bento-card.dark .bento-mini-card b { color: var(--text-light); }
+
+        /* Mini chart in bento */
+        .bento-chart { height: 100px; margin-top: auto; }
+        .bento-chart-stat {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .bento-chart-stat-num {
+            font-family: 'Fraunces', serif;
+            font-size: 36px;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+        .bento-chart-stat-label {
+            font-size: 13px;
+            color: var(--text-dark-sec);
+        }
+        .bento-card.dark .bento-chart-stat-label { color: var(--text-light-sec); }
+
+        /* Mini pulse in bento */
+        .bento-pulse {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: auto;
+        }
+        .bento-pulse-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 11px;
+            color: var(--text-light-sec);
+        }
+        .bento-pulse-row + .bento-pulse-row { border-top: 1px solid rgba(255,255,255,0.06); }
+        .bento-pulse-dot {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .bento-pulse-row b { color: var(--text-light); font-weight: 600; }
+
+        /* Intake preview in bento */
+        .bento-intake {
+            background: #faf8f3;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-top: auto;
+        }
+        .bento-intake-bar {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 12px;
+        }
+        .bento-intake-bar span {
+            flex: 1;
+            height: 3px;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        .bento-intake-bar span.on { background: var(--accent); }
+        .bento-intake-h {
+            font-family: 'Fraunces', serif;
+            font-size: 16px;
+            color: var(--dark-0);
+            line-height: 1.15;
+            margin-bottom: 10px;
+        }
+        .bento-intake-field {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 8px 10px;
+            font-size: 11px;
+            color: var(--dark-0);
+        }
+        .bento-intake-field-flag { display: inline-flex; align-items: center; gap: 5px; }
+
+        /* Mini logos in integration bento */
+        .bento-logos-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: auto;
+        }
+        .bento-logo-chip {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+            font-family: 'Fraunces', serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            letter-spacing: -0.02em;
+        }
+        .bento-card.dark .bento-logo-chip {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+            color: var(--text-light);
+        }
+
+        /* ======================================== */
+        /* FEATURE SECTIONS (deprecated pattern kept for hero usage) */
         /* ======================================== */
         .feature {
             padding: 120px 0;
@@ -1841,15 +2145,52 @@
     </div>
 </section>
 
-<!-- LOGO STRIP -->
+<!-- METRIC BAND -->
+<section class="metric-band">
+    <div class="metric-band-inner">
+        <div class="metric-item">
+            <div class="metric-item-num num">5 075</div>
+            <div class="metric-item-label">Spraw w systemie</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-item-num num">3 846</div>
+            <div class="metric-item-label">Klientów kancelarii</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-item-num num">5<sup>języków</sup></div>
+            <div class="metric-item-label">Intake klienta</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-item-num num">99.9<sup>%</sup></div>
+            <div class="metric-item-label">Uptime Q1 2026</div>
+        </div>
+    </div>
+</section>
+
+<!-- SCROLLING LOGO STRIP -->
 <section class="logo-strip">
     <div class="container">
         <div class="logo-strip-label">Używają nas kancelarie w Polsce</div>
-        <div class="logos-grid">
+    </div>
+    <div class="logos-track-wrapper">
+        <div class="logos-track">
             <div class="logo-item">GetMyPermit</div>
             <div class="logo-item-placeholder">Twoja kancelaria?</div>
-            <div class="logo-item-placeholder">— —</div>
-            <div class="logo-item-placeholder">— —</div>
+            <div class="logo-item">· Imigracja PL</div>
+            <div class="logo-item-placeholder">Upadłość · soon</div>
+            <div class="logo-item">· Kancelaria Wrocław</div>
+            <div class="logo-item-placeholder">Prawo pracy · Q3</div>
+            <div class="logo-item">· 5 075 spraw</div>
+            <div class="logo-item-placeholder">Rozwody · soon</div>
+            <!-- Duplicate for seamless scroll -->
+            <div class="logo-item">GetMyPermit</div>
+            <div class="logo-item-placeholder">Twoja kancelaria?</div>
+            <div class="logo-item">· Imigracja PL</div>
+            <div class="logo-item-placeholder">Upadłość · soon</div>
+            <div class="logo-item">· Kancelaria Wrocław</div>
+            <div class="logo-item-placeholder">Prawo pracy · Q3</div>
+            <div class="logo-item">· 5 075 spraw</div>
+            <div class="logo-item-placeholder">Rozwody · soon</div>
         </div>
     </div>
 </section>
@@ -1892,303 +2233,112 @@
     </div>
 </section>
 
-<!-- FEATURE 1: CRM -->
-<section class="feature feature-alt" id="system">
+<!-- BENTO FEATURES -->
+<section class="bento" id="system">
     <div class="container">
-        <div class="feature-grid">
-            <div class="feature-text reveal">
-                <span class="eyebrow">Moduł 01 · CRM</span>
-                <h2>Wszystkie sprawy w <em class="serif-italic">jednym widoku</em></h2>
-                <p class="lead">Pipeline spraw dopasowany pod proces Twojej kancelarii. Statusy, etapy, terminy i alerty — w jednym miejscu.</p>
-                <ul class="feature-list">
-                    <li><span class="fl-ico">✓</span><span><b>Kanban + tabela + kalendarz</b> — widok jak Ci pasuje</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Auto-flagowanie spraw</b> w ciszy &gt;14 dni, deadlines, wygasające paszporty</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Finanse w sprawie</b> — faktury, płatności, windykacja bez przełączania</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Dokumenty z OCR</b> — paszport odczytany automatycznie, NIP sprawdzony w KRS</span></li>
-                </ul>
-                <a href="#cennik" class="feature-link">Zobacz jak to wygląda</a>
-            </div>
+        <div class="section-head">
+            <span class="eyebrow">Cały stack w jednym miejscu</span>
+            <h2>Cztery moduły. <em class="serif-italic">Jedna platforma.</em></h2>
+            <p class="lead">Zero integracyjnego bałaganu. Wszystko działa ze sobą od pierwszego dnia.</p>
+        </div>
 
-            <div class="feature-visual reveal">
-                <div class="mockup">
-                    <div class="mockup-header">
-                        <div class="mockup-dots"><span></span><span></span><span></span></div>
-                        <div class="mockup-title">Sprawy · pipeline</div>
-                    </div>
-                    <div class="mockup-body">
-                        <div class="kanban">
-                            <div class="kanban-col">
-                                <div class="kanban-col-head">
-                                    Zlecone
-                                    <span class="kanban-col-count">8</span>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-834</div>
-                                    <div class="kanban-card-title">Rajesh K. · TRC praca</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-blue">Indie</span>
-                                        <span>Kasia</span>
-                                    </div>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-832</div>
-                                    <div class="kanban-card-title">Oksana P. · TRC rodzina</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-blue">UA</span>
-                                        <span>Ania</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="kanban-col">
-                                <div class="kanban-col-head">
-                                    Aktywne
-                                    <span class="kanban-col-count">23</span>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-828</div>
-                                    <div class="kanban-card-title">Amir H. · Blue Card</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-amber">Urząd</span>
-                                        <span>Marek</span>
-                                    </div>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-826</div>
-                                    <div class="kanban-card-title">Mei Lin · studia</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-purple">Odwołanie</span>
-                                        <span>Julia</span>
-                                    </div>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-819</div>
-                                    <div class="kanban-card-title">Sanjay R. · TRC praca</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-amber">Fingerprint</span>
-                                        <span>Kasia</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="kanban-col">
-                                <div class="kanban-col-head">
-                                    Zakończone
-                                    <span class="kanban-col-count">112</span>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-814</div>
-                                    <div class="kanban-card-title">Elena V.</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-green">Wydana</span>
-                                    </div>
-                                </div>
-                                <div class="kanban-card">
-                                    <div class="kanban-card-id">GMP-809</div>
-                                    <div class="kanban-card-title">Ahmed F.</div>
-                                    <div class="kanban-card-meta">
-                                        <span class="kanban-tag tag-green">Wydana</span>
-                                    </div>
-                                </div>
-                            </div>
+        <div class="bento-grid">
+            <div class="bento-card bento-2x2 reveal">
+                <div class="bento-kicker">01 · Operacyjny CRM</div>
+                <h3>Wszystkie sprawy w jednym widoku.</h3>
+                <p>Pipeline, etapy, terminy, alerty. Kanban + tabela + kalendarz — widok jak Ci pasuje. Finanse w sprawie, OCR dokumentów, auto-flagi ryzyka.</p>
+                <div class="bento-visual">
+                    <div class="bento-kanban">
+                        <div class="bento-kanban-col">
+                            <div class="bento-kanban-head">Zlecone · 8</div>
+                            <div class="bento-mini-card"><b>Rajesh K.</b> · TRC praca</div>
+                            <div class="bento-mini-card"><b>Oksana P.</b> · TRC rodzina</div>
+                            <div class="bento-mini-card"><b>Anna V.</b> · Blue Card</div>
+                        </div>
+                        <div class="bento-kanban-col">
+                            <div class="bento-kanban-head">Aktywne · 23</div>
+                            <div class="bento-mini-card"><b>Amir H.</b> · urząd</div>
+                            <div class="bento-mini-card"><b>Mei Lin</b> · studia</div>
+                            <div class="bento-mini-card"><b>Sanjay R.</b> · fingerprint</div>
+                        </div>
+                        <div class="bento-kanban-col">
+                            <div class="bento-kanban-head">Zakończone · 112</div>
+                            <div class="bento-mini-card"><b>Elena V.</b> ✓</div>
+                            <div class="bento-mini-card"><b>Ahmed F.</b> ✓</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
 
-<!-- FEATURE 2: INTAKE -->
-<section class="feature">
-    <div class="container">
-        <div class="feature-grid reverse">
-            <div class="feature-text reveal">
-                <span class="eyebrow">Moduł 02 · Intake</span>
-                <h2>Klient wypełnia dane <em class="serif-italic">sam</em>. W swoim języku.</h2>
-                <p class="lead">Wysyłasz link. Klient dostaje intake na telefonie w 5 językach. OCR czyta paszport, auto-flagi ostrzegają o ryzykach. Ty dostajesz gotową sprawę.</p>
-                <ul class="feature-list">
-                    <li><span class="fl-ico">✓</span><span><b>5 języków</b> — PL, EN, UA, RU, HI</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>17 mikro-ekranów</b> — nic nie przytłacza klienta, konwersja 80%+</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>OCR paszportu</b> + walidacja NIP-u pracodawcy w KRS</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Auto-flagi ryzyka</b> — wygasający paszport, pensja poniżej minimum</span></li>
-                </ul>
-                <a href="#cennik" class="feature-link">Zobacz demo intake</a>
-            </div>
-
-            <div class="feature-visual reveal">
-                <div class="phone">
-                    <div class="phone-screen">
-                        <div class="phone-content">
-                            <div class="phone-progress">
-                                <div class="phone-progress-seg done"></div>
-                                <div class="phone-progress-seg done"></div>
-                                <div class="phone-progress-seg done"></div>
-                                <div class="phone-progress-seg active"></div>
-                                <div class="phone-progress-seg"></div>
-                                <div class="phone-progress-seg"></div>
-                                <div class="phone-progress-seg"></div>
-                                <div class="phone-progress-seg"></div>
-                            </div>
-                            <div class="phone-kicker">Dane osobowe · 4/8</div>
-                            <div class="phone-h1">Kiedy się urodziłeś?</div>
-                            <div class="phone-sub">Tak jak w paszporcie. Wpisz datę i wybierz kraj obywatelstwa.</div>
-                            <div class="phone-input">
-                                <div class="phone-input-label">Data urodzenia</div>
-                                <div class="phone-input-value">14.03.1989</div>
-                            </div>
-                            <div class="phone-input">
-                                <div class="phone-input-label">Obywatelstwo</div>
-                                <div class="phone-input-value phone-input-flag">
-                                    <span>🇮🇳</span><span>Indie</span>
-                                </div>
-                            </div>
-                            <div class="phone-cta">Dalej →</div>
+            <div class="bento-card bento-1x2 accent reveal">
+                <div class="bento-kicker">02 · Intake</div>
+                <h3>Klient wypełnia sam. W swoim języku.</h3>
+                <p>5 języków, 17 mikro-ekranów, OCR paszportu, auto-flagi ryzyka. Dane trafiają wprost do CRM.</p>
+                <div class="bento-visual">
+                    <div class="bento-intake">
+                        <div class="bento-intake-bar">
+                            <span class="on"></span><span class="on"></span><span class="on"></span>
+                            <span class="on" style="background: linear-gradient(90deg, #991b1b 50%, #e2e8f0 50%)"></span>
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                        <div class="bento-intake-h">Kiedy się urodziłeś?</div>
+                        <div class="bento-intake-field" style="margin-bottom: 6px">14.03.1989</div>
+                        <div class="bento-intake-field">
+                            <span class="bento-intake-field-flag">🇮🇳 Indie</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
 
-<!-- FEATURE 3: GROWTH -->
-<section class="feature feature-dark">
-    <div class="container">
-        <div class="feature-grid">
-            <div class="feature-text reveal">
-                <span class="eyebrow eyebrow-light">Moduł 03 · Growth</span>
-                <h2>Kampanie leadowe, które <em class="serif-italic">naprawdę</em> konwertują</h2>
-                <p class="lead">Meta + Google Ads prowadzone przez nasz zespół. Lead wprost do CRM. ROAS widoczny w panelu. Płacisz za wyniki — nie za czas.</p>
-                <ul class="feature-list">
-                    <li><span class="fl-ico">✓</span><span><b>Pełen setup</b> — creative, copy, targeting, landing page, piksele</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Auto-routing</b> leadów do prawnika wg specjalizacji</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Monthly review</b> z twardymi liczbami — CPL, CAC, LTV:CAC</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Performance fee</b> od konwersji — skin in the game</span></li>
-                </ul>
-                <a href="#cennik" class="feature-link">Zobacz pakiety</a>
-            </div>
-
-            <div class="feature-visual reveal">
-                <div class="mockup">
-                    <div class="mockup-header">
-                        <div class="mockup-dots"><span></span><span></span><span></span></div>
-                        <div class="mockup-title">Kampanie · Q2 2026</div>
-                    </div>
-                    <div class="mockup-body">
-                        <div class="chart-mockup" style="background: var(--dark-1); border: 1px solid rgba(255,255,255,0.06);">
-                            <div class="chart-mockup-header">
-                                <div>
-                                    <div class="chart-title" style="color: #faf8f3;">Leady vs. koszt</div>
-                                    <div class="chart-sub" style="color: #94a3b8;">Ostatnie 6 miesięcy</div>
-                                </div>
-                                <div class="chart-legend" style="color: #cbd5e1;">
-                                    <span class="ll1">Leady</span>
-                                    <span class="ll2">Koszt (k zł)</span>
-                                </div>
-                            </div>
-                            <svg class="chart-svg" viewBox="0 0 400 160" preserveAspectRatio="none">
-                                <defs>
-                                    <linearGradient id="grad1" x1="0" x2="0" y1="0" y2="1">
-                                        <stop offset="0%" stop-color="#991b1b" stop-opacity="0.35"/>
-                                        <stop offset="100%" stop-color="#991b1b" stop-opacity="0"/>
-                                    </linearGradient>
-                                </defs>
-                                <!-- Grid lines -->
-                                <line x1="0" y1="40" x2="400" y2="40" stroke="rgba(255,255,255,0.05)" stroke-dasharray="2,4"/>
-                                <line x1="0" y1="80" x2="400" y2="80" stroke="rgba(255,255,255,0.05)" stroke-dasharray="2,4"/>
-                                <line x1="0" y1="120" x2="400" y2="120" stroke="rgba(255,255,255,0.05)" stroke-dasharray="2,4"/>
-                                <!-- Leady area -->
-                                <path d="M 20 130 L 85 105 L 150 90 L 215 62 L 280 45 L 345 28 L 380 20 L 380 160 L 20 160 Z" fill="url(#grad1)"/>
-                                <!-- Leady line -->
-                                <path d="M 20 130 L 85 105 L 150 90 L 215 62 L 280 45 L 345 28 L 380 20" fill="none" stroke="#ef4444" stroke-width="2.5"/>
-                                <!-- Leady dots -->
-                                <circle cx="20" cy="130" r="3" fill="#ef4444"/>
-                                <circle cx="85" cy="105" r="3" fill="#ef4444"/>
-                                <circle cx="150" cy="90" r="3" fill="#ef4444"/>
-                                <circle cx="215" cy="62" r="3" fill="#ef4444"/>
-                                <circle cx="280" cy="45" r="3" fill="#ef4444"/>
-                                <circle cx="345" cy="28" r="3" fill="#ef4444"/>
-                                <circle cx="380" cy="20" r="4" fill="#ef4444" stroke="white" stroke-width="1.5"/>
-                                <!-- Koszt line -->
-                                <path d="M 20 90 L 85 85 L 150 82 L 215 78 L 280 75 L 345 72 L 380 70" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="4,2"/>
-                            </svg>
-                            <div class="chart-kpis">
-                                <div>
-                                    <div class="chart-kpi-label">Leady / msc</div>
-                                    <div class="chart-kpi-value" style="color: #faf8f3;">47</div>
-                                </div>
-                                <div>
-                                    <div class="chart-kpi-label">CPL</div>
-                                    <div class="chart-kpi-value" style="color: #faf8f3;">184 zł</div>
-                                </div>
-                                <div>
-                                    <div class="chart-kpi-label">Konwersja</div>
-                                    <div class="chart-kpi-value" style="color: #86efac;">23%</div>
-                                </div>
-                            </div>
+            <div class="bento-card bento-3x1 dark reveal">
+                <div class="bento-kicker">03 · Growth</div>
+                <h3>Kampanie Meta + Google. Leady wprost do CRM.</h3>
+                <p>Pełen setup, auto-routing do prawników, monthly review z twardymi liczbami. Performance fee — płacisz za wyniki.</p>
+                <div class="bento-visual">
+                    <div style="display: flex; gap: 24px; align-items: baseline; margin-bottom: 8px;">
+                        <div>
+                            <div class="bento-chart-stat-num" style="color: #86efac;">47</div>
+                            <div class="bento-chart-stat-label">leadów / msc</div>
+                        </div>
+                        <div>
+                            <div class="bento-chart-stat-num" style="color: var(--text-light); font-size: 28px;">184 zł</div>
+                            <div class="bento-chart-stat-label">CPL</div>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <div class="bento-chart-stat-num" style="color: #86efac; font-size: 28px;">23%</div>
+                            <div class="bento-chart-stat-label">konwersja</div>
                         </div>
                     </div>
+                    <svg class="bento-chart" viewBox="0 0 400 80" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="bentoGrad" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#86efac" stop-opacity="0.3"/>
+                                <stop offset="100%" stop-color="#86efac" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M 0 60 L 60 55 L 120 48 L 180 38 L 240 28 L 300 20 L 360 14 L 400 10 L 400 80 L 0 80 Z" fill="url(#bentoGrad)"/>
+                        <path d="M 0 60 L 60 55 L 120 48 L 180 38 L 240 28 L 300 20 L 360 14 L 400 10" fill="none" stroke="#86efac" stroke-width="2"/>
+                    </svg>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
 
-<!-- FEATURE 4: ADMIN -->
-<section class="feature feature-alt">
-    <div class="container">
-        <div class="feature-grid reverse">
-            <div class="feature-text reveal">
-                <span class="eyebrow">Moduł 04 · Panel właściciela</span>
-                <h2>Widzisz <em class="serif-italic">wszystko</em>. Nawet to, czego nie chcesz wiedzieć.</h2>
-                <p class="lead">Dedykowany widok dla Ciebie. Live activity, scoreboard prawników, sprawy na ryzyku, finansowy pulse, audit log. Pięć zakładek, pełna kontrola.</p>
-                <ul class="feature-list">
-                    <li><span class="fl-ico">✓</span><span><b>Live activity stream</b> — kto, kiedy, co zmienił w systemie</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Scoreboard zespołu</b> — ukończone sprawy, overdue, przychód per prawnik</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Ryzyko board</b> — sprawy w ciszy, wygasające paszporty, overdue faktury</span></li>
-                    <li><span class="fl-ico">✓</span><span><b>Audit log</b> — kto oglądał hasła klientów, co usunął, retencja 2 lata</span></li>
-                </ul>
-                <a href="#cennik" class="feature-link">Zobacz panel</a>
-            </div>
-
-            <div class="feature-visual reveal">
-                <div class="mockup">
-                    <div class="mockup-header">
-                        <div class="mockup-dots"><span></span><span></span><span></span></div>
-                        <div class="mockup-title">Super admin · live pulse</div>
-                    </div>
-                    <div class="mockup-body">
-                        <div class="pulse-mockup">
-                            <div class="pulse-header">
-                                <div class="pulse-title">Strumień zespołu</div>
-                                <div class="pulse-live">Live · 30s</div>
-                            </div>
-                            <div class="pulse-list">
-                                <div class="pulse-row">
-                                    <div class="pulse-avatar sa-1">KM</div>
-                                    <div class="pulse-text"><b>Kasia M.</b> zatwierdziła ankietę <span class="case">#GMP-834</span></div>
-                                    <div class="pulse-time">2 min</div>
-                                </div>
-                                <div class="pulse-row">
-                                    <div class="pulse-avatar sa-2">AW</div>
-                                    <div class="pulse-text"><b>Ania W.</b> dodała dokument do sprawy</div>
-                                    <div class="pulse-time">8 min</div>
-                                </div>
-                                <div class="pulse-row">
-                                    <div class="pulse-avatar sa-3">MK</div>
-                                    <div class="pulse-text"><b>Marek K.</b> zamknął sprawę <span class="case">#GMP-812</span></div>
-                                    <div class="pulse-time">15 min</div>
-                                </div>
-                                <div class="pulse-row">
-                                    <div class="pulse-avatar sa-4">JN</div>
-                                    <div class="pulse-text"><b>Julia N.</b> wysłała 3 emaile do klientów</div>
-                                    <div class="pulse-time">24 min</div>
-                                </div>
-                                <div class="pulse-row">
-                                    <div class="pulse-avatar sa-1">KM</div>
-                                    <div class="pulse-text"><b>Kasia M.</b> oznaczyła zadanie jako gotowe</div>
-                                    <div class="pulse-time">31 min</div>
-                                </div>
-                            </div>
+            <div class="bento-card bento-3x1 dark reveal">
+                <div class="bento-kicker">04 · Panel właściciela</div>
+                <h3>Widzisz wszystko. Live.</h3>
+                <p>Kto pracuje, które sprawy w ryzyku, kto oglądał hasła klientów. Activity score, audit log, financial pulse.</p>
+                <div class="bento-visual">
+                    <div class="bento-pulse">
+                        <div class="bento-pulse-row">
+                            <div class="bento-pulse-dot sa-1">KM</div>
+                            <div><b>Kasia M.</b> zatwierdziła ankietę · 2 min</div>
+                        </div>
+                        <div class="bento-pulse-row">
+                            <div class="bento-pulse-dot sa-2">AW</div>
+                            <div><b>Ania W.</b> dodała dokument · 8 min</div>
+                        </div>
+                        <div class="bento-pulse-row">
+                            <div class="bento-pulse-dot sa-3">MK</div>
+                            <div><b>Marek K.</b> zamknął sprawę · 15 min</div>
                         </div>
                     </div>
                 </div>
